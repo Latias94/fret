@@ -880,3 +880,44 @@ Notes:
   `dispatch_time_us` is a “per-frame sum” of many event dispatches. A quick sanity check at p50 indicates ~74us/event.
 - In this workload, the bounds tree does not materially reduce `hit_test_time_us` (delta is within noise); keep it as an
   optional path and revisit once we have a more realistic “pointer moves spread across frames” driver.
+
+## 2026-02-03 11:03:38 (commit `4941baa1`)
+
+Change:
+- Add `move_pointer_sweep` (multi-frame pointer move) to diagnostics scripts so we can measure hover/hit-test cost per
+  frame (instead of batching many events into one frame via `drag_pointer`).
+
+Scripts:
+- `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
+- `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`
+
+Commands (A/B):
+```powershell
+# Bounds tree ON:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json --dir target/fret-diag-perf/move-hit-test.metrics.bounds-tree-on.r7 --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --dir target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-on.r7d --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+
+# Bounds tree OFF:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json --dir target/fret-diag-perf/move-hit-test.metrics.bounds-tree-off.r7 --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json --dir target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-off.r7d --reuse-launch --repeat 7 --timeout-ms 180000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | variant | p50 total | p95 total | max total | p95 dispatch_time_us | p95 hit_test_time_us |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| ui-gallery-hit-test-move-sweep-steady | bounds tree ON | 1025 | 1176 | 1176 | 108 | 5 |
+| ui-gallery-hit-test-move-sweep-steady | bounds tree OFF | 1015 | 1050 | 1050 | 98 | 6 |
+| ui-gallery-hit-test-data-table-move-sweep-steady | bounds tree ON | 1386 | 1414 | 1414 | 137 | 8 |
+| ui-gallery-hit-test-data-table-move-sweep-steady | bounds tree OFF | 1377 | 1720 | 1720 | 248 | 8 |
+
+Worst bundles:
+- `ui-gallery-hit-test-move-sweep-steady` (ON): `target/fret-diag-perf/move-hit-test.metrics.bounds-tree-on.r7/1770086918445-ui-gallery-hit-test-move-sweep-steady/bundle.json`
+- `ui-gallery-hit-test-move-sweep-steady` (OFF): `target/fret-diag-perf/move-hit-test.metrics.bounds-tree-off.r7/1770086988815-ui-gallery-hit-test-move-sweep-steady/bundle.json`
+- `ui-gallery-hit-test-data-table-move-sweep-steady` (ON): `target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-on.r7d/1770087539969-ui-gallery-hit-test-data-table-move-sweep-steady/bundle.json`
+- `ui-gallery-hit-test-data-table-move-sweep-steady` (OFF): `target/fret-diag-perf/data-table-move-hit-test.metrics.bounds-tree-off.r7d/1770087596313-ui-gallery-hit-test-data-table-move-sweep-steady/bundle.json`
+
+Notes:
+- In these “one pointer move per frame” workloads, `hit_test_time_us` is still in single-digit microseconds, which
+  suggests hit testing is not currently a dominant cost (or the scripts are not yet stressing the right shape).
+- Next: find or synthesize a workload where hit testing is a meaningful slice of the frame budget, then re-run the
+  bounds tree A/B in that context.

@@ -126,6 +126,14 @@ Correctness acceptance:
 - [x] Add a dedicated hit-test drag stress script (high pointer event density).
   - Script: `tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json`
   - Use with: `fretboard diag perf ... --sort hit_test`
+- [x] Add a multi-frame pointer-move sweep step for realistic hover/hit-test measurements.
+  - Implemented by `perf(diag): add move_pointer_sweep script step` (commit `4941baa1`).
+  - Scripts:
+    - `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
+    - `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`
+- [ ] Find (or construct) a workload where `top_hit_test_time_us` is a meaningful slice of the frame budget.
+  - Current sweep scripts are still ~single-digit microseconds per frame for hit testing on macOS M4.
+  - Candidates: windowed rows interactive, docking multiwindow hover, dense tree/table with many hit-testable nodes.
 
 Perf acceptance:
 
