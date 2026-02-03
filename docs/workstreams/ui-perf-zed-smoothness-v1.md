@@ -19,6 +19,7 @@ long as we preserve the cross-crate contracts (or record contract changes via AD
 Related workstreams / anchors:
 
 - GPUI parity (experience + performance): `docs/workstreams/gpui-parity-refactor.md`
+- GPUI perf gap analysis: `docs/workstreams/ui-perf-gpui-gap-v1.md`
 - UI Gallery perf investigation (scroll/measure): `docs/workstreams/ui-gallery-perf-scroll-measure.md`
 - Diagnostics + perf gates: `apps/fretboard` (`fretboard diag perf`, `fretboard diag repro`, `fretboard diag stats`)
 

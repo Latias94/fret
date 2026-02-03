@@ -195,6 +195,8 @@ Perf acceptance:
   `docs/adr/IMPLEMENTATION_ALIGNMENT.md` if relevant.
 - [ ] Prefer tooling-driven evidence: `bundle.json`, `check.*.json`, and reproducible scripts.
 - [ ] Keep `fret-ui` policy-light (mechanisms only; policy stays in ecosystem; see ADR 0066).
+- [ ] Track GPUI performance gaps explicitly and close them with measurable gates:
+  - `docs/workstreams/ui-perf-gpui-gap-v1.md`
 - [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).
   - Default script auto-dump can generate hundreds of GB if left on across long perf sessions.
   - Prefer `FRET_DIAG_SCRIPT_AUTO_DUMP=0` for perf probes and clean old run directories periodically.
