@@ -1143,7 +1143,7 @@ topics (if/when we implement them):
       - Baseline perf (one run, release, view-cache + shell enabled):
         - `ui-gallery-tree-torture-scroll-refresh`: worst tick ~8.6ms (layout-dominated).
         - Example bundle: `target/fret-diag-perf-tree-torture/1769146889956-script-step-0009-wheel/bundle.json`
-- [~] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
+- [x] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-code-view/src/*` (CodeBlock windowed lines; already has a harness).
     - `ecosystem/fret-markdown/src/*` (long scrolling documents; markdown/code blocks).
@@ -1154,7 +1154,8 @@ topics (if/when we implement them):
     - Scripted scroll capture exists: `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json` (run with `fretboard diag run ...`).
     - Baseline variant exists (same steps, different label): `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`.
     - Stale-paint check is wired: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`.
-    - First migration target started: `ecosystem/fret-code-view` now supports `CodeBlockUiOptions.windowed_lines` (VirtualList-backed, per-line window).
+    - First migration target complete: `ecosystem/fret-code-view` now supports `CodeBlockUiOptions.windowed_lines` and implements it via a retained
+      VirtualList host (ADR 0192), so window shifts can reconcile without dirtying the parent cache root.
     - Next (v1):
       - First migration target: `ecosystem/fret-code-view` “CodeBlock -> windowed lines” (visible line window + overscan), with regression enforced by the harness above.
       - Run A/B: `FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0|1` toggles the `code_view_torture` page path (default: `1`).
@@ -1163,7 +1164,7 @@ topics (if/when we implement them):
       - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_view_torture`, `ui-gallery-code-view-root`)
       - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json`
       - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`
-    - `ecosystem/fret-code-view/src/code_block.rs` (`render_code_block_windowed_lines`)
+    - `ecosystem/fret-code-view/src/code_block.rs` (`render_code_block_windowed_lines`, retained VirtualList host)
     - A/B bundles (same script steps, different variant):
       - Baseline (`FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0`): `target/fret-diag/1769092650269-ui-gallery-code-view-scroll-refresh-baseline/bundle.json`
         - `diag stats` time sum (us): total=70638041 layout=35427247 paint=35207014
