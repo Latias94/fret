@@ -52,3 +52,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn hover_card::tests`
 - Web placement gate (layout engine v2): `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
+- Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
+  hover card panel tracks the trigger after wheel-driven scroll updates (validated in
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
+  `fret_hover_card_tracks_trigger_when_underlay_scrolls`).

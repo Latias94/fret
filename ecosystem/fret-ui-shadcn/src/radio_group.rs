@@ -627,6 +627,122 @@ mod tests {
     }
 
     #[test]
+    fn radio_group_selected_indicator_is_centered_in_icon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("b")));
+        let items = vec![
+            RadioGroupItem::new("a", "Alpha"),
+            RadioGroupItem::new("b", "Beta"),
+        ];
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-indicator-centered",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .a11y_label("Options")
+                        .item(items[0].clone())
+                        .item(items[1].clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let theme = Theme::global(&app).clone();
+        let icon = icon_size(&theme);
+        let indicator = indicator_size(&theme);
+        let dot = radio_indicator(&theme);
+
+        let mut dot_rect: Option<Rect> = None;
+        let mut icon_rects: Vec<Rect> = Vec::new();
+        for op in scene.ops() {
+            let fret_core::SceneOp::Quad {
+                rect,
+                background,
+                border,
+                border_color,
+                ..
+            } = op
+            else {
+                continue;
+            };
+
+            let is_dot = (rect.size.width.0 - indicator.0).abs() <= 0.1
+                && (rect.size.height.0 - indicator.0).abs() <= 0.1
+                && *background == dot;
+            if is_dot {
+                dot_rect = Some(*rect);
+            }
+
+            let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
+                && (rect.size.height.0 - icon.0).abs() <= 0.1
+                && *background == Color::TRANSPARENT
+                && border.left.0 > 0.0
+                && border.top.0 > 0.0
+                && border.right.0 > 0.0
+                && border.bottom.0 > 0.0
+                && border_color.a > 0.0;
+            if is_icon {
+                icon_rects.push(*rect);
+            }
+        }
+
+        let dot_rect = dot_rect.expect("missing radio indicator dot quad");
+        let icon_rect = icon_rects
+            .into_iter()
+            .find(|r| {
+                dot_rect.origin.x.0 >= r.origin.x.0
+                    && dot_rect.origin.y.0 >= r.origin.y.0
+                    && (dot_rect.origin.x.0 + dot_rect.size.width.0)
+                        <= (r.origin.x.0 + r.size.width.0)
+                    && (dot_rect.origin.y.0 + dot_rect.size.height.0)
+                        <= (r.origin.y.0 + r.size.height.0)
+            })
+            .expect("missing radio icon quad containing dot");
+
+        let icon_cx = icon_rect.origin.x.0 + icon_rect.size.width.0 * 0.5;
+        let icon_cy = icon_rect.origin.y.0 + icon_rect.size.height.0 * 0.5;
+        let dot_cx = dot_rect.origin.x.0 + dot_rect.size.width.0 * 0.5;
+        let dot_cy = dot_rect.origin.y.0 + dot_rect.size.height.0 * 0.5;
+
+        assert!(
+            (dot_cx - icon_cx).abs() <= 0.2,
+            "expected dot center_x {dot_cx} close to icon center_x {icon_cx}"
+        );
+        assert!(
+            (dot_cy - icon_cy).abs() <= 0.2,
+            "expected dot center_y {dot_cy} close to icon center_y {icon_cy}"
+        );
+    }
+
+    #[test]
     fn radio_group_emits_radio_group_and_radio_button_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();

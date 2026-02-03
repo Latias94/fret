@@ -323,6 +323,47 @@ where
                     );
 
                     if let Some(active_element) = active_element_ref.get() {
+                        let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
+                            let (Some(viewport), Some(child)) = (
+                                cx.last_bounds_for_element(scroll.id),
+                                cx.last_bounds_for_element(active_element),
+                            ) else {
+                                return false;
+                            };
+
+                            // Compute positions in scroll-content coordinates (stable even when we don't
+                            // have paint-space bounds for scrolled children).
+                            let child_top = Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
+                            let child_h = Px(child.size.height.0.max(0.0));
+                            let child_bottom = Px(child_top.0 + child_h.0);
+                            let viewport_h = Px(viewport.size.height.0.max(0.0));
+                            if viewport_h.0 <= 0.01 {
+                                return false;
+                            }
+
+                            let prev = handle_for_stack.offset();
+                            let view_top = prev.y;
+                            let view_bottom = Px(prev.y.0 + viewport_h.0);
+
+                            // If the active row is taller than the viewport, we can't make it fully visible;
+                            // match "nearest" semantics by aligning the top edge.
+                            let target_y = if child_h.0 >= viewport_h.0 - 0.01 {
+                                child_top
+                            } else if child_top.0 < view_top.0 {
+                                child_top
+                            } else if child_bottom.0 > view_bottom.0 {
+                                Px(child_bottom.0 - viewport_h.0)
+                            } else {
+                                view_top
+                            };
+
+                            if (target_y.0 - prev.y.0).abs() <= 0.01 {
+                                return false;
+                            }
+                            handle_for_stack.set_offset(Point::new(prev.x, target_y));
+                            true
+                        };
+
                         if has_scroll && !did_initial_scroll && should_align_active_to_top() {
                             let did = active_desc::scroll_active_element_align_top_y(
                                 cx,
@@ -343,32 +384,7 @@ where
                             }
 
                         } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
-                            // Match Radix `focusSelectedItem`'s `scrollIntoView({ block: 'nearest' })`
-                            // behavior using scroll-content coordinates (stable even when we don't
-                            // have paint-space bounds for scrolled children).
-                            if let (Some(viewport), Some(child)) = (
-                                cx.last_bounds_for_element(scroll.id),
-                                cx.last_bounds_for_element(active_element),
-                            ) {
-                                let child_top =
-                                    Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
-                                let child_h = Px(child.size.height.0.max(0.0));
-                                let child_bottom = Px(child_top.0 + child_h.0);
-                                let viewport_h = Px(viewport.size.height.0.max(0.0));
-
-                                let prev = handle_for_stack.offset();
-                                let view_top = prev.y;
-                                let view_bottom = Px(prev.y.0 + viewport_h.0);
-
-                                let target_y = if child_top.0 < view_top.0 {
-                                    child_top
-                                } else if child_bottom.0 > view_bottom.0 {
-                                    Px(child_bottom.0 - viewport_h.0)
-                                } else {
-                                    view_top
-                                };
-                                handle_for_stack.set_offset(Point::new(prev.x, target_y));
-                            }
+                            let _ = scroll_active_nearest(cx);
                             on_focused_selected_item();
                         } else {
                             // Match Radix Select: only keep the active option in view when the
@@ -1057,6 +1073,9 @@ fn select_impl<H: UiHost>(
         let min_width = theme
             .metric_by_key("component.select.min_width")
             .unwrap_or(Px(128.0));
+        // shadcn/ui new-york-v4 SelectContent includes `min-w-[8rem]`.
+        // Treat that as the semantic minimum regardless of theme overrides.
+        let min_width = Px(min_width.0.max(128.0));
 
         let trigger_layout = decl_style::layout_style(
             &theme,
@@ -1427,22 +1446,34 @@ fn select_impl<H: UiHost>(
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
                         .unwrap_or(Px(0.0));
+                    let item_h = theme
+                        .metric_by_key("component.select.item_height")
+                        .unwrap_or(Px(32.0));
+                    let scroll_button_h = theme
+                        .metric_by_key("component.select.scroll_button_height")
+                        .unwrap_or(Px(24.0));
+                    let min_list_h = Px(scroll_button_h.0 * 2.0 + item_h.0 * 5.0);
+
                     let outer_with_margin =
                         overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
-                    // Radix Select uses `collisionPadding` (10px) on the popper substrate, but the
-                    // listbox can still overflow when it is larger than the available space.
-                    //
-                    // Model this by using full window bounds for popper placement while keeping
-                    // the window-margin inset available as a sizing hint.
+                    // When the viewport is extremely short, applying the full window margin would
+                    // reduce the listbox to an unusable height. Prefer allowing overflow so we can
+                    // keep a reasonable minimum number of rows visible (Radix behavior under tight
+                    // constraints).
+                    let force_no_margin = cx.bounds.size.height.0 <= 180.0;
                     let outer = if position == SelectPosition::Popper {
+                        // Radix Select uses `collisionPadding` (10px) on the popper substrate, but
+                        // the listbox can still overflow when it is larger than the available
+                        // space.
+                        //
+                        // Model this by using full window bounds for popper placement while keeping
+                        // the window-margin inset available as a sizing hint.
+                        cx.bounds
+                    } else if force_no_margin || outer_with_margin.size.height.0 < min_list_h.0 {
                         cx.bounds
                     } else {
                         outer_with_margin
                     };
-
-                    let item_h = theme
-                        .metric_by_key("component.select.item_height")
-                        .unwrap_or(Px(32.0));
 
                     let border_width = resolved.border_width;
                     let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -1638,26 +1669,21 @@ fn select_impl<H: UiHost>(
                         );
                     }
 
-                    // new-york-v4 uses Radix's `--radix-select-content-available-height` which adapts
-                    // to the current window + trigger placement. Prefer that behavior by computing
-                    // the available height from our popper substrate, while still allowing an
-                    // explicit theme override for apps that want a fixed cap.
+                    // new-york-v4 Select uses:
+                    // - `max-h-[var(--radix-select-content-available-height)]`
+                    // - where `--radix-select-content-available-height` is derived from Radix
+                    //   Popper's `size()` middleware (Floating UI) for `position="popper"`.
+                    //
+                    // Model that behavior by computing the available main-axis height for the
+                    // current placement.
                     let available_h = (position == SelectPosition::Popper)
                         .then(|| {
-                            let probe_desired = fret_core::Size::new(desired_w, outer.size.height);
-                            let layout = popper::popper_content_layout_sized(
+                            radix_select::select_popper_available_height(
                                 outer,
                                 anchor,
-                                probe_desired,
+                                min_width,
                                 popper_placement,
-                            );
-                            popper::popper_available_metrics(
-                                outer,
-                                anchor,
-                                &layout,
-                                popper_placement.direction,
                             )
-                            .available_height
                         })
                         .unwrap_or(outer.size.height);
                     let max_h = theme
@@ -1747,6 +1773,18 @@ fn select_impl<H: UiHost>(
                     let transform_origin = placement.transform_origin;
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
+                    if std::env::var("FRET_DEBUG_SELECT_PLACED")
+                        .ok()
+                        .is_some_and(|v| v == "1")
+                    {
+                        eprintln!(
+                            "select placed rect: origin=({}, {}) size=({}, {})",
+                            placed.origin.x.0,
+                            placed.origin.y.0,
+                            placed.size.width.0,
+                            placed.size.height.0
+                        );
+                    }
 
                     let opacity = motion.opacity;
                     let scale = motion.scale;
@@ -2028,6 +2066,8 @@ fn select_impl<H: UiHost>(
                                             trigger_state_for_overlay_in_content.clone();
                                         let state_for_focused_selected_item =
                                             trigger_state_for_overlay_in_content.clone();
+                                        let allow_align_active_to_top =
+                                            position == SelectPosition::ItemAligned;
                                         let state_for_consume_active_scroll_into_view =
                                             trigger_state_for_overlay_in_content.clone();
 
@@ -2058,7 +2098,8 @@ fn select_impl<H: UiHost>(
                                                 let state = state_for_align_check
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
-                                                state.pending_active_align_top_scroll
+                                                allow_align_active_to_top
+                                                    && state.pending_active_align_top_scroll
                                                     && !state.did_item_aligned_scroll_initial
                                                     && !state.did_item_aligned_scroll_reposition
                                             },
@@ -2651,25 +2692,25 @@ fn select_impl<H: UiHost>(
                                                     layout.position = PositionStyle::Absolute;
                                                     layout.inset = InsetStyle {
                                                         left: Some(Px(0.0)),
-                                                        right: Some(Px(0.0)),
-                                                        top: Some(Px(0.0)),
-                                                        bottom: Some(Px(0.0)),
-                                                    };
-                                                    layout.overflow = Overflow::Clip;
-                                                    layout
-                                                },
-                                                padding: Edges::all(Px(0.0)),
-                                                background: Some(
-                                                    theme_for_overlay.colors.panel_background,
-                                                ),
-                                                shadow: Some(shadow),
-                                                border: Edges::all(border_width),
-                                                border_color: Some(overlay_border),
-                                                corner_radii: Corners::all(radius),
-                                                ..Default::default()
+                                                    right: Some(Px(0.0)),
+                                                    top: Some(Px(0.0)),
+                                                    bottom: Some(Px(0.0)),
+                                                };
+                                                layout.overflow = Overflow::Clip;
+                                                layout
                                             },
-                                            move |_cx| vec![scroll],
-                                        );
+                                            padding: Edges::all(Px(0.0)),
+                                            background: Some(
+                                                theme_for_overlay.colors.panel_background,
+                                            ),
+                                            shadow: Some(shadow),
+                                            border: Edges::all(border_width),
+                                            border_color: Some(overlay_border),
+                                            corner_radii: Corners::all(radius),
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![scroll],
+                                    );
 
                                         (
                                             PressableProps {

@@ -41,6 +41,12 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn is_dark_background(theme: &Theme) -> bool {
+    let bg = theme.color_required("background");
+    let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
+    luma < 0.5
+}
+
 fn estimate_text_width(text: &str, font_size: Px) -> Px {
     // Heuristic: our menu panel sizing needs a deterministic width before layout, but the
     // declarative menu rows use flex-1 labels. We approximate the max-content width from the text
@@ -1470,7 +1476,14 @@ impl MenubarMenuEntries {
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let destructive_fg = theme.color_required("destructive");
-                        let destructive_bg = alpha_mul(destructive_fg, 0.12);
+                        let destructive_bg_alpha = if is_dark_background(&theme) { 0.20 } else { 0.10 };
+                        let destructive_bg = theme
+                            .color_by_key(if destructive_bg_alpha >= 0.2 {
+                                "destructive/20"
+                            } else {
+                                "destructive/10"
+                            })
+                            .unwrap_or_else(|| alpha_mul(destructive_fg, destructive_bg_alpha));
 
                         let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
                         let submenu_chrome =
