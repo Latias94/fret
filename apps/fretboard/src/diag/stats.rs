@@ -84,6 +84,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) tick_id: u64,
     pub(super) frame_id: u64,
     pub(super) timestamp_unix_ms: Option<u64>,
+    pub(super) frame_arena_capacity_estimate_bytes: u64,
+    pub(super) frame_arena_grow_events: u32,
     pub(super) layout_time_us: u64,
     pub(super) prepaint_time_us: u64,
     pub(super) paint_time_us: u64,
@@ -3812,6 +3814,16 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.get("stats"))
                 .and_then(|v| v.as_object());
 
+            let frame_arena_capacity_estimate_bytes = stats
+                .and_then(|m| m.get("frame_arena_capacity_estimate_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let frame_arena_grow_events = stats
+                .and_then(|m| m.get("frame_arena_grow_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+
             let layout_time_us = stats
                 .and_then(|m| m.get("layout_time_us"))
                 .and_then(|v| v.as_u64())
@@ -4183,6 +4195,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 tick_id: s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
                 frame_id: s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0),
                 timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
+                frame_arena_capacity_estimate_bytes,
+                frame_arena_grow_events,
                 layout_time_us,
                 prepaint_time_us,
                 paint_time_us,

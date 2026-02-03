@@ -6029,6 +6029,10 @@ impl UiSemanticsNodeV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiFrameStatsV1 {
+    #[serde(default)]
+    pub frame_arena_capacity_estimate_bytes: u64,
+    #[serde(default)]
+    pub frame_arena_grow_events: u32,
     pub layout_time_us: u64,
     #[serde(default)]
     pub layout_roots_time_us: u64,
@@ -6182,6 +6186,8 @@ pub struct UiFrameStatsV1 {
 impl UiFrameStatsV1 {
     fn from_stats(stats: UiDebugFrameStats) -> Self {
         Self {
+            frame_arena_capacity_estimate_bytes: stats.frame_arena_capacity_estimate_bytes,
+            frame_arena_grow_events: stats.frame_arena_grow_events,
             layout_time_us: stats.layout_time.as_micros() as u64,
             layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
             layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()

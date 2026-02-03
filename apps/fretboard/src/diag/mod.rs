@@ -2763,6 +2763,11 @@ See: `docs/tracy.md`.\n";
                         let top_hit_test_bounds_tree_candidate_rejected = top
                             .map(|r| r.hit_test_bounds_tree_candidate_rejected)
                             .unwrap_or(0);
+                        let top_frame_arena_capacity_estimate_bytes = top
+                            .map(|r| r.frame_arena_capacity_estimate_bytes)
+                            .unwrap_or(0);
+                        let top_frame_arena_grow_events =
+                            top.map(|r| r.frame_arena_grow_events).unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                         let top_view_cache_contained_relayouts =
@@ -2813,6 +2818,8 @@ See: `docs/tracy.md`.\n";
                                 "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
                                 "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
                                 "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
+                                "top_frame_arena_capacity_estimate_bytes": top_frame_arena_capacity_estimate_bytes,
+                                "top_frame_arena_grow_events": top_frame_arena_grow_events,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
@@ -3102,6 +3109,11 @@ See: `docs/tracy.md`.\n";
                     let top_hit_test_bounds_tree_candidate_rejected = top
                         .map(|r| r.hit_test_bounds_tree_candidate_rejected)
                         .unwrap_or(0);
+                    let top_frame_arena_capacity_estimate_bytes = top
+                        .map(|r| r.frame_arena_capacity_estimate_bytes)
+                        .unwrap_or(0);
+                    let top_frame_arena_grow_events =
+                        top.map(|r| r.frame_arena_grow_events).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                     let top_view_cache_contained_relayouts =
@@ -3157,6 +3169,8 @@ See: `docs/tracy.md`.\n";
                         "top_hit_test_bounds_tree_misses": top_hit_test_bounds_tree_misses,
                         "top_hit_test_bounds_tree_hits": top_hit_test_bounds_tree_hits,
                         "top_hit_test_bounds_tree_candidate_rejected": top_hit_test_bounds_tree_candidate_rejected,
+                        "top_frame_arena_capacity_estimate_bytes": top_frame_arena_capacity_estimate_bytes,
+                        "top_frame_arena_grow_events": top_frame_arena_grow_events,
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
@@ -3191,6 +3205,9 @@ See: `docs/tracy.md`.\n";
 
                 if runs_total.len() == repeat {
                     if stats_json {
+                        let mut top_frame_arena_capacity_estimate_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_frame_arena_grow_events: Vec<u64> = Vec::with_capacity(repeat);
                         let mut top_view_cache_contained_relayouts: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_view_cache_roots_total: Vec<u64> = Vec::with_capacity(repeat);
@@ -3214,6 +3231,16 @@ See: `docs/tracy.md`.\n";
                         let mut top_virtual_list_visible_range_refreshes: Vec<u64> =
                             Vec::with_capacity(repeat);
                         for run in &runs_json {
+                            top_frame_arena_capacity_estimate_bytes.push(
+                                run.get("top_frame_arena_capacity_estimate_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_frame_arena_grow_events.push(
+                                run.get("top_frame_arena_grow_events")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                             top_view_cache_contained_relayouts.push(
                                 run.get("top_view_cache_contained_relayouts")
                                     .and_then(|v| v.as_u64())
@@ -3288,6 +3315,8 @@ See: `docs/tracy.md`.\n";
                                 "paint_time_us": summarize_times_us(&runs_paint),
                                 "dispatch_time_us": summarize_times_us(&runs_dispatch),
                                 "hit_test_time_us": summarize_times_us(&runs_hit_test),
+                                "top_frame_arena_capacity_estimate_bytes": summarize_times_us(&top_frame_arena_capacity_estimate_bytes),
+                                "top_frame_arena_grow_events": summarize_times_us(&top_frame_arena_grow_events),
                                 "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
                                 "top_view_cache_roots_total": summarize_times_us(&top_view_cache_roots_total),
                                 "top_view_cache_roots_reused": summarize_times_us(&top_view_cache_roots_reused),
