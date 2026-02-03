@@ -176,6 +176,7 @@ To keep the refactor safe and reviewable:
 ### 7.1 Recommended authoring shape (v2)
 
 - Use `fret_imui::imui(cx, |ui| ...)` (or `_build` variants) for immediate-mode control flow and `Response` signals.
+- For reusable widgets on `&mut impl UiWriter<H>`, import `fret_imui::UiWriterImUiExt` (e.g. `use fret_imui::UiWriterImUiExt as _;`).
 - Use `fret_ui_kit::ui::*` / `UiBuilder<T>` for chrome/layout patches, and emit builders via
   `fret_ui_kit::imui::UiWriterUiKitExt::add_ui(...)`.
 - In official ecosystem crates, prefer accepting `&mut impl UiWriter<H>` instead of a concrete `ImUi`.

@@ -10,6 +10,7 @@
 use std::hash::Hash;
 use std::sync::Arc;
 
+use fret_authoring::UiWriter;
 use fret_core::{Px, Rect, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
@@ -20,7 +21,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 
 pub mod prelude {
-    pub use crate::{ImUi, Response, imui, imui_build, imui_vstack};
+    pub use crate::{ImUi, Response, UiWriterImUiExt as _, imui, imui_build, imui_vstack};
     pub use fret_authoring::UiWriter;
 }
 
@@ -57,6 +58,108 @@ const fn fnv1a64(bytes: &[u8]) -> u64 {
 
 const KEY_CLICKED: u64 = fnv1a64(b"fret-imui.clicked.v1");
 const KEY_CHANGED: u64 = fnv1a64(b"fret-imui.changed.v1");
+
+/// Immediate-mode widget helpers for any authoring frontend that implements `UiWriter`.
+///
+/// This allows third-party widget crates to accept a single surface:
+/// `fn widget<H: UiHost>(ui: &mut impl UiWriter<H>, ...) -> Response`.
+pub trait UiWriterImUiExt<H: UiHost>: UiWriter<H> {
+    fn text(&mut self, text: impl Into<Arc<str>>) {
+        let element = self.with_cx_mut(|cx| cx.text(text));
+        self.add(element);
+    }
+
+    fn separator(&mut self) {
+        let element = self.with_cx_mut(|cx| {
+            let mut props = ContainerProps::default();
+            let theme = Theme::global(&*cx.app);
+            props.background = Some(theme.color_required("border"));
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Px(Px(1.0));
+            cx.container(props, |_| Vec::new())
+        });
+        self.add(element);
+    }
+
+    fn button(&mut self, label: impl Into<Arc<str>>) -> Response {
+        let label = label.into();
+        let mut response = Response::default();
+
+        let element = self.with_cx_mut(|cx| {
+            let mut props = PressableProps::default();
+            props.a11y = PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: Some(label.clone()),
+                ..Default::default()
+            };
+
+            cx.pressable_with_id(props, |cx, state, id| {
+                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                    host.record_transient_event(acx, KEY_CLICKED);
+                    host.notify(acx);
+                }));
+
+                response.hovered = state.hovered;
+                response.pressed = state.pressed;
+                response.focused = state.focused;
+                response.clicked = cx.take_transient_for(id, KEY_CLICKED);
+                response.rect = cx.last_bounds_for_element(id);
+
+                vec![cx.text(label.clone())]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn checkbox_model(&mut self, label: impl Into<Arc<str>>, model: &Model<bool>) -> Response {
+        let label = label.into();
+        let model = model.clone();
+
+        let mut response = Response::default();
+        let element = self.with_cx_mut(|cx| {
+            let value = cx
+                .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
+                .unwrap_or(false);
+
+            let mut props = PressableProps::default();
+            props.a11y = PressableA11y {
+                role: Some(SemanticsRole::Checkbox),
+                label: Some(label.clone()),
+                checked: Some(value),
+                ..Default::default()
+            };
+
+            cx.pressable_with_id(props, |cx, state, id| {
+                let model = model.clone();
+                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                    let _ = host.update_model(&model, |v: &mut bool| *v = !*v);
+                    host.record_transient_event(acx, KEY_CHANGED);
+                    host.notify(acx);
+                }));
+
+                response.hovered = state.hovered;
+                response.pressed = state.pressed;
+                response.focused = state.focused;
+                response.changed = cx.take_transient_for(id, KEY_CHANGED);
+                response.rect = cx.last_bounds_for_element(id);
+
+                let prefix: Arc<str> = if value {
+                    Arc::from("[x] ")
+                } else {
+                    Arc::from("[ ] ")
+                };
+                vec![cx.text(Arc::from(format!("{prefix}{label}")))]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+}
+
+impl<H: UiHost, T: UiWriter<H> + ?Sized> UiWriterImUiExt<H> for T {}
 
 pub fn imui<'a, H: UiHost>(
     cx: &mut ElementContext<'a, H>,
@@ -157,16 +260,11 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
     }
 
     pub fn text(&mut self, text: impl Into<Arc<str>>) {
-        self.out.push(self.cx.text(text));
+        <Self as UiWriterImUiExt<H>>::text(self, text);
     }
 
     pub fn separator(&mut self) {
-        let mut props = ContainerProps::default();
-        let theme = Theme::global(&*self.cx.app);
-        props.background = Some(theme.color_required("border"));
-        props.layout.size.width = Length::Fill;
-        props.layout.size.height = Length::Px(Px(1.0));
-        self.out.push(self.cx.container(props, |_| Vec::new()));
+        <Self as UiWriterImUiExt<H>>::separator(self);
     }
 
     pub fn row(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUi<'cx2, 'a2, H>)) {
@@ -180,81 +278,15 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
     }
 
     pub fn button(&mut self, label: impl Into<Arc<str>>) -> Response {
-        let label = label.into();
-        let mut response = Response::default();
-
-        let mut props = PressableProps::default();
-        props.a11y = PressableA11y {
-            role: Some(SemanticsRole::Button),
-            label: Some(label.clone()),
-            ..Default::default()
-        };
-
-        let element = self.cx.pressable_with_id(props, |cx, state, id| {
-            cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
-                host.record_transient_event(acx, KEY_CLICKED);
-                host.notify(acx);
-            }));
-
-            response.hovered = state.hovered;
-            response.pressed = state.pressed;
-            response.focused = state.focused;
-            response.clicked = cx.take_transient_for(id, KEY_CLICKED);
-            response.rect = cx.last_bounds_for_element(id);
-
-            vec![cx.text(label.clone())]
-        });
-
-        self.out.push(element);
-        response
+        <Self as UiWriterImUiExt<H>>::button(self, label)
     }
 
     pub fn checkbox_model(&mut self, label: impl Into<Arc<str>>, model: &Model<bool>) -> Response {
-        let label = label.into();
-        let value = self
-            .cx
-            .read_model(model, fret_ui::Invalidation::Paint, |_app, v| *v)
-            .unwrap_or(false);
-
-        let mut response = Response::default();
-
-        let mut props = PressableProps::default();
-        props.a11y = PressableA11y {
-            role: Some(SemanticsRole::Checkbox),
-            label: Some(label.clone()),
-            checked: Some(value),
-            ..Default::default()
-        };
-
-        let model = model.clone();
-        let element = self.cx.pressable_with_id(props, |cx, state, id| {
-            let model = model.clone();
-            cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
-                let _ = host.update_model(&model, |v: &mut bool| *v = !*v);
-                host.record_transient_event(acx, KEY_CHANGED);
-                host.notify(acx);
-            }));
-
-            response.hovered = state.hovered;
-            response.pressed = state.pressed;
-            response.focused = state.focused;
-            response.changed = cx.take_transient_for(id, KEY_CHANGED);
-            response.rect = cx.last_bounds_for_element(id);
-
-            let prefix: Arc<str> = if value {
-                Arc::from("[x] ")
-            } else {
-                Arc::from("[ ] ")
-            };
-            vec![cx.text(Arc::from(format!("{prefix}{label}")))]
-        });
-
-        self.out.push(element);
-        response
+        <Self as UiWriterImUiExt<H>>::checkbox_model(self, label, model)
     }
 }
 
-impl<'cx, 'a, H: UiHost> fret_authoring::UiWriter<H> for ImUi<'cx, 'a, H> {
+impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUi<'cx, 'a, H> {
     fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
         f(self.cx)
     }
@@ -747,6 +779,18 @@ mod tests {
         );
         assert!(!clicked.get());
     }
+
+    #[allow(dead_code)]
+    fn ui_writer_imui_ext_smoke<H: fret_ui::UiHost>(ui: &mut impl fret_authoring::UiWriter<H>) {
+        use crate::UiWriterImUiExt as _;
+
+        ui.text("Hello");
+        ui.separator();
+        let _ = ui.button("OK");
+    }
+
+    #[test]
+    fn ui_writer_imui_ext_compiles() {}
 
     #[test]
     fn ui_kit_builder_can_be_rendered_from_imui() {
