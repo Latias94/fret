@@ -59,6 +59,8 @@ Conventions:
   - Debounce: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES` (default: 2)
 - [ ] Decide whether scroll unbounded-probe deferral should become the default (remove env gating) and
   update the canonical perf suite env set accordingly.
+- [x] Export view-cache reuse “miss reasons” as perf-visible counters (so regressions are explainable).
+  - Implemented by `feat(diag): export view-cache reuse miss counters` (commit `43f9c73e`).
 
 ### M1: Frame data structures (hashing → dense)
 

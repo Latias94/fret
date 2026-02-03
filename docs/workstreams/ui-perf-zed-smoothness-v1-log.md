@@ -1181,3 +1181,24 @@ A/B (same commit; cache disabled):
 Notes:
 - The majority of the win comes from removing the `Theme` clone from the per-row rich-text path; the row cache is a
   smaller steady-state improvement in this specific probe.
+
+## 2026-02-03 20:40:00 (commit `43f9c73e`)
+
+Change:
+- Export view-cache reuse “miss reasons” as first-class per-frame counters and include them in `fretboard diag perf`
+  JSON output.
+
+Why:
+- We want perf regressions to be explainable: when view-cache reuse drops, we need to know whether it’s due to
+  layout invalidations, deferred rerender flags, or cache key mismatches.
+
+New `diag perf` JSON fields (for the top frame in each run):
+- `top_view_cache_roots_total`
+- `top_view_cache_roots_reused`
+- `top_view_cache_roots_cache_key_mismatch`
+- `top_view_cache_roots_needs_rerender`
+- `top_view_cache_roots_layout_invalidated`
+
+Notes:
+- The per-root `reuse_reason` string in bundle snapshots now includes `needs_rerender` and `layout_invalidated`
+  (in addition to existing reasons like `cache_key_mismatch`).
