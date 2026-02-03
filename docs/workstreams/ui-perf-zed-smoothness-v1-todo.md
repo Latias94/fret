@@ -118,8 +118,14 @@ Correctness acceptance:
 - [ ] Add a stress script gate that correlates pointer-move frequency with stable frame time.
   - Candidate: extend `tools/diag-scripts/ui-gallery-hover-layout-torture.json`.
   - Follow-up: current `diag perf` totals do not include dispatch/hit-test time directly; see next item.
-- [ ] Add a dispatch/hit-test time metric to diagnostics so we can gate pointer-move cost explicitly.
-  - Candidate: extend `UiDebugFrameStats` with `dispatch_time` and/or `hit_test_time` and surface it in `fretboard diag perf`.
+- [x] Add a dispatch/hit-test time metric to diagnostics so we can gate pointer-move cost explicitly.
+  - Implemented by `perf(diag): expose dispatch and hit-test timing` (commit `4b0be50e`).
+  - Adds new `fretboard diag perf --sort dispatch|hit_test` modes and exports:
+    - `top_dispatch_time_us`, `top_hit_test_time_us`
+    - `top_dispatch_events`, `top_hit_test_queries`
+- [x] Add a dedicated hit-test drag stress script (high pointer event density).
+  - Script: `tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json`
+  - Use with: `fretboard diag perf ... --sort hit_test`
 
 Perf acceptance:
 

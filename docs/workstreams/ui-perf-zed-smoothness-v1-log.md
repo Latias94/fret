@@ -851,3 +851,32 @@ Notes:
 - Gate check passed (no failures): `target/fret-diag-perf/ui-gallery-steady.after-bounds-tree.r7/check.perf_thresholds.json`.
 - Compared to the last logged suite run at commit `b038cbf7`, `ui-gallery-hover-layout-torture-steady` is slightly lower
   (`p95 total 1602us -> 1599us`), while `ui-gallery-overlay-torture-steady` shows a higher outlier in this run.
+
+## 2026-02-03 02:29:18 (commit `4b0be50e`)
+
+Change:
+- perf(diag): expose dispatch and hit-test timing (adds `--sort dispatch|hit_test` and exports `top_dispatch_time_us` / `top_hit_test_time_us`)
+
+Suite:
+- `tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json` (added by commit `8a08ff1d`)
+
+Commands (A/B):
+```powershell
+# Bounds tree ON:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json --dir target/fret-diag-perf/drag-hit-test.metrics.bounds-tree-on.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- cargo run -p fret-ui-gallery --release
+
+# Bounds tree OFF:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json --dir target/fret-diag-perf/drag-hit-test.metrics.bounds-tree-off.r7 --reuse-launch --repeat 7 --timeout-ms 120000 --sort hit_test --top 15 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| variant | p95 dispatch_time_us | p95 hit_test_time_us | dispatch_events | hit_test_queries |
+| --- | ---: | ---: | ---: | ---: |
+| bounds tree ON | 47474 | 392 | 604 | 303 |
+| bounds tree OFF | 47274 | 385 | 604 | 303 |
+
+Notes:
+- This script intentionally emits a high density of pointer events in a single frame (by design of `drag_pointer`), so
+  `dispatch_time_us` is a “per-frame sum” of many event dispatches. A quick sanity check at p50 indicates ~74us/event.
+- In this workload, the bounds tree does not materially reduce `hit_test_time_us` (delta is within noise); keep it as an
+  optional path and revisit once we have a more realistic “pointer moves spread across frames” driver.
