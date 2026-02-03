@@ -634,7 +634,7 @@ topics (if/when we implement them):
       - Command:
         - `cargo run -p fretboard -- diag run tools/diag-scripts/docking-demo-drag-indicators.json --warmup-frames 5 --check-prepaint-actions-min 1 --check-drag-cache-root-paint-only dock-demo-dock-space --check-stale-paint dock-demo-dock-space --env FRET_EXAMPLES_VIEW_CACHE=1 --launch -- cargo run -p fret-demo --bin docking_demo --release`
       - Evidence: `target/fret-diag/1769776050260-docking-demo-drag-indicators/bundle.json`
-  - [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
+- [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
@@ -717,6 +717,13 @@ topics (if/when we implement them):
           - Worst layout frame: `frame_id=24` (`tick_id=25`) `layout_time_us=2560` with `retained_virtual_list_attached_items=9`, `detached_items=3` (delta=12) and `barrier_relayouts_performed=1`.
           - Worst attach/detach frame: `frame_id=28` (`tick_id=29`) `attached_items=10`, `detached_items=10` (delta=20) with `layout_time_us=1557`.
         - Takeaway: to reduce worst-tick layout time further, we either need to (a) reduce per-frame attach/detach delta (more frequent smaller shifts / staged prefetch), or (b) reduce the cost of attaching new rows (row recycling, cheaper row layout, or more effective keep-alive reuse).
+    - [x] (Retained host) Stage prefetch shifts to cap per-frame attach/detach burst.
+      - Change: retained-host prepaint uses smaller prefetch steps (`overscan/2`, capped) so a single prefetch shift cannot detach/attach an unbounded number of rows in one frame.
+        This trades “more frequent small reconciles” for lower worst-tick variance (better feel).
+      - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (`RETAINED_HOST_PREFETCH_STEP_MAX`, retained-host `prefetch_step`),
+        `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_caps_retained_host_prefetch_step_to_bound_attach_detach_delta`).
+      - Note: the attach/detach delta check in `fretboard diag stats` uses `attached_items + detached_items` (so a shift by `step` roughly costs `~2*step`).
+      - Evidence: `target/fret-diag-suite-vlist-boundary-retained-stepcap/1770111034260-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
     - [!] GPUI-MVP5-virt-004 (Optional; deferred) Non-retained window shifts without rerender.
       - Rationale: fully composable “window shifts without dirtying the parent cache root” require an explicit retained-host
         boundary (ADR 0192). Track B remains “plan-only”: it may derive a window plan in prepaint, but it must schedule a
@@ -939,10 +946,10 @@ topics (if/when we implement them):
       - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary-retained` defaults to (retained-host path):
         - Same gates as the non-retained suite, plus:
           - `--check-retained-vlist-reconcile-no-notify 1`
-          - `--check-retained-vlist-attach-detach-max 256`
+          - `--check-retained-vlist-attach-detach-max 64`
           - `--check-vlist-window-shifts-non-retained-max 0` (no fallback)
         - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
-        - Evidence bundle (suite; cache+shell, release): `target/fret-diag-suite-ui-gallery-vlist-window-boundary-retained0/1770086113873-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+        - Evidence bundle (suite; cache+shell, release): `target/fret-diag-suite-vlist-boundary-retained-stepcap/1770111034260-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
         `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch_step=overscan*8 for non-retained):
