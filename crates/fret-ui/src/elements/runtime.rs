@@ -152,6 +152,9 @@ pub struct WindowElementState {
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
+    scratch_view_cache_keep_alive_elements: HashSet<GlobalElementId>,
+    scratch_view_cache_keep_alive_visited_roots: HashSet<GlobalElementId>,
+    scratch_view_cache_keep_alive_stack: Vec<GlobalElementId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -198,6 +201,43 @@ pub struct NodeEntryRootOverwrite {
 }
 
 impl WindowElementState {
+    pub(crate) fn take_scratch_view_cache_keep_alive_elements(
+        &mut self,
+    ) -> HashSet<GlobalElementId> {
+        std::mem::take(&mut self.scratch_view_cache_keep_alive_elements)
+    }
+
+    pub(crate) fn restore_scratch_view_cache_keep_alive_elements(
+        &mut self,
+        scratch: HashSet<GlobalElementId>,
+    ) {
+        self.scratch_view_cache_keep_alive_elements = scratch;
+    }
+
+    pub(crate) fn take_scratch_view_cache_keep_alive_visited_roots(
+        &mut self,
+    ) -> HashSet<GlobalElementId> {
+        std::mem::take(&mut self.scratch_view_cache_keep_alive_visited_roots)
+    }
+
+    pub(crate) fn restore_scratch_view_cache_keep_alive_visited_roots(
+        &mut self,
+        scratch: HashSet<GlobalElementId>,
+    ) {
+        self.scratch_view_cache_keep_alive_visited_roots = scratch;
+    }
+
+    pub(crate) fn take_scratch_view_cache_keep_alive_stack(&mut self) -> Vec<GlobalElementId> {
+        std::mem::take(&mut self.scratch_view_cache_keep_alive_stack)
+    }
+
+    pub(crate) fn restore_scratch_view_cache_keep_alive_stack(
+        &mut self,
+        scratch: Vec<GlobalElementId>,
+    ) {
+        self.scratch_view_cache_keep_alive_stack = scratch;
+    }
+
     #[cfg(any(test, feature = "diagnostics"))]
     #[allow(dead_code)]
     pub(crate) fn set_strict_ownership(&mut self, strict: bool) {

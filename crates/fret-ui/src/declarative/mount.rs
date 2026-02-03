@@ -325,10 +325,15 @@ where
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
-            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
-            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
-            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+        let mut keep_alive_view_cache_elements =
+            window_state.take_scratch_view_cache_keep_alive_elements();
+        keep_alive_view_cache_elements.clear();
+        {
+            let mut visited_roots = window_state.take_scratch_view_cache_keep_alive_visited_roots();
+            let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+            visited_roots.clear();
+            stack.clear();
+            stack.extend(window_state.view_cache_reuse_roots());
 
             while let Some(root) = stack.pop() {
                 if !visited_roots.insert(root) {
@@ -338,7 +343,7 @@ where
                     continue;
                 };
                 for &element in elements {
-                    keep_alive.insert(element);
+                    keep_alive_view_cache_elements.insert(element);
                     if !visited_roots.contains(&element)
                         && window_state.view_cache_elements_for_root(element).is_some()
                     {
@@ -347,8 +352,11 @@ where
                 }
             }
 
-            keep_alive
-        };
+            visited_roots.clear();
+            stack.clear();
+            window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+            window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+        }
 
         // If any cache root transitions into reuse this frame, proactively touch the entire
         // retained subtree from the window root. This avoids GC sweeping still-live nodes in the
@@ -470,6 +478,8 @@ where
             });
             false
         });
+
+        window_state.restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
 
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
@@ -729,10 +739,15 @@ where
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        let keep_alive_view_cache_elements: HashSet<GlobalElementId> = {
-            let mut keep_alive: HashSet<GlobalElementId> = HashSet::new();
-            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
-            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
+        let mut keep_alive_view_cache_elements =
+            window_state.take_scratch_view_cache_keep_alive_elements();
+        keep_alive_view_cache_elements.clear();
+        {
+            let mut visited_roots = window_state.take_scratch_view_cache_keep_alive_visited_roots();
+            let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+            visited_roots.clear();
+            stack.clear();
+            stack.extend(window_state.view_cache_reuse_roots());
 
             while let Some(root) = stack.pop() {
                 if !visited_roots.insert(root) {
@@ -742,7 +757,7 @@ where
                     continue;
                 };
                 for &element in elements {
-                    keep_alive.insert(element);
+                    keep_alive_view_cache_elements.insert(element);
                     if !visited_roots.contains(&element)
                         && window_state.view_cache_elements_for_root(element).is_some()
                     {
@@ -751,8 +766,11 @@ where
                 }
             }
 
-            keep_alive
-        };
+            visited_roots.clear();
+            stack.clear();
+            window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+            window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+        }
 
         // See `render_root`: on the first cache-hit frame for a previously dirty root, ensure the
         // overlay subtree stays alive even if it won't rerender this frame.
@@ -864,6 +882,8 @@ where
             });
             false
         });
+
+        window_state.restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
 
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
