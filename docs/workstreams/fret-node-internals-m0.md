@@ -223,6 +223,8 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/`
 - [x] Split left-click pointer-down pipeline into small modules to reduce drift (hit-test vs handlers).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/left_click/`
+- [x] Split node-resize pipeline into small modules to reduce drift (math vs move handler).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/node_resize/`
 - [x] Ensure refactors preserve the public query surfaces of `NodeGraphInternalsStore` and
   `MeasuredGeometryStore`.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
