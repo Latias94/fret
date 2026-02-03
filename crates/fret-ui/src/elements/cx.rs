@@ -2588,13 +2588,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
                     let visible = state.metrics.visible_range(preview_offset, viewport, 0);
                     if let (Some(prev), Some(visible)) = (range, visible) {
+                        let prev_visible_len = prev
+                            .end_index
+                            .saturating_sub(prev.start_index)
+                            .saturating_add(1);
+                        let visible_len = visible
+                            .end_index
+                            .saturating_sub(visible.start_index)
+                            .saturating_add(1);
+
                         let win_start = prev.start_index.saturating_sub(prev.overscan);
                         let win_end =
                             (prev.end_index + prev.overscan).min(prev.count.saturating_sub(1));
                         let out_of_window =
                             visible.start_index < win_start || visible.end_index > win_end;
 
-                        if out_of_window {
+                        // If the viewport grows (e.g. after intrinsic probes settle), the stored
+                        // render-derived window may under-estimate the visible span while still
+                        // appearing "within overscan". Force a one-shot recompute so we don't get
+                        // stuck in a too-small window forever under view-cache reuse.
+                        if visible_len > prev_visible_len || out_of_window {
                             range = state.metrics.visible_range(
                                 preview_offset,
                                 viewport,

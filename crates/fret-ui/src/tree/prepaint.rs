@@ -248,56 +248,97 @@ impl<H: UiHost> UiTree<H> {
                                 && rendered.start_index <= rendered.end_index
                                 && rendered.end_index < rendered.count =>
                         {
-                            let prefetch_margin = (inputs.overscan / 6).max(1);
-                            // Shift by a slightly larger step than the “near-edge” margin so we
-                            // don’t prefetch on every frame during slow scroll, while still keeping
-                            // each prefetch rerender bounded.
-                            let prefetch_step = if retained_host {
-                                inputs.overscan.saturating_mul(3) / 2
-                            } else {
-                                // Non-retained VirtualList pays a full cache-root rerender per shift,
-                                // so prefer fewer, larger shifts while we still have overscan coverage.
-                                //
-                                // This is a deliberate trade-off:
-                                // - larger steps reduce how often we schedule a rerender during smooth scroll,
-                                // - but each rerender may rebuild more rows.
-                                //
-                                // For v1 (non-retained), reducing rerender frequency generally wins because
-                                // we cannot attach/detach rows on cache-hit frames without a retained host
-                                // boundary (ADR 0192).
-                                inputs.overscan.saturating_mul(8)
-                            }
-                            .max(prefetch_margin)
-                            .max(1);
-                            let prefer_forward = if offset_axis.0 > prev_offset.0 + 0.01 {
-                                state.last_scroll_direction_forward = Some(true);
-                                Some(true)
-                            } else if offset_axis.0 + 0.01 < prev_offset.0 {
-                                state.last_scroll_direction_forward = Some(false);
-                                Some(false)
-                            } else {
-                                state.last_scroll_direction_forward
-                            };
-                            if let Some(prefetch) = crate::virtual_list::prefetch_virtual_range_step(
-                                rendered,
-                                visible,
-                                prefetch_margin,
-                                prefetch_step,
-                                prefer_forward,
-                            ) {
-                                window_shift_kind =
-                                    crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch;
-                                // For the non-retained VirtualList path, we will schedule a cache
-                                // root rerender on prefetch so the next frame can rebuild
-                                // `visible_items` against the prefetched window. Clear the
-                                // render-derived window to ensure the rerender consumes the
-                                // prepaint-derived window.
-                                if !retained_host && view_cache_active {
-                                    state.render_window_range = None;
+                            let forced_prefetch = if let Some(desired) = ideal_window_range {
+                                let rendered_visible_len = rendered
+                                    .end_index
+                                    .saturating_sub(rendered.start_index)
+                                    .saturating_add(1);
+                                let visible_len = visible
+                                    .end_index
+                                    .saturating_sub(visible.start_index)
+                                    .saturating_add(1);
+
+                                // If the render-derived window was computed under a smaller
+                                // viewport (e.g. during intrinsic probes), its visible span may
+                                // be shorter than the current visible span. While we can still
+                                // be within the rendered overscan envelope, we should stage a
+                                // one-shot prefetch to the ideal window so the next frame can
+                                // rebuild the correct visible-items set.
+                                if visible_len > rendered_visible_len {
+                                    window_shift_kind =
+                                        crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch;
+                                    // For the non-retained VirtualList path, we will schedule a cache
+                                    // root rerender on prefetch so the next frame can rebuild
+                                    // `visible_items` against the updated window. Clear the
+                                    // render-derived window to ensure the rerender consumes the
+                                    // prepaint-derived window.
+                                    if !retained_host && view_cache_active {
+                                        state.render_window_range = None;
+                                    }
+                                    Some(desired)
+                                } else {
+                                    None
                                 }
+                            } else {
+                                None
+                            };
+
+                            if let Some(prefetch) = forced_prefetch {
                                 Some(prefetch)
                             } else {
-                                ideal_window_range
+                                let prefetch_margin = (inputs.overscan / 6).max(1);
+                                // Shift by a slightly larger step than the “near-edge” margin so we
+                                // don’t prefetch on every frame during slow scroll, while still keeping
+                                // each prefetch rerender bounded.
+                                let prefetch_step = if retained_host {
+                                    inputs.overscan.saturating_mul(3) / 2
+                                } else {
+                                    // Non-retained VirtualList pays a full cache-root rerender per shift,
+                                    // so prefer fewer, larger shifts while we still have overscan coverage.
+                                    //
+                                    // This is a deliberate trade-off:
+                                    // - larger steps reduce how often we schedule a rerender during smooth scroll,
+                                    // - but each rerender may rebuild more rows.
+                                    //
+                                    // For v1 (non-retained), reducing rerender frequency generally wins because
+                                    // we cannot attach/detach rows on cache-hit frames without a retained host
+                                    // boundary (ADR 0192).
+                                    inputs.overscan.saturating_mul(8)
+                                }
+                                .max(prefetch_margin)
+                                .max(1);
+                                let prefer_forward = if offset_axis.0 > prev_offset.0 + 0.01 {
+                                    state.last_scroll_direction_forward = Some(true);
+                                    Some(true)
+                                } else if offset_axis.0 + 0.01 < prev_offset.0 {
+                                    state.last_scroll_direction_forward = Some(false);
+                                    Some(false)
+                                } else {
+                                    state.last_scroll_direction_forward
+                                };
+                                if let Some(prefetch) =
+                                    crate::virtual_list::prefetch_virtual_range_step(
+                                        rendered,
+                                        visible,
+                                        prefetch_margin,
+                                        prefetch_step,
+                                        prefer_forward,
+                                    )
+                                {
+                                    window_shift_kind =
+                                        crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch;
+                                    // For the non-retained VirtualList path, we will schedule a cache
+                                    // root rerender on prefetch so the next frame can rebuild
+                                    // `visible_items` against the prefetched window. Clear the
+                                    // render-derived window to ensure the rerender consumes the
+                                    // prepaint-derived window.
+                                    if !retained_host && view_cache_active {
+                                        state.render_window_range = None;
+                                    }
+                                    Some(prefetch)
+                                } else {
+                                    ideal_window_range
+                                }
                             }
                         }
                         _ => ideal_window_range,
@@ -873,6 +914,128 @@ mod tests {
             last.window_shift_invalidation_detail,
             Some(crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate),
             "expected the non-retained escape shift to align with the scroll-handle window-update invalidation detail"
+        );
+    }
+
+    #[test]
+    fn prepaint_detects_render_window_insufficient_for_overscan_policy() {
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        ui.set_debug_enabled(true);
+
+        let cache_root = ui.create_node(NoopWidget);
+        ui.nodes[cache_root].view_cache.enabled = true;
+        ui.set_root(cache_root);
+
+        let element = GlobalElementId(1);
+        let vlist_node = ui.create_node_for_element(element, NoopWidget);
+        ui.add_child(cache_root, vlist_node);
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(200.0)),
+        );
+        ui.nodes[vlist_node].bounds = bounds;
+
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+        crate::declarative::frame::with_window_frame_mut(&mut app, window, |frame| {
+            frame.instances.insert(
+                vlist_node,
+                crate::declarative::frame::ElementRecord {
+                    element,
+                    instance: crate::declarative::frame::ElementInstance::VirtualList(
+                        crate::element::VirtualListProps {
+                            layout: crate::element::LayoutStyle::default(),
+                            axis: fret_core::Axis::Vertical,
+                            len: 1000,
+                            items_revision: 1,
+                            estimate_row_height: Px(10.0),
+                            measure_mode: crate::element::VirtualListMeasureMode::Fixed,
+                            key_cache: crate::element::VirtualListKeyCacheMode::VisibleOnly,
+                            overscan: 10,
+                            keep_alive: 0,
+                            scroll_margin: Px(0.0),
+                            gap: Px(0.0),
+                            scroll_handle: scroll_handle.clone(),
+                            visible_items: Vec::new(),
+                        },
+                    ),
+                },
+            );
+        });
+
+        // Simulate a render-derived window computed under a smaller viewport:
+        // - rendered visible range: 0..9 (10 items)
+        // - overscan: 10 => rendered expanded window: 0..19
+        //
+        // Under the final viewport (200px @ 10px rows) the desired visible range is 0..19, so the
+        // visible range is still within the rendered expanded envelope. However, the desired
+        // overscan policy needs the expanded window to cover 0..29. Prepaint should treat this as a
+        // mismatch and schedule a one-shot rerender/reconcile.
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::VirtualListState::default,
+            |state| {
+                state.render_window_range = Some(crate::virtual_list::VirtualRange {
+                    start_index: 0,
+                    end_index: 9,
+                    overscan: 10,
+                    count: 1000,
+                });
+                state.items_revision = 1;
+                state.items_len = 1000;
+                state.viewport_h = Px(100.0);
+                state.offset_y = Px(0.0);
+            },
+        );
+
+        let record = InteractionRecord {
+            node: vlist_node,
+            bounds,
+            render_transform_inv: None,
+            children_render_transform_inv: None,
+            clips_hit_test: true,
+            clip_hit_test_corner_radii: None,
+            is_focusable: false,
+            focus_traversal_children: true,
+            can_scroll_descendant_into_view: true,
+        };
+
+        ui.prepaint_virtual_list_window_from_interaction_record(&mut app, &record);
+
+        assert!(
+            ui.nodes[cache_root].view_cache_needs_rerender,
+            "expected prepaint to dirty the nearest cache root when the rendered window is insufficient for the desired overscan policy"
+        );
+
+        let last = ui
+            .debug_virtual_list_windows()
+            .last()
+            .expect("expected a debug virtual list window record");
+        assert!(
+            !last.window_mismatch,
+            "expected the prepaint update to prefetch while still within the rendered window"
+        );
+        assert_eq!(
+            last.window_shift_kind,
+            crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch,
+            "expected the prepaint update to record a prefetch shift for the one-shot correction"
+        );
+        assert_eq!(
+            last.window_shift_reason,
+            Some(crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize),
+            "expected the correction to be attributed to the viewport change"
+        );
+        assert_eq!(
+            last.window_shift_invalidation_detail,
+            Some(crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate),
+            "expected viewport-driven window updates to have a distinct invalidation detail"
         );
     }
 
