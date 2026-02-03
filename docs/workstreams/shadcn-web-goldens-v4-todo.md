@@ -71,6 +71,7 @@ Tracking format:
 - [x] SWG-cal-020 Add nested overlay “stacking order + clamp + scroll” gates (Select inside DatePicker popover).
   - Evidence: `date-picker-with-presets.select-open-vp375x160.open` + `date-picker-with-presets.select-open-vp375x160-scrolled-80.open` + placement + listbox panel-size gate + paint-order gate + scroll parity gate.
 - 2026-02-03: added a DatePicker popover boundary gate: Calendar root background must match web inside PopoverContent scope (`date-picker-demo.open`, light/dark) to lock in `[[data-slot=popover-content]_&]:bg-transparent` behavior.
+- 2026-02-03: moved Calendar range selection background gates into a targeted calendar suite (paint-level start/middle/end backgrounds for `calendar-04` and `calendar-04.vp375x320`, light/dark).
 - 2026-02-01: fixed Radix popper “size()” available-height metrics to apply collision padding/boundary when computing `--radix-*-content-available-height` equivalents (unblocks strict max-height parity for `SelectPosition::Popper` under constrained viewports).
 - 2026-02-01: hardened the overlay-chrome panel-size matcher to prefer semantics-bounded chrome quads (then fallback by size) to avoid nested-overlay ambiguity (Popover + ListBox in the same scene).
 - 2026-01-31: added `date-picker-with-presets.preset-tomorrow-vp375x240` open golden + placement gate (Select interaction + deterministic date selection).
