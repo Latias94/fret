@@ -45,8 +45,8 @@ Notes:
   `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
   checks” rather than “is every page referenced somewhere”.
 
-- Golden files (tracked): `594`
-- Golden keys (tracked, normalized `.open` suffix): `550`
+- Golden files (tracked): `599`
+- Golden keys (tracked, normalized `.open` suffix): `555`
 - Gated keys (string-literal heuristic): `550` (`100%`)
 - Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `550` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)

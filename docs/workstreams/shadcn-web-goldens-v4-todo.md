@@ -48,6 +48,7 @@ Tracking format:
   - 2026-02-03: added `vp375x240` open goldens + placement/insets gates for modal overlays: `dialog-demo`, `sheet-demo`, `alert-dialog-demo`, `drawer-demo`, and `drawer-dialog`.
   - 2026-02-03: added `vp375x240` open goldens + menu height/item chrome gates for `dropdown-menu-checkboxes`, `dropdown-menu-radio-group`, and `dropdown-menu-dialog`.
   - 2026-02-03: added `vp375x240` open goldens + menu/listbox height gates for `item-dropdown`, `breadcrumb-dropdown`, `combobox-popover`, and `combobox-responsive`.
+  - 2026-02-03: added `vp375x240` open goldens + gates for `mode-toggle` and `sheet-side` (top/right/bottom/left), treating Sheet side widths/edge insets as a conformance outcome under constrained mobile height.
 
 ---
 

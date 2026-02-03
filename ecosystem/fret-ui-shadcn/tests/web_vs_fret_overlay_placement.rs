@@ -8268,6 +8268,58 @@ fn web_vs_fret_mode_toggle_dropdown_menu_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_mode_toggle_dropdown_menu_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "mode-toggle.vp375x240",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::{
+                Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
+                DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+                cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(16.0));
+                            layout.size.height = Length::Px(Px(16.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )
+            }
+
+            DropdownMenu::new(open.clone())
+                .align(DropdownMenuAlign::End)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Toggle theme")
+                            .variant(ButtonVariant::Outline)
+                            .size(ButtonSize::Icon)
+                            .children([icon_stub(cx)])
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Light")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Dark")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("System")),
+                        ]
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        Some("Toggle theme"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
 fn web_vs_fret_button_group_demo_menu_item_height_matches() {
     assert_button_group_demo_constrained_menu_item_height_matches("button-group-demo");
 }
@@ -8568,6 +8620,7 @@ fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str
 #[test]
 fn web_vs_fret_mode_toggle_menu_item_height_matches() {
     assert_mode_toggle_constrained_menu_item_height_matches("mode-toggle");
+    assert_mode_toggle_constrained_menu_item_height_matches("mode-toggle.vp375x240");
 }
 
 fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
@@ -8672,6 +8725,7 @@ fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
 #[test]
 fn web_vs_fret_mode_toggle_menu_content_insets_match() {
     assert_mode_toggle_constrained_menu_content_insets_match("mode-toggle");
+    assert_mode_toggle_constrained_menu_content_insets_match("mode-toggle.vp375x240");
 }
 
 fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
@@ -23084,6 +23138,28 @@ fn web_vs_fret_sheet_side_top_overlay_insets_match_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_sheet_side_top_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.top-vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).side(SheetSide::Top).into_element(
+                cx,
+                |cx| {
+                    Button::new("top")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sheet_side_right_overlay_insets_match() {
     use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
 
@@ -23113,6 +23189,30 @@ fn web_vs_fret_sheet_side_right_overlay_insets_match_tiny_viewport() {
 
     assert_viewport_anchored_overlay_placement_matches(
         "sheet-side.right-vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone())
+                .side(SheetSide::Right)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("right")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_side_right_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.right-vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
@@ -23180,6 +23280,30 @@ fn web_vs_fret_sheet_side_bottom_overlay_insets_match_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_sheet_side_bottom_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.bottom-vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone())
+                .side(SheetSide::Bottom)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("bottom")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+                )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sheet_side_left_overlay_insets_match() {
     use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
 
@@ -23207,6 +23331,28 @@ fn web_vs_fret_sheet_side_left_overlay_insets_match_tiny_viewport() {
 
     assert_viewport_anchored_overlay_placement_matches(
         "sheet-side.left-vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).side(SheetSide::Left).into_element(
+                cx,
+                |cx| {
+                    Button::new("left")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_side_left_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.left-vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
