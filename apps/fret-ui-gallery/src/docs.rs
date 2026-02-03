@@ -1397,3 +1397,493 @@ let field = shadcn::Field::new(vec![
 .into_element(cx);
 ```
 "#;
+
+// --- shadcn/ui v4 component coverage (additional pages) ---
+
+pub(crate) const DOC_ALERT: &str = r#"
+## Alert
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/alert.mdx`.
+"#;
+
+pub(crate) const USAGE_ALERT: &str = r#"
+```rust
+let alert = shadcn::Alert::new(vec![
+    shadcn::AlertTitle::new("Heads up!").into_element(cx),
+    shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
+])
+.into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_ALERT_DIALOG: &str = r#"
+## Alert Dialog
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`.
+"#;
+
+pub(crate) const USAGE_ALERT_DIALOG: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_ASPECT_RATIO: &str = r#"
+## Aspect Ratio
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/aspect-ratio.mdx`.
+"#;
+
+pub(crate) const USAGE_ASPECT_RATIO: &str = r#"
+```rust
+let ratio = shadcn::AspectRatio::new(16.0 / 9.0, vec![/* content */]).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_BREADCRUMB: &str = r#"
+## Breadcrumb
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/breadcrumb.mdx`.
+"#;
+
+pub(crate) const USAGE_BREADCRUMB: &str = r#"
+```rust
+// See the gallery preview for `Breadcrumb`, `BreadcrumbItem`, and separators.
+```
+"#;
+
+pub(crate) const DOC_BUTTON_GROUP: &str = r#"
+## Button Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/button-group.mdx`.
+"#;
+
+pub(crate) const USAGE_BUTTON_GROUP: &str = r#"
+```rust
+// ButtonGroup is intended for segmented controls and grouped actions.
+```
+"#;
+
+pub(crate) const DOC_CALENDAR: &str = r#"
+## Calendar
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/calendar.mdx`.
+"#;
+
+pub(crate) const USAGE_CALENDAR: &str = r#"
+```rust
+// See the gallery preview for a minimal Calendar configuration.
+```
+"#;
+
+pub(crate) const DOC_CAROUSEL: &str = r#"
+## Carousel
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/carousel.mdx`.
+"#;
+
+pub(crate) const USAGE_CAROUSEL: &str = r#"
+```rust
+// Gallery preview is a smoke stub; expand as needed.
+```
+"#;
+
+pub(crate) const DOC_CHART: &str = r#"
+## Chart
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/chart.mdx`.
+"#;
+
+pub(crate) const USAGE_CHART: &str = r#"
+```rust
+// Gallery preview is a smoke stub; see `fret-ui-shadcn` tests for web parity.
+```
+"#;
+
+pub(crate) const DOC_CHECKBOX: &str = r#"
+## Checkbox
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/checkbox.mdx`.
+"#;
+
+pub(crate) const USAGE_CHECKBOX: &str = r#"
+```rust
+let checked: Model<bool> = cx.app.models_mut().insert(false);
+let checkbox = shadcn::Checkbox::new(checked)
+    .a11y_label("Accept terms")
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_COLLAPSIBLE: &str = r#"
+## Collapsible
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/collapsible.mdx`.
+"#;
+
+pub(crate) const USAGE_COLLAPSIBLE: &str = r#"
+```rust
+// See the gallery preview for the recommended structure.
+```
+"#;
+
+pub(crate) const DOC_CONTEXT_MENU: &str = r#"
+## Context Menu
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/context-menu.mdx`.
+"#;
+
+pub(crate) const USAGE_CONTEXT_MENU: &str = r#"
+```rust
+// See the "Menus" page (Dropdown/Context) for the full demo.
+```
+"#;
+
+pub(crate) const DOC_DIALOG: &str = r#"
+## Dialog
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`.
+"#;
+
+pub(crate) const USAGE_DIALOG: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_DRAWER: &str = r#"
+## Drawer
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`.
+"#;
+
+pub(crate) const USAGE_DRAWER: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_DROPDOWN_MENU: &str = r#"
+## Dropdown Menu
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/dropdown-menu.mdx`.
+"#;
+
+pub(crate) const USAGE_DROPDOWN_MENU: &str = r#"
+```rust
+// See the "Menus" page (Dropdown/Context) for the full demo.
+```
+"#;
+
+pub(crate) const DOC_EMPTY: &str = r#"
+## Empty
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/empty.mdx`.
+"#;
+
+pub(crate) const USAGE_EMPTY: &str = r#"
+```rust
+let empty = shadcn::Empty::new([]).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_FORM: &str = r#"
+## Form
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/form.mdx`.
+"#;
+
+pub(crate) const USAGE_FORM: &str = r#"
+```rust
+// Fret favors builder-style ergonomic form composition; see `Field` + "Forms" pages.
+```
+"#;
+
+pub(crate) const DOC_HOVER_CARD: &str = r#"
+## Hover Card
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/hover-card.mdx`.
+"#;
+
+pub(crate) const USAGE_HOVER_CARD: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_INPUT: &str = r#"
+## Input
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/input.mdx`.
+"#;
+
+pub(crate) const USAGE_INPUT: &str = r#"
+```rust
+let value: Model<String> = cx.app.models_mut().insert(String::new());
+let input = shadcn::Input::new(value)
+    .a11y_label("Email")
+    .placeholder("name@example.com")
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_INPUT_GROUP: &str = r#"
+## Input Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/input-group.mdx`.
+"#;
+
+pub(crate) const USAGE_INPUT_GROUP: &str = r#"
+```rust
+// Gallery preview is a smoke stub; expand as needed.
+```
+"#;
+
+pub(crate) const DOC_INPUT_OTP: &str = r#"
+## Input OTP
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/input-otp.mdx`.
+"#;
+
+pub(crate) const USAGE_INPUT_OTP: &str = r#"
+```rust
+// Gallery preview is a smoke stub; expand as needed.
+```
+"#;
+
+pub(crate) const DOC_ITEM: &str = r#"
+## Item
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/item.mdx`.
+"#;
+
+pub(crate) const USAGE_ITEM: &str = r#"
+```rust
+// See the gallery preview for the basic Item surface.
+```
+"#;
+
+pub(crate) const DOC_KBD: &str = r#"
+## Kbd
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/kbd.mdx`.
+"#;
+
+pub(crate) const USAGE_KBD: &str = r#"
+```rust
+let kbd = shadcn::Kbd::new("Ctrl+K").into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_LABEL: &str = r#"
+## Label
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/label.mdx`.
+"#;
+
+pub(crate) const USAGE_LABEL: &str = r#"
+```rust
+let label = shadcn::Label::new("Email").into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MENUBAR: &str = r#"
+## Menubar
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/menubar.mdx`.
+"#;
+
+pub(crate) const USAGE_MENUBAR: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_NATIVE_SELECT: &str = r#"
+## Native Select
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/native-select.mdx`.
+"#;
+
+pub(crate) const USAGE_NATIVE_SELECT: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_NAVIGATION_MENU: &str = r#"
+## Navigation Menu
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx`.
+"#;
+
+pub(crate) const USAGE_NAVIGATION_MENU: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_PAGINATION: &str = r#"
+## Pagination
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/pagination.mdx`.
+"#;
+
+pub(crate) const USAGE_PAGINATION: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_POPOVER: &str = r#"
+## Popover
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/popover.mdx`.
+"#;
+
+pub(crate) const USAGE_POPOVER: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_RADIO_GROUP: &str = r#"
+## Radio Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/radio-group.mdx`.
+"#;
+
+pub(crate) const USAGE_RADIO_GROUP: &str = r#"
+```rust
+let group = shadcn::RadioGroup::uncontrolled(Some("comfortable"))
+    .a11y_label("Options")
+    .item(shadcn::RadioGroupItem::new("default", "Default"))
+    .item(shadcn::RadioGroupItem::new("comfortable", "Comfortable"))
+    .item(shadcn::RadioGroupItem::new("compact", "Compact"))
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SEPARATOR: &str = r#"
+## Separator
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/separator.mdx`.
+"#;
+
+pub(crate) const USAGE_SEPARATOR: &str = r#"
+```rust
+let sep = shadcn::Separator::new().into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SHEET: &str = r#"
+## Sheet
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`.
+"#;
+
+pub(crate) const USAGE_SHEET: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_SIDEBAR: &str = r#"
+## Sidebar
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/sidebar.mdx`.
+"#;
+
+pub(crate) const USAGE_SIDEBAR: &str = r#"
+```rust
+// Gallery preview is a smoke stub; the gallery shell itself is already sidebar-shaped.
+```
+"#;
+
+pub(crate) const DOC_SONNER: &str = r#"
+## Sonner
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/sonner.mdx`.
+"#;
+
+pub(crate) const USAGE_SONNER: &str = r#"
+```rust
+// See the "Toast" page (Sonner-backed) for the full demo.
+```
+"#;
+
+pub(crate) const DOC_SPINNER: &str = r#"
+## Spinner
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/spinner.mdx`.
+"#;
+
+pub(crate) const USAGE_SPINNER: &str = r#"
+```rust
+let spinner = shadcn::Spinner::new().into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SWITCH: &str = r#"
+## Switch
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/switch.mdx`.
+"#;
+
+pub(crate) const USAGE_SWITCH: &str = r#"
+```rust
+let checked: Model<bool> = cx.app.models_mut().insert(false);
+let switch = shadcn::Switch::new(checked)
+    .a11y_label("Enable feature")
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_TEXTAREA: &str = r#"
+## Textarea
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/textarea.mdx`.
+"#;
+
+pub(crate) const USAGE_TEXTAREA: &str = r#"
+```rust
+let value: Model<String> = cx.app.models_mut().insert(String::new());
+let textarea = shadcn::Textarea::new(value).a11y_label("Message").into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_TOGGLE: &str = r#"
+## Toggle
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/toggle.mdx`.
+"#;
+
+pub(crate) const USAGE_TOGGLE: &str = r#"
+```rust
+// See the gallery preview for a minimal Toggle configuration.
+```
+"#;
+
+pub(crate) const DOC_TOGGLE_GROUP: &str = r#"
+## Toggle Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/toggle-group.mdx`.
+"#;
+
+pub(crate) const USAGE_TOGGLE_GROUP: &str = r#"
+```rust
+// See the gallery preview for the recommended ToggleGroup structure.
+```
+"#;
+
+pub(crate) const DOC_TYPOGRAPHY: &str = r#"
+## Typography
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/typography.mdx`.
+"#;
+
+pub(crate) const USAGE_TYPOGRAPHY: &str = r#"
+```rust
+let h1 = shadcn::typography::h1(cx, "The Joke Tax Chronicles");
+```
+"#;

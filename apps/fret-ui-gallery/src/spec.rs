@@ -136,6 +136,45 @@ pub(crate) const PAGE_PROGRESS: &str = "progress";
 pub(crate) const PAGE_MENUS: &str = "menus";
 pub(crate) const PAGE_COMMAND: &str = "command";
 pub(crate) const PAGE_TOAST: &str = "toast";
+pub(crate) const PAGE_ALERT: &str = "alert";
+pub(crate) const PAGE_ALERT_DIALOG: &str = "alert_dialog";
+pub(crate) const PAGE_ASPECT_RATIO: &str = "aspect_ratio";
+pub(crate) const PAGE_BREADCRUMB: &str = "breadcrumb";
+pub(crate) const PAGE_BUTTON_GROUP: &str = "button_group";
+pub(crate) const PAGE_CALENDAR: &str = "calendar";
+pub(crate) const PAGE_CAROUSEL: &str = "carousel";
+pub(crate) const PAGE_CHART: &str = "chart";
+pub(crate) const PAGE_CHECKBOX: &str = "checkbox";
+pub(crate) const PAGE_COLLAPSIBLE: &str = "collapsible";
+pub(crate) const PAGE_CONTEXT_MENU: &str = "context_menu";
+pub(crate) const PAGE_DIALOG: &str = "dialog";
+pub(crate) const PAGE_DRAWER: &str = "drawer";
+pub(crate) const PAGE_DROPDOWN_MENU: &str = "dropdown_menu";
+pub(crate) const PAGE_EMPTY: &str = "empty";
+pub(crate) const PAGE_FORM: &str = "form";
+pub(crate) const PAGE_HOVER_CARD: &str = "hover_card";
+pub(crate) const PAGE_INPUT: &str = "input";
+pub(crate) const PAGE_INPUT_GROUP: &str = "input_group";
+pub(crate) const PAGE_INPUT_OTP: &str = "input_otp";
+pub(crate) const PAGE_ITEM: &str = "item";
+pub(crate) const PAGE_KBD: &str = "kbd";
+pub(crate) const PAGE_LABEL: &str = "label";
+pub(crate) const PAGE_MENUBAR: &str = "menubar";
+pub(crate) const PAGE_NATIVE_SELECT: &str = "native_select";
+pub(crate) const PAGE_NAVIGATION_MENU: &str = "navigation_menu";
+pub(crate) const PAGE_PAGINATION: &str = "pagination";
+pub(crate) const PAGE_POPOVER: &str = "popover";
+pub(crate) const PAGE_RADIO_GROUP: &str = "radio_group";
+pub(crate) const PAGE_SEPARATOR: &str = "separator";
+pub(crate) const PAGE_SHEET: &str = "sheet";
+pub(crate) const PAGE_SIDEBAR: &str = "sidebar";
+pub(crate) const PAGE_SONNER: &str = "sonner";
+pub(crate) const PAGE_SPINNER: &str = "spinner";
+pub(crate) const PAGE_SWITCH: &str = "switch";
+pub(crate) const PAGE_TEXTAREA: &str = "textarea";
+pub(crate) const PAGE_TOGGLE: &str = "toggle";
+pub(crate) const PAGE_TOGGLE_GROUP: &str = "toggle_group";
+pub(crate) const PAGE_TYPOGRAPHY: &str = "typography";
 pub(crate) const PAGE_MATERIAL3_GALLERY: &str = "material3_gallery";
 pub(crate) const PAGE_MATERIAL3_BUTTON: &str = "material3_button";
 pub(crate) const PAGE_MATERIAL3_ICON_BUTTON: &str = "material3_icon_button";
@@ -203,6 +242,45 @@ pub(crate) const CMD_NAV_PROGRESS: &str = "ui_gallery.nav.select.progress";
 pub(crate) const CMD_NAV_MENUS: &str = "ui_gallery.nav.select.menus";
 pub(crate) const CMD_NAV_COMMAND: &str = "ui_gallery.nav.select.command";
 pub(crate) const CMD_NAV_TOAST: &str = "ui_gallery.nav.select.toast";
+pub(crate) const CMD_NAV_ALERT: &str = "ui_gallery.nav.select.alert";
+pub(crate) const CMD_NAV_ALERT_DIALOG: &str = "ui_gallery.nav.select.alert_dialog";
+pub(crate) const CMD_NAV_ASPECT_RATIO: &str = "ui_gallery.nav.select.aspect_ratio";
+pub(crate) const CMD_NAV_BREADCRUMB: &str = "ui_gallery.nav.select.breadcrumb";
+pub(crate) const CMD_NAV_BUTTON_GROUP: &str = "ui_gallery.nav.select.button_group";
+pub(crate) const CMD_NAV_CALENDAR: &str = "ui_gallery.nav.select.calendar";
+pub(crate) const CMD_NAV_CAROUSEL: &str = "ui_gallery.nav.select.carousel";
+pub(crate) const CMD_NAV_CHART: &str = "ui_gallery.nav.select.chart";
+pub(crate) const CMD_NAV_CHECKBOX: &str = "ui_gallery.nav.select.checkbox";
+pub(crate) const CMD_NAV_COLLAPSIBLE: &str = "ui_gallery.nav.select.collapsible";
+pub(crate) const CMD_NAV_CONTEXT_MENU: &str = "ui_gallery.nav.select.context_menu";
+pub(crate) const CMD_NAV_DIALOG: &str = "ui_gallery.nav.select.dialog";
+pub(crate) const CMD_NAV_DRAWER: &str = "ui_gallery.nav.select.drawer";
+pub(crate) const CMD_NAV_DROPDOWN_MENU: &str = "ui_gallery.nav.select.dropdown_menu";
+pub(crate) const CMD_NAV_EMPTY: &str = "ui_gallery.nav.select.empty";
+pub(crate) const CMD_NAV_FORM: &str = "ui_gallery.nav.select.form";
+pub(crate) const CMD_NAV_HOVER_CARD: &str = "ui_gallery.nav.select.hover_card";
+pub(crate) const CMD_NAV_INPUT: &str = "ui_gallery.nav.select.input";
+pub(crate) const CMD_NAV_INPUT_GROUP: &str = "ui_gallery.nav.select.input_group";
+pub(crate) const CMD_NAV_INPUT_OTP: &str = "ui_gallery.nav.select.input_otp";
+pub(crate) const CMD_NAV_ITEM: &str = "ui_gallery.nav.select.item";
+pub(crate) const CMD_NAV_KBD: &str = "ui_gallery.nav.select.kbd";
+pub(crate) const CMD_NAV_LABEL: &str = "ui_gallery.nav.select.label";
+pub(crate) const CMD_NAV_MENUBAR: &str = "ui_gallery.nav.select.menubar";
+pub(crate) const CMD_NAV_NATIVE_SELECT: &str = "ui_gallery.nav.select.native_select";
+pub(crate) const CMD_NAV_NAVIGATION_MENU: &str = "ui_gallery.nav.select.navigation_menu";
+pub(crate) const CMD_NAV_PAGINATION: &str = "ui_gallery.nav.select.pagination";
+pub(crate) const CMD_NAV_POPOVER: &str = "ui_gallery.nav.select.popover";
+pub(crate) const CMD_NAV_RADIO_GROUP: &str = "ui_gallery.nav.select.radio_group";
+pub(crate) const CMD_NAV_SEPARATOR: &str = "ui_gallery.nav.select.separator";
+pub(crate) const CMD_NAV_SHEET: &str = "ui_gallery.nav.select.sheet";
+pub(crate) const CMD_NAV_SIDEBAR: &str = "ui_gallery.nav.select.sidebar";
+pub(crate) const CMD_NAV_SONNER: &str = "ui_gallery.nav.select.sonner";
+pub(crate) const CMD_NAV_SPINNER: &str = "ui_gallery.nav.select.spinner";
+pub(crate) const CMD_NAV_SWITCH: &str = "ui_gallery.nav.select.switch";
+pub(crate) const CMD_NAV_TEXTAREA: &str = "ui_gallery.nav.select.textarea";
+pub(crate) const CMD_NAV_TOGGLE: &str = "ui_gallery.nav.select.toggle";
+pub(crate) const CMD_NAV_TOGGLE_GROUP: &str = "ui_gallery.nav.select.toggle_group";
+pub(crate) const CMD_NAV_TYPOGRAPHY: &str = "ui_gallery.nav.select.typography";
 pub(crate) const CMD_NAV_MATERIAL3_GALLERY: &str = "ui_gallery.nav.select.material3_gallery";
 pub(crate) const CMD_NAV_MATERIAL3_BUTTON: &str = "ui_gallery.nav.select.material3_button";
 pub(crate) const CMD_NAV_MATERIAL3_ICON_BUTTON: &str =
@@ -805,6 +883,396 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["dialog", "popover"],
                 docs::DOC_OVERLAY,
                 docs::USAGE_OVERLAY,
+            ),
+            PageSpec::new(
+                PAGE_ALERT,
+                "Alert",
+                "Alert",
+                "fret-ui-shadcn",
+                CMD_NAV_ALERT,
+                &["alert", "feedback"],
+                docs::DOC_ALERT,
+                docs::USAGE_ALERT,
+            ),
+            PageSpec::new(
+                PAGE_ALERT_DIALOG,
+                "Alert Dialog",
+                "Alert Dialog",
+                "fret-ui-shadcn",
+                CMD_NAV_ALERT_DIALOG,
+                &["alert_dialog", "dialog", "overlay"],
+                docs::DOC_ALERT_DIALOG,
+                docs::USAGE_ALERT_DIALOG,
+            ),
+            PageSpec::new(
+                PAGE_ASPECT_RATIO,
+                "Aspect Ratio",
+                "Aspect Ratio",
+                "fret-ui-shadcn",
+                CMD_NAV_ASPECT_RATIO,
+                &["aspect_ratio", "layout"],
+                docs::DOC_ASPECT_RATIO,
+                docs::USAGE_ASPECT_RATIO,
+            ),
+            PageSpec::new(
+                PAGE_BREADCRUMB,
+                "Breadcrumb",
+                "Breadcrumb",
+                "fret-ui-shadcn",
+                CMD_NAV_BREADCRUMB,
+                &["breadcrumb", "navigation"],
+                docs::DOC_BREADCRUMB,
+                docs::USAGE_BREADCRUMB,
+            ),
+            PageSpec::new(
+                PAGE_BUTTON_GROUP,
+                "Button Group",
+                "Button Group",
+                "fret-ui-shadcn",
+                CMD_NAV_BUTTON_GROUP,
+                &["button", "group"],
+                docs::DOC_BUTTON_GROUP,
+                docs::USAGE_BUTTON_GROUP,
+            ),
+            PageSpec::new(
+                PAGE_CALENDAR,
+                "Calendar",
+                "Calendar",
+                "fret-ui-shadcn",
+                CMD_NAV_CALENDAR,
+                &["calendar", "date"],
+                docs::DOC_CALENDAR,
+                docs::USAGE_CALENDAR,
+            ),
+            PageSpec::new(
+                PAGE_CAROUSEL,
+                "Carousel",
+                "Carousel",
+                "fret-ui-shadcn",
+                CMD_NAV_CAROUSEL,
+                &["carousel", "scroll"],
+                docs::DOC_CAROUSEL,
+                docs::USAGE_CAROUSEL,
+            ),
+            PageSpec::new(
+                PAGE_CHART,
+                "Chart",
+                "Chart",
+                "fret-ui-shadcn",
+                CMD_NAV_CHART,
+                &["chart", "data_viz"],
+                docs::DOC_CHART,
+                docs::USAGE_CHART,
+            ),
+            PageSpec::new(
+                PAGE_CHECKBOX,
+                "Checkbox",
+                "Checkbox",
+                "fret-ui-shadcn",
+                CMD_NAV_CHECKBOX,
+                &["checkbox", "input"],
+                docs::DOC_CHECKBOX,
+                docs::USAGE_CHECKBOX,
+            ),
+            PageSpec::new(
+                PAGE_COLLAPSIBLE,
+                "Collapsible",
+                "Collapsible",
+                "fret-ui-shadcn",
+                CMD_NAV_COLLAPSIBLE,
+                &["collapsible", "disclosure"],
+                docs::DOC_COLLAPSIBLE,
+                docs::USAGE_COLLAPSIBLE,
+            ),
+            PageSpec::new(
+                PAGE_CONTEXT_MENU,
+                "Context Menu",
+                "Context Menu",
+                "fret-ui-shadcn",
+                CMD_NAV_CONTEXT_MENU,
+                &["context_menu", "menu"],
+                docs::DOC_CONTEXT_MENU,
+                docs::USAGE_CONTEXT_MENU,
+            ),
+            PageSpec::new(
+                PAGE_DIALOG,
+                "Dialog",
+                "Dialog",
+                "fret-ui-shadcn",
+                CMD_NAV_DIALOG,
+                &["dialog", "overlay"],
+                docs::DOC_DIALOG,
+                docs::USAGE_DIALOG,
+            ),
+            PageSpec::new(
+                PAGE_DRAWER,
+                "Drawer",
+                "Drawer",
+                "fret-ui-shadcn",
+                CMD_NAV_DRAWER,
+                &["drawer", "overlay"],
+                docs::DOC_DRAWER,
+                docs::USAGE_DRAWER,
+            ),
+            PageSpec::new(
+                PAGE_DROPDOWN_MENU,
+                "Dropdown Menu",
+                "Dropdown Menu",
+                "fret-ui-shadcn",
+                CMD_NAV_DROPDOWN_MENU,
+                &["dropdown_menu", "menu"],
+                docs::DOC_DROPDOWN_MENU,
+                docs::USAGE_DROPDOWN_MENU,
+            ),
+            PageSpec::new(
+                PAGE_EMPTY,
+                "Empty",
+                "Empty",
+                "fret-ui-shadcn",
+                CMD_NAV_EMPTY,
+                &["empty", "state"],
+                docs::DOC_EMPTY,
+                docs::USAGE_EMPTY,
+            ),
+            PageSpec::new(
+                PAGE_FORM,
+                "Form",
+                "Form",
+                "fret-ui-shadcn",
+                CMD_NAV_FORM,
+                &["form", "field"],
+                docs::DOC_FORM,
+                docs::USAGE_FORM,
+            ),
+            PageSpec::new(
+                PAGE_HOVER_CARD,
+                "Hover Card",
+                "Hover Card",
+                "fret-ui-shadcn",
+                CMD_NAV_HOVER_CARD,
+                &["hover_card", "overlay"],
+                docs::DOC_HOVER_CARD,
+                docs::USAGE_HOVER_CARD,
+            ),
+            PageSpec::new(
+                PAGE_INPUT,
+                "Input",
+                "Input",
+                "fret-ui-shadcn",
+                CMD_NAV_INPUT,
+                &["input", "text"],
+                docs::DOC_INPUT,
+                docs::USAGE_INPUT,
+            ),
+            PageSpec::new(
+                PAGE_INPUT_GROUP,
+                "Input Group",
+                "Input Group",
+                "fret-ui-shadcn",
+                CMD_NAV_INPUT_GROUP,
+                &["input", "group"],
+                docs::DOC_INPUT_GROUP,
+                docs::USAGE_INPUT_GROUP,
+            ),
+            PageSpec::new(
+                PAGE_INPUT_OTP,
+                "Input OTP",
+                "Input OTP",
+                "fret-ui-shadcn",
+                CMD_NAV_INPUT_OTP,
+                &["input", "otp"],
+                docs::DOC_INPUT_OTP,
+                docs::USAGE_INPUT_OTP,
+            ),
+            PageSpec::new(
+                PAGE_ITEM,
+                "Item",
+                "Item",
+                "fret-ui-shadcn",
+                CMD_NAV_ITEM,
+                &["item", "layout"],
+                docs::DOC_ITEM,
+                docs::USAGE_ITEM,
+            ),
+            PageSpec::new(
+                PAGE_KBD,
+                "Kbd",
+                "Kbd",
+                "fret-ui-shadcn",
+                CMD_NAV_KBD,
+                &["kbd", "text"],
+                docs::DOC_KBD,
+                docs::USAGE_KBD,
+            ),
+            PageSpec::new(
+                PAGE_LABEL,
+                "Label",
+                "Label",
+                "fret-ui-shadcn",
+                CMD_NAV_LABEL,
+                &["label", "form"],
+                docs::DOC_LABEL,
+                docs::USAGE_LABEL,
+            ),
+            PageSpec::new(
+                PAGE_MENUBAR,
+                "Menubar",
+                "Menubar",
+                "fret-ui-shadcn",
+                CMD_NAV_MENUBAR,
+                &["menubar", "menu"],
+                docs::DOC_MENUBAR,
+                docs::USAGE_MENUBAR,
+            ),
+            PageSpec::new(
+                PAGE_NATIVE_SELECT,
+                "Native Select",
+                "Native Select",
+                "fret-ui-shadcn",
+                CMD_NAV_NATIVE_SELECT,
+                &["native_select", "select"],
+                docs::DOC_NATIVE_SELECT,
+                docs::USAGE_NATIVE_SELECT,
+            ),
+            PageSpec::new(
+                PAGE_NAVIGATION_MENU,
+                "Navigation Menu",
+                "Navigation Menu",
+                "fret-ui-shadcn",
+                CMD_NAV_NAVIGATION_MENU,
+                &["navigation_menu", "menu"],
+                docs::DOC_NAVIGATION_MENU,
+                docs::USAGE_NAVIGATION_MENU,
+            ),
+            PageSpec::new(
+                PAGE_PAGINATION,
+                "Pagination",
+                "Pagination",
+                "fret-ui-shadcn",
+                CMD_NAV_PAGINATION,
+                &["pagination"],
+                docs::DOC_PAGINATION,
+                docs::USAGE_PAGINATION,
+            ),
+            PageSpec::new(
+                PAGE_POPOVER,
+                "Popover",
+                "Popover",
+                "fret-ui-shadcn",
+                CMD_NAV_POPOVER,
+                &["popover", "overlay"],
+                docs::DOC_POPOVER,
+                docs::USAGE_POPOVER,
+            ),
+            PageSpec::new(
+                PAGE_RADIO_GROUP,
+                "Radio Group",
+                "Radio Group",
+                "fret-ui-shadcn",
+                CMD_NAV_RADIO_GROUP,
+                &["radio", "group"],
+                docs::DOC_RADIO_GROUP,
+                docs::USAGE_RADIO_GROUP,
+            ),
+            PageSpec::new(
+                PAGE_SEPARATOR,
+                "Separator",
+                "Separator",
+                "fret-ui-shadcn",
+                CMD_NAV_SEPARATOR,
+                &["separator"],
+                docs::DOC_SEPARATOR,
+                docs::USAGE_SEPARATOR,
+            ),
+            PageSpec::new(
+                PAGE_SHEET,
+                "Sheet",
+                "Sheet",
+                "fret-ui-shadcn",
+                CMD_NAV_SHEET,
+                &["sheet", "overlay"],
+                docs::DOC_SHEET,
+                docs::USAGE_SHEET,
+            ),
+            PageSpec::new(
+                PAGE_SIDEBAR,
+                "Sidebar",
+                "Sidebar",
+                "fret-ui-shadcn",
+                CMD_NAV_SIDEBAR,
+                &["sidebar", "navigation"],
+                docs::DOC_SIDEBAR,
+                docs::USAGE_SIDEBAR,
+            ),
+            PageSpec::new(
+                PAGE_SONNER,
+                "Sonner",
+                "Sonner",
+                "fret-ui-shadcn",
+                CMD_NAV_SONNER,
+                &["sonner", "toast"],
+                docs::DOC_SONNER,
+                docs::USAGE_SONNER,
+            ),
+            PageSpec::new(
+                PAGE_SPINNER,
+                "Spinner",
+                "Spinner",
+                "fret-ui-shadcn",
+                CMD_NAV_SPINNER,
+                &["spinner", "loading"],
+                docs::DOC_SPINNER,
+                docs::USAGE_SPINNER,
+            ),
+            PageSpec::new(
+                PAGE_SWITCH,
+                "Switch",
+                "Switch",
+                "fret-ui-shadcn",
+                CMD_NAV_SWITCH,
+                &["switch", "input"],
+                docs::DOC_SWITCH,
+                docs::USAGE_SWITCH,
+            ),
+            PageSpec::new(
+                PAGE_TEXTAREA,
+                "Textarea",
+                "Textarea",
+                "fret-ui-shadcn",
+                CMD_NAV_TEXTAREA,
+                &["textarea", "input"],
+                docs::DOC_TEXTAREA,
+                docs::USAGE_TEXTAREA,
+            ),
+            PageSpec::new(
+                PAGE_TOGGLE,
+                "Toggle",
+                "Toggle",
+                "fret-ui-shadcn",
+                CMD_NAV_TOGGLE,
+                &["toggle"],
+                docs::DOC_TOGGLE,
+                docs::USAGE_TOGGLE,
+            ),
+            PageSpec::new(
+                PAGE_TOGGLE_GROUP,
+                "Toggle Group",
+                "Toggle Group",
+                "fret-ui-shadcn",
+                CMD_NAV_TOGGLE_GROUP,
+                &["toggle_group"],
+                docs::DOC_TOGGLE_GROUP,
+                docs::USAGE_TOGGLE_GROUP,
+            ),
+            PageSpec::new(
+                PAGE_TYPOGRAPHY,
+                "Typography",
+                "Typography",
+                "fret-ui-shadcn",
+                CMD_NAV_TYPOGRAPHY,
+                &["typography", "text"],
+                docs::DOC_TYPOGRAPHY,
+                docs::USAGE_TYPOGRAPHY,
             ),
         ],
     },
