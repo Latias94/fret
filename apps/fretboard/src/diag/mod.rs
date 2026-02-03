@@ -2376,6 +2376,10 @@ See: `docs/tracy.md`.\n";
                         "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
                         "1",
                     );
+                    // Default to the non-retained VirtualList path so this harness gates the
+                    // highest-risk, most common implementation track (ADR 0190 Track B). The
+                    // retained-host track (ADR 0192) has dedicated suites/scripts.
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
                     (
                         vec![resolve_path(
                             &workspace_root,
