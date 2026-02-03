@@ -1484,7 +1484,25 @@ Reference: `repo-ref/ui/apps/v4/content/docs/components/carousel.mdx`.
 
 pub(crate) const USAGE_CAROUSEL: &str = r#"
 ```rust
-// Gallery preview is a smoke stub; expand as needed.
+let carousel = shadcn::Carousel::new([
+    cx.text("Slide 1"),
+    cx.text("Slide 2"),
+    cx.text("Slide 3"),
+])
+.item_basis_main_px(Px(260.0))
+.refine_layout(LayoutRefinement::default().w_px(Px(360.0)))
+.into_element(cx);
+
+// Vertical carousel.
+let vertical = shadcn::Carousel::new([
+    cx.text("A"),
+    cx.text("B"),
+    cx.text("C"),
+])
+.orientation(shadcn::CarouselOrientation::Vertical)
+.item_basis_main_px(Px(120.0))
+.refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+.into_element(cx);
 ```
 "#;
 

@@ -4857,7 +4857,7 @@ fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             shadcn::CardHeader::new(vec![shadcn::CardTitle::new(label).into_element(cx)])
                 .into_element(cx),
             shadcn::CardContent::new(vec![
-                cx.text("Carousel currently demonstrates layout only."),
+                cx.text("Drag to swipe, or use the previous/next buttons."),
             ])
             .into_element(cx),
         ])
