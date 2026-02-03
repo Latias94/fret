@@ -45,6 +45,15 @@ Each TODO is labeled:
 - **MVP5-virt-001**: move VirtualList window derivation toward prepaint so window shifts do not necessarily imply cache-root rerender.
 - **MVP5-perf-002**: turn “notify hotspots no longer dominated by Pressable” into a repeatable perf gate (top bundles + callsites).
 
+## Near-term Plan (2026-02; make progress measurable)
+
+- **P1 — MVP5-virt-001 contract + explainability hardening**
+  - Deliverable: tighten ADR 0190/0193 wording for non-retained v2 (“what can change in prepaint” vs “must rerender”), and keep the `ui-gallery-vlist-window-boundary` suite green with `--check-vlist-window-shifts-explainable`.
+- **P2 — MVP5-perf-002 notify hotspots**
+  - Deliverable: pick one stable harness (VirtualList boundary or overlay torture), record `notify_call` top hotspots per-frame, and add one budget gate that fails fast with evidence JSON.
+- **P3 — MVP5-eco-003 code/text window pilot**
+  - Deliverable: migrate one concrete surface (code-view lines or markdown) onto the prepaint-windowed pattern and add a diag script + stale-paint gate.
+
 ## Baseline (Verified Existing Building Blocks)
 
 Keep this list short and evidence-backed:
