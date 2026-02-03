@@ -92,6 +92,9 @@ different structural capabilities.
 - `prepaint` MAY compute and cache a *window plan* (desired visible/required/prefetch ranges) and MAY request a redraw.
 - `prepaint` MUST NOT attach/detach/reorder declarative children. Therefore, any window change that would alter the
   mounted child subtree MUST schedule a dirty-view rerender for the next frame.
+- If the surface is under view-cache reuse and there is no reliable render-derived window for the current viewport (e.g.
+  because a cache-hit frame skipped declarative render during initial viewport bootstrap), `prepaint` MUST conservatively
+  treat the window as mismatched and schedule a one-shot rerender/reconcile so the mounted child subtree is correct.
 - Scheduling responsibility (to keep behavior explainable and avoid duplicated side effects):
   - For view-cache enabled surfaces, window-boundary detection and rerender scheduling SHOULD be prepaint-driven,
     based on the post-layout bounds + current scroll offset, so a single bundle can attribute “why did we rerender?”
