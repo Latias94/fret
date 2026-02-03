@@ -23,6 +23,7 @@ use std::mem::MaybeUninit;
 use std::slice;
 use std::sync::Arc;
 
+mod bounds_tree;
 mod commands;
 mod dispatch;
 mod hit_test;
@@ -1120,6 +1121,7 @@ pub struct UiTree<H: UiHost> {
     last_pointer_move_hit: HashMap<PointerId, Option<NodeId>>,
     touch_pointer_down_outside_candidates: HashMap<PointerId, TouchPointerDownOutsideCandidate>,
     hit_test_path_cache: Option<HitTestPathCache>,
+    hit_test_bounds_trees: bounds_tree::HitTestBoundsTrees,
     last_internal_drag_target: Option<NodeId>,
     window: Option<AppWindowId>,
     ime_allowed: bool,
@@ -1492,6 +1494,7 @@ impl<H: UiHost> Default for UiTree<H> {
             last_pointer_move_hit: HashMap::new(),
             touch_pointer_down_outside_candidates: HashMap::new(),
             hit_test_path_cache: None,
+            hit_test_bounds_trees: bounds_tree::HitTestBoundsTrees::default(),
             last_internal_drag_target: None,
             window: None,
             ime_allowed: false,

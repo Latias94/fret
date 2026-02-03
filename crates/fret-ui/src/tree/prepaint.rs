@@ -316,6 +316,7 @@ impl<H: UiHost> UiTree<H> {
     pub(super) fn prepaint_after_layout(&mut self, app: &mut H, scale_factor: f32) {
         if self.inspection_active {
             self.interaction_cache.invalidate_recording();
+            self.hit_test_bounds_trees.clear();
             return;
         }
 
@@ -331,14 +332,24 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.interaction_cache.begin_frame();
+        self.hit_test_bounds_trees.begin_frame(app.frame_id());
 
         let theme_revision = Theme::global(&*app).revision();
-        let roots: Vec<NodeId> = self
-            .visible_layers_in_paint_order()
-            .map(|layer| self.layers[layer].root)
-            .collect();
-        for root in roots {
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        for layer_id in layers {
+            let root = self.layers[layer_id].root;
+            let hit_testable = self.layers[layer_id].hit_testable;
+
+            let start = self.interaction_cache.records.len();
             self.prepaint_interaction_node(app, root, scale_factor, theme_revision);
+            let end = self.interaction_cache.records.len();
+
+            if hit_testable {
+                let records = &self.interaction_cache.records[start..end];
+                let nodes = &self.nodes;
+                self.hit_test_bounds_trees
+                    .rebuild_for_layer_from_records(root, records, nodes);
+            }
         }
 
         self.interaction_cache.finish_frame();

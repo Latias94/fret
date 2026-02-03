@@ -15,7 +15,7 @@ impl<H: UiHost> UiTree<H> {
             return None;
         }
 
-        if let Some(cache) = self.hit_test_path_cache.as_ref()
+        if let Some(cache) = self.hit_test_path_cache.take()
             && !cache.path.is_empty()
         {
             for &root in layers {
@@ -24,15 +24,16 @@ impl<H: UiHost> UiTree<H> {
                         && let Some(hit) =
                             self.try_hit_test_along_cached_path(&cache.path, position)
                     {
+                        self.hit_test_path_cache = Some(cache);
                         return Some(hit);
                     }
 
-                    let hit = self.hit_test(root, position);
+                    let hit = self.hit_test_layer_bounds_tree_or_fallback(root, position);
                     self.update_hit_test_path_cache(root, hit);
                     return hit;
                 }
 
-                if let Some(hit) = self.hit_test(root, position) {
+                if let Some(hit) = self.hit_test_layer_bounds_tree_or_fallback(root, position) {
                     self.update_hit_test_path_cache(root, Some(hit));
                     return Some(hit);
                 }
@@ -43,7 +44,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         for &root in layers {
-            if let Some(hit) = self.hit_test(root, position) {
+            if let Some(hit) = self.hit_test_layer_bounds_tree_or_fallback(root, position) {
                 self.update_hit_test_path_cache(root, Some(hit));
                 return Some(hit);
             }
@@ -169,6 +170,71 @@ impl<H: UiHost> UiTree<H> {
         }
 
         None
+    }
+
+    fn hit_test_layer_bounds_tree_or_fallback(
+        &mut self,
+        root: NodeId,
+        position: Point,
+    ) -> Option<NodeId> {
+        match self.hit_test_bounds_trees.query(root, position) {
+            super::bounds_tree::HitTestBoundsTreeQuery::Disabled => self.hit_test(root, position),
+            super::bounds_tree::HitTestBoundsTreeQuery::Miss => None,
+            super::bounds_tree::HitTestBoundsTreeQuery::Hit(candidate) => {
+                if self.hit_test_node_self_only(candidate, position) {
+                    Some(candidate)
+                } else {
+                    self.hit_test(root, position)
+                }
+            }
+        }
+    }
+
+    fn hit_test_node_self_only(&self, node: NodeId, position: Point) -> bool {
+        let Some(n) = self.nodes.get(node) else {
+            return false;
+        };
+        let widget = n.widget.as_ref();
+
+        let prepaint = (!self.inspection_active && !n.invalidation.hit_test)
+            .then_some(n.prepaint_hit_test)
+            .flatten();
+        let render_transform_inv = prepaint.as_ref().and_then(|p| p.render_transform_inv);
+        let clips_hit_test = prepaint
+            .as_ref()
+            .map(|p| p.clips_hit_test)
+            .unwrap_or_else(|| widget.map(|w| w.clips_hit_test(n.bounds)).unwrap_or(true));
+        let corner_radii = prepaint
+            .as_ref()
+            .and_then(|p| p.clip_hit_test_corner_radii)
+            .or_else(|| widget.and_then(|w| w.clip_hit_test_corner_radii(n.bounds)));
+
+        let position_local = if let Some(inv) = render_transform_inv {
+            inv.apply_point(position)
+        } else if let Some(w) = widget
+            && let Some(t) = w.render_transform(n.bounds)
+            && let Some(inv) = t.inverse()
+        {
+            inv.apply_point(position)
+        } else {
+            position
+        };
+
+        if clips_hit_test {
+            if !n.bounds.contains(position_local) {
+                return false;
+            }
+            if let Some(radii) = corner_radii
+                && !Self::point_in_rounded_rect(n.bounds, radii, position_local)
+            {
+                return false;
+            }
+        }
+
+        n.bounds.contains(position_local)
+            && widget
+                .map(|w| w.hit_test(n.bounds, position_local))
+                .unwrap_or(true)
     }
 
     fn update_hit_test_path_cache(&mut self, layer_root: NodeId, hit: Option<NodeId>) {
