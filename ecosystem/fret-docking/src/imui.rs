@@ -11,6 +11,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use fret_authoring::UiWriter;
 use fret_core::{AppWindowId, SemanticsRole};
 use fret_ui::element::LayoutStyle;
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
@@ -49,11 +50,11 @@ impl Default for DockSpaceImUiOptions {
 /// - update `ViewportPanel` targets and sizes (if you embed engine viewports).
 #[track_caller]
 pub fn dock_space_with<H: UiHost + 'static>(
-    ui: &mut fret_imui::ImUi<'_, '_, H>,
+    ui: &mut impl UiWriter<H>,
     options: DockSpaceImUiOptions,
     configure: impl FnMut(&mut H, AppWindowId) + 'static,
 ) {
-    let window = ui.cx_mut().window;
+    let window = ui.with_cx_mut(|cx| cx.window);
 
     let configure: Rc<RefCell<Box<dyn FnMut(&mut H, AppWindowId)>>> =
         Rc::new(RefCell::new(Box::new(configure)));
@@ -67,14 +68,14 @@ pub fn dock_space_with<H: UiHost + 'static>(
         }),
     };
 
-    let element = ui.cx_mut().retained_subtree(props);
+    let element = ui.with_cx_mut(|cx| cx.retained_subtree(props));
     ui.add(element);
 }
 
 /// Convenience wrapper that uses default options (fill layout, no test id).
 #[track_caller]
 pub fn dock_space<H: UiHost + 'static>(
-    ui: &mut fret_imui::ImUi<'_, '_, H>,
+    ui: &mut impl UiWriter<H>,
     configure: impl FnMut(&mut H, AppWindowId) + 'static,
 ) {
     dock_space_with(ui, DockSpaceImUiOptions::default(), configure);

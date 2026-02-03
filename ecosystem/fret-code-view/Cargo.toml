@@ -13,7 +13,7 @@ documentation.workspace = true
 default = []
 
 ui = []
-imui = ["ui", "dep:fret-imui"]
+imui = ["ui", "dep:fret-authoring", "dep:fret-imui"]
 
 syntax-all = ["fret-syntax/tree-sitter-languages"]
 
@@ -55,6 +55,7 @@ fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-imui = { path = "../fret-imui", optional = true }
+fret-authoring = { path = "../fret-authoring", optional = true }
 fret-ui-kit = { path = "../fret-ui-kit" }
 fret-syntax = { path = "../fret-syntax", default-features = false }
 
