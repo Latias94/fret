@@ -5,7 +5,7 @@ use fret_core::{
 use fret_core::{Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService};
 use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
 use fret_runtime::CommandId;
-use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+use fret_ui::element::{LayoutStyle, Length, PressableA11y, PressableProps, SemanticsProps};
 use fret_ui::tree::UiTree;
 use fret_workspace::{WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar};
 use std::sync::Arc;
@@ -75,26 +75,24 @@ fn top_bar_tab_strip_does_not_overlap_left_menu() {
         bounds,
         "workspace-top-bar-tab-strip-does-not-overlap-left",
         |cx| {
-            let left = cx.semantics(
-                SemanticsProps {
-                    role: SemanticsRole::MenuBar,
-                    test_id: Some(Arc::from("topbar-left-menu")),
+            let left = cx.pressable(
+                PressableProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Px(Px(220.0));
+                        layout.size.height = Length::Px(Px(24.0));
+                        layout
+                    },
+                    enabled: true,
+                    focusable: true,
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::MenuBar),
+                        test_id: Some(Arc::from("topbar-left-menu")),
+                        ..Default::default()
+                    },
                     ..Default::default()
                 },
-                |cx| {
-                    let mut layout = LayoutStyle::default();
-                    layout.size.width = Length::Px(Px(220.0));
-                    layout.size.height = Length::Px(Px(24.0));
-                    layout.flex.shrink = 0.0;
-                    vec![cx.semantics(
-                        SemanticsProps {
-                            layout,
-                            role: SemanticsRole::Generic,
-                            ..Default::default()
-                        },
-                        |_cx| Vec::new(),
-                    )]
-                },
+                |_cx, _st| Vec::new(),
             );
 
             let tab_strip = WorkspaceTabStrip::new("a")
@@ -140,7 +138,6 @@ fn top_bar_tab_strip_does_not_overlap_left_menu() {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Px(Px(80.0));
                             layout.size.height = Length::Px(Px(24.0));
-                            layout.flex.shrink = 0.0;
                             vec![cx.semantics(
                                 SemanticsProps {
                                     layout,
@@ -178,5 +175,18 @@ fn top_bar_tab_strip_does_not_overlap_left_menu() {
     assert!(
         tab_list_bounds.origin.x.0 >= left_right - 0.01,
         "expected tab strip to start at/after left menu; left={left_bounds:?} tab_list={tab_list_bounds:?}"
+    );
+
+    let hit = ui.debug_hit_test(Point::new(Px(10.0), Px(16.0)));
+    let hit = hit.hit.expect("expected hit");
+    let hit_test_id = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == hit)
+        .and_then(|n| n.test_id.as_deref())
+        .unwrap_or("<none>");
+    assert_eq!(
+        hit_test_id, "topbar-left-menu",
+        "expected clicks in left menu area to hit the menu, not the tab strip"
     );
 }

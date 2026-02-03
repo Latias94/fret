@@ -36,6 +36,12 @@ fn fill_grow_layout() -> LayoutStyle {
     layout
 }
 
+fn no_shrink_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 0.0;
+    layout
+}
+
 #[derive(Debug, Clone)]
 pub struct WorkspaceFrame {
     top: Option<AnyElement>,
@@ -223,7 +229,15 @@ impl WorkspaceTopBar {
                     },
                     |cx| {
                         let mut children = Vec::new();
-                        children.extend(self.left);
+                        for child in self.left {
+                            children.push(cx.container(
+                                ContainerProps {
+                                    layout: no_shrink_layout(),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![child],
+                            ));
+                        }
 
                         if !self.center.is_empty() {
                             let mut center_layout = flex_grow_layout();
@@ -242,7 +256,15 @@ impl WorkspaceTopBar {
                             children.push(cx.spacer(Default::default()));
                         }
 
-                        children.extend(self.right);
+                        for child in self.right {
+                            children.push(cx.container(
+                                ContainerProps {
+                                    layout: no_shrink_layout(),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![child],
+                            ));
+                        }
                         children
                     },
                 )]
