@@ -4534,6 +4534,10 @@ pub struct UiRetainedVirtualListReconcileV1 {
     pub kept_alive_items: u64,
     #[serde(default)]
     pub evicted_keep_alive_items: u64,
+    #[serde(default)]
+    pub keep_alive_pool_len_before: u64,
+    #[serde(default)]
+    pub keep_alive_pool_len_after: u64,
 }
 
 impl UiRetainedVirtualListReconcileV1 {
@@ -4549,6 +4553,8 @@ impl UiRetainedVirtualListReconcileV1 {
             reused_from_keep_alive_items: record.reused_from_keep_alive_items as u64,
             kept_alive_items: record.kept_alive_items as u64,
             evicted_keep_alive_items: record.evicted_keep_alive_items as u64,
+            keep_alive_pool_len_before: record.keep_alive_pool_len_before as u64,
+            keep_alive_pool_len_after: record.keep_alive_pool_len_after as u64,
         }
     }
 }
