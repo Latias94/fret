@@ -48,6 +48,11 @@ struct DebugHudState {
     ema_frame_time_us: Option<f64>,
 }
 
+fn try_println(line: &str) {
+    use std::io::Write;
+    let _ = writeln!(std::io::stdout(), "{line}");
+}
+
 impl DebugHudState {
     fn tick(&mut self, now: fret_core::time::Instant) -> Option<Duration> {
         let dt = self.last_tick.map(|prev| now.duration_since(prev));
@@ -161,7 +166,10 @@ struct UiGalleryWindowState {
 }
 
 #[derive(Default)]
-struct UiGalleryDriver;
+struct UiGalleryDriver {
+    renderer_perf_last_report: Option<fret_core::time::Instant>,
+    renderer_perf_enabled: bool,
+}
 
 impl UiGalleryDriver {
     fn sync_undo_availability(app: &mut App, window: AppWindowId, doc: &DocumentId) {
@@ -2198,6 +2206,95 @@ pub fn run() -> anyhow::Result<()> {
 
 impl WinitAppDriver for UiGalleryDriver {
     type WindowState = UiGalleryWindowState;
+
+    fn gpu_ready(
+        &mut self,
+        _app: &mut App,
+        _context: &fret_render::WgpuContext,
+        renderer: &mut fret_render::Renderer,
+    ) {
+        self.renderer_perf_enabled =
+            std::env::var_os("FRET_UI_GALLERY_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+        if self.renderer_perf_enabled {
+            renderer.set_perf_enabled(true);
+        }
+    }
+
+    fn gpu_frame_prepare(
+        &mut self,
+        _app: &mut App,
+        _window: AppWindowId,
+        _state: &mut Self::WindowState,
+        _context: &fret_render::WgpuContext,
+        renderer: &mut fret_render::Renderer,
+        _scale_factor: f32,
+    ) {
+        if !self.renderer_perf_enabled {
+            return;
+        }
+
+        let now = fret_core::time::Instant::now();
+        let should_report = match self.renderer_perf_last_report {
+            None => true,
+            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+        };
+        if !should_report {
+            return;
+        }
+        self.renderer_perf_last_report = Some(now);
+
+        let Some(snap) = renderer.take_perf_snapshot() else {
+            return;
+        };
+        if snap.frames == 0 {
+            return;
+        }
+
+        let pipeline_breakdown =
+            std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some_and(|v| !v.is_empty());
+        try_println(&format!(
+            "renderer_perf(ui-gallery): frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+            snap.frames,
+            snap.encode_scene_us as f64 / 1000.0,
+            snap.prepare_svg_us as f64 / 1000.0,
+            snap.prepare_text_us as f64 / 1000.0,
+            snap.draw_calls,
+            snap.quad_draw_calls,
+            snap.viewport_draw_calls,
+            snap.image_draw_calls,
+            snap.text_draw_calls,
+            snap.path_draw_calls,
+            snap.mask_draw_calls,
+            snap.fullscreen_draw_calls,
+            snap.clip_mask_draw_calls,
+            snap.pipeline_switches,
+            snap.bind_group_switches,
+            snap.uniform_bind_group_switches,
+            snap.texture_bind_group_switches,
+            snap.scissor_sets,
+            snap.uniform_bytes / 1024,
+            snap.instance_bytes / 1024,
+            snap.vertex_bytes / 1024,
+            snap.scene_encoding_cache_hits,
+            snap.scene_encoding_cache_misses
+        ));
+        if pipeline_breakdown {
+            try_println(&format!(
+                "renderer_perf_pipelines(ui-gallery): quad={} viewport={} mask={} text_mask={} text_color={} text_subpixel={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                snap.pipeline_switches_quad,
+                snap.pipeline_switches_viewport,
+                snap.pipeline_switches_mask,
+                snap.pipeline_switches_text_mask,
+                snap.pipeline_switches_text_color,
+                snap.pipeline_switches_text_subpixel,
+                snap.pipeline_switches_path,
+                snap.pipeline_switches_path_msaa,
+                snap.pipeline_switches_composite,
+                snap.pipeline_switches_fullscreen,
+                snap.pipeline_switches_clip_mask,
+            ));
+        }
+    }
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
         Self::build_ui(app, window)
