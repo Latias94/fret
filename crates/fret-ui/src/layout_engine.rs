@@ -41,6 +41,7 @@ pub struct TaffyLayoutEngine {
     solve_generation: u64,
     node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
     root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
+    measure_cache_scratch: HashMap<LayoutMeasureKey, taffy::geometry::Size<f32>>,
     solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
@@ -58,6 +59,15 @@ struct RootSolveKey {
     width_bits: u64,
     height_bits: u64,
     scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct LayoutMeasureKey {
+    node: NodeId,
+    known_w: Option<u32>,
+    known_h: Option<u32>,
+    avail_w: (u8, u32),
+    avail_h: (u8, u32),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,6 +97,7 @@ impl Default for TaffyLayoutEngine {
             solve_generation: 0,
             node_solved_stamp: SecondaryMap::new(),
             root_solve_stamp: SecondaryMap::new(),
+            measure_cache_scratch: HashMap::new(),
             solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
@@ -387,15 +398,6 @@ impl TaffyLayoutEngine {
         scale_factor: f32,
         mut measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
     ) {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-        struct MeasureKey {
-            node: NodeId,
-            known_w: Option<u32>,
-            known_h: Option<u32>,
-            avail_w: (u8, u32),
-            avail_h: (u8, u32),
-        }
-
         fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
             match avail {
                 taffy::style::AvailableSpace::Definite(v) => (0, v.to_bits()),
@@ -443,7 +445,8 @@ impl TaffyLayoutEngine {
 
         let mut measure_calls: u64 = 0;
         let mut measure_cache_hits: u64 = 0;
-        let mut measure_cache: HashMap<MeasureKey, taffy::geometry::Size<f32>> = HashMap::new();
+        self.measure_cache_scratch.clear();
+        let measure_cache = &mut self.measure_cache_scratch;
         let enable_profile = self.measure_profiling_enabled;
         let mut measure_time = Duration::default();
 
@@ -468,7 +471,7 @@ impl TaffyLayoutEngine {
                     }
 
                     measure_calls = measure_calls.saturating_add(1);
-                    let key = MeasureKey {
+                    let key = LayoutMeasureKey {
                         node: ctx.node,
                         known_w: known.width.map(|v| v.to_bits()),
                         known_h: known.height.map(|v| v.to_bits()),
