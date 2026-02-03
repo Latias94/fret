@@ -294,6 +294,27 @@ pub struct UiDebugFrameStats {
     pub view_cache_invalidation_truncations: u32,
     /// How many "contained" view-cache roots were re-laid out during the final pass.
     pub view_cache_contained_relayouts: u32,
+    /// How many view-cache roots were observed during the current frame.
+    pub view_cache_roots_total: u32,
+    /// How many view-cache roots were reused during the current frame.
+    pub view_cache_roots_reused: u32,
+    /// View-cache roots that were not reused because they were mounted for the first time.
+    pub view_cache_roots_first_mount: u32,
+    /// View-cache roots that were not reused because their backing `NodeId` was recreated.
+    pub view_cache_roots_node_recreated: u32,
+    /// View-cache roots that were not reused because the declarative cache key did not match.
+    pub view_cache_roots_cache_key_mismatch: u32,
+    /// View-cache roots that were not reused because they were not marked as reuse roots.
+    ///
+    /// This is an authoring-level signal: either view-cache was not enabled, or reuse was gated off
+    /// by local state (e.g. `view_cache_needs_rerender` / layout invalidation) upstream.
+    pub view_cache_roots_not_marked_reuse_root: u32,
+    /// View-cache roots that were not reused because `view_cache_needs_rerender` was set.
+    pub view_cache_roots_needs_rerender: u32,
+    /// View-cache roots that were not reused because they had a layout invalidation.
+    pub view_cache_roots_layout_invalidated: u32,
+    /// View-cache roots recorded from retained/manual cache roots (non-declarative).
+    pub view_cache_roots_manual: u32,
     /// How many times `set_children_barrier` was applied (structural changes without forcing
     /// ancestor relayout).
     pub set_children_barrier_writes: u32,
@@ -792,6 +813,8 @@ pub enum UiDebugCacheRootReuseReason {
     MarkedReuseRoot,
     NotMarkedReuseRoot,
     CacheKeyMismatch,
+    NeedsRerender,
+    LayoutInvalidated,
     ManualCacheRoot,
 }
 
@@ -803,6 +826,8 @@ impl UiDebugCacheRootReuseReason {
             Self::MarkedReuseRoot => "marked_reuse_root",
             Self::NotMarkedReuseRoot => "not_marked_reuse_root",
             Self::CacheKeyMismatch => "cache_key_mismatch",
+            Self::NeedsRerender => "needs_rerender",
+            Self::LayoutInvalidated => "layout_invalidated",
             Self::ManualCacheRoot => "manual_cache_root",
         }
     }
@@ -1745,6 +1770,15 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.view_cache_active = self.view_cache_active();
         self.debug_stats.view_cache_invalidation_truncations = 0;
         self.debug_stats.view_cache_contained_relayouts = 0;
+        self.debug_stats.view_cache_roots_total = 0;
+        self.debug_stats.view_cache_roots_reused = 0;
+        self.debug_stats.view_cache_roots_first_mount = 0;
+        self.debug_stats.view_cache_roots_node_recreated = 0;
+        self.debug_stats.view_cache_roots_cache_key_mismatch = 0;
+        self.debug_stats.view_cache_roots_not_marked_reuse_root = 0;
+        self.debug_stats.view_cache_roots_needs_rerender = 0;
+        self.debug_stats.view_cache_roots_layout_invalidated = 0;
+        self.debug_stats.view_cache_roots_manual = 0;
         self.debug_stats.set_children_barrier_writes = 0;
         self.debug_stats.barrier_relayouts_scheduled = 0;
         self.debug_stats.barrier_relayouts_performed = 0;
@@ -1953,6 +1987,55 @@ impl<H: UiHost> UiTree<H> {
     ) {
         if !self.debug_enabled {
             return;
+        }
+        self.debug_stats.view_cache_roots_total =
+            self.debug_stats.view_cache_roots_total.saturating_add(1);
+        if reused {
+            self.debug_stats.view_cache_roots_reused =
+                self.debug_stats.view_cache_roots_reused.saturating_add(1);
+        }
+        match reuse_reason {
+            UiDebugCacheRootReuseReason::FirstMount => {
+                self.debug_stats.view_cache_roots_first_mount = self
+                    .debug_stats
+                    .view_cache_roots_first_mount
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::NodeRecreated => {
+                self.debug_stats.view_cache_roots_node_recreated = self
+                    .debug_stats
+                    .view_cache_roots_node_recreated
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::CacheKeyMismatch => {
+                self.debug_stats.view_cache_roots_cache_key_mismatch = self
+                    .debug_stats
+                    .view_cache_roots_cache_key_mismatch
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::NotMarkedReuseRoot => {
+                self.debug_stats.view_cache_roots_not_marked_reuse_root = self
+                    .debug_stats
+                    .view_cache_roots_not_marked_reuse_root
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::NeedsRerender => {
+                self.debug_stats.view_cache_roots_needs_rerender = self
+                    .debug_stats
+                    .view_cache_roots_needs_rerender
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::LayoutInvalidated => {
+                self.debug_stats.view_cache_roots_layout_invalidated = self
+                    .debug_stats
+                    .view_cache_roots_layout_invalidated
+                    .saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::ManualCacheRoot => {
+                self.debug_stats.view_cache_roots_manual =
+                    self.debug_stats.view_cache_roots_manual.saturating_add(1);
+            }
+            UiDebugCacheRootReuseReason::MarkedReuseRoot => {}
         }
         self.debug_view_cache_roots.push(DebugViewCacheRootRecord {
             root,
@@ -2253,6 +2336,12 @@ impl<H: UiHost> UiTree<H> {
         // View-cache reuse is an authoring-level "skip re-render" decision, not a "skip repaint"
         // decision: paint invalidations (e.g. hover/focus) should not force a child render pass.
         !n.invalidation.layout
+    }
+
+    pub(crate) fn view_cache_node_needs_rerender(&self, node: NodeId) -> bool {
+        self.nodes
+            .get(node)
+            .is_some_and(|n| n.view_cache_needs_rerender)
     }
 
     /// Configure view-cache behavior for a specific node.

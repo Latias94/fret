@@ -139,6 +139,11 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) cache_roots_contained_relayout: u32,
     pub(super) cache_replayed_ops: u64,
     pub(super) view_cache_contained_relayouts: u32,
+    pub(super) view_cache_roots_total: u32,
+    pub(super) view_cache_roots_reused: u32,
+    pub(super) view_cache_roots_cache_key_mismatch: u32,
+    pub(super) view_cache_roots_needs_rerender: u32,
+    pub(super) view_cache_roots_layout_invalidated: u32,
     pub(super) set_children_barrier_writes: u32,
     pub(super) barrier_relayouts_scheduled: u32,
     pub(super) barrier_relayouts_performed: u32,
@@ -3894,6 +3899,31 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let view_cache_roots_total = stats
+                .and_then(|m| m.get("view_cache_roots_total"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let view_cache_roots_reused = stats
+                .and_then(|m| m.get("view_cache_roots_reused"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let view_cache_roots_cache_key_mismatch = stats
+                .and_then(|m| m.get("view_cache_roots_cache_key_mismatch"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let view_cache_roots_needs_rerender = stats
+                .and_then(|m| m.get("view_cache_roots_needs_rerender"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let view_cache_roots_layout_invalidated = stats
+                .and_then(|m| m.get("view_cache_roots_layout_invalidated"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
             let set_children_barrier_writes = stats
                 .and_then(|m| m.get("set_children_barrier_writes"))
                 .and_then(|v| v.as_u64())
@@ -4207,6 +4237,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 cache_roots_contained_relayout,
                 cache_replayed_ops,
                 view_cache_contained_relayouts,
+                view_cache_roots_total,
+                view_cache_roots_reused,
+                view_cache_roots_cache_key_mismatch,
+                view_cache_roots_needs_rerender,
+                view_cache_roots_layout_invalidated,
                 set_children_barrier_writes,
                 barrier_relayouts_scheduled,
                 barrier_relayouts_performed,

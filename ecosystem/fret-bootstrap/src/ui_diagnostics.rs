@@ -6142,6 +6142,24 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub view_cache_contained_relayouts: u32,
     #[serde(default)]
+    pub view_cache_roots_total: u32,
+    #[serde(default)]
+    pub view_cache_roots_reused: u32,
+    #[serde(default)]
+    pub view_cache_roots_first_mount: u32,
+    #[serde(default)]
+    pub view_cache_roots_node_recreated: u32,
+    #[serde(default)]
+    pub view_cache_roots_cache_key_mismatch: u32,
+    #[serde(default)]
+    pub view_cache_roots_not_marked_reuse_root: u32,
+    #[serde(default)]
+    pub view_cache_roots_needs_rerender: u32,
+    #[serde(default)]
+    pub view_cache_roots_layout_invalidated: u32,
+    #[serde(default)]
+    pub view_cache_roots_manual: u32,
+    #[serde(default)]
     pub set_children_barrier_writes: u32,
     #[serde(default)]
     pub barrier_relayouts_scheduled: u32,
@@ -6229,6 +6247,15 @@ impl UiFrameStatsV1 {
             view_cache_active: stats.view_cache_active,
             view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
             view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
+            view_cache_roots_total: stats.view_cache_roots_total,
+            view_cache_roots_reused: stats.view_cache_roots_reused,
+            view_cache_roots_first_mount: stats.view_cache_roots_first_mount,
+            view_cache_roots_node_recreated: stats.view_cache_roots_node_recreated,
+            view_cache_roots_cache_key_mismatch: stats.view_cache_roots_cache_key_mismatch,
+            view_cache_roots_not_marked_reuse_root: stats.view_cache_roots_not_marked_reuse_root,
+            view_cache_roots_needs_rerender: stats.view_cache_roots_needs_rerender,
+            view_cache_roots_layout_invalidated: stats.view_cache_roots_layout_invalidated,
+            view_cache_roots_manual: stats.view_cache_roots_manual,
             set_children_barrier_writes: stats.set_children_barrier_writes,
             barrier_relayouts_scheduled: stats.barrier_relayouts_scheduled,
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
