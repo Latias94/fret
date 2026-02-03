@@ -949,10 +949,13 @@ topics (if/when we implement them):
         - Same gates as the non-retained suite, plus:
           - `--check-retained-vlist-reconcile-no-notify 1`
           - `--check-retained-vlist-attach-detach-max 64`
-          - `--check-retained-vlist-keep-alive-reuse-min 1`
+          - `--check-retained-vlist-keep-alive-reuse-min 5`
           - `--check-vlist-window-shifts-non-retained-max 0` (no fallback)
         - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_KEEP_ALIVE=128`.
-        - Evidence bundle (suite; cache+shell, release): `target/fret-diag-suite-vlist-boundary-retained-keepalive/1770112825751-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+        - Evidence bundles (suite; cache+shell, release; warmup=5; `keep_alive_reuse_frames=45` in 3 runs):
+          - `target/fret-diag-suite-vlist-boundary-retained-keepalive-min5-run1b/1770117016546-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+          - `target/fret-diag-suite-vlist-boundary-retained-keepalive-min5-run2b/1770117065302-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+          - `target/fret-diag-suite-vlist-boundary-retained-keepalive-min5-run3b/1770117106850-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
         `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch_step=overscan*8 for non-retained):
