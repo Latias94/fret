@@ -1245,15 +1245,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fret-imui-wasm-smoke"
-version = "0.1.0"
-dependencies = [
- "fret-authoring",
- "fret-imui",
- "fret-ui",
-]
-
-[[package]]
 name = "fret-kit"
 version = "0.1.0"
 dependencies = [

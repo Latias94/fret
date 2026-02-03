@@ -169,7 +169,7 @@ To keep the refactor safe and reviewable:
 - Native demos still run:
   - `cargo run -p fret-demo --bin imui_editor_proof_demo`
 - wasm coverage at least includes a compile-only smoke harness for the authoring surface.
-- Evidence: `apps/fret-imui-wasm-smoke` (run `cargo check -p fret-imui-wasm-smoke --target wasm32-unknown-unknown`).
+- Evidence: `cargo check -p fret-authoring -p fret-imui --target wasm32-unknown-unknown`.
 - Official ecosystem crates do not ship duplicated authoring APIs without a clear reason.
 
 ---

@@ -99,7 +99,7 @@ Exit criteria:
 - The most important v1 follow-ups are addressed (moved into v2 so v1 can remain frozen).
 
 - [x] IMUI2-test-030 Add a wasm-targeted smoke harness entry (compile-only is acceptable initially).
-  - Evidence: `apps/fret-imui-wasm-smoke` (run `cargo check -p fret-imui-wasm-smoke --target wasm32-unknown-unknown`).
+  - Evidence: `cargo check -p fret-authoring -p fret-imui --target wasm32-unknown-unknown`.
 - [x] IMUI2-docs-031 Add “when to drop to `cx_mut()`” guidance (canvas, viewport surfaces, docking host).
 - [x] IMUI2-docs-032 Add a concise “Golden Path” section + gotchas/FAQ for immediate-style authoring in Fret.
 - [x] IMUI2-eco-033 Add at least one more official ecosystem `imui` adapter (`fret-plot` or `fret-chart`).
