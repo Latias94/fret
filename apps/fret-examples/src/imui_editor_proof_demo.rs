@@ -13,7 +13,7 @@ use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
     FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality, WindowRole,
 };
-use fret_ui::element::{ContainerProps, LayoutStyle};
+use fret_ui::element::LayoutStyle;
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
@@ -223,10 +223,6 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
         bounds: fret_core::Rect,
         panel: &fret_core::PanelKey,
     ) -> Option<fret_core::NodeId> {
-        let theme = Theme::global(&*app).clone();
-        let padding = theme.metric_required("metric.padding.md");
-        let background = theme.color_required("background");
-
         if panel.kind.0 != "demo.controls" {
             return None;
         }
@@ -248,31 +244,29 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
                     .and_then(|m| cx.watch_model(&m.target).paint().copied())
                     .unwrap_or_default();
 
-                vec![cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
-                            layout
-                        },
-                        padding: fret_core::Edges::all(padding),
-                        background: Some(background),
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        fret_imui::imui_vstack(cx, move |ui| {
-                            ui.id(&panel_key, |ui| {
-                                ui.text("Controls panel (declarative root inside docking)");
-                                ui.text(format!("embedded viewport target: {target:?}"));
-                                ui.text(
-                                    "Wasm/mobile note: multi-window should degrade to in-window floatings.",
-                                );
-                            });
-                        })
-                        .into_vec()
-                    },
-                )]
+                vec![
+                    fret_ui_kit::ui::container_build(cx, move |cx, out| {
+                        out.extend(
+                            fret_imui::imui_vstack(cx, move |ui| {
+                                ui.id(&panel_key, |ui| {
+                                    ui.text("Controls panel (declarative root inside docking)");
+                                    ui.text(format!("embedded viewport target: {target:?}"));
+                                    ui.text(
+                                        "Wasm/mobile note: multi-window should degrade to in-window floatings.",
+                                    );
+                                });
+                            })
+                            .into_vec(),
+                        );
+                    })
+                    .size_full()
+                    .p_3()
+                    .bg(fret_ui_kit::ColorRef::Token {
+                        key: "background",
+                        fallback: fret_ui_kit::ColorFallback::ThemeSurfaceBackground,
+                    })
+                    .into_element(cx),
+                ]
             },
         ))
     }
