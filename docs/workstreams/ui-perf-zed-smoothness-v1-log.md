@@ -1030,3 +1030,22 @@ Notes:
 - The top frames in this torture workload are still layout-dominant (tens to hundreds of milliseconds) even when sorting
   by `hit_test`. The bounds tree improvement is real for hit test, but overall "Zed smoothness" will depend on reducing
   layout/prepaint cost under pointer moves as well.
+
+## 2026-02-03 16:12:00 (commit `0003d978`)
+
+Change:
+- Clean up extremely large local diagnostics artifacts under `target/fret-diag-perf/` after scaling experiments.
+
+Rationale:
+- Some earlier torture runs produced multi-GB `bundle.json` files per repeat (e.g. ~4.7GB each at noise=20k), and
+  accumulated to hundreds of GB. These are not intended to be kept long-term in-repo.
+- The key A/B evidence is already captured as metrics + commands in this log. When needed, bundles can be regenerated
+  by re-running the logged commands.
+
+What was preserved:
+- The two bundles explicitly referenced in this log (noise=20k A/B worst bundles):
+  - `target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-on.noise20k.after-overflow-visible-support.r7/1770098586674-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+  - `target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-off.noise20k.after-overflow-visible-support.r7/1770099309508-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+Outcome:
+- `target/fret-diag-perf/` size: ~292GB → ~29GB (local machine; macOS).
