@@ -1438,6 +1438,50 @@ What it reports (stdout; once per ~1s while enabled):
 Notes:
 - This is a profiling aid (not a speedup). Keep it disabled for normal perf baselines.
 
+Run (code editor autoscroll steady; renderer perf enabled):
+- `feat(ui-gallery): log renderer perf snapshots` (`68e31129`)
+- Date: 2026-02-03
+
+Command:
+```bash
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --dir target/fret-diag-repro-renderer-perf/editor-autoscroll.r2 \
+  --timeout-ms 240000 --poll-ms 50 \
+  --env FRET_UI_GALLERY_RENDERER_PERF=1 \
+  --env FRET_RENDERER_PERF_PIPELINES=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_DIAG_MAX_SNAPSHOTS=180 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- stdout log: `target/fret-diag-repro-renderer-perf/editor-autoscroll.r2.stdout.log`
+- bundle: `target/fret-diag-repro-renderer-perf/editor-autoscroll.r2/1770138298097-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Renderer perf (aggregated per ~1s window; per-frame values derived by dividing by `frames`):
+- Sample windows: `n=22`, frames/window p50 `124` (min `115`, max `129`).
+- Encode (CPU) per-frame: p50 `0.606ms`, mean `0.598ms` (min `0.387ms`, max `0.645ms`).
+- Text prepare (CPU) per-frame: p50 `0.457ms`, mean `0.454ms` (min `0.352ms`, max `0.484ms`).
+- SVG prepare (CPU) per-frame: p50 `0.00094ms` (~0.94µs; negligible).
+- Draw-call complexity per-frame (proxies):
+  - `draws`: p50 `59`, p95 `61`
+  - `pipeline_switches`: p50 `41`, p95 `43`
+  - `bind_group_switches`: p50 `56`, p95 `57`
+  - `scissor_sets`: p50 `39`, p95 `39`
+
+UI diagnostics (same bundle; 180 frames extracted from snapshots):
+- `layout_time_us`: p50 `910`, p95 `943`, max `969`
+- `prepaint_time_us`: p50 `26`, p95 `31`, max `34`
+- `paint_time_us`: p50 `401`, p95 `476`, max `5475` (spike at tick_id=339/frame_id=341)
+- `paint_cache_misses`: always `0`; `paint_cache_replayed_ops`: always `270` (paint cache replay stable)
+
+Notes:
+- This workload looks “CPU-cheap per frame” for scene building + encoding, but the **state-change density** is high (pipeline/bind/scissor counts).
+  If we want Zed-like smoothness under heavier scenes, reducing pipeline/bind churn and making cache keys more stable should be high leverage.
+
 ### FrameArenaScratch v0: GC + semantics scratch reuse (exports `top_frame_arena_*`)
 
 Commits:
