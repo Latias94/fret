@@ -5785,11 +5785,21 @@ fn web_vs_fret_command_dialog_panel_chrome_matches() {
 }
 
 fn assert_command_dialog_focused_item_chrome_matches_web(web_theme_name: &str) {
+    assert_command_dialog_focused_item_chrome_matches_web_named(
+        "command-dialog.focus-first",
+        web_theme_name,
+    );
+}
+
+fn assert_command_dialog_focused_item_chrome_matches_web_named(
+    web_name: &str,
+    web_theme_name: &str,
+) {
     use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
 
-    let web = read_web_golden_open("command-dialog.focus-first");
+    let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
-    let expected = web_find_active_element_chrome(theme);
+    let expected = web_find_highlighted_listbox_option_chrome(theme, "command-item");
 
     let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
         Rect::new(
@@ -5986,16 +5996,14 @@ fn assert_command_dialog_focused_item_chrome_matches_web(web_theme_name: &str) {
             .map(|n| n.role)
             .collect();
         panic!(
-            "command-dialog {web_theme_name}: expected active listbox option\n  focused_roles={focused_roles:?}\n  active_descendant_owner_roles={active_owner_roles:?}"
+            "{web_name} {web_theme_name}: expected active listbox option\n  focused_roles={focused_roles:?}\n  active_descendant_owner_roles={active_owner_roles:?}"
         )
     });
 
     let quad = find_best_solid_quad_within_matching_bg(&scene, option.bounds, expected.bg)
-        .unwrap_or_else(|| {
-            panic!("command-dialog {web_theme_name}: focused option background quad")
-        });
+        .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused option background quad"));
     assert_rgba_close(
-        &format!("command-dialog {web_theme_name} focused option background"),
+        &format!("{web_name} {web_theme_name} focused option background"),
         color_to_rgba(quad.background),
         expected.bg,
         0.03,
@@ -6006,9 +6014,9 @@ fn assert_command_dialog_focused_item_chrome_matches_web(web_theme_name: &str) {
         option.bounds,
         leftish_text_probe_point(option.bounds),
     )
-    .unwrap_or_else(|| panic!("command-dialog {web_theme_name}: focused option text color"));
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused option text color"));
     assert_rgba_close(
-        &format!("command-dialog {web_theme_name} focused option text color"),
+        &format!("{web_name} {web_theme_name} focused option text color"),
         text,
         expected.fg,
         0.03,
@@ -6023,6 +6031,22 @@ fn web_vs_fret_command_dialog_focused_item_chrome_matches_web() {
 #[test]
 fn web_vs_fret_command_dialog_focused_item_chrome_matches_web_dark() {
     assert_command_dialog_focused_item_chrome_matches_web("dark");
+}
+
+#[test]
+fn web_vs_fret_command_dialog_focused_item_chrome_matches_web_mobile_tiny_viewport() {
+    assert_command_dialog_focused_item_chrome_matches_web_named(
+        "command-dialog.focus-first-vp375x240",
+        "light",
+    );
+}
+
+#[test]
+fn web_vs_fret_command_dialog_focused_item_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_command_dialog_focused_item_chrome_matches_web_named(
+        "command-dialog.focus-first-vp375x240",
+        "dark",
+    );
 }
 
 #[test]
@@ -6495,10 +6519,11 @@ fn render_dropdown_menu_demo_settled(
 }
 
 fn assert_dropdown_menu_highlighted_item_chrome_matches_web(
+    web_name: &str,
     web_theme_name: &str,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
 ) {
-    let web = read_web_golden_open("dropdown-menu-demo.highlight-first");
+    let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
     let expected = web_find_highlighted_menu_item_chrome(theme);
 
@@ -6567,33 +6592,22 @@ fn assert_dropdown_menu_highlighted_item_chrome_matches_web(
 
     let quad = find_best_solid_quad_within_matching_bg(&scene, item.bounds, expected.bg)
         .unwrap_or_else(|| {
-            panic!(
-                "dropdown-menu-demo.highlight-first {web_theme_name}: highlighted menu item background quad"
-            )
+            panic!("{web_name} {web_theme_name}: highlighted menu item background quad")
         });
     assert_rgba_close(
-        &format!(
-            "dropdown-menu-demo.highlight-first {web_theme_name} highlighted menu item background"
-        ),
+        &format!("{web_name} {web_theme_name} highlighted menu item background"),
         color_to_rgba(quad.background),
         expected.bg,
         0.03,
     );
 
-    let text = find_best_text_color_near(
-        &scene,
-        item.bounds,
-        leftish_text_probe_point(item.bounds),
-    )
-    .unwrap_or_else(|| {
-        panic!(
-            "dropdown-menu-demo.highlight-first {web_theme_name}: highlighted menu item text color"
-        )
-    });
+    let text =
+        find_best_text_color_near(&scene, item.bounds, leftish_text_probe_point(item.bounds))
+            .unwrap_or_else(|| {
+                panic!("{web_name} {web_theme_name}: highlighted menu item text color")
+            });
     assert_rgba_close(
-        &format!(
-            "dropdown-menu-demo.highlight-first {web_theme_name} highlighted menu item text color"
-        ),
+        &format!("{web_name} {web_theme_name} highlighted menu item text color"),
         text,
         expected.fg,
         0.03,
@@ -6601,10 +6615,11 @@ fn assert_dropdown_menu_highlighted_item_chrome_matches_web(
 }
 
 fn assert_dropdown_menu_focused_item_chrome_matches_web(
+    web_name: &str,
     web_theme_name: &str,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
 ) {
-    let web = read_web_golden_open("dropdown-menu-demo.focus-first");
+    let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
     let expected = web_find_active_element_chrome(theme);
 
@@ -6679,18 +6694,16 @@ fn assert_dropdown_menu_focused_item_chrome_matches_web(
             .map(|n| n.role)
             .collect();
         panic!(
-            "dropdown-menu-demo.focus-first {web_theme_name}: expected focused menu item semantics node\n  focused_roles={focused_roles:?}"
+            "{web_name} {web_theme_name}: expected focused menu item semantics node\n  focused_roles={focused_roles:?}"
         );
     }
 
     let quad = find_best_solid_quad_within_matching_bg(&scene, focused.bounds, expected.bg)
         .unwrap_or_else(|| {
-            panic!(
-                "dropdown-menu-demo.focus-first {web_theme_name}: focused menu item background quad"
-            )
+            panic!("{web_name} {web_theme_name}: focused menu item background quad")
         });
     assert_rgba_close(
-        &format!("dropdown-menu-demo.focus-first {web_theme_name} focused menu item background"),
+        &format!("{web_name} {web_theme_name} focused menu item background"),
         color_to_rgba(quad.background),
         expected.bg,
         0.03,
@@ -6701,11 +6714,9 @@ fn assert_dropdown_menu_focused_item_chrome_matches_web(
         focused.bounds,
         leftish_text_probe_point(focused.bounds),
     )
-    .unwrap_or_else(|| {
-        panic!("dropdown-menu-demo.focus-first {web_theme_name}: focused menu item text color")
-    });
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused menu item text color"));
     assert_rgba_close(
-        &format!("dropdown-menu-demo.focus-first {web_theme_name} focused menu item text color"),
+        &format!("{web_name} {web_theme_name} focused menu item text color"),
         text,
         expected.fg,
         0.03,
@@ -6715,6 +6726,7 @@ fn assert_dropdown_menu_focused_item_chrome_matches_web(
 #[test]
 fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web() {
     assert_dropdown_menu_highlighted_item_chrome_matches_web(
+        "dropdown-menu-demo.highlight-first",
         "light",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
@@ -6723,6 +6735,7 @@ fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web() {
 #[test]
 fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_dark() {
     assert_dropdown_menu_highlighted_item_chrome_matches_web(
+        "dropdown-menu-demo.highlight-first",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
@@ -6731,6 +6744,7 @@ fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_dark() {
 #[test]
 fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web() {
     assert_dropdown_menu_focused_item_chrome_matches_web(
+        "dropdown-menu-demo.focus-first",
         "light",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
@@ -6739,6 +6753,43 @@ fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web() {
 #[test]
 fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_dark() {
     assert_dropdown_menu_focused_item_chrome_matches_web(
+        "dropdown-menu-demo.focus-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_mobile_tiny_viewport() {
+    assert_dropdown_menu_highlighted_item_chrome_matches_web(
+        "dropdown-menu-demo.highlight-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_dropdown_menu_highlighted_item_chrome_matches_web(
+        "dropdown-menu-demo.highlight-first-vp375x240",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_mobile_tiny_viewport() {
+    assert_dropdown_menu_focused_item_chrome_matches_web(
+        "dropdown-menu-demo.focus-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_dropdown_menu_focused_item_chrome_matches_web(
+        "dropdown-menu-demo.focus-first-vp375x240",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
@@ -7933,10 +7984,11 @@ fn render_context_menu_demo_settled(
 }
 
 fn assert_context_menu_highlighted_item_chrome_matches_web(
+    web_name: &str,
     web_theme_name: &str,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
 ) {
-    let web = read_web_golden_open("context-menu-demo.highlight-first");
+    let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
     let expected = web_find_highlighted_menu_item_chrome(theme);
 
@@ -8042,31 +8094,22 @@ fn assert_context_menu_highlighted_item_chrome_matches_web(
 
     let quad = find_best_solid_quad_within_matching_bg(&scene, back.bounds, expected.bg)
         .unwrap_or_else(|| {
-            panic!("context-menu-demo.highlight-first {web_theme_name}: highlighted menu item background quad")
+            panic!("{web_name} {web_theme_name}: highlighted menu item background quad")
         });
     assert_rgba_close(
-        &format!(
-            "context-menu-demo.highlight-first {web_theme_name} highlighted menu item background"
-        ),
+        &format!("{web_name} {web_theme_name} highlighted menu item background"),
         color_to_rgba(quad.background),
         expected.bg,
         0.03,
     );
 
-    let text = find_best_text_color_near(
-        &scene,
-        back.bounds,
-        leftish_text_probe_point(back.bounds),
-    )
-    .unwrap_or_else(|| {
-        panic!(
-            "context-menu-demo.highlight-first {web_theme_name}: highlighted menu item text color"
-        )
-    });
+    let text =
+        find_best_text_color_near(&scene, back.bounds, leftish_text_probe_point(back.bounds))
+            .unwrap_or_else(|| {
+                panic!("{web_name} {web_theme_name}: highlighted menu item text color")
+            });
     assert_rgba_close(
-        &format!(
-            "context-menu-demo.highlight-first {web_theme_name} highlighted menu item text color"
-        ),
+        &format!("{web_name} {web_theme_name} highlighted menu item text color"),
         text,
         expected.fg,
         0.03,
@@ -8074,10 +8117,11 @@ fn assert_context_menu_highlighted_item_chrome_matches_web(
 }
 
 fn assert_context_menu_focused_item_chrome_matches_web(
+    web_name: &str,
     web_theme_name: &str,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
 ) {
-    let web = read_web_golden_open("context-menu-demo.focus-first");
+    let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
     let expected = web_find_active_element_chrome(theme);
 
@@ -8182,18 +8226,16 @@ fn assert_context_menu_focused_item_chrome_matches_web(
             .map(|n| n.role)
             .collect();
         panic!(
-            "context-menu-demo.focus-first {web_theme_name}: expected focused menu item semantics node\n  focused_roles={focused_roles:?}"
+            "{web_name} {web_theme_name}: expected focused menu item semantics node\n  focused_roles={focused_roles:?}"
         )
     });
 
     let quad = find_best_solid_quad_within_matching_bg(&scene, focused.bounds, expected.bg)
         .unwrap_or_else(|| {
-            panic!(
-                "context-menu-demo.focus-first {web_theme_name}: focused menu item background quad"
-            )
+            panic!("{web_name} {web_theme_name}: focused menu item background quad")
         });
     assert_rgba_close(
-        &format!("context-menu-demo.focus-first {web_theme_name} focused menu item background"),
+        &format!("{web_name} {web_theme_name} focused menu item background"),
         color_to_rgba(quad.background),
         expected.bg,
         0.03,
@@ -8204,11 +8246,9 @@ fn assert_context_menu_focused_item_chrome_matches_web(
         focused.bounds,
         leftish_text_probe_point(focused.bounds),
     )
-    .unwrap_or_else(|| {
-        panic!("context-menu-demo.focus-first {web_theme_name}: focused menu item text color")
-    });
+    .unwrap_or_else(|| panic!("{web_name} {web_theme_name}: focused menu item text color"));
     assert_rgba_close(
-        &format!("context-menu-demo.focus-first {web_theme_name} focused menu item text color"),
+        &format!("{web_name} {web_theme_name} focused menu item text color"),
         text,
         expected.fg,
         0.03,
@@ -8218,6 +8258,7 @@ fn assert_context_menu_focused_item_chrome_matches_web(
 #[test]
 fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web() {
     assert_context_menu_highlighted_item_chrome_matches_web(
+        "context-menu-demo.highlight-first",
         "light",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
@@ -8226,6 +8267,7 @@ fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web() {
 #[test]
 fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark() {
     assert_context_menu_highlighted_item_chrome_matches_web(
+        "context-menu-demo.highlight-first",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
@@ -8234,6 +8276,7 @@ fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark() {
 #[test]
 fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web() {
     assert_context_menu_focused_item_chrome_matches_web(
+        "context-menu-demo.focus-first",
         "light",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
     );
@@ -8242,6 +8285,43 @@ fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web() {
 #[test]
 fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark() {
     assert_context_menu_focused_item_chrome_matches_web(
+        "context-menu-demo.focus-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_mobile_tiny_viewport() {
+    assert_context_menu_highlighted_item_chrome_matches_web(
+        "context-menu-demo.highlight-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_context_menu_highlighted_item_chrome_matches_web(
+        "context-menu-demo.highlight-first-vp375x240",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_mobile_tiny_viewport() {
+    assert_context_menu_focused_item_chrome_matches_web(
+        "context-menu-demo.focus-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_context_menu_demo_focused_item_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_context_menu_focused_item_chrome_matches_web(
+        "context-menu-demo.focus-first-vp375x240",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
@@ -11011,6 +11091,28 @@ fn web_vs_fret_select_demo_highlighted_option_chrome_matches_web_dark() {
 }
 
 #[test]
+fn web_vs_fret_select_demo_highlighted_option_chrome_matches_web_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-demo.highlight-first-vp375x240",
+        "light",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_highlighted_option_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-demo.highlight-first-vp375x240",
+        "dark",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_demo_page,
+    );
+}
+
+#[test]
 fn web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web() {
     assert_listbox_highlighted_option_chrome_matches_web(
         "select-scrollable.highlight-first",
@@ -11025,6 +11127,28 @@ fn web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web() {
 fn web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web_dark() {
     assert_listbox_highlighted_option_chrome_matches_web(
         "select-scrollable.highlight-first",
+        "dark",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_scrollable_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-scrollable.highlight-first-vp375x240",
+        "light",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_scrollable_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_highlighted_option_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "select-scrollable.highlight-first-vp375x240",
         "dark",
         "select-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
@@ -11054,16 +11178,91 @@ fn web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_dark() {
     );
 }
 
+#[test]
+fn web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "combobox-demo.highlight-first-vp375x240",
+        "light",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_combobox_demo_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_highlighted_option_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "combobox-demo.highlight-first-vp375x240",
+        "dark",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_combobox_demo_page,
+    );
+}
+
+fn build_shadcn_command_dialog_page(
+    cx: &mut ElementContext<'_, App>,
+    open: &Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{Button, CommandDialog, CommandItem};
+
+    #[derive(Default)]
+    struct Models {
+        query: Option<Model<String>>,
+    }
+
+    let existing = cx.with_state(Models::default, |st| st.query.clone());
+    let query = if let Some(existing) = existing {
+        existing
+    } else {
+        let model = cx.app.models_mut().insert(String::new());
+        cx.with_state(Models::default, |st| st.query = Some(model.clone()));
+        model
+    };
+
+    let items = vec![
+        CommandItem::new("Calendar"),
+        CommandItem::new("Search Emoji"),
+        CommandItem::new("Calculator"),
+    ];
+
+    CommandDialog::new(open.clone(), query, items)
+        .into_element(cx, |cx| Button::new("Open").into_element(cx))
+}
+
+#[test]
+fn web_vs_fret_command_dialog_highlighted_option_chrome_matches_web_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "command-dialog.highlight-first-vp375x240",
+        "light",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_command_dialog_page,
+    );
+}
+
+#[test]
+fn web_vs_fret_command_dialog_highlighted_option_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_listbox_highlighted_option_chrome_matches_web(
+        "command-dialog.highlight-first-vp375x240",
+        "dark",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_command_dialog_page,
+    );
+}
+
 fn assert_listbox_focused_option_chrome_matches_web(
     web_name: &str,
     web_theme_name: &str,
+    web_option_slot: &str,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
     build: impl Fn(&mut ElementContext<'_, App>, &Model<bool>) -> AnyElement + Clone,
     a11y_label: &str,
 ) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme_named(&web, web_theme_name);
-    let expected = web_find_active_element_chrome(theme);
+    let expected = web_find_highlighted_listbox_option_chrome(theme, web_option_slot);
 
     let bounds = theme.viewport.map(bounds_for_viewport).unwrap_or_else(|| {
         Rect::new(
@@ -11221,6 +11420,7 @@ fn web_vs_fret_select_demo_focused_option_chrome_matches_web() {
     assert_listbox_focused_option_chrome_matches_web(
         "select-demo.focus-first",
         "light",
+        "select-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         build_shadcn_select_demo_page,
         "Select",
@@ -11232,6 +11432,31 @@ fn web_vs_fret_select_demo_focused_option_chrome_matches_web_dark() {
     assert_listbox_focused_option_chrome_matches_web(
         "select-demo.focus-first",
         "dark",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_demo_page,
+        "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_focused_option_chrome_matches_web_mobile_tiny_viewport() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-demo.focus-first-vp375x240",
+        "light",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_demo_page,
+        "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_select_demo_focused_option_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-demo.focus-first-vp375x240",
+        "dark",
+        "select-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         build_shadcn_select_demo_page,
         "Select",
@@ -11243,6 +11468,7 @@ fn web_vs_fret_select_scrollable_focused_option_chrome_matches_web() {
     assert_listbox_focused_option_chrome_matches_web(
         "select-scrollable.focus-first",
         "light",
+        "select-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         build_shadcn_select_scrollable_page,
         "Select",
@@ -11254,6 +11480,31 @@ fn web_vs_fret_select_scrollable_focused_option_chrome_matches_web_dark() {
     assert_listbox_focused_option_chrome_matches_web(
         "select-scrollable.focus-first",
         "dark",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_select_scrollable_page,
+        "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_focused_option_chrome_matches_web_mobile_tiny_viewport() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-scrollable.focus-first-vp375x240",
+        "light",
+        "select-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_select_scrollable_page,
+        "Select",
+    );
+}
+
+#[test]
+fn web_vs_fret_select_scrollable_focused_option_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "select-scrollable.focus-first-vp375x240",
+        "dark",
+        "select-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         build_shadcn_select_scrollable_page,
         "Select",
@@ -11265,6 +11516,7 @@ fn web_vs_fret_combobox_demo_focused_option_chrome_matches_web() {
     assert_listbox_focused_option_chrome_matches_web(
         "combobox-demo.focus-first",
         "light",
+        "command-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         build_shadcn_combobox_demo_page,
         "Select a fruit",
@@ -11276,6 +11528,31 @@ fn web_vs_fret_combobox_demo_focused_option_chrome_matches_web_dark() {
     assert_listbox_focused_option_chrome_matches_web(
         "combobox-demo.focus-first",
         "dark",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+        build_shadcn_combobox_demo_page,
+        "Select a fruit",
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_focused_option_chrome_matches_web_mobile_tiny_viewport() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "combobox-demo.focus-first-vp375x240",
+        "light",
+        "command-item",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+        build_shadcn_combobox_demo_page,
+        "Select a fruit",
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_demo_focused_option_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_listbox_focused_option_chrome_matches_web(
+        "combobox-demo.focus-first-vp375x240",
+        "dark",
+        "command-item",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
         build_shadcn_combobox_demo_page,
         "Select a fruit",
@@ -14086,6 +14363,24 @@ fn web_vs_fret_menubar_demo_focused_item_chrome_matches_web_dark() {
 }
 
 #[test]
+fn web_vs_fret_menubar_demo_focused_item_chrome_matches_web_mobile_tiny_viewport() {
+    assert_menubar_focused_item_chrome_matches_web(
+        "menubar-demo.focus-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_focused_item_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_menubar_focused_item_chrome_matches_web(
+        "menubar-demo.focus-first-vp375x240",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
 fn web_vs_fret_menubar_demo_destructive_item_idle_fg_matches_web() {
     assert_menubar_file_menu_destructive_item_idle_fg_matches_web(
         "light",
@@ -14130,6 +14425,24 @@ fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web() {
 fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark() {
     assert_menubar_highlighted_item_chrome_matches_web(
         "menubar-demo.highlight-first",
+        "dark",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_mobile_tiny_viewport() {
+    assert_menubar_highlighted_item_chrome_matches_web(
+        "menubar-demo.highlight-first-vp375x240",
+        "light",
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
+
+#[test]
+fn web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark_mobile_tiny_viewport() {
+    assert_menubar_highlighted_item_chrome_matches_web(
+        "menubar-demo.highlight-first-vp375x240",
         "dark",
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
