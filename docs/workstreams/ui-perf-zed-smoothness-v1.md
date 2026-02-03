@@ -100,6 +100,7 @@ cargo run -p fretboard -- diag perf ui-gallery-steady ^
   --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.<machine-tag>.v1.json ^
   --perf-baseline-headroom-pct 20 ^
   --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 ^
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
@@ -119,6 +120,7 @@ cargo run -p fretboard -- diag perf ui-gallery-steady ^
   --dir target/fret-diag-perf/ui-gallery-steady ^
   --reuse-launch --repeat 7 --sort time --top 15 --json ^
   --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 ^
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 ^
   --launch -- cargo run -p fret-ui-gallery --release
 ```
 
@@ -127,6 +129,9 @@ Notes:
 - `ui-gallery-steady` scripts call `reset_diagnostics` just before the measured interaction(s).
   Prefer `--warmup-frames 0` (default) so the “first post-reset frames” are included.
 - `--reuse-launch` keeps the launched demo alive across repeats/scripts so caches are actually warm.
+- `FRET_DIAG_SCRIPT_AUTO_DUMP` defaults to true and dumps a full diagnostics bundle after many steps.
+  This is useful for debugging, but it can dominate disk I/O and distort perf runs.
+  For perf probes, prefer `--env FRET_DIAG_SCRIPT_AUTO_DUMP=0` and rely on `capture_bundle` steps.
 - If you already have a running demo (or cannot use `--launch`), you can run the suite against it:
 
 ```powershell
