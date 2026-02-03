@@ -1,6 +1,8 @@
 use super::*;
 use crate::cache_key::CacheKeyBuilder;
 
+const RETAINED_HOST_PREFETCH_STEP_MAX: usize = 12;
+
 #[derive(Clone)]
 struct VirtualListPrepaintInputs {
     element: GlobalElementId,
@@ -291,7 +293,14 @@ impl<H: UiHost> UiTree<H> {
                                 // don’t prefetch on every frame during slow scroll, while still keeping
                                 // each prefetch rerender bounded.
                                 let prefetch_step = if retained_host {
-                                    inputs.overscan.saturating_mul(3) / 2
+                                    // Retained hosts (ADR 0192) can apply window shifts via reconcile
+                                    // without rerendering a parent cache root, so prefer smaller, more
+                                    // frequent prefetches. This bounds single-frame attach/detach bursts.
+                                    //
+                                    // Note: shifting the window by `step` can detach ~`step` items and
+                                    // attach ~`step` items, so the attach+detach delta scales like
+                                    // `2*step` (see `--check-retained-vlist-attach-detach-max`).
+                                    (inputs.overscan / 2).clamp(1, RETAINED_HOST_PREFETCH_STEP_MAX)
                                 } else {
                                     // Non-retained VirtualList pays a full cache-root rerender per shift,
                                     // so prefer fewer, larger shifts while we still have overscan coverage.
@@ -1144,6 +1153,132 @@ mod tests {
             last.window_shift_invalidation_detail,
             Some(crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate),
             "expected scroll-to-item window updates to have a distinct invalidation detail"
+        );
+    }
+
+    #[test]
+    fn prepaint_caps_retained_host_prefetch_step_to_bound_attach_detach_delta() {
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_view_cache_enabled(true);
+        ui.set_debug_enabled(true);
+
+        let cache_root = ui.create_node(NoopWidget);
+        ui.nodes[cache_root].view_cache.enabled = true;
+        ui.set_root(cache_root);
+
+        let element = GlobalElementId(1);
+        let vlist_node = ui.create_node_for_element(element, NoopWidget);
+        ui.add_child(cache_root, vlist_node);
+
+        // Mark this VirtualList as a retained host (ADR 0192) so prepaint applies window shifts via
+        // reconcile rather than rerender.
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::windowed_surface_host::RetainedVirtualListHostMarker::default,
+            |_| {},
+        );
+
+        let bounds = Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(100.0)),
+        );
+        ui.nodes[vlist_node].bounds = bounds;
+
+        let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+
+        crate::declarative::frame::with_window_frame_mut(&mut app, window, |frame| {
+            frame.instances.insert(
+                vlist_node,
+                crate::declarative::frame::ElementRecord {
+                    element,
+                    instance: crate::declarative::frame::ElementInstance::VirtualList(
+                        crate::element::VirtualListProps {
+                            layout: crate::element::LayoutStyle::default(),
+                            axis: fret_core::Axis::Vertical,
+                            len: 1000,
+                            items_revision: 1,
+                            estimate_row_height: Px(10.0),
+                            measure_mode: crate::element::VirtualListMeasureMode::Fixed,
+                            key_cache: crate::element::VirtualListKeyCacheMode::VisibleOnly,
+                            overscan: 40,
+                            keep_alive: 0,
+                            scroll_margin: Px(0.0),
+                            gap: Px(0.0),
+                            scroll_handle: scroll_handle.clone(),
+                            visible_items: Vec::new(),
+                        },
+                    ),
+                },
+            );
+        });
+
+        // Start from a render-derived window and then scroll near the prefetch edge while still
+        // remaining within the rendered overscan envelope. This should trigger a prefetch shift.
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::VirtualListState::default,
+            |state| {
+                state.render_window_range = Some(crate::virtual_list::VirtualRange {
+                    start_index: 100,
+                    end_index: 119,
+                    overscan: 40,
+                    count: 1000,
+                });
+                state.viewport_h = bounds.size.height;
+                state.offset_y = Px(0.0);
+            },
+        );
+
+        // Visible range: start=150, end=159 (viewport 100px @ 10px rows), which is within the
+        // rendered expanded window (60..159) and near the end edge.
+        scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(1500.0)));
+
+        let record = InteractionRecord {
+            node: vlist_node,
+            bounds,
+            render_transform_inv: None,
+            children_render_transform_inv: None,
+            clips_hit_test: true,
+            clip_hit_test_corner_radii: None,
+            is_focusable: false,
+            focus_traversal_children: true,
+            can_scroll_descendant_into_view: true,
+        };
+
+        ui.prepaint_virtual_list_window_from_interaction_record(&mut app, &record);
+
+        let last = ui
+            .debug_virtual_list_windows()
+            .last()
+            .expect("expected a debug virtual list window record");
+        assert_eq!(
+            last.window_shift_kind,
+            crate::tree::UiDebugVirtualListWindowShiftKind::Prefetch,
+            "expected this setup to trigger a prefetch shift"
+        );
+        assert_eq!(
+            last.window_shift_apply_mode,
+            Some(crate::tree::UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile),
+            "expected retained hosts to apply shifts via reconcile"
+        );
+
+        let prev = last
+            .prev_window_range
+            .or(last.render_window_range)
+            .expect("expected a previous window range");
+        let next = last.window_range.expect("expected a next window range");
+        let delta = next.start_index.saturating_sub(prev.start_index);
+        assert!(
+            delta <= RETAINED_HOST_PREFETCH_STEP_MAX,
+            "expected retained-host prefetch to cap shift delta (delta={delta} max={})",
+            RETAINED_HOST_PREFETCH_STEP_MAX
         );
     }
 }
