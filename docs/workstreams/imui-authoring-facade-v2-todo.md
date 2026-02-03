@@ -67,6 +67,8 @@ Exit criteria:
 - [x] IMUI2-api-010 Introduce the writer contract (bikesheddable name; minimal methods only).
 - [x] IMUI2-api-011 Update `ImUi` to implement the writer contract.
 - [x] IMUI2-eco-013 Update official ecosystem `imui` adapters to accept `UiWriter` (no concrete `ImUi` coupling).
+- [x] IMUI2-eco-014 Decouple official ecosystem `imui` feature gates from `fret-imui` (depend on `UiWriter` only).
+  - Evidence: `ecosystem/fret-markdown/Cargo.toml`, `ecosystem/fret-code-view/Cargo.toml`, `ecosystem/fret-docking/Cargo.toml`, `ecosystem/fret-node/Cargo.toml`.
 - [x] IMUI2-test-012 Add compile-level smoke tests ensuring the writer surface remains usable across crates.
   - Evidence: `ecosystem/fret-authoring/src/lib.rs` (compile smoke), `ecosystem/fret-imui/src/lib.rs` (bridge smoke).
 

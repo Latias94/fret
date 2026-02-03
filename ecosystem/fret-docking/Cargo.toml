@@ -14,7 +14,6 @@ fret-core = { path = "../../crates/fret-core" }
 fret-dnd = { path = "../fret-dnd" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
-fret-imui = { path = "../fret-imui", optional = true }
 fret-authoring = { path = "../fret-authoring", optional = true }
 slotmap.workspace = true
 tracing.workspace = true
@@ -23,7 +22,7 @@ tracing.workspace = true
 default = ["layout-engine-v2"]
 layout-engine-v2 = ["fret-ui/layout-engine-v2"]
 ui = []
-imui = ["ui", "dep:fret-authoring", "dep:fret-imui"]
+imui = ["ui", "dep:fret-authoring"]
 
 [dev-dependencies]
 slotmap.workspace = true

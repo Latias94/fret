@@ -21,6 +21,7 @@ Tracking:
 Decision snapshot (2026-02-03):
 
 - `UiWriter` lives in `ecosystem/fret-authoring` (tiny, policy-light, no cycles).
+- Official ecosystem `imui` feature gates depend on `fret-authoring` (not `fret-imui`).
 - Canonical widget rule (official crates): one source-of-truth implementation; adapters (imui/ui-kit/shadcn) delegate.
 - Stability policy: keep `UiWriter` stable once depended on; expect churn in bridge utilities and imui ergonomics.
 - Token/preset policy: keep patch vocabulary + generic scales/presets in `fret-ui-kit`; keep shadcn-aligned tokens and recipes in `fret-ui-shadcn`; keep app-specific tokens in the app layer.

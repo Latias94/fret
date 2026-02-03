@@ -285,22 +285,26 @@ To keep ecosystem crates portable and to avoid unnecessary dependencies, adopt:
 - `ui` (declarative integration with `fret-ui`)
 - `imui` (immediate-mode integration; should imply `ui`)
 
-Rule of thumb:
+Rule of thumb (updated by v2 consolidation, 2026-02-03):
 
-- `imui` depends on `fret-imui`, not on `fret-ui-kit`.
-- “recipes” / opinionated styling integrations depend on `fret-ui-kit` (A2).
+- `imui` depends on `fret-authoring` (`UiWriter`), not on a concrete frontend (`fret-imui`).
+- Apps can depend on `fret-imui` (or any future frontend) separately.
+- “recipes” / opinionated styling integrations depend on `fret-ui-kit` / `fret-ui-shadcn` (A2).
 
 ### 6.2 Third-party widget contract
 
 Third-party crates should expose widgets like:
 
-- `pub fn widget(ui: &mut fret_imui::ImUi<'_, '_, H>, ...) -> fret_imui::Response`
+- `pub fn widget(ui: &mut impl fret_authoring::UiWriter<H>, ...)`
 
 This keeps:
 
 - composition easy (any crate can call any other crate’s widget functions),
 - dependencies minimal (no need to depend on `UiTree` or runner details),
 - compatibility with multi-window (the window is already in `ElementContext`).
+
+Interactive widgets may still choose to depend on `fret-imui` for a shared `Response` type, but the
+core embedding surface should remain frontend-agnostic.
 
 #### Third-party checklist (recommended)
 
@@ -309,7 +313,7 @@ This keeps:
 - `default = []`
 - `headless` for model-only / algorithms
 - `ui` for declarative (`fret-ui`) integration
-- `imui` for immediate-mode (`fret-imui`) adapters (and it should imply `ui`)
+- `imui` for immediate-mode adapters (`fret-authoring` + `UiWriter`) (and it should imply `ui`)
 
 2) Gate the adapter module behind `imui`:
 
@@ -322,9 +326,9 @@ pub mod imui;
 
 ```rust
 pub fn widget<H: fret_ui::UiHost>(
-    ui: &mut fret_imui::ImUi<'_, '_, H>,
+    ui: &mut impl fret_authoring::UiWriter<H>,
     /* args */
-) -> fret_imui::Response {
+) {
     /* ... */
 }
 ```
@@ -332,8 +336,8 @@ pub fn widget<H: fret_ui::UiHost>(
 4) Only drop to substrate when necessary:
 
 - for existing declarative builders: `ui.mount(|cx| -> impl IntoIterator<Item=AnyElement> { ... })`
-- for advanced mechanisms: `ui.cx_mut()`
-- for retained widgets: `cx.retained_subtree(...)` (feature-gated)
+- for advanced mechanisms: `ui.with_cx_mut(|cx| { ... })`
+- for retained widgets: `ui.with_cx_mut(|cx| cx.retained_subtree(...))` (feature-gated)
 
 ### 6.3 Escape hatches (avoid ecosystem dead-ends)
 

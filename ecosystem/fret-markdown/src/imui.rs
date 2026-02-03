@@ -1,7 +1,8 @@
-//! Immediate-mode (`fret-imui`) adapters for `fret-markdown`.
+//! Immediate-mode (`UiWriter`) adapters for `fret-markdown`.
 //!
 //! This module is intentionally tiny: it keeps `fret-markdown`'s core rendering APIs in the
-//! declarative layer, and only provides ergonomic glue for `ImUi` consumers.
+//! declarative layer, and only provides ergonomic glue for authoring frontends that implement
+//! `UiWriter`.
 
 use fret_authoring::UiWriter;
 use fret_ui::UiHost;

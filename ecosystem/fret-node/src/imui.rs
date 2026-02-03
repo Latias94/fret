@@ -1,4 +1,4 @@
-//! Immediate-mode (`fret-imui`) adapters for `fret-node`.
+//! Immediate-mode (`UiWriter`) adapters for `fret-node`.
 //!
 //! The node graph UI is implemented as a retained widget subtree. This module provides a small
 //! bridge that hosts that subtree inside the declarative element runtime via the

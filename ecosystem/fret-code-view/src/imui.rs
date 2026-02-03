@@ -1,7 +1,7 @@
-//! Immediate-mode (`fret-imui`) adapters for `fret-code-view`.
+//! Immediate-mode (`UiWriter`) adapters for `fret-code-view`.
 //!
 //! This module keeps `fret-code-view`'s primary APIs in the declarative authoring layer and adds a
-//! small ergonomic bridge for `ImUi` consumers.
+//! small ergonomic bridge for authoring frontends that implement `UiWriter`.
 
 use fret_authoring::UiWriter;
 use fret_ui::UiHost;

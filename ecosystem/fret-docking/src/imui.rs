@@ -1,4 +1,4 @@
-//! Immediate-mode (`fret-imui`) adapters for `fret-docking`.
+//! Immediate-mode (`UiWriter`) adapters for `fret-docking`.
 //!
 //! This module provides a tiny glue layer that lets imui apps embed a docking host without
 //! re-implementing the retained-bridge wiring in every application.
