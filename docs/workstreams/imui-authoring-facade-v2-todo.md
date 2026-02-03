@@ -101,7 +101,7 @@ Exit criteria:
 - Editor-grade proof demos run unchanged in intent (even if APIs changed).
 - The demo suite exercises the multi-window + docking + viewport seams during the refactor.
 
-- [ ] IMUI2-demo-040 Migrate `imui_hello_demo` to v2 surface (smoke).
+- [x] IMUI2-demo-040 Migrate `imui_hello_demo` to v2 surface (smoke).
 - [ ] IMUI2-demo-041 Migrate `imui_node_graph_demo` to v2 surface (retained subtree interop).
 - [~] IMUI2-demo-042 Migrate `imui_editor_proof_demo` to v2 surface (multi-window + docking + viewport).
   - Started by rendering the root layout via `ui::v_flex_build` + `UiWriterUiKitExt::add_ui(...)`.
