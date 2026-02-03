@@ -653,7 +653,7 @@ topics (if/when we implement them):
         - Evidence (suite; cache+shell, release): `target/fret-diag-suite-ui-gallery-vlist-window-boundary-smoke2/1770082913519-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - [x] Add a stable regression gate for the window-boundary harness:
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
-        - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+        - Recommended env: `FRET_UI_GALLERY_VLIST_RETAINED=0`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
         - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
         - Gate (new): `--check-vlist-visible-range-refreshes-min 1` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_min.json`).
         - Gate (new): `--check-vlist-visible-range-refreshes-max 35` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
@@ -675,8 +675,8 @@ topics (if/when we implement them):
       - `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate`)
       - `apps/fretboard/src/diag/stats.rs` (vlist visible-range refresh gates: `--check-vlist-visible-range-refreshes-min`, `--check-vlist-visible-range-refreshes-max`)
       - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (tuned to trigger prefetch reliably)
-    - Evidence (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
-      - `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+    - Evidence (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
+      - `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
   - Scope note: this item intentionally tracks **two** related tracks:
     - **Retained host windowed surfaces (ADR 0192)**: prepaint derives window shifts, and a retained reconcile attaches/detaches rows without
       dirtying the parent cache root. This track is now mostly about tuning and hardening (e.g. staged prefetch + budgets).
@@ -915,9 +915,9 @@ topics (if/when we implement them):
         - `--check-vlist-visible-range-refreshes-max 35`
         - `--check-vlist-window-shifts-prefetch-max 30`
         - `--check-vlist-window-shifts-escape-max 6`
-        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
-      - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated):
-        `target/fret-diag-vlist-boundary-prefetch6/1769935495560-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
+      - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
+        `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch_step=overscan*8 for non-retained):
         `target/fret-diag-suite-ui-gallery-vlist-window-boundary-after-prefetch-step/1770047603074-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
         - Observed: `prefetch_shifts=20`, `escape_shifts=3`, `visible_range_refreshes=26` (budgeted by suite defaults).
