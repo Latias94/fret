@@ -1049,3 +1049,17 @@ What was preserved:
 
 Outcome:
 - `target/fret-diag-perf/` size: ~292GB → ~29GB (local machine; macOS).
+
+## 2026-02-03 16:20:00 (commit `21ceabc3`)
+
+Change:
+- `fretboard diag stats --json` now includes bounds-tree hit-test counters in `top[]` rows:
+  - `hit_test_bounds_tree_queries`
+  - `hit_test_bounds_tree_disabled`
+  - `hit_test_bounds_tree_misses`
+  - `hit_test_bounds_tree_hits`
+  - `hit_test_bounds_tree_candidate_rejected`
+
+Why:
+- `diag perf` already exported these for top frames, but `diag stats` JSON did not, which made ad-hoc inspection
+  confusing when validating whether the bounds tree path was actually exercised.
