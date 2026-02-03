@@ -25341,6 +25341,125 @@ fn web_vs_fret_layout_field_slider_track_geometry_matches_web() {
 }
 
 #[test]
+fn web_vs_fret_layout_field_slider_thumb_insets_match_web() {
+    let web = read_web_golden("field-slider");
+    let theme = web_theme(&web);
+
+    let web_slider = find_first(&theme.root, &|n| {
+        n.tag == "span"
+            && n.attrs
+                .get("aria-label")
+                .is_some_and(|v| v == "Price Range")
+    })
+    .expect("web slider");
+
+    let mut web_thumbs = find_all(web_slider, &|n| {
+        n.tag == "span" && n.attrs.get("role").is_some_and(|r| r == "slider")
+    });
+    assert_eq!(
+        web_thumbs.len(),
+        2,
+        "expected 2 web slider thumbs; got={}",
+        web_thumbs.len()
+    );
+    web_thumbs.sort_by(|a, b| a.rect.x.total_cmp(&b.rect.x));
+    let web_thumb_dx: Vec<f32> = web_thumbs
+        .iter()
+        .map(|thumb| thumb.rect.x - web_slider.rect.x)
+        .collect();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
+    );
+
+    let snap = run_fret_root(bounds, |cx| {
+        let model: Model<Vec<f32>> = cx.app.models_mut().insert(vec![200.0, 800.0]);
+        let slider = fret_ui_shadcn::Slider::new(model)
+            .range(0.0, 1000.0)
+            .step(10.0)
+            .a11y_label("Price Range")
+            .into_element(cx);
+
+        let field = fret_ui_shadcn::Field::new(vec![
+            fret_ui_shadcn::FieldTitle::new("Price Range").into_element(cx),
+            fret_ui_shadcn::FieldDescription::new("Set your budget range ($200 - 800).")
+                .into_element(cx),
+            slider,
+        ])
+        .into_element(cx);
+
+        vec![cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(web_slider.rect.w)),
+                        height: Length::Auto,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            move |_cx| vec![field],
+        )]
+    });
+
+    let mut fret_thumbs: Vec<&fret_core::SemanticsNode> = snap
+        .nodes
+        .iter()
+        .filter(|n| n.role == SemanticsRole::Slider && n.label.as_deref() == Some("Price Range"))
+        .collect();
+    assert_eq!(
+        fret_thumbs.len(),
+        2,
+        "expected 2 fret slider thumbs; got={}",
+        fret_thumbs.len()
+    );
+    fret_thumbs.sort_by(|a, b| a.bounds.origin.x.0.total_cmp(&b.bounds.origin.x.0));
+
+    let slider = fret_thumbs[0]
+        .parent
+        .and_then(|parent| snap.nodes.iter().find(|n| n.id == parent))
+        .unwrap_or(fret_thumbs[0]);
+
+    let fret_thumb_dx: Vec<f32> = fret_thumbs
+        .iter()
+        .map(|thumb| thumb.bounds.origin.x.0 - slider.bounds.origin.x.0)
+        .collect();
+
+    assert_close_px(
+        "field-slider thumb[0] inset x",
+        Px(fret_thumb_dx[0]),
+        web_thumb_dx[0],
+        1.0,
+    );
+    assert_close_px(
+        "field-slider thumb[1] inset x",
+        Px(fret_thumb_dx[1]),
+        web_thumb_dx[1],
+        1.0,
+    );
+
+    // Sanity: thumbs should remain within the slider bounds (Radix `getThumbInBoundsOffset`).
+    for (i, thumb) in fret_thumbs.iter().enumerate() {
+        assert!(
+            thumb.bounds.origin.x.0 >= slider.bounds.origin.x.0 - 0.5,
+            "thumb[{i}] x should not underflow slider bounds: thumb.x={} slider.x={}",
+            thumb.bounds.origin.x.0,
+            slider.bounds.origin.x.0
+        );
+        assert!(
+            thumb.bounds.origin.x.0 + thumb.bounds.size.width.0
+                <= slider.bounds.origin.x.0 + slider.bounds.size.width.0 + 0.5,
+            "thumb[{i}] should not overflow slider bounds: thumb.right={} slider.right={}",
+            thumb.bounds.origin.x.0 + thumb.bounds.size.width.0,
+            slider.bounds.origin.x.0 + slider.bounds.size.width.0
+        );
+    }
+}
+
+#[test]
 fn web_vs_fret_layout_field_demo_separator_height_matches_web() {
     let web = read_web_golden("field-demo");
     let theme = web_theme(&web);
