@@ -47,8 +47,8 @@ Notes:
 
 - Golden files (tracked): `600`
 - Golden keys (tracked, normalized `.open` suffix): `556`
-- Gated keys (string-literal heuristic): `550` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `550` (`100%`)
+- Gated keys (string-literal heuristic): `556` (`100%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `556` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 As of 2026-02-03 (tracked-only).
