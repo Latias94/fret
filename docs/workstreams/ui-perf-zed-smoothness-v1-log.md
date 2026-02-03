@@ -1393,6 +1393,27 @@ Warm-process highlights:
 - `top_frame_arena_grow_events`: p50 `0`, p95 `1` (growth only shows up in the first run; subsequent repeats stay stable)
 - `p95 total`: `6487us` (this is not directly comparable to relaunch-per-repeat baselines)
 
+### Element build: remove per-scope `HashMap` churn in callsite counters
+
+Commit:
+- `perf(fret-ui): remove callsite counter HashMap churn` (`2dd36fde`)
+
+Command (release; steady; repeat=7; relaunch-per-repeat):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --dir target/fret-diag-perf-overlay/overlay-torture.steady.callsite-smallvec.r6 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| callsite counters: `HashMap -> SmallVec` | 6312 | 6373 | 6373 | 3608 | 37 | 2784 |
+
+Worst bundle:
+- `target/fret-diag-perf-overlay/overlay-torture.steady.callsite-smallvec.r6/1770130218798-ui-gallery-overlay-torture-steady/bundle.json`
+
+Delta note (vs `1b0364e9` relaunch-per-repeat run above):
+- `p95 total 6737us -> 6373us` (-364us, ~-5.4%)
+
 ### Script: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json`
 
 Command (release; steady; repeat=7; scratch enabled):

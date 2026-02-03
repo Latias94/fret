@@ -113,6 +113,9 @@ Perf acceptance:
 - [x] Export “frame arena scratch” counters into perf-visible diagnostics:
   - Implemented by `feat(diag): export frame arena scratch stats` (commit `fe0ad7c3`).
   - Fix: `fix(fret-ui): restore keepalive scratch after diagnostics` (commit `1b0364e9`).
+- [x] Remove per-scope `HashMap` churn during element ID derivation (callsite counters).
+  - Implemented by `perf(fret-ui): remove callsite counter HashMap churn` (commit `2dd36fde`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for `2dd36fde`.
 - [ ] Add an optional allocation counter hook for local profiling (feature-gated).
   - Keep it portable; do not require a global allocator swap for normal builds.
 

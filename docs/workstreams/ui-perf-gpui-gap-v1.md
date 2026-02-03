@@ -113,6 +113,9 @@ Fret:
   - GC reachability scratch (`HashSet<NodeId>` + `Vec<NodeId>`) in declarative mount/GC
   - Semantics snapshot traversal scratch (`HashSet<NodeId>` + `Vec<(NodeId, Transform2D)>`)
   - Evidence: `perf(fret-ui): reuse GC/semantics scratch via frame arena` (commit `3d6e2431`).
+- Partial progress: reduce per-frame heap churn during declarative element ID derivation by removing
+  per-scope `HashMap` allocations for callsite counters.
+  - Evidence: `perf(fret-ui): remove callsite counter HashMap churn` (commit `2dd36fde`).
 - Diagnostics now export “frame arena scratch” proxies into perf bundles:
   - `top_frame_arena_capacity_estimate_bytes`
   - `top_frame_arena_grow_events`
