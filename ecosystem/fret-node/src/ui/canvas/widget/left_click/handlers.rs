@@ -3,12 +3,12 @@ use fret_ui::UiHost;
 
 use crate::interaction::NodeGraphDragHandleMode;
 
-use super::super::super::state::{
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::hit::Hit;
+use crate::ui::canvas::state::{
     EdgeDrag, PendingEdgeInsertDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag,
     PendingNodeResize, PendingNodeSelectAction, PendingWireDrag, ViewSnapshot, WireDragKind,
 };
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
-use super::hit::Hit;
 
 pub(super) fn handle_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

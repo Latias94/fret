@@ -1,6 +1,6 @@
-use super::super::super::super::paint_render_data::RenderData;
-use super::super::super::super::*;
 use super::keys;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn paint_root_edges_cached_path_tiled<H: UiHost>(

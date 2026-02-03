@@ -5,10 +5,10 @@ use fret_ui::UiHost;
 
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 
-use super::super::super::conversion;
-use super::super::super::state::{ViewSnapshot, WireDragKind};
 use super::super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use super::diagnostics::severity_rank;
+use crate::ui::canvas::conversion;
+use crate::ui::canvas::state::{ViewSnapshot, WireDragKind};
 
 pub(in super::super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

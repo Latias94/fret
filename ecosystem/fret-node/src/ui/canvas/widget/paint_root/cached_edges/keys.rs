@@ -1,4 +1,4 @@
-use super::super::super::super::*;
+use crate::ui::canvas::widget::*;
 
 pub(super) fn edges_tiles_base_key(
     base_key: DerivedBaseKey,

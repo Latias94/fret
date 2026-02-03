@@ -1,5 +1,5 @@
-use super::super::super::paint_render_data::RenderData;
-use super::super::super::*;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
+use crate::ui::canvas::widget::*;
 
 mod build_state;
 mod keys;

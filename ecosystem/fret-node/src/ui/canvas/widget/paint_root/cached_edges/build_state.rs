@@ -1,5 +1,5 @@
-use super::super::super::super::paint_render_data::RenderData;
-use super::super::super::super::*;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
+use crate::ui::canvas::widget::*;
 
 fn extend_clip_stack_ops(ops: &mut Vec<SceneOp>, tmp: &[SceneOp]) {
     if tmp.is_empty() {

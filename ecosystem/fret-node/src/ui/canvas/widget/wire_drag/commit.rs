@@ -9,13 +9,13 @@ use crate::rules::{ConnectDecision, DiagnosticSeverity};
 use crate::runtime::callbacks::ConnectEndOutcome;
 use crate::ui::presenter::InsertNodeCandidate;
 
-use super::super::super::conversion;
-use super::super::super::searcher::SEARCHER_MAX_VISIBLE_ROWS;
-use super::super::super::state::{
-    ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
-};
 use super::super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use super::commit_cx::WireCommitCx;
+use crate::ui::canvas::conversion;
+use crate::ui::canvas::searcher::SEARCHER_MAX_VISIBLE_ROWS;
+use crate::ui::canvas::state::{
+    ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
+};
 
 pub(in super::super) fn handle_wire_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -257,7 +257,7 @@ pub(in super::super) fn handle_wire_left_up_with_forced_target<
                             candidates: candidates.clone(),
                         });
 
-                        let rows = super::super::super::searcher::build_rows_flat(&candidates, "");
+                        let rows = crate::ui::canvas::searcher::build_rows_flat(&candidates, "");
                         let visible = rows.len().min(SEARCHER_MAX_VISIBLE_ROWS);
                         let origin = canvas.clamp_searcher_origin(
                             Point::new(Px(convert_at.x), Px(convert_at.y)),

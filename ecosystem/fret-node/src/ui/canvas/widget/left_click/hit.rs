@@ -4,8 +4,8 @@ use fret_ui::UiHost;
 use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 use crate::rules::EdgeEndpoint;
 
-use super::super::super::state::{NodeResizeHandle, ViewSnapshot};
 use super::super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{NodeResizeHandle, ViewSnapshot};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) enum Hit {
@@ -54,7 +54,7 @@ pub(super) fn compute_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 }
 
                 let order =
-                    super::super::super::geometry::group_order(graph, &snapshot.group_draw_order);
+                    crate::ui::canvas::geometry::group_order(graph, &snapshot.group_draw_order);
                 for group_id in order.iter().rev() {
                     let Some(group) = graph.groups.get(group_id) else {
                         continue;

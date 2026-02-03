@@ -3,11 +3,11 @@ use fret_ui::UiHost;
 
 use crate::core::{CanvasRect, CanvasSize, NodeExtent};
 
-use super::super::super::geometry::node_rect_origin_from_anchor;
-use super::super::super::geometry::{node_ports, node_size_default_px};
-use super::super::super::state::ViewSnapshot;
 use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use super::math;
+use crate::ui::canvas::geometry::node_rect_origin_from_anchor;
+use crate::ui::canvas::geometry::{node_ports, node_size_default_px};
+use crate::ui::canvas::state::ViewSnapshot;
 
 fn resolve_min_size_px<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
