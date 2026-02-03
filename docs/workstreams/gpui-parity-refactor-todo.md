@@ -635,6 +635,8 @@ topics (if/when we implement them):
           - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (“Scheduling responsibility” under Track B).
           - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (non-retained schedules one-shot rerender on `window_shift_kind!=none`),
             `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (layout no longer duplicates rerender scheduling on `window_mismatch`).
+          - Note: if `render_window_range` is missing (common when a cache-hit frame skips declarative render during the initial viewport bootstrap),
+            prepaint must treat this as a mismatch so the next frame can mount the correct row subtree under view-cache reuse.
         - Specify the allowed "ephemeral prepaint updates" for the non-retained VirtualList path (e.g. window prediction, scroll-offset bookkeeping, one-shot escape scheduling), and explicitly forbid any attach/detach that would require remounting children without a rerender boundary.
         - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
         - References: ADR 0190 §3A + §4 (v2 explainability) and ADR 0193 §2A (“window plans” vs structural mutation).
@@ -692,7 +694,10 @@ topics (if/when we implement them):
       - Current: prepaint updates `VirtualListState.window_range` from interaction records and scroll-handle state (no rerender required for retained hosts).
       - Next (retained host): lift/standardize the derived window into explicit prepaint outputs where needed, and keep the “why did the window change?” story fully explainable from one bundle.
       - Diagnostics: `debug.virtual_list_windows[*]` now include `policy_key` / `inputs_key` and the policy inputs (`estimate_row_height`, `gap`, `scroll_margin`, `content_extent`) so “policy changed vs. scroll changed” is distinguishable.
-        - Evidence: `target/fret-diag-vlist-window-keys/1769858602068-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+          - Evidence: `target/fret-diag-vlist-window-keys/1769858602068-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+        - Regression: prepaint detects when a render-derived window (from a smaller viewport) underestimates the final visible span while still
+          appearing “within overscan”, and stages a one-shot `prefetch` shift attributed to `viewport_resize`.
+          - Anchor: `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_detects_render_window_insufficient_for_overscan_policy`)
       - Perf story (baseline): window-boundary frames are still layout-dominated mainly because retained-host reconcile can attach/detach multiple row subtrees in one tick.
         - Evidence (same bundle; warmup=5):
           - Worst layout frame: `frame_id=24` (`tick_id=25`) `layout_time_us=2560` with `retained_virtual_list_attached_items=9`, `detached_items=3` (delta=12) and `barrier_relayouts_performed=1`.
