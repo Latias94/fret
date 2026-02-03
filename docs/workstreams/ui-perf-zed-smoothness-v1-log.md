@@ -1236,3 +1236,40 @@ Worst bundle:
 
 Notes:
 - Compared to the previous code-editor autoscroll entry (commit `81159325`), this is within expected noise.
+
+## 2026-02-03 20:25:00 (commit `cb3ff2d9`)
+
+Change:
+- Reuse view-cache “keep-alive” scratch collections (HashSet/Vec) during reachability/GC to reduce per-frame
+  allocator churn when cache roots are reused.
+
+Script:
+- `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (release; steady; repeat=5):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.r7 --repeat 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 6274 | 6379 | 6379 | 933 | 29 | 5437 |
+
+Top view-cache counters (top frame):
+- `top_view_cache_roots_total`: 2
+- `top_view_cache_roots_reused`: 1
+- `top_view_cache_roots_cache_key_mismatch`: 0
+- `top_view_cache_roots_needs_rerender`: 0
+- `top_view_cache_roots_layout_invalidated`: 0
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.keepalive-scratch.r7/1770121359579-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Notes:
+- Compared to the previous code-editor autoscroll entry (commit `a39e79c4`), this run regressed:
+  - p95 total: `5949` -> `6379` (+`430us`, +`7.2%`)
+  - p95 paint: `5053` -> `5437` (+`384us`, +`7.6%`)
+- This scenario has only 2 cache roots and is paint-dominated; the keep-alive scratch reuse is expected to matter
+  mostly for cases with many reused roots/elements. Re-run with more repeats and additional probes before deciding
+  whether this change should be kept or reverted.
