@@ -921,3 +921,65 @@ Notes:
   suggests hit testing is not currently a dominant cost (or the scripts are not yet stressing the right shape).
 - Next: find or synthesize a workload where hit testing is a meaningful slice of the frame budget, then re-run the
   bounds tree A/B in that context.
+
+## 2026-02-03 06:17:40 (commit `26de29bd`)
+
+Change:
+- feat(ui-gallery): add hit-test torture harness
+
+Adds:
+- New gallery page: `hit_test_torture`
+- Harness-only mode (skips gallery chrome): `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
+- Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+
+Goal:
+- Provide a deterministic workload where hit-test CPU time is intentionally measurable (tens/hundreds of microseconds),
+  so bounds-tree vs fallback traversal A/B is meaningful.
+
+## 2026-02-03 06:19:06 (commit `ad9d5091`)
+
+Change:
+- perf(diag): expose bounds-tree query stats
+
+Adds:
+- `UiDebugFrameStats` counters for bounds-tree query outcomes (queries / disabled / miss / hit / candidate_rejected).
+- `fretboard diag perf` JSON fields for the top frame:
+  - `top_hit_test_bounds_tree_queries`
+  - `top_hit_test_bounds_tree_disabled`
+  - `top_hit_test_bounds_tree_misses`
+  - `top_hit_test_bounds_tree_hits`
+  - `top_hit_test_bounds_tree_candidate_rejected`
+
+## 2026-02-03 06:24:19 (commit `811101c3`)
+
+Change:
+- perf(fret-ui): support overflow-visible in bounds tree
+
+Context:
+- Previously the bounds tree was disabled for an entire layer if any node had `clips_hit_test=false` (overflow visible),
+  which is common in mechanism-heavy UI trees (semantics wrappers, pointer regions, etc.). This made the index hard to
+  activate in practice, and the A/B runs stayed within noise.
+- After this change, the bounds tree keeps building even when some ancestors do not clip hit-testing, by propagating
+  the ancestor clip (or "no clip") down the stack. This makes the index usable on more real trees.
+
+Commands (A/B; noise=20k; harness-only):
+```powershell
+# Bounds tree ON:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-on.noise20k.after-overflow-visible-support.r7 --repeat 7 --timeout-ms 600000 --sort hit_test --top 5 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+
+# Bounds tree OFF:
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-off.noise20k.after-overflow-visible-support.r7 --repeat 7 --timeout-ms 600000 --sort hit_test --top 5 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES=256 --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=20000 --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+| variant | p50 total | p95 total | max total | p95 dispatch_time_us | p95 hit_test_time_us |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| bounds tree ON | 29729 | 31348 | 31348 | 967 | 240 |
+| bounds tree OFF | 28695 | 29408 | 29408 | 1600 | 797 |
+
+Worst bundles:
+- bounds tree ON: `target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-on.noise20k.after-overflow-visible-support.r7/1770098586674-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- bounds tree OFF: `target/fret-diag-perf/hit-test-torture.harness-only.surface.bounds-tree-off.noise20k.after-overflow-visible-support.r7/1770099309508-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+Notes:
+- Under this workload, bounds tree materially reduces `hit_test_time_us` (~3.3x at p95).

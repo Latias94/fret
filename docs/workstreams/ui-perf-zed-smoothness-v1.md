@@ -225,6 +225,13 @@ layout/paint. We track this as a first-class follow-up:
 
 See `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md` (M3) for the concrete TODO entry.
 
+Update (2026-02-03):
+- Dispatch + hit-test timings are now exported in `fretboard diag perf` (see log entries for commit `4b0be50e`).
+- Bounds-tree query outcomes are also exported for the top frame (commit `ad9d5091`) so we can distinguish “index
+  disabled” vs “index hit/miss” when validating hit-test improvements.
+- A dedicated hit-test torture harness exists (`hit_test_torture`, commit `26de29bd`) and is used to validate the
+  bounds-tree A/B after broadening overflow-visible support (commit `811101c3`).
+
 ---
 
 ## 2) Hot path model (where the time goes)

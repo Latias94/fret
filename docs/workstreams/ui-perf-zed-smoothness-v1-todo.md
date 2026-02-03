@@ -110,7 +110,8 @@ Correctness acceptance:
 - [x] Route pointer move/down hit-testing through the bounds tree for large trees.
   - Implemented by `75a9fde3` (hooked via `UiTree::hit_test_layers_cached`).
 - [x] Define “fallback” conditions clearly (transforms, clips, non-axis-aligned bounds).
-  - Disabled for a layer if any node has `clips_hit_test=false` (overflow-visible hit testing).
+  - Supports `clips_hit_test=false` (overflow-visible hit testing) by propagating the ancestor clip (instead of
+    disabling the index for the entire layer).
   - Disabled for a layer if any transform is non-axis-aligned (`b!=0` or `c!=0`).
   - Env toggles:
     - `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` disables the index.
@@ -131,9 +132,11 @@ Correctness acceptance:
   - Scripts:
     - `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
     - `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`
-- [ ] Find (or construct) a workload where `top_hit_test_time_us` is a meaningful slice of the frame budget.
-  - Current sweep scripts are still ~single-digit microseconds per frame for hit testing on macOS M4.
-  - Candidates: windowed rows interactive, docking multiwindow hover, dense tree/table with many hit-testable nodes.
+- [x] Find (or construct) a workload where `top_hit_test_time_us` is a meaningful slice of the frame budget.
+  - Page: `apps/fret-ui-gallery/src/ui.rs` (`hit_test_torture`)
+  - Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+  - Harness-only mode (to remove gallery chrome noise): `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
+  - Evidence + metrics: see `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries after commit `811101c3`.
 
 Perf acceptance:
 
