@@ -38,6 +38,7 @@ Tracking format:
 - 2026-02-02: added `dropdown-menu-demo.vp375x240-scrolled-80.open` + a wheel-scroll parity gate (overlay x/y stable + first-visible label matches web) to catch scroll-induced anchor drift.
 - 2026-02-02: added a Menubar wheel anchor-stability gate on `menubar-demo.vp375x240.open` (no scroll range; wheel must not move overlay).
 - 2026-02-02: added a NavigationMenu wheel "no-op" gate (wheel over a non-scrollable portal surface must not jitter trigger/content anchor) in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
+- 2026-02-03: added a Select wheel gate: wheeling outside the listbox must not scroll the underlay (modal barrier), and wheeling inside the listbox must scroll options without drifting the anchored panel (`ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`).
 - [x] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
 - 2026-02-03: added `button-group-demo.destructive-focus` open golden + idle/focused destructive item chrome gates (light/dark) to lock in `bg-destructive/10` vs idle behavior for DropdownMenu.
