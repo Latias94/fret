@@ -8732,30 +8732,27 @@ fn preview_tabs(
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     let tabs = shadcn::Tabs::new(value)
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(LayoutRefinement::default().w_px(Px(400.0)))
         .list_full_width(false)
         .items([
             shadcn::TabsItem::new(
-                "overview",
-                "Overview",
-                vec![cx.text("Tabs are stateful and roving-focus friendly.")],
+                "account",
+                "Account",
+                vec![cx.text("Make changes to your account here.")],
             ),
             shadcn::TabsItem::new(
-                "details",
-                "Details",
-                vec![cx.text("Use Tabs for sections within a single page.")],
-            ),
-            shadcn::TabsItem::new(
-                "notes",
-                "Notes",
-                vec![cx.text(
-                    "In this gallery, the outer shell also uses Tabs (Preview/Usage/Notes).",
-                )],
+                "password",
+                "Password",
+                vec![cx.text("Change your password here.")],
             ),
         ])
         .into_element(cx);
 
-    vec![tabs, cx.text(format!("Selected: {selected}"))]
+    vec![
+        tabs,
+        cx.text("Note: this gallery uses Tabs for the Preview/Usage/Docs shell."),
+        cx.text(format!("Selected: {selected}")),
+    ]
 }
 
 fn preview_accordion(
