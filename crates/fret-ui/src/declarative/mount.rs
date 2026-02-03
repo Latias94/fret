@@ -4,7 +4,7 @@ use super::frame::{
 };
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
@@ -1563,7 +1563,6 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
 
             if let Some(existing) = keep_alive_by_key.remove(&item.key) {
                 window_state.remove_retained_virtual_list_keep_alive_root(existing);
-                keep_alive_order.retain(|k| *k != item.key);
                 next_children.push(existing);
                 preserved = preserved.saturating_add(1);
                 reused_from_keep_alive = reused_from_keep_alive.saturating_add(1);
@@ -1616,7 +1615,6 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 if let Some(prev) = keep_alive_by_key.remove(&key) {
                     window_state.remove_retained_virtual_list_keep_alive_root(prev);
                 }
-                keep_alive_order.retain(|k| *k != key);
                 keep_alive_by_key.insert(key, child);
                 keep_alive_order.push_back(key);
                 window_state.add_retained_virtual_list_keep_alive_root(child);
@@ -1632,7 +1630,28 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                     evicted_keep_alive = evicted_keep_alive.saturating_add(1);
                 }
             }
-            keep_alive_order.retain(|k| keep_alive_by_key.contains_key(k));
+            // We allow `keep_alive_order` to contain duplicates to keep the per-detach hot path O(1)
+            // (no `retain` scans). Eviction skips keys that no longer exist in the map.
+            //
+            // Occasionally compact to keep memory bounded and preserve an LRU-like ordering for
+            // evictions (least recent detached keys at the front).
+            let order_len = keep_alive_order.len();
+            let budget = keep_alive_budget.max(1);
+            if order_len > budget.saturating_mul(16).saturating_add(256) {
+                let mut seen: HashSet<crate::ItemKey> = HashSet::new();
+                let mut compact_rev: Vec<crate::ItemKey> =
+                    Vec::with_capacity(keep_alive_by_key.len());
+                for &k in keep_alive_order.iter().rev() {
+                    if !keep_alive_by_key.contains_key(&k) {
+                        continue;
+                    }
+                    if seen.insert(k) {
+                        compact_rev.push(k);
+                    }
+                }
+                compact_rev.reverse();
+                keep_alive_order = VecDeque::from(compact_rev);
+            }
         }
 
         let keep_alive_pool_len_after = keep_alive_by_key.len().min(u32::MAX as usize) as u32;
