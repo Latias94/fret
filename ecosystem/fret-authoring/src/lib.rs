@@ -8,6 +8,8 @@
 //! - Do not introduce a second UI runtime: authoring must compile down to the declarative element
 //!   taxonomy mounted into `UiTree` (ADR 0028).
 
+use std::hash::Hash;
+
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
@@ -42,5 +44,13 @@ pub trait UiWriter<H: UiHost> {
     {
         let elements: Vec<AnyElement> = self.with_cx_mut(|cx| f(cx).into_iter().collect());
         self.extend(elements);
+    }
+
+    /// Create a keyed identity scope.
+    ///
+    /// This delegates to the runtime's canonical keyed identity mechanism (`ElementContext::keyed`)
+    /// so hashing and stable ID rules remain consistent across frontends.
+    fn keyed<K: Hash, R>(&mut self, key: K, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
+        self.with_cx_mut(|cx| cx.keyed(key, f))
     }
 }
