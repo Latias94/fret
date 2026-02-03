@@ -182,6 +182,17 @@ Perf acceptance:
 - [ ] Pointer-move heavy cases should stay paint-only (no layout) unless explicitly required.
 - [ ] Hit-test CPU time should be bounded as node count scales.
 
+### M7: Renderer primitive profiling (bottom-up)
+
+- [x] Add renderer perf logging to UI gallery (primitive-level signals).
+  - Enable: `FRET_UI_GALLERY_RENDERER_PERF=1`
+  - Optional pipeline breakdown: `FRET_RENDERER_PERF_PIPELINES=1`
+  - Goal: provide low-level “are we draw-call/pipeline-switch bound?” signals before deeper refactors.
+- [ ] Add a short “profiling playbook” that links `diag perf` → renderer perf → Tracy → RenderDoc.
+  - Draft: `docs/workstreams/ui-perf-renderer-profiling-v1.md`
+- [ ] Consider exporting renderer perf snapshots into diagnostics bundles for perf log correlation.
+  - This would allow perf logs to record `encode_scene_us / prepare_text_us / draw_calls / pipeline_switches` next to `paint_time_us`.
+
 ### M4: Windowed surfaces (prepaint-driven visible windows)
 
 - [ ] Pick the first “editor-class” migration target:

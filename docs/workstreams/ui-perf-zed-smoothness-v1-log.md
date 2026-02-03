@@ -1411,6 +1411,33 @@ Notes:
 - This script is intentionally “perf-safe”: no screenshots and includes a `reset_diagnostics` after warmup.
 - The element children vec pool stays in a stable “0 misses” steady state on this page as well.
 
+### Renderer primitive profiling (UI gallery): periodic `RenderPerfSnapshot` logging
+
+Commit:
+- `feat(ui-gallery): log renderer perf snapshots` (`68e31129`)
+
+Enable:
+- `FRET_UI_GALLERY_RENDERER_PERF=1` enables renderer perf accumulation + periodic snapshot logging.
+- `FRET_RENDERER_PERF_PIPELINES=1` prints pipeline-switch breakdown (optional).
+
+Usage (scripted steady workload; can be paired with `diag repro --with tracy` or `--with renderdoc`):
+```bash
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --env FRET_UI_GALLERY_RENDERER_PERF=1 \
+  --env FRET_RENDERER_PERF_PIPELINES=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+What it reports (stdout; once per ~1s while enabled):
+- CPU slices: `encode_scene_us`, `prepare_text_us`, `prepare_svg_us`
+- Complexity proxies: `draw_calls`, `pipeline_switches`, bind/scissor counts, upload bytes
+- Cache stability: `scene_encoding_cache_hits` / `scene_encoding_cache_misses`
+
+Notes:
+- This is a profiling aid (not a speedup). Keep it disabled for normal perf baselines.
+
 ### FrameArenaScratch v0: GC + semantics scratch reuse (exports `top_frame_arena_*`)
 
 Commits:
