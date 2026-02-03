@@ -2925,7 +2925,11 @@ See: `docs/tracy.md`.\n";
                     let suite_retained_vlist_keep_alive_reuse_min = ((components_gallery_suite
                         && script_requires_retained_vlist_keep_alive_reuse_gate)
                         || vlist_window_boundary_retained_suite)
-                        .then_some(1u64)
+                        .then_some(if vlist_window_boundary_retained_suite {
+                            5u64
+                        } else {
+                            1u64
+                        })
                         .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
                     let suite_gc_sweep_liveness =
                         builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
