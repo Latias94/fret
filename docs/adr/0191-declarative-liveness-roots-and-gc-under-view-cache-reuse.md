@@ -78,7 +78,8 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
 - **GPUI-style view caching**: cache hits reuse recorded frame ranges and keep view dependencies/state live because the view is still present in the window's view graph.
   - View caching is gated by "dirty views" (e.g. `WindowInvalidator.dirty_views`) plus a cache key (bounds/content mask/text style).
   - Cache hits still restore dependency tracking (e.g. extend `accessed_entities`) and preserve element-local state by "accessing" it as part of `prepaint`/`paint` replay.
-  - Concretely, the per-frame element-state map is driven by an explicit "accessed set": `with_element_state` records keys, and `reuse_prepaint`/`reuse_paint` replay extends `next_frame.accessed_element_states` by copying the recorded key slice from the previous frame's range. A cache hit therefore cannot accidentally drop state simply because a subtree did not rebuild.
+  - Concretely, the per-frame element-state map is driven by an explicit "accessed set": `Window::with_element_state` records keys, and `Window::reuse_prepaint`/`Window::reuse_paint` replays extend `next_frame.accessed_element_states` by copying the recorded key slice from the previous frame's range. A cache hit therefore cannot accidentally drop state simply because a subtree did not rebuild.
+  - This is the closest GPUI analogue of "subtree membership lists": the cached output carries an explicit, replayable summary of which state keys were used, and reusing the cached output reuses that summary.
 
 ### Upstream anchors (non-normative; line numbers may drift)
 
