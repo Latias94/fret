@@ -916,6 +916,7 @@ topics (if/when we implement them):
         - `--check-vlist-window-shifts-prefetch-max 30`
         - `--check-vlist-window-shifts-escape-max 6`
         - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
+        - Observed distribution (local, warmup=5, 3 runs): `total_refreshes=15` (`check.vlist_visible_range_refreshes_max.json`), so `20` is a tight-but-stable cap for churn regressions.
       - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary-retained` defaults to (retained-host path):
         - Same gates as the non-retained suite, plus:
           - `--check-retained-vlist-reconcile-no-notify 1`
