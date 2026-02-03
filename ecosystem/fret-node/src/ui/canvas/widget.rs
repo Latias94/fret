@@ -102,6 +102,7 @@ mod derived_geometry;
 mod edge_drag;
 mod edge_insert;
 mod edge_insert_drag;
+mod edge_path_ctx;
 mod event_clipboard;
 mod event_keyboard;
 mod event_pointer_down;
@@ -116,6 +117,7 @@ mod graph_construction;
 mod group_drag;
 mod group_resize;
 mod hit_test;
+use hit_test::{HitTestCtx, HitTestScratch};
 mod hover;
 mod insert_node_drag;
 mod interaction_policy;
@@ -136,6 +138,8 @@ mod paint_overlay_elements;
 mod paint_overlays;
 mod paint_render_data;
 mod paint_root;
+mod paint_root_helpers;
+mod paint_searcher;
 mod pan_zoom;
 mod pending_drag;
 mod pending_group_drag;
@@ -161,9 +165,10 @@ mod wire_drag;
 mod wire_drag_helpers;
 mod wire_math;
 
+use edge_path_ctx::EdgePathContext;
 use overlay_hit::{
-    context_menu_rect_at, hit_context_menu_item, hit_searcher_row, searcher_rect_at,
-    searcher_visible_rows,
+    context_menu_rect_at, context_menu_size_at_zoom, hit_context_menu_item, hit_searcher_row,
+    searcher_rect_at, searcher_size_at_zoom, searcher_visible_rows,
 };
 use rect_math::{
     edge_bounds_rect, inflate_rect, path_bounds_rect, rect_from_points, rect_union, rects_intersect,
@@ -185,10 +190,10 @@ use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
-    ContextMenuState, ContextMenuTarget, DragPreviewCache, DragPreviewKind, GeometryCache,
-    GeometryCacheKey, InteractionState, InternalsCacheKey, MarqueeDrag, NodeResizeHandle,
-    PanInertiaState, PasteSeries, PendingPaste, SearcherState, ToastState, ViewSnapshot, WireDrag,
-    WireDragKind,
+    ContextMenuState, ContextMenuTarget, DerivedBaseKey, DragPreviewCache, DragPreviewKind,
+    GeometryCache, GeometryCacheKey, InteractionState, InternalsCacheKey, InternalsViewKey,
+    MarqueeDrag, NodeResizeHandle, PanInertiaState, PasteSeries, PendingPaste, SearcherState,
+    SpatialIndexCacheKey, ToastState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -349,12 +354,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     fn edge_render_hint(&self, graph: &Graph, edge_id: EdgeId) -> EdgeRenderHint {
-        let base = self.presenter.edge_render_hint(graph, edge_id, &self.style);
-        if let Some(edge_types) = self.edge_types.as_ref() {
-            edge_types.apply(graph, edge_id, &self.style, base)
-        } else {
-            base
-        }
+        EdgePathContext::new(&self.style, &*self.presenter, self.edge_types.as_ref())
+            .edge_render_hint(graph, edge_id)
     }
 
     fn edge_custom_path(
@@ -366,13 +367,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         to: Point,
         zoom: f32,
     ) -> Option<crate::ui::edge_types::EdgeCustomPath> {
-        self.edge_types.as_ref()?.custom_path(
-            graph,
-            edge_id,
-            &self.style,
-            hint,
-            crate::ui::edge_types::EdgePathInput { from, to, zoom },
-        )
+        EdgePathContext::new(&self.style, &*self.presenter, self.edge_types.as_ref())
+            .edge_custom_path(graph, edge_id, hint, from, to, zoom)
     }
 
     pub fn new_with_middleware(
@@ -529,7 +525,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.color_mode = None;
         self.color_mode_last = None;
         self.color_mode_theme_rev = None;
-        self.geometry.key = None;
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
         self
     }
 
@@ -537,7 +535,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.color_mode = Some(mode);
         self.color_mode_last = None;
         self.color_mode_theme_rev = None;
-        self.geometry.key = None;
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
         self
     }
 
@@ -571,7 +571,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         self.style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
-        self.geometry.key = None;
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
 
         if let Some(services) = services {
             self.paint_cache.clear(services);

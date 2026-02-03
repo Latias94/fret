@@ -80,8 +80,12 @@ impl CanvasSpatialIndex {
 
         let pad = max_hit_pad_canvas.max(0.0);
         for (&edge_id, edge) in &graph.edges {
-            edges_by_port.entry(edge.from).or_default().push(edge_id);
-            edges_by_port.entry(edge.to).or_default().push(edge_id);
+            if edge.from == edge.to {
+                edges_by_port.entry(edge.from).or_default().push(edge_id);
+            } else {
+                edges_by_port.entry(edge.from).or_default().push(edge_id);
+                edges_by_port.entry(edge.to).or_default().push(edge_id);
+            }
 
             let Some(from) = geom.port_center(edge.from) else {
                 continue;
@@ -102,24 +106,30 @@ impl CanvasSpatialIndex {
         }
     }
 
-    pub(crate) fn query_ports(&self, pos: Point, radius: f32, out: &mut Vec<PortId>) {
-        self.ports.query_radius(pos, radius, out);
+    pub(crate) fn query_ports_sorted_dedup<'a>(
+        &self,
+        pos: Point,
+        radius: f32,
+        out: &'a mut Vec<PortId>,
+    ) -> &'a [PortId] {
+        self.ports.query_radius_sorted_dedup(pos, radius, out)
     }
 
-    pub(crate) fn query_edges(&self, pos: Point, radius: f32, out: &mut Vec<EdgeId>) {
-        self.edges.query_radius(pos, radius, out);
+    pub(crate) fn query_edges_sorted_dedup<'a>(
+        &self,
+        pos: Point,
+        radius: f32,
+        out: &'a mut Vec<EdgeId>,
+    ) -> &'a [EdgeId] {
+        self.edges.query_radius_sorted_dedup(pos, radius, out)
     }
 
     pub(crate) fn query_edges_in_rect(&self, rect: Rect, out: &mut Vec<EdgeId>) {
-        self.edges.query_rect(rect, out);
-        out.sort_unstable();
-        out.dedup();
+        let _ = self.edges.query_rect_sorted_dedup(rect, out);
     }
 
     pub(crate) fn query_nodes_in_rect(&self, rect: Rect, out: &mut Vec<NodeId>) {
-        self.nodes.query_rect(rect, out);
-        out.sort_unstable();
-        out.dedup();
+        let _ = self.nodes.query_rect_sorted_dedup(rect, out);
     }
 
     pub(crate) fn edge_aabb(&self, from: Point, to: Point, zoom: f32) -> Rect {

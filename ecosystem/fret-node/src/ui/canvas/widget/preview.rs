@@ -16,7 +16,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let node_origin = snapshot.interaction.node_origin.normalized();
 
-        let base_key = self.geometry.key?;
+        let base_index_key = self.geometry.index_key?;
         let base_geom = self.geometry.geom.clone();
         let base_index = self.geometry.index.clone();
 
@@ -24,7 +24,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .geometry
             .drag_preview
             .as_ref()
-            .is_none_or(|cache| cache.kind != kind || cache.base_key != base_key);
+            .is_none_or(|cache| cache.kind != kind || cache.base_index_key != base_index_key);
         if rebuild {
             let node_ports = self
                 .graph
@@ -93,7 +93,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
             }
 
-            let mut affected_edges: HashSet<EdgeId> = HashSet::new();
+            let mut affected_edges: Vec<EdgeId> = Vec::new();
             for (id, _pos) in nodes {
                 let Some(ports) = node_ports.get(id) else {
                     continue;
@@ -104,19 +104,24 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
             }
+            affected_edges.sort_unstable();
+            affected_edges.dedup();
 
-            let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = self
-                .graph
-                .read_ref(host, |g| {
-                    affected_edges
-                        .iter()
-                        .filter_map(|edge_id| {
-                            g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .ok()
-                .unwrap_or_default();
+            let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = if affected_edges.is_empty() {
+                Vec::new()
+            } else {
+                self.graph
+                    .read_ref(host, |g| {
+                        affected_edges
+                            .iter()
+                            .filter_map(|edge_id| {
+                                g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .ok()
+                    .unwrap_or_default()
+            };
 
             for (edge_id, from, to) in edge_endpoints {
                 let Some(p0) = geom.port_center(from) else {
@@ -131,7 +136,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             self.geometry.drag_preview = Some(DragPreviewCache {
                 kind,
-                base_key,
+                base_index_key,
                 preview_rev,
                 geom: Arc::new(geom),
                 index: Arc::new(index),
@@ -206,7 +211,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
 
-                let mut affected_edges: HashSet<EdgeId> = HashSet::new();
+                let mut affected_edges: Vec<EdgeId> = Vec::new();
                 for (id, _prev, _next) in &moved_nodes {
                     let Some(ports) = cache.node_ports.get(id) else {
                         continue;
@@ -217,28 +222,32 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         }
                     }
                 }
+                affected_edges.sort_unstable();
+                affected_edges.dedup();
 
-                let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = self
-                    .graph
-                    .read_ref(host, |g| {
-                        affected_edges
-                            .iter()
-                            .filter_map(|edge_id| {
-                                g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .ok()
-                    .unwrap_or_default();
-                for (edge_id, from, to) in edge_endpoints {
-                    let Some(p0) = geom_mut.port_center(from) else {
-                        continue;
-                    };
-                    let Some(p1) = geom_mut.port_center(to) else {
-                        continue;
-                    };
-                    let rect = index_mut.edge_aabb(p0, p1, snapshot.zoom);
-                    index_mut.update_edge_rect(edge_id, rect);
+                if !affected_edges.is_empty() {
+                    let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = self
+                        .graph
+                        .read_ref(host, |g| {
+                            affected_edges
+                                .iter()
+                                .filter_map(|edge_id| {
+                                    g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .ok()
+                        .unwrap_or_default();
+                    for (edge_id, from, to) in edge_endpoints {
+                        let Some(p0) = geom_mut.port_center(from) else {
+                            continue;
+                        };
+                        let Some(p1) = geom_mut.port_center(to) else {
+                            continue;
+                        };
+                        let rect = index_mut.edge_aabb(p0, p1, snapshot.zoom);
+                        index_mut.update_edge_rect(edge_id, rect);
+                    }
                 }
 
                 cache.node_positions = next_positions;
@@ -258,7 +267,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         pos: CanvasPoint,
         size_opt_px: Option<CanvasSize>,
     ) -> Option<(Arc<CanvasGeometry>, Arc<CanvasSpatialIndex>)> {
-        let base_key = self.geometry.key?;
+        let base_index_key = self.geometry.index_key?;
         let base_geom = self.geometry.geom.clone();
         let base_index = self.geometry.index.clone();
 
@@ -281,7 +290,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let next_rect = Rect::new(Point::new(Px(next_origin.x), Px(next_origin.y)), size);
 
         let rebuild = self.geometry.drag_preview.as_ref().is_none_or(|cache| {
-            cache.kind != DragPreviewKind::NodeResize || cache.base_key != base_key
+            cache.kind != DragPreviewKind::NodeResize || cache.base_index_key != base_index_key
         });
         if rebuild {
             let node_ports = self
@@ -347,7 +356,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             self.geometry.drag_preview = Some(DragPreviewCache {
                 kind: DragPreviewKind::NodeResize,
-                base_key,
+                base_index_key,
                 preview_rev,
                 geom: Arc::new(geom),
                 index: Arc::new(index),

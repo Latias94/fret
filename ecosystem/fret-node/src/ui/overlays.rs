@@ -36,6 +36,33 @@ enum OverlayPlacement {
     PanelBounds,
 }
 
+fn clamp_rect_to_bounds(mut rect: Rect, bounds: Rect) -> Rect {
+    let w = rect.size.width.0.max(0.0);
+    let h = rect.size.height.0.max(0.0);
+
+    let min_x = bounds.origin.x.0;
+    let min_y = bounds.origin.y.0;
+    let max_x = bounds.origin.x.0 + (bounds.size.width.0 - w).max(0.0);
+    let max_y = bounds.origin.y.0 + (bounds.size.height.0 - h).max(0.0);
+
+    rect.origin.x.0 = rect.origin.x.0.clamp(min_x, max_x);
+    rect.origin.y.0 = rect.origin.y.0.clamp(min_y, max_y);
+    rect
+}
+
+fn group_rename_size_at(style: &NodeGraphStyle) -> Size {
+    let w = style.context_menu_width.max(40.0);
+    let h = (style.context_menu_item_height.max(20.0) + 2.0 * style.context_menu_padding).max(24.0);
+    Size::new(Px(w), Px(h))
+}
+
+fn group_rename_rect_at(style: &NodeGraphStyle, desired_origin: Point, bounds: Rect) -> Rect {
+    clamp_rect_to_bounds(
+        Rect::new(desired_origin, group_rename_size_at(style)),
+        bounds,
+    )
+}
+
 /// UI-only overlay state for a node graph editor instance.
 #[derive(Debug, Default, Clone)]
 pub struct NodeGraphOverlayState {
@@ -129,21 +156,19 @@ impl NodeGraphOverlayHost {
             q.push(tx);
         });
     }
+}
 
-    fn clamp_overlay_rect(&self, desired_origin: Point, bounds: Rect) -> Rect {
-        let w = self.style.context_menu_width.max(40.0);
-        let h = (self.style.context_menu_item_height.max(20.0)
-            + 2.0 * self.style.context_menu_padding)
-            .max(24.0);
-
-        let min_x = bounds.origin.x.0;
-        let min_y = bounds.origin.y.0;
-        let max_x = bounds.origin.x.0 + (bounds.size.width.0 - w).max(0.0);
-        let max_y = bounds.origin.y.0 + (bounds.size.height.0 - h).max(0.0);
-
-        let x = desired_origin.x.0.clamp(min_x, max_x);
-        let y = desired_origin.y.0.clamp(min_y, max_y);
-        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+fn layout_hidden_child_and_release_focus<H: UiHost>(
+    cx: &mut LayoutCx<'_, H>,
+    child: fret_core::NodeId,
+    canvas_node: fret_core::NodeId,
+) {
+    cx.layout_in(
+        child,
+        Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
+    );
+    if cx.focus == Some(child) {
+        cx.tree.set_focus(Some(canvas_node));
     }
 }
 
@@ -215,7 +240,7 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
                 }
             }
 
-            let rect = self.clamp_overlay_rect(rename.invoked_at_window, cx.bounds);
+            let rect = group_rename_rect_at(&self.style, rename.invoked_at_window, cx.bounds);
             self.group_rename_bounds = Some(rect);
             if let Some(child) = child {
                 cx.layout_in(child, rect);
@@ -224,13 +249,7 @@ impl<H: UiHost> Widget<H> for NodeGraphOverlayHost {
             self.last_opened_group = None;
             self.group_rename_bounds = None;
             if let Some(child) = child {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
         }
 
@@ -355,20 +374,6 @@ impl NodeGraphNodeToolbar {
         self
     }
 
-    fn clamp_rect_to_bounds(mut rect: Rect, bounds: Rect) -> Rect {
-        let w = rect.size.width.0.max(0.0);
-        let h = rect.size.height.0.max(0.0);
-
-        let min_x = bounds.origin.x.0;
-        let min_y = bounds.origin.y.0;
-        let max_x = bounds.origin.x.0 + (bounds.size.width.0 - w).max(0.0);
-        let max_y = bounds.origin.y.0 + (bounds.size.height.0 - h).max(0.0);
-
-        rect.origin.x.0 = rect.origin.x.0.clamp(min_x, max_x);
-        rect.origin.y.0 = rect.origin.y.0.clamp(min_y, max_y);
-        rect
-    }
-
     fn positioned_rect_for(
         bounds: Rect,
         node: Rect,
@@ -429,7 +434,7 @@ impl NodeGraphNodeToolbar {
             Point::new(Px(x + offset.x.0), Px(y + offset.y.0)),
             Size::new(Px(w), Px(h)),
         );
-        Self::clamp_rect_to_bounds(rect, bounds)
+        clamp_rect_to_bounds(rect, bounds)
     }
 
     fn resolve_child_size<H: UiHost>(
@@ -482,26 +487,14 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
 
         let Some((node_id, is_selected)) = self.resolve_target_node(&*cx.app) else {
             if let Some(child) = child {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         };
 
         if self.visibility == NodeGraphToolbarVisibility::WhenSelected && !is_selected {
             if let Some(child) = child {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         }
@@ -509,13 +502,7 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
         let snapshot = self.internals.snapshot();
         let Some(node_rect) = snapshot.nodes_window.get(&node_id).copied() else {
             if let Some(child) = child {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         };
@@ -523,13 +510,7 @@ impl<H: UiHost> Widget<H> for NodeGraphNodeToolbar {
         if let Some(child) = child {
             let size = self.resolve_child_size(cx, child);
             if size.width.0 <= 0.0 && size.height.0 <= 0.0 {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             } else {
                 let rect = Self::positioned_rect_for(
                     cx.bounds,
@@ -630,20 +611,6 @@ impl NodeGraphEdgeToolbar {
         self
     }
 
-    fn clamp_rect_to_bounds(mut rect: Rect, bounds: Rect) -> Rect {
-        let w = rect.size.width.0.max(0.0);
-        let h = rect.size.height.0.max(0.0);
-
-        let min_x = bounds.origin.x.0;
-        let min_y = bounds.origin.y.0;
-        let max_x = bounds.origin.x.0 + (bounds.size.width.0 - w).max(0.0);
-        let max_y = bounds.origin.y.0 + (bounds.size.height.0 - h).max(0.0);
-
-        rect.origin.x.0 = rect.origin.x.0.clamp(min_x, max_x);
-        rect.origin.y.0 = rect.origin.y.0.clamp(min_y, max_y);
-        rect
-    }
-
     fn positioned_rect_for(
         bounds: Rect,
         anchor: Point,
@@ -671,7 +638,7 @@ impl NodeGraphEdgeToolbar {
             Point::new(Px(x + offset.x.0), Px(y + offset.y.0)),
             Size::new(Px(w), Px(h)),
         );
-        Self::clamp_rect_to_bounds(rect, bounds)
+        clamp_rect_to_bounds(rect, bounds)
     }
 
     fn resolve_child_size<H: UiHost>(
@@ -724,26 +691,14 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
 
         let Some((edge_id, is_selected)) = self.resolve_target_edge(&*cx.app) else {
             if let Some(child) = child {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         };
 
         if self.visibility == NodeGraphToolbarVisibility::WhenSelected && !is_selected {
             if let Some(child) = child {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         }
@@ -751,13 +706,7 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
         let snapshot = self.internals.snapshot();
         let Some(center) = snapshot.edge_centers_window.get(&edge_id).copied() else {
             if let Some(child) = child {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             }
             return cx.bounds.size;
         };
@@ -765,13 +714,7 @@ impl<H: UiHost> Widget<H> for NodeGraphEdgeToolbar {
         if let Some(child) = child {
             let size = self.resolve_child_size(cx, child);
             if size.width.0 <= 0.0 && size.height.0 <= 0.0 {
-                cx.layout_in(
-                    child,
-                    Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-                );
-                if cx.focus == Some(child) {
-                    cx.tree.set_focus(Some(self.canvas_node));
-                }
+                layout_hidden_child_and_release_focus(cx, child, self.canvas_node);
             } else {
                 let rect = Self::positioned_rect_for(
                     cx.bounds,

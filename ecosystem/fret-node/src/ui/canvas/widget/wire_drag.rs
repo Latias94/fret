@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{AppWindowId, Modifiers, Point, Px, Rect};
 use fret_ui::UiHost;
 
-use crate::core::{EdgeId, PortId};
+use crate::core::PortId;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 use crate::runtime::callbacks::ConnectEndOutcome;
@@ -14,7 +14,7 @@ use super::super::searcher::SEARCHER_MAX_VISIBLE_ROWS;
 use super::super::state::{
     ContextMenuTarget, LastConversionContext, SearcherState, ViewSnapshot, WireDrag, WireDragKind,
 };
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 fn severity_rank(sev: DiagnosticSeverity) -> u8 {
     match sev {
@@ -114,9 +114,9 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     if modifiers.shift {
         if let WireDragKind::New { from, bundle } = &mut w.kind {
-            let mut scratch_ports: Vec<PortId> = Vec::new();
-            let candidate =
-                canvas.hit_port(geom.as_ref(), index.as_ref(), pos, zoom, &mut scratch_ports);
+            let mut scratch = HitTestScratch::default();
+            let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+            let candidate = canvas.hit_port(&mut ctx, pos);
 
             if let Some(candidate) = candidate {
                 let should_add = {
@@ -156,17 +156,15 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         let index = index.clone();
         this.graph
             .read_ref(cx.app, |graph| {
-                let mut scratch_ports: Vec<PortId> = Vec::new();
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
                 this.pick_wire_hover_port(
                     graph,
                     snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
+                    &mut ctx,
                     from_port,
                     require_from_connectable_start,
                     pos,
-                    zoom,
-                    &mut scratch_ports,
                 )
             })
             .ok()
@@ -181,16 +179,9 @@ pub(super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         let index = index.clone();
         this.graph
             .read_ref(cx.app, |graph| {
-                let mut scratch_edges: Vec<EdgeId> = Vec::new();
-                this.hit_edge(
-                    graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    pos,
-                    zoom,
-                    &mut scratch_edges,
-                )
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                this.hit_edge(graph, snapshot, &mut ctx, pos)
             })
             .ok()
             .flatten()
@@ -422,17 +413,16 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost, M: NodeGraphCanv
             let index = index.clone();
             this.graph
                 .read_ref(cx.host(), |graph| {
-                    let mut scratch_ports: Vec<PortId> = Vec::new();
+                    let mut scratch = HitTestScratch::default();
+                    let mut ctx =
+                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
                     this.pick_target_port(
                         graph,
                         snapshot,
-                        geom.as_ref(),
-                        index.as_ref(),
+                        &mut ctx,
                         from_port,
                         require_from_connectable_start,
                         w.pos,
-                        zoom,
-                        &mut scratch_ports,
                     )
                 })
                 .ok()
@@ -632,16 +622,10 @@ pub(super) fn handle_wire_left_up_with_forced_target<H: UiHost, M: NodeGraphCanv
                     let index = index.clone();
                     this.graph
                         .read_ref(cx.host(), |graph| {
-                            let mut scratch_edges: Vec<EdgeId> = Vec::new();
-                            this.hit_edge(
-                                graph,
-                                snapshot,
-                                geom.as_ref(),
-                                index.as_ref(),
-                                w.pos,
-                                zoom,
-                                &mut scratch_edges,
-                            )
+                            let mut scratch = HitTestScratch::default();
+                            let mut ctx =
+                                HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                            this.hit_edge(graph, snapshot, &mut ctx, w.pos)
                         })
                         .ok()
                         .flatten()

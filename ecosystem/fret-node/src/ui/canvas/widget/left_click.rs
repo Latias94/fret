@@ -10,7 +10,7 @@ use super::super::state::{
     PendingNodeDrag, PendingNodeResize, PendingNodeSelectAction, PendingWireDrag, ViewSnapshot,
     WireDragKind,
 };
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: Point) -> bool {
     let zoom = if zoom.is_finite() && zoom > 0.0 {
@@ -58,27 +58,15 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
         let this = &*canvas;
         this.graph
             .read_ref(cx.app, |graph| {
-                let mut scratch_ports: Vec<PortId> = Vec::new();
-                let mut scratch_edges: Vec<EdgeId> = Vec::new();
-                if let Some(port) = this.hit_port(
-                    geom.as_ref(),
-                    index.as_ref(),
-                    position,
-                    zoom,
-                    &mut scratch_ports,
-                ) {
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                if let Some(port) = this.hit_port(&mut ctx, position) {
                     return Hit::Port(port);
                 }
 
-                if let Some((edge, endpoint, fixed)) = this.hit_edge_focus_anchor(
-                    graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    position,
-                    zoom,
-                    &mut scratch_edges,
-                ) {
+                if let Some((edge, endpoint, fixed)) =
+                    this.hit_edge_focus_anchor(graph, snapshot, &mut ctx, position)
+                {
                     return Hit::EdgeAnchor(edge, endpoint, fixed);
                 }
 
@@ -89,15 +77,7 @@ pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddle
                         .is_some_and(|ng| ng.rect.contains(position))
                         .then_some(*id)
                 }) else {
-                    if let Some(edge) = this.hit_edge(
-                        graph,
-                        snapshot,
-                        geom.as_ref(),
-                        index.as_ref(),
-                        position,
-                        zoom,
-                        &mut scratch_edges,
-                    ) {
+                    if let Some(edge) = this.hit_edge(graph, snapshot, &mut ctx, position) {
                         return Hit::Edge(edge);
                     }
 

@@ -6,6 +6,7 @@ use crate::io::NodeGraphViewState;
 use super::super::super::state::{WireDrag, WireDragKind};
 use super::super::NodeGraphCanvas;
 use super::super::wire_drag::handle_wire_left_up_with_forced_target;
+use super::super::{HitTestCtx, HitTestScratch};
 use super::{
     NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
 };
@@ -36,18 +37,10 @@ fn pick_target_port_at(
     let this = canvas;
     this.graph
         .read_ref(host, |graph| {
-            let mut scratch_ports: Vec<crate::core::PortId> = Vec::new();
-            this.pick_target_port(
-                graph,
-                snapshot,
-                geom.as_ref(),
-                index.as_ref(),
-                from,
-                true,
-                pos,
-                snapshot.zoom,
-                &mut scratch_ports,
-            )
+            let mut scratch = HitTestScratch::default();
+            let mut ctx =
+                HitTestCtx::new(geom.as_ref(), index.as_ref(), snapshot.zoom, &mut scratch);
+            this.pick_target_port(graph, snapshot, &mut ctx, from, true, pos)
         })
         .ok()
         .flatten()

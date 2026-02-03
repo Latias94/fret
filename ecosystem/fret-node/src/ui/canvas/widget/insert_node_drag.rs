@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{InternalDragEvent, InternalDragKind, MouseButtons, Point, Px, Rect};
+use fret_core::{InternalDragEvent, InternalDragKind, MouseButtons, Point, Rect};
 use fret_runtime::DragKindId;
 use fret_ui::UiHost;
 use fret_ui_kit::dnd as ui_dnd;
@@ -13,6 +13,7 @@ use crate::rules::ConnectDecision;
 use crate::ui::presenter::InsertNodeCandidate;
 
 use super::super::state::{InsertNodeDragPreview, ViewSnapshot};
+use super::{HitTestCtx, HitTestScratch};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 /// Payload type for "drag a node from the palette/searcher into the canvas".
@@ -24,15 +25,14 @@ pub(super) struct InsertNodeDragPayload {
 pub(super) const DRAG_KIND_INSERT_NODE: DragKindId = DragKindId(0x4E4F44455F494E53);
 const DND_DROP_CANVAS: DndItemId = DndItemId(0x4E4F44455F43414E);
 
-fn canvas_to_window(bounds: Rect, pos: Point, pan: CanvasPoint, zoom: f32) -> Point {
-    let z = if zoom.is_finite() && zoom > 0.0 {
-        zoom
-    } else {
-        1.0
-    };
-    let x = bounds.origin.x.0 + (pos.x.0 + pan.x) * z;
-    let y = bounds.origin.y.0 + (pos.y.0 + pan.y) * z;
-    Point::new(Px(x), Px(y))
+fn canvas_to_window<M: NodeGraphCanvasMiddleware>(
+    bounds: Rect,
+    pos: Point,
+    pan: CanvasPoint,
+    zoom: f32,
+) -> Point {
+    let viewport = NodeGraphCanvasWith::<M>::viewport_from_pan_zoom(bounds, pan, zoom);
+    viewport.canvas_to_screen(pos)
 }
 
 pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
@@ -82,8 +82,8 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
     let Some(window) = cx.window else {
         return false;
     };
-    let start_window = canvas_to_window(cx.bounds, pending.start_pos, snapshot.pan, zoom);
-    let current_window = canvas_to_window(cx.bounds, position, snapshot.pan, zoom);
+    let start_window = canvas_to_window::<M>(cx.bounds, pending.start_pos, snapshot.pan, zoom);
+    let current_window = canvas_to_window::<M>(cx.bounds, position, snapshot.pan, zoom);
 
     let dnd = ui_dnd::dnd_service_model_global(cx.app);
     let frame_id = cx.app.frame_id();
@@ -182,16 +182,10 @@ pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware
             let edge_hit: Option<EdgeId> = canvas
                 .graph
                 .read_ref(cx.app, |graph| {
-                    let mut scratch: Vec<EdgeId> = Vec::new();
-                    canvas.hit_edge(
-                        graph,
-                        snapshot,
-                        geom.as_ref(),
-                        index.as_ref(),
-                        pos,
-                        zoom,
-                        &mut scratch,
-                    )
+                    let mut scratch = HitTestScratch::default();
+                    let mut ctx =
+                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                    canvas.hit_edge(graph, snapshot, &mut ctx, pos)
                 })
                 .ok()
                 .flatten();
@@ -247,16 +241,10 @@ pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware
             let edge_hit: Option<EdgeId> = canvas
                 .graph
                 .read_ref(cx.app, |graph| {
-                    let mut scratch: Vec<EdgeId> = Vec::new();
-                    canvas.hit_edge(
-                        graph,
-                        snapshot,
-                        geom.as_ref(),
-                        index.as_ref(),
-                        pos,
-                        zoom,
-                        &mut scratch,
-                    )
+                    let mut scratch = HitTestScratch::default();
+                    let mut ctx =
+                        HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                    canvas.hit_edge(graph, snapshot, &mut ctx, pos)
                 })
                 .ok()
                 .flatten();

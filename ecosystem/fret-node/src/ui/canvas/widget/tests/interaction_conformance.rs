@@ -2385,18 +2385,14 @@ fn pick_target_port_respects_port_connectable_end() {
     let hit = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch: Vec<PortId> = Vec::new();
-            canvas.pick_target_port(
-                g,
-                &snapshot,
+            let mut scratch = super::super::HitTestScratch::default();
+            let mut ctx = super::super::HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
-                from,
-                true,
-                to_center,
                 snapshot.zoom,
                 &mut scratch,
-            )
+            );
+            canvas.pick_target_port(g, &snapshot, &mut ctx, from, true, to_center)
         })
         .ok()
         .flatten();
@@ -2691,16 +2687,14 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
     let hit_source = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch: Vec<EdgeId> = Vec::new();
-            canvas.hit_edge_focus_anchor(
-                g,
-                &snapshot,
+            let mut scratch = super::super::HitTestScratch::default();
+            let mut ctx = super::super::HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
-                a0,
                 snapshot.zoom,
                 &mut scratch,
-            )
+            );
+            canvas.hit_edge_focus_anchor(g, &snapshot, &mut ctx, a0)
         })
         .ok()
         .flatten();
@@ -2709,16 +2703,14 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
     let hit_target = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch: Vec<EdgeId> = Vec::new();
-            canvas.hit_edge_focus_anchor(
-                g,
-                &snapshot,
+            let mut scratch = super::super::HitTestScratch::default();
+            let mut ctx = super::super::HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
-                a1,
                 snapshot.zoom,
                 &mut scratch,
-            )
+            );
+            canvas.hit_edge_focus_anchor(g, &snapshot, &mut ctx, a1)
         })
         .ok()
         .flatten();
@@ -2762,16 +2754,14 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
     let hit_source = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch: Vec<EdgeId> = Vec::new();
-            canvas.hit_edge_focus_anchor(
-                g,
-                &snapshot,
+            let mut scratch = super::super::HitTestScratch::default();
+            let mut ctx = super::super::HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
-                a0,
                 snapshot.zoom,
                 &mut scratch,
-            )
+            );
+            canvas.hit_edge_focus_anchor(g, &snapshot, &mut ctx, a0)
         })
         .ok()
         .flatten();
@@ -2780,16 +2770,14 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
     let hit_target = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch: Vec<EdgeId> = Vec::new();
-            canvas.hit_edge_focus_anchor(
-                g,
-                &snapshot,
+            let mut scratch = super::super::HitTestScratch::default();
+            let mut ctx = super::super::HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
-                a1,
                 snapshot.zoom,
                 &mut scratch,
-            )
+            );
+            canvas.hit_edge_focus_anchor(g, &snapshot, &mut ctx, a1)
         })
         .ok()
         .flatten();
@@ -2832,16 +2820,14 @@ fn edge_reconnectable_bool_false_disables_anchors_even_when_global_enabled() {
         let hit = canvas
             .graph
             .read_ref(&host, |g| {
-                let mut scratch: Vec<EdgeId> = Vec::new();
-                canvas.hit_edge_focus_anchor(
-                    g,
-                    &snapshot,
+                let mut scratch = super::super::HitTestScratch::default();
+                let mut ctx = super::super::HitTestCtx::new(
                     derived.as_ref(),
                     index.as_ref(),
-                    anchor,
                     snapshot.zoom,
                     &mut scratch,
-                )
+                );
+                canvas.hit_edge_focus_anchor(g, &snapshot, &mut ctx, anchor)
             })
             .ok()
             .flatten();
@@ -2879,16 +2865,14 @@ fn edge_reconnectable_none_follows_global_gate_for_anchors() {
         let hit = canvas
             .graph
             .read_ref(&host, |g| {
-                let mut scratch: Vec<EdgeId> = Vec::new();
-                canvas.hit_edge_focus_anchor(
-                    g,
-                    &snapshot,
+                let mut scratch = super::super::HitTestScratch::default();
+                let mut ctx = super::super::HitTestCtx::new(
                     derived.as_ref(),
                     index.as_ref(),
-                    anchor,
                     snapshot.zoom,
                     &mut scratch,
-                )
+                );
+                canvas.hit_edge_focus_anchor(g, &snapshot, &mut ctx, anchor)
             })
             .ok()
             .flatten();

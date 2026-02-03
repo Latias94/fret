@@ -205,6 +205,9 @@ fn bounds_origin_updates_internals_transform() {
     let b0 = bounds_at(0.0, 0.0);
     let b1 = bounds_at(120.0, 40.0);
 
+    let snapshot0 = canvas.sync_view_state(&mut host);
+    let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
+
     paint_once(&mut canvas, &mut host, &mut services, b0);
     let rev1 = internals.revision();
     let origin1 = internals.snapshot().transform.bounds_origin;
@@ -213,8 +216,100 @@ fn bounds_origin_updates_internals_transform() {
     assert!(internals.revision() > rev1);
     let origin2 = internals.snapshot().transform.bounds_origin;
 
+    let snapshot1 = canvas.sync_view_state(&mut host);
+    let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    assert!(
+        Arc::ptr_eq(&geom0, &geom1),
+        "expected bounds changes to update internals without rebuilding geometry"
+    );
+    assert!(
+        Arc::ptr_eq(&index0, &index1),
+        "expected bounds changes to update internals without rebuilding spatial index"
+    );
+
     assert_eq!(origin1.x.0, 0.0);
     assert_eq!(origin1.y.0, 0.0);
     assert_eq!(origin2.x.0, 120.0);
     assert_eq!(origin2.y.0, 40.0);
+}
+
+#[test]
+fn graph_edit_rebuilds_geometry_and_updates_internals() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let internals = Arc::new(NodeGraphInternalsStore::new());
+    let measured = Arc::new(MeasuredGeometryStore::new());
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone())
+        .with_internals_store(internals.clone())
+        .with_measured_output_store(measured.clone());
+
+    let mut services = NullServices::default();
+    let bounds = bounds_at(0.0, 0.0);
+
+    let snapshot1 = canvas.sync_view_state(&mut host);
+    let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+
+    paint_once(&mut canvas, &mut host, &mut services, bounds);
+    let rev1 = internals.revision();
+    let measured_rev1 = measured.revision();
+    let x1 = internals
+        .snapshot()
+        .nodes_window
+        .get(&a)
+        .expect("node rect must exist")
+        .origin
+        .x
+        .0;
+
+    let dx = 120.0;
+    let _ = graph.update(&mut host, |g, _cx| {
+        let n = g.nodes.get_mut(&a).expect("node must exist");
+        n.pos.x += dx;
+    });
+
+    let snapshot2 = canvas.sync_view_state(&mut host);
+    let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+
+    assert!(!Arc::ptr_eq(&geom1, &geom2));
+    assert!(!Arc::ptr_eq(&index1, &index2));
+
+    paint_once(&mut canvas, &mut host, &mut services, bounds);
+    assert!(internals.revision() > rev1);
+    assert_eq!(measured.revision(), measured_rev1);
+
+    let x2 = internals
+        .snapshot()
+        .nodes_window
+        .get(&a)
+        .expect("node rect must exist")
+        .origin
+        .x
+        .0;
+    assert!((x2 - x1 - dx).abs() <= 1.0e-3);
+}
+
+#[test]
+fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+
+    let snapshot1 = canvas.sync_view_state(&mut host);
+    let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.spatial_index.edge_aabb_pad_screen_px = 200.0;
+    });
+    let snapshot2 = canvas.sync_view_state(&mut host);
+    let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+
+    assert!(Arc::ptr_eq(&geom1, &geom2));
+    assert!(!Arc::ptr_eq(&index1, &index2));
 }
