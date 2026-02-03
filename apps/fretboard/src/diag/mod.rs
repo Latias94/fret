@@ -2741,6 +2741,10 @@ See: `docs/tracy.md`.\n";
                         let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
                         let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                         let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
+                        let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
+                        let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
+                        let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
+                        let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
                         let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                         let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                         let top_view_cache_contained_relayouts =
@@ -2770,6 +2774,10 @@ See: `docs/tracy.md`.\n";
                                 "top_layout_engine_solves": top_solves,
                                 "top_prepaint_time_us": top_prepaint,
                                 "top_paint_time_us": top_paint,
+                                "top_dispatch_time_us": top_dispatch,
+                                "top_hit_test_time_us": top_hit_test,
+                                "top_dispatch_events": top_dispatch_events,
+                                "top_hit_test_queries": top_hit_test_queries,
                                 "top_tick_id": top_tick,
                                 "top_frame_id": top_frame,
                                 "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
@@ -2783,7 +2791,7 @@ See: `docs/tracy.md`.\n";
                             }));
                         } else {
                             println!(
-                                "PERF {} sort={} top.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
+                                "PERF {} sort={} top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
                                 src.display(),
                                 sort.as_str(),
                                 top_total,
@@ -2791,6 +2799,8 @@ See: `docs/tracy.md`.\n";
                                 top_solve,
                                 top_prepaint,
                                 top_paint,
+                                top_dispatch,
+                                top_hit_test,
                                 top_tick,
                                 top_frame,
                                 bundle_path.display(),
@@ -2898,6 +2908,8 @@ See: `docs/tracy.md`.\n";
                 let mut runs_solve: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_prepaint: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_paint: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_dispatch: Vec<u64> = Vec::with_capacity(repeat);
+                let mut runs_hit_test: Vec<u64> = Vec::with_capacity(repeat);
                 let mut runs_json: Vec<serde_json::Value> = Vec::with_capacity(repeat);
                 let mut script_worst: Option<(u64, PathBuf)> = None;
 
@@ -3028,6 +3040,10 @@ See: `docs/tracy.md`.\n";
                     let top_solves = top.map(|r| r.layout_engine_solves).unwrap_or(0);
                     let top_prepaint = top.map(|r| r.prepaint_time_us).unwrap_or(0);
                     let top_paint = top.map(|r| r.paint_time_us).unwrap_or(0);
+                    let top_dispatch = top.map(|r| r.dispatch_time_us).unwrap_or(0);
+                    let top_hit_test = top.map(|r| r.hit_test_time_us).unwrap_or(0);
+                    let top_dispatch_events = top.map(|r| r.dispatch_events).unwrap_or(0);
+                    let top_hit_test_queries = top.map(|r| r.hit_test_queries).unwrap_or(0);
                     let top_frame = top.map(|r| r.frame_id).unwrap_or(0);
                     let top_tick = top.map(|r| r.tick_id).unwrap_or(0);
                     let top_view_cache_contained_relayouts =
@@ -3052,6 +3068,8 @@ See: `docs/tracy.md`.\n";
                     runs_solve.push(top_solve);
                     runs_prepaint.push(top_prepaint);
                     runs_paint.push(top_paint);
+                    runs_dispatch.push(top_dispatch);
+                    runs_hit_test.push(top_hit_test);
                     runs_json.push(serde_json::json!({
                         "run_index": run_index,
                         "top_total_time_us": top_total,
@@ -3060,6 +3078,10 @@ See: `docs/tracy.md`.\n";
                         "top_layout_engine_solves": top_solves,
                         "top_prepaint_time_us": top_prepaint,
                         "top_paint_time_us": top_paint,
+                        "top_dispatch_time_us": top_dispatch,
+                        "top_hit_test_time_us": top_hit_test,
+                        "top_dispatch_events": top_dispatch_events,
+                        "top_hit_test_queries": top_hit_test_queries,
                         "top_tick_id": top_tick,
                         "top_frame_id": top_frame,
                         "top_view_cache_contained_relayouts": top_view_cache_contained_relayouts,
@@ -3151,6 +3173,8 @@ See: `docs/tracy.md`.\n";
                                 "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
                                 "prepaint_time_us": summarize_times_us(&runs_prepaint),
                                 "paint_time_us": summarize_times_us(&runs_paint),
+                                "dispatch_time_us": summarize_times_us(&runs_dispatch),
+                                "hit_test_time_us": summarize_times_us(&runs_hit_test),
                                 "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
                                 "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
                                 "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
@@ -3170,8 +3194,10 @@ See: `docs/tracy.md`.\n";
                         let solve = summarize_times_us(&runs_solve);
                         let prepaint = summarize_times_us(&runs_prepaint);
                         let paint = summarize_times_us(&runs_paint);
+                        let dispatch = summarize_times_us(&runs_dispatch);
+                        let hit_test = summarize_times_us(&runs_hit_test);
                         println!(
-                            "PERF {} sort={} repeat={} p50.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} p95.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{} max.us(total/layout/solve/prepaint/paint)={}/{}/{}/{}/{}",
+                            "PERF {} sort={} repeat={} p50.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} p95.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} max.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{}",
                             src.display(),
                             sort.as_str(),
                             repeat,
@@ -3180,16 +3206,22 @@ See: `docs/tracy.md`.\n";
                             solve.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            dispatch.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
+                            hit_test.get("p50").and_then(|v| v.as_u64()).unwrap_or(0),
                             total.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             layout.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             solve.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            dispatch.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
+                            hit_test.get("p95").and_then(|v| v.as_u64()).unwrap_or(0),
                             total.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             layout.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             solve.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             prepaint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                             paint.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            dispatch.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
+                            hit_test.get("max").and_then(|v| v.as_u64()).unwrap_or(0),
                         );
                     }
 

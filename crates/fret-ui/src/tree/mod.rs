@@ -182,6 +182,17 @@ impl<H: UiHost> Node<H> {
 #[derive(Debug, Default, Clone, Copy)]
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
+    /// Total time spent in event dispatch during the current frame.
+    ///
+    /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
+    /// not include layout/prepaint/paint, which are tracked separately.
+    pub dispatch_time: Duration,
+    /// Time spent inside hit-testing during the current frame (subset of `dispatch_time`).
+    pub hit_test_time: Duration,
+    /// Number of events dispatched during the current frame.
+    pub dispatch_events: u32,
+    /// Number of hit-test queries executed during the current frame.
+    pub hit_test_queries: u32,
     pub layout_time: Duration,
     pub layout_roots_time: Duration,
     pub layout_barrier_relayouts_time: Duration,
@@ -1680,6 +1691,10 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.debug_stats.frame_id = frame_id;
+        self.debug_stats.dispatch_time = Duration::default();
+        self.debug_stats.hit_test_time = Duration::default();
+        self.debug_stats.dispatch_events = 0;
+        self.debug_stats.hit_test_queries = 0;
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();

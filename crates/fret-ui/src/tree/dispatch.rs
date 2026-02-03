@@ -866,6 +866,36 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        struct DebugDispatchTimer {
+            stats: *mut super::UiDebugFrameStats,
+            started: Option<Instant>,
+        }
+
+        impl Drop for DebugDispatchTimer {
+            fn drop(&mut self) {
+                let Some(started) = self.started else {
+                    return;
+                };
+                // Safety: `dispatch_event` holds an exclusive `&mut self` for its full duration.
+                // The raw pointer refers to `self.debug_stats` and remains valid for the scope.
+                unsafe {
+                    (*self.stats).dispatch_time += started.elapsed();
+                }
+            }
+        }
+
+        let _dispatch_timer = DebugDispatchTimer {
+            stats: if self.debug_enabled {
+                &mut self.debug_stats as *mut super::UiDebugFrameStats
+            } else {
+                std::ptr::null_mut()
+            },
+            started: self.debug_enabled.then(Instant::now),
+        };
+        if self.debug_enabled {
+            self.debug_stats.dispatch_events = self.debug_stats.dispatch_events.saturating_add(1);
+        }
+
         // Keep wheel routing and hover detection in sync with out-of-band scroll handle mutations
         // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
         // hit-testing.
@@ -1263,6 +1293,7 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(pos) = event_position(event)
         {
+            let hit_test_started = self.debug_enabled.then(Instant::now);
             // Hit-testing is performance-sensitive (especially for pointer move), but must remain
             // correct across discrete interactions like clicks where the pointer position can jump
             // substantially between events.
@@ -1275,6 +1306,11 @@ impl<H: UiHost> UiTree<H> {
                 self.hit_test_path_cache = None;
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
+            if let Some(started) = hit_test_started {
+                self.debug_stats.hit_test_time += started.elapsed();
+                self.debug_stats.hit_test_queries =
+                    self.debug_stats.hit_test_queries.saturating_add(1);
+            }
 
             if let Event::Pointer(PointerEvent::Up {
                 pointer_id,

@@ -5907,6 +5907,14 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub prepaint_time_us: u64,
     pub paint_time_us: u64,
+    #[serde(default)]
+    pub dispatch_time_us: u64,
+    #[serde(default)]
+    pub hit_test_time_us: u64,
+    #[serde(default)]
+    pub dispatch_events: u32,
+    #[serde(default)]
+    pub hit_test_queries: u32,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6019,6 +6027,10 @@ impl UiFrameStatsV1 {
             layout_deferred_cleanup_time_us: stats.layout_deferred_cleanup_time.as_micros() as u64,
             prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
+            dispatch_time_us: stats.dispatch_time.as_micros() as u64,
+            hit_test_time_us: stats.hit_test_time.as_micros() as u64,
+            dispatch_events: stats.dispatch_events,
+            hit_test_queries: stats.hit_test_queries,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
             prepaint_nodes_visited: stats.prepaint_nodes_visited,

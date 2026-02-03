@@ -11,6 +11,8 @@ pub(super) enum BundleStatsSort {
     #[default]
     Invalidation,
     Time,
+    Dispatch,
+    HitTest,
 }
 
 impl BundleStatsSort {
@@ -18,8 +20,10 @@ impl BundleStatsSort {
         match s.trim() {
             "invalidation" => Ok(Self::Invalidation),
             "time" => Ok(Self::Time),
+            "dispatch" => Ok(Self::Dispatch),
+            "hit_test" => Ok(Self::HitTest),
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time)"
+                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test)"
             )),
         }
     }
@@ -28,6 +32,8 @@ impl BundleStatsSort {
         match self {
             Self::Invalidation => "invalidation",
             Self::Time => "time",
+            Self::Dispatch => "dispatch",
+            Self::HitTest => "hit_test",
         }
     }
 }
@@ -81,6 +87,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_time_us: u64,
     pub(super) prepaint_time_us: u64,
     pub(super) paint_time_us: u64,
+    pub(super) dispatch_time_us: u64,
+    pub(super) hit_test_time_us: u64,
+    pub(super) dispatch_events: u32,
+    pub(super) hit_test_queries: u32,
     pub(super) total_time_us: u64,
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
@@ -879,6 +889,22 @@ impl BundleStatsReport {
                     Value::from(row.prepaint_time_us),
                 );
                 obj.insert("paint_time_us".to_string(), Value::from(row.paint_time_us));
+                obj.insert(
+                    "dispatch_time_us".to_string(),
+                    Value::from(row.dispatch_time_us),
+                );
+                obj.insert(
+                    "hit_test_time_us".to_string(),
+                    Value::from(row.hit_test_time_us),
+                );
+                obj.insert(
+                    "dispatch_events".to_string(),
+                    Value::from(row.dispatch_events),
+                );
+                obj.insert(
+                    "hit_test_queries".to_string(),
+                    Value::from(row.hit_test_queries),
+                );
                 obj.insert("total_time_us".to_string(), Value::from(row.total_time_us));
                 obj.insert(
                     "layout_nodes_performed".to_string(),
@@ -3768,6 +3794,24 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("paint_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let dispatch_time_us = stats
+                .and_then(|m| m.get("dispatch_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let hit_test_time_us = stats
+                .and_then(|m| m.get("hit_test_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_events = stats
+                .and_then(|m| m.get("dispatch_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let hit_test_queries = stats
+                .and_then(|m| m.get("hit_test_queries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
             let total_time_us = layout_time_us
                 .saturating_add(prepaint_time_us)
                 .saturating_add(paint_time_us);
@@ -4061,6 +4105,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_time_us,
                 prepaint_time_us,
                 paint_time_us,
+                dispatch_time_us,
+                hit_test_time_us,
+                dispatch_events,
+                hit_test_queries,
                 total_time_us,
                 layout_nodes_performed,
                 paint_nodes_performed,
@@ -4142,6 +4190,24 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .cmp(&a.total_time_us)
                     .then_with(|| b.layout_time_us.cmp(&a.layout_time_us))
                     .then_with(|| b.paint_time_us.cmp(&a.paint_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::Dispatch => {
+            rows.sort_by(|a, b| {
+                b.dispatch_time_us
+                    .cmp(&a.dispatch_time_us)
+                    .then_with(|| b.hit_test_time_us.cmp(&a.hit_test_time_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+                    .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::HitTest => {
+            rows.sort_by(|a, b| {
+                b.hit_test_time_us
+                    .cmp(&a.hit_test_time_us)
+                    .then_with(|| b.dispatch_time_us.cmp(&a.dispatch_time_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
                     .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
             });
         }
