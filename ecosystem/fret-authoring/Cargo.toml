@@ -1,5 +1,5 @@
 [package]
-name = "fret-imui"
+name = "fret-authoring"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -13,7 +13,6 @@ documentation.workspace = true
 default = []
 
 [dependencies]
-fret-authoring = { path = "../fret-authoring" }
 fret-core = { path = "../../crates/fret-core" }
-fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+

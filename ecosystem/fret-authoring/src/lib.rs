@@ -1,0 +1,46 @@
+//! Shared authoring contracts for ecosystem-level UI frontends.
+//!
+//! This crate defines small, policy-light traits that allow ecosystem crates to expose authoring
+//! helpers without coupling to a specific frontend (e.g. `fret-imui`).
+//!
+//! Design constraints:
+//! - Keep dependencies minimal (`fret-ui` / `fret-core` only).
+//! - Do not introduce a second UI runtime: authoring must compile down to the declarative element
+//!   taxonomy mounted into `UiTree` (ADR 0028).
+
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, UiHost};
+
+/// Minimal authoring surface for immediate-style composition.
+///
+/// This is intended for ecosystem crates that want to expose helpers that work across multiple
+/// authoring frontends while staying policy-light.
+pub trait UiWriter<H: UiHost> {
+    /// Execute a closure with access to the underlying element context (escape hatch).
+    ///
+    /// This avoids leaking `ElementContext`'s lifetime parameter through the trait surface while
+    /// still enabling advanced integrations when needed.
+    fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R;
+
+    /// Append a single element to the current output list.
+    fn add(&mut self, element: AnyElement);
+
+    /// Append an iterator of elements to the current output list.
+    fn extend<I>(&mut self, elements: I)
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        for element in elements {
+            self.add(element);
+        }
+    }
+
+    /// Embed an existing declarative builder into the current output list.
+    fn mount<I>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> I)
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let elements: Vec<AnyElement> = self.with_cx_mut(|cx| f(cx).into_iter().collect());
+        self.extend(elements);
+    }
+}

@@ -964,6 +964,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-authoring"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-ui",
+]
+
+[[package]]
 name = "fret-bootstrap"
 version = "0.1.0"
 dependencies = [
@@ -1054,6 +1062,7 @@ dependencies = [
 name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-core",
  "fret-imui",
  "fret-runtime",
@@ -1113,6 +1122,7 @@ dependencies = [
 name = "fret-docking"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-core",
  "fret-dnd",
  "fret-imui",
@@ -1229,6 +1239,7 @@ dependencies = [
 name = "fret-imui"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-core",
  "fret-runtime",
  "fret-ui",
@@ -1292,6 +1303,7 @@ dependencies = [
 name = "fret-markdown"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-code-view",
  "fret-core",
  "fret-executor",
@@ -1310,6 +1322,7 @@ name = "fret-node"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-authoring",
  "fret-canvas",
  "fret-core",
  "fret-imui",

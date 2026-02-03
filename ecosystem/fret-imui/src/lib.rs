@@ -21,6 +21,7 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 pub mod prelude {
     pub use crate::{ImUi, Response, imui, imui_build, imui_vstack};
+    pub use fret_authoring::UiWriter;
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -250,6 +251,16 @@ impl<'cx, 'a, H: UiHost> ImUi<'cx, 'a, H> {
 
         self.out.push(element);
         response
+    }
+}
+
+impl<'cx, 'a, H: UiHost> fret_authoring::UiWriter<H> for ImUi<'cx, 'a, H> {
+    fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
+        f(self.cx)
+    }
+
+    fn add(&mut self, element: AnyElement) {
+        self.out.push(element);
     }
 }
 
