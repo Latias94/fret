@@ -1496,6 +1496,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slotmap",
+ "smallvec",
  "stacksafe",
  "taffy",
  "tracing",

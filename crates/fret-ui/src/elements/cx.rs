@@ -4,6 +4,8 @@ use std::hash::Hash;
 use std::panic::Location;
 use std::sync::Arc;
 
+use smallvec::SmallVec;
+
 use fret_core::{AppWindowId, EffectChain, EffectMode, NodeId, Px, Rect};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
@@ -40,8 +42,23 @@ pub struct ElementContext<'a, H: UiHost> {
     pub bounds: Rect,
     window_state: &'a mut WindowElementState,
     stack: Vec<GlobalElementId>,
-    callsite_counters: Vec<HashMap<u64, u32>>,
+    callsite_counters: Vec<CallsiteCounters>,
     view_cache_should_reuse: Option<&'a mut dyn FnMut(NodeId) -> bool>,
+}
+
+type CallsiteCounters = SmallVec<[(u64, u32); 16]>;
+
+fn bump_callsite_counter(counters: &mut CallsiteCounters, callsite: u64) -> u64 {
+    for (seen, next) in counters.iter_mut() {
+        if *seen != callsite {
+            continue;
+        }
+        let slot = (*next) as u64;
+        *next = next.saturating_add(1);
+        return slot;
+    }
+    counters.push((callsite, 1));
+    0
 }
 
 impl<'a, H: UiHost> ElementContext<'a, H> {
@@ -73,7 +90,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             bounds,
             window_state,
             stack: vec![root],
-            callsite_counters: vec![HashMap::new()],
+            callsite_counters: vec![CallsiteCounters::new()],
             view_cache_should_reuse: None,
         }
     }
@@ -118,7 +135,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             bounds,
             window_state,
             stack: vec![root],
-            callsite_counters: vec![HashMap::new()],
+            callsite_counters: vec![CallsiteCounters::new()],
             view_cache_should_reuse: None,
         }
     }
@@ -229,7 +246,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let prev_counters = std::mem::take(&mut self.callsite_counters);
 
         self.stack = vec![root];
-        self.callsite_counters = vec![HashMap::new()];
+        self.callsite_counters = vec![CallsiteCounters::new()];
 
         let out = f(self);
 
@@ -540,9 +557,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             .callsite_counters
             .last_mut()
             .expect("callsite counters exist");
-        let next = counters.entry(callsite).or_insert(0);
-        let slot = *next as u64;
-        *next = next.saturating_add(1);
+        let slot = bump_callsite_counter(counters, callsite);
 
         let child_salt = key_hash.unwrap_or(slot);
         let id = derive_child_id(parent, callsite, child_salt);
@@ -561,7 +576,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         );
 
         self.stack.push(id);
-        self.callsite_counters.push(HashMap::new());
+        self.callsite_counters.push(CallsiteCounters::new());
         let out = f(self);
         self.callsite_counters.pop();
         self.stack.pop();
