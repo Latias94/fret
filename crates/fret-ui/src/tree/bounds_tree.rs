@@ -31,7 +31,7 @@ fn hit_test_bounds_tree_min_records() -> usize {
 pub(super) struct HitTestBoundsTrees {
     frame_id: Option<FrameId>,
     layers: Vec<LayerBoundsTree>,
-    clip_stack: Vec<(NodeId, Rect, Transform2D)>,
+    clip_stack: Vec<(NodeId, Option<Rect>, Transform2D)>,
     leaves: Vec<Leaf>,
 }
 
@@ -86,11 +86,6 @@ impl HitTestBoundsTrees {
         let mut order: u32 = 1;
 
         for record in records {
-            if !record.clips_hit_test {
-                disabled = true;
-                break;
-            }
-
             let parent = nodes.get(record.node).and_then(|n| n.parent);
             if record.node == layer_root {
                 self.clip_stack.clear();
@@ -111,7 +106,7 @@ impl HitTestBoundsTrees {
             let (parent_clip_world, parent_to_world_for_children) = self
                 .clip_stack
                 .last()
-                .map(|(_, clip, t)| (Some(*clip), *t))
+                .map(|(_, clip, t)| (*clip, *t))
                 .unwrap_or((None, Transform2D::IDENTITY));
 
             let render_to_world = record
@@ -135,7 +130,11 @@ impl HitTestBoundsTrees {
                 rect_intersection(clip, node_bounds_world)
             });
 
-            let clip_world_for_children = rect_intersection(effective_world, node_bounds_world);
+            let clip_world_for_children = if record.clips_hit_test {
+                Some(rect_intersection(effective_world, node_bounds_world))
+            } else {
+                parent_clip_world
+            };
             let to_world_for_children = node_to_world * children_to_world;
 
             // Maintain the stack even if the clip is empty so children inherit the empty clip.
