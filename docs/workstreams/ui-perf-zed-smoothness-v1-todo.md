@@ -121,6 +121,10 @@ Perf acceptance:
   - Perf-visible counters exported by `feat(diag): export element build pool counters` (commit `cbcd81ed`).
   - Follow-up: `perf(fret-ui): make element children vec pool LIFO` (commit `693a55b0`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for `693a55b0`.
+- [x] Validate element children vec pool steady-state behavior on editor-class pages.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries for:
+    - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` (0 misses; paint-dominant).
+    - `tools/diag-scripts/ui-gallery-chrome-torture-steady.json` (0 misses; very light total).
 - [ ] Add an optional allocation counter hook for local profiling (feature-gated).
   - Keep it portable; do not require a global allocator swap for normal builds.
 

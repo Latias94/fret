@@ -121,9 +121,13 @@ Fret:
   - `top_frame_arena_grow_events`
   - Evidence: `feat(diag): export frame arena scratch stats` (commit `fe0ad7c3`) + perf log entry for `1b0364e9`.
 - Still missing: a true “allocate elements in an arena, bulk-clear after draw” model akin to GPUI’s `Arena`.
-- Still missing: a true “allocate elements in an arena, bulk-clear after draw” model akin to GPUI’s `Arena`.
   - Partial progress: pooled `Vec<AnyElement>` child buffers across frames (arena-adjacent; reduces allocation churn but is not a bump arena).
-    - `perf(fret-ui): pool element children vectors` (commit `07a4c252`)
+    - `perf(fret-ui): pool element children vectors` (commit `07a4c252`) + `perf(fret-ui): make element children vec pool LIFO` (commit `693a55b0`)
+    - Diagnostics: `top_element_children_vec_pool_reuses` / `top_element_children_vec_pool_misses` (commit `cbcd81ed`)
+    - Evidence: the pool reaches stable “0 misses” steady state on:
+      - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+      - `tools/diag-scripts/ui-gallery-chrome-torture-steady.json`
+      (see perf log entries under `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`)
 
 Impact:
 

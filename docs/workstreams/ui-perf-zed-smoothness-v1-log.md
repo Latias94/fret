@@ -1357,6 +1357,60 @@ Worst bundle:
 Notes:
 - A/B deltas are within expected noise for this script.
 
+### Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` (validation)
+
+Command (release; steady; repeat=9; relaunch-per-repeat):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.element-vec-pool.r9 --repeat 9 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| children vec pool (v0) | 6330 | 6525 | 6525 | 936 | 32 | 5558 |
+
+Element build pool counters (top frame):
+- `top_element_children_vec_pool_reuses`: p50 `197`, p95 `197`
+- `top_element_children_vec_pool_misses`: p50 `0`, p95 `0`
+
+Frame arena counters (top frame; proxy signals):
+- `top_frame_arena_capacity_estimate_bytes`: p50 `24016`, p95 `24064`
+- `top_frame_arena_grow_events`: p50 `0`, p95 `0`
+
+Worst bundle:
+- `target/fret-diag-perf-editor/code-editor-torture.autoscroll.steady.element-vec-pool.r9/1770134649492-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Notes:
+- The element children vec pool stays in a stable “0 misses” steady state on this workload.
+- This page is paint-dominant (`p95 paint 5558us / p95 total 6525us`), so allocation-churn wins in element build are not expected to move `p95 total` much here.
+
+### Script: `tools/diag-scripts/ui-gallery-chrome-torture-steady.json` (new steady perf script; validation)
+
+Command (release; steady; repeat=7; relaunch-per-repeat):
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-chrome-torture-steady.json --dir target/fret-diag-perf-chrome/chrome-torture.steady.element-vec-pool.r7 --repeat 7 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=180 --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+| mode | p50 total | p95 total | max total | p95 layout | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| chrome torture (steady) | 968 | 988 | 988 | 655 | 23 | 334 |
+
+Element build pool counters (top frame):
+- `top_element_children_vec_pool_reuses`: p50 `132`, p95 `132`
+- `top_element_children_vec_pool_misses`: p50 `0`, p95 `0`
+
+Frame arena counters (top frame; proxy signals):
+- `top_frame_arena_capacity_estimate_bytes`: p50 `20896`, p95 `20896`
+- `top_frame_arena_grow_events`: p50 `0`, p95 `0`
+
+Worst bundle:
+- `target/fret-diag-perf-chrome/chrome-torture.steady.element-vec-pool.r7/1770135044798-ui-gallery-chrome-torture-steady/bundle.json`
+
+Notes:
+- This script is intentionally “perf-safe”: no screenshots and includes a `reset_diagnostics` after warmup.
+- The element children vec pool stays in a stable “0 misses” steady state on this page as well.
+
 ### FrameArenaScratch v0: GC + semantics scratch reuse (exports `top_frame_arena_*`)
 
 Commits:
