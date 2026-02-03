@@ -43,6 +43,49 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
         .any(|t| t.to_ascii_lowercase().contains(&q_lower))
 }
 
+pub(crate) fn harness_only_view(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+    harness: &str,
+) -> Vec<AnyElement> {
+    match harness.trim() {
+        PAGE_HIT_TEST_TORTURE => preview_hit_test_torture_surface_only(cx),
+        other => vec![
+            shadcn::Card::new(vec![
+                shadcn::CardHeader::new(vec![
+                    shadcn::CardTitle::new("Unknown harness").into_element(cx),
+                    shadcn::CardDescription::new(other.to_string()).into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+        ],
+    }
+}
+
+fn ui_gallery_hit_test_torture_stripes() -> usize {
+    static VALUE: OnceLock<usize> = OnceLock::new();
+    *VALUE.get_or_init(|| {
+        std::env::var("FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(256)
+            .clamp(2, 4096)
+    })
+}
+
+fn ui_gallery_hit_test_torture_noise() -> usize {
+    static VALUE: OnceLock<usize> = OnceLock::new();
+    *VALUE.get_or_init(|| {
+        std::env::var("FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(50_000)
+            .clamp(0, 200_000)
+    })
+}
+
 pub(crate) fn sidebar_view(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -631,6 +674,7 @@ fn page_preview(
             text_input,
             text_area,
         ),
+        PAGE_HIT_TEST_TORTURE => preview_hit_test_torture(cx, theme),
         PAGE_VIRTUAL_LIST_TORTURE => preview_virtual_list_torture(
             cx,
             theme,
@@ -1269,6 +1313,167 @@ fn preview_view_cache(
             ]
         },
     )]
+}
+
+fn preview_hit_test_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use fret_ui::action::PointerMoveCx;
+
+    let stripes = ui_gallery_hit_test_torture_stripes();
+    let noise = ui_gallery_hit_test_torture_noise();
+
+    let area_w = Px(1024.0);
+    let area_h = Px(480.0);
+    let stripe_w = Px((area_w.0 / stripes as f32).max(1.0));
+
+    let on_pointer_move: fret_ui::action::OnPointerMove =
+        Arc::new(|_host, _action_cx, _mv: PointerMoveCx| false);
+
+    let surface = preview_hit_test_torture_surface(
+        cx,
+        stripes,
+        noise,
+        area_w,
+        area_h,
+        stripe_w,
+        on_pointer_move,
+    );
+
+    vec![
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Hit Test (Torture)").into_element(cx),
+                shadcn::CardDescription::new(format!(
+                    "stripes={} (w={}px), noise={} (1x1px)",
+                    stripes, stripe_w.0, noise
+                ))
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                cx.text("Goal: make hit-test a measurable hotspot so bounds-tree vs fallback traversal A/B is meaningful."),
+                cx.text("Env: FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES / FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE"),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx),
+        surface,
+    ]
+}
+
+fn preview_hit_test_torture_surface_only(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui::action::PointerMoveCx;
+
+    let stripes = ui_gallery_hit_test_torture_stripes();
+    let noise = ui_gallery_hit_test_torture_noise();
+
+    let area_w = Px(1024.0);
+    let area_h = Px(480.0);
+    let stripe_w = Px((area_w.0 / stripes as f32).max(1.0));
+
+    let on_pointer_move: fret_ui::action::OnPointerMove =
+        Arc::new(|_host, _action_cx, _mv: PointerMoveCx| false);
+
+    vec![preview_hit_test_torture_surface(
+        cx,
+        stripes,
+        noise,
+        area_w,
+        area_h,
+        stripe_w,
+        on_pointer_move,
+    )]
+}
+
+fn preview_hit_test_torture_surface(
+    cx: &mut ElementContext<'_, App>,
+    stripes: usize,
+    noise: usize,
+    area_w: Px,
+    area_h: Px,
+    stripe_w: Px,
+    on_pointer_move: fret_ui::action::OnPointerMove,
+) -> AnyElement {
+    use fret_ui::element::{
+        LayoutStyle, Length, PointerRegionProps, PositionStyle, SemanticsProps,
+    };
+
+    cx.cached_subtree_with(
+        CachedSubtreeProps::default().contained_layout(true),
+        move |cx| {
+            let mut stack_layout = LayoutStyle::default();
+            stack_layout.size.width = Length::Px(area_w);
+            stack_layout.size.height = Length::Px(area_h);
+            stack_layout.overflow = fret_ui::element::Overflow::Clip;
+
+            let stack = cx.stack_props(
+                StackProps {
+                    layout: stack_layout,
+                },
+                move |cx| {
+                    // Child order matters: `hit_test_node` visits children in reverse order.
+                    // Put hit stripes first (checked last), and append many tiny "noise" regions
+                    // (checked first) to stress fallback traversal.
+                    let mut out: Vec<AnyElement> = Vec::with_capacity(stripes + noise);
+
+                    for i in 0..stripes {
+                        out.push(cx.keyed(("stripe", i), |cx| {
+                            let mut pointer = PointerRegionProps::default();
+                            pointer.layout.position = PositionStyle::Absolute;
+                            pointer.layout.overflow = fret_ui::element::Overflow::Clip;
+                            pointer.layout.inset.top = Some(Px(0.0));
+                            pointer.layout.inset.bottom = Some(Px(0.0));
+                            pointer.layout.inset.left = Some(Px(stripe_w.0 * i as f32));
+                            pointer.layout.size.width = Length::Px(stripe_w);
+
+                            let on_pointer_move = on_pointer_move.clone();
+                            cx.pointer_region(pointer, move |cx| {
+                                cx.pointer_region_on_pointer_move(on_pointer_move.clone());
+                                Vec::new()
+                            })
+                        }));
+                    }
+
+                    // Keep noise within the clipped area so it contributes to both fallback
+                    // traversal cost and bounds-tree size, while placing it in a thin band near
+                    // the top so the pointer sweep (centered vertically) never hits it.
+                    let noise_cols = (area_w.0.max(1.0) as usize).max(1);
+                    let noise_cell = Px(1.0);
+                    for idx in 0..noise {
+                        out.push(cx.keyed(("noise", idx), |cx| {
+                            let x = (idx % noise_cols) as f32 * noise_cell.0;
+                            let y = (idx / noise_cols) as f32 * noise_cell.0;
+
+                            let mut pointer = PointerRegionProps::default();
+                            pointer.layout.position = PositionStyle::Absolute;
+                            pointer.layout.overflow = fret_ui::element::Overflow::Clip;
+                            pointer.layout.inset.left = Some(Px(x));
+                            pointer.layout.inset.top = Some(Px(y));
+                            pointer.layout.size.width = Length::Px(noise_cell);
+                            pointer.layout.size.height = Length::Px(noise_cell);
+
+                            let on_pointer_move = on_pointer_move.clone();
+                            cx.pointer_region(pointer, move |cx| {
+                                cx.pointer_region_on_pointer_move(on_pointer_move.clone());
+                                Vec::new()
+                            })
+                        }));
+                    }
+
+                    out
+                },
+            );
+
+            vec![cx.semantics(
+                SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-hit-test-torture-root")),
+                    ..Default::default()
+                },
+                move |_cx| vec![stack],
+            )]
+        },
+    )
 }
 
 fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {

@@ -1243,6 +1243,13 @@ impl UiGalleryDriver {
 
                     let theme = cx.theme().clone();
 
+                    if let Some(harness) =
+                        std::env::var_os("FRET_UI_GALLERY_HARNESS_ONLY").filter(|v| !v.is_empty())
+                    {
+                        let harness = harness.to_string_lossy();
+                        return crate::ui::harness_only_view(cx, &theme, harness.trim());
+                    }
+
                     let sidebar = if cache_shell {
                         cx.view_cache(
                             {

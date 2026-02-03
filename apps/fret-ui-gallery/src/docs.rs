@@ -76,6 +76,32 @@ let subtree = cx.view_cache(ViewCacheProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_HIT_TEST_TORTURE: &str = r#"
+## Hit Test (torture harness)
+
+This page exists to stress the runtime's pointer hit-testing path under editor-grade UI workloads:
+
+- many hit-testable regions (pointer listeners),
+- stable layout (no relayout on pointer move),
+- pointer moves that change the hovered target every frame (to defeat path caching),
+- ability to A/B test spatial indices (e.g. bounds tree) against the fallback traversal.
+
+The goal is to make `top_hit_test_time_us` large enough to be a meaningful slice of the frame budget so
+we can validate improvements and gate regressions.
+"#;
+
+pub(crate) const USAGE_HIT_TEST_TORTURE: &str = r#"
+```rust
+// Customize the stress level.
+// Defaults are chosen to create a large number of PointerRegion interaction records.
+//
+// - stripes: hit target changes frequently (defeats hit-test path cache).
+// - noise: many tiny pointer regions that should never be hit, but are expensive for fallback scans.
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES", "256");
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE", "50000");
+```
+"#;
+
 pub(crate) const DOC_VIRTUAL_LIST_TORTURE: &str = r#"
 ## Virtual List (torture harness)
 

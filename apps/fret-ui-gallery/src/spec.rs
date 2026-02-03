@@ -95,6 +95,7 @@ pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
+pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
@@ -160,6 +161,7 @@ pub(crate) const PAGE_MATERIAL3_TOUCH_TARGETS: &str = "material3_touch_targets";
 pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
+pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
@@ -344,6 +346,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["cache", "performance", "gpui-parity"],
                 docs::DOC_VIEW_CACHE,
                 docs::USAGE_VIEW_CACHE,
+            ),
+            PageSpec::new(
+                PAGE_HIT_TEST_TORTURE,
+                "Hit Test (Torture)",
+                "Hit Test / Spatial Index Harness",
+                "fret-ui (hit testing)",
+                CMD_NAV_HIT_TEST_TORTURE,
+                &["hit_test", "pointer", "dispatch", "performance", "harness"],
+                docs::DOC_HIT_TEST_TORTURE,
+                docs::USAGE_HIT_TEST_TORTURE,
             ),
             PageSpec::new(
                 PAGE_VIRTUAL_LIST_TORTURE,
