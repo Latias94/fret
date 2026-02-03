@@ -2913,7 +2913,11 @@ See: `docs/tracy.md`.\n";
                     let suite_retained_vlist_attach_detach_max = ((components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate)
                         || vlist_window_boundary_retained_suite)
-                        .then_some(256u64)
+                        .then_some(if vlist_window_boundary_retained_suite {
+                            64u64
+                        } else {
+                            256u64
+                        })
                         .filter(|_| check_retained_vlist_attach_detach_max.is_none());
                     let suite_retained_vlist_keep_alive_reuse_min = (components_gallery_suite
                         && script_requires_retained_vlist_keep_alive_reuse_gate)
