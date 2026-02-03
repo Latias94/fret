@@ -3851,6 +3851,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub dirty_views: Vec<UiDirtyViewV1>,
     #[serde(default)]
+    pub notify_requests: Vec<UiNotifyRequestV1>,
+    #[serde(default)]
     pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
     #[serde(default)]
     pub virtual_list_window_shift_samples: Vec<UiVirtualListWindowShiftSampleV1>,
@@ -3944,6 +3946,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_dirty_views()
                 .iter()
                 .map(UiDirtyViewV1::from_dirty_view)
+                .collect(),
+            notify_requests: ui
+                .debug_notify_requests()
+                .iter()
+                .map(UiNotifyRequestV1::from_notify_request)
                 .collect(),
             virtual_list_windows: ui
                 .debug_virtual_list_windows()
@@ -5427,6 +5434,29 @@ impl UiDirtyViewV1 {
             root_element: dirty.element.map(|e| e.0),
             source: Some(source.to_string()),
             detail: dirty.detail.as_str().map(|s| s.to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiNotifyRequestV1 {
+    pub frame_id: u64,
+    pub caller_node: u64,
+    pub target_view: u64,
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+impl UiNotifyRequestV1 {
+    fn from_notify_request(req: &fret_ui::tree::UiDebugNotifyRequest) -> Self {
+        Self {
+            frame_id: req.frame_id.0,
+            caller_node: key_to_u64(req.caller_node),
+            target_view: key_to_u64(req.target_view.0),
+            file: req.file.to_string(),
+            line: req.line,
+            column: req.column,
         }
     }
 }

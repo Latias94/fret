@@ -24,6 +24,13 @@ pub enum Invalidation {
     HitTestOnly,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UiSourceLocation {
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub services: &'a mut dyn UiServices,
@@ -42,6 +49,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub requested_capture: Option<Option<NodeId>>,
     pub requested_cursor: Option<fret_core::CursorIcon>,
     pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
     pub stop_propagation: bool,
 }
 
@@ -120,8 +128,17 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     ///
     /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
     /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
     pub fn notify(&mut self) {
         self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 
     pub fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
@@ -149,6 +166,7 @@ pub struct ObserverCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
 }
 
 impl<'a, H: UiHost> ObserverCx<'a, H> {
@@ -183,8 +201,17 @@ impl<'a, H: UiHost> ObserverCx<'a, H> {
     ///
     /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
     /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
     pub fn notify(&mut self) {
         self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 }
 

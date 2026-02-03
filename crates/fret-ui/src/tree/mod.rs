@@ -475,6 +475,16 @@ pub struct UiDebugDirtyView {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct UiDebugNotifyRequest {
+    pub frame_id: FrameId,
+    pub caller_node: NodeId,
+    pub target_view: ViewId,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct UiDebugInvalidationWalk {
     pub root: NodeId,
     pub root_element: Option<GlobalElementId>,
@@ -1238,6 +1248,8 @@ pub struct UiTree<H: UiHost> {
     debug_hover_declarative_invalidations:
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
+    #[cfg(feature = "diagnostics")]
+    debug_notify_requests: Vec<UiDebugNotifyRequest>,
     debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
     debug_virtual_list_window_shift_samples: Vec<UiDebugVirtualListWindowShiftSample>,
     debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
@@ -1611,6 +1623,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_edge_this_frame: false,
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_notify_requests: Vec::new(),
             debug_virtual_list_windows: Vec::new(),
             debug_virtual_list_window_shift_samples: Vec::new(),
             debug_retained_virtual_list_reconciles: Vec::new(),
@@ -1849,6 +1863,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_edge_this_frame = false;
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_notify_requests.clear();
         self.debug_virtual_list_windows.clear();
         self.debug_virtual_list_window_shift_samples.clear();
         self.debug_retained_virtual_list_reconciles.clear();
@@ -2225,6 +2241,48 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_overlay_policy_decisions.as_slice()
+    }
+
+    pub(crate) fn debug_record_notify_request(
+        &mut self,
+        frame_id: FrameId,
+        caller_node: NodeId,
+        location: Option<crate::widget::UiSourceLocation>,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if !self.debug_enabled {
+                return;
+            }
+
+            let Some(location) = location else {
+                return;
+            };
+
+            // Mirror the v1 notify routing: the default target is the nearest view-cache root,
+            // falling back to the caller node when no cache boundary exists.
+            let target = self
+                .nearest_view_cache_root(caller_node)
+                .unwrap_or(caller_node);
+
+            if self.debug_notify_requests.len() >= 256 {
+                return;
+            }
+
+            self.debug_notify_requests.push(UiDebugNotifyRequest {
+                frame_id,
+                caller_node,
+                target_view: ViewId(target),
+                file: location.file,
+                line: location.line,
+                column: location.column,
+            });
+        }
+
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (frame_id, caller_node, location);
+        }
     }
 
     #[track_caller]
@@ -2627,6 +2685,21 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_dirty_views.as_slice()
+    }
+
+    pub fn debug_notify_requests(&self) -> &[UiDebugNotifyRequest] {
+        #[cfg(feature = "diagnostics")]
+        {
+            if !self.debug_enabled {
+                return &[];
+            }
+            return self.debug_notify_requests.as_slice();
+        }
+
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            &[]
+        }
     }
 
     pub fn debug_virtual_list_windows(&self) -> &[UiDebugVirtualListWindow] {

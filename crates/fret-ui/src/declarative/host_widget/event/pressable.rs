@@ -31,6 +31,7 @@ pub(super) fn handle_pressable<H: UiHost>(
         requested_capture: &'a mut Option<Option<NodeId>>,
         requested_cursor: &'a mut Option<fret_core::CursorIcon>,
         notify_requested: &'a mut bool,
+        notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
         invalidations: &'a mut Vec<(NodeId, Invalidation)>,
     }
 
@@ -73,8 +74,17 @@ pub(super) fn handle_pressable<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
+            if self.notify_requested_location.is_none() {
+                let caller = std::panic::Location::caller();
+                *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+            }
         }
     }
 
@@ -212,6 +222,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
                         notify_requested: &mut cx.notify_requested,
+                        notify_requested_location: &mut cx.notify_requested_location,
                         invalidations: &mut cx.invalidations,
                     };
 
@@ -268,6 +279,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
                         notify_requested: &mut cx.notify_requested,
+                        notify_requested_location: &mut cx.notify_requested_location,
                         invalidations: &mut cx.invalidations,
                     };
 
@@ -351,6 +363,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         requested_capture: &mut cx.requested_capture,
                         requested_cursor: &mut cx.requested_cursor,
                         notify_requested: &mut cx.notify_requested,
+                        notify_requested_location: &mut cx.notify_requested_location,
                         invalidations: &mut cx.invalidations,
                     };
 
@@ -391,6 +404,8 @@ pub(super) fn handle_pressable<H: UiHost>(
                             window: AppWindowId,
                             element: crate::GlobalElementId,
                             notify_requested: &'a mut bool,
+                            notify_requested_location:
+                                &'a mut Option<crate::widget::UiSourceLocation>,
                         }
 
                         impl<H: UiHost> action::UiActionHost for PressableActivateHookHost<'_, H> {
@@ -436,8 +451,18 @@ pub(super) fn handle_pressable<H: UiHost>(
                                 self.app.next_clipboard_token()
                             }
 
+                            #[track_caller]
                             fn notify(&mut self, _cx: action::ActionCx) {
                                 *self.notify_requested = true;
+                                if self.notify_requested_location.is_none() {
+                                    let caller = std::panic::Location::caller();
+                                    *self.notify_requested_location =
+                                        Some(crate::widget::UiSourceLocation {
+                                            file: caller.file(),
+                                            line: caller.line(),
+                                            column: caller.column(),
+                                        });
+                                }
                             }
                         }
 
@@ -446,6 +471,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                             window,
                             element: this.element,
                             notify_requested: &mut cx.notify_requested,
+                            notify_requested_location: &mut cx.notify_requested_location,
                         };
                         h(
                             &mut host,
@@ -514,6 +540,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     window: AppWindowId,
                     element: crate::GlobalElementId,
                     notify_requested: &'a mut bool,
+                    notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
                 }
 
                 impl<H: UiHost> action::UiActionHost for PressableActivateHookHost<'_, H> {
@@ -559,8 +586,18 @@ pub(super) fn handle_pressable<H: UiHost>(
                         self.app.next_clipboard_token()
                     }
 
+                    #[track_caller]
                     fn notify(&mut self, _cx: action::ActionCx) {
                         *self.notify_requested = true;
+                        if self.notify_requested_location.is_none() {
+                            let caller = std::panic::Location::caller();
+                            *self.notify_requested_location =
+                                Some(crate::widget::UiSourceLocation {
+                                    file: caller.file(),
+                                    line: caller.line(),
+                                    column: caller.column(),
+                                });
+                        }
                     }
                 }
 
@@ -569,6 +606,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     window,
                     element: this.element,
                     notify_requested: &mut cx.notify_requested,
+                    notify_requested_location: &mut cx.notify_requested_location,
                 };
                 h(
                     &mut host,

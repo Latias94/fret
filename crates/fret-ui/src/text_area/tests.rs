@@ -349,6 +349,7 @@ fn event_cx<'a>(
         requested_capture: None,
         requested_cursor: None,
         notify_requested: false,
+        notify_requested_location: None,
         stop_propagation: false,
     }
 }
