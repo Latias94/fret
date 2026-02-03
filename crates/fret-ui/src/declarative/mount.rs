@@ -6,8 +6,17 @@ use super::host_widget::ElementHostWidget;
 use super::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
+
+fn keep_alive_view_cache_scratch_disabled() -> bool {
+    static DISABLED: OnceLock<bool> = OnceLock::new();
+    *DISABLED.get_or_init(|| {
+        std::env::var_os("FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE")
+            .is_some_and(|v| !v.is_empty() && v != "0")
+    })
+}
 
 pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
@@ -325,15 +334,14 @@ where
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        let mut keep_alive_view_cache_elements =
-            window_state.take_scratch_view_cache_keep_alive_elements();
-        keep_alive_view_cache_elements.clear();
-        {
-            let mut visited_roots = window_state.take_scratch_view_cache_keep_alive_visited_roots();
-            let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
-            visited_roots.clear();
-            stack.clear();
-            stack.extend(window_state.view_cache_reuse_roots());
+        let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
+        let keep_alive_view_cache_elements_from_scratch: bool;
+        if keep_alive_view_cache_scratch_disabled() {
+            keep_alive_view_cache_elements = HashSet::new();
+            keep_alive_view_cache_elements_from_scratch = false;
+
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
 
             while let Some(root) = stack.pop() {
                 if !visited_roots.insert(root) {
@@ -351,11 +359,42 @@ where
                     }
                 }
             }
+        } else {
+            keep_alive_view_cache_elements =
+                window_state.take_scratch_view_cache_keep_alive_elements();
+            keep_alive_view_cache_elements_from_scratch = true;
+            keep_alive_view_cache_elements.clear();
 
-            visited_roots.clear();
-            stack.clear();
-            window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
-            window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+            {
+                let mut visited_roots =
+                    window_state.take_scratch_view_cache_keep_alive_visited_roots();
+                let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+                visited_roots.clear();
+                stack.clear();
+                stack.extend(window_state.view_cache_reuse_roots());
+
+                while let Some(root) = stack.pop() {
+                    if !visited_roots.insert(root) {
+                        continue;
+                    }
+                    let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                        continue;
+                    };
+                    for &element in elements {
+                        keep_alive_view_cache_elements.insert(element);
+                        if !visited_roots.contains(&element)
+                            && window_state.view_cache_elements_for_root(element).is_some()
+                        {
+                            stack.push(element);
+                        }
+                    }
+                }
+
+                visited_roots.clear();
+                stack.clear();
+                window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+                window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+            }
         }
 
         // If any cache root transitions into reuse this frame, proactively touch the entire
@@ -479,7 +518,10 @@ where
             false
         });
 
-        window_state.restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
+        if keep_alive_view_cache_elements_from_scratch {
+            window_state
+                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
+        }
 
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
@@ -739,15 +781,14 @@ where
         // Record the root's coordinate space for placement/collision logic (anchored overlays).
         window_state.set_root_bounds(root_id, bounds);
 
-        let mut keep_alive_view_cache_elements =
-            window_state.take_scratch_view_cache_keep_alive_elements();
-        keep_alive_view_cache_elements.clear();
-        {
-            let mut visited_roots = window_state.take_scratch_view_cache_keep_alive_visited_roots();
-            let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
-            visited_roots.clear();
-            stack.clear();
-            stack.extend(window_state.view_cache_reuse_roots());
+        let mut keep_alive_view_cache_elements: HashSet<GlobalElementId>;
+        let keep_alive_view_cache_elements_from_scratch: bool;
+        if keep_alive_view_cache_scratch_disabled() {
+            keep_alive_view_cache_elements = HashSet::new();
+            keep_alive_view_cache_elements_from_scratch = false;
+
+            let mut visited_roots: HashSet<GlobalElementId> = HashSet::new();
+            let mut stack: Vec<GlobalElementId> = window_state.view_cache_reuse_roots().collect();
 
             while let Some(root) = stack.pop() {
                 if !visited_roots.insert(root) {
@@ -765,11 +806,42 @@ where
                     }
                 }
             }
+        } else {
+            keep_alive_view_cache_elements =
+                window_state.take_scratch_view_cache_keep_alive_elements();
+            keep_alive_view_cache_elements_from_scratch = true;
+            keep_alive_view_cache_elements.clear();
 
-            visited_roots.clear();
-            stack.clear();
-            window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
-            window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+            {
+                let mut visited_roots =
+                    window_state.take_scratch_view_cache_keep_alive_visited_roots();
+                let mut stack = window_state.take_scratch_view_cache_keep_alive_stack();
+                visited_roots.clear();
+                stack.clear();
+                stack.extend(window_state.view_cache_reuse_roots());
+
+                while let Some(root) = stack.pop() {
+                    if !visited_roots.insert(root) {
+                        continue;
+                    }
+                    let Some(elements) = window_state.view_cache_elements_for_root(root) else {
+                        continue;
+                    };
+                    for &element in elements {
+                        keep_alive_view_cache_elements.insert(element);
+                        if !visited_roots.contains(&element)
+                            && window_state.view_cache_elements_for_root(element).is_some()
+                        {
+                            stack.push(element);
+                        }
+                    }
+                }
+
+                visited_roots.clear();
+                stack.clear();
+                window_state.restore_scratch_view_cache_keep_alive_visited_roots(visited_roots);
+                window_state.restore_scratch_view_cache_keep_alive_stack(stack);
+            }
         }
 
         // See `render_root`: on the first cache-hit frame for a previously dirty root, ensure the
@@ -883,7 +955,10 @@ where
             false
         });
 
-        window_state.restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
+        if keep_alive_view_cache_elements_from_scratch {
+            window_state
+                .restore_scratch_view_cache_keep_alive_elements(keep_alive_view_cache_elements);
+        }
 
         for record in &stale {
             window_state.forget_view_cache_subtree_elements(record.element);
