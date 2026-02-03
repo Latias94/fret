@@ -723,7 +723,7 @@ topics (if/when we implement them):
       - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (`RETAINED_HOST_PREFETCH_STEP_MAX`, retained-host `prefetch_step`),
         `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_caps_retained_host_prefetch_step_to_bound_attach_detach_delta`).
       - Note: the attach/detach delta check in `fretboard diag stats` uses `attached_items + detached_items` (so a shift by `step` roughly costs `~2*step`).
-      - Evidence: `target/fret-diag-suite-vlist-boundary-retained-stepcap/1770111034260-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - Evidence: `target/fret-diag-suite-vlist-boundary-retained-keepalive/1770112825751-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
     - [!] GPUI-MVP5-virt-004 (Optional; deferred) Non-retained window shifts without rerender.
       - Rationale: fully composable “window shifts without dirtying the parent cache root” require an explicit retained-host
         boundary (ADR 0192). Track B remains “plan-only”: it may derive a window plan in prepaint, but it must schedule a
@@ -947,9 +947,10 @@ topics (if/when we implement them):
         - Same gates as the non-retained suite, plus:
           - `--check-retained-vlist-reconcile-no-notify 1`
           - `--check-retained-vlist-attach-detach-max 64`
+          - `--check-retained-vlist-keep-alive-reuse-min 1`
           - `--check-vlist-window-shifts-non-retained-max 0` (no fallback)
-        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
-        - Evidence bundle (suite; cache+shell, release): `target/fret-diag-suite-vlist-boundary-retained-stepcap/1770111034260-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_KEEP_ALIVE=128`.
+        - Evidence bundle (suite; cache+shell, release): `target/fret-diag-suite-vlist-boundary-retained-keepalive/1770112825751-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
         `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
       - Evidence bundle (suite; cache+shell, release; prefetch_step=overscan*8 for non-retained):
