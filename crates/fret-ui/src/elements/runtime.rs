@@ -217,25 +217,14 @@ impl WindowElementState {
         &mut self,
         min_capacity: usize,
     ) -> Vec<AnyElement> {
-        const POOL_MAX: usize = 2048;
-        let min_capacity = min_capacity.max(0);
-
-        if let Some((idx, _)) = self
-            .scratch_element_children_vec_pool
-            .iter()
-            .enumerate()
-            .rev()
-            .find(|(_, v)| v.capacity() >= min_capacity)
-        {
+        if let Some(mut out) = self.scratch_element_children_vec_pool.pop() {
             self.element_children_vec_pool_reuses =
                 self.element_children_vec_pool_reuses.saturating_add(1);
-            let mut out = self.scratch_element_children_vec_pool.swap_remove(idx);
             out.clear();
+            if out.capacity() < min_capacity {
+                out.reserve(min_capacity - out.capacity());
+            }
             return out;
-        }
-
-        if self.scratch_element_children_vec_pool.len() >= POOL_MAX {
-            self.scratch_element_children_vec_pool.truncate(POOL_MAX);
         }
         self.element_children_vec_pool_misses =
             self.element_children_vec_pool_misses.saturating_add(1);
@@ -244,11 +233,14 @@ impl WindowElementState {
 
     pub(crate) fn restore_scratch_element_children_vec(&mut self, mut scratch: Vec<AnyElement>) {
         const POOL_MAX: usize = 2048;
-        const MAX_RETAIN_CAP: usize = 256;
+        const MAX_RETAIN_BYTES: usize = 64 * 1024;
         if self.scratch_element_children_vec_pool.len() >= POOL_MAX {
             return;
         }
-        if scratch.capacity() > MAX_RETAIN_CAP {
+        let bytes = scratch
+            .capacity()
+            .saturating_mul(std::mem::size_of::<AnyElement>());
+        if bytes > MAX_RETAIN_BYTES {
             return;
         }
         scratch.clear();
