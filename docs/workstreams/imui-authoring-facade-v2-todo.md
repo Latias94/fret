@@ -81,7 +81,9 @@ Exit criteria:
 
 - [x] IMUI2-bridge-020 Add an ecosystem-owned bridge module (in `fret-ui-kit` behind an `imui` feature):
   - extension trait on `UiWriter` to render `UiBuilder<T>` into the current output list.
-- [ ] IMUI2-bridge-021 Decide and document where token/preset helpers live (kit vs shadcn vs app).
+- [x] IMUI2-bridge-021 Decide and document where token/preset helpers live (kit vs shadcn vs app).
+  - Rule: `fret-ui-kit` owns patch vocabulary + generic scales/presets; `fret-ui-shadcn` owns shadcn-aligned tokens and recipes; app owns app-specific tokens.
+  - Evidence: `docs/workstreams/imui-authoring-facade-v2.md` (decision snapshot).
 
 ---
 
@@ -91,10 +93,12 @@ Exit criteria:
 
 - The most important v1 follow-ups are addressed (moved into v2 so v1 can remain frozen).
 
-- [ ] IMUI2-test-030 Add a wasm-targeted smoke harness entry (compile-only is acceptable initially).
+- [x] IMUI2-test-030 Add a wasm-targeted smoke harness entry (compile-only is acceptable initially).
+  - Evidence: `apps/fret-imui-wasm-smoke` (run `cargo check -p fret-imui-wasm-smoke --target wasm32-unknown-unknown`).
 - [x] IMUI2-docs-031 Add “when to drop to `cx_mut()`” guidance (canvas, viewport surfaces, docking host).
 - [x] IMUI2-docs-032 Add a concise “Golden Path” section + gotchas/FAQ for immediate-style authoring in Fret.
-- [ ] IMUI2-eco-033 Add at least one more official ecosystem `imui` adapter (`fret-plot` or `fret-chart`).
+- [x] IMUI2-eco-033 Add at least one more official ecosystem `imui` adapter (`fret-plot` or `fret-chart`).
+  - Evidence: `ecosystem/fret-plot/src/imui.rs` (feature `fret-plot/imui`).
 
 ---
 

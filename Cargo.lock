@@ -1247,6 +1247,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-imui-wasm-smoke"
+version = "0.1.0"
+dependencies = [
+ "fret-authoring",
+ "fret-imui",
+ "fret-ui",
+]
+
+[[package]]
 name = "fret-kit"
 version = "0.1.0"
 dependencies = [
@@ -1372,6 +1381,7 @@ dependencies = [
 name = "fret-plot"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-canvas",
  "fret-core",
  "fret-runtime",

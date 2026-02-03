@@ -23,6 +23,7 @@ Decision snapshot (2026-02-03):
 - `UiWriter` lives in `ecosystem/fret-authoring` (tiny, policy-light, no cycles).
 - Canonical widget rule (official crates): one source-of-truth implementation; adapters (imui/ui-kit/shadcn) delegate.
 - Stability policy: keep `UiWriter` stable once depended on; expect churn in bridge utilities and imui ergonomics.
+- Token/preset policy: keep patch vocabulary + generic scales/presets in `fret-ui-kit`; keep shadcn-aligned tokens and recipes in `fret-ui-shadcn`; keep app-specific tokens in the app layer.
 
 ---
 
@@ -164,6 +165,7 @@ To keep the refactor safe and reviewable:
 - Native demos still run:
   - `cargo run -p fret-demo --bin imui_editor_proof_demo`
 - wasm coverage at least includes a compile-only smoke harness for the authoring surface.
+- Evidence: `apps/fret-imui-wasm-smoke` (run `cargo check -p fret-imui-wasm-smoke --target wasm32-unknown-unknown`).
 - Official ecosystem crates do not ship duplicated authoring APIs without a clear reason.
 
 ---
