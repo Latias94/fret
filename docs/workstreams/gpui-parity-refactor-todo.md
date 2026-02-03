@@ -743,12 +743,17 @@ topics (if/when we implement them):
         - Evidence: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache`)
     - [x] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
       `--check-retained-vlist-reconcile-no-notify`, `--check-retained-vlist-reconcile-cache-reuse` (recommended: reconcile occurs on cache-hit),
-      attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`, plus `--check-wheel-scroll` and `--check-stale-paint`.
+      attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`, plus `--check-wheel-scroll-hit-changes` (container targets) and
+      `--check-stale-paint`.
       - Suite: `fretboard diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
       - Scripts:
         - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
         - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
         - `tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json`
+      - Evidence (suite defaults; warmup=5; view-cache enabled):
+        - `target/fret-diag-suite-components-gallery-file-tree-defaults6/1770080650850-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-file-tree-defaults6/1770080678326-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-file-tree-defaults6/1770080712385-components-gallery-file-tree-window-boundary-bounce/bundle.json`
       - Note: retained-vlist *window-boundary* gates are applied only to scripts named `*window-boundary*` when running multi-script suites
         (toggle/sort scripts still run, but are gated by stale-paint / wheel-scroll / view-cache reuse, etc.).
     - [x] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
@@ -863,7 +868,7 @@ topics (if/when we implement them):
         - `C:\fret-diag-perf-components-gallery-file-tree-boundary-keepalive\1769839663570-script-step-0022-wheel\bundle.json`
       - Evidence (bounce; expect `reused_from_keep_alive_items > 0`):
         - `target/fret-diag/1769851029699-components-gallery-file-tree-window-boundary-bounce/bundle.json`
-        - Command: `cargo run -p fretboard -- diag run tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1 --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N=50000 --env FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE=256 --env FRET_EXAMPLES_VIEW_CACHE=1 --env FRET_EXAMPLES_VIEW_CACHE_SHELL=1 --warmup-frames 5 --check-retained-vlist-keep-alive-reuse-min 1 --launch -- cargo run -p fret-demo --bin components_gallery --release`
+        - Command: `cargo run -p fretboard -- diag run tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1 --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N=50000 --env FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE=256 --env FRET_EXAMPLES_VIEW_CACHE=1 --warmup-frames 5 --check-retained-vlist-keep-alive-reuse-min 1 --launch -- cargo run -p fret-demo --bin components_gallery --release`
       - Note: keep-alive does not reduce the “first time we see new items” cost during one-direction boundary scroll; it targets oscillation/backtracking stability.
     - Validated (v1.1): per-row nested cache roots inside `VirtualList`.
       - Attempt: wrap each row in a nested `ViewCache` boundary (`FRET_UI_GALLERY_VLIST_ROW_CACHE=1`) to reuse row layout/paint across window rebuilds.
@@ -887,9 +892,17 @@ topics (if/when we implement them):
       - Diagnostics: bundles report `debug.stats.layout_fast_path_taken` and `debug.stats.layout_invalidations_count` (helps validate the fast path is actually taking effect in scripted harnesses).
       - Gate: `fretboard diag stats <bundle> --check-layout-fast-path-min 1` (after warmup).
       - Evidence (smoke; `components_gallery` file-tree bounce): `target/fret-diag-smoke-layout-fastpath/1769855748827-components-gallery-file-tree-window-boundary-bounce/bundle.json`
-      - Suite default: `fretboard diag suite components-gallery-file-tree` sets `--check-layout-fast-path-min 1`.
-      - Suite default: `fretboard diag suite components-gallery-file-tree` enables `--check-vlist-policy-key-stable` (applies only to the window-boundary scripts, not toggle-driven scripts).
-      - Suite default: `fretboard diag suite components-gallery-file-tree` sets `--check-retained-vlist-attach-detach-max 64` (applies only to the window-boundary scripts).
+      - Suite defaults (components gallery surfaces; override via CLI flags):
+        - `--check-layout-fast-path-min 1`
+        - `--check-view-cache-reuse-min 1`
+        - `--check-stale-paint components-gallery-file-tree-root` / `components-gallery-table-root`
+        - `--check-wheel-scroll-hit-changes components-gallery-file-tree-root` / `components-gallery-table-root`
+        - Window-boundary scripts only:
+          - `--check-vlist-window-shifts-non-retained-max 0`
+          - `--check-vlist-policy-key-stable`
+          - `--check-retained-vlist-reconcile-no-notify 1`
+          - `--check-retained-vlist-attach-detach-max 64`
+          - `--check-retained-vlist-keep-alive-reuse-min 1` (keep-alive bounce scripts)
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
     - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
@@ -1336,10 +1349,12 @@ topics (if/when we implement them):
         - `target/fret-diag-suite-components-gallery-table-nonretained0/check.vlist_window_shifts_non_retained_max.json`
       - Evidence (keep-alive bounce; cache+shell, release; keep-alive gate enabled):
         - `target/fret-diag/1769958870151-components-gallery-table-window-boundary-bounce/bundle.json`
-      - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to `components-gallery-table-window-boundary-scroll.json`
+      - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to
+        `components-gallery-table-window-boundary-scroll.json` and `components-gallery-table-window-boundary-bounce.json`
         (the sort+scroll script is still gated by view-cache reuse + wheel-scroll + stale-paint, etc.).
-      - Note: the suite also enables `--check-vlist-policy-key-stable`, applied only to the window-boundary script (policy changes are expected in sort/toggle style scripts).
-      - Note: the suite sets `--check-retained-vlist-attach-detach-max 64` on the window-boundary script to catch extreme row churn regressions.
+      - Note: the suite also enables `--check-vlist-policy-key-stable`, applied only to the window-boundary scripts
+        (policy changes are expected in sort/toggle style scripts).
+      - Note: the suite sets `--check-retained-vlist-attach-detach-max 64` on the window-boundary scripts to catch extreme row churn regressions.
       - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
         - window-boundary: `C:\fret-diag-perf-components-gallery-table-boundary\1769833617760-script-step-0018-wheel/bundle.json` (2757/1989/13/755)
         - sort+scroll: `C:\fret-diag-perf-components-gallery-table-sort\1769833651344-script-step-0011-wheel/bundle.json` (6155/4682/11/1462)
