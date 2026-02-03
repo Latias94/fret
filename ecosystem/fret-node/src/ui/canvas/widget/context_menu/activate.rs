@@ -1,207 +1,6 @@
-use super::*;
-
-pub(super) fn handle_context_menu_escape<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
-) -> bool {
-    if canvas.interaction.context_menu.take().is_some() {
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
-    }
-    false
-}
-
-pub(super) fn handle_context_menu_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
-    key: fret_core::KeyCode,
-) -> bool {
-    let Some(mut menu) = canvas.interaction.context_menu.take() else {
-        return false;
-    };
-
-    match key {
-        fret_core::KeyCode::ArrowDown => {
-            let n = menu.items.len();
-            if n > 0 {
-                let mut ix = (menu.active_item + 1) % n;
-                for _ in 0..n {
-                    if menu.items.get(ix).is_some_and(|it| it.enabled) {
-                        break;
-                    }
-                    ix = (ix + 1) % n;
-                }
-                menu.active_item = ix;
-            }
-            menu.typeahead.clear();
-            canvas.interaction.context_menu = Some(menu);
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            return true;
-        }
-        fret_core::KeyCode::ArrowUp => {
-            let n = menu.items.len();
-            if n > 0 {
-                let mut ix = if menu.active_item == 0 {
-                    n - 1
-                } else {
-                    menu.active_item - 1
-                };
-                for _ in 0..n {
-                    if menu.items.get(ix).is_some_and(|it| it.enabled) {
-                        break;
-                    }
-                    ix = if ix == 0 { n - 1 } else { ix - 1 };
-                }
-                menu.active_item = ix;
-            }
-            menu.typeahead.clear();
-            canvas.interaction.context_menu = Some(menu);
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            return true;
-        }
-        fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
-            let ix = menu.active_item.min(menu.items.len().saturating_sub(1));
-            let item = menu.items.get(ix).cloned();
-            let target = menu.target.clone();
-            let invoked_at = menu.invoked_at;
-            let candidates = menu.candidates.clone();
-
-            if let Some(item) = item
-                && item.enabled
-            {
-                canvas.activate_context_menu_item(cx, &target, invoked_at, item, &candidates);
-            }
-
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            return true;
-        }
-        fret_core::KeyCode::Backspace => {
-            if !menu.typeahead.is_empty() {
-                menu.typeahead.pop();
-                canvas.interaction.context_menu = Some(menu);
-                cx.stop_propagation();
-                cx.request_redraw();
-                cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-                return true;
-            }
-        }
-        _ => {}
-    }
-
-    if let Some(ch) = fret_core::keycode_to_ascii_lowercase(key) {
-        let try_find = |needle: &str| -> Option<usize> {
-            if needle.is_empty() {
-                return None;
-            }
-            menu.items.iter().position(|it| {
-                it.enabled && it.label.as_ref().to_ascii_lowercase().starts_with(needle)
-            })
-        };
-
-        menu.typeahead.push(ch);
-        let mut needle = menu.typeahead.to_ascii_lowercase();
-        let mut hit = try_find(&needle);
-        if hit.is_none() {
-            needle.clear();
-            needle.push(ch);
-            hit = try_find(&needle);
-            if hit.is_some() {
-                menu.typeahead.clear();
-                menu.typeahead.push(ch);
-            }
-        }
-
-        if let Some(ix) = hit {
-            menu.active_item = ix.min(menu.items.len().saturating_sub(1));
-        }
-
-        canvas.interaction.context_menu = Some(menu);
-        cx.stop_propagation();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
-    }
-
-    canvas.interaction.context_menu = Some(menu);
-    false
-}
-
-pub(super) fn handle_context_menu_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
-    position: Point,
-    button: MouseButton,
-    zoom: f32,
-) -> bool {
-    let Some(menu) = canvas.interaction.context_menu.take() else {
-        return false;
-    };
-
-    match button {
-        MouseButton::Left => {
-            if let Some(ix) = super::hit_context_menu_item(&canvas.style, &menu, position, zoom) {
-                let item = menu.items.get(ix).cloned();
-                let target = menu.target.clone();
-                let invoked_at = menu.invoked_at;
-                let candidates = menu.candidates.clone();
-                if let Some(item) = item
-                    && item.enabled
-                {
-                    canvas.activate_context_menu_item(cx, &target, invoked_at, item, &candidates);
-                }
-            } else {
-            }
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            true
-        }
-        MouseButton::Right => false,
-        _ => {
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-            true
-        }
-    }
-}
-
-pub(super) fn handle_context_menu_pointer_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
-    position: Point,
-    zoom: f32,
-) -> bool {
-    let Some(menu) = canvas.interaction.context_menu.as_mut() else {
-        return false;
-    };
-
-    let new_hover = super::hit_context_menu_item(&canvas.style, menu, position, zoom);
-    if menu.hovered_item != new_hover {
-        menu.hovered_item = new_hover;
-        if let Some(ix) = new_hover {
-            if menu.items.get(ix).is_some_and(|it| it.enabled) {
-                menu.active_item = ix.min(menu.items.len().saturating_sub(1));
-                menu.typeahead.clear();
-            }
-        }
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-    }
-
-    true
-}
-
+use super::super::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    pub(super) fn activate_context_menu_item<H: UiHost>(
+    pub(in crate::ui::canvas::widget) fn activate_context_menu_item<H: UiHost>(
         &mut self,
         cx: &mut EventCx<'_, H>,
         target: &ContextMenuTarget,
@@ -233,7 +32,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     return;
                 };
                 self.record_recent_kind(&candidate.kind);
-
                 let outcome = if candidate.kind.0 == REROUTE_KIND {
                     Some(Ok(Self::build_reroute_create_ops(*at)))
                 } else {
@@ -244,7 +42,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         })
                         .ok()
                 };
-
                 match outcome {
                     Some(Ok(ops)) => {
                         let node_id = Self::first_added_node_id(&ops);
@@ -272,18 +69,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 NodeGraphContextMenuAction::InsertNodeCandidate(candidate_ix),
             ) => {
                 let mode = self.sync_view_state(cx.app).interaction.connection_mode;
-
                 enum Outcome {
                     Apply(Vec<GraphOp>, Option<GraphNodeId>, Option<PortId>),
                     Reject(DiagnosticSeverity, Arc<str>),
                     Ignore,
                 }
-
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
                 self.record_recent_kind(&candidate.kind);
-
                 let (outcome, toast) = {
                     let presenter = &mut *self.presenter;
                     self.graph
@@ -293,14 +87,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             } else {
                                 presenter.plan_create_node(graph, &candidate, *at)
                             };
-
                             let insert_ops = match insert_ops {
                                 Ok(ops) => ops,
                                 Err(msg) => {
                                     return (Outcome::Reject(DiagnosticSeverity::Info, msg), None);
                                 }
                             };
-
                             let planned = workflow::plan_wire_drop_insert(
                                 presenter, graph, *from, mode, insert_ops,
                             );
@@ -317,7 +109,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         .ok()
                         .unwrap_or((Outcome::Ignore, None))
                 };
-
                 match outcome {
                     Outcome::Apply(ops, created_node, continue_from) => {
                         let resume_pos = self.interaction.last_pos.unwrap_or(invoked_at);
@@ -335,7 +126,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             if let Some((sev, msg)) = toast {
                                 self.show_toast(cx.app, cx.window, sev, msg);
                             }
-
                             if let Some(port) = continue_from {
                                 self.interaction.suspended_wire_drag = None;
                                 self.start_sticky_wire_drag_from_port(cx, port, resume_pos);
@@ -366,7 +156,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             (ContextMenuTarget::Edge(edge_id), NodeGraphContextMenuAction::InsertReroute) => {
                 let at = self.reroute_pos_for_invoked_at(invoked_at);
                 let kind = NodeKindKey::new(REROUTE_KIND);
-
                 let outcome = {
                     let presenter = &mut *self.presenter;
                     self.graph
@@ -379,7 +168,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         })
                         .ok()
                 };
-
                 match outcome {
                     Some(Ok(ops)) => {
                         let node_id = Self::first_added_node_id(&ops);
@@ -427,7 +215,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         .ok()
                         .unwrap_or_default()
                 };
-
                 self.apply_ops(cx.app, cx.window, remove_ops);
                 self.update_view_state(cx.app, |s| {
                     s.selected_edges.retain(|id| *id != *edge_id);
@@ -451,15 +238,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     Reject(DiagnosticSeverity, Arc<str>),
                     Ignore,
                 }
-
                 let Some(candidate) = menu_candidates.get(candidate_ix).cloned() else {
                     return;
                 };
                 self.record_recent_kind(&candidate.kind);
-
                 let zoom = self.cached_zoom;
                 let style = self.style.clone();
-
                 let outcome = {
                     let presenter = &mut *self.presenter;
                     self.graph
@@ -475,7 +259,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                                     );
                                 }
                             };
-
                             let plan = conversion::plan_insert_conversion(
                                 presenter, graph, &style, zoom, *from, *to, *at, template,
                             );
@@ -491,7 +274,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         .ok()
                         .unwrap_or(Outcome::Ignore)
                 };
-
                 match outcome {
                     Outcome::Apply(ops) => {
                         let node_id = Self::first_added_node_id(&ops);
@@ -530,7 +312,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         .flatten()
                         .unwrap_or_default()
                 };
-
                 if !ops.is_empty() {
                     self.apply_ops(cx.app, cx.window, ops);
                 }
