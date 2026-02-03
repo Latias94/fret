@@ -16,11 +16,11 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
-- shadcn-web `v4/new-york-v4`: `476/476` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-01-31
+- shadcn-web `v4/new-york-v4`: `529/529` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-02-02
 
 Heuristic “where we already have gates” (top key families by prefix):
 
-- `chart` (84), `calendar` (34), `input` (27), `button` (26), `form` (19), `navigation` (17)
+- `chart` (92), `calendar` (44), `input` (27), `button` (29), `form` (19), `navigation` (20)
 
 ## Executive summary (current status + next targets)
 
@@ -56,6 +56,7 @@ Recent breadth wins:
 - **DatePicker open popover placement**: new shadcn-web `.open` goldens are now gated for
   `date-picker-demo.open`, `date-picker-with-presets.open`, and `date-picker-with-range.open` (portal rect + insets via the shared overlay placement harness).
 - **DatePicker nested overlay placement**: `date-picker-with-presets.select-open.open` now gates the Select listbox popper placement while the popover is open (ComboBox -> ListBox portal).
+- **Sonner (toast) depth gates**: `sonner-demo*` / `sonner-types*` have open-mode goldens and a deterministic geometry gate for the toast item rect, including the `sonner-types` variant matrix (`default/success/info/warning/error/promise-loading`) and `vp1440x240` constrained viewport variants.
 - **DatePicker presets behavior (Tomorrow)**: `date-picker-with-presets.preset-tomorrow.open` now gates the selected-day ARIA label and the trigger’s `format(date, "PPP")` output (`January 16th, 2026` when extracted with `--freezeDate=2026-01-15`).
 - **Dashboard block shell**: `dashboard-01` now has a shell geometry gate (sidebar width + header inset geometry).
 - **Chart tooltip/legend wrapper**: initial `chart-tooltip-*` + `chart-*-legend` panel geometry gates (min-width + padding + line-height outcomes).
@@ -144,6 +145,7 @@ Recent fixes:
 - Trigger chrome/content width now tracks the trigger width mode (auto vs fixed), preventing “ellipsis even when there is space” cases.
 - `fret-icons-radix` now vendors `chevron-up.svg`, so Radix-backed semantic `ui.chevron.up` resolves correctly.
 - Trigger `aria-invalid` border + focus ring (including shadcn's invalid ring override colors) now match shadcn-web (`select-demo.invalid`, `select-demo.invalid-focus`).
+- `SelectPosition::Popper` now derives the default listbox max-height from Radix/Floating-style “available height” metrics computed against the effective collision boundary (padding/boundary aware), matching constrained-viewport goldens like `date-picker-with-presets.select-open-vp375x160`.
 
 Conformance gates:
 
@@ -317,6 +319,7 @@ Recent fixes:
 - `viewport=true` viewport geometry now matches shadcn-web mobile snapshots, including “click then hover” switching (`home-mobile-then-hover-components`) and the viewport/indicator chrome gates.
 - Trigger width conformance now accounts for the upstream `" "` text node between the label and the chevron (in addition to `ml-1`) via `component.navigation_menu.trigger.space_px` (defaulted to a Geist-ish `3.92px` at `text-sm`).
 - The overlay-placement text heuristic now applies a small weight multiplier for medium/bold text, reducing drift for long `font-medium` labels (notably `NavigationMenuTrigger`).
+- The overlay-placement harness now selects a `TextWidthProfile` from the web golden’s `fontFamily` (falling back to the first subtree node that reports it) and models Geist-vs-ui-sans space width separately; this reduces drift for intrinsic-width panels (notably Select/ListBox and NavigationMenu sizing).
 - Geometry gates now measure the registered viewport panel element (via `navigation_menu_viewport_panel_id`) instead of relying on “largest overlay rect” heuristics. This avoids accidentally measuring motion wrappers / indicator siblings when overlays animate or when multiple popover layers exist.
 - The viewport panel keeps `overflow: visible` so drop shadows match CSS `box-shadow` footprint; radius clipping is applied by an inner `overflow: clip` container with the same corner radii so content still clips correctly.
 - Known gap: viewport content inset gates currently allow a slightly higher tolerance (`2px`) to accommodate border-box / subpixel rounding differences between the web snapshots and the integer-ish layout bounds in the Fret test harness. Track this as a future layout-model cleanup rather than a component-specific quirk.

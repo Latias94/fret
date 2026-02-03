@@ -1,54 +1,44 @@
-# shadcn/ui Chart (new-york-v4) Audit (Fret)
+# shadcn/ui chart audit (New York v4)
 
-This audit tracks alignment for the shadcn/ui v4 **Chart** surface in the `new-york-v4` preset.
+This document tracks parity work for shadcn/ui **Chart** surfaces (and related legend/tooltip/axis behavior).
 
-## Scope and baseline
+## Status
 
-- Upstream baseline:
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/ui/chart.tsx`
-  - `repo-ref/ui/apps/v4/registry/new-york-v4/blocks/chart-*.tsx`
-- Fret implementation:
-  - `ecosystem/fret-ui-shadcn/src/chart.rs`
-  - Theme tokens: `ecosystem/fret-ui-shadcn/src/shadcn_themes.rs` (`chart-*` palette)
-- Tests / goldens:
-  - shadcn-web goldens: `goldens/shadcn-web/v4/new-york-v4/chart-*.json`
-  - gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (chart section)
+- **Scope:** Partially audited (tooltip + legend layout/chrome).
+- **Breadth coverage:** Included in `docs/audits/shadcn-new-york-v4-coverage.md`.
+- **Depth checklist:** Tracked in `docs/audits/shadcn-new-york-v4-depth-checklist.md`.
 
-## Current alignment posture
+Evidence anchors:
 
-Fret is not implementing Recharts; instead we are aligning the **shadcn “chart scaffolding + tooltip/legend UI”**
-and validating geometry outcomes against shadcn-web goldens.
+- Tooltip + legend geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_tooltip.rs`
+- Hover-mid (interactive) tooltip + cursor gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_hover_mid.rs`
+- Baseline chart DOM invariants (web-only): `ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart.rs`
 
-What is currently gated (high level):
+## What “1:1 parity” means here
 
-- Chart scaffold geometry (container + plot area bounds) for representative families.
-- Tooltip panel chrome + internal row layout for tooltip variants.
-- Scripted “hover-mid” snapshots that gate tooltip panel size, cursor geometry, and active marker (dot) geometry for interactive pages.
+At minimum, chart parity should cover:
 
-This is sufficient to catch many regressions in:
+- Layout primitives: plot area insets, axis label sizing, tick alignment, legend layout.
+- Tooltip/overlay: placement and collision, viewport constraints, pointer tracking, and visible animations.
+- Styling: color tokens, typography, grid/axis stroke widths, radii, and opacity.
+- Data contracts: series ordering, stacked/grouped behavior, and default variants.
 
-- spacing tokens (`px/py`, gaps, line-height outcomes),
-- tooltip/legend wrapper layout,
-- cursor/active marker placement for the scripted scenarios we currently export.
+## Next actions (proposed)
 
-## Known gaps / risks
+1. Identify the upstream reference implementation(s) in `repo-ref/ui` used for chart demos in `v4/new-york-v4`.
+2. Add **open-mode** goldens for tooltip/legend overlays (including constrained viewport variants).
+3. Add **high-signal** Rust gates: tooltip rects, plot insets, legend wrapping, and axis tick count/spacing.
+4. Add evidence anchors (tests + key functions) in this file as work lands.
 
-The following are expected sources of drift and need explicit depth gates before we claim 1:1 parity:
+Recommended P0 depth extensions:
 
-- Axis rendering parity (tick placement, text metrics, label truncation).
-- Stacked/normalized series math (area/bar stacking and “expand” variants).
-- Hit-testing / interaction model (what is considered “nearest” on hover, keyboard focus affordances).
-- Mobile/viewport variants beyond the current minimal set (avoid exploding the matrix until the geometry is stable).
+- Gate the **interactive** tooltip surfaces that depend on cursor position (`*.hover-mid` pages):
+  - cursor rect geometry (e.g. `recharts-tooltip-cursor`)
+  - active marker geometry (e.g. `recharts-active-dot`)
+- Add a constrained viewport variant for at least one tooltip-heavy page to validate overflow behavior.
 
-## Recommended next steps (P0 → P1)
+Constrained viewport coverage (current):
 
-P0 (maximize signal per test):
-
-1. Add a small set of **stable geometry anchors** per family (e.g. cursor line rect, active dot rect, tooltip bounds)
-   for `chart-*-interactive*` pages, across the existing scripted scenarios.
-2. Gate **axis tick count + tick bounding boxes** for `chart-*-axes` pages (keep tolerant to sub-pixel rounding).
-
-P1 (broader confidence, still controlled):
-
-1. Introduce a limited DPI/font-metrics sweep (1–2 DPIs, 1 “weird metrics” font) for tooltip/legend/axis-heavy pages.
-2. Expand stacking/math gates once the baseline implementation stops churn (avoid fragile tests while refactoring).
+- `chart-tooltip-default.vp375x320` / `chart-tooltip-advanced.vp375x320` are gated (panel size + row geometry).
+- `chart-*-legend.vp375x320` are gated to validate wrapping height outcomes under narrow widths.
+- `chart-*-interactive.hover-mid-vp1440x240` are gated to validate tooltip/cursor/active-marker geometry under tight height.

@@ -99,7 +99,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": 17.0,
+          "x": 3.0,
           "y": 4.0
         },
         "size": {
@@ -122,7 +122,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": 26.0,
+          "x": 12.0,
           "y": 9.0
         },
         "size": {
@@ -145,30 +145,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": -2.0,
-          "y": 9.0
-        },
-        "size": {
-          "w": 10.0,
-          "h": 19.0
-        }
-      },
-      "flags": {
-        "focused": false,
-        "captured": false,
-        "disabled": false,
-        "selected": false,
-        "expanded": false,
-        "checked": null
-      }
-    },
-    {
-      "role": "Generic",
-      "label": null,
-      "value": null,
-      "bounds": {
-        "origin": {
-          "x": -11.0,
+          "x": 31.0,
           "y": 4.0
         },
         "size": {
@@ -191,7 +168,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": -30.0,
+          "x": 40.0,
           "y": 9.0
         },
         "size": {
@@ -214,12 +191,35 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": -39.0,
+          "x": 59.0,
           "y": 4.0
         },
         "size": {
           "w": 28.0,
           "h": 29.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 68.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 19.0
         }
       },
       "flags": {
@@ -237,7 +237,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": -39.0,
+          "x": 3.0,
           "y": 4.0
         },
         "size": {
@@ -260,7 +260,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": -11.0,
+          "x": 31.0,
           "y": 4.0
         },
         "size": {
@@ -283,7 +283,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": 17.0,
+          "x": 59.0,
           "y": 4.0
         },
         "size": {
@@ -352,7 +352,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": -30.0,
+          "x": 12.0,
           "y": 11.0
         },
         "size": {
@@ -375,7 +375,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": -2.0,
+          "x": 40.0,
           "y": 11.0
         },
         "size": {
@@ -398,7 +398,7 @@
       "value": null,
       "bounds": {
         "origin": {
-          "x": 26.0,
+          "x": 68.0,
           "y": 11.0
         },
         "size": {
@@ -504,7 +504,7 @@
       "kind": "Quad",
       "rect": {
         "origin": {
-          "x": -41.0,
+          "x": 1.0,
           "y": 4.0
         },
         "size": {
@@ -541,7 +541,7 @@
       "kind": "Quad",
       "rect": {
         "origin": {
-          "x": -40.0,
+          "x": 2.0,
           "y": 5.0
         },
         "size": {
@@ -578,7 +578,7 @@
       "kind": "Quad",
       "rect": {
         "origin": {
-          "x": -39.0,
+          "x": 3.0,
           "y": 6.0
         },
         "size": {
@@ -615,7 +615,7 @@
       "kind": "Quad",
       "rect": {
         "origin": {
-          "x": -39.0,
+          "x": 3.0,
           "y": 4.0
         },
         "size": {
@@ -651,7 +651,7 @@
     {
       "kind": "Text",
       "origin": {
-        "x": -30.0,
+        "x": 12.0,
         "y": 19.0
       },
       "color": {
@@ -665,7 +665,7 @@
       "kind": "Quad",
       "rect": {
         "origin": {
-          "x": -11.0,
+          "x": 31.0,
           "y": 4.0
         },
         "size": {
@@ -701,7 +701,7 @@
     {
       "kind": "Text",
       "origin": {
-        "x": -2.0,
+        "x": 40.0,
         "y": 19.0
       },
       "color": {
@@ -715,7 +715,7 @@
       "kind": "Quad",
       "rect": {
         "origin": {
-          "x": 17.0,
+          "x": 59.0,
           "y": 4.0
         },
         "size": {
@@ -751,7 +751,7 @@
     {
       "kind": "Text",
       "origin": {
-        "x": 26.0,
+        "x": 68.0,
         "y": 19.0
       },
       "color": {

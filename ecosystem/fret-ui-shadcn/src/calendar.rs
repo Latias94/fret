@@ -598,7 +598,10 @@ impl Calendar {
                             },
                             direction: fret_core::Axis::Horizontal,
                             gap: day_col_gap,
-                            padding: fret_core::Edges::all(Px(0.0)),
+                            padding: fret_core::Edges {
+                                top: week_row_gap,
+                                ..fret_core::Edges::all(Px(0.0))
+                            },
                             justify: MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Start,
                             wrap: true,
@@ -678,9 +681,14 @@ impl Calendar {
                             }
                         }));
 
+                        let week_count = (grid.len() / 7).max(1);
                         grid.iter()
                             .enumerate()
                             .map(|(idx, day)| {
+                                let week_idx = idx / 7;
+                                let is_last_week = week_idx + 1 >= week_count;
+                                let row_bottom_gap =
+                                    if is_last_week { Px(0.0) } else { week_row_gap };
                                 let is_hidden =
                                     (!day.in_month && !show_outside_days) || !in_bounds(day.date);
                                 if is_hidden {
@@ -688,7 +696,7 @@ impl Calendar {
                                         cx,
                                         &theme_days_for_days,
                                         day_size,
-                                        week_row_gap,
+                                        row_bottom_gap,
                                     );
                                 }
 
@@ -707,7 +715,7 @@ impl Calendar {
                                     is_disabled,
                                     focus_date.is_some_and(|d| d == day.date),
                                     day_size,
-                                    week_row_gap,
+                                    row_bottom_gap,
                                     &selected_model,
                                     close_on_select.clone(),
                                     disabled_predicate.clone(),
@@ -730,15 +738,20 @@ impl Calendar {
                                 },
                                 direction: fret_core::Axis::Vertical,
                                 gap: Px(0.0),
-                                padding: fret_core::Edges::all(Px(0.0)),
+                                padding: fret_core::Edges {
+                                    top: week_row_gap,
+                                    ..fret_core::Edges::all(Px(0.0))
+                                },
                                 justify: MainAlign::Start,
                                 align: fret_ui::element::CrossAlign::Start,
                                 wrap: false,
                             },
                             move |cx| {
+                                let week_count = week_numbers.len().max(1);
                                 week_numbers
                                     .iter()
-                                    .map(|n: &u32| {
+                                    .enumerate()
+                                    .map(|(idx, n): (usize, &u32)| {
                                         let mut props = TextProps::new(Arc::from(n.to_string()));
                                         props.style = Some(grid_text_style_week_numbers.clone());
                                         props.color = theme_days_for_week_numbers
@@ -749,8 +762,11 @@ impl Calendar {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Px(day_size);
                                         layout.size.height = Length::Px(day_size);
-                                        layout.margin.bottom =
-                                            fret_ui::element::MarginEdge::Px(week_row_gap);
+                                        let is_last_week = idx + 1 >= week_count;
+                                        if !is_last_week {
+                                            layout.margin.bottom =
+                                                fret_ui::element::MarginEdge::Px(week_row_gap);
+                                        }
                                         props.layout = layout;
                                         cx.text_props(props)
                                     })
@@ -782,7 +798,7 @@ impl Calendar {
 
                     let body = stack::vstack(
                         cx,
-                        stack::VStackProps::default().gap(Space::N2),
+                        stack::VStackProps::default().gap(Space::N0),
                         move |_cx| vec![weekday_row, days],
                     );
 
@@ -1164,7 +1180,10 @@ fn calendar_month_view<H: UiHost>(
             },
             direction: fret_core::Axis::Horizontal,
             gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
+            padding: fret_core::Edges {
+                top: week_row_gap,
+                ..fret_core::Edges::all(Px(0.0))
+            },
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Start,
             wrap: true,
@@ -1243,16 +1262,20 @@ fn calendar_month_view<H: UiHost>(
             }
         }));
 
+        let week_count = (grid.len() / 7).max(1);
         grid.iter()
             .enumerate()
             .map(|(idx, day)| {
+                let week_idx = idx / 7;
+                let is_last_week = week_idx + 1 >= week_count;
+                let row_bottom_gap = if is_last_week { Px(0.0) } else { week_row_gap };
                 let is_hidden = (!day.in_month && !show_outside_days) || !in_bounds(day.date);
                 if is_hidden {
                     return calendar_hidden_day_cell(
                         cx,
                         &theme_days_for_days,
                         day_size,
-                        week_row_gap,
+                        row_bottom_gap,
                     );
                 }
 
@@ -1271,7 +1294,7 @@ fn calendar_month_view<H: UiHost>(
                     is_disabled,
                     focus_date.is_some_and(|d| d == day.date),
                     day_size,
-                    week_row_gap,
+                    row_bottom_gap,
                     &selected_model,
                     close_on_select.clone(),
                     disabled_predicate.clone(),
@@ -1294,15 +1317,20 @@ fn calendar_month_view<H: UiHost>(
                 },
                 direction: fret_core::Axis::Vertical,
                 gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                padding: fret_core::Edges {
+                    top: week_row_gap,
+                    ..fret_core::Edges::all(Px(0.0))
+                },
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: false,
             },
             move |cx| {
+                let week_count = week_numbers.len().max(1);
                 week_numbers
                     .iter()
-                    .map(|n: &u32| {
+                    .enumerate()
+                    .map(|(idx, n): (usize, &u32)| {
                         let mut props = TextProps::new(Arc::from(n.to_string()));
                         props.style = Some(grid_text_style_week_numbers.clone());
                         props.color = theme_days_for_week_numbers.color_by_key("muted-foreground");
@@ -1312,7 +1340,10 @@ fn calendar_month_view<H: UiHost>(
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Px(day_size);
                         layout.size.height = Length::Px(day_size);
-                        layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
+                        let is_last_week = idx + 1 >= week_count;
+                        if !is_last_week {
+                            layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
+                        }
                         props.layout = layout;
                         cx.text_props(props)
                     })
@@ -1344,7 +1375,7 @@ fn calendar_month_view<H: UiHost>(
 
     let body = stack::vstack(
         cx,
-        stack::VStackProps::default().gap(Space::N2),
+        stack::VStackProps::default().gap(Space::N0),
         move |_cx| vec![weekday_row, days],
     );
 
@@ -1550,7 +1581,7 @@ fn calendar_hidden_day_cell<H: UiHost>(
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
-        chrome_props.layout = layout;
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1680,7 +1711,9 @@ fn calendar_day_cell<H: UiHost>(
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
-        chrome_props.layout = layout;
+        // Margins are outside the control box (CSS mental model). Keep them on the pressable node
+        // so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1700,15 +1733,40 @@ fn calendar_day_cell<H: UiHost>(
         };
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![
-                ui::label(cx, day_text.clone())
-                    .text_size_px(text_sm_px)
-                    .line_height_px(text_sm_line_height)
-                    .font_medium()
-                    .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
-                    .nowrap()
-                    .into_element(cx),
-            ]
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: fret_ui::element::CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    let label = ui::label(cx, day_text.clone())
+                        .text_size_px(text_sm_px)
+                        .line_height_px(text_sm_line_height)
+                        .font_medium()
+                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .nowrap();
+
+                    let label = if disabled {
+                        cx.opacity(0.5, |cx| vec![label.into_element(cx)])
+                    } else {
+                        label.into_element(cx)
+                    };
+
+                    vec![label]
+                },
+            )]
         };
 
         (pressable, chrome_props, children)

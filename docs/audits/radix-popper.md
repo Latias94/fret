@@ -108,6 +108,8 @@ and transform origin:
     default max-height.
   - Fret computes the same concept from `popper_available_metrics(...)` via
     `select_popper_available_height(...)` and uses it to size `SelectPosition::Popper`.
+  - The “available height/width” metrics are computed against the *effective collision boundary*
+    (after collision padding + boundary intersection), matching Radix/Floating `size()` behavior.
   - Implementation: `ecosystem/fret-ui-kit/src/primitives/select.rs`
   - Usage example: `ecosystem/fret-ui-shadcn/src/select.rs`
 

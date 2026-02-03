@@ -348,6 +348,14 @@ impl Switch {
                 chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
                 chrome_props.layout.size = pressable_layout.size;
 
+                // Absolute positioning uses the container's content box (after border/padding).
+                // Align the thumb within that inner box so the visual center matches web
+                // `items-center` behavior under `box-sizing: border-box`.
+                let chrome_inset_y = Px(chrome_props.border.top.0
+                    + chrome_props.border.bottom.0
+                    + chrome_props.padding.top.0
+                    + chrome_props.padding.bottom.0);
+
                 let mut a11y = switch_a11y(a11y_label.clone(), on);
                 a11y.test_id = test_id.clone();
                 let pressable_props = PressableProps {
@@ -360,7 +368,8 @@ impl Switch {
                 };
 
                 let children = move |cx: &mut ElementContext<'_, H>| {
-                    let pad_y = Px(((h.0 - thumb.0) * 0.5).max(0.0));
+                    let inner_h = Px((h.0 - chrome_inset_y.0).max(0.0));
+                    let pad_y = Px(((inner_h.0 - thumb.0) * 0.5).max(0.0));
                     let x = if on {
                         Px((w.0 - pad_x.0 - thumb.0).max(0.0))
                     } else {
@@ -477,6 +486,125 @@ mod tests {
         fn unregister_svg(&mut self, _svg: SvgId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn switch_thumb_is_vertically_centered_in_track() {
+        fn overlap_area(a: Rect, b: Rect) -> f32 {
+            let ax0 = a.origin.x.0;
+            let ay0 = a.origin.y.0;
+            let ax1 = ax0 + a.size.width.0;
+            let ay1 = ay0 + a.size.height.0;
+
+            let bx0 = b.origin.x.0;
+            let by0 = b.origin.y.0;
+            let bx1 = bx0 + b.size.width.0;
+            let by1 = by0 + b.size.height.0;
+
+            let x0 = ax0.max(bx0);
+            let y0 = ay0.max(by0);
+            let x1 = ax1.min(bx1);
+            let y1 = ay1.min(by1);
+
+            let w = (x1 - x0).max(0.0);
+            let h = (y1 - y0).max(0.0);
+            w * h
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-switch-thumb-centered",
+            |cx| {
+                vec![
+                    Switch::new(model.clone())
+                        .a11y_label("Switch")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let switch = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Switch && n.label.as_deref() == Some("Switch")
+            })
+            .or_else(|| {
+                snap.nodes
+                    .iter()
+                    .find(|n| n.role == fret_core::SemanticsRole::Switch)
+            })
+            .expect("missing semantics for switch");
+        let switch_bounds = switch.bounds;
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let theme = Theme::global(&app).clone();
+        let track_bg = switch_bg_off(&theme);
+        let thumb_size = switch_thumb(&theme);
+        let thumb_bg = switch_thumb_bg(&theme);
+
+        let mut track_rect: Option<Rect> = None;
+        let mut thumb_rect: Option<Rect> = None;
+        for op in scene.ops() {
+            let fret_core::SceneOp::Quad {
+                rect, background, ..
+            } = op
+            else {
+                continue;
+            };
+
+            let is_thumb = (rect.size.width.0 - thumb_size.0).abs() <= 0.1
+                && (rect.size.height.0 - thumb_size.0).abs() <= 0.1
+                && *background == thumb_bg;
+            if is_thumb {
+                thumb_rect = Some(*rect);
+            }
+
+            if *background == track_bg {
+                let score = overlap_area(*rect, switch_bounds);
+                if score <= 0.0 {
+                    continue;
+                }
+                let replace =
+                    track_rect.is_none_or(|best| overlap_area(best, switch_bounds) < score);
+                if replace {
+                    track_rect = Some(*rect);
+                }
+            }
+        }
+
+        let track = track_rect.expect("missing switch track quad");
+        let thumb = thumb_rect.expect("missing switch thumb quad");
+
+        let track_cy = track.origin.y.0 + track.size.height.0 * 0.5;
+        let thumb_cy = thumb.origin.y.0 + thumb.size.height.0 * 0.5;
+        assert!(
+            (thumb_cy - track_cy).abs() <= 0.2,
+            "expected thumb center_y {thumb_cy} close to track center_y {track_cy}"
+        );
     }
 
     #[test]

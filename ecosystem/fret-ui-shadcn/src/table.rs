@@ -9,6 +9,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
@@ -96,7 +97,12 @@ impl Table {
         props.layout.overflow = Overflow::Visible;
 
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -120,7 +126,12 @@ impl TableHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -144,7 +155,12 @@ impl TableBody {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -180,7 +196,12 @@ impl TableFooter {
         };
 
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 

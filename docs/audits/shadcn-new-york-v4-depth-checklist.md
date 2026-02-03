@@ -180,6 +180,39 @@ Evidence anchors:
   (`web_vs_fret_hover_card_demo_panel_size_matches_web`, `web_vs_fret_hover_card_demo_panel_size_matches_web_dark`,
   `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web_dark`)
 
+### Toasts (Sonner) (`sonner-demo*`, `sonner-types*`)
+
+- Open state: **Gated**
+- Toast geometry (rect `x/y/w/h`): **Gated**
+- Constrained height (tiny viewport): **Gated** (`*.vp1440x240.open`)
+
+Notes:
+
+- Sonner's toaster container (`[data-sonner-toaster]`) can have `h=0` in DOM snapshots because toasts are
+  positioned absolutely; gates target the toast item rect (`[data-sonner-toast]`) instead.
+
+Evidence anchors:
+
+- Goldens:
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-demo*.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-types*.open.json` (variant matrix + constrained viewport variants)
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_sonner_demo_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_demo_tiny_viewport_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_error_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_promise_loading_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_error_open_toast_rect_matches_web`)
+
 ## Controls: pressed / disabled states
 
 ### Button (`button-default*`)

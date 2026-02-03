@@ -1,11 +1,11 @@
 use std::cell::Cell;
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RovingFlexProps, RovingFocusProps, SemanticsProps, SpinnerProps, SvgIconProps,
+    PressableProps, RovingFlexProps, RovingFocusProps, SpinnerProps, SvgIconProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
@@ -20,6 +20,17 @@ use fret_ui_kit::{
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
     c
+}
+
+fn luma_linear(c: Color) -> f32 {
+    // `Theme` colors are stored in linear space; approximate WCAG relative luminance.
+    (c.r * 0.2126) + (c.g * 0.7152) + (c.b * 0.0722)
+}
+
+fn theme_is_dark(theme: &Theme) -> bool {
+    let fg = theme.color_required("foreground");
+    let bg = theme.color_required("background");
+    luma_linear(fg) > luma_linear(bg)
 }
 
 fn apply_trigger_inherited_style(
@@ -768,13 +779,9 @@ impl Tabs {
             let items_for_list = items.clone();
             let mut children: Vec<AnyElement> = Vec::new();
 
-            children.push(cx.semantics(
-                SemanticsProps {
-                    role: SemanticsRole::TabList,
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.container(list_props, |cx| {
+            let tab_list_semantics = radix_tabs::tab_list_semantics_props(list_props.layout);
+            children.push(cx.semantics(tab_list_semantics, move |cx| {
+                vec![cx.container(list_props, |cx| {
                         vec![cx.roving_flex(
                             RovingFlexProps {
                                 flex: FlexProps {
@@ -784,7 +791,13 @@ impl Tabs {
                                     },
                                     gap: Px(0.0),
                                     padding: Edges::all(Px(0.0)),
-                                    justify: MainAlign::Center,
+                                    // NOTE: Taffy currently shrink-wraps auto-sized flex containers
+                                    // around the sum of flex bases, not the min-content widths.
+                                    // With Tailwind-like `flex-1` (`basis=0`), that yields a
+                                    // zero-width container and a negative "centered" offset.
+                                    // `justify-start` matches shadcn for `flex-1` triggers while
+                                    // avoiding negative positions in shrink-wrapped lists.
+                                    justify: MainAlign::Start,
                                     align: CrossAlign::Center,
                                     wrap: false,
                                     ..Default::default()
@@ -797,7 +810,14 @@ impl Tabs {
                                     cx.roving_select_option_arc_str(&model, values_arc.clone());
                                 }
 
-                                let fg_muted = ColorRef::Color(tabs_list_fg_muted(&theme));
+                                // shadcn new-york-v4: inactive triggers are `text-foreground` in
+                                // light mode and `text-muted-foreground` in dark mode.
+                                let fg_inactive = if theme_is_dark(&theme) {
+                                    tabs_list_fg_muted(&theme)
+                                } else {
+                                    theme.color_required("foreground")
+                                };
+                                let fg_inactive = ColorRef::Color(fg_inactive);
                                 let fg_active = ColorRef::Color(theme.color_required("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_required("foreground"), 0.5));
@@ -809,7 +829,7 @@ impl Tabs {
                                     ColorRef::Color(tabs_trigger_border_active(&theme));
                                 let border_w = tabs_trigger_border_width(&theme);
 
-                                let default_trigger_fg = WidgetStateProperty::new(fg_muted)
+                                let default_trigger_fg = WidgetStateProperty::new(fg_inactive)
                                     .when(WidgetStates::SELECTED, fg_active)
                                     .when(WidgetStates::DISABLED, fg_disabled);
                                 let default_trigger_bg = WidgetStateProperty::new(None)
@@ -1012,8 +1032,7 @@ impl Tabs {
                             },
                         )]
                     })]
-                },
-            ));
+            }));
 
             if !force_mount_content {
                 if let Some(panel) = radix_tabs::tab_panel_with_gate(
