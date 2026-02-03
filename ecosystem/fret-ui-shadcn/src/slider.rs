@@ -733,9 +733,13 @@ pub fn slider<H: UiHost>(
                         thumb_layout.size.width = Length::Px(thumb_size);
                         thumb_layout.size.height = Length::Px(thumb_size);
                         thumb_layout.flex.shrink = 0.0;
+                        // Radix keeps the thumb inside the slider bounds at the edges via
+                        // `getThumbInBoundsOffset`. Model the same outcome by shifting the thumb
+                        // with asymmetric negative margins while keeping the flex footprint at 0.
+                        let thumb_in_bounds_offset = Px(thumb_r.0 * (1.0 - 2.0 * t));
                         thumb_layout.margin = MarginEdges {
-                            left: MarginEdge::Px(Px(-thumb_r.0)),
-                            right: MarginEdge::Px(Px(-thumb_r.0)),
+                            left: MarginEdge::Px(Px(-thumb_r.0 + thumb_in_bounds_offset.0)),
+                            right: MarginEdge::Px(Px(-thumb_r.0 - thumb_in_bounds_offset.0)),
                             ..Default::default()
                         };
 
