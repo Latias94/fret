@@ -24,22 +24,23 @@ use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
-    check_bundle_for_retained_vlist_attach_detach_max,
+    check_bundle_for_layout_fast_path_min, check_bundle_for_overlay_synthesis_min,
+    check_bundle_for_prepaint_actions_min, check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
     check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
-    check_bundle_for_viewport_input_min, check_bundle_for_vlist_visible_range_refreshes_max,
+    check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
+    check_bundle_for_vlist_visible_range_refreshes_max,
     check_bundle_for_vlist_visible_range_refreshes_min,
     check_bundle_for_vlist_window_shifts_explainable,
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
     check_bundle_for_vlist_window_shifts_kind_max,
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
-    check_report_for_hover_layout_invalidations, clear_script_result_files,
-    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
-    wait_for_failure_dump_bundle, write_pick_script,
+    check_bundle_for_wheel_scroll_hit_changes, check_report_for_hover_layout_invalidations,
+    clear_script_result_files, report_pick_result_and_exit, report_result_and_exit,
+    run_pick_and_wait, run_script_and_wait, wait_for_failure_dump_bundle, write_pick_script,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
@@ -104,6 +105,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
+    let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
@@ -114,6 +116,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_vlist_window_shifts_non_retained_max: Option<u64> = None;
     let mut check_vlist_window_shifts_prefetch_max: Option<u64> = None;
     let mut check_vlist_window_shifts_escape_max: Option<u64> = None;
+    let mut check_vlist_policy_key_stable: bool = false;
+    let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_view_cache_reuse_stable_min: Option<u64> = None;
@@ -530,6 +534,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_wheel_scroll_test_id = Some(v);
                 i += 1;
             }
+            "--check-wheel-scroll-hit-changes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-wheel-scroll-hit-changes".to_string());
+                };
+                check_wheel_scroll_hit_changes_test_id = Some(v);
+                i += 1;
+            }
             "--check-vlist-visible-range-refreshes-max" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -598,6 +610,21 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_vlist_window_shifts_escape_max = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --check-vlist-window-shifts-escape-max".to_string()
                 })?);
+                i += 1;
+            }
+            "--check-vlist-policy-key-stable" => {
+                check_vlist_policy_key_stable = true;
+                i += 1;
+            }
+            "--check-layout-fast-path-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-layout-fast-path-min".to_string());
+                };
+                check_layout_fast_path_min =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-layout-fast-path-min".to_string()
+                    })?);
                 i += 1;
             }
             "--check-prepaint-actions-min" => {
@@ -1266,6 +1293,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_pixels_changed_test_id.is_some()
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
+                    || check_wheel_scroll_hit_changes_test_id.is_some()
                     || check_prepaint_actions_min.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
@@ -1274,6 +1302,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_vlist_window_shifts_non_retained_max.is_some()
                     || check_vlist_window_shifts_prefetch_max.is_some()
                     || check_vlist_window_shifts_escape_max.is_some()
+                    || check_vlist_policy_key_stable
+                    || check_layout_fast_path_min.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -1310,6 +1340,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_wheel_scroll_hit_changes_test_id.as_deref(),
                         check_prepaint_actions_min,
                         check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
@@ -1318,6 +1349,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_vlist_window_shifts_non_retained_max,
                         check_vlist_window_shifts_prefetch_max,
                         check_vlist_window_shifts_escape_max,
+                        check_vlist_policy_key_stable,
+                        check_layout_fast_path_min,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
@@ -1601,6 +1634,7 @@ See: `docs/tracy.md`.\n";
                         || check_pixels_changed_test_id.is_some()
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
+                        || check_wheel_scroll_hit_changes_test_id.is_some()
                         || check_prepaint_actions_min.is_some()
                         || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
@@ -1609,6 +1643,8 @@ See: `docs/tracy.md`.\n";
                         || check_vlist_window_shifts_non_retained_max.is_some()
                         || check_vlist_window_shifts_prefetch_max.is_some()
                         || check_vlist_window_shifts_escape_max.is_some()
+                        || check_vlist_policy_key_stable
+                        || check_layout_fast_path_min.is_some()
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
                         || check_gc_sweep_liveness
@@ -1643,6 +1679,7 @@ See: `docs/tracy.md`.\n";
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
+                            check_wheel_scroll_hit_changes_test_id.as_deref(),
                             check_prepaint_actions_min,
                             check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
@@ -1651,6 +1688,8 @@ See: `docs/tracy.md`.\n";
                             check_vlist_window_shifts_non_retained_max,
                             check_vlist_window_shifts_prefetch_max,
                             check_vlist_window_shifts_escape_max,
+                            check_vlist_policy_key_stable,
+                            check_layout_fast_path_min,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
                             check_gc_sweep_liveness,
@@ -2421,6 +2460,29 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_components_gallery_file_tree_suite {
+                    // components_gallery's "file tree torture" surface is behind env gates; the
+                    // scripted harness assumes it is enabled and large enough to cross overscan
+                    // boundaries deterministically.
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE",
+                        "1",
+                    );
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N",
+                        "50000",
+                    );
+                    // Enable view-cache reuse by default for suite regressions. (components_gallery
+                    // reads `FRET_EXAMPLES_VIEW_CACHE`.)
+                    push_env_if_missing(&mut launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
+                    // Keep-alive is only observed by the `*bounce*` script, but setting it here
+                    // keeps the suite defaults consistent.
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE",
+                        "256",
+                    );
                     (
                         vec![
                             resolve_path(
@@ -2452,6 +2514,12 @@ See: `docs/tracy.md`.\n";
                         "FRET_COMPONENTS_GALLERY_TABLE_TORTURE",
                         "1",
                     );
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N",
+                        "50000",
+                    );
+                    push_env_if_missing(&mut launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
                     (
                         vec![
                             resolve_path(
@@ -2475,6 +2543,12 @@ See: `docs/tracy.md`.\n";
                         "FRET_COMPONENTS_GALLERY_TABLE_TORTURE",
                         "1",
                     );
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N",
+                        "50000",
+                    );
+                    push_env_if_missing(&mut launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
                     push_env_if_missing(
                         &mut launch_env,
                         "FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE",
@@ -2634,10 +2708,13 @@ See: `docs/tracy.md`.\n";
                     || check_pixels_changed_test_id.is_some()
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
+                    || check_wheel_scroll_hit_changes_test_id.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
                     || check_drag_cache_root_paint_only_test_id.is_some()
+                    || check_vlist_policy_key_stable
+                    || check_layout_fast_path_min.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
                     || check_view_cache_reuse_min.is_some()
@@ -2661,6 +2738,9 @@ See: `docs/tracy.md`.\n";
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration)
                     || is_ui_gallery_vlist_window_boundary_suite
+                    || is_components_gallery_file_tree_suite
+                    || is_components_gallery_table_suite
+                    || is_components_gallery_table_keep_alive_suite
                     || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script);
 
                 if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
@@ -2684,6 +2764,33 @@ See: `docs/tracy.md`.\n";
                             (None, None, None)
                         };
                     let vlist_window_boundary_suite = is_ui_gallery_vlist_window_boundary_suite;
+                    let components_gallery_suite = is_components_gallery_file_tree_suite
+                        || is_components_gallery_table_suite
+                        || is_components_gallery_table_keep_alive_suite;
+                    let suite_components_gallery_stale_paint_test_id =
+                        is_components_gallery_file_tree_suite
+                            .then_some("components-gallery-file-tree-root")
+                            .or_else(|| {
+                                (is_components_gallery_table_suite
+                                    || is_components_gallery_table_keep_alive_suite)
+                                    .then_some("components-gallery-table-root")
+                            })
+                            .filter(|_| check_stale_paint_test_id.is_none());
+                    let suite_components_gallery_wheel_scroll_hit_changes_test_id =
+                        is_components_gallery_file_tree_suite
+                            .then_some("components-gallery-file-tree-root")
+                            .or_else(|| {
+                                (is_components_gallery_table_suite
+                                    || is_components_gallery_table_keep_alive_suite)
+                                    .then_some("components-gallery-table-root")
+                            })
+                            .filter(|_| check_wheel_scroll_hit_changes_test_id.is_none());
+                    let suite_components_gallery_view_cache_reuse_min = components_gallery_suite
+                        .then_some(1u64)
+                        .filter(|_| check_view_cache_reuse_min.is_none());
+                    let suite_layout_fast_path_min = components_gallery_suite
+                        .then_some(1u64)
+                        .filter(|_| check_layout_fast_path_min.is_none());
                     let suite_stale_paint_test_id = vlist_window_boundary_suite
                         .then_some("ui-gallery-virtual-list-root")
                         .filter(|_| check_stale_paint_test_id.is_none());
@@ -2716,6 +2823,25 @@ See: `docs/tracy.md`.\n";
                         ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
                             .then_some(0u64)
                             .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
+                    let script_requires_retained_vlist_reconcile_gate =
+                        ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
+                    let suite_vlist_policy_key_stable = components_gallery_suite
+                        && script_requires_retained_vlist_reconcile_gate
+                        && !check_vlist_policy_key_stable;
+                    let script_requires_retained_vlist_keep_alive_reuse_gate =
+                        ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
+                    let suite_retained_vlist_reconcile_no_notify_min = (components_gallery_suite
+                        && script_requires_retained_vlist_reconcile_gate)
+                        .then_some(1u64)
+                        .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
+                    let suite_retained_vlist_attach_detach_max = (components_gallery_suite
+                        && script_requires_retained_vlist_reconcile_gate)
+                        .then_some(64u64)
+                        .filter(|_| check_retained_vlist_attach_detach_max.is_none());
+                    let suite_retained_vlist_keep_alive_reuse_min = (components_gallery_suite
+                        && script_requires_retained_vlist_keep_alive_reuse_gate)
+                        .then_some(1u64)
+                        .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
                     let suite_gc_sweep_liveness =
                         builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
                     apply_post_run_checks(
@@ -2724,7 +2850,8 @@ See: `docs/tracy.md`.\n";
                         check_idle_no_paint_min,
                         check_stale_paint_test_id
                             .as_deref()
-                            .or(suite_stale_paint_test_id),
+                            .or(suite_stale_paint_test_id)
+                            .or(suite_components_gallery_stale_paint_test_id),
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
@@ -2732,6 +2859,9 @@ See: `docs/tracy.md`.\n";
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
+                        check_wheel_scroll_hit_changes_test_id
+                            .as_deref()
+                            .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
@@ -2747,18 +2877,25 @@ See: `docs/tracy.md`.\n";
                             .or(suite_vlist_window_shifts_prefetch_max),
                         check_vlist_window_shifts_escape_max
                             .or(suite_vlist_window_shifts_escape_max),
+                        check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
+                        check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
                         check_view_cache_reuse_stable_min,
-                        check_view_cache_reuse_min.or(suite_view_cache_reuse_min),
+                        check_view_cache_reuse_min
+                            .or(suite_view_cache_reuse_min)
+                            .or(suite_components_gallery_view_cache_reuse_min),
                         check_overlay_synthesis_min,
                         check_viewport_input_min.or(suite_viewport_input_min),
                         check_dock_drag_min.or(suite_dock_drag_min),
                         check_viewport_capture_min.or(suite_viewport_capture_min),
-                        retained_vlist_gate_for_script,
-                        retained_vlist_attach_detach_max_for_script,
-                        retained_vlist_keep_alive_reuse_min_for_script,
+                        retained_vlist_gate_for_script
+                            .or(suite_retained_vlist_reconcile_no_notify_min),
+                        retained_vlist_attach_detach_max_for_script
+                            .or(suite_retained_vlist_attach_detach_max),
+                        retained_vlist_keep_alive_reuse_min_for_script
+                            .or(suite_retained_vlist_keep_alive_reuse_min),
                         warmup_frames,
                     )?;
                 }
@@ -3664,6 +3801,13 @@ See: `docs/tracy.md`.\n";
             }
             if let Some(test_id) = check_wheel_scroll_test_id.as_deref() {
                 check_bundle_for_wheel_scroll(bundle_path.as_path(), test_id, warmup_frames)?;
+            }
+            if let Some(test_id) = check_wheel_scroll_hit_changes_test_id.as_deref() {
+                check_bundle_for_wheel_scroll_hit_changes(
+                    bundle_path.as_path(),
+                    test_id,
+                    warmup_frames,
+                )?;
             }
             if let Some(test_id) = check_drag_cache_root_paint_only_test_id.as_deref() {
                 check_bundle_for_drag_cache_root_paint_only(&bundle_path, test_id, warmup_frames)?;
@@ -5098,7 +5242,9 @@ fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bo
             | "ui-gallery-data-table-window-boundary-scroll-retained.json"
             | "ui-gallery-table-retained-window-boundary-scroll.json"
             | "components-gallery-file-tree-window-boundary-scroll.json"
+            | "components-gallery-file-tree-window-boundary-bounce.json"
             | "components-gallery-table-window-boundary-scroll.json"
+            | "components-gallery-table-window-boundary-bounce.json"
     )
 }
 
@@ -5339,6 +5485,7 @@ fn apply_post_run_checks(
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
+    check_wheel_scroll_hit_changes_test_id: Option<&str>,
     check_prepaint_actions_min: Option<u64>,
     check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
@@ -5347,6 +5494,8 @@ fn apply_post_run_checks(
     check_vlist_window_shifts_non_retained_max: Option<u64>,
     check_vlist_window_shifts_prefetch_max: Option<u64>,
     check_vlist_window_shifts_escape_max: Option<u64>,
+    check_vlist_policy_key_stable: bool,
+    check_layout_fast_path_min: Option<u64>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     check_gc_sweep_liveness: bool,
@@ -5382,6 +5531,9 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
+    }
+    if let Some(test_id) = check_wheel_scroll_hit_changes_test_id {
+        check_bundle_for_wheel_scroll_hit_changes(bundle_path, test_id, warmup_frames)?;
     }
     if let Some(min) = check_prepaint_actions_min {
         check_bundle_for_prepaint_actions_min(bundle_path, out_dir, min, warmup_frames)?;
@@ -5437,6 +5589,12 @@ fn apply_post_run_checks(
             max_total_escape_shifts,
             warmup_frames,
         )?;
+    }
+    if check_vlist_policy_key_stable {
+        check_bundle_for_vlist_policy_key_stable(bundle_path, out_dir, warmup_frames)?;
+    }
+    if let Some(min_frames) = check_layout_fast_path_min {
+        check_bundle_for_layout_fast_path_min(bundle_path, out_dir, min_frames, warmup_frames)?;
     }
     if let Some(test_id) = check_drag_cache_root_paint_only_test_id {
         check_bundle_for_drag_cache_root_paint_only(bundle_path, test_id, warmup_frames)?;
@@ -6050,7 +6208,8 @@ mod tests {
         check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
         check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
-        json_pointer_set, scan_semantics_changed_repainted_json,
+        check_bundle_for_wheel_scroll_hit_changes_json, json_pointer_set,
+        scan_semantics_changed_repainted_json,
     };
     use serde_json::json;
     use std::path::Path;
@@ -7040,6 +7199,204 @@ mod tests {
             std::process::id(),
             nanos
         ))
+    }
+
+    #[test]
+    fn layout_fast_path_min_check_passes() {
+        let out_dir = tmp_out_dir("layout_fast_path_min_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 0, "debug": { "stats": { "layout_fast_path_taken": false } } },
+                    { "frame_id": 1, "debug": { "stats": { "layout_fast_path_taken": true } } }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_layout_fast_path_min(&bundle_path, &out_dir, 1, 0)
+            .expect("expected layout fast-path >= 1");
+        assert!(out_dir.join("check.layout_fast_path_min.json").is_file());
+    }
+
+    #[test]
+    fn layout_fast_path_min_check_fails_when_missing() {
+        let out_dir = tmp_out_dir("layout_fast_path_min_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 0, "debug": { "stats": { "layout_fast_path_taken": false } } },
+                    { "frame_id": 1, "debug": { "stats": { "layout_fast_path_taken": false } } }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_layout_fast_path_min(&bundle_path, &out_dir, 1, 0)
+            .expect_err("expected fast-path < 1");
+        assert!(err.contains("layout fast-path gate failed"));
+        assert!(out_dir.join("check.layout_fast_path_min.json").is_file());
+    }
+
+    #[test]
+    fn vlist_policy_key_stable_check_passes() {
+        let out_dir = tmp_out_dir("vlist_policy_key_stable_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 1,
+                        "debug": { "virtual_list_windows": [{ "node": 10, "element": 20, "policy_key": 7 }] }
+                    },
+                    {
+                        "frame_id": 2,
+                        "debug": { "virtual_list_windows": [{ "node": 10, "element": 20, "policy_key": 7 }] }
+                    }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_vlist_policy_key_stable(&bundle_path, &out_dir, 0)
+            .expect("expected stable vlist policy_key");
+        assert!(out_dir.join("check.vlist_policy_key_stable.json").is_file());
+    }
+
+    #[test]
+    fn vlist_policy_key_stable_check_fails_when_changed() {
+        let out_dir = tmp_out_dir("vlist_policy_key_stable_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 1,
+                        "debug": { "virtual_list_windows": [{ "node": 10, "element": 20, "policy_key": 7 }] }
+                    },
+                    {
+                        "frame_id": 2,
+                        "debug": { "virtual_list_windows": [{ "node": 10, "element": 20, "policy_key": 9 }] }
+                    }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_vlist_policy_key_stable(&bundle_path, &out_dir, 0)
+            .expect_err("expected unstable vlist policy_key");
+        assert!(err.contains("vlist policy-key stability gate failed"));
+        assert!(out_dir.join("check.vlist_policy_key_stable.json").is_file());
+    }
+
+    #[test]
+    fn wheel_scroll_hit_changes_check_passes_when_offset_changes() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "events": [{ "kind": "pointer.wheel", "frame_id": 1 }],
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "hit_test": { "hit": 2 },
+                            "semantics": { "nodes": [
+                                { "id": 1, "test_id": "root" },
+                                { "id": 2, "parent": 1 }
+                            ]},
+                            "virtual_list_windows": [{ "offset": 0.0 }]
+                        }
+                    },
+                    {
+                        "frame_id": 1,
+                        "debug": {
+                            "hit_test": { "hit": 2 },
+                            "semantics": { "nodes": [
+                                { "id": 1, "test_id": "root" },
+                                { "id": 2, "parent": 1 }
+                            ]},
+                            "virtual_list_windows": [{ "offset": 12.0 }]
+                        }
+                    }
+                ]
+            }]
+        });
+
+        check_bundle_for_wheel_scroll_hit_changes_json(
+            &bundle,
+            Path::new("bundle.json"),
+            "root",
+            0,
+        )
+        .expect("expected wheel scroll to change offset");
+    }
+
+    #[test]
+    fn wheel_scroll_hit_changes_check_fails_when_hit_and_offset_are_stable() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "events": [{ "kind": "pointer.wheel", "frame_id": 1 }],
+                "snapshots": [
+                    {
+                        "frame_id": 0,
+                        "debug": {
+                            "hit_test": { "hit": 2 },
+                            "semantics": { "nodes": [
+                                { "id": 1, "test_id": "root" },
+                                { "id": 2, "parent": 1 }
+                            ]},
+                            "virtual_list_windows": [{ "offset": 0.0 }]
+                        }
+                    },
+                    {
+                        "frame_id": 1,
+                        "debug": {
+                            "hit_test": { "hit": 2 },
+                            "semantics": { "nodes": [
+                                { "id": 1, "test_id": "root" },
+                                { "id": 2, "parent": 1 }
+                            ]},
+                            "virtual_list_windows": [{ "offset": 0.0 }]
+                        }
+                    }
+                ]
+            }]
+        });
+
+        let err = check_bundle_for_wheel_scroll_hit_changes_json(
+            &bundle,
+            Path::new("bundle.json"),
+            "root",
+            0,
+        )
+        .expect_err("expected wheel scroll check to fail when stable");
+        assert!(err.contains("wheel scroll hit-change check failed"));
+        assert!(err.contains("error=hit_did_not_change"));
     }
 
     fn write_png_solid(path: &std::path::Path, w: u32, h: u32, rgba: [u8; 4]) {

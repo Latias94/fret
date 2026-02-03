@@ -2391,6 +2391,16 @@ pub(super) fn check_bundle_for_wheel_scroll(
     check_bundle_for_wheel_scroll_json(&bundle, bundle_path, test_id, warmup_frames)
 }
 
+pub(super) fn check_bundle_for_wheel_scroll_hit_changes(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_wheel_scroll_hit_changes_json(&bundle, bundle_path, test_id, warmup_frames)
+}
+
 pub(super) fn check_bundle_for_wheel_scroll_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -2511,6 +2521,156 @@ pub(super) fn check_bundle_for_wheel_scroll_json(
     Err(msg)
 }
 
+pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_wheel = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
+            continue;
+        };
+        any_wheel = true;
+
+        let after_frame = wheel_frame.max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut before: Option<&serde_json::Value> = None;
+        let mut before_frame: u64 = 0;
+        let mut after: Option<&serde_json::Value> = None;
+        let mut after_frame_id: u64 = 0;
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                if frame_id >= before_frame && frame_id < after_frame {
+                    before = Some(s);
+                    before_frame = frame_id;
+                }
+                continue;
+            }
+            after = Some(s);
+            after_frame_id = frame_id;
+            break;
+        }
+
+        let (Some(before), Some(after)) = (before, after) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} error=missing_before_or_after_snapshot"
+            ));
+            continue;
+        };
+
+        let Some(target_before) = semantics_node_id_for_test_id(before, test_id) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
+            ));
+            continue;
+        };
+        let Some(target_after) = semantics_node_id_for_test_id(after, test_id) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
+            ));
+            continue;
+        };
+
+        let before_parents = semantics_parent_map(before);
+        let after_parents = semantics_parent_map(after);
+
+        let Some(hit_before) = hit_test_node_id(before) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} error=missing_hit_before"
+            ));
+            continue;
+        };
+        let Some(hit_after) = hit_test_node_id(after) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} error=missing_hit_after"
+            ));
+            continue;
+        };
+
+        if !is_descendant(hit_before, target_before, &before_parents) {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=hit_not_within_target_before hit={hit_before} target={target_before}"
+            ));
+            continue;
+        }
+        if !is_descendant(hit_after, target_after, &after_parents) {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_not_within_target_after hit={hit_after} target={target_after}"
+            ));
+            continue;
+        }
+
+        // Prefer a vlist-driven signal when available: for virtualized surfaces the hit-test node
+        // can remain stable (e.g. when hovering a static region), but the scroll offset must move.
+        let before_offset = before
+            .get("debug")
+            .and_then(|v| v.get("virtual_list_windows"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("offset"))
+            .and_then(|v| v.as_f64());
+        let after_offset = after
+            .get("debug")
+            .and_then(|v| v.get("virtual_list_windows"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("offset"))
+            .and_then(|v| v.as_f64());
+        if let (Some(a), Some(b)) = (before_offset, after_offset) {
+            if (a - b).abs() > 0.1 {
+                continue;
+            }
+        }
+
+        if hit_before == hit_after {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_did_not_change hit={hit_after}"
+            ));
+        }
+    }
+
+    if !any_wheel {
+        return Err(format!(
+            "wheel scroll hit-change check requires at least one pointer.wheel event in the bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str(
+        "wheel scroll hit-change check failed (expected wheel to affect the scrolled content)\n",
+    );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
     bundle_path: &Path,
     out_dir: &Path,
@@ -2579,6 +2739,115 @@ pub(super) fn check_bundle_for_vlist_window_shifts_kind_max(
     )
 }
 
+pub(super) fn check_bundle_for_vlist_policy_key_stable(
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_policy_key_stable_json(&bundle, bundle_path, out_dir, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_vlist_policy_key_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_signal = false;
+    let mut examined_snapshots: u64 = 0;
+    let mut by_surface: std::collections::BTreeMap<(u64, u64), std::collections::BTreeSet<u64>> =
+        std::collections::BTreeMap::new();
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let vlist_windows = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if vlist_windows.is_empty() {
+                continue;
+            }
+
+            any_signal = true;
+            for win in vlist_windows {
+                let node = win.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
+                let element = win.get("element").and_then(|v| v.as_u64()).unwrap_or(0);
+                let policy_key = win.get("policy_key").and_then(|v| v.as_u64()).unwrap_or(0);
+                by_surface
+                    .entry((node, element))
+                    .or_default()
+                    .insert(policy_key);
+            }
+        }
+    }
+
+    let offenders: Vec<serde_json::Value> = by_surface
+        .iter()
+        .filter(|(_, keys)| keys.len() > 1)
+        .take(64)
+        .map(|((node, element), keys)| {
+            serde_json::json!({
+                "node": node,
+                "element": element,
+                "policy_keys": keys.iter().copied().collect::<Vec<u64>>(),
+            })
+        })
+        .collect();
+
+    let out_path = out_dir.join("check.vlist_policy_key_stable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_policy_key_stable",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "surfaces_seen": by_surface.len(),
+        "offenders": offenders,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_signal {
+        return Err(format!(
+            "vlist policy-key stability gate requires debug.virtual_list_windows after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if offenders.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "vlist policy-key stability gate failed (expected each vlist surface to keep a stable policy_key after warmup)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        out_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
     bundle_path: &Path,
     out_dir: &Path,
@@ -2594,6 +2863,98 @@ pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
         min_total_refreshes,
         warmup_frames,
     )
+}
+
+pub(super) fn check_bundle_for_layout_fast_path_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_layout_fast_path_min_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        min_frames,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_layout_fast_path_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut fast_path_frames: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let taken = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("layout_fast_path_taken"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if taken {
+                fast_path_frames = fast_path_frames.saturating_add(1);
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.layout_fast_path_min.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "layout_fast_path_min",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_frames": min_frames,
+        "examined_snapshots": examined_snapshots,
+        "fast_path_frames": fast_path_frames,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if examined_snapshots == 0 {
+        return Err(format!(
+            "layout fast-path gate requires snapshots after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if fast_path_frames >= min_frames {
+        return Ok(());
+    }
+
+    Err(format!(
+        "layout fast-path gate failed (expected at least {min_frames} frames to take the fast-path after warmup, got {fast_path_frames}; examined_snapshots={examined_snapshots}, warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        out_path.display()
+    ))
 }
 
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
