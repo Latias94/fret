@@ -207,6 +207,24 @@ Next action:
 
 - record the decision in this workstream and treat it as part of the performance contract (M0).
 
+### 1.4 Dispatch / hit-test visibility (known gap)
+
+The current `fretboard diag perf` suite focuses on **frame pipeline** costs (layout / prepaint / paint). This is
+necessary, but it does **not** directly gate the CPU time spent in:
+
+- input dispatch,
+- pointer move hit-testing,
+- routing / capture / focus arbitration.
+
+For “Zed feel”, pointer-move and wheel responsiveness is often dominated by dispatch-time micro-costs rather than
+layout/paint. We track this as a first-class follow-up:
+
+- add `dispatch_time_us` and/or `hit_test_time_us` to `UiDebugFrameStats`,
+- plumb the metrics into `fretboard diag perf` output,
+- add a pointer-move stress script gate that fails on dispatch-time regressions.
+
+See `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md` (M3) for the concrete TODO entry.
+
 ---
 
 ## 2) Hot path model (where the time goes)
