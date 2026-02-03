@@ -191,7 +191,8 @@ where
             cx.sync_focused_element_from_focused_node(focused);
             cx.dismissible_clear_on_dismiss_request();
             cx.dismissible_clear_on_pointer_move();
-            render(&mut cx).into_iter().collect()
+            let built = render(&mut cx);
+            cx.collect_children(built)
         });
 
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -200,6 +201,10 @@ where
         let cutoff = frame_id.0.saturating_sub(lag);
 
         let window_state = runtime.for_window_mut(window);
+        ui.debug_set_element_children_vec_pool_stats(
+            window_state.element_children_vec_pool_reuses(),
+            window_state.element_children_vec_pool_misses(),
+        );
         let root_id = crate::elements::global_root(window, root_name);
         let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
 
@@ -260,7 +265,8 @@ where
                 .is_none();
 
             let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-            for child in children {
+            let mut children = children;
+            for child in children.drain(..) {
                 mounted_children.push(mount_element(
                     ui,
                     window,
@@ -278,6 +284,7 @@ where
             if inserted {
                 window_frame.revision = window_frame.revision.saturating_add(1);
             }
+            window_state.restore_scratch_element_children_vec(children);
 
             let retained_virtual_lists = window_state.take_retained_virtual_list_reconciles();
             if !retained_virtual_lists.is_empty() {
@@ -706,7 +713,8 @@ where
             cx.sync_focused_element_from_focused_node(focused);
             cx.dismissible_clear_on_dismiss_request();
             cx.dismissible_clear_on_pointer_move();
-            render(&mut cx).into_iter().collect()
+            let built = render(&mut cx);
+            cx.collect_children(built)
         });
 
     app.with_global_mut_untracked(crate::elements::ElementRuntime::new, |runtime, app| {
@@ -715,6 +723,10 @@ where
         let cutoff = frame_id.0.saturating_sub(lag);
 
         let window_state = runtime.for_window_mut(window);
+        ui.debug_set_element_children_vec_pool_stats(
+            window_state.element_children_vec_pool_reuses(),
+            window_state.element_children_vec_pool_misses(),
+        );
         let root_id = crate::elements::global_root(window, root_name);
         let mut scroll_bindings: Vec<crate::declarative::frame::ScrollHandleBinding> = Vec::new();
 
@@ -769,7 +781,8 @@ where
             }
 
             let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
-            for child in children {
+            let mut children = children;
+            for child in children.drain(..) {
                 mounted_children.push(mount_element(
                     ui,
                     window,
@@ -783,6 +796,7 @@ where
                 ));
             }
             ui.set_children(root_node, mounted_children);
+            window_state.restore_scratch_element_children_vec(children);
         });
 
         if ui.view_cache_enabled() {
@@ -1117,7 +1131,9 @@ fn mount_element<H: UiHost>(
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
 ) -> NodeId {
+    let mut element = element;
     let id = element.id;
+    let mut children = std::mem::take(&mut element.children);
     let existing_node_entry = window_state.node_entry(id);
     let had_existing_node_entry = existing_node_entry.is_some();
     let had_existing_node = existing_node_entry
@@ -1408,6 +1424,7 @@ fn mount_element<H: UiHost>(
             scroll_bindings,
             node,
         );
+        window_state.restore_scratch_element_children_vec(children);
         return node;
     }
 
@@ -1429,8 +1446,8 @@ fn mount_element<H: UiHost>(
         };
         let _reuse_guard = reuse_span.enter();
 
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
-        for child in element.children {
+        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(children.len());
+        for child in children.drain(..) {
             child_nodes.push(mount_element(
                 ui,
                 _window,
@@ -1459,8 +1476,8 @@ fn mount_element<H: UiHost>(
             collect_declarative_elements_for_existing_subtree(ui, window_state, window_frame, node),
         );
     } else {
-        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(element.children.len());
-        for child in element.children {
+        let mut child_nodes: Vec<NodeId> = Vec::with_capacity(children.len());
+        for child in children.drain(..) {
             child_nodes.push(mount_element(
                 ui,
                 _window,
@@ -1483,6 +1500,7 @@ fn mount_element<H: UiHost>(
         sync_window_frame_children(window_frame, node, ui.children_ref(node));
     }
 
+    window_state.restore_scratch_element_children_vec(children);
     node
 }
 

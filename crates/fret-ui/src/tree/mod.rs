@@ -192,6 +192,13 @@ pub struct UiDebugFrameStats {
     /// This is a proxy for allocator churn in hot paths that should ideally stabilize after
     /// warmup.
     pub frame_arena_grow_events: u32,
+    /// Number of child-element vectors reused from the per-window pool during element build.
+    ///
+    /// This is a proxy for “element tree arena” progress: higher reuse implies less allocator churn
+    /// while building the ephemeral declarative element tree.
+    pub element_children_vec_pool_reuses: u32,
+    /// Number of child-element vectors that had to be newly allocated during element build.
+    pub element_children_vec_pool_misses: u32,
     /// Total time spent in event dispatch during the current frame.
     ///
     /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
@@ -1789,6 +1796,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.frame_arena_capacity_estimate_bytes =
             self.frame_arena.capacity_estimate_bytes();
         self.debug_stats.frame_arena_grow_events = 0;
+        self.debug_stats.element_children_vec_pool_reuses = 0;
+        self.debug_stats.element_children_vec_pool_misses = 0;
         self.debug_stats.dispatch_time = Duration::default();
         self.debug_stats.hit_test_time = Duration::default();
         self.debug_stats.dispatch_events = 0;
@@ -2698,6 +2707,14 @@ impl<H: UiHost> UiTree<H> {
 
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
+    }
+
+    pub(crate) fn debug_set_element_children_vec_pool_stats(&mut self, reuses: u32, misses: u32) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.element_children_vec_pool_reuses = reuses;
+        self.debug_stats.element_children_vec_pool_misses = misses;
     }
 
     #[cfg(test)]

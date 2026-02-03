@@ -12,6 +12,7 @@ use slotmap::Key as _;
 #[cfg(feature = "diagnostics")]
 use std::sync::Arc as StdArc;
 
+use crate::element::AnyElement;
 use crate::widget::Invalidation;
 
 use super::GlobalElementId;
@@ -155,6 +156,9 @@ pub struct WindowElementState {
     scratch_view_cache_keep_alive_elements: HashSet<GlobalElementId>,
     scratch_view_cache_keep_alive_visited_roots: HashSet<GlobalElementId>,
     scratch_view_cache_keep_alive_stack: Vec<GlobalElementId>,
+    scratch_element_children_vec_pool: Vec<Vec<AnyElement>>,
+    element_children_vec_pool_reuses: u32,
+    element_children_vec_pool_misses: u32,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -201,6 +205,56 @@ pub struct NodeEntryRootOverwrite {
 }
 
 impl WindowElementState {
+    pub(crate) fn element_children_vec_pool_reuses(&self) -> u32 {
+        self.element_children_vec_pool_reuses
+    }
+
+    pub(crate) fn element_children_vec_pool_misses(&self) -> u32 {
+        self.element_children_vec_pool_misses
+    }
+
+    pub(crate) fn take_scratch_element_children_vec(
+        &mut self,
+        min_capacity: usize,
+    ) -> Vec<AnyElement> {
+        const POOL_MAX: usize = 2048;
+        let min_capacity = min_capacity.max(0);
+
+        if let Some((idx, _)) = self
+            .scratch_element_children_vec_pool
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, v)| v.capacity() >= min_capacity)
+        {
+            self.element_children_vec_pool_reuses =
+                self.element_children_vec_pool_reuses.saturating_add(1);
+            let mut out = self.scratch_element_children_vec_pool.swap_remove(idx);
+            out.clear();
+            return out;
+        }
+
+        if self.scratch_element_children_vec_pool.len() >= POOL_MAX {
+            self.scratch_element_children_vec_pool.truncate(POOL_MAX);
+        }
+        self.element_children_vec_pool_misses =
+            self.element_children_vec_pool_misses.saturating_add(1);
+        Vec::with_capacity(min_capacity)
+    }
+
+    pub(crate) fn restore_scratch_element_children_vec(&mut self, mut scratch: Vec<AnyElement>) {
+        const POOL_MAX: usize = 2048;
+        const MAX_RETAIN_CAP: usize = 256;
+        if self.scratch_element_children_vec_pool.len() >= POOL_MAX {
+            return;
+        }
+        if scratch.capacity() > MAX_RETAIN_CAP {
+            return;
+        }
+        scratch.clear();
+        self.scratch_element_children_vec_pool.push(scratch);
+    }
+
     pub(crate) fn take_scratch_view_cache_keep_alive_elements(
         &mut self,
     ) -> HashSet<GlobalElementId> {
@@ -254,6 +308,8 @@ impl WindowElementState {
 
         self.raf_notify_roots.clear();
         self.view_cache_key_mismatch_roots.clear();
+        self.element_children_vec_pool_reuses = 0;
+        self.element_children_vec_pool_misses = 0;
 
         std::mem::swap(
             &mut self.view_cache_keys_rendered,
