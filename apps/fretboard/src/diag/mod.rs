@@ -24,8 +24,9 @@ use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_layout_fast_path_min, check_bundle_for_overlay_synthesis_min,
-    check_bundle_for_prepaint_actions_min, check_bundle_for_retained_vlist_attach_detach_max,
+    check_bundle_for_layout_fast_path_min, check_bundle_for_notify_hotspot_file_max,
+    check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
+    check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
@@ -119,6 +120,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_vlist_policy_key_stable: bool = false;
     let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
+    let mut check_notify_hotspot_file_max: Vec<(String, u64)> = Vec::new();
     let mut check_view_cache_reuse_min: Option<u64> = None;
     let mut check_view_cache_reuse_stable_min: Option<u64> = None;
     let mut check_redraw_hitches_max_total_ms_threshold: Option<u64> = None;
@@ -663,6 +665,25 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-gc-sweep-liveness" => {
                 check_gc_sweep_liveness = true;
+                i += 1;
+            }
+            "--check-notify-hotspot-file-max" => {
+                i += 1;
+                let Some(file) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-notify-hotspot-file-max (file)".to_string()
+                    );
+                };
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-notify-hotspot-file-max (max)".to_string()
+                    );
+                };
+                let max = v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-notify-hotspot-file-max (max)".to_string()
+                })?;
+                check_notify_hotspot_file_max.push((file, max));
                 i += 1;
             }
             "--check-view-cache-reuse-min" => {
@@ -1307,6 +1328,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
+                    || !check_notify_hotspot_file_max.is_empty()
                     || check_view_cache_reuse_min.is_some()
                     || check_view_cache_reuse_stable_min.is_some()
                     || check_overlay_synthesis_min.is_some()
@@ -1354,6 +1376,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness,
+                        &check_notify_hotspot_file_max,
                         check_view_cache_reuse_stable_min,
                         check_view_cache_reuse_min,
                         check_overlay_synthesis_min,
@@ -1648,6 +1671,7 @@ See: `docs/tracy.md`.\n";
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
                         || check_gc_sweep_liveness
+                        || !check_notify_hotspot_file_max.is_empty()
                         || check_view_cache_reuse_min.is_some()
                         || check_view_cache_reuse_stable_min.is_some()
                         || check_overlay_synthesis_min.is_some()
@@ -1693,6 +1717,7 @@ See: `docs/tracy.md`.\n";
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
                             check_gc_sweep_liveness,
+                            &check_notify_hotspot_file_max,
                             check_view_cache_reuse_stable_min,
                             check_view_cache_reuse_min,
                             check_overlay_synthesis_min,
@@ -2746,6 +2771,7 @@ See: `docs/tracy.md`.\n";
                     || check_layout_fast_path_min.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
+                    || !check_notify_hotspot_file_max.is_empty()
                     || check_view_cache_reuse_min.is_some()
                     || check_view_cache_reuse_stable_min.is_some()
                     || check_overlay_synthesis_min.is_some()
@@ -2933,6 +2959,7 @@ See: `docs/tracy.md`.\n";
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
+                        &check_notify_hotspot_file_max,
                         check_view_cache_reuse_stable_min,
                         check_view_cache_reuse_min
                             .or(suite_view_cache_reuse_min)
@@ -3868,6 +3895,14 @@ See: `docs/tracy.md`.\n";
             }
             if check_gc_sweep_liveness {
                 check_bundle_for_gc_sweep_liveness(bundle_path.as_path(), warmup_frames)?;
+            }
+            for (file, max) in &check_notify_hotspot_file_max {
+                check_bundle_for_notify_hotspot_file_max(
+                    bundle_path.as_path(),
+                    file.as_str(),
+                    *max,
+                    warmup_frames,
+                )?;
             }
             if let Some(min) = check_view_cache_reuse_stable_min
                 && min > 0
@@ -5550,6 +5585,7 @@ fn apply_post_run_checks(
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
     check_gc_sweep_liveness: bool,
+    check_notify_hotspot_file_max: &[(String, u64)],
     check_view_cache_reuse_stable_min: Option<u64>,
     check_view_cache_reuse_min: Option<u64>,
     check_overlay_synthesis_min: Option<u64>,
@@ -5704,6 +5740,9 @@ fn apply_post_run_checks(
     }
     if check_gc_sweep_liveness {
         check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
+    }
+    for (file, max) in check_notify_hotspot_file_max {
+        check_bundle_for_notify_hotspot_file_max(bundle_path, file.as_str(), *max, warmup_frames)?;
     }
     Ok(())
 }
@@ -7623,6 +7662,55 @@ mod tests {
                 .unwrap_or(0)
                 > 0,
             "expected keep_alive_liveness_mismatch to be counted"
+        );
+    }
+
+    #[test]
+    fn notify_hotspots_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("notify_hotspots_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "notify_requests": [{
+                            "frame_id": 1,
+                            "caller_node": 100,
+                            "target_view": 200,
+                            "file": "crates/fret-ui/src/declarative/host_widget/event/pressable.rs",
+                            "line": 123,
+                            "column": 9
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err = check_bundle_for_notify_hotspot_file_max(&bundle_path, "pressable.rs", 0, 0)
+            .unwrap_err();
+        assert!(err.contains("notify hotspot file budget exceeded"));
+
+        let evidence_path = bundle_dir.join("check.notify_hotspots.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected notify hotspots evidence JSON to be written"
+        );
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("notify_hotspots")
         );
     }
 
