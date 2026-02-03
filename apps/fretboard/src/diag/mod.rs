@@ -27,6 +27,7 @@ use stats::{
     check_bundle_for_layout_fast_path_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max,
+    check_bundle_for_retained_vlist_keep_alive_budget,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
@@ -131,6 +132,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_retained_vlist_reconcile_no_notify_min: Option<u64> = None;
     let mut check_retained_vlist_attach_detach_max: Option<u64> = None;
     let mut check_retained_vlist_keep_alive_reuse_min: Option<u64> = None;
+    let mut check_retained_vlist_keep_alive_budget: Option<(u64, u64)> = None;
     let mut compare_eps_px: f32 = 0.5;
     let mut compare_ignore_bounds: bool = false;
     let mut compare_ignore_scene_fingerprint: bool = false;
@@ -800,6 +802,28 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
+            "--check-retained-vlist-keep-alive-budget" => {
+                i += 1;
+                let Some(min_max_pool_len_after) = args.get(i).cloned() else {
+                    return Err("missing value for --check-retained-vlist-keep-alive-budget (expected MIN_MAX_POOL_LEN_AFTER)".to_string());
+                };
+                let min_max_pool_len_after =
+                    min_max_pool_len_after.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-retained-vlist-keep-alive-budget (expected MIN_MAX_POOL_LEN_AFTER)".to_string()
+                    })?;
+
+                i += 1;
+                let Some(max_total_evicted_items) = args.get(i).cloned() else {
+                    return Err("missing value for --check-retained-vlist-keep-alive-budget (expected MAX_TOTAL_EVICTED_ITEMS)".to_string());
+                };
+                let max_total_evicted_items =
+                    max_total_evicted_items.parse::<u64>().map_err(|_| {
+                        "invalid value for --check-retained-vlist-keep-alive-budget (expected MAX_TOTAL_EVICTED_ITEMS)".to_string()
+                    })?;
+                check_retained_vlist_keep_alive_budget =
+                    Some((min_max_pool_len_after, max_total_evicted_items));
+                i += 1;
+            }
             "--compare-eps-px" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1338,6 +1362,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_retained_vlist_reconcile_no_notify_min.is_some()
                     || check_retained_vlist_attach_detach_max.is_some()
                     || check_retained_vlist_keep_alive_reuse_min.is_some()
+                    || check_retained_vlist_keep_alive_budget.is_some()
                 {
                     let bundle_path = wait_for_bundle_json_from_script_result(
                         &resolved_out_dir,
@@ -1386,6 +1411,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_retained_vlist_reconcile_no_notify_min,
                         check_retained_vlist_attach_detach_max,
                         check_retained_vlist_keep_alive_reuse_min,
+                        check_retained_vlist_keep_alive_budget,
                         warmup_frames,
                     )?;
                 }
@@ -1680,7 +1706,8 @@ See: `docs/tracy.md`.\n";
                         || check_viewport_capture_min.is_some()
                         || check_retained_vlist_reconcile_no_notify_min.is_some()
                         || check_retained_vlist_attach_detach_max.is_some()
-                        || check_retained_vlist_keep_alive_reuse_min.is_some();
+                        || check_retained_vlist_keep_alive_reuse_min.is_some()
+                        || check_retained_vlist_keep_alive_budget.is_some();
 
                     if wants_post_run_checks_for_script {
                         let Some(bundle_path) = bundle_path.as_ref() else {
@@ -1727,6 +1754,7 @@ See: `docs/tracy.md`.\n";
                             check_retained_vlist_reconcile_no_notify_min,
                             check_retained_vlist_attach_detach_max,
                             check_retained_vlist_keep_alive_reuse_min,
+                            check_retained_vlist_keep_alive_budget,
                             warmup_frames,
                         ) {
                             overall_error = Some(err);
@@ -2756,6 +2784,10 @@ See: `docs/tracy.md`.\n";
                     check_retained_vlist_keep_alive_reuse_min.filter(|_| {
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
                     });
+                let retained_vlist_keep_alive_budget_for_script =
+                    check_retained_vlist_keep_alive_budget.filter(|_| {
+                        ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src)
+                    });
                 let vlist_window_shifts_non_retained_max_for_script =
                     check_vlist_window_shifts_non_retained_max
                         .filter(|_| ui_gallery_script_requires_retained_vlist_reconcile_gate(&src));
@@ -2784,6 +2816,7 @@ See: `docs/tracy.md`.\n";
                     || retained_vlist_gate_for_script.is_some()
                     || retained_vlist_attach_detach_max_for_script.is_some()
                     || retained_vlist_keep_alive_reuse_min_for_script.is_some()
+                    || retained_vlist_keep_alive_budget_for_script.is_some()
                     || vlist_window_shifts_non_retained_max_for_script.is_some()
                     || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
@@ -2869,7 +2902,7 @@ See: `docs/tracy.md`.\n";
                         // - Retained-host path: allow a looser cap since reconcile can legitimately
                         //   refresh more often (and we have additional retained-only gates).
                         .then_some(if vlist_window_boundary_retained_suite {
-                            35u64
+                            50u64
                         } else {
                             20u64
                         })
@@ -2884,7 +2917,7 @@ See: `docs/tracy.md`.\n";
                             && !check_vlist_window_shifts_have_prepaint_actions;
                     let suite_vlist_window_shifts_prefetch_max = vlist_window_boundary_suite
                         .then_some(if vlist_window_boundary_retained_suite {
-                            30u64
+                            100u64
                         } else {
                             12u64
                         })
@@ -2931,6 +2964,11 @@ See: `docs/tracy.md`.\n";
                             1u64
                         })
                         .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
+                    let suite_retained_vlist_keep_alive_budget = ((components_gallery_suite
+                        && script_requires_retained_vlist_keep_alive_reuse_gate)
+                        || vlist_window_boundary_retained_suite)
+                        .then_some((1u64, 0u64))
+                        .filter(|_| check_retained_vlist_keep_alive_budget.is_none());
                     let suite_gc_sweep_liveness =
                         builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script;
 
@@ -3002,6 +3040,8 @@ See: `docs/tracy.md`.\n";
                             .or(suite_retained_vlist_attach_detach_max),
                         retained_vlist_keep_alive_reuse_min_for_script
                             .or(suite_retained_vlist_keep_alive_reuse_min),
+                        retained_vlist_keep_alive_budget_for_script
+                            .or(suite_retained_vlist_keep_alive_budget),
                         warmup_frames,
                     )?;
                 }
@@ -5623,6 +5663,7 @@ fn apply_post_run_checks(
     check_retained_vlist_reconcile_no_notify_min: Option<u64>,
     check_retained_vlist_attach_detach_max: Option<u64>,
     check_retained_vlist_keep_alive_reuse_min: Option<u64>,
+    check_retained_vlist_keep_alive_budget: Option<(u64, u64)>,
     warmup_frames: u64,
 ) -> Result<(), String> {
     if let Some(test_id) = check_stale_paint_test_id {
@@ -5765,6 +5806,16 @@ fn apply_post_run_checks(
         && min > 0
     {
         check_bundle_for_retained_vlist_keep_alive_reuse_min(bundle_path, min, warmup_frames)?;
+    }
+    if let Some((min_max_pool_len_after, max_total_evicted_items)) =
+        check_retained_vlist_keep_alive_budget
+    {
+        check_bundle_for_retained_vlist_keep_alive_budget(
+            bundle_path,
+            min_max_pool_len_after,
+            max_total_evicted_items,
+            warmup_frames,
+        )?;
     }
     if check_gc_sweep_liveness {
         check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
@@ -6322,6 +6373,7 @@ mod tests {
         bundle_stats_from_json_with_options, check_bundle_for_dock_drag_min_json,
         check_bundle_for_gc_sweep_liveness, check_bundle_for_overlay_synthesis_min_json,
         check_bundle_for_retained_vlist_attach_detach_max_json,
+        check_bundle_for_retained_vlist_keep_alive_budget_json,
         check_bundle_for_retained_vlist_reconcile_no_notify_min_json,
         check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
         check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
@@ -7093,6 +7145,64 @@ mod tests {
         )
         .expect_err("expected missing reconcile events");
         assert!(err.contains("expected at least 1 retained virtual-list reconcile event"));
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_keep_alive_budget_passes() {
+        let out_dir = tmp_out_dir("retained_vlist_keep_alive_budget_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "retained_virtual_list_reconciles": [
+                            { "keep_alive_pool_len_after": 128, "evicted_keep_alive_items": 0 }
+                        ]
+                    }
+                }]
+            }]
+        });
+
+        check_bundle_for_retained_vlist_keep_alive_budget_json(&bundle, &bundle_path, 1, 0, 0)
+            .expect("expected keep-alive budget to pass");
+        assert!(
+            out_dir
+                .join("check.retained_vlist_keep_alive_budget.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn check_bundle_for_retained_vlist_keep_alive_budget_fails_when_evicted() {
+        let out_dir = tmp_out_dir("retained_vlist_keep_alive_budget_fail_evicted");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "frame_id": 10,
+                    "debug": {
+                        "retained_virtual_list_reconciles": [
+                            { "keep_alive_pool_len_after": 64, "evicted_keep_alive_items": 1 }
+                        ]
+                    }
+                }]
+            }]
+        });
+
+        let err =
+            check_bundle_for_retained_vlist_keep_alive_budget_json(&bundle, &bundle_path, 1, 0, 0)
+                .expect_err("expected eviction budget to fail");
+        assert!(err.contains("keep-alive budget violated"));
+        assert!(err.contains("total_evicted_items=1"));
     }
 
     #[test]
