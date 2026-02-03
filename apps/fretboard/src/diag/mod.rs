@@ -2430,6 +2430,9 @@ See: `docs/tracy.md`.\n";
                         "1",
                     );
                     push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "1");
+                    // Enable keep-alive in the retained-host harness so boundary scroll back can
+                    // reuse detached row subtrees (reduces attach cost and stabilizes worst tick).
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_KEEP_ALIVE", "128");
                     (
                         vec![resolve_path(
                             &workspace_root,
@@ -2919,8 +2922,9 @@ See: `docs/tracy.md`.\n";
                             256u64
                         })
                         .filter(|_| check_retained_vlist_attach_detach_max.is_none());
-                    let suite_retained_vlist_keep_alive_reuse_min = (components_gallery_suite
+                    let suite_retained_vlist_keep_alive_reuse_min = ((components_gallery_suite
                         && script_requires_retained_vlist_keep_alive_reuse_gate)
+                        || vlist_window_boundary_retained_suite)
                         .then_some(1u64)
                         .filter(|_| check_retained_vlist_keep_alive_reuse_min.is_none());
                     let suite_gc_sweep_liveness =
