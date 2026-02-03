@@ -147,6 +147,18 @@ struct CodeEditorState {
     syntax_row_cache: HashMap<usize, (Arc<[SyntaxSpan]>, u64)>,
     #[cfg(feature = "syntax")]
     syntax_row_cache_queue: VecDeque<(usize, u64)>,
+    #[cfg(feature = "syntax")]
+    rich_row_cache_rev: fret_code_editor_buffer::Revision,
+    #[cfg(feature = "syntax")]
+    rich_row_cache_theme_rev: u64,
+    #[cfg(feature = "syntax")]
+    rich_row_cache_tick: u64,
+    #[cfg(feature = "syntax")]
+    rich_row_cache_language: Option<Arc<str>>,
+    #[cfg(feature = "syntax")]
+    rich_row_cache: HashMap<usize, (AttributedText, u64)>,
+    #[cfg(feature = "syntax")]
+    rich_row_cache_queue: VecDeque<(usize, u64)>,
 }
 
 #[derive(Clone)]
@@ -187,6 +199,18 @@ impl CodeEditorHandle {
                 syntax_row_cache: HashMap::new(),
                 #[cfg(feature = "syntax")]
                 syntax_row_cache_queue: VecDeque::new(),
+                #[cfg(feature = "syntax")]
+                rich_row_cache_rev: fret_code_editor_buffer::Revision(0),
+                #[cfg(feature = "syntax")]
+                rich_row_cache_theme_rev: 0,
+                #[cfg(feature = "syntax")]
+                rich_row_cache_tick: 0,
+                #[cfg(feature = "syntax")]
+                rich_row_cache_language: None,
+                #[cfg(feature = "syntax")]
+                rich_row_cache: HashMap::new(),
+                #[cfg(feature = "syntax")]
+                rich_row_cache_queue: VecDeque::new(),
             })),
         }
     }
@@ -200,6 +224,10 @@ impl CodeEditorHandle {
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+            st.rich_row_cache_language = None;
+            st.rich_row_cache_tick = 0;
+            st.rich_row_cache.clear();
+            st.rich_row_cache_queue.clear();
         }
         #[cfg(not(feature = "syntax"))]
         {
@@ -241,6 +269,13 @@ impl CodeEditorHandle {
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+
+            st.rich_row_cache_rev = st.buffer.revision();
+            st.rich_row_cache_theme_rev = 0;
+            st.rich_row_cache_language = st.language.clone();
+            st.rich_row_cache_tick = 0;
+            st.rich_row_cache.clear();
+            st.rich_row_cache_queue.clear();
         }
     }
 
@@ -1481,8 +1516,17 @@ fn paint_row(
         if !drew_rich {
             let spans = cached_row_syntax_spans(st, row, text_cache_max_entries);
             if !spans.is_empty() {
-                let theme = painter.theme().clone();
-                let rich = materialize_row_rich_text(&theme, Arc::clone(&line), spans.as_ref());
+                let rich = {
+                    let theme = painter.theme();
+                    cached_row_rich_text(
+                        st,
+                        theme,
+                        row,
+                        Arc::clone(&line),
+                        spans.as_ref(),
+                        text_cache_max_entries,
+                    )
+                };
                 let _ = painter.rich_text(
                     key,
                     DrawOrder(2),
@@ -1958,6 +2002,70 @@ fn materialize_row_rich_text(
     AttributedText::new(line, out)
 }
 
+#[cfg(feature = "syntax")]
+fn cached_row_rich_text(
+    st: &mut CodeEditorState,
+    theme: &fret_ui::Theme,
+    row: usize,
+    line: Arc<str>,
+    spans: &[SyntaxSpan],
+    max_entries: usize,
+) -> AttributedText {
+    if rich_row_cache_disabled() {
+        return materialize_row_rich_text(theme, line, spans);
+    }
+
+    let rev = st.buffer.revision();
+    let theme_rev = theme.revision();
+    let language = st.language.clone();
+    if st.rich_row_cache_rev != rev
+        || st.rich_row_cache_theme_rev != theme_rev
+        || st.rich_row_cache_language != language
+    {
+        st.rich_row_cache_rev = rev;
+        st.rich_row_cache_theme_rev = theme_rev;
+        st.rich_row_cache_language = language;
+        st.rich_row_cache_tick = 0;
+        st.rich_row_cache.clear();
+        st.rich_row_cache_queue.clear();
+    }
+
+    st.rich_row_cache_tick = st.rich_row_cache_tick.saturating_add(1);
+    let tick = st.rich_row_cache_tick;
+
+    if let Some((rich, last_used)) = st.rich_row_cache.get_mut(&row) {
+        *last_used = tick;
+        st.rich_row_cache_queue.push_back((row, tick));
+        return rich.clone();
+    }
+
+    let rich = materialize_row_rich_text(theme, line, spans);
+    st.rich_row_cache.insert(row, (rich.clone(), tick));
+    st.rich_row_cache_queue.push_back((row, tick));
+
+    while st.rich_row_cache.len() > max_entries {
+        let Some((victim, victim_tick)) = st.rich_row_cache_queue.pop_front() else {
+            break;
+        };
+        let remove = st
+            .rich_row_cache
+            .get(&victim)
+            .is_some_and(|(_, last_used)| *last_used == victim_tick);
+        if remove {
+            st.rich_row_cache.remove(&victim);
+        }
+    }
+
+    rich
+}
+
+#[cfg(feature = "syntax")]
+fn rich_row_cache_disabled() -> bool {
+    std::env::var_os("FRET_CODE_EDITOR_RICH_ROW_CACHE_DISABLE")
+        .filter(|v| !v.is_empty() && v != "0")
+        .is_some()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1976,6 +2084,23 @@ mod tests {
             st.drag_pointer = Some(fret_core::PointerId(1));
             st.row_text_cache.insert(0, ("hello".into(), 1));
             st.row_text_cache_queue.push_back((0, 1));
+            #[cfg(feature = "syntax")]
+            {
+                st.rich_row_cache.insert(
+                    0,
+                    (
+                        AttributedText::new(
+                            "hello",
+                            vec![TextSpan {
+                                len: "hello".len(),
+                                ..Default::default()
+                            }],
+                        ),
+                        1,
+                    ),
+                );
+                st.rich_row_cache_queue.push_back((0, 1));
+            }
         }
 
         let doc = DocId::new();
@@ -1991,6 +2116,11 @@ mod tests {
         assert_eq!(st.drag_pointer, None);
         assert_eq!(st.row_text_cache.len(), 0);
         assert_eq!(st.row_text_cache_queue.len(), 0);
+        #[cfg(feature = "syntax")]
+        {
+            assert_eq!(st.rich_row_cache.len(), 0);
+            assert_eq!(st.rich_row_cache_queue.len(), 0);
+        }
     }
 
     #[test]
