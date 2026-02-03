@@ -13,7 +13,6 @@ use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
     FrameId, PlatformCapabilities, TickId, WindowHoverDetectionQuality, WindowRole,
 };
-use fret_ui::element::LayoutStyle;
 
 const VIEWPORT_PX_SIZE: (u32, u32) = (960, 540);
 const AUX_LOGICAL_WINDOW_ID: &str = "aux";
@@ -184,16 +183,11 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 ui.add_ui(last_input_line);
                 ui.separator();
 
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout.size.height = Length::Fill;
-                layout.flex.grow = 1.0;
-
                 fret_docking::imui::dock_space_with(
                     ui,
                     fret_docking::imui::DockSpaceImUiOptions {
-                        layout,
                         test_id: Some("imui-editor-proof-dock"),
+                        ..Default::default()
                     },
                     move |app, window| ensure_dock_graph(app, window),
                 );

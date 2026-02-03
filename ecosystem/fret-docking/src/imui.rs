@@ -33,6 +33,7 @@ impl Default for DockSpaceImUiOptions {
         let mut layout = LayoutStyle::default();
         layout.size.width = fret_ui::element::Length::Fill;
         layout.size.height = fret_ui::element::Length::Fill;
+        layout.flex.grow = 1.0;
         Self {
             layout,
             test_id: None,

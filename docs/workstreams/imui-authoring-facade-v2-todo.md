@@ -1,4 +1,4 @@
-# Immediate-Mode Authoring Facade ("imui") v2 — TODO Tracker
+# Immediate-Mode Authoring Facade ("imui") v2 - TODO Tracker
 
 Status: In progress (fearless refactor tracker)
 Last updated: 2026-02-03
@@ -35,7 +35,7 @@ Tracking format:
 
 ---
 
-## M0 — Lock the v2 seams (decisions first)
+## M0 - Lock the v2 seams (decisions first)
 
 Exit criteria:
 
@@ -46,15 +46,18 @@ Exit criteria:
 - [x] IMUI2-scope-001 Decide where the writer trait lives:
   - candidates: `fret-imui`, `fret-ui-kit`, or a new tiny ecosystem crate.
   - recommendation: a new tiny ecosystem crate (e.g. `ecosystem/fret-authoring`) to avoid policy coupling and cycles.
-- [ ] IMUI2-scope-002 Define the canonical widget rule for official crates:
-  - one source-of-truth implementation,
-  - thin wrappers are allowed, duplicated logic is discouraged.
-- [ ] IMUI2-scope-003 Decide v2 public surface stability policy:
-  - which APIs are “v2 stable” vs “unstable/experimental”.
+- [x] IMUI2-scope-002 Define the canonical widget rule for official crates:
+  - One source-of-truth implementation per widget (prefer a frontend-agnostic core widget/element).
+  - Multiple authoring entry points are allowed as thin adapters (imui/ui-kit/shadcn) but must delegate.
+  - Avoid duplicated state machines and interaction rules across authoring paths.
+- [x] IMUI2-scope-003 Decide v2 public surface stability policy:
+  - Treat `fret-authoring::UiWriter` as the shared contract we try to keep stable once ecosystem crates depend on it.
+  - Treat bridge utilities (`fret-ui-kit::imui`) and imui ergonomics (`fret-imui`) as unstable during the refactor.
+  - The “do not break” invariants remain non-negotiable even while APIs churn.
 
 ---
 
-## M1 — Unify the immediate-mode composition contract
+## M1 - Unify the immediate-mode composition contract
 
 Exit criteria:
 
@@ -64,11 +67,12 @@ Exit criteria:
 - [x] IMUI2-api-010 Introduce the writer contract (bikesheddable name; minimal methods only).
 - [x] IMUI2-api-011 Update `ImUi` to implement the writer contract.
 - [x] IMUI2-eco-013 Update official ecosystem `imui` adapters to accept `UiWriter` (no concrete `ImUi` coupling).
-- [ ] IMUI2-test-012 Add compile-level smoke tests ensuring the writer trait remains object-safe and usable across crates.
+- [x] IMUI2-test-012 Add compile-level smoke tests ensuring the writer surface remains usable across crates.
+  - Evidence: `ecosystem/fret-authoring/src/lib.rs` (compile smoke), `ecosystem/fret-imui/src/lib.rs` (bridge smoke).
 
 ---
 
-## M2 — Bridge `ui()` / `UiBuilder<T>` into imui (convergence)
+## M2 - Bridge `ui()` / `UiBuilder<T>` into imui (convergence)
 
 Exit criteria:
 
@@ -81,20 +85,20 @@ Exit criteria:
 
 ---
 
-## M3 — Close the v1 “leftovers” inside v2
+## M3 - Close the v1 “leftovers” inside v2
 
 Exit criteria:
 
 - The most important v1 follow-ups are addressed (moved into v2 so v1 can remain frozen).
 
 - [ ] IMUI2-test-030 Add a wasm-targeted smoke harness entry (compile-only is acceptable initially).
-- [ ] IMUI2-docs-031 Add “when to drop to `cx_mut()`” guidance (canvas, viewport surfaces, docking host).
-- [ ] IMUI2-docs-032 Add a concise “Golden Path” section + gotchas/FAQ for immediate-style authoring in Fret.
+- [x] IMUI2-docs-031 Add “when to drop to `cx_mut()`” guidance (canvas, viewport surfaces, docking host).
+- [x] IMUI2-docs-032 Add a concise “Golden Path” section + gotchas/FAQ for immediate-style authoring in Fret.
 - [ ] IMUI2-eco-033 Add at least one more official ecosystem `imui` adapter (`fret-plot` or `fret-chart`).
 
 ---
 
-## M4 — Demos and proof points (keep editor-grade green)
+## M4 - Demos and proof points (keep editor-grade green)
 
 Exit criteria:
 
@@ -103,13 +107,14 @@ Exit criteria:
 
 - [x] IMUI2-demo-040 Migrate `imui_hello_demo` to v2 surface (smoke).
 - [x] IMUI2-demo-041 Migrate `imui_node_graph_demo` to v2 surface (retained subtree interop).
-- [~] IMUI2-demo-042 Migrate `imui_editor_proof_demo` to v2 surface (multi-window + docking + viewport).
+- [x] IMUI2-demo-042 Migrate `imui_editor_proof_demo` to v2 surface (multi-window + docking + viewport).
   - Started by rendering the root layout via `ui::v_flex_build` + `UiWriterUiKitExt::add_ui(...)`.
   - Migrated the docking-hosted controls panel root container to `ui::container_build` + `UiBuilder` chrome/layout patches.
+  - Removed the last manual `LayoutStyle` usage for docking host embedding by improving `DockSpaceImUiOptions::default()`.
 
 ---
 
-## M5 — Delete v1 surface (flag day)
+## M5 - Delete v1 surface (flag day)
 
 Exit criteria:
 

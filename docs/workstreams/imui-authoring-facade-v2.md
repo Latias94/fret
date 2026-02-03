@@ -1,4 +1,4 @@
-# Immediate-Mode Authoring Facade ("imui") v2 — Fearless Refactor Plan
+# Immediate-Mode Authoring Facade ("imui") v2 - Fearless Refactor Plan
 
 Status: Draft (workstream note; not an ADR)
 Last updated: 2026-02-03
@@ -17,6 +17,12 @@ Tracking:
 - Fluent builder ergonomics audit: `docs/workstreams/authoring-ergonomics-fluent-builder.md`
 - Architecture baseline: `docs/architecture.md`
 - Docking parity notes: `docs/workstreams/docking-multiwindow-imgui-parity.md`
+
+Decision snapshot (2026-02-03):
+
+- `UiWriter` lives in `ecosystem/fret-authoring` (tiny, policy-light, no cycles).
+- Canonical widget rule (official crates): one source-of-truth implementation; adapters (imui/ui-kit/shadcn) delegate.
+- Stability policy: keep `UiWriter` stable once depended on; expect churn in bridge utilities and imui ergonomics.
 
 ---
 
@@ -162,30 +168,39 @@ To keep the refactor safe and reviewable:
 
 ---
 
-## 7) Open Questions
+## 7) Golden Path and Gotchas
 
-1) Where should the “writer” trait live?
+### 7.1 Recommended authoring shape (v2)
 
-- `fret-imui` (closest to the immediate façade),
-- `fret-ui-kit` (ecosystem-owned authoring utilities),
-- a new tiny ecosystem crate (shared authoring contracts without pulling policy).
+- Use `fret_imui::imui(cx, |ui| ...)` (or `_build` variants) for immediate-mode control flow and `Response` signals.
+- Use `fret_ui_kit::ui::*` / `UiBuilder<T>` for chrome/layout patches, and emit builders via
+  `fret_ui_kit::imui::UiWriterUiKitExt::add_ui(...)`.
+- In official ecosystem crates, prefer accepting `&mut impl UiWriter<H>` instead of a concrete `ImUi`.
 
-Recommendation:
+### 7.2 When to drop to `cx_mut()` / `with_cx_mut(...)`
 
-- Prefer a new tiny ecosystem crate (e.g. `ecosystem/fret-authoring`) that depends only on `fret-ui` / `fret-core`.
-  This keeps the writer contract shareable without pulling `fret-ui-kit` into `fret-imui` and avoids dependency
-  cycles when adding optional bridges.
+Use the escape hatch when you need substrate-level mechanisms that are not (and should not be) expressed as ui-kit
+patch vocabulary:
 
-Decision (2026-02-03):
+- Docking host embedding (`fret_docking::imui::dock_space_with(...)`).
+- Viewport surfaces / embedded engine views (render targets, capture boundaries).
+- Canvas-like custom drawing elements (low-level paint/layout wiring).
+- Retained subtree interop (explicit, feature-gated).
 
-- Landed the initial `UiWriter` contract in `ecosystem/fret-authoring`.
+### 7.3 Common pitfalls
 
-2) How far should `Response` expand in v2?
+- Avoid borrow conflicts by constructing `UiBuilder<T>` first, then calling `add_ui(builder)` (don’t keep `&mut cx` alive).
+- Always use keyed identity (`ui.id(...)` / `ui.keyed(...)`) for dynamic collections that can reorder.
+
+---
+
+## 8) Open Questions
+
+1) How far should `Response` expand in v2?
 
 - keep v1 minimal (`clicked/changed/hovered/pressed/focused/rect`), or
 - add more editor-grade signals (drag started/ended, context menu requests, etc.).
 
-3) How strict should the “single authoritative implementation per widget” rule be for official crates?
+2) Where should token/preset helpers live long-term?
 
-- allowed: tiny wrappers (declarative ↔ imui) that delegate to a single implementation,
-- discouraged: separate widget logic duplicated across both authoring paths.
+- kit vs shadcn vs app (see `IMUI2-bridge-021`).

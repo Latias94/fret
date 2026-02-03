@@ -54,3 +54,24 @@ pub trait UiWriter<H: UiHost> {
         self.with_cx_mut(|cx| cx.keyed(key, f))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::UiWriter;
+    use fret_ui::UiHost;
+    use fret_ui::element::AnyElement;
+
+    // Compile-level smoke: this crate exists primarily to define shared signatures across
+    // ecosystem crates. The body is never executed; it only ensures the surface stays usable.
+    #[allow(dead_code)]
+    fn writer_surface_smoke<H: UiHost>(ui: &mut impl UiWriter<H>) {
+        ui.with_cx_mut(|_cx| ());
+        ui.extend(Vec::<AnyElement>::new());
+        ui.mount(|_cx| Vec::<AnyElement>::new());
+        ui.keyed("key", |_cx| ());
+        ui.keyed(123_u64, |_cx| ());
+    }
+
+    #[test]
+    fn ui_writer_compiles() {}
+}
