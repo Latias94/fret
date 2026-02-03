@@ -1440,7 +1440,9 @@ fn render_and_paint_in_bounds(
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
+    // Use style-aware text metrics so painted/layout-derived geometry is comparable to web goldens.
+    // `FakeServices` intentionally returns constant 10x10 text metrics and will distort layout.
+    let mut services = StyleAwareServices::default();
 
     let root = fret_ui::declarative::render_root(
         &mut ui,
