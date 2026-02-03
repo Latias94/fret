@@ -6033,6 +6033,10 @@ pub struct UiFrameStatsV1 {
     pub frame_arena_capacity_estimate_bytes: u64,
     #[serde(default)]
     pub frame_arena_grow_events: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_reuses: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_misses: u32,
     pub layout_time_us: u64,
     #[serde(default)]
     pub layout_roots_time_us: u64,
@@ -6188,6 +6192,8 @@ impl UiFrameStatsV1 {
         Self {
             frame_arena_capacity_estimate_bytes: stats.frame_arena_capacity_estimate_bytes,
             frame_arena_grow_events: stats.frame_arena_grow_events,
+            element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
+            element_children_vec_pool_misses: stats.element_children_vec_pool_misses,
             layout_time_us: stats.layout_time.as_micros() as u64,
             layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
             layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()

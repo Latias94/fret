@@ -86,6 +86,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) timestamp_unix_ms: Option<u64>,
     pub(super) frame_arena_capacity_estimate_bytes: u64,
     pub(super) frame_arena_grow_events: u32,
+    pub(super) element_children_vec_pool_reuses: u32,
+    pub(super) element_children_vec_pool_misses: u32,
     pub(super) layout_time_us: u64,
     pub(super) prepaint_time_us: u64,
     pub(super) paint_time_us: u64,
@@ -3823,6 +3825,16 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let element_children_vec_pool_reuses = stats
+                .and_then(|m| m.get("element_children_vec_pool_reuses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let element_children_vec_pool_misses = stats
+                .and_then(|m| m.get("element_children_vec_pool_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
 
             let layout_time_us = stats
                 .and_then(|m| m.get("layout_time_us"))
@@ -4197,6 +4209,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 timestamp_unix_ms: s.get("timestamp_unix_ms").and_then(|v| v.as_u64()),
                 frame_arena_capacity_estimate_bytes,
                 frame_arena_grow_events,
+                element_children_vec_pool_reuses,
+                element_children_vec_pool_misses,
                 layout_time_us,
                 prepaint_time_us,
                 paint_time_us,
