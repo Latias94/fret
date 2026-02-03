@@ -1027,6 +1027,30 @@ struct CalendarChromeConfig {
     selected: time::Date,
 }
 
+#[derive(Debug, Clone)]
+enum CalendarSelectionMode {
+    Single(time::Date),
+    Range { min: time::Date, max: time::Date },
+    Multiple(Vec<time::Date>),
+}
+
+#[derive(Debug, Clone)]
+struct CalendarHoverChromeConfig {
+    locale: fret_ui_shadcn::calendar::CalendarLocale,
+    month: time::Month,
+    year: i32,
+    origin_x: f32,
+    origin_y: f32,
+    cell_size: Px,
+    week_start: time::Weekday,
+    today: Option<time::Date>,
+    show_week_number: bool,
+    show_outside_days: bool,
+    disable_outside_days: bool,
+    selection: CalendarSelectionMode,
+    calendar_03_multiple_contract: bool,
+}
+
 fn render_calendar_chrome_from_config(
     cx: &mut fret_ui::ElementContext<'_, App>,
     config: CalendarChromeConfig,
@@ -1061,6 +1085,112 @@ fn render_calendar_chrome_from_config(
     }
 
     let calendar = calendar.into_element(cx);
+    let calendar = cx.container(
+        fret_ui::element::ContainerProps {
+            layout: {
+                let mut layout = fret_ui::element::LayoutStyle::default();
+                layout.size.width = fret_ui::element::Length::Fill;
+                layout.size.height = fret_ui::element::Length::Fill;
+                layout
+            },
+            padding: fret_core::Edges {
+                left: Px(config.origin_x),
+                top: Px(config.origin_y),
+                right: Px(0.0),
+                bottom: Px(0.0),
+            },
+            ..Default::default()
+        },
+        move |_cx| vec![calendar],
+    );
+
+    vec![calendar]
+}
+
+fn render_calendar_hover_chrome_from_config(
+    cx: &mut fret_ui::ElementContext<'_, App>,
+    config: CalendarHoverChromeConfig,
+) -> Vec<fret_ui::element::AnyElement> {
+    use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
+
+    let theme = Theme::global(&*cx.app).clone();
+    let border = theme.color_required("border");
+
+    let chrome = fret_ui_kit::ChromeRefinement::default()
+        .rounded(fret_ui_kit::Radius::Lg)
+        .border_1()
+        .border_color(fret_ui_kit::ColorRef::Color(border))
+        .shadow_sm();
+
+    let calendar = match config.selection {
+        CalendarSelectionMode::Single(date) => {
+            let month_model: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(config.year, config.month));
+            let selected: Model<Option<time::Date>> = cx.app.models_mut().insert(Some(date));
+
+            let mut calendar = fret_ui_shadcn::Calendar::new(month_model, selected)
+                .locale(config.locale)
+                .week_start(config.week_start)
+                .show_outside_days(config.show_outside_days)
+                .disable_outside_days(config.disable_outside_days)
+                .show_week_number(config.show_week_number)
+                .refine_style(chrome)
+                .cell_size(config.cell_size);
+            if let Some(today) = config.today {
+                calendar = calendar.today(today);
+            }
+            calendar.into_element(cx)
+        }
+        CalendarSelectionMode::Range { min, max } => {
+            let month_model: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(config.year, config.month));
+            let selected: Model<DateRangeSelection> =
+                cx.app.models_mut().insert(DateRangeSelection {
+                    from: Some(min),
+                    to: Some(max),
+                });
+
+            let mut calendar = fret_ui_shadcn::CalendarRange::new(month_model, selected)
+                .locale(config.locale)
+                .week_start(config.week_start)
+                .show_outside_days(config.show_outside_days)
+                .disable_outside_days(config.disable_outside_days)
+                .show_week_number(config.show_week_number)
+                .refine_style(chrome)
+                .cell_size(config.cell_size);
+            if let Some(today) = config.today {
+                calendar = calendar.today(today);
+            }
+            calendar.into_element(cx)
+        }
+        CalendarSelectionMode::Multiple(dates) => {
+            let month_model: Model<CalendarMonth> = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::new(config.year, config.month));
+            let selected: Model<Vec<time::Date>> = cx.app.models_mut().insert(dates);
+
+            let mut calendar = fret_ui_shadcn::CalendarMultiple::new(month_model, selected)
+                .locale(config.locale)
+                .week_start(config.week_start)
+                .show_outside_days(config.show_outside_days)
+                .disable_outside_days(config.disable_outside_days)
+                .show_week_number(config.show_week_number)
+                .refine_style(chrome)
+                .cell_size(config.cell_size);
+            if config.calendar_03_multiple_contract {
+                calendar = calendar.required(true).max(5);
+            }
+            if let Some(today) = config.today {
+                calendar = calendar.today(today);
+            }
+            calendar.into_element(cx)
+        }
+    };
     let calendar = cx.container(
         fret_ui::element::ContainerProps {
             layout: {
@@ -2993,23 +3123,18 @@ fn assert_calendar_hover_day_background_matches_web(
     });
     assert!(!web_day_buttons.is_empty(), "expected calendar day buttons");
 
-    let web_selected_cell = find_first(&theme.root, &|n| {
-        n.attrs.get("aria-selected").is_some_and(|v| v == "true")
-    })
-    .expect("web selected calendar cell (aria-selected=true)");
-    let web_selected_button = find_first(web_selected_cell, &|n| {
-        n.tag == "button"
-            && n.attrs
-                .get("aria-label")
-                .is_some_and(|label| parse_calendar_day_aria_label(label.as_str()).is_some())
-    })
-    .expect("web selected day button");
-    let web_selected_label = web_selected_button
-        .attrs
-        .get("aria-label")
-        .expect("web selected day aria-label");
-    let (selected_date, _selected_suffix) = parse_calendar_day_aria_label(web_selected_label)
-        .unwrap_or_else(|| panic!("invalid web selected day aria-label: {web_selected_label}"));
+    let mut selected_dates: Vec<time::Date> = web_day_buttons
+        .iter()
+        .filter_map(|n| n.attrs.get("aria-label"))
+        .filter_map(|label| parse_calendar_day_aria_label(label).filter(|(_, sel)| *sel))
+        .map(|(d, _)| d)
+        .collect();
+    selected_dates.sort();
+    selected_dates.dedup();
+    assert!(
+        !selected_dates.is_empty(),
+        "expected at least one selected day for hover gating"
+    );
 
     let web_hovered_button = web_day_buttons
         .iter()
@@ -3019,9 +3144,9 @@ fn assert_calendar_hover_day_background_matches_web(
                 .is_some_and(|v| v != "rgba(0, 0, 0, 0)")
         })
         .find(|n| {
-            n.attrs
-                .get("aria-label")
-                .is_some_and(|label| label != web_selected_label)
+            n.attrs.get("aria-label").is_some_and(|label| {
+                parse_calendar_day_aria_label(label.as_str()).is_some_and(|(_, sel)| !sel)
+            })
         })
         .copied()
         .expect("web hovered day button (non-transparent backgroundColor)");
@@ -3076,12 +3201,38 @@ fn assert_calendar_hover_day_background_matches_web(
     });
 
     let cell_size =
-        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_selected_button.rect.w));
+        parse_calendar_cell_size_px(theme).unwrap_or_else(|| Px(web_day_buttons[0].rect.w));
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
-    let config = CalendarChromeConfig {
+
+    let web_is_range_mode = find_first_in_theme(theme, &|n| {
+        class_has_token(n, "rdp-range_start")
+            || class_has_token(n, "rdp-range_middle")
+            || class_has_token(n, "rdp-range_end")
+    })
+    .is_some();
+
+    let selection = if web_is_range_mode {
+        assert!(
+            selected_dates.len() >= 2,
+            "expected at least 2 selected dates for range mode hover gating"
+        );
+        let (min, max) = selected_dates
+            .iter()
+            .copied()
+            .fold((selected_dates[0], selected_dates[0]), |(min, max), d| {
+                (min.min(d), max.max(d))
+            });
+        CalendarSelectionMode::Range { min, max }
+    } else if selected_dates.len() > 1 {
+        CalendarSelectionMode::Multiple(selected_dates.clone())
+    } else {
+        CalendarSelectionMode::Single(selected_dates[0])
+    };
+
+    let config = CalendarHoverChromeConfig {
         locale,
         month,
         year,
@@ -3093,7 +3244,8 @@ fn assert_calendar_hover_day_background_matches_web(
         show_week_number,
         show_outside_days,
         disable_outside_days,
-        selected: selected_date,
+        selection,
+        calendar_03_multiple_contract: web_name.starts_with("calendar-03"),
     };
 
     let window = AppWindowId::default();
@@ -3108,6 +3260,8 @@ fn assert_calendar_hover_day_background_matches_web(
     ui.set_window(window);
     let mut services = StyleAwareServices::default();
 
+    let config2 = config.clone();
+    let config1 = config;
     let root_node = fret_ui::declarative::render_root(
         &mut ui,
         &mut app,
@@ -3115,7 +3269,7 @@ fn assert_calendar_hover_day_background_matches_web(
         window,
         bounds,
         "web-vs-fret-calendar-hover",
-        move |cx| render_calendar_chrome_from_config(cx, config),
+        move |cx| render_calendar_hover_chrome_from_config(cx, config1),
     );
     ui.set_root(root_node);
     ui.request_semantics_snapshot();
@@ -3145,7 +3299,6 @@ fn assert_calendar_hover_day_background_matches_web(
     );
 
     app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
-    let config2 = config;
     let root_node = fret_ui::declarative::render_root(
         &mut ui,
         &mut app,
@@ -3153,7 +3306,7 @@ fn assert_calendar_hover_day_background_matches_web(
         window,
         bounds,
         "web-vs-fret-calendar-hover",
-        move |cx| render_calendar_chrome_from_config(cx, config2),
+        move |cx| render_calendar_hover_chrome_from_config(cx, config2),
     );
     ui.set_root(root_node);
     ui.request_semantics_snapshot();
@@ -3188,6 +3341,42 @@ fn web_vs_fret_calendar_14_vp375x320_hover_day_background_matches_web() {
         "calendar-14.hover-day-13-vp375x320",
         "calendar-14.vp375x320 hover day quad",
         "calendar-14.vp375x320 hover day background",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_03_hover_day_background_matches_web() {
+    assert_calendar_hover_day_background_matches_web(
+        "calendar-03.hover-day-june-11",
+        "calendar-03 hover day quad",
+        "calendar-03 hover day background",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_03_vp375x320_hover_day_background_matches_web() {
+    assert_calendar_hover_day_background_matches_web(
+        "calendar-03.hover-day-june-11-vp375x320",
+        "calendar-03.vp375x320 hover day quad",
+        "calendar-03.vp375x320 hover day background",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_04_hover_day_background_matches_web() {
+    assert_calendar_hover_day_background_matches_web(
+        "calendar-04.hover-day-june-5",
+        "calendar-04 hover day quad",
+        "calendar-04 hover day background",
+    );
+}
+
+#[test]
+fn web_vs_fret_calendar_04_vp375x320_hover_day_background_matches_web() {
+    assert_calendar_hover_day_background_matches_web(
+        "calendar-04.hover-day-june-5-vp375x320",
+        "calendar-04.vp375x320 hover day quad",
+        "calendar-04.vp375x320 hover day background",
     );
 }
 
