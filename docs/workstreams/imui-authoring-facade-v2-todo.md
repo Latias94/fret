@@ -104,7 +104,7 @@ Exit criteria:
 - [ ] IMUI2-demo-040 Migrate `imui_hello_demo` to v2 surface (smoke).
 - [ ] IMUI2-demo-041 Migrate `imui_node_graph_demo` to v2 surface (retained subtree interop).
 - [~] IMUI2-demo-042 Migrate `imui_editor_proof_demo` to v2 surface (multi-window + docking + viewport).
-  - Started by rendering some header controls via `fret_ui_kit::imui::UiWriterUiKitExt::add_ui(...)`.
+  - Started by rendering the root layout via `ui::v_flex_build` + `UiWriterUiKitExt::add_ui(...)`.
 
 ---
 
