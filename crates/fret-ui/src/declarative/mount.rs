@@ -233,7 +233,8 @@ where
             ui.set_root(root_node);
         }
 
-        let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
+        let mut pending_invalidations = ui.take_scratch_pending_invalidations();
+        pending_invalidations.clear();
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
@@ -296,7 +297,8 @@ where
             let _ = ui.repair_parent_pointers_from_layer_roots();
         }
 
-        apply_pending_invalidations(ui, pending_invalidations);
+        apply_pending_invalidations(ui, &mut pending_invalidations);
+        ui.restore_scratch_pending_invalidations(pending_invalidations);
 
         if ui.view_cache_enabled() {
             ui.propagate_auto_sized_view_cache_root_invalidations();
@@ -671,7 +673,8 @@ where
             },
         );
 
-        let mut pending_invalidations: HashMap<NodeId, u8> = HashMap::new();
+        let mut pending_invalidations = ui.take_scratch_pending_invalidations();
+        pending_invalidations.clear();
         app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
             let window_frame = frame.windows.entry(window).or_default();
             prepare_window_frame_for_frame(window_frame, frame_id);
@@ -713,7 +716,8 @@ where
             let _ = ui.repair_parent_pointers_from_layer_roots();
         }
 
-        apply_pending_invalidations(ui, pending_invalidations);
+        apply_pending_invalidations(ui, &mut pending_invalidations);
+        ui.restore_scratch_pending_invalidations(pending_invalidations);
 
         crate::declarative::frame::register_scroll_handle_bindings_batch(
             app,
@@ -1649,8 +1653,8 @@ fn virtual_list_can_be_layout_barrier(props: &crate::element::VirtualListProps) 
     }
 }
 
-fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: HashMap<NodeId, u8>) {
-    for (node, mask) in pending {
+fn apply_pending_invalidations<H: UiHost>(ui: &mut UiTree<H>, pending: &mut HashMap<NodeId, u8>) {
+    for (node, mask) in pending.drain() {
         if (mask & INVALIDATION_HIT_TEST) != 0 {
             ui.invalidate(node, Invalidation::HitTest);
         }

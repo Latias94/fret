@@ -285,7 +285,8 @@ impl<H: UiHost> UiTree<H> {
                         // can render correctly while their descendant bounds remain stale, causing
                         // incorrect pointer routing and stale semantics geometry.
                         let window = self.window;
-                        let mut stack: Vec<NodeId> = Vec::new();
+                        let mut stack = self.take_scratch_node_stack();
+                        stack.clear();
                         let mut i = 0usize;
                         loop {
                             let child = self
@@ -319,6 +320,7 @@ impl<H: UiHost> UiTree<H> {
                                 stack.push(child);
                             }
                         }
+                        self.restore_scratch_node_stack(stack);
                     }
 
                     self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);

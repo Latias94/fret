@@ -56,6 +56,7 @@ pub(super) struct InteractionCacheState {
     generation: u64,
     pub(super) prev_records: Vec<InteractionRecord>,
     pub(super) records: Vec<InteractionRecord>,
+    replay_scratch: Vec<InteractionRecord>,
     pub(super) source_generation: u64,
     pub(super) target_generation: u64,
     pub(super) hits: u32,
@@ -82,6 +83,7 @@ impl InteractionCacheState {
     pub(super) fn invalidate_recording(&mut self) {
         self.prev_records.clear();
         self.records.clear();
+        self.replay_scratch.clear();
         self.generation = self.generation.saturating_add(1);
     }
 }
@@ -434,12 +436,15 @@ impl<H: UiHost> UiTree<H> {
             let range = prev.start as usize..prev.end as usize;
             if range.start <= range.end && range.end <= self.interaction_cache.prev_records.len() {
                 let start = self.interaction_cache.records.len();
-                let replay: Vec<InteractionRecord> =
-                    self.interaction_cache.prev_records[range].to_vec();
-                for record in &replay {
-                    self.interaction_cache.records.push(*record);
-                    self.apply_interaction_record(record);
-                    self.prepaint_virtual_list_window_from_interaction_record(app, record);
+                self.interaction_cache.replay_scratch.clear();
+                self.interaction_cache
+                    .replay_scratch
+                    .extend_from_slice(&self.interaction_cache.prev_records[range]);
+                for i in 0..self.interaction_cache.replay_scratch.len() {
+                    let record = self.interaction_cache.replay_scratch[i];
+                    self.interaction_cache.records.push(record);
+                    self.apply_interaction_record(&record);
+                    self.prepaint_virtual_list_window_from_interaction_record(app, &record);
                 }
                 let end = self.interaction_cache.records.len();
 

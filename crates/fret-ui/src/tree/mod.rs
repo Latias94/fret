@@ -1181,6 +1181,8 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
     measure_cache_this_frame: HashMap<MeasureStackKey, Size>,
+    scratch_pending_invalidations: HashMap<NodeId, u8>,
+    scratch_node_stack: Vec<NodeId>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
     viewport_roots: Vec<(NodeId, Rect)>,
@@ -1554,6 +1556,8 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
             measure_cache_this_frame: HashMap::new(),
+            scratch_pending_invalidations: HashMap::new(),
+            scratch_node_stack: Vec::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
             viewport_roots: Vec::new(),
@@ -2512,6 +2516,22 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn node_exists(&self, node: NodeId) -> bool {
         self.nodes.contains_key(node)
+    }
+
+    pub(crate) fn take_scratch_pending_invalidations(&mut self) -> HashMap<NodeId, u8> {
+        std::mem::take(&mut self.scratch_pending_invalidations)
+    }
+
+    pub(crate) fn restore_scratch_pending_invalidations(&mut self, scratch: HashMap<NodeId, u8>) {
+        self.scratch_pending_invalidations = scratch;
+    }
+
+    pub(crate) fn take_scratch_node_stack(&mut self) -> Vec<NodeId> {
+        std::mem::take(&mut self.scratch_node_stack)
+    }
+
+    pub(crate) fn restore_scratch_node_stack(&mut self, scratch: Vec<NodeId>) {
+        self.scratch_node_stack = scratch;
     }
 
     pub(crate) fn flush_deferred_cleanup(&mut self, services: &mut dyn UiServices) {
