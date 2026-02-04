@@ -31,6 +31,7 @@ use fret_ui::element::{
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::virtual_list::VirtualListMetrics;
 use fret_ui::{ElementContext, UiHost};
+use tracing::info;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WindowedRowsPaintFrame {
@@ -353,6 +354,15 @@ fn row_index_for_pointer(
     let local_y = Px(position.y.0 - bounds.origin.y.0);
     if local_y.0 < 0.0 {
         return None;
+    }
+
+    if std::env::var_os("FRET_WINDOWED_ROWS_POINTER_DEBUG")
+        .is_some_and(|v| !v.is_empty() && v != "0")
+    {
+        info!(
+            "windowed_rows_pointer bounds_y={} pos_y={} local_y={} offset_y={} viewport_h={}",
+            bounds.origin.y.0, position.y.0, local_y.0, offset_y.0, viewport_h.0
+        );
     }
 
     // Pointer event positions are mapped through the UI tree's transforms. Scroll containers apply
