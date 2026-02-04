@@ -44,6 +44,7 @@ Now / Next / Later (high level):
 - **Now**: lock refactor invariants (derived internals + invalidation discipline) via conformance tests (workstream M0).
   - Detailed contract checklist: `docs/workstreams/fret-node-internals-m0.md`
 - **Next**: stabilize built-in add-ons API (minimap/controls/background theming) without policy bleed (workstream M2).
+  - Workstream: `docs/workstreams/fret-node-addons-api-m2.md`
 - **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M5 + future milestones).
 
 ### Headless substrate (present)
