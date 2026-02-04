@@ -1,12 +1,15 @@
 {
   "name": "fret-skills",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
   "last_updated": "2026-02-04",
   "skills": {
     "foundation": [
       "fret-component-authoring",
       "fret-action-hooks"
+    ],
+    "app_architecture": [
+      "fret-app-architecture-and-effects"
     ],
     "design_system": [
       "fret-design-system-styles"
@@ -192,6 +195,42 @@
       "data-table",
       "data-grid",
       "data grid"
+    ],
+    "app_architecture": [
+      "fret-kit",
+      "fret-bootstrap",
+      "fret-launch",
+      "fret-executor",
+      "Dispatcher",
+      "DispatcherHandle",
+      "dispatch_on_main_thread",
+      "dispatch_background",
+      "dispatch_after",
+      "wake",
+      "Inbox",
+      "InboxSender",
+      "InboxDrainer",
+      "InboxDrainRegistry",
+      "Effect::SetTimer",
+      "Effect::RequestAnimationFrame",
+      "Effect::Redraw",
+      "Event::Timer",
+      "TimerToken",
+      "background task",
+      "concurrency",
+      "main thread",
+      "persistence",
+      "serialize",
+      "save",
+      "load",
+      "debounce",
+      "持久化",
+      "保存",
+      "加载",
+      "异步",
+      "后台任务",
+      "防抖",
+      "定时器"
     ]
   },
   "notes": {
