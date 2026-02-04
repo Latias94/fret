@@ -18,6 +18,10 @@ pub(super) enum BundleStatsSort {
     RendererDrawCalls,
     RendererPipelineSwitches,
     RendererBindGroupSwitches,
+    RendererTextAtlasUploadBytes,
+    RendererTextAtlasEvictedPages,
+    RendererIntermediatePeakInUseBytes,
+    RendererIntermediatePoolEvictions,
 }
 
 impl BundleStatsSort {
@@ -36,8 +40,22 @@ impl BundleStatsSort {
             "bind_group_switches" | "binds" | "renderer_bind_group_switches" => {
                 Ok(Self::RendererBindGroupSwitches)
             }
+            "atlas_upload_bytes"
+            | "text_atlas_upload_bytes"
+            | "renderer_text_atlas_upload_bytes" => Ok(Self::RendererTextAtlasUploadBytes),
+            "atlas_evicted_pages"
+            | "text_atlas_evicted_pages"
+            | "renderer_text_atlas_evicted_pages" => Ok(Self::RendererTextAtlasEvictedPages),
+            "intermediate_peak_bytes"
+            | "intermediate_peak"
+            | "renderer_intermediate_peak_in_use_bytes" => {
+                Ok(Self::RendererIntermediatePeakInUseBytes)
+            }
+            "pool_evictions"
+            | "intermediate_pool_evictions"
+            | "renderer_intermediate_pool_evictions" => Ok(Self::RendererIntermediatePoolEvictions),
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches)"
+                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|intermediate_peak_bytes|pool_evictions)"
             )),
         }
     }
@@ -53,6 +71,10 @@ impl BundleStatsSort {
             Self::RendererDrawCalls => "draw_calls",
             Self::RendererPipelineSwitches => "pipeline_switches",
             Self::RendererBindGroupSwitches => "bind_group_switches",
+            Self::RendererTextAtlasUploadBytes => "atlas_upload_bytes",
+            Self::RendererTextAtlasEvictedPages => "atlas_evicted_pages",
+            Self::RendererIntermediatePeakInUseBytes => "intermediate_peak_bytes",
+            Self::RendererIntermediatePoolEvictions => "pool_evictions",
         }
     }
 }
@@ -128,6 +150,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_encode_scene_us: u64,
     pub(super) renderer_prepare_text_us: u64,
     pub(super) renderer_prepare_svg_us: u64,
+    pub(super) renderer_text_atlas_upload_bytes: u64,
+    pub(super) renderer_text_atlas_evicted_pages: u64,
+    pub(super) renderer_intermediate_peak_in_use_bytes: u64,
+    pub(super) renderer_intermediate_pool_evictions: u64,
     pub(super) renderer_draw_calls: u64,
     pub(super) renderer_pipeline_switches: u64,
     pub(super) renderer_bind_group_switches: u64,
@@ -3959,6 +3985,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_prepare_svg_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_text_atlas_upload_bytes = stats
+                .and_then(|m| m.get("renderer_text_atlas_upload_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_text_atlas_evicted_pages = stats
+                .and_then(|m| m.get("renderer_text_atlas_evicted_pages"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_peak_in_use_bytes = stats
+                .and_then(|m| m.get("renderer_intermediate_peak_in_use_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_pool_evictions = stats
+                .and_then(|m| m.get("renderer_intermediate_pool_evictions"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_draw_calls = stats
                 .and_then(|m| m.get("renderer_draw_calls"))
                 .and_then(|v| v.as_u64())
@@ -4301,6 +4343,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_encode_scene_us,
                 renderer_prepare_text_us,
                 renderer_prepare_svg_us,
+                renderer_text_atlas_upload_bytes,
+                renderer_text_atlas_evicted_pages,
+                renderer_intermediate_peak_in_use_bytes,
+                renderer_intermediate_pool_evictions,
                 renderer_draw_calls,
                 renderer_pipeline_switches,
                 renderer_bind_group_switches,
@@ -4466,6 +4512,52 @@ pub(super) fn bundle_stats_from_json_with_options(
                             .cmp(&a.renderer_pipeline_switches)
                     })
                     .then_with(|| b.renderer_draw_calls.cmp(&a.renderer_draw_calls))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererTextAtlasUploadBytes => {
+            rows.sort_by(|a, b| {
+                b.renderer_text_atlas_upload_bytes
+                    .cmp(&a.renderer_text_atlas_upload_bytes)
+                    .then_with(|| {
+                        b.renderer_text_atlas_evicted_pages
+                            .cmp(&a.renderer_text_atlas_evicted_pages)
+                    })
+                    .then_with(|| b.renderer_prepare_text_us.cmp(&a.renderer_prepare_text_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererTextAtlasEvictedPages => {
+            rows.sort_by(|a, b| {
+                b.renderer_text_atlas_evicted_pages
+                    .cmp(&a.renderer_text_atlas_evicted_pages)
+                    .then_with(|| {
+                        b.renderer_text_atlas_upload_bytes
+                            .cmp(&a.renderer_text_atlas_upload_bytes)
+                    })
+                    .then_with(|| b.renderer_prepare_text_us.cmp(&a.renderer_prepare_text_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediatePeakInUseBytes => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_peak_in_use_bytes
+                    .cmp(&a.renderer_intermediate_peak_in_use_bytes)
+                    .then_with(|| {
+                        b.renderer_intermediate_pool_evictions
+                            .cmp(&a.renderer_intermediate_pool_evictions)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediatePoolEvictions => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_pool_evictions
+                    .cmp(&a.renderer_intermediate_pool_evictions)
+                    .then_with(|| {
+                        b.renderer_intermediate_peak_in_use_bytes
+                            .cmp(&a.renderer_intermediate_peak_in_use_bytes)
+                    })
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
         }

@@ -2829,6 +2829,17 @@ See: `docs/tracy.md`.\n";
                         let top_renderer_scene_encoding_cache_misses = top
                             .map(|r| r.renderer_scene_encoding_cache_misses)
                             .unwrap_or(0);
+                        let top_renderer_text_atlas_upload_bytes =
+                            top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
+                        let top_renderer_text_atlas_evicted_pages = top
+                            .map(|r| r.renderer_text_atlas_evicted_pages)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_peak_in_use_bytes = top
+                            .map(|r| r.renderer_intermediate_peak_in_use_bytes)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_pool_evictions = top
+                            .map(|r| r.renderer_intermediate_pool_evictions)
+                            .unwrap_or(0);
 
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
@@ -2877,6 +2888,10 @@ See: `docs/tracy.md`.\n";
                                 "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
                                 "top_renderer_scissor_sets": top_renderer_scissor_sets,
                                 "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
+                                "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
+                                "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
+                                "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
+                                "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
                                 "bundle": bundle_path.display().to_string(),
                             }));
                         } else {
@@ -3209,6 +3224,17 @@ See: `docs/tracy.md`.\n";
                     let top_renderer_scene_encoding_cache_misses = top
                         .map(|r| r.renderer_scene_encoding_cache_misses)
                         .unwrap_or(0);
+                    let top_renderer_text_atlas_upload_bytes =
+                        top.map(|r| r.renderer_text_atlas_upload_bytes).unwrap_or(0);
+                    let top_renderer_text_atlas_evicted_pages = top
+                        .map(|r| r.renderer_text_atlas_evicted_pages)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_peak_in_use_bytes = top
+                        .map(|r| r.renderer_intermediate_peak_in_use_bytes)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_evictions = top
+                        .map(|r| r.renderer_intermediate_pool_evictions)
+                        .unwrap_or(0);
 
                     runs_total.push(top_total);
                     runs_layout.push(top_layout);
@@ -3262,6 +3288,10 @@ See: `docs/tracy.md`.\n";
                         "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
                         "top_renderer_scissor_sets": top_renderer_scissor_sets,
                         "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
+                        "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
+                        "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
+                        "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
+                        "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
                         "bundle": bundle_path.display().to_string(),
                     }));
 
@@ -3319,6 +3349,14 @@ See: `docs/tracy.md`.\n";
                         let mut top_renderer_bind_group_switches: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_renderer_scene_encoding_cache_misses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_text_atlas_upload_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_text_atlas_evicted_pages: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_peak_in_use_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_evictions: Vec<u64> =
                             Vec::with_capacity(repeat);
                         for run in &runs_json {
                             top_frame_arena_capacity_estimate_bytes.push(
@@ -3431,11 +3469,31 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_text_atlas_upload_bytes.push(
+                                run.get("top_renderer_text_atlas_upload_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_text_atlas_evicted_pages.push(
+                                run.get("top_renderer_text_atlas_evicted_pages")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_peak_in_use_bytes.push(
+                                run.get("top_renderer_intermediate_peak_in_use_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_evictions.push(
+                                run.get("top_renderer_intermediate_pool_evictions")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                         }
                         perf_json_rows.push(serde_json::json!({
-	                            "script": src.display().to_string(),
-	                            "sort": sort.as_str(),
-	                            "repeat": repeat,
+	                        "script": src.display().to_string(),
+	                        "sort": sort.as_str(),
+	                        "repeat": repeat,
 	                            "runs": runs_json,
 	                            "stats": {
 	                                "total_time_us": summarize_times_us(&runs_total),
@@ -3467,6 +3525,10 @@ See: `docs/tracy.md`.\n";
 	                                "top_renderer_pipeline_switches": summarize_times_us(&top_renderer_pipeline_switches),
 	                                "top_renderer_bind_group_switches": summarize_times_us(&top_renderer_bind_group_switches),
 	                                "top_renderer_scene_encoding_cache_misses": summarize_times_us(&top_renderer_scene_encoding_cache_misses),
+	                                "top_renderer_text_atlas_upload_bytes": summarize_times_us(&top_renderer_text_atlas_upload_bytes),
+	                                "top_renderer_text_atlas_evicted_pages": summarize_times_us(&top_renderer_text_atlas_evicted_pages),
+	                                "top_renderer_intermediate_peak_in_use_bytes": summarize_times_us(&top_renderer_intermediate_peak_in_use_bytes),
+	                                "top_renderer_intermediate_pool_evictions": summarize_times_us(&top_renderer_intermediate_pool_evictions),
 	                            },
 	                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
 	                                "top_total_time_us": us,
