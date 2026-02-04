@@ -123,6 +123,8 @@ type SnapshotId =
   | "column_pinning_enable_column_pinning_false_disables_can_pin"
   | "column_pinning_enable_pinning_false_disables_can_pin"
   | "column_pinning_action_pin_left_right_unpin"
+  | "column_pinning_action_pins_when_enable_column_pinning_false"
+  | "column_pinning_action_pins_when_enable_pinning_false"
 
 type DemoProcessRow = {
   id: number
@@ -2709,6 +2711,18 @@ function snapshotColumnPinning(
           { type: "pinColumn", column_id: "c", position: "right" },
           { type: "pinColumn", column_id: "a", position: null },
         ],
+      ),
+      mkActions(
+        "column_pinning_action_pins_when_enable_column_pinning_false",
+        { enableColumnPinning: false },
+        {},
+        [{ type: "pinColumn", column_id: "a", position: "left" }],
+      ),
+      mkActions(
+        "column_pinning_action_pins_when_enable_pinning_false",
+        { enablePinning: false },
+        {},
+        [{ type: "pinColumn", column_id: "a", position: "left" }],
       ),
     ]
   } else if (case_id === "sort_undefined") {

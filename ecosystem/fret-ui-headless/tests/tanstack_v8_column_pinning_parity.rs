@@ -2,8 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, ColumnId, ColumnPinPosition, RowKey, Table, TanStackTableOptions,
-    TanStackTableState, pin_column,
+    ColumnDef, ColumnPinPosition, RowKey, Table, TanStackTableOptions, TanStackTableState,
 };
 use serde::Deserialize;
 
@@ -114,14 +113,22 @@ fn tanstack_v8_column_pinning_parity() {
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
         for action in &snap.actions {
+            let table = Table::builder(&data)
+                .columns(columns.clone())
+                .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .state(state.clone())
+                .options(options)
+                .build();
+
             match action {
                 FixtureAction::PinColumn {
                     column_id,
                     position,
                 } => {
                     let pos = parse_column_pin_position(position.as_deref());
-                    let col_id: ColumnId = column_id.as_str().into();
-                    pin_column(&mut state.column_pinning, &col_id, pos);
+                    state.column_pinning = table
+                        .toggled_column_pinning(column_id, pos)
+                        .unwrap_or_else(|| panic!("unknown column in action: {column_id}"));
                 }
             }
         }

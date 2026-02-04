@@ -720,9 +720,6 @@ impl<'a, TData> Table<'a, TData> {
         position: Option<super::ColumnPinPosition>,
     ) -> Option<super::ColumnPinningState> {
         let col = self.column(column_id)?;
-        if !(self.options.enable_column_pinning && col.enable_pinning) {
-            return Some(self.state.column_pinning.clone());
-        }
         Some(super::pinned_column(
             &self.state.column_pinning,
             &col.id,
@@ -2509,7 +2506,10 @@ mod tests {
             .toggled_column_pinning("b", Some(ColumnPinPosition::Right))
             .unwrap();
         assert!(next_b.left.is_empty());
-        assert!(next_b.right.is_empty());
+        assert_eq!(
+            next_b.right.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
+            vec!["b"]
+        );
     }
 
     #[test]
