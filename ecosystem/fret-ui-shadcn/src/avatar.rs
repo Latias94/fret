@@ -4,7 +4,7 @@ use fret_core::{ImageId, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, ImageProps,
-    InteractivityGateProps, MainAlign, Overflow,
+    InteractivityGateProps, LayoutStyle, Length, MainAlign, Overflow, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -140,6 +140,12 @@ impl AvatarImage {
             let image = self.source.resolve(cx);
 
             let present = image.is_some();
+            let mut gate_layout = LayoutStyle::default();
+            gate_layout.size = SizeStyle {
+                width: Length::Fill,
+                height: Length::Fill,
+                ..Default::default()
+            };
             let children = if let Some(image) = image {
                 let theme = Theme::global(&*cx.app).clone();
                 let layout = LayoutRefinement::default()
@@ -151,10 +157,16 @@ impl AvatarImage {
 
                 let wrapper = decl_style::container_props(&theme, self.chrome, layout);
                 let opacity = self.opacity.clamp(0.0, 1.0);
+                let mut image_layout = LayoutStyle::default();
+                image_layout.size = SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                };
 
                 vec![cx.container(wrapper, move |cx| {
                     vec![cx.image_props(ImageProps {
-                        layout: Default::default(),
+                        layout: image_layout,
                         image,
                         opacity,
                         uv: None,
@@ -167,6 +179,7 @@ impl AvatarImage {
             AnyElement::new(
                 id,
                 ElementKind::InteractivityGate(InteractivityGateProps {
+                    layout: gate_layout,
                     present,
                     interactive: false,
                     ..Default::default()
@@ -322,6 +335,14 @@ impl AvatarFallback {
             AnyElement::new(
                 id,
                 ElementKind::InteractivityGate(InteractivityGateProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
                     present,
                     interactive: false,
                     ..Default::default()
@@ -506,5 +527,79 @@ mod tests {
         ui.request_semantics_snapshot();
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(!snapshot_contains_label(&snap, "JD"));
+    }
+
+    #[test]
+    fn avatar_image_uses_fill_layout_when_image_is_ready() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let image = app.models_mut().insert(Some(ImageId::default()));
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            0,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let root = ui.base_root().expect("root");
+        let avatar = ui
+            .children(root)
+            .first()
+            .copied()
+            .expect("expected avatar element");
+        let avatar_bounds = ui.debug_node_bounds(avatar).expect("avatar bounds");
+        assert!(
+            avatar_bounds.size.width.0 > 1.0 && avatar_bounds.size.height.0 > 1.0,
+            "expected avatar to have non-zero bounds, got {avatar_bounds:?}"
+        );
+
+        let image_gate = ui
+            .children(avatar)
+            .first()
+            .copied()
+            .expect("expected image gate element");
+        let gate_bounds = ui.debug_node_bounds(image_gate).expect("image gate bounds");
+        assert!(
+            gate_bounds.size.width.0 > 1.0 && gate_bounds.size.height.0 > 1.0,
+            "expected image gate to have non-zero bounds, got {gate_bounds:?}"
+        );
+
+        let image_wrapper = ui
+            .children(image_gate)
+            .first()
+            .copied()
+            .expect("expected image wrapper element");
+        let wrapper_bounds = ui
+            .debug_node_bounds(image_wrapper)
+            .expect("image wrapper bounds");
+        assert!(
+            wrapper_bounds.size.width.0 > 1.0 && wrapper_bounds.size.height.0 > 1.0,
+            "expected image wrapper to have non-zero bounds, got {wrapper_bounds:?}"
+        );
+
+        let image_node = ui
+            .children(image_wrapper)
+            .first()
+            .copied()
+            .expect("expected image node");
+        let image_bounds = ui.debug_node_bounds(image_node).expect("image bounds");
+        assert!(
+            image_bounds.size.width.0 > 1.0 && image_bounds.size.height.0 > 1.0,
+            "expected image to have non-zero bounds, got {image_bounds:?}"
+        );
     }
 }
