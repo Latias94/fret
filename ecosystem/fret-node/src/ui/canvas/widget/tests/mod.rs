@@ -46,6 +46,7 @@ mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
 mod group_preview_conformance;
 mod hit_testing_conformance;
+mod hit_testing_semantic_zoom_conformance;
 mod hot_state_invalidation_conformance;
 mod insert_node_drag_conformance;
 mod insert_node_drag_drop_conformance;

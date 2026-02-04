@@ -299,7 +299,8 @@ Work items:
       - spatial index patch: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/spatial_index.rs`
       - internals edge centers (EdgeToolbar): `ecosystem/fret-node/src/ui/canvas/widget/stores.rs`
     - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
-- [~] Ensure hit-testing semantics remain deterministic (especially under semantic zoom).
+- [x] Ensure hit-testing semantics remain deterministic (especially under semantic zoom).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_semantic_zoom_conformance.rs`
 - [x] Add conformance tests for:
   - path generation determinism (`ecosystem/fret-node/src/ui/canvas/widget/tests/custom_edge_path_conformance.rs`),
   - hit-test width semantics (`ecosystem/fret-node/src/ui/canvas/widget/tests/edge_hit_width_conformance.rs`),
