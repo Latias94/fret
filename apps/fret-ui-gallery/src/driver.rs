@@ -2167,11 +2167,26 @@ pub fn build_runner_config() -> WinitRunnerConfig {
         None => winit::dpi::LogicalSize::new(1080.0, 720.0),
     };
 
-    WinitRunnerConfig {
+    let mut config = WinitRunnerConfig {
         main_window_title: "fret-ui-gallery".to_string(),
         main_window_size,
         ..Default::default()
+    };
+
+    if let Ok(raw) = std::env::var("FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES") {
+        let raw = raw.trim();
+        if !raw.is_empty() {
+            if let Ok(bytes) = raw.parse::<u64>() {
+                config.renderer_intermediate_budget_bytes = bytes.max(1024);
+                tracing::info!(
+                    bytes = config.renderer_intermediate_budget_bytes,
+                    "ui-gallery overriding renderer_intermediate_budget_bytes via FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES"
+                );
+            }
+        }
     }
+
+    config
 }
 
 pub fn build_driver() -> impl WinitAppDriver {
