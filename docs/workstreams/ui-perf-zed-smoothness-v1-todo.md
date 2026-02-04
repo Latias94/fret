@@ -169,6 +169,12 @@ Correctness acceptance:
     - `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`,
       `--max-pointer-move-global-changes` (fretboard `diag perf`)
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `6da92d3d`.
+- [ ] Eliminate changed-but-unobserved model churn on pointer-move frames.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dd1a22e8` shows pointer-move
+    frames with `changed_models=2` and `propagated_model_change_unobserved_models=2` while remaining paint-only.
+  - Goal: pointer-move frames should have `changed_models=0` unless the interaction explicitly updates observed state.
+  - Candidate fix: move per-frame pointer-move bookkeeping out of `Model` updates into a window-scoped scratch store
+    (or a “set-if-changed” model update discipline similar to the global churn fix).
 - [x] Add a dispatch/hit-test time metric to diagnostics so we can gate pointer-move cost explicitly.
   - Implemented by `perf(diag): expose dispatch and hit-test timing` (commit `4b0be50e`).
   - Adds new `fretboard diag perf --sort dispatch|hit_test` modes and exports:
