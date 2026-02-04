@@ -81,6 +81,8 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
         solve = get_stats("layout_engine_solve_time_us")
         paint = get_stats("paint_time_us")
         prepaint = get_stats("prepaint_time_us")
+        dispatch = get_stats("dispatch_time_us")
+        hit_test = get_stats("hit_test_time_us")
 
         churn = {
             "text_atlas_upload_bytes": get_stats("top_renderer_text_atlas_upload_bytes"),
@@ -128,6 +130,8 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
                 "solve": solve,
                 "prepaint": prepaint,
                 "paint": paint,
+                "dispatch": dispatch,
+                "hit_test": hit_test,
                 "churn": churn,
                 "worst_us": int(worst_us or 0),
                 "worst_bundle": str(worst_bundle or ""),
@@ -181,11 +185,13 @@ def _format_entry_markdown(
         lines.append("")
 
     lines.append("Results (us):")
-    lines.append("| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |")
-    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
+    lines.append(
+        "| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |"
+    )
+    lines.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
     for r in rows:
         lines.append(
-            "| {script} | {p50_total} | {p95_total} | {max_total} | {p95_layout} | {p95_solve} | {p95_prepaint} | {p95_paint} |".format(
+            "| {script} | {p50_total} | {p95_total} | {max_total} | {p95_layout} | {p95_solve} | {p95_prepaint} | {p95_paint} | {p95_dispatch} | {p95_hit_test} |".format(
                 script=r["script"],
                 p50_total=r["total"]["p50"],
                 p95_total=r["total"]["p95"],
@@ -194,6 +200,8 @@ def _format_entry_markdown(
                 p95_solve=r["solve"]["p95"],
                 p95_prepaint=r["prepaint"]["p95"],
                 p95_paint=r["paint"]["p95"],
+                p95_dispatch=r["dispatch"]["p95"],
+                p95_hit_test=r["hit_test"]["p95"],
             )
         )
     lines.append("")
