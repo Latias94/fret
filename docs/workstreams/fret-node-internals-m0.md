@@ -256,6 +256,11 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/measured/store.rs`
   - Evidence: `ecosystem/fret-node/src/ui/measured/presenter.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
+- [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/origin.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/layout.rs`
 - [x] Split align/distribute move-op pipeline into small modules to reduce drift (label vs planning vs glue).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/`
 - [x] Ensure refactors preserve the public query surfaces of `NodeGraphInternalsStore` and

@@ -4,11 +4,21 @@
 //! These outputs are the foundation for hit-testing, edge routing, minimap/fit-view, snapping,
 //! and editor features like alignment guides and marquee selection.
 
-use std::collections::{BTreeMap, BTreeSet};
+mod layout;
+mod order;
+mod origin;
+
+pub(crate) use layout::{node_size_default_px, port_center};
+pub(crate) use order::{group_order, node_order, node_ports};
+pub(crate) use origin::{
+    node_anchor_from_rect_origin, node_origin_offset_canvas, node_rect_origin_from_anchor,
+};
+
+use std::collections::BTreeMap;
 
 use fret_core::{Point, Px, Rect, Size};
 
-use crate::core::{Graph, GroupId, NodeId, PortDirection, PortId};
+use crate::core::{Graph, NodeId, PortDirection, PortId};
 use crate::io::NodeGraphNodeOrigin;
 use crate::ui::presenter::{NodeGraphPresenter, PortAnchorHint};
 use crate::ui::style::NodeGraphStyle;
@@ -151,107 +161,18 @@ impl CanvasGeometry {
     }
 }
 
-pub(crate) fn node_origin_offset_canvas(
-    size_canvas: crate::core::CanvasSize,
-    node_origin: NodeGraphNodeOrigin,
-) -> crate::core::CanvasPoint {
-    let origin = node_origin.normalized();
-    crate::core::CanvasPoint {
-        x: origin.x * size_canvas.width,
-        y: origin.y * size_canvas.height,
-    }
-}
-
-pub(crate) fn node_rect_origin_from_anchor(
-    anchor: crate::core::CanvasPoint,
-    size_canvas: crate::core::CanvasSize,
-    node_origin: NodeGraphNodeOrigin,
-) -> crate::core::CanvasPoint {
-    let off = node_origin_offset_canvas(size_canvas, node_origin);
-    crate::core::CanvasPoint {
-        x: anchor.x - off.x,
-        y: anchor.y - off.y,
-    }
-}
-
-pub(crate) fn node_anchor_from_rect_origin(
-    rect_origin: crate::core::CanvasPoint,
-    size_canvas: crate::core::CanvasSize,
-    node_origin: NodeGraphNodeOrigin,
-) -> crate::core::CanvasPoint {
-    let off = node_origin_offset_canvas(size_canvas, node_origin);
-    crate::core::CanvasPoint {
-        x: rect_origin.x + off.x,
-        y: rect_origin.y + off.y,
-    }
-}
-
-pub(crate) fn node_order(graph: &Graph, draw_order: &[NodeId]) -> Vec<NodeId> {
-    let mut seen: BTreeSet<NodeId> = BTreeSet::new();
-    let mut out: Vec<NodeId> = Vec::new();
-
-    let visible = |id: &NodeId| graph.nodes.get(id).is_some_and(|n| !n.hidden);
-
-    for id in draw_order {
-        if visible(id) && seen.insert(*id) {
-            out.push(*id);
-        }
-    }
-
-    for id in graph.nodes.keys() {
-        if !visible(id) {
-            continue;
-        }
-        if seen.insert(*id) {
-            out.push(*id);
-        }
-    }
-
-    out
-}
-
-pub(crate) fn group_order(graph: &Graph, draw_order: &[GroupId]) -> Vec<GroupId> {
-    let mut seen: BTreeSet<GroupId> = BTreeSet::new();
-    let mut out: Vec<GroupId> = Vec::new();
-
-    for id in draw_order {
-        if graph.groups.contains_key(id) && seen.insert(*id) {
-            out.push(*id);
-        }
-    }
-
-    for id in graph.groups.keys() {
-        if seen.insert(*id) {
-            out.push(*id);
-        }
-    }
-
-    out
-}
-
-pub(crate) fn node_ports(graph: &Graph, node: NodeId) -> (Vec<PortId>, Vec<PortId>) {
-    let Some(n) = graph.nodes.get(&node) else {
-        return (Vec::new(), Vec::new());
-    };
-
-    let mut inputs: Vec<PortId> = Vec::new();
-    let mut outputs: Vec<PortId> = Vec::new();
-    for port_id in &n.ports {
-        let Some(p) = graph.ports.get(port_id) else {
-            continue;
-        };
-        match p.dir {
-            PortDirection::In => inputs.push(*port_id),
-            PortDirection::Out => outputs.push(*port_id),
-        }
-    }
-
-    (inputs, outputs)
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::core::{CanvasPoint, CanvasRect, CanvasSize, Graph, Group, GroupId};
+    use crate::core::{
+        CanvasPoint, CanvasRect, CanvasSize, Graph, Group, GroupId, Node, NodeId, NodeKindKey,
+        Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    };
+    use crate::io::NodeGraphNodeOrigin;
+    use crate::ui::presenter::{NodeGraphPresenter, PortAnchorHint};
+    use crate::ui::style::NodeGraphStyle;
+    use fret_core::{Point, Px, Rect, Size};
+    use serde_json::Value;
+    use std::sync::Arc;
 
     #[test]
     fn group_order_prefers_draw_order_then_appends_rest() {
@@ -283,35 +204,183 @@ mod tests {
         assert_eq!(order[1], g1);
         assert!(order.contains(&g3));
     }
-}
 
-pub(crate) fn node_size_default_px(
-    input_count: usize,
-    output_count: usize,
-    style: &NodeGraphStyle,
-) -> (f32, f32) {
-    // Keep a minimum chrome height even for nodes without ports so they don't collapse to a tiny
-    // header-only box (XyFlow default nodes effectively have at least one source/target handle).
-    let rows = input_count.max(output_count).max(1) as f32;
-    let base = style.node_header_height + 2.0 * style.node_padding;
-    let pin_area = rows * style.pin_row_height;
-    (style.node_width, base + pin_area)
-}
+    #[test]
+    fn node_order_filters_hidden_nodes_and_dedupes_draw_order() {
+        let mut graph = Graph::default();
 
-pub(crate) fn port_center(
-    node_rect: Rect,
-    dir: PortDirection,
-    row: usize,
-    style: &NodeGraphStyle,
-    zoom: f32,
-) -> Point {
-    let x = match dir {
-        PortDirection::In => node_rect.origin.x.0,
-        PortDirection::Out => node_rect.origin.x.0 + node_rect.size.width.0,
-    };
-    let y = node_rect.origin.y.0
-        + (style.node_header_height + style.node_padding) / zoom
-        + (row as f32 + 0.5) * (style.pin_row_height / zoom);
+        let n1 = NodeId::new();
+        let n2 = NodeId::new();
+        let n3 = NodeId::new();
 
-    Point::new(Px(x), Px(y))
+        let node = |hidden: bool| Node {
+            kind: NodeKindKey::new("test.node"),
+            kind_version: 1,
+            pos: CanvasPoint { x: 0.0, y: 0.0 },
+            selectable: None,
+            draggable: None,
+            connectable: None,
+            deletable: None,
+            parent: None,
+            extent: None,
+            expand_parent: None,
+            size: None,
+            hidden,
+            collapsed: false,
+            ports: Vec::new(),
+            data: Value::Null,
+        };
+
+        graph.nodes.insert(n1, node(false));
+        graph.nodes.insert(n2, node(true));
+        graph.nodes.insert(n3, node(false));
+
+        let order = super::node_order(&graph, &[n3, n3, n2, n1]);
+        assert_eq!(order, vec![n3, n1]);
+    }
+
+    #[test]
+    fn node_origin_anchor_roundtrips() {
+        let size = CanvasSize {
+            width: 420.0,
+            height: 180.0,
+        };
+        let origin = NodeGraphNodeOrigin { x: 0.25, y: 0.75 };
+        let anchor = CanvasPoint { x: 10.0, y: -20.0 };
+        let rect_origin = super::node_rect_origin_from_anchor(anchor, size, origin);
+        let round = super::node_anchor_from_rect_origin(rect_origin, size, origin);
+        assert!((round.x - anchor.x).abs() <= 1.0e-6);
+        assert!((round.y - anchor.y).abs() <= 1.0e-6);
+    }
+
+    #[derive(Default)]
+    struct HintPresenter {
+        node_w_px: f32,
+        node_h_px: f32,
+        hint: Option<PortAnchorHint>,
+    }
+
+    impl NodeGraphPresenter for HintPresenter {
+        fn node_title(&self, _graph: &Graph, _node: NodeId) -> Arc<str> {
+            Arc::<str>::from("node")
+        }
+
+        fn port_label(&self, _graph: &Graph, _port: PortId) -> Arc<str> {
+            Arc::<str>::from("port")
+        }
+
+        fn node_size_hint_px(
+            &mut self,
+            _graph: &Graph,
+            _node: NodeId,
+            _style: &NodeGraphStyle,
+        ) -> Option<(f32, f32)> {
+            Some((self.node_w_px, self.node_h_px))
+        }
+
+        fn port_anchor_hint(
+            &mut self,
+            _graph: &Graph,
+            _node: NodeId,
+            _port: PortId,
+            _style: &NodeGraphStyle,
+        ) -> Option<PortAnchorHint> {
+            self.hint
+        }
+    }
+
+    fn assert_near(a: f32, b: f32) {
+        assert!((a - b).abs() <= 1.0e-6, "{a} != {b}");
+    }
+
+    #[test]
+    fn presenter_anchor_hint_is_zoom_invariant_in_window_space() {
+        let mut graph = Graph::default();
+        let node_id = NodeId::new();
+        let port_id = PortId::new();
+
+        graph.nodes.insert(
+            node_id,
+            Node {
+                kind: NodeKindKey::new("test.node"),
+                kind_version: 1,
+                pos: CanvasPoint { x: 50.0, y: 60.0 },
+                selectable: None,
+                draggable: None,
+                connectable: None,
+                deletable: None,
+                parent: None,
+                extent: None,
+                expand_parent: None,
+                size: None,
+                hidden: false,
+                collapsed: false,
+                ports: vec![port_id],
+                data: Value::Null,
+            },
+        );
+        graph.ports.insert(
+            port_id,
+            Port {
+                node: node_id,
+                key: PortKey::new("p"),
+                dir: PortDirection::In,
+                kind: PortKind::Data,
+                capacity: PortCapacity::Single,
+                connectable: None,
+                connectable_start: None,
+                connectable_end: None,
+                ty: None,
+                data: Value::Null,
+            },
+        );
+
+        let hint = PortAnchorHint {
+            center: Point::new(Px(12.0), Px(34.0)),
+            bounds: Rect::new(Point::new(Px(10.0), Px(30.0)), Size::new(Px(8.0), Px(8.0))),
+        };
+
+        let style = NodeGraphStyle::default();
+        let origin = NodeGraphNodeOrigin { x: 0.0, y: 0.0 };
+
+        let mut presenter = HintPresenter {
+            node_w_px: 200.0,
+            node_h_px: 100.0,
+            hint: Some(hint),
+        };
+
+        let zoom_a = 1.0;
+        let geom_a = super::CanvasGeometry::build_with_presenter(
+            &graph,
+            &[node_id],
+            &style,
+            zoom_a,
+            origin,
+            &mut presenter,
+        );
+        let node_rect_a = geom_a.nodes.get(&node_id).unwrap().rect;
+        let port_a = geom_a.ports.get(&port_id).unwrap();
+
+        let dx_a = (port_a.center.x.0 - node_rect_a.origin.x.0) * zoom_a;
+        let dy_a = (port_a.center.y.0 - node_rect_a.origin.y.0) * zoom_a;
+        assert_near(dx_a, 12.0);
+        assert_near(dy_a, 34.0);
+
+        let zoom_b = 2.0;
+        let geom_b = super::CanvasGeometry::build_with_presenter(
+            &graph,
+            &[node_id],
+            &style,
+            zoom_b,
+            origin,
+            &mut presenter,
+        );
+        let node_rect_b = geom_b.nodes.get(&node_id).unwrap().rect;
+        let port_b = geom_b.ports.get(&port_id).unwrap();
+
+        let dx_b = (port_b.center.x.0 - node_rect_b.origin.x.0) * zoom_b;
+        let dy_b = (port_b.center.y.0 - node_rect_b.origin.y.0) * zoom_b;
+        assert_near(dx_b, 12.0);
+        assert_near(dy_b, 34.0);
+    }
 }
