@@ -899,48 +899,15 @@ impl CodeEditor {
                             down.position,
                         ));
                         st.undo_group = None;
-                        st.preedit = None;
 
                         let caret = caret_for_pointer(&st, row, bounds, down.position, cell_w);
-                        match down.click_count {
-                            2 => {
-                                let (start, end) = select_word_range_in_buffer(
-                                    &st.buffer,
-                                    caret,
-                                    st.text_boundary_mode,
-                                );
-                                st.selection = Selection {
-                                    anchor: start,
-                                    focus: end,
-                                };
-                                st.caret_preferred_x = None;
-                            }
-                            3 => {
-                                let start = st
-                                    .display_map
-                                    .display_point_to_byte(&st.buffer, DisplayPoint::new(row, 0));
-                                let line = st.buffer.line_index_at_byte(start);
-                                if let Some(range) = st.buffer.line_byte_range_including_newline(line)
-                                {
-                                    st.selection = Selection {
-                                        anchor: range.start,
-                                        focus: range.end,
-                                    };
-                                }
-                                st.caret_preferred_x = None;
-                            }
-                            _ => {
-                                if down.modifiers.shift {
-                                    st.selection.focus = caret;
-                                } else {
-                                    st.selection = Selection {
-                                        anchor: caret,
-                                        focus: caret,
-                                    };
-                                }
-                                st.caret_preferred_x = None;
-                            }
-                        }
+                        input::apply_pointer_down_selection(
+                            &mut st,
+                            row,
+                            caret,
+                            down.click_count,
+                            down.modifiers.shift,
+                        );
 
                         let caret_rect = caret_rect_for_selection(
                             &st,

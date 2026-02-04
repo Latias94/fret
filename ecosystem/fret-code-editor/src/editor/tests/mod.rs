@@ -404,6 +404,106 @@ fn a11y_window_maps_offsets_back_to_buffer_selection() {
 }
 
 #[test]
+fn a11y_window_includes_preedit_and_reports_composition_range() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 2,
+            focus: 2,
+        };
+        st.preedit = Some(PreeditState {
+            text: "ab".to_string(),
+            cursor: Some((0, "a".len())),
+        });
+    }
+
+    let st = handle.state.borrow();
+    let (value, selection, composition) = a11y_composed_text_window(&st);
+    assert_eq!(value.as_str(), "heabllo");
+    assert_eq!(composition, Some((2, 2 + "ab".len() as u32)));
+    assert_eq!(selection, Some((2, 2 + "a".len() as u32)));
+}
+
+#[test]
+fn pointer_down_double_click_selects_word_and_cancels_preedit() {
+    let handle = CodeEditorHandle::new("foo_bar baz");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection { anchor: 0, focus: 0 };
+        st.preedit = Some(PreeditState {
+            text: "x".to_string(),
+            cursor: Some((0, 1)),
+        });
+
+        let caret = "foo_".len();
+        let (expect_start, expect_end) =
+            select_word_range_in_buffer(&st.buffer, caret, st.text_boundary_mode);
+
+        input::apply_pointer_down_selection(&mut st, 0, caret, 2, false);
+
+        assert_eq!(st.preedit, None);
+        assert_eq!(
+            st.selection,
+            Selection {
+                anchor: expect_start,
+                focus: expect_end,
+            }
+        );
+    }
+}
+
+#[test]
+fn pointer_down_triple_click_selects_logical_line_including_newline_and_cancels_preedit() {
+    let handle = CodeEditorHandle::new("abc\ndef\n");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection { anchor: 0, focus: 0 };
+        st.preedit = Some(PreeditState {
+            text: "x".to_string(),
+            cursor: Some((0, 1)),
+        });
+
+        let row = 1;
+        let caret = "abc\n".len() + 1;
+        input::apply_pointer_down_selection(&mut st, row, caret, 3, false);
+
+        assert_eq!(st.preedit, None);
+        assert_eq!(
+            st.selection.normalized(),
+            "abc\n".len()..("abc\ndef\n".len())
+        );
+    }
+}
+
+#[test]
+fn pointer_down_shift_click_extends_selection_and_cancels_preedit() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 1,
+            focus: 1,
+        };
+        st.preedit = Some(PreeditState {
+            text: "x".to_string(),
+            cursor: Some((0, 1)),
+        });
+
+        input::apply_pointer_down_selection(&mut st, 0, 4, 1, true);
+
+        assert_eq!(st.preedit, None);
+        assert_eq!(
+            st.selection,
+            Selection {
+                anchor: 1,
+                focus: 4,
+            }
+        );
+    }
+}
+
+#[test]
 fn move_caret_vertical_clamps_in_display_row_space_when_wrapped() {
     let handle = CodeEditorHandle::new("abcd\nef");
     handle.set_soft_wrap_cols(Some(2));
