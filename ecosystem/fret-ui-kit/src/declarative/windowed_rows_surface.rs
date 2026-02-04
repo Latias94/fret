@@ -352,9 +352,6 @@ fn row_index_for_pointer(
     let offset_y = metrics.clamp_offset(offset_y, viewport_h);
 
     let local_y = Px(position.y.0 - bounds.origin.y.0);
-    if local_y.0 < 0.0 {
-        return None;
-    }
 
     if std::env::var_os("FRET_WINDOWED_ROWS_POINTER_DEBUG")
         .is_some_and(|v| !v.is_empty() && v != "0")
@@ -388,7 +385,7 @@ fn row_index_for_pointer(
         idx_content
     };
 
-    (idx < len).then_some(idx)
+    Some(idx.min(len.saturating_sub(1)))
 }
 
 /// Like [`windowed_rows_surface`], but wraps the canvas in a `PointerRegion` that performs row

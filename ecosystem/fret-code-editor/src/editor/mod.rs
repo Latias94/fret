@@ -899,19 +899,9 @@ impl CodeEditor {
                         let bounds = host.bounds();
                         st.last_bounds = Some(bounds);
 
-                        // When pointer capture is active, pointer moves can arrive while the cursor is
-                        // outside the windowed surface bounds. In that case `windowed_rows_surface`
-                        // hit-testing may return `None` for the row, which would make selection updates
-                        // feel sticky/jumpy while dragging. Clamp to the nearest representable row so
-                        // selection can continue to update smoothly.
-                        let row = row.unwrap_or_else(|| {
-                            let row_h = row_h.0.max(1.0);
-                            let offset = on_pointer_move_scroll.offset();
-                            let content_y =
-                                (mv.position.y.0 - bounds.origin.y.0).max(0.0) + offset.y.0;
-                            let approx_row = (content_y / row_h).floor().max(0.0) as usize;
-                            approx_row.min(st.display_map.row_count().saturating_sub(1))
-                        });
+                        let Some(row) = row else {
+                            return false;
+                        };
 
                         let cell_w = on_pointer_move_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
