@@ -119,7 +119,7 @@ High-level layering (ADR 0135):
 - **UI substrate (optional, default)**: `ecosystem/fret-node/src/ui/*`
   - canvas widget: `ecosystem/fret-node/src/ui/canvas/*` and `ecosystem/fret-node/src/ui/canvas/widget.rs`
   - derived internals (entry + impl): `ecosystem/fret-node/src/ui/internals.rs` and `ecosystem/fret-node/src/ui/internals/*` (`MeasuredGeometryStore` in `ecosystem/fret-node/src/ui/measured.rs`)
-  - overlays (rename, controls, minimap): `ecosystem/fret-node/src/ui/overlays.rs`
+  - overlays (rename, controls, minimap): `ecosystem/fret-node/src/ui/overlays/mod.rs`
   - portal escape hatch: `ecosystem/fret-node/src/ui/portal.rs`
   - commands: `ecosystem/fret-node/src/ui/commands.rs`
 - **Demos**: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
@@ -261,11 +261,11 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 - [x] **NodeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
-  - fret-node: `NodeGraphNodeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+  - fret-node: `NodeGraphNodeToolbar` (`ecosystem/fret-node/src/ui/overlays/toolbars.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
 
 - [x] **EdgeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
-  - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals/snapshot.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+  - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays/toolbars.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals/snapshot.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
 
 - [~] **Panels / toolbars / overlays composition API**
   - XyFlow: `<Panel />` composition patterns

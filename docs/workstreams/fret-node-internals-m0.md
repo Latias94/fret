@@ -149,7 +149,7 @@ Overlays must not “steal” canvas input unintentionally:
 
 Evidence:
 
-- `ecosystem/fret-node/src/ui/overlays.rs`
+- `ecosystem/fret-node/src/ui/overlays/mod.rs`
 - `ecosystem/fret-node/src/ui/panel.rs`
 - Overlay hit-testing + focus discipline conformance:
   - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`

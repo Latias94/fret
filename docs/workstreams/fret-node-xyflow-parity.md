@@ -127,7 +127,7 @@ fret-node (target):
 - UI integration (default `fret-ui` feature):
   - canvas widget: `ecosystem/fret-node/src/ui/canvas/*` and `ecosystem/fret-node/src/ui/canvas/widget.rs`
   - derived internals: `ecosystem/fret-node/src/ui/internals.rs` and `ecosystem/fret-node/src/ui/internals/*`, `ecosystem/fret-node/src/ui/measured.rs`
-  - overlays/add-ons: `ecosystem/fret-node/src/ui/overlays.rs`, `ecosystem/fret-node/src/ui/panel.rs`
+  - overlays/add-ons: `ecosystem/fret-node/src/ui/overlays/mod.rs`, `ecosystem/fret-node/src/ui/panel.rs`
 
 ## Current gap summary (top items)
 
@@ -265,14 +265,14 @@ Work items:
   - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
   - Implementation direction: window-space overlay positioned from derived geometry
     (`NodeGraphInternalsStore`), composed via `NodeGraphPanel` (or a dedicated overlay host).
-  - fret-node implementation: `ecosystem/fret-node/src/ui/overlays.rs` (`NodeGraphNodeToolbar`)
+  - fret-node implementation: `ecosystem/fret-node/src/ui/overlays/toolbars.rs` (`NodeGraphNodeToolbar`)
 - [x] EdgeToolbar primitive:
   - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
   - Implementation direction: window-space overlay positioned from edge center/label anchors
     (needs a public “edge anchor” query from internals).
-  - fret-node implementation: `ecosystem/fret-node/src/ui/overlays.rs` (`NodeGraphEdgeToolbar`) + `NodeGraphInternalsSnapshot.edge_centers_window`
+  - fret-node implementation: `ecosystem/fret-node/src/ui/overlays/toolbars.rs` (`NodeGraphEdgeToolbar`) + `NodeGraphInternalsSnapshot.edge_centers_window`
 - [x] MiniMap/Controls stabilization pass:
-  - Current fret-node: `NodeGraphMiniMapOverlay`, `NodeGraphControlsOverlay` in `ecosystem/fret-node/src/ui/overlays.rs`
+  - Current fret-node: `NodeGraphMiniMapOverlay`, `NodeGraphControlsOverlay` in `ecosystem/fret-node/src/ui/overlays/mod.rs`
   - Add: accessibility baseline + placement APIs + theming tokens + store/action wiring guidance.
   - Contract doc: `docs/node-graph-addons-minimap-controls.md`
   - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
