@@ -262,10 +262,15 @@ ColumnDef keys referenced by upstream feature implementations:
   - `enablePinning`, `enableColumnPinning`, `onColumnPinningChange`.
   - Parity-gated (option gates + state transition outcomes): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`.
-- [ ] HTP-colvis-010 Align column visibility option gates and hooks:
+- [~] HTP-colvis-010 Align column visibility option gates and hooks:
   - `enableHiding`, `onColumnVisibilityChange`.
-- [ ] HTP-colord-010 Align column ordering hook:
-  - `onColumnOrderChange` and `groupedColumnMode` interactions.
+  - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`.
+- [~] HTP-colord-010 Align column ordering hook:
+  - `onColumnOrderChange` (state transition outcomes + derived leaf order).
+  - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`.
+  - Remaining: `groupedColumnMode` interactions (covered by future `grouping` gates).
 
 ---
 
