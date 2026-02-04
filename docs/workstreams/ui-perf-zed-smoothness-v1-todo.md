@@ -217,6 +217,11 @@ Correctness acceptance:
 - [ ] Investigate why the torture workload is still layout/prepaint-dominant on the sampled frames.
   - Goal: create (or tune) a variant where pointer moves are paint-only and hit-test cost is isolated.
   - Hypotheses:
+  - TODO: Use the new bounds-tree “work” counters to determine whether `hit_test_time_us` tails are algorithmic or
+    wall-time noise:
+    - `debug.stats.hit_test_bounds_tree_nodes_visited`
+    - `debug.stats.hit_test_bounds_tree_nodes_pushed`
+    - Implemented by `feat(fret-ui): track bounds-tree query work in debug stats` (commit `913ee260`).
     - hover policy triggers layout
     - retained tree has a per-frame relayout
     - noise elements invalidate layout

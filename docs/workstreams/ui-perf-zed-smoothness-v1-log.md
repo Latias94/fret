@@ -2689,3 +2689,35 @@ Next:
 
 - Use this snapshot identity to add a more detailed breakdown for the dispatch/hit-test time (so the outlier can be
   explained in terms of concrete work, not just wall time).
+
+## 2026-02-05 07:26:44 (commit `913ee260`)
+
+Change:
+- feat(fret-ui): track bounds-tree query work in debug stats
+
+Why:
+- Pointer-move hit testing is currently gated by `hit_test_time_us`, but without a “work” proxy it is hard to
+  distinguish:
+  - algorithmic cost (too many nodes visited / too much overlap), vs
+  - wall-time noise (preemption, scheduling jitter).
+
+Notes:
+
+- Diagnostics snapshots now include two new per-frame counters (accumulated across queries in a frame):
+  - `debug.stats.hit_test_bounds_tree_nodes_visited`
+  - `debug.stats.hit_test_bounds_tree_nodes_pushed`
+- Example (single run; max-hit-test pointer-move frame from the bundle below):
+  - `hit_test_time_us=896` with `hit_test_bounds_tree_nodes_visited=17` and `hit_test_bounds_tree_nodes_pushed=17`
+
+Command:
+```sh
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-run/2026-02-05-pointer-move-bounds-tree-query-stats \
+  --timeout-ms 300000 --poll-ms 100 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Bundle:
+- `target/fret-diag-run/2026-02-05-pointer-move-bounds-tree-query-stats/1770247519772-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
