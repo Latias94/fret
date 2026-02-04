@@ -263,9 +263,9 @@ ColumnDef keys referenced by upstream feature implementations:
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_tree.json`.
 - [~] HTP-expand-010 Align expanded state shape (`true | Record<RowId, boolean>`) and behaviors.
-  - In progress (parity gate added): expanded state transitions and row model outputs under `paginateExpandedRows` true/false.
+  - Done (parity-gated): expanded state transitions and row model outputs under `paginateExpandedRows` true/false.
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`
-    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs` (currently failing; see HTP-page-030).
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs`.
 - [ ] HTP-expand-020 Align option gates and hooks:
   - `enableExpanding`, `manualExpanding`, `onExpandedChange`, `getExpandedRowModel` override.
 - [ ] HTP-expand-030 Align `autoResetExpanded` / `autoResetAll` behaviors.
