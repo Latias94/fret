@@ -138,6 +138,16 @@ Privacy and portability rules:
 - Type identities MUST use stable, non-path strings (e.g. `std::any::type_name::<T>()`) and MUST NOT include machine-local
   paths.
 
+Implementation note (non-normative):
+
+- The current bundle format exports renderer metrics as flat counters under
+  `.windows[].snapshots[].debug.stats.renderer_*` when enabled:
+  - timings: `renderer_encode_scene_us`, `renderer_prepare_text_us`, `renderer_prepare_svg_us`
+  - batching: `renderer_draw_calls`, `renderer_pipeline_switches`, `renderer_bind_group_switches`, `renderer_scissor_sets`
+  - churn (best-effort per-frame): `renderer_text_atlas_upload_bytes`, `renderer_text_atlas_evicted_pages`,
+    `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_pool_evictions`
+  - cache: `renderer_scene_encoding_cache_misses`
+
 ### 2) Provide per-window ring buffers and a “diagnostics bundle” export
 
 The runner MUST maintain per-window bounded ring buffers for:
@@ -146,14 +156,13 @@ The runner MUST maintain per-window bounded ring buffers for:
 - recent effects drained (including commands, docking ops, IME cursor-area updates),
 - recent `UiDiagnosticsSnapshotV1` samples (e.g. last ~300 frames).
 
-Export shape:
+Export shape (bundle directory):
 
 - a directory under `target/fret-diag/<timestamp>/` by default (or an OS temp dir on wasm),
 - with at least:
-  - `snapshot.json` (the most recent full snapshot),
-  - `ring.json` (bounded history),
-  - `trace.jsonl` (optional structured tracing export, if enabled),
-  - `notes.txt` (optional user-supplied reproduction notes).
+  - `bundle.json` (the exported diagnostics bundle; includes bounded per-window snapshot history),
+  - `latest.txt` pointer file in the parent output directory (best-effort),
+  - optional screenshot artifacts when enabled (tooling-driven; see `docs/ui-diagnostics-and-scripted-tests.md`).
 
 This “bundle” is the unit of sharing with other humans and with AI tools.
 
