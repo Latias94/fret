@@ -123,6 +123,7 @@ type SnapshotId =
   | "pinning_enable_row_pinning_false_disables_can_pin"
   | "pinning_enable_pinning_false_disables_can_pin"
   | "pinning_enable_pinning_false_enable_row_pinning_true_overrides"
+  | "pinning_enable_pinning_false_enable_row_pinning_fn_overrides"
   | "pinning_action_pin_top_bottom"
   | "pinning_action_unpin_top"
   | "pinning_tree_keep_true_child_hidden_when_parent_collapsed"
@@ -229,6 +230,8 @@ type TanStackOptions = {
   aggregationFnsMode?: "custom_plus_one"
   // Fixture-only: override `getGroupedRowModel` with a deterministic implementation.
   __getGroupedRowModel?: "pre_grouped"
+  // Fixture-only: inject `enableRowPinning` as a deterministic per-row predicate.
+  __enableRowPinning?: "odd_ids"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
   sortingFnsMode?: "custom_text"
   // Fixture-only: when set, the generator injects a deterministic `options.filterFns` map.
@@ -1339,7 +1342,13 @@ async function main(): Promise<void> {
       enableSubRowSelection: options.enableSubRowSelection ?? true,
       enableColumnResizing: options.enableColumnResizing ?? true,
       enableHiding: options.enableHiding ?? true,
-      enableRowPinning: options.enableRowPinning,
+      enableRowPinning:
+        options.__enableRowPinning === "odd_ids"
+          ? (row: any) => {
+              const id = Number.parseInt(String(row?.id ?? ""), 10)
+              return Number.isFinite(id) ? id % 2 === 1 : false
+            }
+          : options.enableRowPinning,
       enableGrouping: options.enableGrouping,
       enableColumnPinning: options.enableColumnPinning,
       enablePinning: options.enablePinning,
@@ -3272,6 +3281,11 @@ function snapshotColumnPinning(
       mk(
         "pinning_enable_pinning_false_enable_row_pinning_true_overrides",
         { enablePinning: false, enableRowPinning: true, keepPinnedRows: true },
+        baseState,
+      ),
+      mk(
+        "pinning_enable_pinning_false_enable_row_pinning_fn_overrides",
+        { enablePinning: false, __enableRowPinning: "odd_ids", keepPinnedRows: true },
         baseState,
       ),
       mkActions(

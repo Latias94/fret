@@ -110,6 +110,7 @@ pub struct TableBuilder<'a, TData> {
     aggregation_fns: HashMap<Arc<str>, super::AggregationFn>,
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
+    enable_row_pinning: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
@@ -128,6 +129,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             aggregation_fns: HashMap::new(),
             global_filter_fn: super::FilteringFnSpec::Auto,
             get_column_can_global_filter: None,
+            enable_row_pinning: None,
             get_row_key: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
@@ -266,6 +268,12 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// TanStack-aligned: configure `options.enableRowPinning` as a per-row predicate.
+    pub fn enable_row_pinning_by(mut self, f: impl Fn(RowKey, &TData) -> bool + 'static) -> Self {
+        self.enable_row_pinning = Some(Arc::new(f));
+        self
+    }
+
     pub fn enable_column_resizing(mut self, enabled: bool) -> Self {
         self.options.enable_column_resizing = enabled;
         self
@@ -331,6 +339,7 @@ pub struct Table<'a, TData> {
     aggregation_fns: HashMap<Arc<str>, super::AggregationFn>,
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
+    enable_row_pinning: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: GetRowKeyFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
@@ -418,6 +427,7 @@ impl<'a, TData> Table<'a, TData> {
             aggregation_fns: builder.aggregation_fns,
             global_filter_fn: builder.global_filter_fn,
             get_column_can_global_filter: builder.get_column_can_global_filter,
+            enable_row_pinning: builder.enable_row_pinning,
             get_row_key,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
@@ -950,8 +960,10 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn row_can_pin(&self, row_key: RowKey) -> Option<bool> {
         let core = self.core_row_model();
-        if core.row_by_key(row_key).is_none() {
-            return None;
+        let index = core.row_by_key(row_key)?;
+        let row = core.row(index)?;
+        if let Some(enable_row_pinning) = self.enable_row_pinning.as_ref() {
+            return Some(enable_row_pinning(row_key, row.original));
         }
         Some(self.options.enable_row_pinning)
     }

@@ -135,14 +135,24 @@ fn tanstack_v8_pinning_parity() {
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
+        let enable_row_pinning_mode = snap
+            .options
+            .get("__enableRowPinning")
+            .and_then(|v| v.as_str());
+
         for action in &snap.actions {
-            let table = Table::builder(&data)
+            let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .global_filter_fn(FilteringFnSpec::Auto)
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
                 .state(state.clone())
-                .options(options)
-                .build();
+                .options(options);
+
+            if enable_row_pinning_mode == Some("odd_ids") {
+                builder = builder.enable_row_pinning_by(|row_key, _row| row_key.0 % 2 == 1);
+            }
+
+            let table = builder.build();
 
             match action {
                 FixtureAction::PinRow {
@@ -181,13 +191,18 @@ fn tanstack_v8_pinning_parity() {
             );
         }
 
-        let table = Table::builder(&data)
+        let mut builder = Table::builder(&data)
             .columns(columns.clone())
             .global_filter_fn(FilteringFnSpec::Auto)
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
             .state(state)
-            .options(options)
-            .build();
+            .options(options);
+
+        if enable_row_pinning_mode == Some("odd_ids") {
+            builder = builder.enable_row_pinning_by(|row_key, _row| row_key.0 % 2 == 1);
+        }
+
+        let table = builder.build();
 
         if let Some(expected) = snap.expect.row_pinning.as_ref() {
             let top: Vec<String> = table
