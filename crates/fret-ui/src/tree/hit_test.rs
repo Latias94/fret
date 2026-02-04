@@ -177,12 +177,22 @@ impl<H: UiHost> UiTree<H> {
         root: NodeId,
         position: Point,
     ) -> Option<NodeId> {
-        let query = self.hit_test_bounds_trees.query(root, position);
+        let (query, query_stats) =
+            self.hit_test_bounds_trees
+                .query(root, position, self.debug_enabled);
         if self.debug_enabled {
             self.debug_stats.hit_test_bounds_tree_queries = self
                 .debug_stats
                 .hit_test_bounds_tree_queries
                 .saturating_add(1);
+            self.debug_stats.hit_test_bounds_tree_nodes_visited = self
+                .debug_stats
+                .hit_test_bounds_tree_nodes_visited
+                .saturating_add(query_stats.nodes_visited);
+            self.debug_stats.hit_test_bounds_tree_nodes_pushed = self
+                .debug_stats
+                .hit_test_bounds_tree_nodes_pushed
+                .saturating_add(query_stats.nodes_pushed);
             match query {
                 super::bounds_tree::HitTestBoundsTreeQuery::Disabled => {
                     self.debug_stats.hit_test_bounds_tree_disabled = self

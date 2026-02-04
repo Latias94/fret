@@ -79,7 +79,7 @@ fn bounds_tree_supports_overflow_visible_ancestors() {
 
     trees.rebuild_for_layer_from_records(layer_root, &records, &nodes);
 
-    let query = trees.query(layer_root, Point::new(Px(125.0), Px(15.0)));
+    let (query, _stats) = trees.query(layer_root, Point::new(Px(125.0), Px(15.0)), false);
     assert_eq!(
         query,
         super::super::bounds_tree::HitTestBoundsTreeQuery::Hit(outside_child)

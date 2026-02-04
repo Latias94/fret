@@ -176,24 +176,42 @@ impl HitTestBoundsTrees {
         layer.tree = tree;
     }
 
-    pub(super) fn query(&mut self, layer_root: NodeId, position: Point) -> HitTestBoundsTreeQuery {
+    pub(super) fn query(
+        &mut self,
+        layer_root: NodeId,
+        position: Point,
+        collect_stats: bool,
+    ) -> (HitTestBoundsTreeQuery, HitTestBoundsTreeQueryStats) {
         let Some(frame_id) = self.frame_id else {
-            return HitTestBoundsTreeQuery::Disabled;
+            return (
+                HitTestBoundsTreeQuery::Disabled,
+                HitTestBoundsTreeQueryStats::default(),
+            );
         };
         let layer = self
             .layers
             .iter_mut()
             .find(|l| l.used_this_frame && l.frame_id == Some(frame_id) && l.root == layer_root);
         let Some(layer) = layer else {
-            return HitTestBoundsTreeQuery::Disabled;
+            return (
+                HitTestBoundsTreeQuery::Disabled,
+                HitTestBoundsTreeQueryStats::default(),
+            );
         };
         if !layer.enabled {
-            return HitTestBoundsTreeQuery::Disabled;
+            return (
+                HitTestBoundsTreeQuery::Disabled,
+                HitTestBoundsTreeQueryStats::default(),
+            );
         }
-        match layer.tree.find_max_containing_point(position) {
+        let (hit, stats) = layer
+            .tree
+            .find_max_containing_point(position, collect_stats);
+        let query = match hit {
             Some(hit) => HitTestBoundsTreeQuery::Hit(hit),
             None => HitTestBoundsTreeQuery::Miss,
-        }
+        };
+        (query, stats)
     }
 
     pub(super) fn reuse_for_layer(&mut self, layer_root: NodeId) {
@@ -246,6 +264,12 @@ pub(super) enum HitTestBoundsTreeQuery {
     Disabled,
     Miss,
     Hit(NodeId),
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(super) struct HitTestBoundsTreeQueryStats {
+    pub(super) nodes_visited: u32,
+    pub(super) nodes_pushed: u32,
 }
 
 #[derive(Debug)]
@@ -353,24 +377,41 @@ impl BoundsTree {
         self.root = self.level.first().copied();
     }
 
-    fn find_max_containing_point(&mut self, point: Point) -> Option<NodeId> {
-        let root = self.root?;
+    fn find_max_containing_point(
+        &mut self,
+        point: Point,
+        collect_stats: bool,
+    ) -> (Option<NodeId>, HitTestBoundsTreeQueryStats) {
+        let Some(root) = self.root else {
+            return (None, HitTestBoundsTreeQueryStats::default());
+        };
+
+        let mut stats = HitTestBoundsTreeQueryStats::default();
 
         if let Some(max_idx) = self.max_leaf
             && rect_contains_point(self.nodes[max_idx].bounds, point)
         {
+            if collect_stats {
+                stats.nodes_visited = 1;
+            }
             if let TreeNodeKind::Leaf { node, .. } = &self.nodes[max_idx].kind {
-                return Some(*node);
+                return (Some(*node), stats);
             }
         }
 
         self.search_stack.clear();
         self.search_stack.push(root);
+        if collect_stats {
+            stats.nodes_pushed = stats.nodes_pushed.saturating_add(1);
+        }
 
         let mut best_order: u32 = 0;
         let mut best_node: Option<NodeId> = None;
 
         while let Some(idx) = self.search_stack.pop() {
+            if collect_stats {
+                stats.nodes_visited = stats.nodes_visited.saturating_add(1);
+            }
             let node = &self.nodes[idx];
             if node.max_order <= best_order {
                 continue;
@@ -394,13 +435,16 @@ impl BoundsTree {
                             && rect_contains_point(self.nodes[child].bounds, point)
                         {
                             self.search_stack.push(child);
+                            if collect_stats {
+                                stats.nodes_pushed = stats.nodes_pushed.saturating_add(1);
+                            }
                         }
                     }
                 }
             }
         }
 
-        best_node
+        (best_node, stats)
     }
 }
 
