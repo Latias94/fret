@@ -27,6 +27,12 @@ pub struct TableOptions {
     ///
     /// When `true`, `expanded_row_model()` returns `pre_expanded_row_model()`.
     pub manual_expanding: bool,
+    /// Enables/disables expanding for all rows (TanStack `enableExpanding`).
+    pub enable_expanding: bool,
+    /// TanStack-aligned: global auto reset gate (`autoResetAll`).
+    pub auto_reset_all: Option<bool>,
+    /// TanStack-aligned: expanded auto reset gate (`autoResetExpanded`).
+    pub auto_reset_expanded: Option<bool>,
     /// When true, pagination counts expanded rows (children) as part of the page.
     ///
     /// This mirrors TanStack's `paginateExpandedRows` behavior.
@@ -91,6 +97,9 @@ impl Default for TableOptions {
             manual_sorting: false,
             manual_pagination: false,
             manual_expanding: false,
+            enable_expanding: true,
+            auto_reset_all: None,
+            auto_reset_expanded: None,
             paginate_expanded_rows: true,
             keep_pinned_rows: true,
             enable_hiding: true,

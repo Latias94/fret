@@ -120,11 +120,17 @@ type SnapshotId =
   | "selection_toggle_all_rows_disabled_noop"
   | "selection_toggle_all_page_rows_respects_pagination"
   | "expanding_baseline"
+  | "expanding_enable_expanding_false_disables_can_expand"
+  | "expanding_hook_get_row_can_expand_overrides_enable_expanding_false"
   | "expanding_state_row_1"
+  | "expanding_override_get_expanded_row_model_pre_expanded"
+  | "expanding_hook_get_is_row_expanded_overrides_state"
   | "expanding_state_all_true"
   | "expanding_paginate_expanded_rows_true_counts_children"
   | "expanding_paginate_expanded_rows_false_expands_within_page"
   | "expanding_action_toggle_row"
+  | "expanding_action_toggle_row_on_expanded_change_noop_ignores"
+  | "expanding_action_toggle_row_enable_expanding_false_still_updates_state"
   | "expanding_action_toggle_all"
   | "pinning_keep_true_page_0"
   | "pinning_keep_false_page_0"
@@ -157,6 +163,9 @@ type SnapshotId =
   | "grouping_override_get_grouped_row_model_pre_grouped"
   | "grouping_action_toggle_role_on"
   | "grouping_action_toggle_role_off"
+  | "grouping_autoreset_expanded_default_resets"
+  | "grouping_autoreset_expanded_manual_expanding_true_no_reset"
+  | "grouping_autoreset_expanded_auto_reset_expanded_true_overrides_manual"
   | "grouping_action_toggle_noop_when_enable_grouping_false"
   | "grouping_action_toggle_ignores_enable_grouping_false"
   | "grouping_state_one_column_sort_role_desc"
@@ -210,10 +219,13 @@ type TanStackState = {
 
 type TanStackOptions = {
   initialState?: Partial<TanStackState>
+  autoResetAll?: boolean
   manualFiltering?: boolean
   manualSorting?: boolean
   manualPagination?: boolean
+  autoResetExpanded?: boolean
   manualExpanding?: boolean
+  enableExpanding?: boolean
   manualGrouping?: boolean
   paginateExpandedRows?: boolean
   keepPinnedRows?: boolean
@@ -243,6 +255,12 @@ type TanStackOptions = {
   aggregationFnsMode?: "custom_plus_one"
   // Fixture-only: override `getGroupedRowModel` with a deterministic implementation.
   __getGroupedRowModel?: "pre_grouped"
+  // Fixture-only: override `getRowCanExpand` with a deterministic implementation.
+  __getRowCanExpand?: "only_root_1"
+  // Fixture-only: override `getIsRowExpanded` with a deterministic implementation.
+  __getIsRowExpanded?: "always_false"
+  // Fixture-only: override `getExpandedRowModel` with a deterministic implementation.
+  __getExpandedRowModel?: "pre_expanded"
   // Fixture-only: inject `enableRowPinning` as a deterministic per-row predicate.
   __enableRowPinning?: "odd_ids"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
@@ -253,6 +271,7 @@ type TanStackOptions = {
   // Fixture-only: simulate controlled state hooks that ignore the updater.
   __onColumnSizingChange?: "noop"
   __onColumnSizingInfoChange?: "noop"
+  __onExpandedChange?: "noop"
 }
 
 type RowModelSnapshot = { root: string[]; flat: string[] }
@@ -1348,16 +1367,19 @@ async function main(): Promise<void> {
       ...state,
     }
 
-  const table = tableCore.createTable<DemoProcessRow>({
+    const table = tableCore.createTable<DemoProcessRow>({
     data,
     columns,
     getRowId: (row: DemoProcessRow) => String(row.id),
     getSubRows: (row: DemoProcessRow) => (row as any).subRows,
-    initialState: options.initialState,
-    manualFiltering: options.manualFiltering ?? false,
-    manualSorting: options.manualSorting ?? false,
-    manualPagination: options.manualPagination ?? false,
-    manualExpanding: options.manualExpanding ?? false,
+      initialState: options.initialState,
+      autoResetAll: options.autoResetAll,
+      manualFiltering: options.manualFiltering ?? false,
+      manualSorting: options.manualSorting ?? false,
+      manualPagination: options.manualPagination ?? false,
+      autoResetExpanded: options.autoResetExpanded,
+      manualExpanding: options.manualExpanding ?? false,
+      enableExpanding: options.enableExpanding,
       manualGrouping: options.manualGrouping ?? false,
       paginateExpandedRows: options.paginateExpandedRows ?? true,
       keepPinnedRows: options.keepPinnedRows ?? true,
@@ -1382,6 +1404,12 @@ async function main(): Promise<void> {
               return Number.isFinite(id) ? id % 2 === 1 : false
             }
           : options.enableRowPinning,
+      getRowCanExpand:
+        options.__getRowCanExpand === "only_root_1"
+          ? (row: any) => String(row?.id ?? "") === "1"
+          : undefined,
+      getIsRowExpanded:
+        options.__getIsRowExpanded === "always_false" ? (_row: any) => false : undefined,
       enableGrouping: options.enableGrouping,
       enableColumnPinning: options.enableColumnPinning,
       enablePinning: options.enablePinning,
@@ -1433,7 +1461,10 @@ async function main(): Promise<void> {
         : {}),
       getSortedRowModel: tableCore.getSortedRowModel(),
       getPaginationRowModel: tableCore.getPaginationRowModel(),
-      getExpandedRowModel: tableCore.getExpandedRowModel(),
+      getExpandedRowModel:
+        options.__getExpandedRowModel === "pre_expanded"
+          ? (t: any) => () => t.getPreExpandedRowModel?.()
+          : tableCore.getExpandedRowModel(),
       onSortingChange: (updater: any) => {
         const next = typeof updater === "function" ? updater(currentState.sorting) : updater
         currentState.sorting = next ?? []
@@ -1490,6 +1521,14 @@ async function main(): Promise<void> {
         const next =
           typeof updater === "function" ? updater(currentState.rowSelection) : updater
         currentState.rowSelection = next ?? {}
+      },
+      onExpandedChange: (updater: any) => {
+        if (options.__onExpandedChange === "noop") {
+          return
+        }
+        const next =
+          typeof updater === "function" ? updater(currentState.expanded) : updater
+        currentState.expanded = next ?? {}
       },
       onGroupingChange: (updater: any) => {
         const next =
@@ -2352,6 +2391,78 @@ function snapshotColumnPinning(
     }
   }
 
+  async function snapshotForGroupingActionsWithAutoResetFlush(
+    options: TanStackOptions,
+    state: TanStackState,
+    actions: FixtureAction[],
+  ): Promise<FixtureSnapshot["expect"]> {
+    const { table, currentState } = buildTable(options, state)
+
+    for (const action of actions) {
+      if (action.type === "toggleGrouping") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        if (typeof col.toggleGrouping !== "function") {
+          throw new Error(`Column has no toggleGrouping: ${action.column_id}`)
+        }
+        col.toggleGrouping(action.value)
+      } else if (action.type === "toggleGroupingHandler") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        if (typeof col.getToggleGroupingHandler !== "function") {
+          throw new Error(`Column has no getToggleGroupingHandler: ${action.column_id}`)
+        }
+        const handler = col.getToggleGroupingHandler()
+        if (typeof handler !== "function") {
+          throw new Error(`Column returned no toggle handler: ${action.column_id}`)
+        }
+        handler()
+      } else if (action.type === "setGrouping") {
+        if (typeof table.setGrouping !== "function") {
+          throw new Error("Table has no setGrouping")
+        }
+        table.setGrouping(action.grouping)
+      } else {
+        throw new Error(
+          `snapshotForGroupingActionsWithAutoResetFlush only supports grouping actions; got: ${action.type}`,
+        )
+      }
+
+      // Simulate a render pass where the grouped row model is recomputed. TanStack's
+      // `getGroupedRowModel` memo debug callback queues `_autoResetExpanded()`.
+      table.getGroupedRowModel?.()
+
+      // Flush the microtask queue to run `table._queue` callbacks (registration + reset).
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+
+    const expect = snapshotForState(options, currentState)
+
+    return {
+      ...expect,
+      next_state: {
+        sorting: currentState.sorting ?? [],
+        columnFilters: currentState.columnFilters ?? [],
+        globalFilter: currentState.globalFilter,
+        pagination: currentState.pagination,
+        grouping: currentState.grouping ?? [],
+        expanded: currentState.expanded,
+        rowPinning: currentState.rowPinning,
+        rowSelection: currentState.rowSelection ?? {},
+        columnVisibility: currentState.columnVisibility,
+        columnSizing: currentState.columnSizing ?? {},
+        columnSizingInfo: currentState.columnSizingInfo,
+        columnPinning: currentState.columnPinning,
+        columnOrder: currentState.columnOrder,
+      },
+    }
+  }
+
   const defaultOptions: TanStackOptions = {
     manualFiltering: false,
     manualSorting: false,
@@ -2676,10 +2787,43 @@ function snapshotColumnPinning(
         expect: snapshotForState(base, {}),
       },
       {
+        id: "expanding_enable_expanding_false_disables_can_expand",
+        options: { ...base, enableExpanding: false },
+        state: {},
+        expect: snapshotForState({ ...base, enableExpanding: false }, {}),
+      },
+      {
+        id: "expanding_hook_get_row_can_expand_overrides_enable_expanding_false",
+        options: { ...base, enableExpanding: false, __getRowCanExpand: "only_root_1" },
+        state: {},
+        expect: snapshotForState(
+          { ...base, enableExpanding: false, __getRowCanExpand: "only_root_1" },
+          {},
+        ),
+      },
+      {
         id: "expanding_state_row_1",
         options: base,
         state: { expanded: { "1": true } },
         expect: snapshotForState(base, { expanded: { "1": true } }),
+      },
+      {
+        id: "expanding_override_get_expanded_row_model_pre_expanded",
+        options: { ...base, __getExpandedRowModel: "pre_expanded" },
+        state: { expanded: { "1": true } },
+        expect: snapshotForState(
+          { ...base, __getExpandedRowModel: "pre_expanded" },
+          { expanded: { "1": true } },
+        ),
+      },
+      {
+        id: "expanding_hook_get_is_row_expanded_overrides_state",
+        options: { ...base, __getIsRowExpanded: "always_false" },
+        state: { expanded: { "1": true } },
+        expect: snapshotForState(
+          { ...base, __getIsRowExpanded: "always_false" },
+          { expanded: { "1": true } },
+        ),
       },
       {
         id: "expanding_state_all_true",
@@ -2715,6 +2859,24 @@ function snapshotColumnPinning(
         ],
         expect: snapshotForActions(base, {}, [
           { type: "toggleRowExpanded", row_id: "1" },
+          { type: "toggleRowExpanded", row_id: "1" },
+        ]),
+      },
+      {
+        id: "expanding_action_toggle_row_on_expanded_change_noop_ignores",
+        options: { ...base, __onExpandedChange: "noop" },
+        state: {},
+        actions: [{ type: "toggleRowExpanded", row_id: "1" }],
+        expect: snapshotForActions({ ...base, __onExpandedChange: "noop" }, {}, [
+          { type: "toggleRowExpanded", row_id: "1" },
+        ]),
+      },
+      {
+        id: "expanding_action_toggle_row_enable_expanding_false_still_updates_state",
+        options: { ...base, enableExpanding: false },
+        state: {},
+        actions: [{ type: "toggleRowExpanded", row_id: "1" }],
+        expect: snapshotForActions({ ...base, enableExpanding: false }, {}, [
           { type: "toggleRowExpanded", row_id: "1" },
         ]),
       },
@@ -3184,6 +3346,37 @@ function snapshotColumnPinning(
       }
     }
 
+    const mkActionsAutoReset = async (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = await snapshotForGroupingActionsWithAutoResetFlush(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      const isGroupingApplied =
+        !options.manualGrouping &&
+        options.__getGroupedRowModel !== "pre_grouped" &&
+        (expect.next_state.grouping?.length ?? 0) > 0
+      const sorted_grouped_row_model =
+        isGroupingApplied ? snapshotSortedGroupedRowModel(table) : undefined
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          grouped_row_model: snapshotGroupedRowModel(table),
+          grouped_aggregations_u64: snapshotGroupedAggregationsU64(table),
+          sorted_grouped_row_model,
+        },
+      }
+    }
+
     snapshots = [
       mk("grouping_baseline", {}, {}),
       mk("grouping_state_one_column", {}, { grouping: ["role"] }),
@@ -3205,6 +3398,33 @@ function snapshotColumnPinning(
       mkActions("grouping_action_toggle_role_off", {}, { grouping: ["role"] }, [
         { type: "toggleGrouping", column_id: "role" },
       ]),
+      await mkActionsAutoReset(
+        "grouping_autoreset_expanded_default_resets",
+        {},
+        { expanded: { "1": true } },
+        [
+          { type: "toggleGrouping", column_id: "role" },
+          { type: "toggleGrouping", column_id: "team" },
+        ],
+      ),
+      await mkActionsAutoReset(
+        "grouping_autoreset_expanded_manual_expanding_true_no_reset",
+        { manualExpanding: true },
+        { expanded: { "1": true } },
+        [
+          { type: "toggleGrouping", column_id: "role" },
+          { type: "toggleGrouping", column_id: "team" },
+        ],
+      ),
+      await mkActionsAutoReset(
+        "grouping_autoreset_expanded_auto_reset_expanded_true_overrides_manual",
+        { manualExpanding: true, autoResetExpanded: true },
+        { expanded: { "1": true } },
+        [
+          { type: "toggleGrouping", column_id: "role" },
+          { type: "toggleGrouping", column_id: "team" },
+        ],
+      ),
       mkActions(
         "grouping_action_toggle_noop_when_enable_grouping_false",
         { enableGrouping: false },

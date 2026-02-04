@@ -3,8 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    Aggregation, ColumnDef, GroupedRowKind, GroupedRowModel, RowKey, Table, TanStackTableOptions,
-    TanStackTableState, grouped_row_model_from_leaf, sort_grouped_row_indices_in_place,
+    Aggregation, ColumnDef, GroupedRowKind, GroupedRowModel, RowKey, Table, TableState,
+    TanStackTableOptions, TanStackTableState, grouped_row_model_from_leaf,
+    sort_grouped_row_indices_in_place,
 };
 use serde::Deserialize;
 
@@ -358,16 +359,31 @@ fn tanstack_v8_grouping_parity() {
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
+        // TanStack: table-level reset APIs target `options.initialState`, not `options.state`.
+        // Auto reset behaviors (e.g. `autoResetExpanded`) also reset to `initialState`.
+        let initial_state = match snap.options.get("initialState") {
+            Some(v) => TanStackTableState::from_json(v)
+                .expect("tanstack initialState")
+                .to_table_state()
+                .expect("initialState conversion"),
+            None => TableState::default(),
+        };
+
         let grouped_override_pre_grouped = snap
             .options
             .get("__getGroupedRowModel")
             .and_then(|v| v.as_str())
             .is_some_and(|v| v == "pre_grouped");
 
+        let mut auto_reset_expanded_registered = false;
+
         for action in &snap.actions {
+            let prev_grouping = state.grouping.clone();
+
             let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options);
 
@@ -399,6 +415,18 @@ fn tanstack_v8_grouping_parity() {
                         .collect();
                 }
             }
+
+            let grouping_changed = state.grouping != prev_grouping;
+            if grouping_changed {
+                // TanStack Table v8: the grouped row model memo debug callback queues
+                // `_autoResetExpanded()`. The first invocation only registers; subsequent invocations
+                // can trigger a reset depending on option gates.
+                if !auto_reset_expanded_registered {
+                    auto_reset_expanded_registered = true;
+                } else if table.should_auto_reset_expanded() {
+                    state.expanding = table.reset_expanded(false);
+                }
+            }
         }
 
         if let Some(expected_next) = snap.expect.next_state.as_ref() {
@@ -410,6 +438,11 @@ fn tanstack_v8_grouping_parity() {
             assert_eq!(
                 state.grouping, expected_state.grouping,
                 "snapshot {} next_state.grouping mismatch",
+                snap.id
+            );
+            assert_eq!(
+                state.expanding, expected_state.expanding,
+                "snapshot {} next_state.expanded mismatch",
                 snap.id
             );
         }

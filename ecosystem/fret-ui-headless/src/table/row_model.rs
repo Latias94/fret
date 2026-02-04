@@ -111,9 +111,12 @@ pub struct TableBuilder<'a, TData> {
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     enable_row_pinning: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    get_row_can_expand: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    get_is_row_expanded: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    expanded_row_model_override_pre_expanded: bool,
     initial_state: Option<super::TableState>,
     state: super::TableState,
     options: super::TableOptions,
@@ -131,9 +134,12 @@ impl<'a, TData> TableBuilder<'a, TData> {
             global_filter_fn: super::FilteringFnSpec::Auto,
             get_column_can_global_filter: None,
             enable_row_pinning: None,
+            get_row_can_expand: None,
+            get_is_row_expanded: None,
             get_row_key: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
+            expanded_row_model_override_pre_expanded: false,
             initial_state: None,
             state: super::TableState::default(),
             options: super::TableOptions::default(),
@@ -243,6 +249,12 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// TanStack-aligned: override `getExpandedRowModel` to return `getPreExpandedRowModel()`.
+    pub fn override_expanded_row_model_pre_expanded(mut self) -> Self {
+        self.expanded_row_model_override_pre_expanded = true;
+        self
+    }
+
     pub fn paginate_expanded_rows(mut self, enabled: bool) -> Self {
         self.options.paginate_expanded_rows = enabled;
         self
@@ -281,6 +293,18 @@ impl<'a, TData> TableBuilder<'a, TData> {
     /// TanStack-aligned: configure `options.enableRowPinning` as a per-row predicate.
     pub fn enable_row_pinning_by(mut self, f: impl Fn(RowKey, &TData) -> bool + 'static) -> Self {
         self.enable_row_pinning = Some(Arc::new(f));
+        self
+    }
+
+    /// TanStack-aligned: configure `options.getRowCanExpand` as a per-row predicate.
+    pub fn get_row_can_expand_by(mut self, f: impl Fn(RowKey, &TData) -> bool + 'static) -> Self {
+        self.get_row_can_expand = Some(Arc::new(f));
+        self
+    }
+
+    /// TanStack-aligned: configure `options.getIsRowExpanded` as a per-row predicate.
+    pub fn get_is_row_expanded_by(mut self, f: impl Fn(RowKey, &TData) -> bool + 'static) -> Self {
+        self.get_is_row_expanded = Some(Arc::new(f));
         self
     }
 
@@ -350,9 +374,12 @@ pub struct Table<'a, TData> {
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     enable_row_pinning: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    get_row_can_expand: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    get_is_row_expanded: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: GetRowKeyFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    expanded_row_model_override_pre_expanded: bool,
     /// TanStack-aligned `initialState` snapshot (used by table-level reset APIs).
     initial_state: super::TableState,
     state: super::TableState,
@@ -445,9 +472,13 @@ impl<'a, TData> Table<'a, TData> {
             global_filter_fn: builder.global_filter_fn,
             get_column_can_global_filter: builder.get_column_can_global_filter,
             enable_row_pinning: builder.enable_row_pinning,
+            get_row_can_expand: builder.get_row_can_expand,
+            get_is_row_expanded: builder.get_is_row_expanded,
             get_row_key,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
+            expanded_row_model_override_pre_expanded: builder
+                .expanded_row_model_override_pre_expanded,
             initial_state,
             state: builder.state,
             options: builder.options,
@@ -659,6 +690,23 @@ impl<'a, TData> Table<'a, TData> {
         let mut next = self.state.expanding.clone();
         super::toggle_row_expanded(&mut next, self.row_model(), row_key, value);
         next
+    }
+
+    /// TanStack-aligned: `autoResetAll ?? autoResetExpanded ?? !manualExpanding`.
+    pub fn should_auto_reset_expanded(&self) -> bool {
+        self.options
+            .auto_reset_all
+            .or(self.options.auto_reset_expanded)
+            .unwrap_or(!self.options.manual_expanding)
+    }
+
+    /// TanStack-aligned: `table.resetExpanded(defaultState?)`.
+    pub fn reset_expanded(&self, default_state: bool) -> super::ExpandingState {
+        if default_state {
+            super::ExpandingState::default()
+        } else {
+            self.initial_state.expanding.clone()
+        }
     }
 
     pub fn grouping(&self) -> &super::GroupingState {
@@ -907,9 +955,30 @@ impl<'a, TData> Table<'a, TData> {
                     .flat_rows()
                     .iter()
                     .filter_map(|&i| model.row(i))
-                    .all(|r| super::is_row_expanded(r.key, &self.state.expanding))
+                    .all(|r| self.row_is_expanded_for_row(r))
             }
         }
+    }
+
+    fn row_is_expanded_for_row(&self, row: &Row<'a, TData>) -> bool {
+        self.get_is_row_expanded
+            .as_ref()
+            .map(|f| f(row.key, row.original))
+            .unwrap_or_else(|| super::is_row_expanded(row.key, &self.state.expanding))
+    }
+
+    fn row_is_expanded_for_key_and_original(&self, row_key: RowKey, original: &TData) -> bool {
+        self.get_is_row_expanded
+            .as_ref()
+            .map(|f| f(row_key, original))
+            .unwrap_or_else(|| super::is_row_expanded(row_key, &self.state.expanding))
+    }
+
+    fn row_can_expand_for_row(&self, row: &Row<'a, TData>) -> bool {
+        self.get_row_can_expand
+            .as_ref()
+            .map(|f| f(row.key, row.original))
+            .unwrap_or_else(|| self.options.enable_expanding && !row.sub_rows.is_empty())
     }
 
     pub fn can_some_rows_expand(&self) -> bool {
@@ -917,7 +986,8 @@ impl<'a, TData> Table<'a, TData> {
         model
             .flat_rows()
             .iter()
-            .any(|&i| super::row_can_expand(model, i))
+            .filter_map(|&i| model.row(i))
+            .any(|r| self.row_can_expand_for_row(r))
     }
 
     pub fn expanded_depth(&self) -> u16 {
@@ -925,17 +995,33 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn row_can_expand(&self, row_key: RowKey) -> bool {
-        let model = self.pre_expanded_row_model();
+        let model = self.core_row_model();
         model
             .row_by_key(row_key)
-            .is_some_and(|i| super::row_can_expand(model, i))
+            .and_then(|i| model.row(i))
+            .is_some_and(|r| self.row_can_expand_for_row(r))
     }
 
     pub fn row_is_all_parents_expanded(&self, row_key: RowKey) -> bool {
-        let model = self.pre_expanded_row_model();
-        model
-            .row_by_key(row_key)
-            .is_some_and(|i| super::row_is_all_parents_expanded(model, &self.state.expanding, i))
+        let model = self.core_row_model();
+        let Some(mut current) = model.row_by_key(row_key) else {
+            return false;
+        };
+        loop {
+            let Some(r) = model.row(current) else {
+                return true;
+            };
+            let Some(parent) = r.parent else {
+                return true;
+            };
+            let Some(parent_row) = model.row(parent) else {
+                return true;
+            };
+            if !self.row_is_expanded_for_row(parent_row) {
+                return false;
+            }
+            current = parent;
+        }
     }
 
     pub fn is_some_rows_pinned(&self, position: Option<super::RowPinPosition>) -> bool {
@@ -1824,11 +1910,18 @@ impl<'a, TData> Table<'a, TData> {
         if self.options.manual_expanding {
             return self.pre_expanded_row_model();
         }
+        if self.expanded_row_model_override_pre_expanded {
+            return self.pre_expanded_row_model();
+        }
         if !super::is_some_rows_expanded(&self.state.expanding) {
             return self.pre_expanded_row_model();
         }
         self.expanded_row_model.get_or_init(|| {
-            super::expand_row_model(self.pre_expanded_row_model(), &self.state.expanding)
+            super::expand_row_model(
+                self.pre_expanded_row_model(),
+                &self.state.expanding,
+                |row_key, original| self.row_is_expanded_for_key_and_original(row_key, original),
+            )
         })
     }
 
@@ -1846,7 +1939,10 @@ impl<'a, TData> Table<'a, TData> {
             super::paginate_row_model(self.pre_pagination_row_model(), self.state.pagination)
         });
         self.expanded_paginated_row_model.get_or_init(|| {
-            let mut out = super::expand_row_model(paginated, &self.state.expanding);
+            let mut out =
+                super::expand_row_model(paginated, &self.state.expanding, |row_key, original| {
+                    self.row_is_expanded_for_key_and_original(row_key, original)
+                });
             rebuild_flat_rows_from_roots_including_duplicates(&mut out);
             out
         })

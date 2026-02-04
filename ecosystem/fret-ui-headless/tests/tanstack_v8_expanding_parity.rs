@@ -6,6 +6,7 @@ use fret_ui_headless::table::{
     contains_ascii_case_insensitive,
 };
 use serde::Deserialize;
+use serde_json::Value;
 
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureRow {
@@ -76,6 +77,10 @@ struct Fixture {
     snapshots: Vec<FixtureSnapshot>,
 }
 
+fn option_marker<'a>(options: &'a Value, key: &str) -> Option<&'a str> {
+    options.get(key)?.as_str()
+}
+
 fn snapshot_row_model<'a, TData>(
     model: &fret_ui_headless::table::RowModel<'a, TData>,
 ) -> RowModelSnapshot {
@@ -130,6 +135,11 @@ fn tanstack_v8_expanding_parity() {
         columns.iter().map(|c| (c.id.as_ref(), c)).collect();
 
     for snap in fixture.snapshots {
+        let get_row_can_expand_mode = option_marker(&snap.options, "__getRowCanExpand");
+        let get_is_row_expanded_mode = option_marker(&snap.options, "__getIsRowExpanded");
+        let on_expanded_change_mode = option_marker(&snap.options, "__onExpandedChange");
+        let get_expanded_row_model_mode = option_marker(&snap.options, "__getExpandedRowModel");
+
         let tanstack_options =
             TanStackTableOptions::from_json(&snap.options).expect("tanstack options");
         let options = tanstack_options.to_table_options();
@@ -138,7 +148,7 @@ fn tanstack_v8_expanding_parity() {
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
         for action in &snap.actions {
-            let table = Table::builder(&data)
+            let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
                 .get_sub_rows(|row, _idx| {
@@ -147,10 +157,17 @@ fn tanstack_v8_expanding_parity() {
                     } else {
                         Some(row.sub_rows.as_slice())
                     }
-                })
-                .state(state.clone())
-                .options(options)
-                .build();
+                });
+            if get_row_can_expand_mode == Some("only_root_1") {
+                builder = builder.get_row_can_expand_by(|row_key, _row| row_key.0 == 1);
+            }
+            if get_is_row_expanded_mode == Some("always_false") {
+                builder = builder.get_is_row_expanded_by(|_row_key, _row| false);
+            }
+            if get_expanded_row_model_mode == Some("pre_expanded") {
+                builder = builder.override_expanded_row_model_pre_expanded();
+            }
+            let table = builder.state(state.clone()).options(options).build();
 
             match action {
                 FixtureAction::ToggleRowExpanded { row_id, value } => {
@@ -159,10 +176,14 @@ fn tanstack_v8_expanding_parity() {
                             .parse::<u64>()
                             .unwrap_or_else(|_| panic!("invalid row_id: {row_id}")),
                     );
-                    state.expanding = table.toggled_row_expanded(row_key, *value);
+                    if on_expanded_change_mode != Some("noop") {
+                        state.expanding = table.toggled_row_expanded(row_key, *value);
+                    }
                 }
                 FixtureAction::ToggleAllRowsExpanded { value } => {
-                    state.expanding = table.toggled_all_rows_expanded(*value);
+                    if on_expanded_change_mode != Some("noop") {
+                        state.expanding = table.toggled_all_rows_expanded(*value);
+                    }
                 }
             }
         }
@@ -180,7 +201,7 @@ fn tanstack_v8_expanding_parity() {
             );
         }
 
-        let table = Table::builder(&data)
+        let mut builder = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
             .get_sub_rows(|row, _idx| {
@@ -189,10 +210,17 @@ fn tanstack_v8_expanding_parity() {
                 } else {
                     Some(row.sub_rows.as_slice())
                 }
-            })
-            .state(state)
-            .options(options)
-            .build();
+            });
+        if get_row_can_expand_mode == Some("only_root_1") {
+            builder = builder.get_row_can_expand_by(|row_key, _row| row_key.0 == 1);
+        }
+        if get_is_row_expanded_mode == Some("always_false") {
+            builder = builder.get_is_row_expanded_by(|_row_key, _row| false);
+        }
+        if get_expanded_row_model_mode == Some("pre_expanded") {
+            builder = builder.override_expanded_row_model_pre_expanded();
+        }
+        let table = builder.state(state).options(options).build();
 
         let core = snapshot_row_model(table.core_row_model());
         let filtered = snapshot_row_model(table.filtered_row_model());

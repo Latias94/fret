@@ -2515,7 +2515,234 @@
               "score": 10
             }
           }
-        ]
+        ],
+        "sorted_grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        }
       }
     },
     {
@@ -3689,6 +3916,3424 @@
       }
     },
     {
+      "id": "grouping_autoreset_expanded_default_resets",
+      "options": {},
+      "state": {
+        "expanded": {
+          "1": true
+        }
+      },
+      "actions": [
+        {
+          "type": "toggleGrouping",
+          "column_id": "role"
+        },
+        {
+          "type": "toggleGrouping",
+          "column_id": "team"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "5",
+            "1",
+            "5",
+            "3",
+            "3",
+            "role:1>team:10",
+            "role:1>team:20",
+            "2",
+            "2",
+            "4",
+            "4",
+            "role:2>team:20",
+            "role:2>team:10",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "5",
+            "1",
+            "5",
+            "3",
+            "3",
+            "role:1>team:10",
+            "role:1>team:20",
+            "2",
+            "2",
+            "4",
+            "4",
+            "role:2>team:20",
+            "role:2>team:10",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "role:1>team:10",
+            "1",
+            "5",
+            "role:1>team:20",
+            "3",
+            "role:2",
+            "role:2>team:20",
+            "2",
+            "role:2>team:10",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "role:1>team:10",
+            "1",
+            "5",
+            "role:1>team:20",
+            "3",
+            "role:2",
+            "role:2>team:20",
+            "2",
+            "role:2>team:10",
+            "4"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "role",
+            "team"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": [
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              }
+            ],
+            "values": {
+              "score": 8
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              },
+              {
+                "column_id": "team",
+                "value": "10"
+              }
+            ],
+            "values": {
+              "score": 7
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              },
+              {
+                "column_id": "team",
+                "value": "20"
+              }
+            ],
+            "values": {
+              "score": 1
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              }
+            ],
+            "values": {
+              "score": 10
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              },
+              {
+                "column_id": "team",
+                "value": "20"
+              }
+            ],
+            "values": {
+              "score": 7
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              },
+              {
+                "column_id": "team",
+                "value": "10"
+              }
+            ],
+            "values": {
+              "score": 3
+            }
+          }
+        ],
+        "sorted_grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "grouping_autoreset_expanded_manual_expanding_true_no_reset",
+      "options": {
+        "manualExpanding": true
+      },
+      "state": {
+        "expanded": {
+          "1": true
+        }
+      },
+      "actions": [
+        {
+          "type": "toggleGrouping",
+          "column_id": "role"
+        },
+        {
+          "type": "toggleGrouping",
+          "column_id": "team"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "5",
+            "1",
+            "5",
+            "3",
+            "3",
+            "role:1>team:10",
+            "role:1>team:20",
+            "2",
+            "2",
+            "4",
+            "4",
+            "role:2>team:20",
+            "role:2>team:10",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "5",
+            "1",
+            "5",
+            "3",
+            "3",
+            "role:1>team:10",
+            "role:1>team:20",
+            "2",
+            "2",
+            "4",
+            "4",
+            "role:2>team:20",
+            "role:2>team:10",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "role:1>team:10",
+            "1",
+            "5",
+            "role:1>team:20",
+            "3",
+            "role:2",
+            "role:2>team:20",
+            "2",
+            "role:2>team:10",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "role:1>team:10",
+            "1",
+            "5",
+            "role:1>team:20",
+            "3",
+            "role:2",
+            "role:2>team:20",
+            "2",
+            "role:2>team:10",
+            "4"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": true,
+        "can_some_rows_expand": true,
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "role",
+            "team"
+          ],
+          "expanded": {
+            "1": true
+          },
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": [
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              }
+            ],
+            "values": {
+              "score": 8
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              },
+              {
+                "column_id": "team",
+                "value": "10"
+              }
+            ],
+            "values": {
+              "score": 7
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              },
+              {
+                "column_id": "team",
+                "value": "20"
+              }
+            ],
+            "values": {
+              "score": 1
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              }
+            ],
+            "values": {
+              "score": 10
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              },
+              {
+                "column_id": "team",
+                "value": "20"
+              }
+            ],
+            "values": {
+              "score": 7
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              },
+              {
+                "column_id": "team",
+                "value": "10"
+              }
+            ],
+            "values": {
+              "score": 3
+            }
+          }
+        ],
+        "sorted_grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "grouping_autoreset_expanded_auto_reset_expanded_true_overrides_manual",
+      "options": {
+        "manualExpanding": true,
+        "autoResetExpanded": true
+      },
+      "state": {
+        "expanded": {
+          "1": true
+        }
+      },
+      "actions": [
+        {
+          "type": "toggleGrouping",
+          "column_id": "role"
+        },
+        {
+          "type": "toggleGrouping",
+          "column_id": "team"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "5",
+            "1",
+            "5",
+            "3",
+            "3",
+            "role:1>team:10",
+            "role:1>team:20",
+            "2",
+            "2",
+            "4",
+            "4",
+            "role:2>team:20",
+            "role:2>team:10",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "5",
+            "1",
+            "5",
+            "3",
+            "3",
+            "role:1>team:10",
+            "role:1>team:20",
+            "2",
+            "2",
+            "4",
+            "4",
+            "role:2>team:20",
+            "role:2>team:10",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "role:1>team:10",
+            "1",
+            "5",
+            "role:1>team:20",
+            "3",
+            "role:2",
+            "role:2>team:20",
+            "2",
+            "role:2>team:10",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "role:1>team:10",
+            "1",
+            "5",
+            "role:1>team:20",
+            "3",
+            "role:2",
+            "role:2>team:20",
+            "2",
+            "role:2>team:10",
+            "4"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "role",
+            "team"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": [
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              }
+            ],
+            "values": {
+              "score": 8
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              },
+              {
+                "column_id": "team",
+                "value": "10"
+              }
+            ],
+            "values": {
+              "score": 7
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              },
+              {
+                "column_id": "team",
+                "value": "20"
+              }
+            ],
+            "values": {
+              "score": 1
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              }
+            ],
+            "values": {
+              "score": 10
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              },
+              {
+                "column_id": "team",
+                "value": "20"
+              }
+            ],
+            "values": {
+              "score": 7
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              },
+              {
+                "column_id": "team",
+                "value": "10"
+              }
+            ],
+            "values": {
+              "score": 3
+            }
+          }
+        ],
+        "sorted_grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 2,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "20"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "20",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "group",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                },
+                {
+                  "column_id": "team",
+                  "value": "10"
+                }
+              ],
+              "grouping_column_id": "team",
+              "grouping_value": "10",
+              "leaf_row_count": 1,
+              "first_leaf_row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "grouping_action_toggle_noop_when_enable_grouping_false",
       "options": {
         "enableGrouping": false
@@ -4433,7 +8078,234 @@
               "score": 10
             }
           }
-        ]
+        ],
+        "sorted_grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        }
       }
     },
     {

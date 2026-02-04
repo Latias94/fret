@@ -136,6 +136,7 @@ pub fn expanded_depth<TData>(row_model: &RowModel<'_, TData>, expanded: &Expandi
 pub fn expand_row_model<'a, TData>(
     row_model: &RowModel<'a, TData>,
     expanded: &ExpandingState,
+    mut row_is_expanded: impl FnMut(RowKey, &TData) -> bool,
 ) -> RowModel<'a, TData> {
     if row_model.root_rows().is_empty() {
         return row_model.clone();
@@ -149,7 +150,7 @@ pub fn expand_row_model<'a, TData>(
 
     fn push_visible<TData>(
         source: &RowModel<'_, TData>,
-        expanded: &ExpandingState,
+        row_is_expanded: &mut impl FnMut(RowKey, &TData) -> bool,
         out: &mut Vec<RowIndex>,
         row: RowIndex,
     ) {
@@ -160,16 +161,16 @@ pub fn expand_row_model<'a, TData>(
         if r.sub_rows.is_empty() {
             return;
         }
-        if !is_row_expanded(r.key, expanded) {
+        if !row_is_expanded(r.key, r.original) {
             return;
         }
         for &child in &r.sub_rows {
-            push_visible(source, expanded, out, child);
+            push_visible(source, row_is_expanded, out, child);
         }
     }
 
     for &root in row_model.root_rows() {
-        push_visible(row_model, expanded, &mut out.root_rows, root);
+        push_visible(row_model, &mut row_is_expanded, &mut out.root_rows, root);
     }
 
     out
