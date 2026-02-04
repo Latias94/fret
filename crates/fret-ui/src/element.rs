@@ -960,6 +960,12 @@ pub struct TextInputProps {
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which this text input controls.
+    ///
+    /// This is an authoring convenience for relationships like `aria-controls` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub controls_element: Option<u64>,
     pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
@@ -979,6 +985,7 @@ impl TextInputProps {
             test_id: None,
             placeholder: None,
             active_descendant: None,
+            controls_element: None,
             expanded: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
@@ -1002,6 +1009,7 @@ impl std::fmt::Debug for TextInputProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
