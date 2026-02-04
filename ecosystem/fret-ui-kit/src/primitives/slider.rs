@@ -35,14 +35,14 @@ pub fn slider_use_values_model<H: UiHost>(
 
 /// Semantics wrapper props for a slider root.
 pub fn slider_root_semantics(
-    _label: Option<Arc<str>>,
-    _value: f32,
+    label: Option<Arc<str>>,
+    value: f32,
     disabled: bool,
 ) -> SemanticsProps {
     SemanticsProps {
         role: SemanticsRole::Generic,
-        label: None,
-        value: None,
+        label,
+        value: Some(format_semantics_value(value)),
         disabled,
         ..Default::default()
     }
@@ -68,6 +68,7 @@ mod tests {
     use super::*;
 
     use std::cell::Cell;
+    use std::sync::Arc;
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
@@ -77,6 +78,17 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(200.0), Px(120.0)),
         )
+    }
+
+    #[test]
+    fn slider_root_semantics_exposes_value_string() {
+        let label = Arc::<str>::from("slider");
+        let value = 12.0;
+
+        let out = slider_root_semantics(Some(label.clone()), value, false);
+        assert_eq!(out.label.as_deref(), Some(label.as_ref()));
+        assert_eq!(out.value, Some(format_semantics_value(value)));
+        assert_eq!(out.disabled, false);
     }
 
     #[test]

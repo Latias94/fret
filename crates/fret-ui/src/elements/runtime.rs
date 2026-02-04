@@ -160,6 +160,7 @@ pub struct WindowElementState {
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
+    transient_events: HashMap<(GlobalElementId, u64), FrameId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -220,6 +221,9 @@ impl WindowElementState {
 
         self.advance_element_state_buffers(lag_frames);
 
+        let cutoff = frame_id.0.saturating_sub(1);
+        self.transient_events
+            .retain(|_, recorded| recorded.0 >= cutoff);
         self.raf_notify_roots.clear();
         self.view_cache_key_mismatch_roots.clear();
 
@@ -296,6 +300,15 @@ impl WindowElementState {
 
     pub(crate) fn remove_retained_virtual_list_keep_alive_root(&mut self, node: NodeId) {
         self.retained_virtual_list_keep_alive_roots.remove(&node);
+    }
+
+    pub(crate) fn record_transient_event(&mut self, element: GlobalElementId, key: u64) {
+        self.transient_events
+            .insert((element, key), self.prepared_frame);
+    }
+
+    pub(crate) fn take_transient_event(&mut self, element: GlobalElementId, key: u64) -> bool {
+        self.transient_events.remove(&(element, key)).is_some()
     }
 
     fn advance_element_state_buffers(&mut self, lag_frames: u64) {
@@ -1112,6 +1125,46 @@ impl DebugIdentitySegment {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn transient_events_survive_one_frame_and_clear_on_read() {
+        let mut state = WindowElementState::default();
+        let element = GlobalElementId(123);
+        let key = 0xDEAD_BEEF;
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.record_transient_event(element, key);
+
+        // A transient event should be observable in the next prepared frame, since input can
+        // arrive between frames.
+        state.prepare_for_frame(FrameId(2), 0);
+        assert!(state.take_transient_event(element, key));
+        assert!(!state.take_transient_event(element, key));
+    }
+
+    #[test]
+    fn transient_events_prune_after_two_frames_if_not_consumed() {
+        let mut state = WindowElementState::default();
+        let element = GlobalElementId(123);
+        let key = 0xDEAD_BEEF;
+
+        state.prepare_for_frame(FrameId(10), 0);
+        state.record_transient_event(element, key);
+
+        // Kept for one additional frame to allow delivery on the next render.
+        state.prepare_for_frame(FrameId(11), 0);
+        assert!(state.take_transient_event(element, key));
+
+        // If we record and never consume, it should not survive beyond the next-next frame.
+        state.record_transient_event(element, key);
+        state.prepare_for_frame(FrameId(12), 0);
+        assert!(state.take_transient_event(element, key));
+
+        state.record_transient_event(element, key);
+        state.prepare_for_frame(FrameId(13), 0);
+        state.prepare_for_frame(FrameId(14), 0);
+        assert!(!state.take_transient_event(element, key));
+    }
 
     #[test]
     #[should_panic(expected = "ownership root overwrite detected")]

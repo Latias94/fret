@@ -10,6 +10,9 @@ mod facade;
 mod invalidation;
 pub mod runtime;
 
+#[cfg(feature = "imui")]
+pub mod imui;
+
 pub use dock::{
     ActivatePanelOptions, DockManager, DockPanel, DockPanelRegistry, DockPanelRegistryService,
     DockSpace, DockSpaceMount, DockViewportLayout, DockViewportOverlayHooks,

@@ -249,11 +249,11 @@ fn snackbar_toast_layer_style(theme: &Theme) -> ToastLayerStyle {
     ToastLayerStyle {
         palette,
         shadow,
-        show_close_button: false,
         open_ticks,
         close_ticks,
         easing,
         slide_distance: Px(16.0),
+        show_close_button: true,
         border_color_key: None,
         border_width: Px(0.0),
         description_color_key: Some("md.comp.snackbar.supporting-text.color".to_string()),

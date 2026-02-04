@@ -117,6 +117,8 @@ struct UiGalleryWindowState {
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
+    time_picker_open: Model<bool>,
+    time_picker_selected: Model<time::Time>,
     resizable_h_fractions: Model<Vec<f32>>,
     resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
@@ -395,6 +397,10 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(fret_ui_headless::calendar::CalendarMonth::from_date(today));
         let date_picker_selected = app.models_mut().insert(None::<Date>);
+        let time_picker_open = app.models_mut().insert(false);
+        let time_picker_selected = app
+            .models_mut()
+            .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
 
         let resizable_h_fractions = app.models_mut().insert(vec![0.3, 0.7]);
         let resizable_v_fractions = app.models_mut().insert(vec![0.5, 0.5]);
@@ -536,6 +542,8 @@ impl UiGalleryDriver {
             date_picker_open,
             date_picker_month,
             date_picker_selected,
+            time_picker_open,
+            time_picker_selected,
             resizable_h_fractions,
             resizable_v_fractions,
             data_table_state,
@@ -994,6 +1002,8 @@ impl UiGalleryDriver {
         let date_picker_open = state.date_picker_open.clone();
         let date_picker_month = state.date_picker_month.clone();
         let date_picker_selected = state.date_picker_selected.clone();
+        let time_picker_open = state.time_picker_open.clone();
+        let time_picker_selected = state.time_picker_selected.clone();
         let resizable_h_fractions = state.resizable_h_fractions.clone();
         let resizable_v_fractions = state.resizable_v_fractions.clone();
         let data_table_state = state.data_table_state.clone();
@@ -1382,6 +1392,8 @@ impl UiGalleryDriver {
                                             date_picker_open.clone(),
                                             date_picker_month.clone(),
                                             date_picker_selected.clone(),
+                                            time_picker_open.clone(),
+                                            time_picker_selected.clone(),
                                             resizable_h_fractions.clone(),
                                             resizable_v_fractions.clone(),
                                             data_table_state.clone(),
@@ -1473,6 +1485,8 @@ impl UiGalleryDriver {
                                         date_picker_open.clone(),
                                         date_picker_month.clone(),
                                         date_picker_selected.clone(),
+                                        time_picker_open.clone(),
+                                        time_picker_selected.clone(),
                                         resizable_h_fractions.clone(),
                                         resizable_v_fractions.clone(),
                                         data_table_state.clone(),

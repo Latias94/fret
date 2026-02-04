@@ -258,6 +258,8 @@ pub(crate) fn content_view(
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
+    time_picker_open: Model<bool>,
+    time_picker_selected: Model<time::Time>,
     resizable_h_fractions: Model<Vec<f32>>,
     resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
@@ -417,6 +419,8 @@ pub(crate) fn content_view(
         date_picker_open,
         date_picker_month,
         date_picker_selected,
+        time_picker_open,
+        time_picker_selected,
         resizable_h_fractions,
         resizable_v_fractions,
         data_table_state,
@@ -595,6 +599,8 @@ fn page_preview(
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
+    time_picker_open: Model<bool>,
+    time_picker_selected: Model<time::Time>,
     resizable_h_fractions: Model<Vec<f32>>,
     resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
@@ -850,6 +856,39 @@ fn page_preview(
         PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_radio(cx, material3_radio_value)
         }),
+        PAGE_MATERIAL3_BADGE => {
+            material3_scoped_page(cx, material3_expressive.clone(), preview_material3_badge)
+        }
+        PAGE_MATERIAL3_TOP_APP_BAR => material3_scoped_page(
+            cx,
+            material3_expressive.clone(),
+            preview_material3_top_app_bar,
+        ),
+        PAGE_MATERIAL3_BOTTOM_SHEET => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_bottom_sheet(cx, sheet_open)
+            })
+        }
+        PAGE_MATERIAL3_DATE_PICKER => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_date_picker(
+                    cx,
+                    date_picker_open,
+                    date_picker_month,
+                    date_picker_selected,
+                )
+            })
+        }
+        PAGE_MATERIAL3_TIME_PICKER => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_time_picker(cx, time_picker_open, time_picker_selected)
+            })
+        }
+        PAGE_MATERIAL3_SEGMENTED_BUTTON => material3_scoped_page(
+            cx,
+            material3_expressive.clone(),
+            preview_material3_segmented_button,
+        ),
         PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_select(cx)
         }),
@@ -5050,7 +5089,7 @@ fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             shadcn::CardHeader::new(vec![shadcn::CardTitle::new(label).into_element(cx)])
                 .into_element(cx),
             shadcn::CardContent::new(vec![
-                cx.text("Carousel currently demonstrates layout only."),
+                cx.text("Drag to swipe, or use the previous/next buttons."),
             ])
             .into_element(cx),
         ])
@@ -5662,6 +5701,31 @@ fn preview_material3_gallery(
         },
     ));
 
+    out.push(cx.text("— FAB —"));
+    out.push(stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search")
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search (small)")
+                    .size(material3::FabSize::Small)
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search (large)")
+                    .size(material3::FabSize::Large)
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search (primary)")
+                    .variant(material3::FabVariant::Primary)
+                    .into_element(cx),
+            ]
+        },
+    ));
+
     out.push(cx.text("— Selection —"));
     out.push(stack::hstack(
         cx,
@@ -5965,6 +6029,9 @@ fn material3_state_matrix_content(
     out.push(cx.text("— Icon Buttons —"));
     out.extend(preview_material3_icon_button(cx));
 
+    out.push(cx.text("— FAB —"));
+    out.extend(preview_material3_fab(cx, last_action.clone()));
+
     out.push(cx.text("— Checkbox —"));
     out.extend(preview_material3_checkbox(cx, material3_checkbox));
 
@@ -6118,7 +6185,7 @@ fn preview_material3_chip(
     let activate_row1 = activate.clone();
     let activate_row2 = activate.clone();
     let activate_row3 = activate.clone();
-    let _activate_row4 = activate.clone();
+    let activate_row4 = activate.clone();
 
     let last_action_for_input_selected = last_action.clone();
     let activate_input_selected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
@@ -6178,6 +6245,14 @@ fn preview_material3_chip(
     let input_selected_row1 = input_selected.clone();
     let input_unselected_row1 = input_unselected.clone();
     let input_unselected_row2 = input_unselected.clone();
+    let activate_filter_primary_row = activate_filter_primary.clone();
+    let activate_filter_trailing_row = activate_filter_trailing.clone();
+    let activate_filter_primary_for_set = activate_filter_primary.clone();
+    let activate_filter_trailing_for_set = activate_filter_trailing.clone();
+    let activate_input_unselected_primary_row = activate_input_unselected_primary.clone();
+    let activate_input_unselected_trailing_row = activate_input_unselected_trailing.clone();
+    let activate_input_unselected_primary_for_set = activate_input_unselected_primary.clone();
+    let activate_input_unselected_trailing_for_set = activate_input_unselected_trailing.clone();
 
     vec![
         cx.text("Material 3 AssistChip: token-driven shape/colors + state layer + bounded ripple."),
@@ -6270,18 +6345,18 @@ fn preview_material3_chip(
                 vec![
                     material3::FilterChip::new(filter_selected_row1.clone(), "Filter")
                         .trailing_icon(ids::ui::CLOSE)
-                        .on_activate(activate_filter_primary.clone())
-                        .on_trailing_icon_activate(activate_filter_trailing.clone())
+                        .on_activate(activate_filter_primary_row.clone())
+                        .on_trailing_icon_activate(activate_filter_trailing_row.clone())
                         .test_id("ui-gallery-material3-filter-chip-selected")
                         .into_element(cx),
                     material3::FilterChip::new(filter_unselected_row1.clone(), "Filter")
-                        .on_activate(activate_filter_primary.clone())
+                        .on_activate(activate_filter_primary_row.clone())
                         .test_id("ui-gallery-material3-filter-chip-unselected")
                         .into_element(cx),
                     material3::FilterChip::new(filter_selected_row2.clone(), "Override")
                         .variant(material3::FilterChipVariant::Elevated)
                         .style(filter_override_style_row.clone())
-                        .on_activate(activate_filter_primary.clone())
+                        .on_activate(activate_filter_primary_row.clone())
                         .test_id("ui-gallery-material3-filter-chip-override")
                         .into_element(cx),
                     material3::FilterChip::new(filter_unselected_row2.clone(), "Disabled")
@@ -6303,8 +6378,8 @@ fn preview_material3_chip(
                         .into_element(cx),
                     material3::InputChip::new(input_unselected_row1.clone(), "Input")
                         .trailing_icon(ids::ui::CLOSE)
-                        .on_activate(activate_input_unselected_primary.clone())
-                        .on_trailing_icon_activate(activate_input_unselected_trailing.clone())
+                        .on_activate(activate_input_unselected_primary_row.clone())
+                        .on_trailing_icon_activate(activate_input_unselected_trailing_row.clone())
                         .test_id("ui-gallery-material3-input-chip-unselected")
                         .into_element(cx),
                     material3::InputChip::new(input_unselected_row2.clone(), "Disabled")
@@ -6314,6 +6389,40 @@ fn preview_material3_chip(
                 ]
             },
         ),
+        cx.text(
+            "Material 3 ChipSet: roving focus (ArrowLeft/Right + Home/End). Multi-action chips use ArrowLeft/Right to move focus between primary/trailing actions, then roving continues to the next chip.",
+        ),
+        material3::ChipSet::new(vec![
+            material3::ChipSetItem::from(
+                material3::AssistChip::new("Assist")
+                    .leading_icon(ids::ui::SETTINGS)
+                    .on_activate(activate_row4.clone())
+                    .test_id("ui-gallery-material3-chip-set-assist"),
+            ),
+            material3::ChipSetItem::from(
+                material3::SuggestionChip::new("Suggestion")
+                    .leading_icon(ids::ui::SEARCH)
+                    .on_activate(activate_row4.clone())
+                    .test_id("ui-gallery-material3-chip-set-suggestion"),
+            ),
+            material3::ChipSetItem::from(
+                material3::FilterChip::new(filter_selected.clone(), "Filter")
+                    .trailing_icon(ids::ui::CLOSE)
+                    .on_activate(activate_filter_primary_for_set.clone())
+                    .on_trailing_icon_activate(activate_filter_trailing_for_set.clone())
+                    .test_id("ui-gallery-material3-chip-set-filter"),
+            ),
+            material3::ChipSetItem::from(
+                material3::InputChip::new(input_unselected.clone(), "Input")
+                    .trailing_icon(ids::ui::CLOSE)
+                    .on_activate(activate_input_unselected_primary_for_set.clone())
+                    .on_trailing_icon_activate(activate_input_unselected_trailing_for_set.clone())
+                    .test_id("ui-gallery-material3-chip-set-input"),
+            ),
+        ])
+        .a11y_label("chip set")
+        .test_id("ui-gallery-material3-chip-set")
+        .into_element(cx),
     ]
 }
 
@@ -6751,6 +6860,127 @@ fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     ]
 }
 
+fn preview_material3_fab(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+    use fret_ui::action::OnActivate;
+
+    fn on_activate(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
+        Arc::new(move |host, _acx, _reason| {
+            let _ = host.models_mut().update(&last_action, |v| {
+                *v = Arc::<str>::from(id);
+            });
+        })
+    }
+
+    let row = {
+        let last_action = last_action.clone();
+        move |cx: &mut ElementContext<'_, App>,
+              variant: material3::FabVariant,
+              label: &'static str| {
+            let last_action = last_action.clone();
+            stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                move |cx| {
+                    vec![
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label(label)
+                            .on_activate(on_activate(
+                                "material3.fab.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Small")
+                            .size(material3::FabSize::Small)
+                            .on_activate(on_activate(
+                                "material3.fab.small.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Large")
+                            .size(material3::FabSize::Large)
+                            .on_activate(on_activate(
+                                "material3.fab.large.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Lowered")
+                            .lowered(true)
+                            .on_activate(on_activate(
+                                "material3.fab.lowered.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Disabled")
+                            .disabled(true)
+                            .into_element(cx),
+                    ]
+                },
+            )
+        }
+    };
+
+    let extended = {
+        let last_action = last_action.clone();
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(material3::FabVariant::Surface)
+                        .label("Create")
+                        .on_activate(on_activate(
+                            "material3.extended_fab.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(material3::FabVariant::Primary)
+                        .label("Create")
+                        .on_activate(on_activate(
+                            "material3.extended_fab.primary.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(material3::FabVariant::Surface)
+                        .label("Reroute")
+                        .icon(None)
+                        .on_activate(on_activate(
+                            "material3.extended_fab.no_icon.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                ]
+            },
+        )
+    };
+
+    vec![
+        cx.text(
+            "Material 3 FAB: token-driven variants + focus ring + state layer + bounded ripple.",
+        ),
+        row(cx, material3::FabVariant::Surface, "Surface"),
+        row(cx, material3::FabVariant::Primary, "Primary"),
+        row(cx, material3::FabVariant::Secondary, "Secondary"),
+        row(cx, material3::FabVariant::Tertiary, "Tertiary"),
+        extended,
+    ]
+}
+
 fn preview_material3_checkbox(
     cx: &mut ElementContext<'_, App>,
     checked: Model<bool>,
@@ -7006,12 +7236,575 @@ fn preview_material3_radio(
     ]
 }
 
+fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_core::{Corners, Px};
+    use fret_ui::element::{AnyElement, ContainerProps, Length};
+
+    let theme = Theme::global(&*cx.app).clone();
+    let theme_for_anchor = theme.clone();
+
+    let anchor = move |cx: &mut ElementContext<'_, App>, size: Px, test_id: &'static str| {
+        let mut props = ContainerProps::default();
+        props.layout.size.width = Length::Px(size);
+        props.layout.size.height = Length::Px(size);
+        props.background =
+            Some(theme_for_anchor.color_required("md.sys.color.surface-container-low"));
+        props.corner_radii = Corners::all(Px(8.0));
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::<str>::from(test_id)),
+                ..Default::default()
+            },
+            move |cx| vec![cx.container(props, |_cx| Vec::<AnyElement>::new())],
+        )
+    };
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        |cx| {
+            let small = Px(24.0);
+            vec![
+                material3::Badge::dot()
+                    .navigation_anchor_size(small)
+                    .test_id("ui-gallery-material3-badge-dot-nav")
+                    .into_element(cx, |cx| vec![anchor(cx, small, "badge-anchor-dot-nav")]),
+                material3::Badge::text("9")
+                    .navigation_anchor_size(small)
+                    .test_id("ui-gallery-material3-badge-text-nav")
+                    .into_element(cx, |cx| vec![anchor(cx, small, "badge-anchor-text-nav")]),
+                material3::Badge::dot()
+                    .placement(material3::BadgePlacement::TopRight)
+                    .test_id("ui-gallery-material3-badge-dot-top-right")
+                    .into_element(cx, |cx| {
+                        vec![anchor(cx, Px(40.0), "badge-anchor-dot-top-right")]
+                    }),
+                material3::Badge::text("99+")
+                    .placement(material3::BadgePlacement::TopRight)
+                    .test_id("ui-gallery-material3-badge-text-top-right")
+                    .into_element(cx, |cx| {
+                        vec![anchor(cx, Px(40.0), "badge-anchor-text-top-right")]
+                    }),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Badge: dot + large/value variants via md.comp.badge.*."),
+        row,
+    ]
+}
+
+fn preview_material3_top_app_bar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant,
+    };
+
+    let bar = |cx: &mut ElementContext<'_, App>,
+               variant: TopAppBarVariant,
+               scrolled: bool,
+               title: &'static str,
+               test_id: &'static str| {
+        TopAppBar::new(title)
+            .variant(variant)
+            .scrolled(scrolled)
+            .navigation_icon(
+                TopAppBarAction::new(ids::ui::CHEVRON_RIGHT)
+                    .a11y_label("Navigate")
+                    .test_id(format!("{test_id}-nav")),
+            )
+            .actions(vec![
+                TopAppBarAction::new(ids::ui::SEARCH)
+                    .a11y_label("Search")
+                    .test_id(format!("{test_id}-search")),
+                TopAppBarAction::new(ids::ui::MORE_HORIZONTAL)
+                    .a11y_label("More actions")
+                    .test_id(format!("{test_id}-more")),
+            ])
+            .test_id(test_id)
+            .into_element(cx)
+    };
+
+    let scroll_demo = |cx: &mut ElementContext<'_, App>,
+                       key: &'static str,
+                       title: &'static str,
+                       variant: TopAppBarVariant,
+                       behavior: fn(fret_ui::scroll::ScrollHandle) -> TopAppBarScrollBehavior,
+                       test_prefix: &'static str| {
+        cx.keyed(key, |cx| {
+            let scroll_handle =
+                cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let behavior = cx.with_state(
+                || behavior(scroll_handle.clone()),
+                |behavior| behavior.clone(),
+            );
+            let bar = TopAppBar::new(title)
+                .variant(variant)
+                .scroll_behavior(behavior)
+                .navigation_icon(
+                    TopAppBarAction::new(ids::ui::CHEVRON_RIGHT)
+                        .a11y_label("Navigate")
+                        .test_id(format!("{test_prefix}-nav")),
+                )
+                .actions(vec![
+                    TopAppBarAction::new(ids::ui::MORE_HORIZONTAL)
+                        .a11y_label("More actions")
+                        .test_id(format!("{test_prefix}-more")),
+                ])
+                .test_id(test_prefix)
+                .into_element(cx);
+
+            let mut content_props = stack::VStackProps::default();
+            content_props.gap = Space::N2;
+            let content = stack::vstack(cx, content_props, |cx| {
+                let mut out: Vec<AnyElement> = Vec::new();
+                out.push(cx.text("Scroll this area to drive the TopAppBar scroll behavior."));
+                for i in 0..80usize {
+                    out.push(cx.text(format!("Row {i:02}")));
+                }
+                out
+            });
+
+            let scroll = shadcn::ScrollArea::new([content])
+                .scroll_handle(scroll_handle.clone())
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
+                .viewport_test_id(format!("{test_prefix}-scroll-viewport"))
+                .into_element(cx);
+
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4),
+                |_cx| [bar, scroll],
+            )
+        })
+    };
+
+    let mut props = stack::VStackProps::default();
+    props.gap = Space::N4;
+    let content = stack::vstack(cx, props, |cx| {
+        vec![
+            cx.text("Material 3 Top App Bar: primitives driven by md.comp.top-app-bar.* tokens."),
+            cx.text("Scroll behavior demos (policy-only, no fret-ui mechanism changes):"),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-pinned",
+                "Pinned scroll behavior (toggle scrolled container treatment)",
+                TopAppBarVariant::Small,
+                TopAppBarScrollBehavior::pinned,
+                "ui-gallery-material3-top-app-bar-pinned",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-enter-always",
+                "EnterAlways scroll behavior (collapses fully, shows on reverse scroll)",
+                TopAppBarVariant::Small,
+                TopAppBarScrollBehavior::enter_always,
+                "ui-gallery-material3-top-app-bar-enter-always",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-enter-always-settle-on-idle",
+                "EnterAlways + settleOnIdle (policy-only spring settle after idle)",
+                TopAppBarVariant::Small,
+                |h| TopAppBarScrollBehavior::enter_always(h).settle_on_idle(),
+                "ui-gallery-material3-top-app-bar-enter-always-settle-on-idle",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-exit-until-collapsed",
+                "ExitUntilCollapsed scroll behavior (Large collapses down to Small height)",
+                TopAppBarVariant::Large,
+                TopAppBarScrollBehavior::exit_until_collapsed,
+                "ui-gallery-material3-top-app-bar-exit-until-collapsed",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-exit-until-collapsed-settle-on-idle",
+                "ExitUntilCollapsed + settleOnIdle (policy-only snap; content moves)",
+                TopAppBarVariant::Large,
+                |h| TopAppBarScrollBehavior::exit_until_collapsed(h).settle_on_idle(),
+                "ui-gallery-material3-top-app-bar-exit-until-collapsed-settle-on-idle",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Small,
+                false,
+                "Small (idle)",
+                "ui-gallery-material3-top-app-bar-small",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Small,
+                true,
+                "Small (scrolled)",
+                "ui-gallery-material3-top-app-bar-small-scrolled",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::SmallCentered,
+                false,
+                "Small Centered (idle)",
+                "ui-gallery-material3-top-app-bar-small-centered",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::SmallCentered,
+                true,
+                "Small Centered (scrolled)",
+                "ui-gallery-material3-top-app-bar-small-centered-scrolled",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Medium,
+                false,
+                "Medium (idle)",
+                "ui-gallery-material3-top-app-bar-medium",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Medium,
+                true,
+                "Medium (scrolled)",
+                "ui-gallery-material3-top-app-bar-medium-scrolled",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Large,
+                false,
+                "Large (idle)",
+                "ui-gallery-material3-top-app-bar-large",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Large,
+                true,
+                "Large (scrolled)",
+                "ui-gallery-material3-top-app-bar-large-scrolled",
+            ),
+        ]
+    });
+
+    vec![content]
+}
+
+fn preview_material3_bottom_sheet(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui_material3::{
+        Button, ButtonVariant, DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet,
+    };
+
+    let open_sheet: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let close_sheet: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let underlay = move |cx: &mut ElementContext<'_, App>| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N4),
+            move |cx| {
+                let docked =
+                    DockedBottomSheet::new()
+                        .variant(DockedBottomSheetVariant::Standard)
+                        .test_id("ui-gallery-material3-bottom-sheet-docked")
+                        .into_element(cx, |cx| {
+                            vec![
+                        cx.text("Docked (standard) sheet: token-driven container + drag handle."),
+                        Button::new("Primary action")
+                            .variant(ButtonVariant::Filled)
+                            .test_id("ui-gallery-material3-bottom-sheet-docked-primary")
+                            .into_element(cx),
+                        Button::new("Secondary action")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("ui-gallery-material3-bottom-sheet-docked-secondary")
+                            .into_element(cx),
+                    ]
+                        });
+
+                vec![
+                cx.text(
+                    "Material 3 Bottom Sheet: primitives driven by md.comp.sheet.bottom.* tokens.",
+                ),
+                Button::new("Open modal bottom sheet")
+                    .variant(ButtonVariant::Filled)
+                    .on_activate(open_sheet.clone())
+                    .test_id("ui-gallery-material3-bottom-sheet-open")
+                    .into_element(cx),
+                Button::new("Underlay focus probe")
+                    .variant(ButtonVariant::Outlined)
+                    .test_id("ui-gallery-material3-bottom-sheet-underlay-probe")
+                    .into_element(cx),
+                cx.text(
+                    "Tip: click the scrim to dismiss; Tab should stay inside the sheet while open.",
+                ),
+                docked,
+            ]
+            },
+        )
+    };
+
+    let sheet = ModalBottomSheet::new(open)
+        .test_id("ui-gallery-material3-bottom-sheet")
+        .into_element(cx, underlay, move |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N4),
+                move |cx| {
+                    vec![
+                        cx.text("Modal bottom sheet content."),
+                        Button::new("Close")
+                            .variant(ButtonVariant::Filled)
+                            .on_activate(close_sheet.clone())
+                            .test_id("ui-gallery-material3-bottom-sheet-close")
+                            .into_element(cx),
+                    ]
+                },
+            )]
+        });
+
+    vec![sheet]
+}
+
+fn preview_material3_date_picker(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<time::Date>>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui_material3::{Button, ButtonVariant, DatePickerDialog, DockedDatePicker};
+
+    let open_dialog: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let selected_value = cx
+        .get_model_cloned(&selected, Invalidation::Layout)
+        .unwrap_or(None);
+    let selected_label: Arc<str> = match selected_value {
+        Some(date) => Arc::from(format!("Selected: {date}")),
+        None => Arc::<str>::from("Selected: <none>"),
+    };
+
+    let dialog = DatePickerDialog::new(open.clone(), month.clone(), selected.clone())
+        .test_id("ui-gallery-material3-date-picker")
+        .into_element(cx, move |cx| {
+            stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N4),
+                move |cx| {
+                    let docked = DockedDatePicker::new(month.clone(), selected.clone())
+                        .test_id("ui-gallery-material3-date-picker-docked")
+                        .into_element(cx);
+
+                    vec![
+                        cx.text(
+                            "Material 3 Date Picker: primitives driven by md.comp.date-picker.* tokens.",
+                        ),
+                        cx.text(selected_label.clone()),
+                        Button::new("Open date picker dialog")
+                            .variant(ButtonVariant::Filled)
+                            .on_activate(open_dialog.clone())
+                            .test_id("ui-gallery-material3-date-picker-open")
+                            .into_element(cx),
+                        Button::new("Underlay focus probe")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("ui-gallery-material3-date-picker-underlay-probe")
+                            .into_element(cx),
+                        docked,
+                    ]
+                },
+            )
+        });
+
+    vec![dialog]
+}
+
+fn preview_material3_time_picker(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    selected: Model<time::Time>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui_material3::{Button, ButtonVariant, DockedTimePicker, TimePickerDialog};
+
+    let open_dialog: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let selected_value = cx
+        .get_model_copied(&selected, Invalidation::Layout)
+        .unwrap_or_else(|| time::Time::from_hms(9, 41, 0).expect("valid time"));
+    let selected_label: Arc<str> = Arc::from(format!(
+        "Selected: {:02}:{:02}",
+        selected_value.hour(),
+        selected_value.minute()
+    ));
+
+    let dialog = TimePickerDialog::new(open.clone(), selected.clone())
+        .test_id("ui-gallery-material3-time-picker")
+        .into_element(cx, move |cx| {
+            stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N4),
+                move |cx| {
+                    let docked = DockedTimePicker::new(selected.clone())
+                        .test_id("ui-gallery-material3-time-picker-docked")
+                        .into_element(cx);
+
+                    vec![
+                        cx.text(
+                            "Material 3 Time Picker: primitives driven by md.comp.time-picker.* tokens.",
+                        ),
+                        cx.text(selected_label.clone()),
+                        Button::new("Open time picker dialog")
+                            .variant(ButtonVariant::Filled)
+                            .on_activate(open_dialog.clone())
+                            .test_id("ui-gallery-material3-time-picker-open")
+                            .into_element(cx),
+                        Button::new("Underlay focus probe")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("ui-gallery-material3-time-picker-underlay-probe")
+                            .into_element(cx),
+                        docked,
+                    ]
+                },
+            )
+        });
+
+    vec![dialog]
+}
+
+fn preview_material3_segmented_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use std::collections::BTreeSet;
+
+    use fret_ui_material3::{SegmentedButtonItem, SegmentedButtonSet};
+
+    #[derive(Default)]
+    struct SegmentedButtonPageModels {
+        single_value: Option<Model<Arc<str>>>,
+        multi_value: Option<Model<BTreeSet<Arc<str>>>>,
+    }
+
+    let single_value = cx.with_state(SegmentedButtonPageModels::default, |st| {
+        st.single_value.clone()
+    });
+    let single_value = match single_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("alpha"));
+            cx.with_state(SegmentedButtonPageModels::default, |st| {
+                st.single_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let multi_value = cx.with_state(SegmentedButtonPageModels::default, |st| {
+        st.multi_value.clone()
+    });
+    let multi_value = match multi_value {
+        Some(model) => model,
+        None => {
+            let initial: BTreeSet<Arc<str>> = [Arc::<str>::from("alpha")].into_iter().collect();
+            let model = cx.app.models_mut().insert(initial);
+            cx.with_state(SegmentedButtonPageModels::default, |st| {
+                st.multi_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let single_current = cx
+        .get_model_cloned(&single_value, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let multi_current_len = cx
+        .get_model_cloned(&multi_value, Invalidation::Layout)
+        .map(|set| set.len())
+        .unwrap_or(0);
+
+    let content = stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N4).items_start(),
+        |cx| {
+            vec![
+                SegmentedButtonSet::single(single_value.clone())
+                    .items(vec![
+                        SegmentedButtonItem::new("alpha", "Alpha")
+                            .icon(fret_icons::ids::ui::SEARCH)
+                            .test_id("ui-gallery-material3-segmented-single-alpha"),
+                        SegmentedButtonItem::new("beta", "Beta")
+                            .icon(fret_icons::ids::ui::SETTINGS)
+                            .test_id("ui-gallery-material3-segmented-single-beta"),
+                        SegmentedButtonItem::new("gamma", "Gamma (disabled)")
+                            .disabled(true)
+                            .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                            .test_id("ui-gallery-material3-segmented-single-gamma-disabled"),
+                    ])
+                    .a11y_label("Material 3 Segmented Button (single)")
+                    .test_id("ui-gallery-material3-segmented-single")
+                    .into_element(cx),
+                cx.text(format!("single={}", single_current.as_ref())),
+                SegmentedButtonSet::multi(multi_value.clone())
+                    .items(vec![
+                        SegmentedButtonItem::new("alpha", "Alpha")
+                            .test_id("ui-gallery-material3-segmented-multi-alpha"),
+                        SegmentedButtonItem::new("beta", "Beta")
+                            .test_id("ui-gallery-material3-segmented-multi-beta"),
+                        SegmentedButtonItem::new("gamma", "Gamma (disabled)")
+                            .disabled(true)
+                            .test_id("ui-gallery-material3-segmented-multi-gamma-disabled"),
+                    ])
+                    .a11y_label("Material 3 Segmented Button (multi)")
+                    .test_id("ui-gallery-material3-segmented-multi")
+                    .into_element(cx),
+                cx.text(format!("multi_count={multi_current_len}")),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Segmented Buttons: token-driven outcomes + roving focus + selection."),
+        content,
+    ]
+}
+
 fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
     #[derive(Default)]
     struct SelectPageModels {
         selected: Option<Model<Option<Arc<str>>>>,
+        selected_unclamped: Option<Model<Option<Arc<str>>>>,
+        selected_typeahead: Option<Model<Option<Arc<str>>>>,
+        selected_rich: Option<Model<Option<Arc<str>>>>,
+        selected_transformed: Option<Model<Option<Arc<str>>>>,
+        menu_width_floor_enabled: Option<Model<bool>>,
+        typeahead_delay_ms: Option<Model<u32>>,
     }
 
     let selected = cx.with_state(SelectPageModels::default, |st| st.selected.clone());
@@ -7025,6 +7818,94 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             model
         }
     };
+
+    let selected_unclamped = cx.with_state(SelectPageModels::default, |st| {
+        st.selected_unclamped.clone()
+    });
+    let selected_unclamped = match selected_unclamped {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_unclamped = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_typeahead = cx.with_state(SelectPageModels::default, |st| {
+        st.selected_typeahead.clone()
+    });
+    let selected_typeahead = match selected_typeahead {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_typeahead = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_rich = cx.with_state(SelectPageModels::default, |st| st.selected_rich.clone());
+    let selected_rich = match selected_rich {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_rich = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_transformed = cx.with_state(SelectPageModels::default, |st| {
+        st.selected_transformed.clone()
+    });
+    let selected_transformed = match selected_transformed {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_transformed = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let menu_width_floor_enabled = cx.with_state(SelectPageModels::default, |st| {
+        st.menu_width_floor_enabled.clone()
+    });
+    let menu_width_floor_enabled = match menu_width_floor_enabled {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.menu_width_floor_enabled = Some(model.clone())
+            });
+            model
+        }
+    };
+    let menu_width_floor_enabled_now = cx
+        .get_model_copied(&menu_width_floor_enabled, Invalidation::Layout)
+        .unwrap_or(true);
+
+    let typeahead_delay_ms = cx.with_state(SelectPageModels::default, |st| {
+        st.typeahead_delay_ms.clone()
+    });
+    let typeahead_delay_ms = match typeahead_delay_ms {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(200u32);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.typeahead_delay_ms = Some(model.clone())
+            });
+            model
+        }
+    };
+    let typeahead_delay_ms_now = cx
+        .get_model_copied(&typeahead_delay_ms, Invalidation::Layout)
+        .unwrap_or(200);
 
     let theme = Theme::global(&*cx.app).clone();
 
@@ -7072,14 +7953,219 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-material3-select-overridden")
         .into_element(cx);
 
+    let unclamped_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("short", "Short")
+            .test_id("ui-gallery-material3-select-unclamped-item-short"),
+        material3::SelectItem::new("medium", "Medium option")
+            .test_id("ui-gallery-material3-select-unclamped-item-medium"),
+        material3::SelectItem::new(
+            "long",
+            "A very long option label that should expand the menu beyond the anchor width",
+        )
+        .test_id("ui-gallery-material3-select-unclamped-item-long"),
+        material3::SelectItem::new("long2", "Another long-ish label for measuring menu width")
+            .test_id("ui-gallery-material3-select-unclamped-item-long2"),
+        material3::SelectItem::new(
+            "xl",
+            "Extra long: The quick brown fox jumps over the lazy dog",
+        )
+        .test_id("ui-gallery-material3-select-unclamped-item-xl"),
+    ]
+    .into();
+
+    let unclamped = material3::Select::new(selected_unclamped.clone())
+        .a11y_label("Material 3 Select (unclamped menu width)")
+        .placeholder("Unclamped")
+        .items(unclamped_items)
+        .match_anchor_width(false)
+        .menu_width_floor(if menu_width_floor_enabled_now {
+            Px(210.0)
+        } else {
+            Px(0.0)
+        })
+        .typeahead_delay_ms(typeahead_delay_ms_now)
+        .test_id("ui-gallery-material3-select-unclamped")
+        .into_element(cx);
+
+    let floor_toggle = material3::Switch::new(menu_width_floor_enabled.clone())
+        .a11y_label("Select menu width floor (210px)")
+        .test_id("ui-gallery-material3-select-menu-width-floor-toggle")
+        .into_element(cx);
+
+    let typeahead_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("beta", "Beta")
+            .test_id("ui-gallery-material3-select-typeahead-item-beta"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("ui-gallery-material3-select-typeahead-item-charlie-disabled"),
+        material3::SelectItem::new("delta", "Delta")
+            .test_id("ui-gallery-material3-select-typeahead-item-delta"),
+        material3::SelectItem::new("echo", "Echo")
+            .test_id("ui-gallery-material3-select-typeahead-item-echo"),
+    ]
+    .into();
+
+    let set_delay_button = |cx: &mut ElementContext<'_, App>, ms: u32| -> AnyElement {
+        use fret_ui::action::OnActivate;
+
+        let delay_model = typeahead_delay_ms.clone();
+        let on_activate: OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&delay_model, |v| *v = ms);
+            host.request_redraw(action_cx.window);
+        });
+
+        material3::Button::new(format!("{ms}ms"))
+            .variant(if typeahead_delay_ms_now == ms {
+                material3::ButtonVariant::Filled
+            } else {
+                material3::ButtonVariant::Outlined
+            })
+            .test_id(format!("ui-gallery-material3-select-typeahead-delay-{ms}"))
+            .on_activate(on_activate)
+            .into_element(cx)
+    };
+
+    let typeahead_select = material3::Select::new(selected_typeahead.clone())
+        .a11y_label("Material 3 Select (typeahead delay)")
+        .placeholder("Typeahead probe")
+        .items(typeahead_items)
+        .typeahead_delay_ms(typeahead_delay_ms_now)
+        .test_id("ui-gallery-material3-select-typeahead")
+        .into_element(cx);
+
+    let rich_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha")
+            .supporting_text("Supporting: quick summary")
+            .trailing_supporting_text("⌘A")
+            .leading_icon(fret_icons::ids::ui::SEARCH)
+            .test_id("ui-gallery-material3-select-rich-item-alpha"),
+        material3::SelectItem::new("beta", "Beta")
+            .supporting_text("Supporting: secondary line")
+            .trailing_supporting_text("⌘B")
+            .leading_icon(fret_icons::ids::ui::SETTINGS)
+            .test_id("ui-gallery-material3-select-rich-item-beta"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .supporting_text("Disabled items are skipped by typeahead/roving")
+            .disabled(true)
+            .leading_icon(fret_icons::ids::ui::SLASH)
+            .test_id("ui-gallery-material3-select-rich-item-charlie-disabled"),
+        material3::SelectItem::new("delta", "Delta")
+            .supporting_text("Trailing-only still aligns")
+            .trailing_supporting_text("⌘D")
+            .test_id("ui-gallery-material3-select-rich-item-delta"),
+    ]
+    .into();
+
+    let rich_select = material3::Select::new(selected_rich.clone())
+        .a11y_label("Material 3 Select (supporting text options)")
+        .placeholder("Option richness probe")
+        .items(rich_items)
+        .typeahead_delay_ms(typeahead_delay_ms_now)
+        .test_id("ui-gallery-material3-select-rich")
+        .into_element(cx);
+
+    let transformed_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha")
+            .test_id("ui-gallery-material3-select-transformed-item-alpha"),
+        material3::SelectItem::new("beta", "Beta")
+            .test_id("ui-gallery-material3-select-transformed-item-beta"),
+        material3::SelectItem::new("gamma", "Gamma")
+            .test_id("ui-gallery-material3-select-transformed-item-gamma"),
+    ]
+    .into();
+
+    let transformed_select = material3::Select::new(selected_transformed.clone())
+        .a11y_label("Material 3 Select (transformed)")
+        .placeholder("Transformed")
+        .items(transformed_items)
+        .test_id("ui-gallery-material3-select-transformed")
+        .into_element(cx);
+
+    let transformed_probe = cx.container(
+        fret_ui::element::ContainerProps {
+            layout: {
+                let mut l = fret_ui::element::LayoutStyle::default();
+                l.size.width = fret_ui::element::Length::Fill;
+                l.size.height = fret_ui::element::Length::Px(Px(88.0));
+                l.overflow = fret_ui::element::Overflow::Clip;
+                l
+            },
+            background: Some(
+                theme
+                    .color_by_key("md.sys.color.surface-container")
+                    .unwrap_or_else(|| {
+                        theme
+                            .color_by_key("md.sys.color.surface")
+                            .unwrap_or(fret_core::Color::TRANSPARENT)
+                    }),
+            ),
+            border: fret_core::Edges::all(Px(1.0)),
+            border_color: Some(
+                theme
+                    .color_by_key("md.sys.color.outline-variant")
+                    .unwrap_or(fret_core::Color::TRANSPARENT),
+            ),
+            corner_radii: fret_core::Corners::all(Px(12.0)),
+            padding: fret_core::Edges::all(Px(12.0)),
+            ..Default::default()
+        },
+        move |cx| {
+            let transform =
+                fret_core::Transform2D::translation(fret_core::Point::new(Px(12.0), Px(6.0)))
+                    * fret_core::Transform2D::scale_uniform(0.92);
+            vec![cx.visual_transform(transform, |_cx| vec![transformed_select.clone()])]
+        },
+    );
+
     vec![
         cx.text(
             "Material 3 Select: token-driven trigger + listbox overlay + ADR 1159 style overrides.",
         ),
-        stack::hstack(
+        stack::vstack(
             cx,
-            stack::HStackProps::default().gap(Space::N4).items_center(),
-            move |_cx| vec![default, overridden],
+            stack::VStackProps::default().gap(Space::N4).items_start(),
+            move |cx| {
+                vec![
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N4).items_center(),
+                        move |_cx| vec![default, overridden],
+                    ),
+                    cx.text("Option richness probe (Material Web select-option supporting slots):"),
+                    rich_select,
+                    cx.text("Menu width probe (Material Web min-width behavior + optional 210px floor):"),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |cx| {
+                            vec![
+                                cx.text("menu_width_floor=210px"),
+                                floor_toggle,
+                                cx.text(if menu_width_floor_enabled_now { "on" } else { "off" }),
+                            ]
+                        },
+                    ),
+                    unclamped,
+                    cx.text(format!(
+                        "Typeahead delay probe (Material Web typeaheadDelay): current={}ms",
+                        typeahead_delay_ms_now
+                    )),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |cx| vec![
+                            set_delay_button(cx, 200),
+                            set_delay_button(cx, 500),
+                            set_delay_button(cx, 1000),
+                        ],
+                    ),
+                    typeahead_select,
+                    cx.text(
+                        "Menu positioning probe (Material Web menuPositioning): select is render-transformed + clipped; overlay should still align and avoid clipping.",
+                    ),
+                    transformed_probe,
+                ]
+            },
         ),
     ]
 }
@@ -7348,12 +8434,14 @@ fn preview_material3_navigation_bar(
         .test_id("ui-gallery-material3-navigation-bar")
         .items(vec![
             material3::NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                .badge_dot()
                 .a11y_label("Destination Search")
                 .test_id("ui-gallery-material3-nav-search"),
             material3::NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS)
                 .a11y_label("Destination Settings")
                 .test_id("ui-gallery-material3-nav-settings"),
             material3::NavigationBarItem::new("more", "More", ids::ui::MORE_HORIZONTAL)
+                .badge_text("9")
                 .a11y_label("Destination More")
                 .test_id("ui-gallery-material3-nav-more"),
         ])
@@ -7381,12 +8469,14 @@ fn preview_material3_navigation_rail(
         .test_id("ui-gallery-material3-navigation-rail")
         .items(vec![
             material3::NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                .badge_dot()
                 .a11y_label("Destination Search")
                 .test_id("ui-gallery-material3-rail-search"),
             material3::NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS)
                 .a11y_label("Destination Settings")
                 .test_id("ui-gallery-material3-rail-settings"),
             material3::NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                .badge_text("99+")
                 .a11y_label("Destination Play")
                 .test_id("ui-gallery-material3-rail-play"),
             material3::NavigationRailItem::new("disabled", "Disabled", ids::ui::SLASH)
@@ -7433,9 +8523,11 @@ fn preview_material3_navigation_drawer(
                 .a11y_label("Destination Search")
                 .test_id("ui-gallery-material3-drawer-search"),
             material3::NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                .badge_label("2")
                 .a11y_label("Destination Settings")
                 .test_id("ui-gallery-material3-drawer-settings"),
             material3::NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                .badge_label("99+")
                 .a11y_label("Destination Play")
                 .test_id("ui-gallery-material3-drawer-play"),
             material3::NavigationDrawerItem::new("disabled", "Disabled", ids::ui::SLASH)
@@ -7505,9 +8597,11 @@ fn preview_material3_modal_navigation_drawer(
                             "Settings",
                             ids::ui::SETTINGS,
                         )
+                        .badge_label("2")
                         .a11y_label("Destination Settings")
                         .test_id("ui-gallery-material3-modal-drawer-settings"),
                         material3::NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                            .badge_label("99+")
                             .a11y_label("Destination Play")
                             .test_id("ui-gallery-material3-modal-drawer-play"),
                         material3::NavigationDrawerItem::new("disabled", "Disabled", ids::ui::SLASH)
@@ -7577,6 +8671,7 @@ fn preview_material3_dialog(
     #[derive(Default)]
     struct DialogPageModels {
         override_open: Option<Model<bool>>,
+        selected: Option<Model<Option<Arc<str>>>>,
     }
 
     let override_open = cx.with_state(DialogPageModels::default, |st| st.override_open.clone());
@@ -7586,6 +8681,18 @@ fn preview_material3_dialog(
             let model = cx.app.models_mut().insert(false);
             cx.with_state(DialogPageModels::default, |st| {
                 st.override_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected = cx.with_state(DialogPageModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(DialogPageModels::default, |st| {
+                st.selected = Some(model.clone())
             });
             model
         }
@@ -7627,6 +8734,16 @@ fn preview_material3_dialog(
     };
 
     let theme = cx.theme().clone();
+    let select_items: Arc<[material3::SelectItem]> = (0..20)
+        .map(|i| {
+            material3::SelectItem::new(
+                Arc::<str>::from(format!("item-{i:02}")),
+                Arc::<str>::from(format!("Item {i:02}")),
+            )
+            .test_id(format!("ui-gallery-material3-dialog-select-item-{i:02}"))
+        })
+        .collect::<Vec<_>>()
+        .into();
     let override_style = material3::DialogStyle::default()
         .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
             theme.color_required("md.sys.color.secondary-container"),
@@ -7715,7 +8832,53 @@ fn preview_material3_dialog(
                     },
                 )
             },
-            |_cx| std::iter::empty::<AnyElement>(),
+            {
+                let selected = selected.clone();
+                let select_items = select_items.clone();
+                move |cx| {
+                    let spacer = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = fret_ui::element::Length::Fill;
+                                l.size.height = fret_ui::element::Length::Px(Px(480.0));
+                                l
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    );
+
+                    vec![stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N4),
+                        move |cx| {
+                            vec![
+                                material3::Select::new(selected.clone())
+                                    .a11y_label("Material 3 Select (dialog)")
+                                    .placeholder("Pick one")
+                                    .items(select_items.clone())
+                                    .match_anchor_width(false)
+                                    .test_id(format!("{id_prefix}-select"))
+                                    .into_element(cx),
+                                cx.text(
+                                    "Bottom-edge clamping probe: open the Select menu near the window bottom.",
+                                ),
+                                spacer,
+                                material3::Select::new(selected.clone())
+                                    .a11y_label("Material 3 Select (dialog, bottom)")
+                                    .placeholder("Pick one")
+                                    .items(select_items.clone())
+                                    .match_anchor_width(false)
+                                    .test_id(format!("{id_prefix}-select-bottom"))
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                }
+            },
         )
     };
 

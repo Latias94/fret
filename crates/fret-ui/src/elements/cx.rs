@@ -222,6 +222,21 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.root_bounds(root)
     }
 
+    /// Consume a transient event flag for the current element.
+    ///
+    /// This returns `true` at most once per recorded event (clear-on-read).
+    pub fn take_transient(&mut self, key: u64) -> bool {
+        let element = self.root_id();
+        self.take_transient_for(element, key)
+    }
+
+    /// Consume a transient event flag for the specified element.
+    ///
+    /// This returns `true` at most once per recorded event (clear-on-read).
+    pub fn take_transient_for(&mut self, element: GlobalElementId, key: u64) -> bool {
+        self.window_state.take_transient_event(element, key)
+    }
+
     pub fn with_root_name<R>(&mut self, root_name: &str, f: impl FnOnce(&mut Self) -> R) -> R {
         let root = global_root(self.window, root_name);
 
@@ -2190,6 +2205,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 hooks.on_paint = Some(on_paint.clone());
             });
             cx.new_any_element(id, ElementKind::Canvas(props), Vec::new())
+        })
+    }
+
+    #[cfg(feature = "unstable-retained-bridge")]
+    #[track_caller]
+    pub fn retained_subtree(
+        &mut self,
+        props: crate::retained_bridge::RetainedSubtreeProps,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.new_any_element(id, ElementKind::RetainedSubtree(props), Vec::new())
         })
     }
 

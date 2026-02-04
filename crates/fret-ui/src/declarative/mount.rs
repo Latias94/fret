@@ -9,6 +9,12 @@ use std::sync::Arc;
 
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 
+#[cfg(feature = "unstable-retained-bridge")]
+#[derive(Default)]
+struct RetainedSubtreeHostState {
+    root: Option<NodeId>,
+}
+
 pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
     pub app: &'a mut H,
@@ -605,7 +611,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn render_dismissible_root_impl<H: UiHost, F, I>(
+fn render_dismissible_root_impl<H: UiHost + 'static, F, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -989,7 +995,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn mount_element<H: UiHost>(
+fn mount_element<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     _window: AppWindowId,
     root_id: GlobalElementId,
@@ -1012,6 +1018,12 @@ fn mount_element<H: UiHost>(
     };
     let reuse_view_cache =
         view_cache_props.is_some() && window_state.should_reuse_view_cache_root(id);
+
+    #[cfg(feature = "unstable-retained-bridge")]
+    let retained_subtree_props = match &element.kind {
+        ElementKind::RetainedSubtree(props) => Some(props.clone()),
+        _ => None,
+    };
 
     let span = if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
         tracing::trace_span!(
@@ -1162,6 +1174,8 @@ fn mount_element<H: UiHost>(
         ElementKind::Grid(p) => ElementInstance::Grid(p),
         ElementKind::Image(p) => ElementInstance::Image(p),
         ElementKind::Canvas(p) => ElementInstance::Canvas(p),
+        #[cfg(feature = "unstable-retained-bridge")]
+        ElementKind::RetainedSubtree(p) => ElementInstance::RetainedSubtree(p),
         ElementKind::ViewportSurface(p) => ElementInstance::ViewportSurface(p),
         ElementKind::SvgIcon(p) => ElementInstance::SvgIcon(p),
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
@@ -1288,6 +1302,44 @@ fn mount_element<H: UiHost>(
             scroll_bindings,
             node,
         );
+        return node;
+    }
+
+    #[cfg(feature = "unstable-retained-bridge")]
+    if let Some(props) = retained_subtree_props {
+        if !element.children.is_empty() {
+            tracing::warn!(
+                element = ?id,
+                children = element.children.len(),
+                "RetainedSubtree ignores declarative children (expected leaf element)",
+            );
+        }
+
+        let retained_root = window_state.with_state_mut(
+            id,
+            RetainedSubtreeHostState::default,
+            |st: &mut RetainedSubtreeHostState| {
+                if let Some(root) = st.root
+                    && ui.node_exists(root)
+                {
+                    return root;
+                }
+
+                let root = props.factory.build(ui);
+                st.root = Some(root);
+                root
+            },
+        );
+
+        let child_nodes = vec![retained_root];
+        if had_existing_node {
+            ui.set_children(node, child_nodes.clone());
+        } else {
+            ui.set_children_in_mount(node, child_nodes.clone());
+        }
+        window_frame
+            .children
+            .insert(node, Arc::<[NodeId]>::from(child_nodes));
         return node;
     }
 

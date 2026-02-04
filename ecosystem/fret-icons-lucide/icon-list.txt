@@ -21,6 +21,7 @@ circle-x.svg
 clipboard-copy.svg
 clipboard-paste.svg
 clipboard.svg
+clock.svg
 copy.svg
 download.svg
 ellipsis-vertical.svg
@@ -35,6 +36,7 @@ folder.svg
 house.svg
 inbox.svg
 info.svg
+keyboard.svg
 layout-dashboard.svg
 link.svg
 loader-circle.svg

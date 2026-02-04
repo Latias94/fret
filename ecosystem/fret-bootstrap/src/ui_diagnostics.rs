@@ -7048,6 +7048,7 @@ pub(crate) fn semantics_role_label(role: SemanticsRole) -> &'static str {
         SemanticsRole::Generic => "generic",
         SemanticsRole::Window => "window",
         SemanticsRole::Panel => "panel",
+        SemanticsRole::Toolbar => "toolbar",
         SemanticsRole::Dialog => "dialog",
         SemanticsRole::AlertDialog => "alert_dialog",
         SemanticsRole::Alert => "alert",
@@ -7085,6 +7086,7 @@ fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
         "generic" => SemanticsRole::Generic,
         "window" => SemanticsRole::Window,
         "panel" => SemanticsRole::Panel,
+        "toolbar" => SemanticsRole::Toolbar,
         "dialog" => SemanticsRole::Dialog,
         "alert_dialog" => SemanticsRole::AlertDialog,
         "alert" => SemanticsRole::Alert,
@@ -9141,7 +9143,7 @@ mod tests {
             }"#,
         )
         .expect("parse barrier_roots predicate");
-        svc.pending_script = Some(script);
+        svc.pending_script = PendingScript::from_v1(script);
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();
