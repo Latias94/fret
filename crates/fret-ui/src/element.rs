@@ -635,7 +635,7 @@ impl Default for AnchoredProps {
 ///
 /// This is renderer-friendly: runtimes can approximate blur by drawing multiple expanded quads with
 /// alpha falloff (ADR 0060) until we have a true blur pipeline.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowLayerStyle {
     pub color: Color,
     pub offset_x: Px,
@@ -650,7 +650,7 @@ pub struct ShadowLayerStyle {
 ///
 /// Many Tailwind/shadcn recipes are multi-layer shadows (e.g. `shadow-md`), so we support up to two
 /// layers without forcing heap allocation (keeps `ContainerProps` `Copy`).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowStyle {
     pub primary: ShadowLayerStyle,
     pub secondary: Option<ShadowLayerStyle>,
@@ -798,7 +798,7 @@ pub enum RingPlacement {
 ///
 /// This is intentionally small and renderer-friendly: it maps to one or two `SceneOp::Quad`
 /// operations.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RingStyle {
     pub placement: RingPlacement,
     pub width: Px,

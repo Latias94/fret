@@ -1772,6 +1772,24 @@ fn declarative_instance_change_mask(
     let mut paint_changed = false;
 
     match (previous, next) {
+        (ElementInstance::Container(a), ElementInstance::Container(b)) => {
+            // Container padding/border affect child layout (box-sizing: border-box).
+            if a.padding != b.padding || a.border != b.border {
+                layout_changed = true;
+            }
+
+            if a.background != b.background
+                || a.shadow != b.shadow
+                || a.border_color != b.border_color
+                || a.focus_ring != b.focus_ring
+                || a.focus_border_color != b.focus_border_color
+                || a.focus_within != b.focus_within
+                || a.corner_radii != b.corner_radii
+                || a.snap_to_device_pixels != b.snap_to_device_pixels
+            {
+                paint_changed = true;
+            }
+        }
         (ElementInstance::InteractivityGate(a), ElementInstance::InteractivityGate(b)) => {
             // Presence/interactivity gates affect layout participation, hit-testing, focus traversal,
             // and semantics inclusion. Even when the wrapper layout is unchanged, we need a layout
