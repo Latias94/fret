@@ -223,15 +223,27 @@ TODO:
   - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
   - Budget override: `FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520` (20MB)
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (pool evictions > 0).
-- [ ] Add additional churn accounting beyond text atlas:
-  - image uploads (bytes + count),
-  - SVG mask atlas churn (page alloc/evict, upload bytes),
-  - path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
+- [x] Add additional churn accounting beyond text atlas (non-text uploads):
+  - Bundles now export (best-effort) non-text texture upload counters:
+    `renderer_svg_upload_bytes`, `renderer_svg_uploads`,
+    `renderer_image_upload_bytes`, `renderer_image_uploads`.
+  - Commits: `d01d3190` + `4bade395` + `dfbc02d3` (workload). Evidence:
+    `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dfbc02d3`.
+  - Harness/script:
+    - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=svg_upload_torture`
+    - Script: `tools/diag-scripts/ui-gallery-svg-upload-thrash-steady.json`
+    - Budget override: `FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144` (256KB)
 - [x] Add an eviction stress protocol for intermediate pool churn correlation.
   - Env: `FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520` (20MB) to force pool evictions.
   - Script: `tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json`
   - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (entry for `effects_blur_thrash`).
+- [ ] Extend churn accounting beyond uploads:
+  - SVG raster cache occupancy + eviction counts (to distinguish warmup vs thrash),
+  - path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
+- [ ] Replace keyed repaint forcing with a representative invalidation-driven workload.
+  - Current `svg_upload_torture` harness keys the Canvas subtree by frame to bypass paint-cache replay.
+  - Follow-up: design a scroll/pan/zoom driven invalidation path that still yields a stable upload-churn signature.
 - [ ] Standardize “churn triage checklist” in the perf log template:
   - `top_renderer_text_atlas_upload_bytes`, `top_renderer_text_atlas_evicted_pages`,
     `top_renderer_intermediate_peak_in_use_bytes`, `top_renderer_intermediate_pool_evictions`,

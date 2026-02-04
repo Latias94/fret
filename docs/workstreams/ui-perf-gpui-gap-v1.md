@@ -245,12 +245,17 @@ Proposal:
     - Intermediate pool: `renderer_intermediate_peak_in_use_bytes`,
       `renderer_intermediate_pool_evictions` (and related counters).
     - Commits: `d10cac5a` + `c9a8b168`.
+  - Non-text upload churn counters are now exported (best-effort):
+    `renderer_svg_upload_bytes`, `renderer_svg_uploads`,
+    `renderer_image_upload_bytes`, `renderer_image_uploads`.
+    - Commits: `d01d3190` + `4bade395` (export) + `dfbc02d3` (deterministic workload + script).
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dfbc02d3`.
 
 Next:
 
 - Extend the exported telemetry with additional “GPU churn” and “occupancy” signals:
   - glyph atlas occupancy / live page count (to distinguish “one-time warmup” vs “thrash”),
-  - texture upload bytes for non-text assets (images, SVG masks, path intermediates),
+  - texture upload bytes for non-text assets (done for bytes/count; still missing occupancy + eviction counters),
   - (optional) GPU timestamp queries for render passes + present/submit time when supported.
 - Promote churn into a first-class perf log surface:
   - require `diag perf --json` output to include churn vectors for the top frames,
