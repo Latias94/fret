@@ -8,9 +8,9 @@ use fret_core::{
     TextStyle, TextWrap,
 };
 use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps, ScrollbarStyle,
-    SelectableTextProps, SizeStyle, StackProps, StyledTextProps, TextProps,
+    AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, OpacityProps,
+    Overflow, PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
+    ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, StyledTextProps, TextProps,
     VirtualListKeyCacheMode, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
@@ -459,11 +459,12 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
         vec![cx.hover_region(HoverRegionProps::default(), |cx, hovered| {
             let copied = feedback.is_copied();
             let copy_visible = !options.copy_button_on_hover || hovered || copied;
+            let scrollbar_x_enabled = options.show_scrollbar_x;
             let scrollbar_x_visible =
-                options.show_scrollbar_x && (!options.scrollbar_x_on_hover || hovered);
-            let scrollbar_y_visible = options.show_scrollbar_y
-                && options.max_height.is_some()
-                && (!options.scrollbar_y_on_hover || hovered);
+                scrollbar_x_enabled && (!options.scrollbar_x_on_hover || hovered);
+            let scrollbar_y_enabled = options.show_scrollbar_y && options.max_height.is_some();
+            let scrollbar_y_visible =
+                scrollbar_y_enabled && (!options.scrollbar_y_on_hover || hovered);
 
             let header_visible = options.show_header
                 || language.is_some()
@@ -510,7 +511,9 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
                         options.wrap,
                         options.windowed_lines,
                         options.windowed_lines_overscan,
+                        scrollbar_x_enabled,
                         scrollbar_x_visible,
+                        scrollbar_y_enabled,
                         scrollbar_y_visible,
                         options.max_height,
                     ));
@@ -628,7 +631,9 @@ fn render_code_block_body<H: UiHost + 'static>(
     wrap: CodeBlockWrap,
     windowed_lines: bool,
     windowed_lines_overscan: usize,
+    scrollbar_x_enabled: bool,
     scrollbar_x_visible: bool,
+    scrollbar_y_enabled: bool,
     scrollbar_y_visible: bool,
     max_height: Option<Px>,
 ) -> AnyElement {
@@ -651,7 +656,7 @@ fn render_code_block_body<H: UiHost + 'static>(
         };
 
         let scrollbar_w = theme.metric_required("metric.scrollbar.width");
-        let reserved_right_for_x_scrollbar = if scrollbar_y_visible {
+        let reserved_right_for_x_scrollbar = if scrollbar_y_enabled {
             scrollbar_w
         } else {
             Px(0.0)
@@ -664,8 +669,10 @@ fn render_code_block_body<H: UiHost + 'static>(
                     theme,
                     prepared.clone(),
                     windowed_lines_overscan,
+                    scrollbar_x_enabled,
                     scrollbar_x_visible,
                     reserved_right_for_x_scrollbar,
+                    scrollbar_y_enabled,
                     scrollbar_y_visible,
                     max_height,
                 )
@@ -679,6 +686,7 @@ fn render_code_block_body<H: UiHost + 'static>(
                         theme,
                         rich,
                         wrap,
+                        scrollbar_x_enabled,
                         scrollbar_x_visible,
                         reserved_right_for_x_scrollbar,
                         line_count,
@@ -689,6 +697,7 @@ fn render_code_block_body<H: UiHost + 'static>(
                         theme,
                         rich,
                         wrap,
+                        scrollbar_x_enabled,
                         scrollbar_x_visible,
                         reserved_right_for_x_scrollbar,
                         line_count,
@@ -727,39 +736,36 @@ fn render_code_block_body<H: UiHost + 'static>(
                         |_cx| vec![content],
                     );
 
-                    if !scrollbar_y_visible {
-                        return vec![scroll];
-                    }
-
                     let scroll_id = scroll.id;
                     return vec![cx.stack_props(
                         StackProps {
                             layout: outer_layout,
                         },
                         move |cx| {
-                            let scrollbar_layout = LayoutStyle {
-                                position: PositionStyle::Absolute,
-                                inset: InsetStyle {
-                                    top: Some(Px(0.0)),
-                                    right: Some(Px(0.0)),
-                                    bottom: Some(if scrollbar_x_visible {
-                                        scrollbar_w
-                                    } else {
-                                        Px(0.0)
-                                    }),
-                                    left: None,
-                                },
-                                size: SizeStyle {
-                                    width: Length::Px(scrollbar_w),
-                                    ..Default::default()
-                                },
-                                ..Default::default()
-                            };
+                            let mut out = vec![scroll];
 
-                            vec![
-                                scroll,
-                                cx.scrollbar(ScrollbarProps {
-                                    layout: scrollbar_layout,
+                            if scrollbar_y_enabled {
+                                let scrollbar_layout = LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        top: Some(Px(0.0)),
+                                        right: Some(Px(0.0)),
+                                        bottom: Some(if scrollbar_x_enabled {
+                                            scrollbar_w
+                                        } else {
+                                            Px(0.0)
+                                        }),
+                                        left: None,
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(scrollbar_w),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                };
+
+                                let scrollbar = cx.scrollbar(ScrollbarProps {
+                                    layout: fill_layout(),
                                     axis: ScrollbarAxis::Vertical,
                                     scroll_target: Some(scroll_id),
                                     scroll_handle: handle,
@@ -768,8 +774,17 @@ fn render_code_block_body<H: UiHost + 'static>(
                                         thumb_hover,
                                         ..Default::default()
                                     },
-                                }),
-                            ]
+                                });
+
+                                out.push(overlay_chrome(
+                                    cx,
+                                    scrollbar_layout,
+                                    scrollbar_y_visible,
+                                    scrollbar,
+                                ));
+                            }
+
+                            out
                         },
                     )];
                 } else {
@@ -779,6 +794,23 @@ fn render_code_block_body<H: UiHost + 'static>(
 
         vec![content]
     })
+}
+
+fn fill_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout
+}
+
+fn overlay_chrome<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    layout: LayoutStyle,
+    visible: bool,
+    child: AnyElement,
+) -> AnyElement {
+    let opacity = if visible { 1.0 } else { 0.0 };
+    cx.opacity_props(OpacityProps { layout, opacity }, |_cx| vec![child])
 }
 
 fn build_code_block_line_rich(
@@ -952,8 +984,10 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
     overscan: usize,
+    scrollbar_x_enabled: bool,
     scrollbar_x_visible: bool,
     scrollbar_x_right_inset: Px,
+    scrollbar_y_enabled: bool,
     scrollbar_y_visible: bool,
     max_height: Option<Px>,
 ) -> AnyElement {
@@ -1070,36 +1104,41 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                         ..Default::default()
                     };
 
-                    let scrollbar = cx.scrollbar(ScrollbarProps {
-                        layout: scrollbar_layout,
-                        axis: ScrollbarAxis::Horizontal,
-                        scroll_target: Some(scroll_x_id),
-                        scroll_handle: scroll_x_handle.clone(),
-                        style: ScrollbarStyle {
-                            thumb: thumb_x.clone(),
-                            thumb_hover: thumb_hover_x.clone(),
-                            ..Default::default()
-                        },
-                    });
+                    let mut out = vec![scroll_x_el];
 
-                    vec![
-                        scroll_x_el,
-                        cx.opacity(if scrollbar_x_visible { 1.0 } else { 0.0 }, move |_cx| {
-                            vec![scrollbar]
-                        }),
-                    ]
+                    if scrollbar_x_enabled {
+                        let scrollbar = cx.scrollbar(ScrollbarProps {
+                            layout: fill_layout(),
+                            axis: ScrollbarAxis::Horizontal,
+                            scroll_target: Some(scroll_x_id),
+                            scroll_handle: scroll_x_handle.clone(),
+                            style: ScrollbarStyle {
+                                thumb: thumb_x.clone(),
+                                thumb_hover: thumb_hover_x.clone(),
+                                ..Default::default()
+                            },
+                        });
+                        out.push(overlay_chrome(
+                            cx,
+                            scrollbar_layout,
+                            scrollbar_x_visible,
+                            scrollbar,
+                        ));
+                    }
+
+                    out
                 },
             );
 
             out.push(scroll_x_and_bar);
 
-            if scrollbar_y_visible {
+            if scrollbar_y_enabled {
                 let scrollbar_layout = LayoutStyle {
                     position: PositionStyle::Absolute,
                     inset: InsetStyle {
                         top: Some(Px(0.0)),
                         right: Some(Px(0.0)),
-                        bottom: Some(if scrollbar_x_visible {
+                        bottom: Some(if scrollbar_x_enabled {
                             scrollbar_w
                         } else {
                             Px(0.0)
@@ -1113,8 +1152,8 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                     ..Default::default()
                 };
 
-                out.push(cx.scrollbar(ScrollbarProps {
-                    layout: scrollbar_layout,
+                let scrollbar = cx.scrollbar(ScrollbarProps {
+                    layout: fill_layout(),
                     axis: ScrollbarAxis::Vertical,
                     scroll_target: Some(list_id),
                     scroll_handle: scroll_y_handle.base_handle().clone(),
@@ -1123,7 +1162,14 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                         thumb_hover: thumb_hover_y.clone(),
                         ..Default::default()
                     },
-                }));
+                });
+
+                out.push(overlay_chrome(
+                    cx,
+                    scrollbar_layout,
+                    scrollbar_y_visible,
+                    scrollbar,
+                ));
             }
 
             out
@@ -1198,6 +1244,7 @@ fn render_code_block_text<H: UiHost>(
     theme: &Theme,
     rich: AttributedText,
     wrap: CodeBlockWrap,
+    scrollbar_x_enabled: bool,
     scrollbar_x_visible: bool,
     scrollbar_x_right_inset: Px,
     line_count: usize,
@@ -1288,24 +1335,28 @@ fn render_code_block_text<H: UiHost>(
                 ..Default::default()
             };
 
-            let scrollbar = cx.scrollbar(ScrollbarProps {
-                layout: scrollbar_layout,
-                axis: ScrollbarAxis::Horizontal,
-                scroll_target: Some(scroll_id),
-                scroll_handle: handle,
-                style: ScrollbarStyle {
-                    thumb,
-                    thumb_hover,
-                    ..Default::default()
-                },
-            });
+            let mut out = vec![scroll];
+            if scrollbar_x_enabled {
+                let scrollbar = cx.scrollbar(ScrollbarProps {
+                    layout: fill_layout(),
+                    axis: ScrollbarAxis::Horizontal,
+                    scroll_target: Some(scroll_id),
+                    scroll_handle: handle,
+                    style: ScrollbarStyle {
+                        thumb,
+                        thumb_hover,
+                        ..Default::default()
+                    },
+                });
+                out.push(overlay_chrome(
+                    cx,
+                    scrollbar_layout,
+                    scrollbar_x_visible,
+                    scrollbar,
+                ));
+            }
 
-            vec![
-                scroll,
-                cx.opacity(if scrollbar_x_visible { 1.0 } else { 0.0 }, move |_cx| {
-                    vec![scrollbar]
-                }),
-            ]
+            out
         },
     )
 }
