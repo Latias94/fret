@@ -31,6 +31,7 @@ mod custom_edge_path_conformance;
 mod derived_geometry_invalidation_conformance;
 mod draw_order_invalidation_conformance;
 mod edge_hit_width_conformance;
+mod edge_insert_conformance;
 mod edge_marker_tangent_fallback_conformance;
 mod edge_types_invalidation_conformance;
 mod edit_command_availability_conformance;
