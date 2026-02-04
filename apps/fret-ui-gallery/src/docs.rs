@@ -1604,7 +1604,10 @@ pub(crate) const DOC_SLIDER: &str = r#"
 Slider is a pointer-driven control with support for:
 
 - single value
-- multi-thumb range
+- multi-thumb range (`min_steps_between_thumbs`)
+- `orientation` (horizontal / vertical)
+- direction-aware mapping (`dir` + `inverted`, Radix-aligned)
+- `on_value_commit` (Radix `onValueCommit`)
 
 This page uses `Slider::new_controllable` to keep demo state local to the subtree.
 "#;
@@ -1613,6 +1616,9 @@ pub(crate) const USAGE_SLIDER: &str = r#"
 ```rust
 let slider = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
     .range(0.0, 100.0)
+    .on_value_commit(|_host, _cx, _values| {
+        // Called on pointer up and keyboard commits.
+    })
     .into_element(cx);
 ```
 "#;
