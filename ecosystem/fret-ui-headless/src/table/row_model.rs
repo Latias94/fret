@@ -114,6 +114,7 @@ pub struct TableBuilder<'a, TData> {
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    initial_state: Option<super::TableState>,
     state: super::TableState,
     options: super::TableOptions,
     render_fallback_value: super::TanStackValue,
@@ -133,6 +134,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_key: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
+            initial_state: None,
             state: super::TableState::default(),
             options: super::TableOptions::default(),
             render_fallback_value: super::TanStackValue::Null,
@@ -205,6 +207,14 @@ impl<'a, TData> TableBuilder<'a, TData> {
 
     pub fn state(mut self, state: super::TableState) -> Self {
         self.state = state;
+        self
+    }
+
+    /// TanStack-aligned: override the `initialState` snapshot used by table-level reset APIs.
+    ///
+    /// If not set, the `initialState` defaults to the same value as `state`.
+    pub fn initial_state(mut self, initial_state: super::TableState) -> Self {
+        self.initial_state = Some(initial_state);
         self
     }
 
@@ -343,6 +353,8 @@ pub struct Table<'a, TData> {
     get_row_key: GetRowKeyFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    /// TanStack-aligned `initialState` snapshot (used by table-level reset APIs).
+    initial_state: super::TableState,
     state: super::TableState,
     options: super::TableOptions,
     render_fallback_value: super::TanStackValue,
@@ -418,6 +430,11 @@ impl<'a, TData> Table<'a, TData> {
         let mut columns: Vec<super::ColumnDef<TData>> = Vec::new();
         push_leaf_columns(&column_tree, &mut columns);
 
+        let initial_state = builder
+            .initial_state
+            .clone()
+            .unwrap_or_else(|| builder.state.clone());
+
         Self {
             data: builder.data,
             column_tree,
@@ -431,6 +448,7 @@ impl<'a, TData> Table<'a, TData> {
             get_row_key,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
+            initial_state,
             state: builder.state,
             options: builder.options,
             render_fallback_value: builder.render_fallback_value,
@@ -1407,6 +1425,24 @@ impl<'a, TData> Table<'a, TData> {
         let mut next = self.state.column_sizing.clone();
         next.remove(&col.id);
         Some(next)
+    }
+
+    /// TanStack-aligned: `table.resetColumnSizing(defaultState?)`.
+    pub fn reset_column_sizing(&self, default_state: bool) -> super::ColumnSizingState {
+        if default_state {
+            super::ColumnSizingState::default()
+        } else {
+            self.initial_state.column_sizing.clone()
+        }
+    }
+
+    /// TanStack-aligned: `table.resetHeaderSizeInfo(defaultState?)` (`columnSizingInfo` reset).
+    pub fn reset_header_size_info(&self, default_state: bool) -> super::ColumnSizingInfoState {
+        if default_state {
+            super::ColumnSizingInfoState::default()
+        } else {
+            self.initial_state.column_sizing_info.clone()
+        }
     }
 
     pub fn started_column_resize(

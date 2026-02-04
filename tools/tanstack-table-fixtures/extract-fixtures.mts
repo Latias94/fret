@@ -53,6 +53,10 @@ type SnapshotId =
   | "colsize_resize_on_end_end_writes"
   | "colsize_resize_rtl_move_flips"
   | "colsize_enable_column_resizing_false_noops"
+  | "colsize_reset_column_size_removes_override"
+  | "colsize_reset_column_sizing_default_true_clears"
+  | "colsize_reset_column_sizing_restores_initial"
+  | "colsize_reset_header_size_info_default_true_clears"
   | "group_resize_on_change_move_updates"
   | "group_resize_on_change_end_resets"
   | "group_resize_on_end_end_writes"
@@ -201,6 +205,7 @@ type TanStackState = {
 }
 
 type TanStackOptions = {
+  initialState?: Partial<TanStackState>
   manualFiltering?: boolean
   manualSorting?: boolean
   manualPagination?: boolean
@@ -582,6 +587,18 @@ type FixtureAction =
   | {
       type: "columnResizeEnd"
       client_x: number
+    }
+  | {
+      type: "resetColumnSize"
+      column_id: string
+    }
+  | {
+      type: "resetColumnSizing"
+      default_state?: boolean
+    }
+  | {
+      type: "resetHeaderSizeInfo"
+      default_state?: boolean
     }
 
 function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
@@ -1324,15 +1341,16 @@ async function main(): Promise<void> {
       ...state,
     }
 
-    const table = tableCore.createTable<DemoProcessRow>({
-      data,
-      columns,
-      getRowId: (row: DemoProcessRow) => String(row.id),
-      getSubRows: (row: DemoProcessRow) => (row as any).subRows,
-      manualFiltering: options.manualFiltering ?? false,
-      manualSorting: options.manualSorting ?? false,
-      manualPagination: options.manualPagination ?? false,
-      manualExpanding: options.manualExpanding ?? false,
+  const table = tableCore.createTable<DemoProcessRow>({
+    data,
+    columns,
+    getRowId: (row: DemoProcessRow) => String(row.id),
+    getSubRows: (row: DemoProcessRow) => (row as any).subRows,
+    initialState: options.initialState,
+    manualFiltering: options.manualFiltering ?? false,
+    manualSorting: options.manualSorting ?? false,
+    manualPagination: options.manualPagination ?? false,
+    manualExpanding: options.manualExpanding ?? false,
       manualGrouping: options.manualGrouping ?? false,
       paginateExpandedRows: options.paginateExpandedRows ?? true,
       keepPinnedRows: options.keepPinnedRows ?? true,
@@ -2249,6 +2267,31 @@ function snapshotColumnPinning(
         }
         doc.dispatch("mouseup", { clientX: action.client_x })
         activeResize = null
+        continue
+      }
+      if (action.type === "resetColumnSize") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        if (typeof col.resetSize !== "function") {
+          throw new Error(`Column has no resetSize: ${action.column_id}`)
+        }
+        col.resetSize()
+        continue
+      }
+      if (action.type === "resetColumnSizing") {
+        if (typeof table.resetColumnSizing !== "function") {
+          throw new Error("Table has no resetColumnSizing")
+        }
+        table.resetColumnSizing(action.default_state)
+        continue
+      }
+      if (action.type === "resetHeaderSizeInfo") {
+        if (typeof table.resetHeaderSizeInfo !== "function") {
+          throw new Error("Table has no resetHeaderSizeInfo")
+        }
+        table.resetHeaderSizeInfo(action.default_state)
         continue
       }
       // exhaustive
@@ -3649,6 +3692,86 @@ function snapshotColumnPinning(
             { type: "columnResizeBegin", column_id: "c", client_x: 10 },
             { type: "columnResizeMove", client_x: 35 },
             { type: "columnResizeEnd", client_x: 35 },
+          ],
+        ),
+      },
+      {
+        id: "colsize_reset_column_size_removes_override",
+        options: baseOptions,
+        state: clampedState,
+        actions: [{ type: "resetColumnSize", column_id: "a" }],
+        expect: snapshotForActions(baseOptions, clampedState, [
+          { type: "resetColumnSize", column_id: "a" },
+        ]),
+      },
+      {
+        id: "colsize_reset_column_sizing_default_true_clears",
+        options: baseOptions,
+        state: clampedState,
+        actions: [{ type: "resetColumnSizing", default_state: true }],
+        expect: snapshotForActions(baseOptions, clampedState, [
+          { type: "resetColumnSizing", default_state: true },
+        ]),
+      },
+      {
+        id: "colsize_reset_column_sizing_restores_initial",
+        options: {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+          initialState: {
+            columnSizing: { c: 70 },
+          },
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+          { type: "resetColumnSizing" },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            columnResizeMode: "onChange",
+            columnResizeDirection: "ltr",
+            initialState: {
+              columnSizing: { c: 70 },
+            },
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+            { type: "columnResizeEnd", client_x: 35 },
+            { type: "resetColumnSizing" },
+          ],
+        ),
+      },
+      {
+        id: "colsize_reset_header_size_info_default_true_clears",
+        options: {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "resetHeaderSizeInfo", default_state: true },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            columnResizeMode: "onChange",
+            columnResizeDirection: "ltr",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+            { type: "resetHeaderSizeInfo", default_state: true },
           ],
         ),
       },
