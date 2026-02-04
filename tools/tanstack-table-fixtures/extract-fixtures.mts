@@ -11,6 +11,7 @@ type CaseId =
   | "headers_cells"
   | "visibility_ordering"
   | "pinning"
+  | "pinning_tree"
   | "column_sizing"
   | "column_resizing_group_headers"
   | "state_shapes"
@@ -110,6 +111,11 @@ type SnapshotId =
   | "pinning_keep_false_filter_excludes_pinned"
   | "pinning_action_pin_top_bottom"
   | "pinning_action_unpin_top"
+  | "pinning_tree_keep_true_child_hidden_when_parent_collapsed"
+  | "pinning_tree_keep_true_child_visible_when_parent_expanded"
+  | "pinning_tree_keep_false_never_surfaces_child_row"
+  | "pinning_tree_action_pin_root_includes_leaf_rows"
+  | "pinning_tree_action_pin_grandchild_includes_parent_rows"
 
 type DemoProcessRow = {
   id: number
@@ -451,6 +457,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "headers_cells" &&
         v !== "visibility_ordering" &&
         v !== "pinning" &&
+        v !== "pinning_tree" &&
         v !== "column_sizing" &&
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
@@ -466,7 +473,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding]",
     )
   }
   return { out, case_id }
@@ -713,7 +720,7 @@ async function main(): Promise<void> {
         sortingFn: sortNumber,
       },
     ]
-  } else if (case_id === "expanding") {
+  } else if (case_id === "expanding" || case_id === "pinning_tree") {
     const tree: DemoProcessRow[] = [
       {
         id: 1,
@@ -2455,6 +2462,95 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
             type: "pinRow",
             row_id: "4",
             position: null,
+          },
+        ],
+      ),
+    ]
+  } else if (case_id === "pinning_tree") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    snapshots = [
+      mk(
+        "pinning_tree_keep_true_child_hidden_when_parent_collapsed",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          rowPinning: { top: ["11"], bottom: [] },
+        },
+      ),
+      mk(
+        "pinning_tree_keep_true_child_visible_when_parent_expanded",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          expanded: { "1": true },
+          rowPinning: { top: ["11"], bottom: [] },
+        },
+      ),
+      mk(
+        "pinning_tree_keep_false_never_surfaces_child_row",
+        { enableRowPinning: true, keepPinnedRows: false },
+        {
+          expanded: { "1": true },
+          rowPinning: { top: ["11"], bottom: [] },
+        },
+      ),
+      mkActions(
+        "pinning_tree_action_pin_root_includes_leaf_rows",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {},
+        [
+          {
+            type: "pinRow",
+            row_id: "1",
+            position: "top",
+            include_leaf_rows: true,
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_tree_action_pin_grandchild_includes_parent_rows",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {},
+        [
+          {
+            type: "pinRow",
+            row_id: "121",
+            position: "bottom",
+            include_parent_rows: true,
           },
         ],
       ),
