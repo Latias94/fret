@@ -39,6 +39,7 @@ Tracking format:
 - 2026-02-02: added a Menubar wheel anchor-stability gate on `menubar-demo.vp375x240.open` (no scroll range; wheel must not move overlay).
 - 2026-02-02: added a NavigationMenu wheel "no-op" gate (wheel over a non-scrollable portal surface must not jitter trigger/content anchor) in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
 - 2026-02-03: added a Select wheel gate: wheeling outside the listbox must not scroll the underlay (modal barrier), and wheeling inside the listbox must scroll options without drifting the anchored panel (`ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`).
+- 2026-02-04: added Combobox underlay scroll anchor-stability gates: popover-backed combobox must re-anchor after underlay scroll, and the responsive drawer-backed combobox must block underlay scroll (prevents scroll-induced "menu drift") (`ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`).
 - 2026-02-03: fixed the web golden extractor to support hover-only scripted steps (`hoverNoWait=...`) so hover highlight variants don't deadlock waiting for new portal surfaces; regenerated `*.highlight-first-vp375x240.open.json` for `dropdown-menu-demo`, `context-menu-demo`, and `menubar-demo`.
 - [x] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
