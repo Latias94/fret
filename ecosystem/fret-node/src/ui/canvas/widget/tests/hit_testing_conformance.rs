@@ -8,6 +8,7 @@ use super::super::EdgeEndpoint;
 use super::super::HitTestCtx;
 use super::super::HitTestScratch;
 use super::super::NodeGraphCanvas;
+use super::super::hit_test::hit_test_canvas_units_from_screen_px;
 use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn pick_target_port_at(
@@ -86,7 +87,7 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
         .expect("target port handle should exist");
 
     let inside = handle.center;
-    let r = canvas.style.pin_radius / snapshot.zoom.max(1.0e-6);
+    let r = hit_test_canvas_units_from_screen_px(canvas.style.pin_radius, snapshot.zoom);
     let outside_but_near = Point::new(Px(handle.bounds.origin.x.0 - 0.5 * r), inside.y);
 
     let _ = view.update(&mut host, |s, _cx| {
