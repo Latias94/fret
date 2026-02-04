@@ -110,10 +110,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
-        if d2_from <= d2_to {
-            Some((EdgeEndpoint::From, edge.to))
-        } else {
-            Some((EdgeEndpoint::To, edge.from))
-        }
+        let mut best = score::BestEdgeEndpointByDistance::new(zoom);
+        best.consider(EdgeEndpoint::From, edge.to, d2_from);
+        best.consider(EdgeEndpoint::To, edge.from, d2_to);
+        best.into_value()
     }
 }

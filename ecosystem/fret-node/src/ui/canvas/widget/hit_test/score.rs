@@ -154,3 +154,49 @@ impl BestEdgeFocusAnchorByDistance {
         self.inner.into_value()
     }
 }
+
+pub(super) struct BestEdgeEndpointByDistance {
+    eps: f32,
+    best: Option<(EdgeEndpoint, PortId, f32)>,
+}
+
+impl BestEdgeEndpointByDistance {
+    pub fn new(zoom: f32) -> Self {
+        let z = zoom.max(1.0e-6);
+        Self {
+            eps: super::zoom_eps(z),
+            best: None,
+        }
+    }
+
+    pub fn consider(&mut self, endpoint: EdgeEndpoint, fixed: PortId, d2: f32) {
+        let better = match self.best {
+            Some((best_endpoint, best_fixed, best_d2)) => {
+                if d2 + self.eps < best_d2 {
+                    true
+                } else if (d2 - best_d2).abs() <= self.eps {
+                    // Deterministic tie-break: From wins ties, then fixed id.
+                    let ord = match endpoint {
+                        EdgeEndpoint::From => 0u8,
+                        EdgeEndpoint::To => 1u8,
+                    };
+                    let best_ord = match best_endpoint {
+                        EdgeEndpoint::From => 0u8,
+                        EdgeEndpoint::To => 1u8,
+                    };
+                    ord < best_ord || (ord == best_ord && fixed < best_fixed)
+                } else {
+                    false
+                }
+            }
+            None => true,
+        };
+        if better {
+            self.best = Some((endpoint, fixed, d2));
+        }
+    }
+
+    pub fn into_value(self) -> Option<(EdgeEndpoint, PortId)> {
+        self.best.map(|(endpoint, fixed, _d2)| (endpoint, fixed))
+    }
+}
