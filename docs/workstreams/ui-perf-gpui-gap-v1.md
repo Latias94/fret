@@ -395,6 +395,10 @@ Progress:
 - Implemented a first cut that avoids publishing these globals on hover-only pointer moves (commit `d4adf37f`),
   collapsing `snapshots_with_global_changes` to 0 and reducing pointer-move dispatch tails in the stripes sweep
   (see the perf log entry for `d4adf37f`).
+- Implemented a dedicated pointer-move gate in `fretboard diag perf`:
+  - `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`, `--max-pointer-move-global-changes`
+  - plus derived pointer-move stats in `tools/perf/perf_log.py`
+  - Evidence: perf log entry for commit `6da92d3d`.
 
 Acceptance:
 

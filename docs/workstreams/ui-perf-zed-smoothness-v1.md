@@ -142,6 +142,20 @@ cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag ^
   --repeat 7 --sort time --top 15 --json
 ```
 
+Run a pointer-move gate (dispatch / hit-test; “Zed feel” hot path):
+
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json ^
+  --dir target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate ^
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json ^
+  --max-pointer-move-dispatch-us 2000 ^
+  --max-pointer-move-hit-test-us 1500 ^
+  --max-pointer-move-global-changes 0 ^
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture ^
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 ^
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
 Extract root cause from the worst bundle:
 
 ```powershell
@@ -234,6 +248,14 @@ Update (2026-02-03):
   disabled” vs “index hit/miss” when validating hit-test improvements.
 - A dedicated hit-test torture harness exists (`hit_test_torture`, commit `26de29bd`) and is used to validate the
   bounds-tree A/B after broadening overflow-visible support (commit `811101c3`).
+
+Update (2026-02-05):
+- Pointer-move regressions are now gated explicitly in `fretboard diag perf` via:
+  - `--max-pointer-move-dispatch-us`
+  - `--max-pointer-move-hit-test-us`
+  - `--max-pointer-move-global-changes`
+  - plus derived pointer-move stats printed by `tools/perf/perf_log.py` (commit `b6f147e2`) and the gate flags in
+    `fretboard` (commit `6da92d3d`).
 
 ---
 
