@@ -25,6 +25,11 @@ impl Renderer {
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
             frame_perf.frames = 1;
+            self.perf_svg_raster_cache_hits = 0;
+            self.perf_svg_raster_cache_misses = 0;
+            self.perf_svg_raster_budget_evictions = 0;
+            self.perf_svg_mask_atlas_page_evictions = 0;
+            self.perf_svg_mask_atlas_entries_evicted = 0;
             let counters = crate::upload_counters::take_upload_counters();
             frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);
             frame_perf.svg_upload_bytes = frame_perf
@@ -2529,6 +2534,47 @@ impl Renderer {
         frame_targets.release_all(&mut self.intermediate_pool, self.intermediate_budget_bytes);
 
         if perf_enabled {
+            // Snapshot SVG cache occupancy after `prepare_svg_ops` (which may prune rasters).
+            let pages_live = self
+                .svg_mask_atlas_pages
+                .iter()
+                .filter(|p| p.is_some())
+                .count();
+            let atlas_capacity_px = u64::from(pages_live as u32)
+                .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX))
+                .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX));
+            let atlas_used_px = self
+                .svg_rasters
+                .values()
+                .filter_map(|e| match e.storage {
+                    SvgRasterStorage::MaskAtlas { page_index, .. } => Some((page_index, e.size_px)),
+                    SvgRasterStorage::Standalone { .. } => None,
+                })
+                .filter(|(page_index, _)| {
+                    self.svg_mask_atlas_pages
+                        .get(*page_index)
+                        .is_some_and(|p| p.is_some())
+                })
+                .fold(0u64, |acc, (_, (w, h))| {
+                    let pad = u64::from(SVG_MASK_ATLAS_PADDING_PX.saturating_mul(2));
+                    let w_pad = u64::from(w).saturating_add(pad);
+                    let h_pad = u64::from(h).saturating_add(pad);
+                    acc.saturating_add(w_pad.saturating_mul(h_pad))
+                });
+
+            frame_perf.svg_raster_budget_bytes = self.svg_raster_budget_bytes;
+            frame_perf.svg_rasters_live = self.svg_rasters.len() as u64;
+            frame_perf.svg_standalone_bytes_live = self.svg_raster_bytes;
+            frame_perf.svg_mask_atlas_pages_live = pages_live as u64;
+            frame_perf.svg_mask_atlas_bytes_live = self.svg_mask_atlas_bytes;
+            frame_perf.svg_mask_atlas_used_px = atlas_used_px;
+            frame_perf.svg_mask_atlas_capacity_px = atlas_capacity_px;
+            frame_perf.svg_raster_cache_hits = self.perf_svg_raster_cache_hits;
+            frame_perf.svg_raster_cache_misses = self.perf_svg_raster_cache_misses;
+            frame_perf.svg_raster_budget_evictions = self.perf_svg_raster_budget_evictions;
+            frame_perf.svg_mask_atlas_page_evictions = self.perf_svg_mask_atlas_page_evictions;
+            frame_perf.svg_mask_atlas_entries_evicted = self.perf_svg_mask_atlas_entries_evicted;
+
             let pool_perf = self.intermediate_pool.take_perf_snapshot();
             frame_perf.intermediate_pool_allocations = pool_perf.allocations;
             frame_perf.intermediate_pool_reuses = pool_perf.reuses;
@@ -2555,6 +2601,50 @@ impl Renderer {
                 .perf
                 .image_upload_bytes
                 .saturating_add(frame_perf.image_upload_bytes);
+
+            self.perf.svg_raster_budget_bytes = frame_perf.svg_raster_budget_bytes;
+            self.perf.svg_rasters_live =
+                self.perf.svg_rasters_live.max(frame_perf.svg_rasters_live);
+            self.perf.svg_standalone_bytes_live = self
+                .perf
+                .svg_standalone_bytes_live
+                .max(frame_perf.svg_standalone_bytes_live);
+            self.perf.svg_mask_atlas_pages_live = self
+                .perf
+                .svg_mask_atlas_pages_live
+                .max(frame_perf.svg_mask_atlas_pages_live);
+            self.perf.svg_mask_atlas_bytes_live = self
+                .perf
+                .svg_mask_atlas_bytes_live
+                .max(frame_perf.svg_mask_atlas_bytes_live);
+            self.perf.svg_mask_atlas_used_px = self
+                .perf
+                .svg_mask_atlas_used_px
+                .max(frame_perf.svg_mask_atlas_used_px);
+            self.perf.svg_mask_atlas_capacity_px = self
+                .perf
+                .svg_mask_atlas_capacity_px
+                .max(frame_perf.svg_mask_atlas_capacity_px);
+            self.perf.svg_raster_cache_hits = self
+                .perf
+                .svg_raster_cache_hits
+                .saturating_add(frame_perf.svg_raster_cache_hits);
+            self.perf.svg_raster_cache_misses = self
+                .perf
+                .svg_raster_cache_misses
+                .saturating_add(frame_perf.svg_raster_cache_misses);
+            self.perf.svg_raster_budget_evictions = self
+                .perf
+                .svg_raster_budget_evictions
+                .saturating_add(frame_perf.svg_raster_budget_evictions);
+            self.perf.svg_mask_atlas_page_evictions = self
+                .perf
+                .svg_mask_atlas_page_evictions
+                .saturating_add(frame_perf.svg_mask_atlas_page_evictions);
+            self.perf.svg_mask_atlas_entries_evicted = self
+                .perf
+                .svg_mask_atlas_entries_evicted
+                .saturating_add(frame_perf.svg_mask_atlas_entries_evicted);
 
             self.perf.text_atlas_revision = frame_perf.text_atlas_revision;
             self.perf.text_atlas_uploads = self
@@ -2741,6 +2831,18 @@ impl Renderer {
                 svg_upload_bytes: frame_perf.svg_upload_bytes,
                 image_uploads: frame_perf.image_uploads,
                 image_upload_bytes: frame_perf.image_upload_bytes,
+                svg_raster_budget_bytes: frame_perf.svg_raster_budget_bytes,
+                svg_rasters_live: frame_perf.svg_rasters_live,
+                svg_standalone_bytes_live: frame_perf.svg_standalone_bytes_live,
+                svg_mask_atlas_pages_live: frame_perf.svg_mask_atlas_pages_live,
+                svg_mask_atlas_bytes_live: frame_perf.svg_mask_atlas_bytes_live,
+                svg_mask_atlas_used_px: frame_perf.svg_mask_atlas_used_px,
+                svg_mask_atlas_capacity_px: frame_perf.svg_mask_atlas_capacity_px,
+                svg_raster_cache_hits: frame_perf.svg_raster_cache_hits,
+                svg_raster_cache_misses: frame_perf.svg_raster_cache_misses,
+                svg_raster_budget_evictions: frame_perf.svg_raster_budget_evictions,
+                svg_mask_atlas_page_evictions: frame_perf.svg_mask_atlas_page_evictions,
+                svg_mask_atlas_entries_evicted: frame_perf.svg_mask_atlas_entries_evicted,
                 text_atlas_revision: frame_perf.text_atlas_revision,
                 text_atlas_uploads: frame_perf.text_atlas_uploads,
                 text_atlas_upload_bytes: frame_perf.text_atlas_upload_bytes,

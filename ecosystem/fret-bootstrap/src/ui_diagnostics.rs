@@ -6214,6 +6214,30 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_image_upload_bytes: u64,
     #[serde(default)]
+    pub renderer_svg_raster_budget_bytes: u64,
+    #[serde(default)]
+    pub renderer_svg_rasters_live: u64,
+    #[serde(default)]
+    pub renderer_svg_standalone_bytes_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_pages_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_bytes_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_used_px: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_capacity_px: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_budget_evictions: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_page_evictions: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_entries_evicted: u64,
+    #[serde(default)]
     pub renderer_text_atlas_revision: u64,
     #[serde(default)]
     pub renderer_text_atlas_uploads: u64,
@@ -6377,6 +6401,18 @@ impl UiFrameStatsV1 {
             renderer_svg_upload_bytes: 0,
             renderer_image_uploads: 0,
             renderer_image_upload_bytes: 0,
+            renderer_svg_raster_budget_bytes: 0,
+            renderer_svg_rasters_live: 0,
+            renderer_svg_standalone_bytes_live: 0,
+            renderer_svg_mask_atlas_pages_live: 0,
+            renderer_svg_mask_atlas_bytes_live: 0,
+            renderer_svg_mask_atlas_used_px: 0,
+            renderer_svg_mask_atlas_capacity_px: 0,
+            renderer_svg_raster_cache_hits: 0,
+            renderer_svg_raster_cache_misses: 0,
+            renderer_svg_raster_budget_evictions: 0,
+            renderer_svg_mask_atlas_page_evictions: 0,
+            renderer_svg_mask_atlas_entries_evicted: 0,
             renderer_text_atlas_revision: 0,
             renderer_text_atlas_uploads: 0,
             renderer_text_atlas_upload_bytes: 0,
@@ -6419,6 +6455,19 @@ impl UiFrameStatsV1 {
             out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
             out.renderer_image_uploads = sample.perf.image_uploads;
             out.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
+            out.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
+            out.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
+            out.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;
+            out.renderer_svg_mask_atlas_pages_live = sample.perf.svg_mask_atlas_pages_live;
+            out.renderer_svg_mask_atlas_bytes_live = sample.perf.svg_mask_atlas_bytes_live;
+            out.renderer_svg_mask_atlas_used_px = sample.perf.svg_mask_atlas_used_px;
+            out.renderer_svg_mask_atlas_capacity_px = sample.perf.svg_mask_atlas_capacity_px;
+            out.renderer_svg_raster_cache_hits = sample.perf.svg_raster_cache_hits;
+            out.renderer_svg_raster_cache_misses = sample.perf.svg_raster_cache_misses;
+            out.renderer_svg_raster_budget_evictions = sample.perf.svg_raster_budget_evictions;
+            out.renderer_svg_mask_atlas_page_evictions = sample.perf.svg_mask_atlas_page_evictions;
+            out.renderer_svg_mask_atlas_entries_evicted =
+                sample.perf.svg_mask_atlas_entries_evicted;
             out.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
             out.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
             out.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;

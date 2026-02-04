@@ -172,6 +172,13 @@ impl Renderer {
                 keys_to_remove.push(*k);
             }
         }
+        if self.perf_enabled {
+            self.perf_svg_mask_atlas_page_evictions =
+                self.perf_svg_mask_atlas_page_evictions.saturating_add(1);
+            self.perf_svg_mask_atlas_entries_evicted = self
+                .perf_svg_mask_atlas_entries_evicted
+                .saturating_add(keys_to_remove.len() as u64);
+        }
         for k in keys_to_remove {
             let _ = self.svg_rasters.remove(&k);
         }

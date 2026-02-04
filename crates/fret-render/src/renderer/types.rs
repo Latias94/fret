@@ -128,6 +128,21 @@ pub struct RenderPerfSnapshot {
     pub image_uploads: u64,
     pub image_upload_bytes: u64,
 
+    // SVG raster cache (best-effort). These are intended to distinguish one-time warmup from
+    // steady-state thrash (e.g. budget-driven eviction + repeated re-upload).
+    pub svg_raster_budget_bytes: u64,
+    pub svg_rasters_live: u64,
+    pub svg_standalone_bytes_live: u64,
+    pub svg_mask_atlas_pages_live: u64,
+    pub svg_mask_atlas_bytes_live: u64,
+    pub svg_mask_atlas_used_px: u64,
+    pub svg_mask_atlas_capacity_px: u64,
+    pub svg_raster_cache_hits: u64,
+    pub svg_raster_cache_misses: u64,
+    pub svg_raster_budget_evictions: u64,
+    pub svg_mask_atlas_page_evictions: u64,
+    pub svg_mask_atlas_entries_evicted: u64,
+
     // Text atlas churn (best-effort). These numbers are per-frame signals and should be treated as
     // diagnostic hints rather than strict correctness metrics.
     pub text_atlas_revision: u64,
@@ -197,6 +212,19 @@ pub(super) struct RenderPerfStats {
     pub(super) svg_upload_bytes: u64,
     pub(super) image_uploads: u64,
     pub(super) image_upload_bytes: u64,
+
+    pub(super) svg_raster_budget_bytes: u64,
+    pub(super) svg_rasters_live: u64,
+    pub(super) svg_standalone_bytes_live: u64,
+    pub(super) svg_mask_atlas_pages_live: u64,
+    pub(super) svg_mask_atlas_bytes_live: u64,
+    pub(super) svg_mask_atlas_used_px: u64,
+    pub(super) svg_mask_atlas_capacity_px: u64,
+    pub(super) svg_raster_cache_hits: u64,
+    pub(super) svg_raster_cache_misses: u64,
+    pub(super) svg_raster_budget_evictions: u64,
+    pub(super) svg_mask_atlas_page_evictions: u64,
+    pub(super) svg_mask_atlas_entries_evicted: u64,
 
     pub(super) text_atlas_revision: u64,
     pub(super) text_atlas_uploads: u64,

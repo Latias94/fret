@@ -176,6 +176,12 @@ pub struct Renderer {
     svg_perf: SvgPerfStats,
 
     perf_enabled: bool,
+    // Per-frame SVG cache stats (best-effort; populated only when `perf_enabled` is true).
+    perf_svg_raster_cache_hits: u64,
+    perf_svg_raster_cache_misses: u64,
+    perf_svg_raster_budget_evictions: u64,
+    perf_svg_mask_atlas_page_evictions: u64,
+    perf_svg_mask_atlas_entries_evicted: u64,
     perf: RenderPerfStats,
     last_frame_perf: Option<RenderPerfSnapshot>,
     render_scene_frame_index: u64,
