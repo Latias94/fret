@@ -5,6 +5,7 @@ use std::collections::{HashMap, VecDeque};
 use std::ops::Range;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_code_editor_buffer::{DocId, Edit, TextBuffer, TextBufferTransaction, TextBufferTx};
 use fret_code_editor_view::{
@@ -16,8 +17,8 @@ use fret_core::{
     Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow,
     TextPaintStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
-use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
-use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
+use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode, TimerToken};
+use fret_ui::action::{ActionCx, KeyDownCx, OnTimer, UiActionHost, UiPointerActionHost};
 use fret_ui::canvas::CanvasTextConstraints;
 use fret_ui::element::AnyElement;
 use fret_ui::element::{
@@ -46,6 +47,78 @@ use geom::{
     caret_x_for_buffer_byte_in_row, caret_x_for_index, hit_test_index_from_caret_stops,
     map_row_local_to_buffer_byte, preedit_cursor_offset_bytes, preedit_cursor_offset_cols,
 };
+
+const DRAG_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
+
+fn scale_vertical_mouse_autoscroll_delta(delta_px: f32) -> f32 {
+    (delta_px.max(0.0).powf(1.2) / 100.0).min(3.0)
+}
+
+fn drag_autoscroll_delta_y(viewport_h: Px, row_h: Px, viewport_y: Px) -> Px {
+    if viewport_h.0 <= 0.0 {
+        return Px(0.0);
+    }
+    let vertical_margin = Px(row_h.0.min(viewport_h.0 / 3.0));
+    if vertical_margin.0 <= 0.0 {
+        return Px(0.0);
+    }
+
+    let top = vertical_margin.0;
+    let bottom = viewport_h.0 - vertical_margin.0;
+
+    if viewport_y.0 < top {
+        Px(-scale_vertical_mouse_autoscroll_delta(top - viewport_y.0))
+    } else if viewport_y.0 > bottom {
+        Px(scale_vertical_mouse_autoscroll_delta(viewport_y.0 - bottom))
+    } else {
+        Px(0.0)
+    }
+}
+
+fn viewport_pos_for_pointer(
+    bounds: Rect,
+    scroll_handle: &fret_ui::scroll::ScrollHandle,
+    pos: fret_core::Point,
+) -> fret_core::Point {
+    let offset = scroll_handle.offset();
+    let viewport = scroll_handle.viewport_size();
+    let viewport_w = Px(viewport.width.0.max(0.0));
+    let viewport_h = Px(viewport.height.0.max(0.0));
+
+    let local_x = Px(pos.x.0 - bounds.origin.x.0);
+    let local_y = Px(pos.y.0 - bounds.origin.y.0);
+
+    let y_viewport = local_y;
+    let y_content = Px(local_y.0 - offset.y.0);
+
+    // Pointer event positions are mapped through transforms. Within scroll containers, descendants
+    // typically see "content space" coordinates already. Prefer the interpretation that places the
+    // cursor position closer to the viewport.
+    let range_min = -viewport_h.0;
+    let range_max = viewport_h.0 * 2.0;
+    let plausible = |y: Px| y.0 >= range_min && y.0 <= range_max;
+    let score = |y: Px| (y.0 - (viewport_h.0 / 2.0)).abs();
+
+    let y = match (plausible(y_viewport), plausible(y_content)) {
+        (true, false) => y_viewport,
+        (false, true) => y_content,
+        _ => {
+            if score(y_content) < score(y_viewport) {
+                y_content
+            } else {
+                y_viewport
+            }
+        }
+    };
+
+    let x = if viewport_w.0 > 0.0 {
+        Px(local_x.0.clamp(0.0, viewport_w.0))
+    } else {
+        local_x
+    };
+
+    fret_core::Point::new(x, y)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Selection {
@@ -160,6 +233,8 @@ struct CodeEditorState {
     undo_group: Option<UndoGroup>,
     dragging: bool,
     drag_pointer: Option<fret_core::PointerId>,
+    drag_autoscroll_timer: Option<TimerToken>,
+    drag_autoscroll_viewport_pos: Option<fret_core::Point>,
     last_bounds: Option<Rect>,
     cache_stats: CodeEditorCacheStats,
     row_text_cache_rev: fret_code_editor_buffer::Revision,
@@ -218,6 +293,8 @@ impl CodeEditorHandle {
                 undo_group: None,
                 dragging: false,
                 drag_pointer: None,
+                drag_autoscroll_timer: None,
+                drag_autoscroll_viewport_pos: None,
                 last_bounds: None,
                 cache_stats: CodeEditorCacheStats::default(),
                 row_text_cache_rev: fret_code_editor_buffer::Revision(0),
@@ -816,6 +893,11 @@ impl CodeEditor {
                         st.last_bounds = Some(bounds);
                         st.dragging = true;
                         st.drag_pointer = Some(down.pointer_id);
+                        st.drag_autoscroll_viewport_pos = Some(viewport_pos_for_pointer(
+                            bounds,
+                            &on_pointer_down_scroll,
+                            down.position,
+                        ));
                         st.undo_group = None;
                         st.preedit = None;
 
@@ -884,7 +966,7 @@ impl CodeEditor {
                 let on_pointer_move_cell_w = cell_w.clone();
                 let on_pointer_move_scroll = scroll_handle.clone();
                 let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
-                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, mv| {
+                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, _row, mv| {
                         // Show an I-beam cursor while hovering the editor surface, even when not dragging.
                         host.set_cursor_icon(CursorIcon::Text);
                         if !mv.buttons.left {
@@ -899,47 +981,58 @@ impl CodeEditor {
                         let bounds = host.bounds();
                         st.last_bounds = Some(bounds);
 
-                        let Some(row) = row else {
-                            return false;
-                        };
-
-                        // Drag-to-select autoscroll: when the pointer is near/over the viewport edges,
-                        // scroll so selection can extend beyond the visible window (Zed-style).
-                        //
-                        // Pointer positions are mapped through transforms; within scroll containers this
-                        // typically means "content space". Use the scroll offset + viewport size to
-                        // compute edge proximity in the same space.
                         let mut changed = false;
+                        let viewport_pos =
+                            viewport_pos_for_pointer(bounds, &on_pointer_move_scroll, mv.position);
+                        st.drag_autoscroll_viewport_pos = Some(viewport_pos);
+
                         let viewport_h = Px(on_pointer_move_scroll.viewport_size().height.0.max(0.0));
-                        if viewport_h.0 > 0.0 {
+                        let scroll_delta_y = drag_autoscroll_delta_y(viewport_h, row_h, viewport_pos.y);
+                        if scroll_delta_y.0 != 0.0 {
                             let offset = on_pointer_move_scroll.offset();
-                            let vertical_margin = Px(row_h.0.min(viewport_h.0 / 3.0));
-                            let top = Px(offset.y.0 + vertical_margin.0);
-                            let bottom = Px(offset.y.0 + viewport_h.0 - vertical_margin.0);
+                            on_pointer_move_scroll.set_offset(fret_core::Point::new(
+                                offset.x,
+                                Px(offset.y.0 + scroll_delta_y.0),
+                            ));
+                            changed = true;
 
-                            let scale_vertical_delta = |delta_px: f32| -> f32 {
-                                (delta_px.max(0.0).powf(1.2) / 100.0).min(3.0)
-                            };
-
-                            let mut scroll_delta_y = 0.0f32;
-                            if mv.position.y.0 < top.0 {
-                                scroll_delta_y = -scale_vertical_delta(top.0 - mv.position.y.0);
-                            } else if mv.position.y.0 > bottom.0 {
-                                scroll_delta_y = scale_vertical_delta(mv.position.y.0 - bottom.0);
+                            if st.drag_autoscroll_timer.is_none() {
+                                let token = host.next_timer_token();
+                                st.drag_autoscroll_timer = Some(token);
+                                host.push_effect(Effect::SetTimer {
+                                    window: Some(action_cx.window),
+                                    token,
+                                    after: DRAG_AUTOSCROLL_TICK,
+                                    repeat: Some(DRAG_AUTOSCROLL_TICK),
+                                });
                             }
-
-                            if scroll_delta_y.abs() > 0.0 {
-                                on_pointer_move_scroll.set_offset(fret_core::Point::new(
-                                    offset.x,
-                                    Px(offset.y.0 + scroll_delta_y),
-                                ));
-                                changed = true;
-                            }
+                        } else if let Some(token) = st.drag_autoscroll_timer.take() {
+                            st.drag_autoscroll_viewport_pos = None;
+                            host.push_effect(Effect::CancelTimer { token });
                         }
 
                         let cell_w = on_pointer_move_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                        let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
+
+                        let viewport_y = if viewport_h.0 > 0.0 {
+                            Px(viewport_pos.y.0.clamp(0.0, viewport_h.0))
+                        } else {
+                            Px(0.0)
+                        };
+                        let offset = on_pointer_move_scroll.offset();
+                        let content_y = offset.y.0 + viewport_y.0;
+                        let mut row = if row_h.0 > 0.0 {
+                            (content_y / row_h.0).floor().max(0.0) as usize
+                        } else {
+                            0
+                        };
+                        row = row.min(st.display_map.row_count().saturating_sub(1));
+
+                        let caret_pos = fret_core::Point::new(
+                            Px(bounds.origin.x.0 + viewport_pos.x.0),
+                            Px(bounds.origin.y.0 + viewport_y.0),
+                        );
+                        let caret = caret_for_pointer(&st, row, bounds, caret_pos, cell_w);
                         if caret != st.selection.focus {
                             st.selection.focus = caret;
                             st.caret_preferred_x = None;
@@ -979,6 +1072,10 @@ impl CodeEditor {
                         st.dragging = false;
                         st.drag_pointer = None;
                         st.undo_group = None;
+                        st.drag_autoscroll_viewport_pos = None;
+                        if let Some(token) = st.drag_autoscroll_timer.take() {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
                         host.release_pointer_capture();
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
@@ -995,6 +1092,10 @@ impl CodeEditor {
                             st.drag_pointer = None;
                         }
                         st.undo_group = None;
+                        st.drag_autoscroll_viewport_pos = None;
+                        if let Some(token) = st.drag_autoscroll_timer.take() {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
                         host.release_pointer_capture();
                         host.notify(action_cx);
                         host.request_redraw(action_cx.window);
@@ -1002,11 +1103,102 @@ impl CodeEditor {
                     },
                 );
 
+                let on_timer_state = editor_state.clone();
+                let on_timer_scroll = scroll_handle.clone();
+                let on_timer_cell_w = cell_w.clone();
+                let on_timer: OnTimer = Arc::new(move |host, action_cx, token| {
+                    let mut st = on_timer_state.borrow_mut();
+                    if st.drag_autoscroll_timer != Some(token) {
+                        return false;
+                    }
+
+                    if !st.dragging {
+                        st.drag_autoscroll_timer = None;
+                        st.drag_autoscroll_viewport_pos = None;
+                        host.push_effect(Effect::CancelTimer { token });
+                        return true;
+                    }
+
+                    let Some(bounds) = st.last_bounds else {
+                        st.drag_autoscroll_timer = None;
+                        st.drag_autoscroll_viewport_pos = None;
+                        host.push_effect(Effect::CancelTimer { token });
+                        return true;
+                    };
+
+                    let Some(viewport_pos) = st.drag_autoscroll_viewport_pos else {
+                        st.drag_autoscroll_timer = None;
+                        host.push_effect(Effect::CancelTimer { token });
+                        return true;
+                    };
+
+                    let viewport_h = Px(on_timer_scroll.viewport_size().height.0.max(0.0));
+                    let scroll_delta_y = drag_autoscroll_delta_y(viewport_h, row_h, viewport_pos.y);
+                    if scroll_delta_y.0 == 0.0 {
+                        st.drag_autoscroll_timer = None;
+                        st.drag_autoscroll_viewport_pos = None;
+                        host.push_effect(Effect::CancelTimer { token });
+                        return true;
+                    }
+
+                    let offset = on_timer_scroll.offset();
+                    on_timer_scroll.set_offset(fret_core::Point::new(
+                        offset.x,
+                        Px(offset.y.0 + scroll_delta_y.0),
+                    ));
+
+                    let viewport_y = if viewport_h.0 > 0.0 {
+                        Px(viewport_pos.y.0.clamp(0.0, viewport_h.0))
+                    } else {
+                        Px(0.0)
+                    };
+                    let offset = on_timer_scroll.offset();
+                    let content_y = offset.y.0 + viewport_y.0;
+                    let mut row = if row_h.0 > 0.0 {
+                        (content_y / row_h.0).floor().max(0.0) as usize
+                    } else {
+                        0
+                    };
+                    row = row.min(st.display_map.row_count().saturating_sub(1));
+
+                    let cell_w = on_timer_cell_w.get();
+                    let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+
+                    let caret_pos = fret_core::Point::new(
+                        Px(bounds.origin.x.0 + viewport_pos.x.0),
+                        Px(bounds.origin.y.0 + viewport_y.0),
+                    );
+                    let caret = caret_for_pointer(&st, row, bounds, caret_pos, cell_w);
+                    if caret != st.selection.focus {
+                        st.selection.focus = caret;
+                        st.caret_preferred_x = None;
+                    }
+
+                    let caret_rect = caret_rect_for_selection(
+                        &st,
+                        row_h,
+                        cell_w,
+                        bounds,
+                        &on_timer_scroll,
+                    );
+                    if let Some(rect) = caret_rect {
+                        host.push_effect(Effect::ImeSetCursorArea {
+                            window: action_cx.window,
+                            rect,
+                        });
+                    }
+
+                    host.notify(action_cx);
+                    host.request_redraw(action_cx.window);
+                    true
+                });
+
                 let handlers = WindowedRowsSurfacePointerHandlers {
                     on_pointer_down: Some(on_pointer_down),
                     on_pointer_move: Some(on_pointer_move),
                     on_pointer_up: Some(on_pointer_up),
                     on_pointer_cancel: Some(on_pointer_cancel),
+                    on_timer: Some(on_timer),
                 };
 
                 let text_state = editor_state.clone();
