@@ -2923,6 +2923,7 @@ mod tests {
                                     scroll_handle: Some(scroll_handle.clone()),
                                     intrinsic_measure_mode:
                                         fret_ui::element::ScrollIntrinsicMeasureMode::Content,
+                                    windowed_paint: false,
                                     probe_unbounded: true,
                                 },
                                 |cx| {
@@ -3167,6 +3168,7 @@ mod tests {
                                             scroll_handle: Some(scroll_with_trigger_handle.clone()),
                                             intrinsic_measure_mode:
                                                 fret_ui::element::ScrollIntrinsicMeasureMode::Content,
+                                            windowed_paint: false,
                                             probe_unbounded: true,
                                         },
                                         |cx| {
@@ -3237,6 +3239,7 @@ mod tests {
                                             scroll_handle: Some(other_scroll_handle.clone()),
                                             intrinsic_measure_mode:
                                                 fret_ui::element::ScrollIntrinsicMeasureMode::Content,
+                                            windowed_paint: false,
                                             probe_unbounded: true,
                                         },
                                         |cx| {
