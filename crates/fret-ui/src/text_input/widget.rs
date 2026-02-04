@@ -504,10 +504,24 @@ impl<H: UiHost> Widget<H> for TextInput {
                     let padding = self.chrome_style.padding.left;
                     let local_x =
                         Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
-                    let caret = self
+                    let mut caret = self
                         .text_blob
                         .map(|blob| cx.services.hit_test_x(blob, local_x))
                         .unwrap_or_else(|| self.caret_from_x(local_x));
+
+                    // While IME preedit is active, the displayed text is the base buffer with the
+                    // preedit spliced at the caret (ADR 0071). Pointer hit-testing is performed
+                    // against that composed view, but the widget's internal indices are tracked in
+                    // base-text byte offsets. Map the display index back into base coordinates
+                    // before applying selection/navigation and then cancel the inline preedit
+                    // deterministically (v1 policy).
+                    if !self.preedit.is_empty() {
+                        caret = crate::text_edit::ime::display_to_base_index(
+                            self.caret,
+                            self.preedit.len(),
+                            caret,
+                        );
+                    }
 
                     self.caret = caret;
                     match *click_count {

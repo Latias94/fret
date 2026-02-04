@@ -45,10 +45,10 @@ Notes:
   `snapshots.rs` by default). This helps answer “how much is covered by high-signal, purpose-built
   checks” rather than “is every page referenced somewhere”.
 
-- Golden files (tracked): `582`
-- Golden keys (tracked, normalized `.open` suffix): `538`
-- Gated keys (string-literal heuristic): `538` (`100%`)
-- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `538` (`100%`)
+- Golden files (tracked): `622`
+- Golden keys (tracked, normalized `.open` suffix): `578`
+- Gated keys (string-literal heuristic): `578` (`100%`)
+- Targeted gates (excluding `web_vs_fret_layout.rs`, `snapshots.rs`): `578` (`100%`)
 - Smoke-parse coverage: `100%` (via `shadcn_web_goldens_smoke_parse_and_rects_valid`)
 
 As of 2026-02-03 (tracked-only).
@@ -80,37 +80,36 @@ The largest gated groups (already gated somewhere in `ecosystem/fret-ui-shadcn/t
 - `menubar` (16)
 - `sidebar` (16)
 - `sonner` (15)
-- `dropdown` (15)
+- `dropdown` (18)
 - `context` (14)
-- `toggle` (13)
-- `field` (12)
-- `date` (12)
 - `select` (13)
-- `item` (10)
-- `sheet` (10)
-- `spinner` (10)
+- `toggle` (13)
+- `date` (12)
+- `field` (12)
+- `sheet` (11)
+- `combobox` (12)
+- `item` (11)
 - `scroll` (10)
-- `breadcrumb` (9)
-- `combobox` (10)
+- `spinner` (10)
+- `breadcrumb` (10)
 - `textarea` (8)
 - `empty` (7)
 - `carousel` (6)
+- `drawer` (6)
 - `otp` (5)
 - `signup` (5)
 - `login` (5)
 - `kbd` (5)
+- `alert` (5)
 - `command` (5)
 - `badge` (4)
-- `drawer` (4)
-- `alert` (4)
-- `native` (4)
 - `checkbox` (4)
+- `native` (4)
+- `dialog` (4)
 - `resizable` (4)
-- `dialog` (3)
+- `tooltip` (3)
 - `hover` (3)
 - `popover` (3)
-- `tooltip` (3)
-- `skeleton` (2)
 
 Top untargeted groups (i.e. keys only referenced by broad gates like `web_vs_fret_layout.rs` / `snapshots.rs`):
 

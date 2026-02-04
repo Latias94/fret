@@ -1044,6 +1044,7 @@ dependencies = [
 name = "fret-code-editor-buffer"
 version = "0.1.0"
 dependencies = [
+ "ropey",
  "thiserror 2.0.17",
  "uuid",
 ]
@@ -1174,6 +1175,7 @@ dependencies = [
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
+ "fret-workspace",
  "glam",
  "image",
  "serde_json",
@@ -1572,6 +1574,7 @@ dependencies = [
  "fret-canvas",
  "fret-chart",
  "fret-code-editor",
+ "fret-code-editor-view",
  "fret-code-view",
  "fret-core",
  "fret-icons",
@@ -1581,6 +1584,7 @@ dependencies = [
  "fret-render",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-ai",
  "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-material3",
@@ -1616,6 +1620,8 @@ name = "fret-ui-headless"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "serde",
+ "serde_json",
  "time",
  "virtualizer",
 ]
@@ -3400,6 +3406,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ropey"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93411e420bcd1a75ddd1dc3caf18c23155eda2c090631a85af21ba19e97093b5"
+dependencies = [
+ "smallvec",
+ "str_indices",
+]
+
+[[package]]
 name = "roxmltree"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3879,6 +3895,12 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "str_indices"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d08889ec5408683408db66ad89e0e1f93dff55c73a4ccc71c427d5b277ee47e6"
 
 [[package]]
 name = "streaming-iterator"

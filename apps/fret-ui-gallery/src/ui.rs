@@ -1,5 +1,6 @@
 use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
+use fret_code_editor_view as code_editor_view;
 use fret_code_view as code_view;
 use fret_core::{
     AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
@@ -11,6 +12,7 @@ use fret_ui::Theme;
 use fret_ui::element::{CanvasProps, StackProps};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
@@ -29,18 +31,35 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
     }
 
     let q_lower = q.to_ascii_lowercase();
-    if item.id.to_ascii_lowercase().contains(&q_lower) {
+    let q_norm: String = q_lower
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
+
+    let matches_norm = |haystack: &str| {
+        if q_norm.is_empty() {
+            return false;
+        }
+        let norm: String = haystack
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        norm.contains(&q_norm)
+    };
+
+    if item.id.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.id) {
         return true;
     }
-    if item.label.to_ascii_lowercase().contains(&q_lower) {
+    if item.label.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.label) {
         return true;
     }
-    if item.origin.to_ascii_lowercase().contains(&q_lower) {
+    if item.origin.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.origin) {
         return true;
     }
     item.tags
         .iter()
-        .any(|t| t.to_ascii_lowercase().contains(&q_lower))
+        .any(|t| t.to_ascii_lowercase().contains(&q_lower) || matches_norm(t))
 }
 
 pub(crate) fn sidebar_view(
@@ -276,6 +295,7 @@ pub(crate) fn content_view(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -437,6 +457,7 @@ pub(crate) fn content_view(
         virtual_list_torture_scroll,
         code_editor_syntax_rust,
         code_editor_boundary_identifier,
+        code_editor_soft_wrap,
     );
 
     let active_tab: Arc<str> = cx
@@ -617,6 +638,7 @@ fn page_preview(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -640,18 +662,21 @@ fn page_preview(
             virtual_list_torture_edit_text,
             virtual_list_torture_scroll,
         ),
+        PAGE_UI_KIT_LIST_TORTURE => preview_ui_kit_list_torture(cx, theme),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
         PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(
             cx,
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(
             cx,
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
@@ -682,6 +707,10 @@ fn page_preview(
         }
         PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
+        PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
+        PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
+        PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
+        PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -1419,13 +1448,22 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
+    let variable_height =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let retained_host =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_RETAINED").filter(|v| !v.is_empty()) {
             Some(v) => {
                 let v = v.to_string_lossy().trim().to_ascii_lowercase();
                 !(v == "0" || v == "false" || v == "no" || v == "off")
             }
-            None => false,
+            None => true,
         };
 
     let row_cache =
@@ -1436,6 +1474,11 @@ fn preview_virtual_list_torture(
             }
             None => false,
         };
+
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_VLIST_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(0);
 
     let header_editing_row = (!minimal_harness)
         .then(|| {
@@ -1561,6 +1604,11 @@ fn preview_virtual_list_torture(
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
+                cx.text(if keep_alive > 0 {
+                    format!("Mode: keep-alive enabled (budget={keep_alive}).")
+                } else {
+                    "Mode: keep-alive disabled (budget=0).".to_string()
+                }),
             ];
 
             if minimal_harness {
@@ -1596,6 +1644,12 @@ fn preview_virtual_list_torture(
         fret_ui::element::VirtualListOptions::new(Px(28.0), 10)
     };
 
+    let options = if retained_host && keep_alive > 0 {
+        options.keep_alive(keep_alive)
+    } else {
+        options
+    };
+
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
         let list = if minimal_harness {
             if retained_host {
@@ -1611,20 +1665,35 @@ fn preview_virtual_list_torture(
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                     let row_label = cx.text(format!("Row {index}"));
+                    let extra_line = cx.text(format!(
+                        "Details: index={index} seed={} repeat={}",
+                        index.wrapping_mul(2654435761),
+                        (index % 7) + 1
+                    ));
 
                     let mut container_props = decl_style::container_props(
                         &theme,
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
+                        {
+                            let mut layout = LayoutRefinement::default().w_full();
+                            if !variable_height {
+                                layout = layout.h_px(MetricRef::Px(height_hint));
+                            }
+                            layout
+                        },
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                     let row_layout = container_props.layout;
-                    let container = cx.container(container_props, |_cx| vec![row_label]);
+                    let container = cx.container(container_props, |_cx| {
+                        if variable_height && index % 15 == 0 {
+                            vec![row_label, extra_line]
+                        } else {
+                            vec![row_label]
+                        }
+                    });
                     let mut semantics = fret_ui::element::SemanticsProps::default();
                     semantics.layout = row_layout;
                     semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
@@ -1658,20 +1727,35 @@ fn preview_virtual_list_torture(
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                         let row_label = cx.text(format!("Row {index}"));
+                        let extra_line = cx.text(format!(
+                            "Details: index={index} seed={} repeat={}",
+                            index.wrapping_mul(2654435761),
+                            (index % 7) + 1
+                        ));
 
                         let mut container_props = decl_style::container_props(
                             theme,
                             ChromeRefinement::default()
                                 .bg(ColorRef::Color(background))
                                 .p(Space::N2),
-                            LayoutRefinement::default()
-                                .w_full()
-                                .h_px(MetricRef::Px(height_hint)),
+                            {
+                                let mut layout = LayoutRefinement::default().w_full();
+                                if !variable_height {
+                                    layout = layout.h_px(MetricRef::Px(height_hint));
+                                }
+                                layout
+                            },
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                         let row_layout = container_props.layout;
-                        let container = cx.container(container_props, |_cx| vec![row_label]);
+                        let container = cx.container(container_props, |_cx| {
+                            if variable_height && index % 15 == 0 {
+                                vec![row_label, extra_line]
+                            } else {
+                                vec![row_label]
+                            }
+                        });
                         let mut semantics = fret_ui::element::SemanticsProps::default();
                         semantics.layout = row_layout;
                         semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
@@ -1948,6 +2032,121 @@ fn preview_virtual_list_torture(
     vec![root]
 }
 
+#[derive(Default)]
+struct UiKitListTortureModels {
+    selection: Option<Model<Option<usize>>>,
+}
+
+fn preview_ui_kit_list_torture(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    let selection = cx.with_state(UiKitListTortureModels::default, |st| st.selection.clone());
+    let selection = match selection {
+        Some(selection) => selection,
+        None => {
+            let selection = cx.app.models_mut().insert(Option::<usize>::None);
+            cx.with_state(UiKitListTortureModels::default, |st| {
+                st.selection = Some(selection.clone());
+            });
+            selection
+        }
+    };
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text(
+                    "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0192).",
+                ),
+                cx.text("Expect: scroll boundary shifts reconcile without scroll-window dirty views."),
+            ]
+        },
+    );
+
+    let len: usize = std::env::var("FRET_UI_GALLERY_UI_KIT_LIST_LEN")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10_000)
+        .clamp(16, 200_000);
+    let overscan: usize = 6;
+
+    let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+        vec![
+            fret_ui_kit::declarative::list::list_virtualized_copyable_retained_v0(
+                cx,
+                selection,
+                fret_ui_kit::Size::Medium,
+                None,
+                len,
+                overscan,
+                &scroll_handle,
+                0,
+                |i| i as u64,
+                Arc::new(|_models, i| Some(format!("Item {i}"))),
+                |_i| None,
+                |cx, i| {
+                    let mut out = Vec::new();
+                    let label = cx.text(format!("Item {i}"));
+                    let label = if i == 0 {
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::<str>::from(
+                                    "ui-gallery-ui-kit-list-row-0-label",
+                                )),
+                                ..Default::default()
+                            },
+                            |_cx| [label],
+                        )
+                    } else {
+                        label
+                    };
+                    out.push(label);
+                    out.push(cx.spacer(fret_ui::element::SpacerProps {
+                        min: Px(0.0),
+                        ..Default::default()
+                    }));
+                    out
+                },
+            ),
+        ]
+    });
+
+    let list = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::List,
+            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-root")),
+            ..Default::default()
+        },
+        |_cx| [list],
+    );
+
+    let root = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |_cx| vec![header, list],
+    );
+
+    let root = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-torture-root")),
+            ..Default::default()
+        },
+        |_cx| [root],
+    );
+
+    vec![root]
+}
+
 fn code_view_torture_source() -> Arc<str> {
     static SOURCE: OnceLock<Arc<str>> = OnceLock::new();
     SOURCE
@@ -2062,11 +2261,92 @@ fn code_editor_torture_source() -> String {
         .clone()
 }
 
+fn code_editor_word_boundary_fixture() -> String {
+    [
+        "// Word boundary fixture (UI Gallery)\n",
+        "\n",
+        "世界 hello 😀 foo123_bar baz foo.bar\n",
+        "a_b c\t  hello   world\n",
+        "αβγ δ\n",
+    ]
+    .concat()
+}
+
+fn format_word_boundary_debug(text: &str, idx: usize) -> String {
+    let idx = code_editor_view::clamp_to_char_boundary(text, idx).min(text.len());
+    fn move_n_chars_left(text: &str, mut idx: usize, n: usize) -> usize {
+        for _ in 0..n {
+            let prev = code_editor_view::prev_char_boundary(text, idx);
+            if prev == idx {
+                break;
+            }
+            idx = prev;
+        }
+        idx
+    }
+
+    fn move_n_chars_right(text: &str, mut idx: usize, n: usize) -> usize {
+        for _ in 0..n {
+            let next = code_editor_view::next_char_boundary(text, idx);
+            if next == idx {
+                break;
+            }
+            idx = next;
+        }
+        idx
+    }
+
+    fn sanitize_inline(s: &str) -> String {
+        let mut out = String::with_capacity(s.len());
+        for ch in s.chars() {
+            match ch {
+                '\n' => out.push('⏎'),
+                '\t' => out.push('⇥'),
+                '\r' => out.push('␍'),
+                _ => out.push(ch),
+            }
+        }
+        out
+    }
+
+    let ctx_start = move_n_chars_left(text, idx, 16);
+    let ctx_end = move_n_chars_right(text, idx, 16);
+    let ctx_start = code_editor_view::clamp_to_char_boundary(text, ctx_start).min(text.len());
+    let ctx_end = code_editor_view::clamp_to_char_boundary(text, ctx_end).min(text.len());
+    let ctx_before = sanitize_inline(text.get(ctx_start..idx).unwrap_or(""));
+    let ctx_after = sanitize_inline(text.get(idx..ctx_end).unwrap_or(""));
+    let caret_ch = text.get(idx..).and_then(|s| s.chars().next());
+    let caret_ch = caret_ch.map(|c| sanitize_inline(&c.to_string()));
+
+    let unicode = fret_runtime::TextBoundaryMode::UnicodeWord;
+    let ident = fret_runtime::TextBoundaryMode::Identifier;
+
+    let (u_a, u_b) = code_editor_view::select_word_range(text, idx, unicode);
+    let (i_a, i_b) = code_editor_view::select_word_range(text, idx, ident);
+
+    let u_l = code_editor_view::move_word_left(text, idx, unicode);
+    let u_r = code_editor_view::move_word_right(text, idx, unicode);
+    let i_l = code_editor_view::move_word_left(text, idx, ident);
+    let i_r = code_editor_view::move_word_right(text, idx, ident);
+
+    [
+        format!(
+            "idx={idx} caret_char={}",
+            caret_ch.as_deref().unwrap_or("<eof>")
+        ),
+        format!("context: {ctx_before}|{ctx_after}"),
+        format!("UnicodeWord: select={u_a}..{u_b} left={u_l} right={u_r}"),
+        format!("Identifier: select={i_a}..{i_b} left={i_l} right={i_r}"),
+    ]
+    .join("\n")
+}
+
 fn preview_code_editor_mvp(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -2074,6 +2354,49 @@ fn preview_code_editor_mvp(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+        |h| h.clone(),
+    );
+    let word_handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
+        |h| h.clone(),
+    );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        let mode = if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        };
+        handle.set_text_boundary_mode(mode);
+        word_handle.set_text_boundary_mode(mode);
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
+
+    let word_fixture_loaded = cx.with_state(|| Rc::new(Cell::new(true)), |v| v.clone());
+    let word_idx = cx.with_state(|| Rc::new(Cell::new(0usize)), |v| v.clone());
+    let word_debug = cx.with_state(
+        || Rc::new(std::cell::RefCell::new(String::new())),
+        |v| v.clone(),
+    );
+
+    let syntax_rust_switch = syntax_rust.clone();
+    let boundary_identifier_switch = boundary_identifier.clone();
+    let boundary_identifier_for_harness = boundary_identifier.clone();
+    let soft_wrap_switch = soft_wrap.clone();
+    let word_handle_for_harness = word_handle.clone();
+    let word_debug_for_harness = word_debug.clone();
+    let word_debug_for_render = word_debug.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2088,7 +2411,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(syntax_rust.clone())
+                            shadcn::Switch::new(syntax_rust_switch.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
                                 .into_element(cx),
                             cx.text(if syntax_enabled {
@@ -2104,7 +2427,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(boundary_identifier.clone())
+                            shadcn::Switch::new(boundary_identifier_switch.clone())
                                 .a11y_label("Toggle identifier word boundaries")
                                 .into_element(cx),
                             cx.text(if boundary_identifier_enabled {
@@ -2115,31 +2438,319 @@ fn preview_code_editor_mvp(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Button::new("Dump layout…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap_switch.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        let text = word_handle_for_harness.with_buffer(|b| b.text_string());
+                        let caret = word_handle_for_harness.selection().caret().min(text.len());
+                        if word_idx.get() != caret {
+                            word_idx.set(caret);
+                        }
+                        *word_debug_for_harness.borrow_mut() =
+                            format_word_boundary_debug(text.as_str(), caret);
+
+                        let apply_fixture_handle = word_handle_for_harness.clone();
+                        let apply_fixture_loaded = word_fixture_loaded.clone();
+                        let apply_fixture_idx = word_idx.clone();
+                        let apply_fixture_debug = word_debug_for_harness.clone();
+                        let apply_fixture: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let fixture = code_editor_word_boundary_fixture();
+                                apply_fixture_handle.set_text(fixture.clone());
+                                apply_fixture_handle.set_caret(0);
+                                apply_fixture_loaded.set(true);
+                                apply_fixture_idx.set(0);
+                                *apply_fixture_debug.borrow_mut() =
+                                    format_word_boundary_debug(&fixture, 0);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_char_loaded = word_fixture_loaded.clone();
+                        let prev_char_idx = word_idx.clone();
+                        let prev_char_handle = word_handle_for_harness.clone();
+                        let prev_char_debug = word_debug_for_harness.clone();
+                        let prev_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_char_loaded.get() {
+                                    return;
+                                }
+                                let text = prev_char_handle.with_buffer(|b| b.text_string());
+                                let cur = prev_char_idx.get().min(text.len());
+                                let next = code_editor_view::prev_char_boundary(text.as_str(), cur);
+                                prev_char_idx.set(next);
+                                prev_char_handle.set_caret(next);
+                                *prev_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_char_loaded = word_fixture_loaded.clone();
+                        let next_char_idx = word_idx.clone();
+                        let next_char_handle = word_handle_for_harness.clone();
+                        let next_char_debug = word_debug_for_harness.clone();
+                        let next_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_char_loaded.get() {
+                                    return;
+                                }
+                                let text = next_char_handle.with_buffer(|b| b.text_string());
+                                let cur = next_char_idx.get().min(text.len());
+                                let next = code_editor_view::next_char_boundary(text.as_str(), cur);
+                                next_char_idx.set(next);
+                                next_char_handle.set_caret(next);
+                                *next_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_word_loaded = word_fixture_loaded.clone();
+                        let prev_word_idx = word_idx.clone();
+                        let prev_word_handle = word_handle_for_harness.clone();
+                        let prev_word_debug = word_debug_for_harness.clone();
+                        let prev_word_mode = boundary_identifier_for_harness.clone();
+                        let prev_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_word_loaded.get() {
+                                    return;
+                                }
+                                let text = prev_word_handle.with_buffer(|b| b.text_string());
+                                let cur = prev_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&prev_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_left(text.as_str(), cur, mode);
+                                prev_word_idx.set(next);
+                                prev_word_handle.set_caret(next);
+                                *prev_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_word_loaded = word_fixture_loaded.clone();
+                        let next_word_idx = word_idx.clone();
+                        let next_word_handle = word_handle_for_harness.clone();
+                        let next_word_debug = word_debug_for_harness.clone();
+                        let next_word_mode = boundary_identifier_for_harness.clone();
+                        let next_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_word_loaded.get() {
+                                    return;
+                                }
+                                let text = next_word_handle.with_buffer(|b| b.text_string());
+                                let cur = next_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&next_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_right(text.as_str(), cur, mode);
+                                next_word_idx.set(next);
+                                next_word_handle.set_caret(next);
+                                *next_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_caret_loaded = word_fixture_loaded.clone();
+                        let apply_caret_idx = word_idx.clone();
+                        let apply_caret_handle = word_handle_for_harness.clone();
+                        let apply_caret: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_caret_loaded.get() {
+                                    return;
+                                }
+                                let text = apply_caret_handle.with_buffer(|b| b.text_string());
+                                let idx = apply_caret_idx.get().min(text.len());
+                                apply_caret_handle.set_caret(idx);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_word_loaded = word_fixture_loaded.clone();
+                        let apply_word_idx = word_idx.clone();
+                        let apply_word_handle = word_handle_for_harness.clone();
+                        let apply_word_mode = boundary_identifier_for_harness.clone();
+                        let apply_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_word_loaded.get() {
+                                    return;
+                                }
+                                let text = apply_word_handle.with_buffer(|b| b.text_string());
+                                let idx = apply_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&apply_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let (a, b) = code_editor_view::select_word_range(text.as_str(), idx, mode);
+                                apply_word_handle.set_selection(code_editor::Selection {
+                                    anchor: a,
+                                    focus: b,
+                                });
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        vec![
+                            shadcn::Button::new("Load word-boundary fixture")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_fixture)
+                                .into_element(cx),
+                            shadcn::Button::new("Prev char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Prev word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply caret")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_caret)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply selection")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                        ]
+                    },
+                ),
+                cx.keyed("word-boundary-debug", |cx| {
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        move |cx| {
+                            let fixture_editor = code_editor::CodeEditor::new(word_handle.clone())
+                                .key(1)
+                                .overscan(8)
+                                .soft_wrap_cols(None)
+                                .viewport_test_id("ui-gallery-code-editor-word-fixture-viewport")
+                                .into_element(cx);
+                            let fixture_panel = cx.container(
+                                decl_style::container_props(
+                                    theme,
+                                    ChromeRefinement::default()
+                                        .border_1()
+                                        .rounded(Radius::Md)
+                                        .bg(ColorRef::Color(theme.color_required("background"))),
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .h_px(MetricRef::Px(Px(150.0))),
+                                ),
+                                |_cx| vec![fixture_editor],
+                            );
+
+                            let debug = word_debug_for_render.borrow().clone();
+                            let lines: Vec<Arc<str>> = debug
+                                .lines()
+                                .map(|line| Arc::<str>::from(line.to_string()))
+                                .collect();
+                            let debug_lines = stack::vstack(
+                                cx,
+                                stack::VStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N0),
+                                move |cx| {
+                                    lines
+                                        .iter()
+                                        .cloned()
+                                        .map(|line| {
+                                            let mut props = fret_ui::element::TextProps::new(line);
+                                            props.style = Some(TextStyle {
+                                                font: FontId::monospace(),
+                                                size: Px(12.0),
+                                                ..Default::default()
+                                            });
+                                            props.wrap = TextWrap::None;
+                                            props.overflow = TextOverflow::Clip;
+                                            cx.text_props(props)
+                                        })
+                                        .collect::<Vec<_>>()
+                                },
+                            );
+
+                            vec![fixture_panel, debug_lines]
+                        },
+                    )
+                }),
             ]
         },
     );
 
-    let handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
-        |h| h.clone(),
-    );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_applied.get() != Some(syntax_enabled) {
-        handle.set_language(if syntax_enabled { Some("rust") } else { None });
-        last_applied.set(Some(syntax_enabled));
-    }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_boundaries.get() != Some(boundary_identifier_enabled) {
-        handle.set_text_boundary_mode(if boundary_identifier_enabled {
-            fret_runtime::TextBoundaryMode::Identifier
-        } else {
-            fret_runtime::TextBoundaryMode::UnicodeWord
-        });
-        last_boundaries.set(Some(boundary_identifier_enabled));
-    }
-
     let editor = code_editor::CodeEditor::new(handle)
+        .key(0)
         .overscan(32)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
+        .viewport_test_id("ui-gallery-code-editor-mvp-viewport")
         .into_element(cx);
 
     let panel = cx.container(
@@ -2173,6 +2784,7 @@ fn preview_code_editor_torture(
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -2180,6 +2792,9 @@ fn preview_code_editor_torture(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2189,6 +2804,7 @@ fn preview_code_editor_torture(
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+                cx.text("Note: with soft wrap enabled, continuation rows may start mid-token (the numeric prefix does not repeat)."),
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -2221,6 +2837,27 @@ fn preview_code_editor_torture(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -2246,7 +2883,9 @@ fn preview_code_editor_torture(
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
         .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+        .viewport_test_id("ui-gallery-code-editor-torture-viewport")
         .into_element(cx);
 
     let panel = cx.container(
@@ -3229,7 +3868,7 @@ fn preview_web_ime_harness(
             .preedit
             .as_deref()
             .unwrap_or("<none>");
-        let ime_enabled = st.ime_enabled as u8;
+        let harness_region_ime_enabled = st.ime_enabled as u8;
 
         let panel = cx.container(
             decl_style::container_props(
@@ -3250,10 +3889,13 @@ fn preview_web_ime_harness(
                         .gap(Space::N2),
                     |cx| {
                         let mut lines = vec![
-                            cx.text(format!("ime_enabled={ime_enabled}")),
+                            cx.text(format!(
+                                "harness_region_ime_enabled={harness_region_ime_enabled}"
+                            )),
                             cx.text(format!("preedit={preedit:?}")),
                             cx.text(format!("committed_tail={committed_tail:?}")),
                             cx.text(format!("last_event={:?}", st.last)),
+                            cx.text("Console logging: add ?ime_debug=1 or set window.__FRET_IME_DEBUG=true"),
                             cx.text(format!(
                                 "counts: text_input={} ime_commit={} ime_preedit={} ime_delete_surrounding={} enabled={} disabled={}",
                                 st.text_input_count,
@@ -3264,6 +3906,94 @@ fn preview_web_ime_harness(
                                 st.ime_disabled_count
                             )),
                         ];
+
+                        if let Some(snapshot) = cx
+                            .app
+                            .global::<fret_runtime::WindowTextInputSnapshotService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_text_input_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} is_composing={}",
+                                snapshot.focus_is_text_input as u8, snapshot.is_composing as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  text_len_utf16={} selection_utf16={:?} marked_utf16={:?}",
+                                snapshot.text_len_utf16, snapshot.selection_utf16, snapshot.marked_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  ime_cursor_area={:?}",
+                                snapshot.ime_cursor_area
+                            )));
+                        } else {
+                            lines.push(cx.text("window_text_input_snapshot: <unavailable>"));
+                        }
+
+                        if let Some(input_ctx) = cx
+                            .app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_input_context_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} text_boundary_mode={:?}",
+                                input_ctx.focus_is_text_input as u8, input_ctx.text_boundary_mode
+                            )));
+                        } else {
+                            lines.push(cx.text("window_input_context_snapshot: <unavailable>"));
+                        }
+
+                        if let Some(key) = cx.app.global::<fret_runtime::TextFontStackKey>() {
+                            lines.push(cx.text(format!("text_font_stack_key={}", key.0)));
+                        } else {
+                            lines.push(cx.text("text_font_stack_key: <unavailable>"));
+                        }
+
+                        if let Some(cfg) = cx.app.global::<fret_core::TextFontFamilyConfig>().cloned()
+                        {
+                            let fmt = |v: &[String]| -> String {
+                                let head = v.iter().take(4).cloned().collect::<Vec<_>>().join(", ");
+                                if v.len() > 4 {
+                                    format!("[{head}, …] (len={})", v.len())
+                                } else {
+                                    format!("[{head}] (len={})", v.len())
+                                }
+                            };
+                            lines.push(cx.text("text_font_families:"));
+                            lines.push(cx.text(format!("  ui_sans={}", fmt(&cfg.ui_sans))));
+                            lines.push(cx.text(format!("  ui_serif={}", fmt(&cfg.ui_serif))));
+                            lines.push(cx.text(format!("  ui_mono={}", fmt(&cfg.ui_mono))));
+                            lines.push(cx.text(format!(
+                                "  common_fallback={}",
+                                fmt(&cfg.common_fallback)
+                            )));
+                        } else {
+                            lines.push(cx.text("text_font_families: <unavailable>"));
+                        }
+
+                        if let Some(catalog) = cx.app.global::<fret_runtime::FontCatalog>().cloned()
+                        {
+                            let head = catalog
+                                .families
+                                .iter()
+                                .take(6)
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            lines.push(cx.text("font_catalog:"));
+                            lines.push(cx.text(format!(
+                                "  revision={} families_len={}",
+                                catalog.revision,
+                                catalog.families.len()
+                            )));
+                            if !catalog.families.is_empty() {
+                                lines.push(cx.text(format!("  head=[{head}]")));
+                            }
+                        } else {
+                            lines.push(cx.text("font_catalog: <unavailable>"));
+                        }
 
                         let snapshot = cx
                             .app
@@ -3276,6 +4006,25 @@ fn preview_web_ime_harness(
                                 snapshot.enabled as u8,
                                 snapshot.composing as u8,
                                 snapshot.suppress_next_input as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_preedit_text={:?} preedit_cursor_utf16={:?}",
+                                snapshot.last_preedit_text.as_deref(),
+                                snapshot.last_preedit_cursor_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_commit_text={:?}",
+                                snapshot.last_commit_text.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  position_mode={:?} mount_kind={:?} dpr={:?}",
+                                snapshot.position_mode.as_deref(),
+                                snapshot.mount_kind.as_deref(),
+                                snapshot.device_pixel_ratio,
+                            )));
+                            lines.push(cx.text(format!(
+                                "  textarea_has_focus={:?} active_element_tag={:?}",
+                                snapshot.textarea_has_focus, snapshot.active_element_tag
                             )));
                             lines.push(cx.text(format!(
                                 "  last_input_type={:?}",
@@ -3294,6 +4043,10 @@ fn preview_web_ime_harness(
                                 snapshot.last_key_code, snapshot.last_cursor_area
                             )));
                             lines.push(cx.text(format!(
+                                "  last_cursor_anchor_px={:?}",
+                                snapshot.last_cursor_anchor_px
+                            )));
+                            lines.push(cx.text(format!(
                                 "  counts: beforeinput={} input={} suppressed={} comp_start={} comp_update={} comp_end={} cursor_area_set={}",
                                 snapshot.beforeinput_seen,
                                 snapshot.input_seen,
@@ -3303,6 +4056,23 @@ fn preview_web_ime_harness(
                                 snapshot.composition_end_seen,
                                 snapshot.cursor_area_set_seen,
                             )));
+                            lines.push(cx.text(format!(
+                                "  textarea: chars={:?} sel_utf16={:?}..{:?} client={:?}x{:?} scroll={:?}x{:?}",
+                                snapshot.textarea_value_chars,
+                                snapshot.textarea_selection_start_utf16,
+                                snapshot.textarea_selection_end_utf16,
+                                snapshot.textarea_client_width_px,
+                                snapshot.textarea_client_height_px,
+                                snapshot.textarea_scroll_width_px,
+                                snapshot.textarea_scroll_height_px,
+                            )));
+
+                            if !snapshot.recent_events.is_empty() {
+                                lines.push(cx.text("  recent_events:"));
+                                for e in snapshot.recent_events.iter().rev().take(10) {
+                                    lines.push(cx.text(format!("    {e}")));
+                                }
+                            }
                         } else {
                             lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
                         }
@@ -10018,6 +10788,14 @@ fn preview_data_table_torture(
 ) -> Vec<AnyElement> {
     use fret_ui_headless::table::{ColumnDef, RowKey};
 
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_DATA_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
     #[derive(Debug, Clone)]
     struct Row {
         id: u64,
@@ -10108,10 +10886,61 @@ fn preview_data_table_torture(
                     ..Default::default()
                 },
                 |cx| {
-                    vec![
-                        shadcn::DataTable::new()
-                            .overscan(10)
+                    let retained =
+                        std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
+                    vec![if retained {
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
                             .row_height(Px(28.0))
+                            .measure_rows(variable_height)
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                            .into_element_retained(
+                                cx,
+                                data.clone(),
+                                1,
+                                state,
+                                columns.clone(),
+                                |row, _index, _parent| RowKey(row.id),
+                                |col| Arc::<str>::from(col.id.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
+                                    "status" => cx.text(row.status.as_ref()),
+                                    "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                    _ => cx.text("?"),
+                                },
+                                Some(Arc::<str>::from("ui-gallery-data-table-header-")),
+                                Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                            )
+                    } else {
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
+                            .row_height(Px(28.0))
+                            .measure_rows(variable_height)
                             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
@@ -10121,15 +10950,33 @@ fn preview_data_table_torture(
                                 columns.clone(),
                                 |row, _index, _parent| RowKey(row.id),
                                 |col| Arc::<str>::from(col.id.as_ref()),
-                                |cx, col, row| match col.id.as_ref() {
-                                    "name" => cx.text(row.name.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
                                     "status" => cx.text(row.status.as_ref()),
                                     "cpu%" => cx.text(format!("{}%", row.cpu)),
                                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                                     _ => cx.text("?"),
                                 },
-                            ),
-                    ]
+                            )
+                    }]
                 },
             )]
         });
@@ -10137,7 +10984,7 @@ fn preview_data_table_torture(
     let mut container_props = decl_style::container_props(
         theme,
         ChromeRefinement::default(),
-        LayoutRefinement::default().w_full(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -10149,6 +10996,10 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
 
     use fret_ui_kit::TreeItem;
     use fret_ui_kit::TreeState;
+
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
 
     #[derive(Default)]
     struct TreeTortureModels {
@@ -10183,10 +11034,16 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                             Vec::with_capacity(leaves_per_folder as usize);
                         for l in 0..leaves_per_folder {
                             let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
-                            leaves.push(
-                                TreeItem::new(leaf_id, format!("Leaf {r}/{f}/{l} (id={leaf_id})"))
-                                    .disabled(leaf_id % 97 == 0),
-                            );
+                            let label = if variable_height && leaf_id % 15 == 0 {
+                                format!(
+                                    "Leaf {r}/{f}/{l} (id={leaf_id})\nDetails: id={} seed={}",
+                                    leaf_id,
+                                    leaf_id.wrapping_mul(2654435761)
+                                )
+                            } else {
+                                format!("Leaf {r}/{f}/{l} (id={leaf_id})")
+                            };
+                            leaves.push(TreeItem::new(leaf_id, label).disabled(leaf_id % 97 == 0));
                         }
 
                         folders.push(
@@ -10237,12 +11094,39 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 ..Default::default()
             },
             |cx| {
-                vec![fret_ui_kit::declarative::tree::tree_view(
-                    cx,
-                    items,
-                    state,
-                    fret_ui_kit::Size::Medium,
-                )]
+                let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
+                    .filter(|v| !v.is_empty())
+                    .is_some();
+
+                if retained {
+                    if variable_height {
+                        vec![
+                            fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
+                                cx,
+                                items,
+                                state,
+                                fret_ui_kit::Size::Medium,
+                                fret_ui::element::VirtualListMeasureMode::Measured,
+                                Some(Arc::<str>::from("ui-gallery-tree-row")),
+                            ),
+                        ]
+                    } else {
+                        vec![fret_ui_kit::declarative::tree::tree_view_retained(
+                            cx,
+                            items,
+                            state,
+                            fret_ui_kit::Size::Medium,
+                            Some(Arc::<str>::from("ui-gallery-tree-row")),
+                        )]
+                    }
+                } else {
+                    vec![fret_ui_kit::declarative::tree::tree_view(
+                        cx,
+                        items,
+                        state,
+                        fret_ui_kit::Size::Medium,
+                    )]
+                }
             },
         )]
     });
@@ -10255,6 +11139,512 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
     vec![header, cx.container(container_props, |_cx| vec![tree])]
+}
+
+fn preview_ai_transcript_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let message_count = std::env::var("FRET_UI_GALLERY_AI_TRANSCRIPT_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(5_000);
+
+    #[derive(Default)]
+    struct TranscriptModels {
+        messages: Option<Arc<[ui_ai::ConversationMessage]>>,
+    }
+
+    let messages = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
+    let messages = match messages {
+        Some(messages) => messages,
+        None => {
+            let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
+            for i in 0..message_count as u64 {
+                let role = match i % 4 {
+                    0 => ui_ai::MessageRole::User,
+                    1 => ui_ai::MessageRole::Assistant,
+                    2 => ui_ai::MessageRole::Tool,
+                    _ => ui_ai::MessageRole::System,
+                };
+                let text = if variable_height && i % 7 == 0 {
+                    Arc::<str>::from(format!(
+                        "Message {i}\nDetails: seed={} tokens={} latency={}ms",
+                        (i * 31) % 97,
+                        16 + (i % 64),
+                        10 + (i % 120)
+                    ))
+                } else {
+                    Arc::<str>::from(format!("Message {i}: hello world"))
+                };
+                out.push(ui_ai::ConversationMessage::new(i, role, text));
+            }
+
+            let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
+            cx.with_state(TranscriptModels::default, |st| {
+                st.messages = Some(out.clone())
+            });
+            out
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
+                cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
+            ]
+        },
+    );
+
+    let transcript =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let revision = messages.len().min(u64::MAX as usize) as u64;
+
+            vec![
+                ui_ai::ConversationTranscript::from_arc(messages.clone())
+                    .content_revision(revision)
+                    .scroll_handle(scroll_handle)
+                    .stick_to_bottom(false)
+                    .show_scroll_to_bottom_button(false)
+                    .debug_root_test_id("ui-gallery-ai-transcript-root")
+                    .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
+                    .into_element(cx),
+            ]
+        });
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![
+        header,
+        cx.container(container_props, |_cx| vec![transcript]),
+    ]
+}
+
+fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let len: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(50_000)
+        .clamp(16, 200_000);
+    let row_height = Px(28.0);
+    let overscan = 12;
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(0)
+        .clamp(0, 4096);
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(460.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    let options =
+        fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height)
+            .keep_alive(keep_alive);
+
+    let theme = theme.clone();
+    let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
+        let zebra = (index % 2) == 0;
+        let background = if zebra {
+            theme.color_required("muted")
+        } else {
+            theme.color_required("background")
+        };
+
+        let depth = (index % 8) as f32;
+        let indent_px = Px(depth * 12.0);
+
+        let name = cx.text(format!("prop_{index}"));
+        let value = cx.text(format!("value {index}"));
+
+        let spacer = cx.container(
+            fret_ui::element::ContainerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: fret_ui::element::Length::Px(indent_px),
+                        height: fret_ui::element::Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        let mut row_props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(background))
+                .p(Space::N2),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(row_height)),
+        );
+        row_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+        let row_layout = row_props.layout;
+        let row = cx.container(row_props, |cx| {
+            vec![stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .gap(Space::N2)
+                    .items_center(),
+                |_cx| vec![spacer, name, value],
+            )]
+        });
+
+        let mut semantics = fret_ui::element::SemanticsProps::default();
+        semantics.layout = row_layout;
+        semantics.test_id = Some(Arc::<str>::from(format!(
+            "ui-gallery-inspector-row-{index}-label"
+        )));
+        cx.semantics(semantics, |_cx| vec![row])
+    };
+
+    let list = cx.virtual_list_keyed_retained_with_layout_fn(
+        list_layout,
+        len,
+        options,
+        &scroll_handle,
+        |i| i as fret_ui::ItemKey,
+        row,
+    );
+
+    let mut semantics = fret_ui::element::SemanticsProps::default();
+    semantics.role = fret_core::SemanticsRole::List;
+    semantics.layout = list_layout;
+    semantics.test_id = Some(Arc::<str>::from("ui-gallery-inspector-root"));
+    let list = cx.semantics(semantics, |_cx| vec![list]);
+
+    vec![cx.cached_subtree_with(
+        CachedSubtreeProps::default().contained_layout(true),
+        |_cx| vec![list],
+    )]
+}
+
+fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let _ = theme;
+    use std::collections::HashSet;
+
+    let row_height = Px(26.0);
+    let overscan = 12;
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(460.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    use fret_ui_kit::{TreeItem, TreeItemId, TreeState};
+
+    #[derive(Default)]
+    struct FileTreeTortureModels {
+        items: Option<Model<Vec<TreeItem>>>,
+        state: Option<Model<TreeState>>,
+    }
+
+    let (items, state) = cx.with_state(FileTreeTortureModels::default, |st| {
+        (st.items.clone(), st.state.clone())
+    });
+    let (items, state) = match (items, state) {
+        (Some(items), Some(state)) => (items, state),
+        _ => {
+            let (items_value, state_value) = {
+                let root_count: u64 = std::env::var("FRET_UI_GALLERY_FILE_TREE_ROOTS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(200);
+                let folders_per_root = 10u64;
+                let leaves_per_folder = 25u64;
+
+                let mut expanded: HashSet<TreeItemId> = HashSet::new();
+                let mut roots: Vec<TreeItem> = Vec::with_capacity(root_count as usize);
+
+                for r in 0..root_count {
+                    let root_id = r;
+                    expanded.insert(root_id);
+
+                    let mut folders: Vec<TreeItem> = Vec::with_capacity(folders_per_root as usize);
+                    for f in 0..folders_per_root {
+                        let folder_id = 1_000_000 + r * 100 + f;
+                        expanded.insert(folder_id);
+
+                        let mut leaves: Vec<TreeItem> =
+                            Vec::with_capacity(leaves_per_folder as usize);
+                        for l in 0..leaves_per_folder {
+                            let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
+                            leaves.push(TreeItem::new(
+                                leaf_id,
+                                Arc::<str>::from(format!("file_{r}_{f}_{l}.rs")),
+                            ));
+                        }
+
+                        folders.push(
+                            TreeItem::new(folder_id, Arc::<str>::from(format!("dir_{r}_{f}")))
+                                .children(leaves),
+                        );
+                    }
+
+                    roots.push(
+                        TreeItem::new(root_id, Arc::<str>::from(format!("root_{r}")))
+                            .children(folders),
+                    );
+                }
+
+                (
+                    roots,
+                    TreeState {
+                        expanded,
+                        selected: None,
+                    },
+                )
+            };
+
+            let items = cx.app.models_mut().insert(items_value);
+            let state = cx.app.models_mut().insert(state_value);
+            cx.with_state(FileTreeTortureModels::default, |st| {
+                st.items = Some(items.clone());
+                st.state = Some(state.clone());
+            });
+            (items, state)
+        }
+    };
+
+    let mut props = fret_ui_kit::declarative::file_tree::FileTreeViewProps::default();
+    props.layout = list_layout;
+    props.row_height = row_height;
+    props.overscan = overscan;
+    props.debug_root_test_id = Some(Arc::<str>::from("ui-gallery-file-tree-root"));
+    props.debug_row_test_id_prefix = Some(Arc::<str>::from("ui-gallery-file-tree-node"));
+
+    vec![
+        fret_ui_kit::declarative::file_tree::file_tree_view_retained_v0(
+            cx,
+            items,
+            state,
+            &scroll_handle,
+            props,
+        ),
+    ]
+}
+
+fn preview_table_retained_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
+    #[derive(Clone)]
+    struct TableRow {
+        id: u64,
+        name: Arc<str>,
+        status: Arc<str>,
+        cpu: u32,
+        mem_mb: u32,
+    }
+
+    #[derive(Default)]
+    struct TableTortureModels {
+        data: Option<Arc<[TableRow]>>,
+        columns: Option<Arc<[ColumnDef<TableRow>]>>,
+        state: Option<Model<TableState>>,
+    }
+
+    let (data, columns, state) = cx.with_state(TableTortureModels::default, |st| {
+        (st.data.clone(), st.columns.clone(), st.state.clone())
+    });
+
+    let (data, columns, state) = match (data, columns, state) {
+        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+        _ => {
+            let mut rows: Vec<TableRow> = Vec::with_capacity(50_000);
+            for i in 0..50_000u64 {
+                rows.push(TableRow {
+                    id: i,
+                    name: Arc::from(format!("Row {i}")),
+                    status: Arc::from(if i % 3 == 0 {
+                        "idle"
+                    } else if i % 3 == 1 {
+                        "busy"
+                    } else {
+                        "offline"
+                    }),
+                    cpu: ((i * 7) % 100) as u32,
+                    mem_mb: (128 + (i % 4096)) as u32,
+                });
+            }
+            let data: Arc<[TableRow]> = Arc::from(rows);
+
+            let cols: Vec<ColumnDef<TableRow>> = vec![
+                ColumnDef::new("name").sort_by(|a: &TableRow, b: &TableRow| a.name.cmp(&b.name)),
+                ColumnDef::new("status")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.status.cmp(&b.status)),
+                ColumnDef::new("cpu%").sort_by(|a: &TableRow, b: &TableRow| a.cpu.cmp(&b.cpu)),
+                ColumnDef::new("mem_mb")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.mem_mb.cmp(&b.mem_mb)),
+            ];
+            let columns: Arc<[ColumnDef<TableRow>]> = Arc::from(cols);
+
+            let state = cx.app.models_mut().insert(TableState::default());
+
+            cx.with_state(TableTortureModels::default, |st| {
+                st.data = Some(data.clone());
+                st.columns = Some(columns.clone());
+                st.state = Some(state.clone());
+            });
+
+            (data, columns, state)
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text(
+                    "Goal: baseline harness for `fret-ui-kit::declarative::table` running on the virt-003 retained host path.",
+                ),
+                cx.text(
+                    "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
+                ),
+            ]
+        },
+    );
+
+    let table =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-table-retained-torture-root")),
+                    ..Default::default()
+                },
+                |cx| {
+                    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+                    let state_revision = cx.app.models().revision(&state).unwrap_or(0);
+                    let items_revision = 1 ^ state_revision.rotate_left(17);
+
+                    let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
+                    props.overscan = 10;
+                    props.row_height = Some(Px(28.0));
+                    if keep_alive > 0 {
+                        props.keep_alive = Some(keep_alive);
+                    }
+                    props.row_measure_mode = if variable_height {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Measured
+                    } else {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed
+                    };
+                    props.enable_column_grouping = false;
+                    props.enable_column_resizing = false;
+
+                    let header_label =
+                        Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
+                    let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
+                    let cell_at = Arc::new(
+                        move |cx: &mut ElementContext<'_, App>,
+                              col: &ColumnDef<TableRow>,
+                              row: &TableRow| {
+                            match col.id.as_ref() {
+                                "name" => {
+                                    if variable_height && row.id % 15 == 0 {
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N0),
+                                            |cx| {
+                                                vec![
+                                                    cx.text(row.name.as_ref()),
+                                                    cx.text(format!(
+                                                        "Details: id={} cpu={} mem={}",
+                                                        row.id, row.cpu, row.mem_mb
+                                                    )),
+                                                ]
+                                            },
+                                        )
+                                    } else {
+                                        cx.text(row.name.as_ref())
+                                    }
+                                }
+                                "status" => cx.text(row.status.as_ref()),
+                                "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                _ => cx.text("?"),
+                            }
+                        },
+                    );
+
+                    vec![
+                        fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                            cx,
+                            data.clone(),
+                            columns.clone(),
+                            state.clone(),
+                            &scroll_handle,
+                            items_revision,
+                            row_key_at,
+                            Some(Arc::new(|row: &TableRow, _index: usize| {
+                                Arc::from(row.id.to_string())
+                            })),
+                            props,
+                            header_label,
+                            cell_at,
+                            Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
+                            Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+                        ),
+                    ]
+                },
+            )]
+        });
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![header, cx.container(container_props, |_cx| vec![table])]
 }
 
 fn preview_data_grid(
@@ -10388,13 +11778,23 @@ fn preview_accordion(
 }
 
 fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let crate_w = fret_core::Px(160.0);
+    let layer_w = fret_core::Px(140.0);
+    let notes_w = fret_core::Px(420.0);
+
     let header = shadcn::TableHeader::new(vec![
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableHead::new("Crate").into_element(cx),
-                shadcn::TableHead::new("Layer").into_element(cx),
-                shadcn::TableHead::new("Notes").into_element(cx),
+                shadcn::TableHead::new("Crate")
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Layer")
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Notes")
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .border_bottom(true)
@@ -10413,18 +11813,28 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     },
                     |cx| vec![cx.text("fret-ui")],
                 ))
+                .refine_layout(LayoutRefinement::default().w_px(crate_w))
                 .into_element(cx),
-                shadcn::TableCell::new(cx.text("mechanisms")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Element tree + layout")).into_element(cx),
+                shadcn::TableCell::new(cx.text("mechanisms"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("Element tree + layout"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .into_element(cx),
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.text("fret-ui-kit")).into_element(cx),
-                shadcn::TableCell::new(cx.text("policies")).into_element(cx),
+                shadcn::TableCell::new(cx.text("fret-ui-kit"))
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("policies"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
                 shadcn::TableCell::new(cx.text("Dismiss / focus / menu / overlays"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
                     .into_element(cx),
             ],
         )
@@ -10433,9 +11843,15 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.text("fret-ui-shadcn")).into_element(cx),
-                shadcn::TableCell::new(cx.text("recipes")).into_element(cx),
-                shadcn::TableCell::new(cx.text("skinned components + defaults")).into_element(cx),
+                shadcn::TableCell::new(cx.text("fret-ui-shadcn"))
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("recipes"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("skinned components + defaults"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .into_element(cx),

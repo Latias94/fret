@@ -56,7 +56,7 @@ impl ElementHostWidget {
         };
 
         let is_text_input = matches!(
-            instance,
+            &instance,
             ElementInstance::TextInput(_)
                 | ElementInstance::TextArea(_)
                 | ElementInstance::TextInputRegion(_)

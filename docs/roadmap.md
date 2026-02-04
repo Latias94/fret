@@ -15,6 +15,7 @@ Workstream docs live under `docs/workstreams/` (living implementation trackers; 
 Active tracker highlights:
 
 - Text system v2 (Parley + attributed spans): `docs/workstreams/text-system-v2-parley.md` (see also `docs/todo-tracker.md`).
+- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` (TODOs: `docs/workstreams/headless-table-tanstack-parity-todo.md`).
 - Fonts bootstrap + invalidation contract: `docs/adr/0162-font-stack-bootstrap-and-textfontstackkey-v1.md`.
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (TODOs: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md`).
 - Immediate-mode authoring convergence (imui v2): `docs/workstreams/imui-authoring-facade-v2.md` (TODOs: `docs/workstreams/imui-authoring-facade-v2-todo.md`).

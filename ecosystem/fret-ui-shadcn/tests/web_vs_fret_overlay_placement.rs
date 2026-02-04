@@ -7022,6 +7022,57 @@ fn web_vs_fret_dropdown_menu_dialog_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_dialog_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "dropdown-menu-dialog.vp375x240",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use fret_ui_shadcn::{
+                Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
+                DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
+            };
+
+            use fret_ui_kit::declarative::icon as decl_icon;
+
+            let button = Button::new("")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::IconSm)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(32.0)))
+                        .h_px(MetricRef::Px(Px(32.0))),
+                )
+                .children([decl_icon::icon(cx, fret_icons::ids::ui::MORE_HORIZONTAL)]);
+
+            DropdownMenu::new(open.clone())
+                // new-york-v4 dropdown-menu-dialog: `DropdownMenuContent className="w-40"`.
+                .min_width(Px(160.0))
+                .align(DropdownMenuAlign::End)
+                .into_element(
+                    cx,
+                    |cx| button.into_element(cx),
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Label(DropdownMenuLabel::new("File Actions")),
+                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("New File...")),
+                                DropdownMenuEntry::Item(DropdownMenuItem::new("Share...")),
+                                DropdownMenuEntry::Item(
+                                    DropdownMenuItem::new("Download").disabled(true),
+                                ),
+                            ])),
+                        ]
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        None,
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_dialog_menu_item_height_matches() {
     let web_name = "dropdown-menu-dialog";
     let web = read_web_golden_open(web_name);
@@ -7039,8 +7090,37 @@ fn web_vs_fret_dropdown_menu_dialog_menu_item_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_dialog_menu_item_height_matches_mobile_tiny_viewport() {
+    let web_name = "dropdown-menu-dialog.vp375x240";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+
+    let snap = build_dropdown_menu_dialog_open_snapshot(theme);
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_dialog_menu_content_insets_match() {
     let web_name = "dropdown-menu-dialog";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+
+    let snap = build_dropdown_menu_dialog_open_snapshot(theme);
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_dialog_menu_content_insets_match_mobile_tiny_viewport() {
+    let web_name = "dropdown-menu-dialog.vp375x240";
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
@@ -7273,6 +7353,140 @@ fn web_vs_fret_item_dropdown_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_item_dropdown_overlay_placement_matches_mobile_tiny_viewport() {
+    let web_name = "item-dropdown.vp375x240";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let is_open_trigger = |n: &WebNode| {
+        n.tag == "button"
+            && (n
+                .attrs
+                .get("data-state")
+                .is_some_and(|v| v.as_str() == "open")
+                || n.attrs
+                    .get("aria-expanded")
+                    .is_some_and(|v| v.as_str() == "true"))
+    };
+    let web_trigger = find_first(&web.themes["light"].root, &is_open_trigger)
+        .or_else(|| find_first(&web.themes["dark"].root, &is_open_trigger))
+        .expect("web trigger (button)");
+    let trigger_rect = web_trigger.rect;
+
+    let expected_item_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_item_h = expected_item_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+    let item_h = expected_item_h.round();
+
+    assert_overlay_placement_matches(
+        web_name,
+        Some("menu"),
+        move |cx, open| {
+            use fret_ui::element::LayoutStyle;
+            use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+            use fret_ui_shadcn::{
+                Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, DropdownMenu,
+                DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, Item, ItemContent,
+                ItemDescription, ItemMedia, ItemSize, ItemTitle,
+            };
+
+            use fret_ui_kit::declarative::icon as decl_icon;
+
+            let button = Button::new("Select")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(trigger_rect.w)))
+                        .h_px(MetricRef::Px(Px(trigger_rect.h))),
+                )
+                .children([decl_icon::icon(cx, fret_icons::ids::ui::CHEVRON_DOWN)]);
+
+            let people = vec![
+                ("shadcn", "shadcn@vercel.com"),
+                ("maxleiter", "maxleiter@vercel.com"),
+                ("evilrabbit", "evilrabbit@vercel.com"),
+            ];
+
+            let entries: Vec<DropdownMenuEntry> = people
+                .into_iter()
+                .map(|(username, email)| {
+                    let content = Item::new(vec![
+                        ItemMedia::new(vec![
+                            Avatar::new(vec![
+                                AvatarFallback::new(
+                                    username
+                                        .chars()
+                                        .next()
+                                        .map(|ch| ch.to_string())
+                                        .unwrap_or_else(|| "?".to_owned()),
+                                )
+                                .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        ItemContent::new(vec![
+                            ItemTitle::new(username).into_element(cx),
+                            ItemDescription::new(email).into_element(cx),
+                        ])
+                        .gap(Px(2.0))
+                        .into_element(cx),
+                    ])
+                    .size(ItemSize::Sm)
+                    .refine_style(
+                        ChromeRefinement::default()
+                            .p(Space::N2)
+                            .rounded(fret_ui_kit::Radius::Md),
+                    )
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(MetricRef::Px(Px(item_h))),
+                    )
+                    .into_element(cx);
+
+                    DropdownMenuEntry::Item(
+                        DropdownMenuItem::new(username)
+                            .padding(Edges::all(Px(0.0)))
+                            .estimated_height(Px(item_h))
+                            .content(content),
+                    )
+                })
+                .collect();
+
+            let dropdown = DropdownMenu::new(open.clone())
+                // new-york-v4 item-dropdown: `DropdownMenuContent className="w-72"`.
+                .min_width(Px(288.0))
+                .align(DropdownMenuAlign::End)
+                .into_element(cx, |cx| button.into_element(cx), |_cx| entries);
+
+            cx.container(
+                ContainerProps {
+                    layout: {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout
+                    },
+                    padding: Edges {
+                        left: Px(trigger_rect.x),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                |_cx| vec![dropdown],
+            )
+        },
+        SemanticsRole::Button,
+        Some("Select"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
 fn web_vs_fret_item_dropdown_menu_item_height_matches() {
     let web_name = "item-dropdown";
     let web = read_web_golden_open(web_name);
@@ -7290,8 +7504,55 @@ fn web_vs_fret_item_dropdown_menu_item_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_item_dropdown_menu_item_height_matches_mobile_tiny_viewport() {
+    let web_name = "item-dropdown.vp375x240";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+
+    let snap = build_item_dropdown_open_snapshot(theme, expected_h.round());
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
 fn web_vs_fret_item_dropdown_menu_content_insets_match() {
     let web_name = "item-dropdown";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_item_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_item_h = expected_item_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let snap = build_item_dropdown_open_snapshot(theme, expected_item_h.round());
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_item_dropdown_menu_content_insets_match_mobile_tiny_viewport() {
+    let web_name = "item-dropdown.vp375x240";
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
@@ -7684,9 +7945,93 @@ fn web_vs_fret_dropdown_menu_checkboxes_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_checkboxes_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "dropdown-menu-checkboxes.vp375x240",
+        Some("menu"),
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                checked_status_bar: Option<Model<bool>>,
+                checked_activity_bar: Option<Model<bool>>,
+                checked_panel: Option<Model<bool>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| {
+                match (
+                    st.checked_status_bar.as_ref(),
+                    st.checked_activity_bar.as_ref(),
+                    st.checked_panel.as_ref(),
+                ) {
+                    (Some(a), Some(b), Some(c)) => Some((a.clone(), b.clone(), c.clone())),
+                    _ => None,
+                }
+            });
+
+            let (checked_status_bar, checked_activity_bar, checked_panel) =
+                if let Some(existing) = existing {
+                    existing
+                } else {
+                    let checked_status_bar = cx.app.models_mut().insert(true);
+                    let checked_activity_bar = cx.app.models_mut().insert(false);
+                    let checked_panel = cx.app.models_mut().insert(false);
+
+                    cx.with_state(Models::default, |st| {
+                        st.checked_status_bar = Some(checked_status_bar.clone());
+                        st.checked_activity_bar = Some(checked_activity_bar.clone());
+                        st.checked_panel = Some(checked_panel.clone());
+                    });
+
+                    (checked_status_bar, checked_activity_bar, checked_panel)
+                };
+
+            build_dropdown_menu_checkboxes_demo(
+                cx,
+                open,
+                checked_status_bar,
+                checked_activity_bar,
+                checked_panel,
+            )
+        },
+        SemanticsRole::Button,
+        Some("Open"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "dropdown-menu-radio-group",
+        Some("menu"),
+        |cx, open| {
+            #[derive(Default)]
+            struct Models {
+                position: Option<Model<Option<Arc<str>>>>,
+            }
+
+            let existing = cx.with_state(Models::default, |st| st.position.as_ref().cloned());
+
+            let position = if let Some(existing) = existing {
+                existing
+            } else {
+                let position = cx.app.models_mut().insert(Some(Arc::from("bottom")));
+                cx.with_state(Models::default, |st| st.position = Some(position.clone()));
+                position
+            };
+
+            build_dropdown_menu_radio_group_demo(cx, open, position)
+        },
+        SemanticsRole::Button,
+        Some("Open"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "dropdown-menu-radio-group.vp375x240",
         Some("menu"),
         |cx, open| {
             #[derive(Default)]
@@ -7717,153 +8062,167 @@ fn web_vs_fret_button_group_demo_dropdown_menu_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "button-group-demo",
         Some("menu"),
-        |cx, open| {
-            use fret_ui_shadcn::{
-                Button, ButtonGroup, ButtonGroupOrientation, ButtonSize, ButtonVariant,
-                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuGroup,
-                DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
-            };
+        |cx, open| render_button_group_demo_dropdown_menu(cx, open.clone()),
+        SemanticsRole::Button,
+        Some("More Options"),
+        SemanticsRole::Menu,
+    );
+}
 
-            fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-                cx.container(
-                    ContainerProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Px(Px(16.0));
-                            layout.size.height = Length::Px(Px(16.0));
-                            layout
-                        },
-                        ..Default::default()
-                    },
-                    |_cx| Vec::new(),
-                )
-            }
+fn render_button_group_demo_dropdown_menu<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+) -> AnyElement {
+    use fret_ui_shadcn::{
+        Button, ButtonGroup, ButtonGroupOrientation, ButtonSize, ButtonVariant, DropdownMenu,
+        DropdownMenuAlign, DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem,
+        DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    };
 
-            let radius = fret_ui::Theme::global(&*cx.app).metric_required("metric.radius.md");
+    fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Px(Px(16.0));
+                    layout.size.height = Length::Px(Px(16.0));
+                    layout
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
+    }
 
-            let left_button = Button::new("Snooze")
-                .variant(ButtonVariant::Outline)
-                .corner_radii_override(fret_core::Corners {
-                    top_left: radius,
-                    bottom_left: radius,
-                    top_right: Px(0.0),
-                    bottom_right: Px(0.0),
-                });
+    let radius = fret_ui::Theme::global(&*cx.app).metric_required("metric.radius.md");
 
-            let right_button = Button::new("More Options")
+    let left_button = Button::new("Snooze")
+        .variant(ButtonVariant::Outline)
+        .corner_radii_override(fret_core::Corners {
+            top_left: radius,
+            bottom_left: radius,
+            top_right: Px(0.0),
+            bottom_right: Px(0.0),
+        });
+
+    let right_button = Button::new("More Options")
+        .variant(ButtonVariant::Outline)
+        .size(ButtonSize::Icon)
+        .border_left_width_override(Px(0.0))
+        .corner_radii_override(fret_core::Corners {
+            top_left: Px(0.0),
+            bottom_left: Px(0.0),
+            top_right: radius,
+            bottom_right: radius,
+        })
+        .children([icon_stub(cx)]);
+
+    let label: Model<Option<Arc<str>>> = cx.app.models_mut().insert(Some(Arc::from("personal")));
+
+    let dropdown = DropdownMenu::new(open.clone())
+        .align(DropdownMenuAlign::End)
+        // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
+        .min_width(Px(208.0))
+        .into_element(
+            cx,
+            |cx| right_button.clone().into_element(cx),
+            |cx| {
+                vec![
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
+                        ),
+                    ])),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
+                        ),
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Label As...")
+                                .leading(icon_stub(cx))
+                                .submenu(vec![DropdownMenuEntry::RadioGroup(
+                                    DropdownMenuRadioGroup::new(label.clone())
+                                        .item(DropdownMenuRadioItemSpec::new(
+                                            "personal", "Personal",
+                                        ))
+                                        .item(DropdownMenuRadioItemSpec::new("work", "Work"))
+                                        .item(DropdownMenuRadioItemSpec::new("other", "Other")),
+                                )]),
+                        ),
+                    ])),
+                    DropdownMenuEntry::Separator,
+                    DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
+                        DropdownMenuEntry::Item(
+                            DropdownMenuItem::new("Trash")
+                                .leading(icon_stub(cx))
+                                .variant(
+                                fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            ),
+                        ),
+                    ])),
+                ]
+            },
+        );
+
+    let group3 = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: SemanticsRole::Group,
+            ..Default::default()
+        },
+        move |cx| {
+            vec![cx.flex(
+                fret_ui::element::FlexProps {
+                    layout: LayoutStyle::default(),
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    wrap: false,
+                },
+                move |cx| vec![left_button.clone().into_element(cx), dropdown.clone()],
+            )]
+        },
+    );
+
+    ButtonGroup::new(vec![
+        ButtonGroup::new(vec![
+            Button::new("Go Back")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::Icon)
-                .border_left_width_override(Px(0.0))
-                .corner_radii_override(fret_core::Corners {
-                    top_left: Px(0.0),
-                    bottom_left: Px(0.0),
-                    top_right: radius,
-                    bottom_right: radius,
-                })
-                .children([icon_stub(cx)]);
-
-            let label: Model<Option<Arc<str>>> =
-                cx.app.models_mut().insert(Some(Arc::from("personal")));
-
-            let dropdown = DropdownMenu::new(open.clone())
-                .align(DropdownMenuAlign::End)
-                // new-york-v4 button-group-demo: `DropdownMenuContent className="w-52"`.
-                .min_width(Px(208.0))
-                .into_element(
-                    cx,
-                    |cx| right_button.clone().into_element(cx),
-                    |cx| {
-                        vec![
-                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Mark as Read").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Archive").leading(icon_stub(cx)),
-                                ),
-                            ])),
-                            DropdownMenuEntry::Separator,
-                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Snooze").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Add to Calendar").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Add to List").leading(icon_stub(cx)),
-                                ),
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Label As...")
-                                        .leading(icon_stub(cx))
-                                        .submenu(vec![DropdownMenuEntry::RadioGroup(
-                                            DropdownMenuRadioGroup::new(label.clone())
-                                                .item(DropdownMenuRadioItemSpec::new(
-                                                    "personal", "Personal",
-                                                ))
-                                                .item(DropdownMenuRadioItemSpec::new("work", "Work"))
-                                                .item(DropdownMenuRadioItemSpec::new(
-                                                    "other", "Other",
-                                                )),
-                                        )]),
-                                ),
-                            ])),
-                            DropdownMenuEntry::Separator,
-                            DropdownMenuEntry::Group(DropdownMenuGroup::new(vec![
-                                DropdownMenuEntry::Item(
-                                    DropdownMenuItem::new("Trash")
-                                        .leading(icon_stub(cx))
-                                        .variant(
-                                            fret_ui_shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                                        ),
-                                ),
-                            ])),
-                        ]
-                    },
-                );
-
-            let group3 = cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: SemanticsRole::Group,
-                    ..Default::default()
-                },
-                move |cx| {
-                    vec![cx.flex(
-                        fret_ui::element::FlexProps {
-                            layout: LayoutStyle::default(),
-                            direction: fret_core::Axis::Horizontal,
-                            gap: Px(0.0),
-                            padding: Edges::all(Px(0.0)),
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                        },
-                        move |cx| vec![left_button.clone().into_element(cx), dropdown.clone()],
-                    )]
-                },
-            );
-
-            ButtonGroup::new(vec![
-                ButtonGroup::new(vec![
-                    Button::new("Go Back")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Icon)
-                        .children([icon_stub(cx)])
-                        .into(),
-                ])
+                .children([icon_stub(cx)])
                 .into(),
-                ButtonGroup::new(vec![
-                    Button::new("Archive")
-                        .variant(ButtonVariant::Outline)
-                        .into(),
-                    Button::new("Report").variant(ButtonVariant::Outline).into(),
-                ])
+        ])
+        .into(),
+        ButtonGroup::new(vec![
+            Button::new("Archive")
+                .variant(ButtonVariant::Outline)
                 .into(),
-                group3.into(),
-            ])
-            .orientation(ButtonGroupOrientation::Horizontal)
-            .into_element(cx)
-        },
+            Button::new("Report").variant(ButtonVariant::Outline).into(),
+        ])
+        .into(),
+        group3.into(),
+    ])
+    .orientation(ButtonGroupOrientation::Horizontal)
+    .into_element(cx)
+}
+
+#[test]
+fn web_vs_fret_button_group_demo_dropdown_menu_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "button-group-demo.vp375x240",
+        Some("menu"),
+        |cx, open| render_button_group_demo_dropdown_menu(cx, open.clone()),
         SemanticsRole::Button,
         Some("More Options"),
         SemanticsRole::Menu,
@@ -7923,8 +8282,61 @@ fn web_vs_fret_mode_toggle_dropdown_menu_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_mode_toggle_dropdown_menu_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "mode-toggle.vp375x240",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::{
+                Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign,
+                DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            fn icon_stub<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+                cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(16.0));
+                            layout.size.height = Length::Px(Px(16.0));
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    |_cx| Vec::new(),
+                )
+            }
+
+            DropdownMenu::new(open.clone())
+                .align(DropdownMenuAlign::End)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Toggle theme")
+                            .variant(ButtonVariant::Outline)
+                            .size(ButtonSize::Icon)
+                            .children([icon_stub(cx)])
+                            .into_element(cx)
+                    },
+                    |_cx| {
+                        vec![
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Light")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("Dark")),
+                            DropdownMenuEntry::Item(DropdownMenuItem::new("System")),
+                        ]
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        Some("Toggle theme"),
+        SemanticsRole::Menu,
+    );
+}
+
+#[test]
 fn web_vs_fret_button_group_demo_menu_item_height_matches() {
     assert_button_group_demo_constrained_menu_item_height_matches("button-group-demo");
+    assert_button_group_demo_constrained_menu_item_height_matches("button-group-demo.vp375x240");
 }
 
 fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str) {
@@ -8072,6 +8484,7 @@ fn assert_button_group_demo_constrained_menu_item_height_matches(web_name: &str)
 #[test]
 fn web_vs_fret_button_group_demo_menu_content_insets_match() {
     assert_button_group_demo_constrained_menu_content_insets_match("button-group-demo");
+    assert_button_group_demo_constrained_menu_content_insets_match("button-group-demo.vp375x240");
 }
 
 fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str) {
@@ -8223,6 +8636,7 @@ fn assert_button_group_demo_constrained_menu_content_insets_match(web_name: &str
 #[test]
 fn web_vs_fret_mode_toggle_menu_item_height_matches() {
     assert_mode_toggle_constrained_menu_item_height_matches("mode-toggle");
+    assert_mode_toggle_constrained_menu_item_height_matches("mode-toggle.vp375x240");
 }
 
 fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
@@ -8327,6 +8741,7 @@ fn assert_mode_toggle_constrained_menu_item_height_matches(web_name: &str) {
 #[test]
 fn web_vs_fret_mode_toggle_menu_content_insets_match() {
     assert_mode_toggle_constrained_menu_content_insets_match("mode-toggle");
+    assert_mode_toggle_constrained_menu_content_insets_match("mode-toggle.vp375x240");
 }
 
 fn assert_mode_toggle_constrained_menu_content_insets_match(web_name: &str) {
@@ -9035,6 +9450,293 @@ fn web_vs_fret_breadcrumb_dropdown_overlay_placement_matches() {
         Some("Components"),
         SemanticsRole::Menu,
     );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "breadcrumb-dropdown.vp375x240",
+        Some("menu"),
+        |cx, open| {
+            use fret_ui_shadcn::breadcrumb::primitives as bc;
+            use fret_ui_shadcn::{
+                DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+            };
+
+            let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+            bc::Breadcrumb::new().into_element(cx, |cx| {
+                vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                    vec![
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![dropdown.into_element(
+                                cx,
+                                |cx| {
+                                    let theme = fret_ui::Theme::global(&*cx.app).clone();
+                                    let muted = theme.color_required("muted-foreground");
+
+                                    let mut props = fret_ui::element::PressableProps::default();
+                                    props.a11y.role = Some(SemanticsRole::Button);
+                                    props.a11y.label = Some(Arc::from("Components"));
+
+                                    cx.pressable(props, move |cx, _st| {
+                                        vec![cx.flex(
+                                            fret_ui::element::FlexProps {
+                                                layout: Default::default(),
+                                                direction: fret_core::Axis::Horizontal,
+                                                gap: Px(4.0),
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
+                                                wrap: false,
+                                            },
+                                            move |cx| {
+                                                let text = cx.text_props(TextProps {
+                                                    layout: Default::default(),
+                                                    text: Arc::from("Components"),
+                                                    style: Some(shadcn_text_style(
+                                                        theme.metric_required("font.size"),
+                                                        theme.metric_required("font.line_height"),
+                                                        FontWeight::NORMAL,
+                                                    )),
+                                                    color: Some(muted),
+                                                    wrap: TextWrap::Word,
+                                                    overflow: TextOverflow::Clip,
+                                                });
+
+                                                let icon =
+                                                    fret_ui_kit::declarative::icon::icon_with(
+                                                        cx,
+                                                        fret_icons::ids::ui::CHEVRON_DOWN,
+                                                        Some(Px(14.0)),
+                                                        Some(fret_ui_kit::ColorRef::Color(muted)),
+                                                    );
+
+                                                vec![text, icon]
+                                            },
+                                        )]
+                                    })
+                                },
+                                |_cx| {
+                                    vec![
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new(
+                                            "Documentation",
+                                        )),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                        DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                    ]
+                                },
+                            )]
+                        }),
+                        bc::BreadcrumbSeparator::new()
+                            .kind(bc::BreadcrumbSeparatorKind::Slash)
+                            .into_element(cx),
+                        bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                            vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                        }),
+                    ]
+                })]
+            })
+        },
+        SemanticsRole::Button,
+        Some("Components"),
+        SemanticsRole::Menu,
+    );
+}
+
+fn build_breadcrumb_dropdown_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::from_web_theme(theme);
+
+    let bounds = bounds_for_web_theme(theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+
+    let render = |cx: &mut ElementContext<'_, App>| {
+        use fret_ui_shadcn::breadcrumb::primitives as bc;
+        use fret_ui_shadcn::{
+            DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
+        };
+
+        let dropdown = DropdownMenu::new(open.clone()).align(DropdownMenuAlign::Start);
+
+        bc::Breadcrumb::new().into_element(cx, |cx| {
+            vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
+                vec![
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbLink::new("Home").into_element(cx)]
+                    }),
+                    bc::BreadcrumbSeparator::new()
+                        .kind(bc::BreadcrumbSeparatorKind::Slash)
+                        .into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![dropdown.into_element(
+                            cx,
+                            |cx| {
+                                let theme = fret_ui::Theme::global(&*cx.app).clone();
+                                let muted = theme.color_required("muted-foreground");
+
+                                let mut props = fret_ui::element::PressableProps::default();
+                                props.a11y.role = Some(SemanticsRole::Button);
+                                props.a11y.label = Some(Arc::from("Components"));
+
+                                cx.pressable(props, move |cx, _st| {
+                                    vec![cx.flex(
+                                        fret_ui::element::FlexProps {
+                                            layout: Default::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(4.0),
+                                            padding: Edges::all(Px(0.0)),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
+                                            let text = cx.text_props(TextProps {
+                                                layout: Default::default(),
+                                                text: Arc::from("Components"),
+                                                style: Some(shadcn_text_style(
+                                                    theme.metric_required("font.size"),
+                                                    theme.metric_required("font.line_height"),
+                                                    FontWeight::NORMAL,
+                                                )),
+                                                color: Some(muted),
+                                                wrap: TextWrap::Word,
+                                                overflow: TextOverflow::Clip,
+                                            });
+
+                                            let icon = fret_ui_kit::declarative::icon::icon_with(
+                                                cx,
+                                                fret_icons::ids::ui::CHEVRON_DOWN,
+                                                Some(Px(14.0)),
+                                                Some(fret_ui_kit::ColorRef::Color(muted)),
+                                            );
+
+                                            vec![text, icon]
+                                        },
+                                    )]
+                                })
+                            },
+                            |_cx| {
+                                vec![
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Documentation")),
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("Themes")),
+                                    DropdownMenuEntry::Item(DropdownMenuItem::new("GitHub")),
+                                ]
+                            },
+                        )]
+                    }),
+                    bc::BreadcrumbSeparator::new()
+                        .kind(bc::BreadcrumbSeparatorKind::Slash)
+                        .into_element(cx),
+                    bc::BreadcrumbItem::new().into_element(cx, |cx| {
+                        vec![bc::BreadcrumbPage::new("Breadcrumb").into_element(cx)]
+                    }),
+                ]
+            })]
+        })
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = render(cx);
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    ui.semantics_snapshot().expect("semantics snapshot").clone()
+}
+
+fn assert_breadcrumb_dropdown_menu_item_height_matches(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-item"]);
+    let expected_h = expected_hs
+        .iter()
+        .copied()
+        .next()
+        .unwrap_or_else(|| panic!("missing web dropdown-menu-item height for {web_name}"));
+
+    let snap = build_breadcrumb_dropdown_open_snapshot(theme);
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+fn assert_breadcrumb_dropdown_menu_content_insets_match(web_name: &str) {
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let snap = build_breadcrumb_dropdown_open_snapshot(theme);
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_item_height_matches() {
+    assert_breadcrumb_dropdown_menu_item_height_matches("breadcrumb-dropdown");
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_item_height_matches_mobile_tiny_viewport() {
+    assert_breadcrumb_dropdown_menu_item_height_matches("breadcrumb-dropdown.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_content_insets_match() {
+    assert_breadcrumb_dropdown_menu_content_insets_match("breadcrumb-dropdown");
+}
+
+#[test]
+fn web_vs_fret_breadcrumb_dropdown_menu_content_insets_match_mobile_tiny_viewport() {
+    assert_breadcrumb_dropdown_menu_content_insets_match("breadcrumb-dropdown.vp375x240");
 }
 
 #[test]
@@ -9861,6 +10563,14 @@ fn web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_we
     );
 }
 
+#[test]
+fn web_vs_fret_dropdown_menu_checkboxes_checkbox_indicator_slot_inset_matches_web_mobile_tiny_viewport()
+ {
+    assert_dropdown_menu_checkboxes_indicator_slot_inset_matches_web_impl(
+        "dropdown-menu-checkboxes.vp375x240",
+    );
+}
+
 fn assert_dropdown_menu_checkboxes_indicator_slot_inset_matches_web_impl(web_name: &str) {
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
@@ -10054,8 +10764,162 @@ fn web_vs_fret_dropdown_menu_checkboxes_menu_content_insets_match() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_checkboxes_menu_content_insets_match_mobile_tiny_viewport() {
+    let web_name = "dropdown-menu-checkboxes.vp375x240";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_status_bar: Model<bool> = app.models_mut().insert(true);
+    let checked_activity_bar: Model<bool> = app.models_mut().insert(false);
+    let checked_panel: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_checkboxes_demo(
+                cx,
+                &open,
+                checked_status_bar.clone(),
+                checked_activity_bar.clone(),
+                checked_panel.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = build_dropdown_menu_checkboxes_demo(
+                    cx,
+                    &open,
+                    checked_status_bar.clone(),
+                    checked_activity_bar.clone(),
+                    checked_panel.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_checkboxes_menu_item_height_matches() {
     let web_name = "dropdown-menu-checkboxes";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-checkbox-item"]);
+    let expected_h =
+        expected_hs.iter().copied().next().unwrap_or_else(|| {
+            panic!("missing web dropdown-menu-checkbox-item height for {web_name}")
+        });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let checked_status_bar: Model<bool> = app.models_mut().insert(true);
+    let checked_activity_bar: Model<bool> = app.models_mut().insert(false);
+    let checked_panel: Model<bool> = app.models_mut().insert(false);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_checkboxes_demo(
+                cx,
+                &open,
+                checked_status_bar.clone(),
+                checked_activity_bar.clone(),
+                checked_panel.clone(),
+            );
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            frame == 2 + settle_frames,
+            |cx| {
+                let el = build_dropdown_menu_checkboxes_demo(
+                    cx,
+                    &open,
+                    checked_status_bar.clone(),
+                    checked_activity_bar.clone(),
+                    checked_panel.clone(),
+                );
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_checkboxes_menu_item_height_matches_mobile_tiny_viewport() {
+    let web_name = "dropdown-menu-checkboxes.vp375x240";
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-checkbox-item"]);
@@ -10130,6 +10994,14 @@ fn web_vs_fret_dropdown_menu_checkboxes_menu_item_height_matches() {
 fn web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web() {
     assert_dropdown_menu_radio_group_indicator_slot_inset_matches_web_impl(
         "dropdown-menu-radio-group",
+    );
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_radio_indicator_slot_inset_matches_web_mobile_tiny_viewport()
+ {
+    assert_dropdown_menu_radio_group_indicator_slot_inset_matches_web_impl(
+        "dropdown-menu-radio-group.vp375x240",
     );
 }
 
@@ -10297,8 +11169,136 @@ fn web_vs_fret_dropdown_menu_radio_group_menu_content_insets_match() {
 }
 
 #[test]
+fn web_vs_fret_dropdown_menu_radio_group_menu_content_insets_match_mobile_tiny_viewport() {
+    let web_name = "dropdown-menu-radio-group.vp375x240";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+
+    let expected = web_menu_content_insets_for_slots(&theme, &["dropdown-menu-content"]);
+    let expected_menu_h = web_portal_node_by_data_slot(&theme, "dropdown-menu-content")
+        .rect
+        .h;
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let position: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("bottom")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        let request_semantics = frame == 2 + settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual = fret_menu_content_insets(&snap);
+    assert_sorted_insets_match(web_name, &actual, &expected);
+    let actual_menu_h = fret_largest_menu_height(&snap)
+        .unwrap_or_else(|| panic!("missing fret menu for {web_name}"));
+    assert_close(
+        &format!("{web_name} menu height"),
+        actual_menu_h,
+        expected_menu_h,
+        2.0,
+    );
+}
+
+#[test]
 fn web_vs_fret_dropdown_menu_radio_group_menu_item_height_matches() {
     let web_name = "dropdown-menu-radio-group";
+    let web = read_web_golden_open(web_name);
+    let theme = web_theme(&web);
+    let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-radio-item"]);
+    let expected_h =
+        expected_hs.iter().copied().next().unwrap_or_else(|| {
+            panic!("missing web dropdown-menu-radio-item height for {web_name}")
+        });
+
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    setup_app_with_shadcn_theme(&mut app);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let bounds = bounds_for_web_theme(&theme);
+    let open: Model<bool> = app.models_mut().insert(false);
+    let position: Model<Option<Arc<str>>> = app.models_mut().insert(Some(Arc::from("bottom")));
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        FrameId(1),
+        false,
+        |cx| {
+            let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+            vec![pad_root(cx, Px(0.0), el)]
+        },
+    );
+    let _ = app.models_mut().update(&open, |v| *v = true);
+    let settle_frames = fret_ui_kit::declarative::overlay_motion::SHADCN_MOTION_TICKS_100 + 2;
+    for frame in 2..=(2 + settle_frames) {
+        let request_semantics = frame == 2 + settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            request_semantics,
+            |cx| {
+                let el = build_dropdown_menu_radio_group_demo(cx, &open, position.clone());
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+    }
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    let actual_hs = fret_menu_item_heights_in_menus(&snap);
+    assert_menu_item_row_height_matches(web_name, expected_h.round(), &actual_hs, 1.0);
+}
+
+#[test]
+fn web_vs_fret_dropdown_menu_radio_group_menu_item_height_matches_mobile_tiny_viewport() {
+    let web_name = "dropdown-menu-radio-group.vp375x240";
     let web = read_web_golden_open(web_name);
     let theme = web_theme(&web);
     let expected_hs = web_portal_slot_heights(&theme, &["dropdown-menu-radio-item"]);
@@ -13856,7 +14856,10 @@ fn web_portal_first_node_by_role<'a>(theme: &'a WebGoldenTheme, role: &str) -> &
     panic!("missing web portal node with role={role}")
 }
 
-fn combobox_demo_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSnapshot {
+fn combobox_demo_open_snapshot(
+    theme: &WebGoldenTheme,
+    responsive: bool,
+) -> fret_core::SemanticsSnapshot {
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
@@ -13884,6 +14887,7 @@ fn combobox_demo_open_snapshot(theme: &WebGoldenTheme) -> fret_core::SemanticsSn
         Combobox::new(value.clone(), open.clone())
             .a11y_label("Select a fruit")
             .width(Px(200.0))
+            .responsive(responsive)
             .items(items)
             .into_element(cx)
     };
@@ -13930,7 +14934,8 @@ fn assert_combobox_demo_listbox_height_matches(web_name: &str) {
     let web_listbox = web_portal_first_node_by_role(theme, "listbox");
     let expected_h = web_listbox.rect.h;
 
-    let snap = combobox_demo_open_snapshot(theme);
+    let responsive = web_name.starts_with("combobox-responsive");
+    let snap = combobox_demo_open_snapshot(theme, responsive);
     let listbox = snap
         .nodes
         .iter()
@@ -13959,7 +14964,8 @@ fn assert_combobox_demo_listbox_option_height_matches(web_name: &str) {
         "{web_name} expected uniform web combobox option height; got {expected:?}"
     );
 
-    let snap = combobox_demo_open_snapshot(theme);
+    let responsive = web_name.starts_with("combobox-responsive");
+    let snap = combobox_demo_open_snapshot(theme, responsive);
     let actual: std::collections::BTreeSet<i32> = fret_listbox_option_heights_in_listbox(&snap)
         .into_iter()
         .map(round_i32)
@@ -13985,7 +14991,8 @@ fn assert_combobox_demo_listbox_option_insets_match(web_name: &str) {
     let web_listbox = web_portal_first_node_by_role(theme, "listbox");
     let expected_inset = web_select_content_option_inset(web_listbox);
 
-    let snap = combobox_demo_open_snapshot(theme);
+    let responsive = web_name.starts_with("combobox-responsive");
+    let snap = combobox_demo_open_snapshot(theme, responsive);
     let actual_inset = fret_select_content_option_inset(&snap);
     assert_select_inset_match(web_name, actual_inset, expected_inset);
 }
@@ -14089,6 +15096,44 @@ fn web_vs_fret_combobox_popover_overlay_placement_matches() {
 }
 
 #[test]
+fn web_vs_fret_combobox_popover_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_overlay_placement_matches(
+        "combobox-popover.vp375x240",
+        Some("dialog"),
+        |cx, open| {
+            use fret_ui_kit::{LayoutRefinement, MetricRef};
+            use fret_ui_shadcn::{
+                Button, ButtonVariant, Popover, PopoverAlign, PopoverContent, PopoverSide,
+            };
+
+            Popover::new(open.clone())
+                .side(PopoverSide::Right)
+                .align(PopoverAlign::Start)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("Open")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| {
+                        PopoverContent::new(Vec::new())
+                            .refine_layout(
+                                LayoutRefinement::default()
+                                    .w_px(MetricRef::Px(Px(288.0)))
+                                    .h_px(MetricRef::Px(Px(205.33334))),
+                            )
+                            .into_element(cx)
+                    },
+                )
+        },
+        SemanticsRole::Button,
+        None,
+        SemanticsRole::Dialog,
+    );
+}
+
+#[test]
 fn web_vs_fret_combobox_responsive_overlay_placement_matches() {
     assert_overlay_placement_matches(
         "combobox-responsive",
@@ -14108,12 +15153,41 @@ fn web_vs_fret_combobox_responsive_overlay_placement_matches() {
             Combobox::new(value, open.clone())
                 .a11y_label("Select a framework")
                 .width(Px(200.0))
+                .responsive(true)
                 .items(items)
                 .into_element(cx)
         },
         SemanticsRole::ComboBox,
         None,
         SemanticsRole::Dialog,
+    );
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_overlay_placement_matches_mobile_tiny_viewport() {
+    assert_viewport_anchored_overlay_placement_matches(
+        "combobox-responsive.vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            use fret_ui_shadcn::{Combobox, ComboboxItem};
+
+            let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+            let items = vec![
+                ComboboxItem::new("nextjs", "Next.js"),
+                ComboboxItem::new("sveltekit", "SvelteKit"),
+                ComboboxItem::new("nuxt", "Nuxt.js"),
+                ComboboxItem::new("remix", "Remix"),
+                ComboboxItem::new("astro", "Astro"),
+            ];
+
+            Combobox::new(value, open.clone())
+                .a11y_label("Select a framework")
+                .width(Px(200.0))
+                .responsive(true)
+                .items(items)
+                .into_element(cx)
+        },
     );
 }
 
@@ -14128,6 +15202,16 @@ fn web_vs_fret_combobox_responsive_listbox_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_combobox_popover_listbox_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_height_matches("combobox-popover.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_height_matches("combobox-responsive.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_combobox_popover_listbox_option_height_matches() {
     assert_combobox_demo_listbox_option_height_matches("combobox-popover");
 }
@@ -14138,6 +15222,16 @@ fn web_vs_fret_combobox_responsive_listbox_option_height_matches() {
 }
 
 #[test]
+fn web_vs_fret_combobox_popover_listbox_option_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-popover.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_option_height_matches_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_height_matches("combobox-responsive.vp375x240");
+}
+
+#[test]
 fn web_vs_fret_combobox_popover_listbox_option_insets_match() {
     assert_combobox_demo_listbox_option_insets_match("combobox-popover");
 }
@@ -14145,6 +15239,16 @@ fn web_vs_fret_combobox_popover_listbox_option_insets_match() {
 #[test]
 fn web_vs_fret_combobox_responsive_listbox_option_insets_match() {
     assert_combobox_demo_listbox_option_insets_match("combobox-responsive");
+}
+
+#[test]
+fn web_vs_fret_combobox_popover_listbox_option_insets_match_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-popover.vp375x240");
+}
+
+#[test]
+fn web_vs_fret_combobox_responsive_listbox_option_insets_match_mobile_tiny_viewport() {
+    assert_combobox_demo_listbox_option_insets_match("combobox-responsive.vp375x240");
 }
 
 fn assert_point_anchored_overlay_placement_matches(
@@ -21466,6 +22570,32 @@ fn web_vs_fret_dialog_demo_overlay_center_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_dialog_demo_overlay_center_matches_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Dialog, DialogContent};
+
+    assert_centered_overlay_placement_matches(
+        "dialog-demo.vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Dialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    DialogContent::new(vec![cx.text("Edit profile")])
+                        .refine_layout(fret_ui_kit::LayoutRefinement::default().max_w(Px(425.0)))
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sidebar_13_dialog_overlay_center_matches() {
     use fret_ui_shadcn::{Button, ButtonSize, Dialog, DialogContent};
 
@@ -21889,6 +23019,31 @@ fn web_vs_fret_alert_dialog_demo_overlay_center_matches_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_alert_dialog_demo_overlay_center_matches_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{AlertDialog, AlertDialogContent, Button, ButtonVariant};
+
+    assert_centered_overlay_placement_matches(
+        "alert-dialog-demo.vp375x240",
+        "alertdialog",
+        SemanticsRole::AlertDialog,
+        |cx, open| {
+            AlertDialog::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Show Dialog")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    AlertDialogContent::new(vec![cx.text("Are you absolutely sure?")])
+                        .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sheet_demo_overlay_insets_match() {
     use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
 
@@ -21916,6 +23071,28 @@ fn web_vs_fret_sheet_demo_overlay_insets_match_tiny_viewport() {
 
     assert_viewport_anchored_overlay_placement_matches(
         "sheet-demo.vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_demo_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-demo.vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
@@ -21977,6 +23154,28 @@ fn web_vs_fret_sheet_side_top_overlay_insets_match_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_sheet_side_top_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.top-vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).side(SheetSide::Top).into_element(
+                cx,
+                |cx| {
+                    Button::new("top")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sheet_side_right_overlay_insets_match() {
     use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
 
@@ -22006,6 +23205,30 @@ fn web_vs_fret_sheet_side_right_overlay_insets_match_tiny_viewport() {
 
     assert_viewport_anchored_overlay_placement_matches(
         "sheet-side.right-vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone())
+                .side(SheetSide::Right)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("right")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+                )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_sheet_side_right_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.right-vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
@@ -22073,6 +23296,30 @@ fn web_vs_fret_sheet_side_bottom_overlay_insets_match_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_sheet_side_bottom_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.bottom-vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone())
+                .side(SheetSide::Bottom)
+                .into_element(
+                    cx,
+                    |cx| {
+                        Button::new("bottom")
+                            .variant(ButtonVariant::Outline)
+                            .into_element(cx)
+                    },
+                    |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+                )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_sheet_side_left_overlay_insets_match() {
     use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
 
@@ -22117,11 +23364,55 @@ fn web_vs_fret_sheet_side_left_overlay_insets_match_tiny_viewport() {
 }
 
 #[test]
+fn web_vs_fret_sheet_side_left_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Sheet, SheetContent, SheetSide};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "sheet-side.left-vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Sheet::new(open.clone()).side(SheetSide::Left).into_element(
+                cx,
+                |cx| {
+                    Button::new("left")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| SheetContent::new(vec![cx.text("Edit profile")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
 fn web_vs_fret_drawer_demo_overlay_insets_match_tiny_viewport() {
     use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
 
     assert_viewport_anchored_overlay_placement_matches(
         "drawer-demo.vp1440x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Drawer::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Open Drawer")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| DrawerContent::new(vec![cx.text("Drawer content")]).into_element(cx),
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_drawer_demo_overlay_insets_match_mobile_tiny_viewport() {
+    use fret_ui_shadcn::{Button, ButtonVariant, Drawer, DrawerContent};
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "drawer-demo.vp375x240",
         "dialog",
         SemanticsRole::Dialog,
         |cx, open| {
@@ -22161,6 +23452,42 @@ fn web_vs_fret_drawer_dialog_desktop_overlay_center_matches_tiny_viewport() {
                                 .max_w(fret_ui_kit::MetricRef::Px(Px(425.0))),
                         )
                         .into_element(cx)
+                },
+            )
+        },
+    );
+}
+
+#[test]
+fn web_vs_fret_drawer_dialog_mobile_overlay_insets_match() {
+    use fret_ui_shadcn::{
+        Button, ButtonVariant, Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle,
+    };
+
+    assert_viewport_anchored_overlay_placement_matches(
+        "drawer-dialog.vp375x240",
+        "dialog",
+        SemanticsRole::Dialog,
+        |cx, open| {
+            Drawer::new(open.clone()).into_element(
+                cx,
+                |cx| {
+                    Button::new("Edit Profile")
+                        .variant(ButtonVariant::Outline)
+                        .into_element(cx)
+                },
+                |cx| {
+                    DrawerContent::new(vec![
+                        DrawerHeader::new(vec![
+                            DrawerTitle::new("Edit profile").into_element(cx),
+                            DrawerDescription::new(
+                                "Make changes to your profile here. Click save when you're done.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
                 },
             )
         },

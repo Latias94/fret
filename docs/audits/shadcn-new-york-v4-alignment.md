@@ -16,7 +16,7 @@ For coverage status (what is gated vs only has goldens), see:
 
 Coverage snapshot (update via `tools/golden_coverage.ps1`):
 
-- shadcn-web `v4/new-york-v4`: `529/529` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-02-02
+- shadcn-web `v4/new-york-v4`: `578/578` gated keys (`100%`, tracked-only, normalized `.open`) as of 2026-02-03
 
 Heuristic “where we already have gates” (top key families by prefix):
 
@@ -53,6 +53,7 @@ Recent breadth wins:
   (matches upstream `[[data-slot=popover-content]_&]:bg-transparent`; implemented via `surface_slot` context).
 - **DatePicker popover surface**: `DatePicker` / `DateRangePicker` now wrap the calendar in `PopoverContent` (matches upstream `w-auto p-0`),
   ensuring the popover panel provides the background/border/shadow instead of rendering as a transparent overlay.
+  - Targeted gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_calendar.rs` asserts the DatePicker popover Calendar root background matches web (`date-picker-demo.open`, light/dark).
 - **DatePicker open popover placement**: new shadcn-web `.open` goldens are now gated for
   `date-picker-demo.open`, `date-picker-with-presets.open`, and `date-picker-with-range.open` (portal rect + insets via the shared overlay placement harness).
 - **DatePicker nested overlay placement**: `date-picker-with-presets.select-open.open` now gates the Select listbox popper placement while the popover is open (ComboBox -> ListBox portal).

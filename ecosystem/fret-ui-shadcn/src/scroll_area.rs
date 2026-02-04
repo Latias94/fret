@@ -323,6 +323,7 @@ impl ScrollAreaRoot {
                         layout: scroll_layout,
                         axis,
                         scroll_handle: Some(handle.clone()),
+                        windowed_paint: false,
                         probe_unbounded: viewport_probe_unbounded,
                         intrinsic_measure_mode,
                     },

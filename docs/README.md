@@ -9,6 +9,7 @@ contracts early to avoid large rewrites later.
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
 - Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
 - Foundation closure (P0, cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` and `docs/workstreams/foundation-closure-p0-todo.md`
+- Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity-todo.md`
 - Charts (ECharts alignment): `docs/audits/echarts-alignment.md` and `docs/delinea-echarts-alignment.md`
 - Text system v2 tracker: `docs/workstreams/text-system-v2-parley.md`
 - Input dispatch v2 tracker: `docs/workstreams/input-dispatch-v2.md`

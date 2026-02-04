@@ -39,6 +39,12 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
+    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0192).
+    ///
+    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0191).
+    pub retained_keep_alive_roots_len: u32,
+    pub retained_keep_alive_roots_head: Vec<NodeId>,
+    pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
 }
 
@@ -141,7 +147,9 @@ pub struct WindowElementState {
     view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
-    pub(super) pending_retained_virtual_list_reconciles: HashSet<GlobalElementId>,
+    pub(super) pending_retained_virtual_list_reconciles:
+        HashMap<GlobalElementId, crate::tree::UiDebugRetainedVirtualListReconcileKind>,
+    retained_virtual_list_keep_alive_roots: HashSet<NodeId>,
     prepared_frame: FrameId,
     #[cfg(any(test, feature = "diagnostics"))]
     strict_ownership: bool,
@@ -280,6 +288,20 @@ impl WindowElementState {
         }
     }
 
+    pub(crate) fn retained_virtual_list_keep_alive_roots(
+        &self,
+    ) -> impl Iterator<Item = NodeId> + '_ {
+        self.retained_virtual_list_keep_alive_roots.iter().copied()
+    }
+
+    pub(crate) fn add_retained_virtual_list_keep_alive_root(&mut self, node: NodeId) {
+        self.retained_virtual_list_keep_alive_roots.insert(node);
+    }
+
+    pub(crate) fn remove_retained_virtual_list_keep_alive_root(&mut self, node: NodeId) {
+        self.retained_virtual_list_keep_alive_roots.remove(&node);
+    }
+
     pub(crate) fn record_transient_event(&mut self, element: GlobalElementId, key: u64) {
         self.transient_events
             .insert((element, key), self.prepared_frame);
@@ -387,12 +409,31 @@ impl WindowElementState {
         Some(out)
     }
 
-    pub(crate) fn mark_retained_virtual_list_needs_reconcile(&mut self, element: GlobalElementId) {
+    pub(crate) fn mark_retained_virtual_list_needs_reconcile(
+        &mut self,
+        element: GlobalElementId,
+        kind: crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    ) {
         self.pending_retained_virtual_list_reconciles
-            .insert(element);
+            .entry(element)
+            .and_modify(|existing| {
+                // "Escape" is correctness-critical; if both are scheduled in the same tick, keep the
+                // stronger reason so downstream diagnostics/gates remain explainable.
+                if *existing == crate::tree::UiDebugRetainedVirtualListReconcileKind::Prefetch
+                    && kind == crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape
+                {
+                    *existing = kind;
+                }
+            })
+            .or_insert(kind);
     }
 
-    pub(crate) fn take_retained_virtual_list_reconciles(&mut self) -> Vec<GlobalElementId> {
+    pub(crate) fn take_retained_virtual_list_reconciles(
+        &mut self,
+    ) -> Vec<(
+        GlobalElementId,
+        crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    )> {
         self.pending_retained_virtual_list_reconciles
             .drain()
             .collect()
@@ -854,6 +895,35 @@ impl WindowElementState {
                 })
                 .collect();
 
+        const KEEP_ALIVE_ROOT_SAMPLE: usize = 16;
+        let mut retained_keep_alive_roots: Vec<NodeId> = self
+            .retained_virtual_list_keep_alive_roots
+            .iter()
+            .copied()
+            .collect();
+        retained_keep_alive_roots.sort_by_key(|n| n.data().as_ffi());
+        let retained_keep_alive_roots_len =
+            retained_keep_alive_roots.len().min(u32::MAX as usize) as u32;
+        let retained_keep_alive_roots_head: Vec<NodeId> = retained_keep_alive_roots
+            .iter()
+            .take(KEEP_ALIVE_ROOT_SAMPLE)
+            .copied()
+            .collect();
+        let retained_keep_alive_roots_tail: Vec<NodeId> =
+            if retained_keep_alive_roots.len() > KEEP_ALIVE_ROOT_SAMPLE {
+                retained_keep_alive_roots
+                    .iter()
+                    .skip(
+                        retained_keep_alive_roots
+                            .len()
+                            .saturating_sub(KEEP_ALIVE_ROOT_SAMPLE),
+                    )
+                    .copied()
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
             focused_element_node: node_for(self.focused_element),
@@ -899,6 +969,9 @@ impl WindowElementState {
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
             view_cache_reuse_root_element_samples,
+            retained_keep_alive_roots_len,
+            retained_keep_alive_roots_head,
+            retained_keep_alive_roots_tail,
             node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
         }
     }

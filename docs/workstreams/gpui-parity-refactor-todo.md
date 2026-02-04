@@ -45,6 +45,20 @@ Each TODO is labeled:
 - **MVP5-virt-001**: move VirtualList window derivation toward prepaint so window shifts do not necessarily imply cache-root rerender.
 - **MVP5-perf-002**: turn “notify hotspots no longer dominated by Pressable” into a repeatable perf gate (top bundles + callsites).
 
+## Near-term Plan (2026-02; make progress measurable)
+
+- **P1 — MVP5-virt-001 contract + explainability hardening**
+  - Deliverable: tighten ADR 0190/0193 wording for non-retained v2 (“what can change in prepaint” vs “must rerender”), and keep the `ui-gallery-vlist-window-boundary` suite green with `--check-vlist-window-shifts-explainable`.
+- **P2 — MVP5-perf-002 notify hotspots**
+  - Deliverable: pick one stable harness (VirtualList boundary or overlay torture), record `notify_call` hotspots with *callsite attribution*, and add one budget gate that fails fast with evidence JSON.
+  - Checklist:
+    - Add `#[track_caller]` capture for `EventCx::notify()` / `ObserverCx::notify()` and propagate a single callsite per dispatch.
+    - Export bounded per-frame `debug.notify_requests` (file/line/col + caller node + target dirty view/cache root).
+    - Add a `fretboard diag stats` gate that can fail on a specific hotspot file (e.g. `pressable.rs`) and writes `check.notify_hotspots.json`.
+    - Wire the gate into at least one perf suite (warmup-ranked) so it is exercised in CI-style runs.
+- **P3 — MVP5-eco-003 code/text window pilot**
+  - Deliverable: migrate one concrete surface (code-view lines or markdown) onto the prepaint-windowed pattern and add a diag script + stale-paint gate.
+
 ## Baseline (Verified Existing Building Blocks)
 
 Keep this list short and evidence-backed:
@@ -176,6 +190,13 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Removed the global “skip sweep while reuse exists” GC stopgap.
     - Made liveness explicit under reuse via layer roots + view-cache reuse roots + per-root subtree membership lists (ADR 0191).
     - Stabilized unkeyed element identity generation by using per-callsite counters (reduces accidental subtree swaps under conditional structure).
+  - Progress (diagnostics): bundles now include retained keep-alive root samples (`debug.element_runtime.retained_keep_alive_roots_*`), so the full liveness root set can be audited from a single run.
+    - Anchors: `crates/fret-ui/src/elements/runtime.rs` (`WindowElementDiagnosticsSnapshot::retained_keep_alive_roots_*`),
+      `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`ElementDiagnosticsSnapshotV1.retained_keep_alive_roots_*`).
+  - Root-cause framing (keep honest):
+    - When a live interactive subtree is swept while view-cache reuse exists, the GC is usually behaving correctly on the graph it sees.
+      The bug is typically that ownership/liveness bookkeeping allowed the subtree to become an *island root* (unreachable from both
+      layer roots and view-cache reuse roots), most often due to incomplete/misaligned subtree membership lists under reuse (ADR 0191).
   - Evidence (cache+shell, sweep enabled):
     - `target/fret-diag-cache005-stopgap-removed-overlay-1769334929510/1769335008125-ui-gallery-overlay-torture/bundle.json`
     - `target/fret-diag-cache005-stopgap-removed-sidebar-1769335037056/1769335040362-ui-gallery-sidebar-scroll-refresh/bundle.json`
@@ -202,26 +223,32 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - If overlay torture still fails under stopgap disabled, prioritize proving whether the missing semantics targets live under a nested `CachedSubtree` (inner ViewCache root) that is not being kept alive when an outer cache root hits:
       - confirm whether the inner cache root appears in the outer root's recorded subtree-element list (and is therefore part of the keep-alive recursion),
       - and whether the subtree becomes an island due to missing ownership/attachment bookkeeping rather than pure parent-pointer drift.
+    - Diagnostics follow-up: `--check-gc-sweep-liveness` writes `check.gc_sweep_liveness.json` next to `bundle.json` (even on failure), with bounded offender samples and the key root-set counters.
+      Use this file as the first stop when classifying “island vs. broken parent chain”, without re-running the harness.
     - Diagnostics follow-up: some failing bundles still cannot resolve `root_element_path` / `root_parent_element_path` (paths are `null`).
       Prefer capturing debug paths at removal time (or extending the debug-path retention window) so cache-005 regressions stay explainable from a single bundle.
     - Verify we are not accidentally overwriting element-root ownership during “touch existing subtree” paths:
       - add debug-only diagnostics when updating `NodeEntry.root` for an element that already has a different `root`,
       - decide whether to preserve the original root (avoid cross-root pollution) or split bookkeeping per-root if overwrites are expected/legitimate.
   - Historical investigation plan (pre-fix):
-    - Export/confirm the liveness roots on the failing frame: which layer roots are active (and whether “invisible” layers still count as liveness roots), plus the current `view_cache_reuse_roots` list.
+    - Export/confirm the liveness roots on the failing frame: which layer roots are active (note: `UiTree::all_layer_roots` includes invisible layers; visibility is not a lifetime signal), plus the current `view_cache_reuse_roots` list, plus retained keep-alive roots (ADR 0192).
     - Export the sever-parent mapping (parent node -> element id/path + cache-root flags) so the detach callsite can be tied back to the authoring UI structure.
     - Add debug-only diagnostics for `NodeEntry.root` overwrites (element + old_root + new_root + debug paths) to validate or falsify the “cross-root ownership overwrite” hypothesis.
     - Re-run the overlay torture with the stopgap disabled and use the new fields to decide whether the fix is:
+      - Note: in stopgap-disabled failing bundles we expect to see whether a swept subtree is a true island (both `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false`), which points to liveness-root selection or attach/ownership bookkeeping drift (not just a “parent pointer broke” story).
       - missing liveness roots (root selection / visibility semantics),
       - root ownership / attachment bookkeeping drift (the subtree becomes an island even though the app still expects it to be interactive), or
       - a true structural detach (authoring/runtime edge drop) that must be attributed to a callsite.
   - Done when:
     - The `view_cache_has_reuse_roots` stopgap is removed and both overlay regression harnesses remain green under cache+shell reuse.
+    - `fretboard diag suite ui-gallery-cache005` defaults `--check-gc-sweep-liveness` for the cache-005 harness scripts (overlay torture + sidebar scroll refresh), so island regressions are caught without manual inspection (without bloating the main `ui-gallery` suite).
   - Diagnostics:
     - `removed_subtrees` include `root_element_path` (when the element debug identity is still retained within the diagnostics lag window).
     - `removed_subtrees` include `root_parent_children_last_set_location` (when the parent has a recorded `set_children(..)` write in this run).
     - `removed_subtrees` include `root_path_edge_ui_contains_child` / `root_path_edge_frame_contains_child` to pinpoint whether the parent chain is internally consistent
       (and whether the authoritative `WindowFrame.children` agrees with `UiTree` edges).
+    - `removed_subtrees.reachable_from_layer_roots` is computed using the same conservative reachability used by GC (liveness roots + union of `UiTree` and `WindowFrame` edges),
+      so cache-hit frames with temporarily-incomplete `UiTree.children` do not misreport “islands”.
     - `removed_subtrees` include `reachable_from_view_cache_roots` to classify whether a swept subtree was still reachable from any view-cache reuse root node (child-edge reachability),
       vs. becoming a fully-detached island.
     - `removed_subtrees` include `trigger_element` / `trigger_element_root` and `trigger_element_root_path` to identify which element-runtime root produced the sweep.
@@ -238,6 +265,16 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
     - Re-verified (2026-01-25): PASS with sweep enabled under cache+shell (stopgap removed):
       - `target/fret-diag-cache005-stopgap-removed-overlay-1769334929510/1769335008125-ui-gallery-overlay-torture/bundle.json`
       - `target/fret-diag-cache005-stopgap-removed-sidebar-1769335037056/1769335040362-ui-gallery-sidebar-scroll-refresh/bundle.json`
+    - Re-verified (2026-01-31): PASS with `--check-gc-sweep-liveness` and stale-paint under cache+shell:
+      - `target/fret-diag/1769824052379-ui-gallery-overlay-torture/bundle.json`
+    - Re-verified (2026-02-02): PASS via `fretboard diag suite ui-gallery-cache005` (warmup=5, cache+shell, `--check-gc-sweep-liveness` defaulted for cache-005 scripts):
+      - `target/fret-diag-suite-cache005-local1/1770011515732-ui-gallery-overlay-torture/bundle.json`
+      - `target/fret-diag-suite-cache005-local1/1770011541379-ui-gallery-sidebar-scroll-refresh/bundle.json`
+    - Re-verified (2026-02-02): PASS (cache+shell) with taxonomy evidence exported by the gate:
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035888620-script-step-0018-press_key/bundle.json`
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035916581-script-step-0007-wheel/bundle.json`
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035888620-script-step-0018-press_key/check.gc_sweep_liveness.json`
+      - `target/fret-diag-suite-ui-gallery-cache005-cache-shell/1770035916581-script-step-0007-wheel/check.gc_sweep_liveness.json`
     - Re-verified (2026-01-24): PASS on this branch with the stopgap still enabled:
       - `target/fret-diag-overlay-torture-cache005-stopgap/1769240992350-ui-gallery-overlay-torture/bundle.json`
       - `target/fret-diag-sidebar-scroll-refresh-cache005-stopgap/1769241046228-ui-gallery-sidebar-scroll-refresh/bundle.json`
@@ -264,7 +301,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       so we can remove the global `view_cache_has_reuse_roots` stopgap.
     - Observation (2026-01-25): in the `stopgap-disabled-vc-reachability` bundle, the max-`removed_nodes` record reports:
       - `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false`, which indicates the swept subtree is *not* reachable from any current layer root or any view-cache reuse root node.
-      - This shifts the likely root cause from “missing liveness roots” to “attachment/identity bookkeeping breaks under cache-hit + shell reuse”, producing a detached island that GC can legally collect.
+      - This points to a **true island** per ADR 0191’s taxonomy: liveness-root selection, ownership drift, or subtree membership bookkeeping under reuse (not just “a parent pointer broke”).
     - Observation (2026-01-25): in the `stopgap-disabled-trigger-element-path` bundle, the sweep is attributed to:
       - `trigger_element_root_path = root[fret-ui-gallery]`, i.e. the window root pass, not an overlay-only root.
     - Observation (2026-01-24): in the failing bundles above, `ui-gallery-dialog-trigger` is last present at `frame_id=33` and is removed as part of the max-`removed_nodes` subtree at `frame_id=34`
@@ -275,11 +312,12 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
       - Regression triage checklist (only relevant if a new failing bundle appears):
         - Confirm whether the removed subtree was still reachable from any liveness root:
           - `debug.removed_subtrees[*].reachable_from_layer_roots` / `reachable_from_view_cache_roots`.
-        - If the subtree is still reachable from a layer root, treat it as an attachment/classification bug:
+        - If the subtree is still reachable from a layer root, treat it as a reachability/classification bug:
           - Audit `debug.layers_in_paint_order[*].visible`, `debug.layer_visible_writes[*]`, and `debug.overlay_policy_decisions[*]`.
           - Audit parent edge consistency via `root_parent_children_contains_root` / `root_parent_frame_children_contains_root`.
         - If the subtree is an island (both reachability flags are `false`), treat it as bookkeeping drift:
           - Audit `element_runtime.view_cache_reuse_root_element_samples` and `element_runtime.node_entry_root_overwrites`.
+          - If present, use `root_root_parent_sever_*` / `root_parent_children_last_set_*` attribution fields to find the first structural detach that created the island.
           - Audit cache-root `set_children` attribution via `debug.cache_roots[*].children_last_set_*`.
         - If the subtree is a true structural detach, attribute it to a callsite:
           - Use `root_root_parent_sever_*` and parent element debug-path fields.
@@ -557,10 +595,10 @@ topics (if/when we implement them):
 - Cache key gates for reuse beyond `layout` invalidation (bounds/text style/content mask parity with GPUI).
 - “Inspector mode disables caching” semantics (GPUI does this; helps explainability and avoids unstable debug identity).
 
-- [~] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
+- [x] GPUI-MVP5-core-000 Define the “ephemeral prepaint items” contract and debug surfaces.
   - Goal: we can explain “why did the virtual window change” and “why did we rerender” in exported diagnostics bundles.
   - Touches: `crates/fret-ui/src/tree/prepaint.rs`, `crates/fret-ui/src/tree/mod.rs`, diagnostics export in `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
-  - Contract: `docs/adr/0193-ephemeral-prepaint-items-v1.md` (Proposed).
+  - Contract: `docs/adr/0193-ephemeral-prepaint-items-v1.md` (Accepted).
   - Notes: ADR 0190 is now Accepted as the guiding contract; capture any new “hard-to-change” commitments as follow-up ADRs if needed.
   - Progress (v1):
     - Bundles can export VirtualList window telemetry via `UiTreeDebugSnapshotV1.virtual_list_windows` (debug-only, bounded) for postmortem analysis.
@@ -572,10 +610,31 @@ topics (if/when we implement them):
       - Anchors: `crates/fret-ui/src/widget.rs` (`PrepaintCx`, `Widget::prepaint`),
         `crates/fret-ui/src/tree/prepaint.rs` (prepaint traversal),
         `crates/fret-ui/src/tree/tests/prepaint.rs` (`prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache`).
+    - Prepaint can stash per-cache-root ephemeral outputs keyed by the cache root's prepaint key.
+      - This is a minimal “ephemeral prepaint items” substrate: it lets prepaint compute paint-only state without
+        mutating the declarative structure, and makes reuse safe by clearing outputs when the cache root key changes.
+      - Anchors: `crates/fret-ui/src/tree/mod.rs` (`PrepaintOutputs`), `crates/fret-ui/src/widget.rs` (`PrepaintCx::set_output`, `PrepaintCx::output`),
+        `crates/fret-ui/src/tree/tests/prepaint.rs` (`prepaint_output_store_is_keyed_by_cache_root_prepaint_key`).
     - Paint-cache replay now keeps descendant bounds in sync when a cached subtree translates (required for correct hit-testing + semantics under caching).
       - Anchors: `crates/fret-ui/src/tree/paint.rs` (paint-cache replay translates descendant bounds),
         `crates/fret-ui/src/tree/tests/paint_cache.rs` (`paint_cache_replay_translates_descendant_bounds_for_descendants`).
-  - [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
+  - Definition of done (v1; mark `[x]` when all are true):
+    - [x] There is at least one end-to-end harness where a cache root stays clean (no rerender), but frame-local behavior still updates correctly via prepaint hooks and/or prepaint outputs
+      (e.g. drag indicators, hover chrome, windowed surface telemetry).
+    - [x] A single `bundle.json` contains enough evidence to explain:
+      - why a prepaint output changed (inputs + key),
+      - why a cache root rerendered (if it did), and
+      - what prepaint requested (invalidate/redraw/RAF).
+    - [x] There is a stable post-run gate for the chosen harness in `fretboard diag stats` (or `diag suite`) so regressions are caught without manual inspection.
+  - Next steps (to close core-000, keep minimal and test-first):
+    - [x] Pick the closing harness: `tools/diag-scripts/docking-demo-drag-indicators.json` (paint-only chrome under view-cache reuse)
+    - [x] Add one small gate that asserts “prepaint acted” in the relevant frames (bounded) in addition to existing `--check-stale-paint` / view-cache gates.
+      - Gate: `--check-prepaint-actions-min 1` (counts snapshots with non-empty `debug.prepaint_actions` after warmup).
+    - [x] Record a fresh passing evidence bundle and link it here.
+      - Command:
+        - `cargo run -p fretboard -- diag run tools/diag-scripts/docking-demo-drag-indicators.json --warmup-frames 5 --check-prepaint-actions-min 1 --check-drag-cache-root-paint-only dock-demo-dock-space --check-stale-paint dock-demo-dock-space --env FRET_EXAMPLES_VIEW_CACHE=1 --launch -- cargo run -p fret-demo --bin docking_demo --release`
+      - Evidence: `target/fret-diag/1769776050260-docking-demo-drag-indicators/bundle.json`
+- [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
@@ -583,16 +642,196 @@ topics (if/when we implement them):
       visible window requires a cache-root rerender to rebuild the item subtree. The v2 goal is to move “window derivation + ephemeral items”
       into prepaint (ADR 0190), so scroll-driven window updates do not necessarily imply a cache-root rerender.
     - Remaining work (non-retained v2; keep small and gate-driven):
-      - [ ] Introduce an explicit ephemeral/windowed boundary so a window shift does not necessarily imply a cache-root rerender.
-      - [ ] Move visible window derivation into `prepaint` (derive/commit window state without rerunning the parent cache root).
-      - [ ] Ensure liveness/ownership remains deterministic under cache-hit frames when ephemeral items are attached/detached (ADR 0191 + ADR 0193).
-      - [ ] Add a stable regression gate for the window-boundary harness:
+      - Scope note: for *fully composable* row subtrees, “apply a window shift without rerendering the parent cache root” effectively requires a retained host boundary (ADR 0192 / `GPUI-MVP5-virt-003`).
+        This track therefore focuses on: (1) prepaint deriving the *next desired window* (explainable), and (2) making escape ticks cheap and predictable (one-shot rerender, no extra current-frame churn).
+      - [~] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
+        - [x] Make Track B scheduling responsibility explicit and prepaint-driven (avoid duplicated layout side effects).
+          - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (“Scheduling responsibility” under Track B).
+          - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (non-retained schedules one-shot rerender on `window_shift_kind!=none`),
+            `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (layout no longer duplicates rerender scheduling on `window_mismatch`).
+          - Note: if `render_window_range` is missing (common when a cache-hit frame skips declarative render during the initial viewport bootstrap),
+            prepaint must treat this as a mismatch so the next frame can mount the correct row subtree under view-cache reuse.
+        - Specify the allowed "ephemeral prepaint updates" for the non-retained VirtualList path (e.g. window prediction, scroll-offset bookkeeping, one-shot escape scheduling), and explicitly forbid any attach/detach that would require remounting children without a rerender boundary.
+        - Define the required explainability surface: every window change MUST correspond to a named reason and MUST be visible in one `bundle.json` (and in post-run gates).
+        - References: ADR 0190 §3A + §4 (v2 explainability) and ADR 0193 §2A (“window plans” vs structural mutation).
+      - [x] Make window shifts explainable from one bundle (kinds: `prefetch`/`escape`; reasons: `scroll_offset`/`viewport_resize`/`items_revision`/`scroll_to_item`), and ensure they line up with the invalidation detail that dirtied the cache root.
+        - [x] Add a per-frame debug counter + samples for non-retained window shifts (kind + old/new range + triggering invalidation detail), similar to retained-host reconcile samples.
+          - Exports:
+            - `debug.stats.virtual_list_window_shifts_total` / `debug.stats.virtual_list_window_shifts_non_retained`
+            - `debug.virtual_list_window_shift_samples` (bounded; only records non-retained rerender shifts)
+          - Anchors:
+            - `crates/fret-ui/src/tree/mod.rs` (`UiDebugFrameStats.virtual_list_window_shifts_*`, `UiDebugVirtualListWindowShiftSample`)
+            - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiTreeDebugSnapshotV1.virtual_list_window_shift_samples`, `UiFrameStatsV1.virtual_list_window_shifts_*`)
+        - [x] Ensure `debug.prepaint_actions` includes a `virtual_list_window_shift` action (kind + reason).
+          - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (records window shift action), `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::VirtualListWindowShift`), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
+          - Gate: `--check-vlist-window-shifts-have-prepaint-actions` (emits `check.vlist_window_shifts_have_prepaint_actions.json`).
+        - Gate (retained-host safety): `--check-vlist-window-shifts-non-retained-max 0` (fails if a retained-host window shift falls back to `non_retained_rerender`; emits `check.vlist_window_shifts_non_retained_max.json`).
+        - Evidence (suite; cache+shell, release): `target/fret-diag-suite-ui-gallery-vlist-window-boundary-smoke2/1770082913519-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - [x] Add a stable regression gate for the window-boundary harness:
         - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json`
-        - Recommended env: `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+        - Recommended env: `FRET_UI_GALLERY_VLIST_RETAINED=0`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
         - Gate target: “no rerender until escape” (dirty views budget) + stale-paint + prepaint actions.
+        - Gate (new): `--check-vlist-visible-range-refreshes-min 1` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_min.json`).
+        - Gate (new): `--check-vlist-visible-range-refreshes-max 35` (counts `debug.stats.virtual_list_visible_range_refreshes` after the first wheel event; emits `check.vlist_visible_range_refreshes_max.json`).
+        - Gate (new): `--check-vlist-window-shifts-explainable` (requires `debug.virtual_list_windows` to include `window_shift_kind` + `window_shift_reason` + `window_shift_apply_mode`; and for non-retained shifts, requires `window_shift_invalidation_detail` to match the shift reason when it is specific (`scroll_to_item`/`viewport_resize`/`items_revision`) or fall back to the shift kind (`prefetch`/`escape`); emits `check.vlist_window_shifts_explainable.json`).
+        - Gate (new): `--check-vlist-window-shifts-have-prepaint-actions` (requires that every `source=prepaint` window shift has a matching `debug.prepaint_actions` entry; emits `check.vlist_window_shifts_have_prepaint_actions.json`).
+        - Suite default: `fretboard diag suite ui-gallery-vlist-window-boundary` applies:
+          `--check-stale-paint ui-gallery-virtual-list-root`, `--check-view-cache-reuse-min 1`,
+          `--check-vlist-visible-range-refreshes-min 1`, `--check-vlist-visible-range-refreshes-max 35`,
+          and `--check-vlist-window-shifts-explainable` + `--check-vlist-window-shifts-have-prepaint-actions` unless explicitly overridden.
+          - Note: this suite intentionally does *not* default to `--check-wheel-scroll`, since VirtualList scroll can keep hit-test results within the root container.
   - Note: the paint-driven path (e.g. `windowed_rows_surface`) already satisfies ADR 0190 for fixed-height surfaces. For fully composable
-    row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
-    (tracked in ADR 0192).
+     row subtrees, we need a retained host boundary so cache-hit frames can attach/detach items without rerendering the parent cache root
+     (tracked in ADR 0192).
+  - Stopgap (non-retained path; implemented): prefetch window shifts before `window_mismatch` so boundary work happens earlier / more often,
+    reducing the likelihood of a single large “escape” tick.
+    - This is intentionally *not* the final GPUI parity answer: it still relies on cache-root rerenders to rebuild `visible_items`.
+    - Anchors:
+      - `crates/fret-ui/src/tree/prepaint.rs` (non-retained prefetch; `window_shift_kind=prefetch`)
+      - `crates/fret-ui/src/tree/mod.rs` (`UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate`)
+      - `apps/fretboard/src/diag/stats.rs` (vlist visible-range refresh gates: `--check-vlist-visible-range-refreshes-min`, `--check-vlist-visible-range-refreshes-max`)
+      - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json` (tuned to trigger prefetch reliably)
+    - Evidence (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
+      - `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+  - Scope note: this item intentionally tracks **two** related tracks:
+    - **Retained host windowed surfaces (ADR 0192)**: prepaint derives window shifts, and a retained reconcile attaches/detaches rows without
+      dirtying the parent cache root. This track is now mostly about tuning and hardening (e.g. staged prefetch + budgets).
+    - **Non-retained `VirtualList` path**: today, window changes still imply a cache-root rerender to rebuild `visible_items`. This is the main
+      remaining gap to reach “GPUI-like scroll stays cheap even when the window shifts”.
+  - Execution plan (v2 slices; keep incremental, avoid a big-bang rewrite):
+    - [x] Pick one primary consumer surface (start with file tree, then inspector/table/tree).
+      - Anchors: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`),
+        `apps/fret-ui-gallery/src/ui.rs` (`preview_file_tree_torture`).
+      - Note: retained-host consumers MUST provide a meaningful `VirtualListOptions.items_revision` so window updates and key caches are explainable.
+        - Evidence: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` folds tree + state revisions into `items_revision`.
+    - [x] (Retained host) Move “window derivation” to prepaint (ADR 0190 / ADR 0193), keyed by: viewport + offset + overscan + items revision.
+      - Current: prepaint updates `VirtualListState.window_range` from interaction records and scroll-handle state (no rerender required for retained hosts).
+      - Next (retained host): lift/standardize the derived window into explicit prepaint outputs where needed, and keep the “why did the window change?” story fully explainable from one bundle.
+      - Diagnostics: `debug.virtual_list_windows[*]` now include `policy_key` / `inputs_key` and the policy inputs (`estimate_row_height`, `gap`, `scroll_margin`, `content_extent`) so “policy changed vs. scroll changed” is distinguishable.
+          - Evidence: `target/fret-diag-vlist-window-keys/1769858602068-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+        - Regression: prepaint detects when a render-derived window (from a smaller viewport) underestimates the final visible span while still
+          appearing “within overscan”, and stages a one-shot `prefetch` shift attributed to `viewport_resize`.
+          - Anchor: `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_detects_render_window_insufficient_for_overscan_policy`)
+      - Perf story (baseline): window-boundary frames are still layout-dominated mainly because retained-host reconcile can attach/detach multiple row subtrees in one tick.
+        - Evidence (same bundle; warmup=5):
+          - Worst layout frame: `frame_id=24` (`tick_id=25`) `layout_time_us=2560` with `retained_virtual_list_attached_items=9`, `detached_items=3` (delta=12) and `barrier_relayouts_performed=1`.
+          - Worst attach/detach frame: `frame_id=28` (`tick_id=29`) `attached_items=10`, `detached_items=10` (delta=20) with `layout_time_us=1557`.
+        - Takeaway: to reduce worst-tick layout time further, we either need to (a) reduce per-frame attach/detach delta (more frequent smaller shifts / staged prefetch), or (b) reduce the cost of attaching new rows (row recycling, cheaper row layout, or more effective keep-alive reuse).
+    - [x] (Retained host) Stage prefetch shifts to cap per-frame attach/detach burst.
+      - Change: retained-host prepaint uses smaller prefetch steps (`overscan/2`, capped) so a single prefetch shift cannot detach/attach an unbounded number of rows in one frame.
+        This trades “more frequent small reconciles” for lower worst-tick variance (better feel).
+      - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (`RETAINED_HOST_PREFETCH_STEP_MAX`, retained-host `prefetch_step`),
+        `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_caps_retained_host_prefetch_step_to_bound_attach_detach_delta`).
+      - Note: the attach/detach delta check in `fretboard diag stats` uses `attached_items + detached_items` (so a shift by `step` roughly costs `~2*step`).
+      - Evidence: `target/fret-diag-suite-vlist-boundary-retained-keepalive/1770112825751-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+    - [!] GPUI-MVP5-virt-004 (Optional; deferred) Non-retained window shifts without rerender.
+      - Rationale: fully composable “window shifts without dirtying the parent cache root” require an explicit retained-host
+        boundary (ADR 0192). Track B remains “plan-only”: it may derive a window plan in prepaint, but it must schedule a
+        one-shot rerender to rebuild `visible_items` when the window actually changes.
+      - If revisited, prefer implementing this as an explicit boundary/host (not structural mutation in prepaint) so the
+        result remains diagnosable and compatible with view-cache reuse + GC invariants (ADR 0191/0193).
+    - [x] Add staged prefetch (ADR 0190 v2 addendum): shift retained-host windows *before* `window_mismatch` and reconcile incrementally.
+      - Idea: when the visible range approaches the prefetch boundary (but is still covered), shift the window by a small bounded step and request redraw.
+      - Goal: turn “one big boundary tick” into a bounded stream of small reconciles, reducing worst-tick spikes.
+      - Anchors:
+        - `crates/fret-ui/src/tree/prepaint.rs` (compute `window_shift_kind` and schedule retained-host reconciles even when `window_mismatch == false`)
+        - `crates/fret-ui/src/virtual_list.rs` (`prefetch_virtual_range_step` helper for bounded window shifting)
+        - `crates/fret-ui/src/elements/runtime.rs` (pending retained-host reconcile queue carries `Prefetch` vs `Escape`)
+        - `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts` records `reconcile_kind`)
+        - `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_prefetches_window_before_escape_without_rerendering_cache_root`)
+      - Diagnostics + gates:
+        - `debug.virtual_list_windows[*].window_shift_kind` (`none`/`prefetch`/`escape`) explains why a shift occurred.
+        - `debug.retained_virtual_list_reconciles[*].reconcile_kind` (`prefetch`/`escape`) attributes attach/detach work to the right cause.
+        - `debug.retained_virtual_list_reconciles[*].reconcile_time_us` provides coarse wall-time attribution for the retained-host reconcile work.
+        - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` exports these fields to bundles.
+        - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-min <n>` (use on `*window-boundary*` scripts).
+        - Gate: `fretboard diag stats <bundle> --check-retained-vlist-prefetch-reconciles-max <n>` (guards against runaway steady-state prefetch).
+      - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (v2 addendum; staged prefetch + budgets).
+    - [x] Tune staged prefetch thresholds so steady-state overhead stays low.
+      - Goal: avoid prefetching too early/often; prefetch should trigger mainly when approaching escape (or when predicted escape deltas would be large).
+      - Evidence should show: fewer `window_shift_kind=prefetch` frames under slow scroll, while still bounding `attached_items+detached_items` deltas on boundary ticks.
+      - Current tuning:
+        - `prefetch_margin = (overscan / 6).max(1)`
+        - `prefetch_step = (overscan * 3 / 2).max(prefetch_margin).max(1)`
+        - Direction hint: when both ends are "near", prefer the last observed scroll direction to avoid prefetch oscillation.
+      - Tree retained harness now fits a `prefetch_reconciles_max=30` budget.
+        - Evidence: `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch30-directionState/1769921894057-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - Before (budget ~40): `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch9/1769913766043-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - After (budget 30): `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch30-directionState/1769921894057-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+    - [x] Drive attach/detach via retained host reconcile (ADR 0192) when the window shifts, without rerendering the parent cache root.
+      - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (marks retained hosts for reconcile),
+        `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
+      - Note: retained-host reconcile now prefers the prepaint-derived `VirtualListState.window_range` (ADR 0190) rather than re-deriving the
+        window from scroll state during reconcile. This keeps “why did the window change?” explainable from one bundle and reduces duplicated work.
+        - Evidence: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_updates_visible_range_on_wheel_scroll_without_notifying_view_cache`)
+    - [x] Add/keep a `window-boundary` script that deterministically crosses overscan boundaries and enforce gates:
+      `--check-retained-vlist-reconcile-no-notify`, `--check-retained-vlist-reconcile-cache-reuse` (recommended: reconcile occurs on cache-hit),
+      attach/detach bounds, `--check-retained-vlist-scroll-window-dirty-max`, plus `--check-wheel-scroll-hit-changes` (container targets) and
+      `--check-stale-paint`.
+      - Suite: `fretboard diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
+      - Scripts:
+        - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
+        - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
+        - `tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json`
+      - Evidence (suite defaults; warmup=5; view-cache enabled):
+        - `target/fret-diag-suite-components-gallery-file-tree-defaults6/1770080650850-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-file-tree-defaults6/1770080678326-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-file-tree-defaults6/1770080712385-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - Note: retained-vlist *window-boundary* gates are applied only to scripts named `*window-boundary*` when running multi-script suites
+        (toggle/sort scripts still run, but are gated by stale-paint / wheel-scroll / view-cache reuse, etc.).
+    - [x] Record before/after bundles and keep the “worst tick” attribution explainable (layout vs prepaint vs paint).
+      - Note: the window-boundary scripts use `wait_until` to assert a row is mounted; the stable test id is
+        `components-gallery-file-tree-node-<TreeItemId>` (e.g. `...-node-1`), not `...-node-0`.
+      - Baseline recorded (warmup=5; prefetch not implemented / not enabled; attach/detach deltas are larger per shift):
+        - window-boundary-scroll: max.us(total/layout/prepaint/paint)=2812/2119/15/678
+          - Evidence: `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862343305-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - toggle+scroll: max.us(total/layout/prepaint/paint)=3339/2685/15/639
+          - Evidence: `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862370728-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - window-boundary-bounce: max.us(total/layout/prepaint/paint)=2823/2142/19/662
+          - Evidence: `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862397267-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - After staged prefetch (warmup=5; explicit gate: `--check-retained-vlist-prefetch-reconciles-min 1`):
+        - window-boundary-scroll:
+          - Prefetch reconciles observed: 19 (warmup excluded); max attach/detach delta bounded to 8 (down from 20 baseline).
+          - max.us(total/layout/prepaint/paint)=2364/1809/19/536
+          - Evidence: `target/fret-diag-perf-components-gallery-file-tree-suite-prefetch4/1769876796976-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - toggle+scroll:
+          - Prefetch reconciles observed: 15 (warmup excluded).
+          - max.us(total/layout/prepaint/paint)=2433/1869/22/542
+          - Evidence: `target/fret-diag-perf-components-gallery-file-tree-suite-prefetch4/1769876825653-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - window-boundary-bounce:
+          - Prefetch reconciles observed: 22 (warmup excluded); max attach/detach delta bounded to 8 (down from 20 baseline).
+          - max.us(total/layout/prepaint/paint)=2332/1729/32/571
+          - Evidence: `target/fret-diag-perf-components-gallery-file-tree-suite-prefetch4/1769876853802-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - Current assessment:
+        - Correctness + explainability improved (prefetch is visible in bundles; deltas are bounded), and worst-tick time is reduced vs baseline
+          for this surface in the current tuning.
+        - Next steps:
+          - Use `debug.retained_virtual_list_reconciles[*].reconcile_time_us` to identify whether time is dominated by row subtree mounting,
+            keep-alive churn, or general layout/paint work.
+          - Re-run a harness with known large spikes (e.g. ui-gallery vlist boundary) to confirm staged prefetch reduces peak tail latency.
+          - Retained vlist harness (ui-gallery; minimal + known heights; cache+shell):
+            - Baseline (no staged prefetch):
+              - max.us(total/layout/prepaint/paint)=5181/4171/125/885
+              - Evidence: `target/fret-diag-perf-vlist-retained-boundary-baseline/1769765204218-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+            - After tuned staged prefetch:
+              - Prefetch reconciles observed: 23 (warmup excluded); shift_kinds: `none=111`, `prefetch=25`, `escape=3`
+              - max.us(total/layout/prepaint/paint)=4435/3656/45/734; max `reconcile_time_us`=50
+              - Evidence: `target/fret-diag-perf-vlist-retained-boundary-prefetch5/1769878053904-script-step-0048-wheel/bundle.json`
+            - Suite gate (same harness, but with the full retained-vlist correctness gates enabled):
+              - PASS: `fretboard diag suite ui-gallery-virt-retained --check-retained-vlist-prefetch-reconciles-min 1`
+              - Evidence: `target/fret-diag-perf-ui-gallery-virt-retained-suite-prefetch7/1769911980127-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+      - Additional retained-host consumers (staged prefetch evidence + budgets):
+        - Tree (default budget `--check-retained-vlist-prefetch-reconciles-max 30`):
+          - `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch30-directionState/1769921894057-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - DataTable (default budget `--check-retained-vlist-prefetch-reconciles-max 30`):
+          - `target/fret-diag-perf-ui-gallery-data-table-retained-suite-prefetch10/1769913856566-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+  - Definition of done (v2; mark `[x]` when all are true):
+    - [x] The primary surface’s `window-boundary` script shows reduced worst-tick layout time while preserving correctness gates.
+    - [x] Window shifts do not force a cache-root rerender unless an explicit structural change requires it.
+    - [x] The same substrate can be applied to at least one more surface (reused primitives, not a one-off hack).
+  - Clarification: the legacy `virtual_list_keyed` API (frame-local `FnMut` row closures) cannot support “attach/detach on cache-hit frames”
+    by construction. The v2 path for GPUI-like prepaint-driven window updates therefore focuses on retained-host surfaces (ADR 0192) and
+    ergonomic ecosystem wrappers that adopt them by default.
   - Progress (v1):
     - VirtualList rerender frames now compute `render_window_range` against the latest scroll-handle offset (including out-of-band `set_offset`),
       reducing “window jump -> layout updates -> next frame rerender” one-frame lag.
@@ -613,20 +852,49 @@ topics (if/when we implement them):
     - Evidence bundle (cache+shell, release, post-range-baseline change): `target/fret-diag-perf-vlist-window-boundary-recenter/1769177486396-script-step-0027-wheel/bundle.json`
     - Notes: the current worst tick is layout-dominated when the wheel crosses the window boundary; this is the baseline we want to improve by moving window derivation toward prepaint (ADR 0190).
     - Tip: for a more stable baseline (avoid measure noise), run the harness with `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1` so the page uses `VirtualListOptions::known(...)`.
-    - Rejected (v1): “sticky window shift by minimal delta” increases window-churn under wheel scroll because v1 still requires cache-root rerender to rebuild `visible_items`.
-      Keep this idea for v2 prepaint-driven window updates (ADR 0190).
+    - Note (v1): “sticky window shift by minimal delta” is harmful for the legacy VirtualList path because v1 still requires a cache-root rerender to rebuild `visible_items`.
+    - Note (v2): the retained-host path can use “minimal shift” safely because the runtime can attach/detach rows during reconcile without rerendering the parent cache root.
+      - Anchor: `crates/fret-ui/src/tree/prepaint.rs` (`shift_virtual_list_window_minimally`).
       - Evidence bundles (cache+shell, release): `target/fret-diag-perf-vlist-window-boundary-sticky/1769176834622-script-step-0027-wheel/bundle.json`,
         `target/fret-diag-perf-vlist-window-boundary-sticky2/1769177002575-script-step-0027-wheel/bundle.json`.
     - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell/1769174146628-script-step-0027-wheel/bundle.json`
       - Takeaway: the boundary tick remains layout-dominated even without measurement, so the dominant cost is rebuilding/layouting the row subtree, not measuring it.
+    - Known-heights evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`, prepaint-driven scheduling): `target/fret-diag-perf-vlist-window-boundary-known-cache-shell-v2/1770040368919-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - Takeaway: Track B window-boundary scheduling is now fully prepaint-driven (including the “no render-derived window yet” case), avoiding the failure mode where a cached root never schedules the one-shot rerender and mounts zero rows.
     - Progress (v1.2): avoid triggering an extra contained relayout pass on window-mismatch frames.
       - Change: VirtualList now marks the nearest view-cache root as "needs rerender" (dirty view) and requests redraw, instead of issuing an `Invalidation::Layout` during layout.
       - Anchors: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`, `crates/fret-ui/src/tree/mod.rs` (`mark_nearest_view_cache_root_needs_rerender`).
       - Evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-boundary-optin/1769349359414-script-step-0027-wheel/bundle.json`
       - Takeaway: the dominant cost is still the rerender frame that rebuilds new rows; this change removes avoidable current-frame work and keeps the contract GPUI-like ("mark dirty, rebuild next frame").
     - Progress (v1.3): keep scroll-handle invalidation HitTestOnly even when the visible range leaves the rendered overscan window; mark the nearest view-cache root dirty and request redraw instead of forcing a layout invalidation walk.
+    - Progress (v1.4): make window-boundary scheduling prepaint-driven (Track B), and treat missing render-derived windows as an "escape" that schedules a one-shot rerender.
+      - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (window mismatch baseline uses `render_window_range` and schedules rerender when absent),
+        `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (layout no longer duplicates rerender scheduling for `window_mismatch` under view-cache).
+    - Progress (v2.0 retained host): reconcile now uses `render_window_range` as a baseline and shifts the window minimally only when the visible range leaves the overscanned window (aligns retained-host reconcile with prepaint window logic).
+      - Anchors: `crates/fret-ui/src/declarative/mount.rs` (retained host reconcile window selection), `crates/fret-ui/src/virtual_list.rs` (`shift_virtual_range_minimally`), `crates/fret-ui/src/tree/prepaint.rs` (shared helper usage).
+      - Evidence bundle (suite, cache+shell, release): `target/fret-diag-virt-retained-suite-local1/1769751016873-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
       - Change: `invalidate_scroll_handle_bindings_for_changed_handles` triggers `mark_nearest_view_cache_root_needs_rerender` with `scroll_handle_window_update` while keeping the node invalidation as hit-test-only.
       - Anchors: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/tests/view_cache.rs` (`view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender`), `crates/fret-ui/src/tree/tests/scroll_invalidation.rs` (`virtual_list_out_of_band_scroll_avoids_layout_after_overscan_window`).
+    - Progress (v2.1 retained host): add a bounded keep-alive bucket for detached item subtrees (Flutter sliver-style).
+      - Mechanism: when items detach due to a window shift, keep up to `VirtualListOptions::keep_alive` item roots keyed by `ItemKey` for later reuse (no remount).
+      - Performance: keep-alive bookkeeping stays hot-path friendly during boundary scroll. The keep-alive eviction order is maintained without per-frame O(n) scans,
+        and is periodically compacted to preserve an LRU-like “least recent detached” order for evictions.
+      - Liveness: keep-alive roots are included in the window's GC liveness roots (ADR 0191) so cache-hit frames cannot sweep kept-alive subtrees as “islands”.
+      - State persistence: the keep-alive bucket is stored in element-local state; retained hosts must touch that state key during normal render so it survives between reconcile frames (and on view-cache hits).
+      - Diagnostics: bundles report `reused_from_keep_alive_items` / `kept_alive_items` / `evicted_keep_alive_items` and the keep-alive bucket size (`keep_alive_pool_len_before` / `keep_alive_pool_len_after`).
+      - Anchors:
+        - `crates/fret-ui/src/element.rs` (`VirtualListOptions::keep_alive`, `VirtualListProps.keep_alive`)
+        - `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts` keep-alive bucket)
+        - `crates/fret-ui/src/elements/cx.rs` (touch keep-alive state key under retained hosts)
+        - `crates/fret-ui/src/elements/runtime.rs` (keep-alive roots in window liveness bookkeeping)
+        - `crates/fret-ui/src/windowed_surface_host.rs` (keep-alive state storage)
+        - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export)
+      - Evidence (monotonic scroll; expect `kept_alive_items > 0`, `reused_from_keep_alive_items == 0`):
+        - `C:\fret-diag-perf-components-gallery-file-tree-boundary-keepalive\1769839663570-script-step-0022-wheel\bundle.json`
+      - Evidence (bounce; expect `reused_from_keep_alive_items > 0`):
+        - `target/fret-diag/1769851029699-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+        - Command: `cargo run -p fretboard -- diag run tools/diag-scripts/components-gallery-file-tree-window-boundary-bounce.json --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1 --env FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N=50000 --env FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE=256 --env FRET_EXAMPLES_VIEW_CACHE=1 --warmup-frames 5 --check-retained-vlist-keep-alive-reuse-min 1 --launch -- cargo run -p fret-demo --bin components_gallery --release`
+      - Note: keep-alive does not reduce the “first time we see new items” cost during one-direction boundary scroll; it targets oscillation/backtracking stability.
     - Validated (v1.1): per-row nested cache roots inside `VirtualList`.
       - Attempt: wrap each row in a nested `ViewCache` boundary (`FRET_UI_GALLERY_VLIST_ROW_CACHE=1`) to reuse row layout/paint across window rebuilds.
       - Fix: `ViewCacheProps::default().contained_layout` is now `false` (contained relayout is opt-in), so barrier-placed roots (VirtualList row placement) keep parent-provided bounds and do not get clobbered by out-of-band contained relayout.
@@ -635,18 +903,95 @@ topics (if/when we implement them):
       - Unit regression: `crates/fret-ui/src/declarative/tests/view_cache.rs` (`view_cache_row_cached_virtual_list_keeps_semantics_in_viewport_space`)
       - Takeaway: nested row caches are viable again for v1.1 experiments, but they do not replace ADR 0190: v1 still requires rerender when the visible-item set changes (window derivation is still render-driven).
   - Next (v2 direction; ADR 0190):
+    - Progress (v2.0): derive VirtualList window telemetry during prepaint (cache-hit safe).
+      - Change: `UiTree::prepaint_virtual_list_window_from_interaction_record` updates `VirtualListState.{window_range,viewport_*,offset_*}` from interaction records, and can dirty the nearest cache root on overscan escape (no rerender required to compute the window).
+      - Change: prepaint also refreshes `VirtualListScrollHandle` internal viewport/content sizes and clamps offset via `set_*_internal`, keeping scroll-state bookkeeping consistent under reuse.
+      - Perf: avoid cloning `VirtualListProps` (which includes `visible_items`) in scroll-handle invalidation paths by adding a borrowed lookup helper (`with_element_record_for_node`) and using it for the fixed-mode scroll-to-item fast path.
+      - Evidence bundle (cache+shell, release, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `--warmup-frames 5`): `target/fret-diag-perf-vlist-window-prepaint-v2/1769442109178-script-step-0027-wheel/bundle.json`
+      - Evidence: `crates/fret-ui/src/tree/prepaint.rs` (`prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape`), `crates/fret-ui/src/declarative/frame.rs` (`with_element_record_for_node`), `crates/fret-ui/src/tree/layout.rs` (borrowed vlist fast path).
+    - Progress (v2.2): skip full layout engine work on layout-clean frames (prepaint-only fast path).
+      - Change: `UiTree::layout_all_with_pass_kind` now early-exits when there are no layout invalidations and no pending barrier relayouts, while still refreshing semantics (if requested) and running prepaint.
+      - Intent: keep scroll-only and cache-hit frames cheap without requiring every driver to grow a “layout_if_needed” wrapper.
+      - Anchor: `crates/fret-ui/src/tree/layout.rs` (fast-path early return).
+      - Perf note: the fast-path gate must be O(1). Use `UiTree.layout_invalidations_count` rather than scanning all nodes each frame.
+      - Diagnostics: bundles report `debug.stats.layout_fast_path_taken` and `debug.stats.layout_invalidations_count` (helps validate the fast path is actually taking effect in scripted harnesses).
+      - Gate: `fretboard diag stats <bundle> --check-layout-fast-path-min 1` (after warmup).
+      - Evidence (smoke; `components_gallery` file-tree bounce): `target/fret-diag-smoke-layout-fastpath/1769855748827-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - Suite defaults (components gallery surfaces; override via CLI flags):
+        - `--check-layout-fast-path-min 1`
+        - `--check-view-cache-reuse-min 1`
+        - `--check-stale-paint components-gallery-file-tree-root` / `components-gallery-table-root`
+        - `--check-wheel-scroll-hit-changes components-gallery-file-tree-root` / `components-gallery-table-root`
+        - Window-boundary scripts only:
+          - `--check-vlist-window-shifts-non-retained-max 0`
+          - `--check-vlist-policy-key-stable`
+          - `--check-retained-vlist-reconcile-no-notify 1`
+          - `--check-retained-vlist-attach-detach-max 64`
+          - `--check-retained-vlist-keep-alive-reuse-min 1` (keep-alive bounce scripts)
     - Move “window derivation” into `prepaint` so window shifts can be applied while the view remains cache-reusable (no forced rerender).
     - Define (and gate via bundles) what data constitutes the VirtualList “window cache key” (viewport/offset/overscan/items revision) so reuse is explainable.
-    - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that still force a cache-root rerender in cache+shell mode.
+    - Add a regression gate for `ui-gallery-virtual-list-window-boundary-scroll` that flags boundary ticks that force cache-root rerenders too frequently under cache+shell mode:
+      - `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json --warmup-frames 5 --check-vlist-scroll-window-dirty-max 2 ...`
+      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary` defaults to (non-retained path):
+        - `--check-stale-paint ui-gallery-virtual-list-root`
+        - `--check-view-cache-reuse-min 1`
+        - `--check-vlist-visible-range-refreshes-min 1`
+        - `--check-vlist-visible-range-refreshes-max 20`
+        - `--check-vlist-window-shifts-prefetch-max 12`
+        - `--check-vlist-window-shifts-escape-max 4`
+        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=0`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`.
+        - Observed distribution (local, warmup=5, 3 runs):
+          - `total_refreshes=15` (`check.vlist_visible_range_refreshes_max.json`)
+          - `prefetch_shifts=7..8` (`check.vlist_window_shifts_prefetch_max.json`)
+          - `escape_shifts=3` (`check.vlist_window_shifts_escape_max.json`)
+          So the defaults above are tight-but-stable caps for churn regressions.
+      - Builtin suite: `fretboard diag suite ui-gallery-vlist-window-boundary-retained` defaults to (retained-host path):
+        - Gates:
+          - `--check-stale-paint ui-gallery-virtual-list-root`
+          - `--check-view-cache-reuse-min 1`
+          - `--check-vlist-visible-range-refreshes-min 1`
+          - `--check-vlist-visible-range-refreshes-max 50`
+          - `--check-vlist-window-shifts-prefetch-max 100` (deduped per-frame; see `check.vlist_window_shifts_prefetch_max.json`)
+          - `--check-vlist-window-shifts-escape-max 6`
+          - `--check-retained-vlist-reconcile-no-notify 1`
+          - `--check-retained-vlist-attach-detach-max 64`
+          - `--check-retained-vlist-keep-alive-reuse-min 5`
+          - `--check-retained-vlist-keep-alive-budget 1 0` (min pool size; no evictions)
+          - `--check-vlist-window-shifts-non-retained-max 0` (no fallback)
+        - Default launch env (overridable via `--env KEY=...`): `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_KEEP_ALIVE=128`.
+        - Evidence bundles (suite; cache+shell, release; warmup=5):
+          - `target/fret-diag-suite-vlist-boundary-retained-keepalive-min5-run1b/1770117016546-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+          - `target/fret-diag-suite-vlist-boundary-retained-keepalive-min5-run2b/1770117065302-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+          - `target/fret-diag-suite-vlist-boundary-retained-keepalive-min5-run3b/1770117106850-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+          - `target/fret-diag-suite-vlist-boundary-retained-keepalive-budget3/1770122152178-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+            - Post-run evidence: `target/fret-diag-suite-vlist-boundary-retained-keepalive-budget3/1770122151041-script-step-0052-wheel/check.retained_vlist_keep_alive_budget.json` (`max_pool_len_after=5`, `total_evicted_items=0`)
+      - Evidence bundle (suite; cache+shell, release; prefetch-min + prefetch-dirty budget gated; non-retained default):
+        `target/fret-diag-suite-ui-gallery-vlist-window-boundary-nonretained0/1770084994647-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+      - Evidence bundle (suite; cache+shell, release; prefetch_step=overscan*8 for non-retained):
+        `target/fret-diag-suite-ui-gallery-vlist-window-boundary-after-prefetch-step/1770047603074-ui-gallery-virtual-list-window-boundary-scroll/bundle.json`
+        - Observed: `prefetch_shifts=20`, `escape_shifts=3`, `visible_range_refreshes=26` (budgeted by suite defaults).
+      - Gate tightening ladder (post-warmup):
+        - Current: `--check-vlist-visible-range-refreshes-max 20` (catches “too much window churn” regressions after wheel events, while allowing prefetch).
+        - Next: aim for `10` once v2 window derivation reduces boundary work in a single tick and/or staged prefetch budgets are tightened.
+        - Stretch: aim for `5` once the boundary harness is stable under the *default suite env* (cache+shell+known heights) and we have
+          repeatable evidence that the prepaint-driven scheduling path no longer causes “extra settle refreshes” after the first wheel event.
+          - Definition of done to tighten to `5` (run locally at least 3 times):
+            - `fretboard diag suite ui-gallery-vlist-window-boundary --launch -- cargo run -p fret-ui-gallery --release` passes with `--check-vlist-visible-range-refreshes-max 5`,
+            - `--check-stale-paint ui-gallery-virtual-list-root` still passes,
+            - and the bundle shows at least one cache-hit tail streak (`--check-view-cache-reuse-min 1` stays meaningful).
+        - Target: split budgets by cause once “window shift reasons” are exported (e.g. `prefetch` vs `escape`) and can be gated independently.
+          - Gates: `--check-vlist-window-shifts-prefetch-max <n>`, `--check-vlist-window-shifts-escape-max <n>` (counts prepaint-sourced shifts after warmup).
 
-- [~] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
+- [x] GPUI-MVP5-virt-003 Retained windowed surface host for composable virtualization (ADR 0192).
   - Note: the existing `virtual_list_keyed` authoring API uses non-`'static` closures (`FnMut`), so v1 of virt-003 MUST be a new, opt-in surface that stores `'static` callbacks in element-local state (per ADR 0192) rather than retrofitting the existing helper.
   - Goal: allow scroll/window membership updates to attach/detach item subtrees without rerendering the parent cache root.
-  - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Proposed).
-  - Progress (v1 prototype; fixed/known height only):
+  - Contract: `docs/adr/0192-retained-windowed-surface-hosts.md` (Accepted).
+  - Progress (v1 prototype; fixed/known baseline, measured variant gated):
     - Runtime host state: `crates/fret-ui/src/windowed_surface_host.rs` (`RetainedVirtualListHostMarker`, `RetainedVirtualListHostCallbacks`).
     - Scheduling: `crates/fret-ui/src/tree/layout.rs`, `crates/fret-ui/src/tree/prepaint.rs` (`mark_retained_virtual_list_needs_reconcile`).
     - Input routing: `crates/fret-ui/src/declarative/host_widget/event/scroll.rs` schedules retained-host reconcile on overscan escape instead of forcing `notify()` (keeps parent cache roots reusable).
+    - Prepaint window updates now shift retained-host windows minimally on overscan escape to reduce attach/detach churn (instead of snapping to the ideal visible range).
+      - Anchor: `crates/fret-ui/src/tree/prepaint.rs` (`shift_virtual_list_window_minimally`).
     - Reconcile: `crates/fret-ui/src/declarative/mount.rs` (`reconcile_retained_virtual_list_hosts`).
     - Diagnostics: bundles export retained VirtualList reconcile deltas (`debug.retained_virtual_list_reconciles`) and frame counters (`debug.stats.retained_virtual_list_*`).
     - Tests: `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`retained_virtual_list_host_updates_window_without_rerendering_view_cache_root`).
@@ -655,17 +1000,90 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json`
     - Run with: `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
     - Expectation: crossing the overscan window boundary does not force a parent cache-root rerender; instead the retained host reconciles (attach/detach delta only).
-    - Gate (single script): `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 64 --check-wheel-scroll ui-gallery-virtual-list-row-0-label --check-stale-paint ui-gallery-virtual-list-row-0-label ...`
-    - Gate (suite): `fretboard diag suite ui-gallery-virt-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 64 --check-wheel-scroll ui-gallery-virtual-list-row-0-label --check-stale-paint ui-gallery-virtual-list-row-0-label ...`
+    - Variant (measured rows): set `FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT=1` (no fixed row height hints) to exercise `VirtualListMeasureMode::Measured` under the retained host path.
+    - Gate (single script): `fretboard diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll-retained.json --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 64 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-virtual-list-row-0-label --check-stale-paint ui-gallery-virtual-list-row-0-label ...`
+    - Gate (suite): `fretboard diag suite ui-gallery-virt-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 64 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-virtual-list-row-0-label --check-stale-paint ui-gallery-virtual-list-row-0-label ...`
+      - Defaults: `ui-gallery-virt-retained` sets `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1` and `FRET_UI_GALLERY_VLIST_MINIMAL=1` to reduce measurement noise and focus the gate on retained window reconcile behavior.
+    - Gate (suite, measured rows): `fretboard diag suite ui-gallery-virt-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 64 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-virtual-list-row-0-label --check-stale-paint ui-gallery-virtual-list-row-0-label ...`
+      - Defaults: `ui-gallery-virt-retained-measured` sets `FRET_UI_GALLERY_VLIST_RETAINED=1`, `FRET_UI_GALLERY_VLIST_MINIMAL=1`, and `FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT=1`.
+    - Re-verified (cache+shell, release; reconcile>=2 + attach/detach min enforced): `target/fret-diag-virt-retained-suite-stronger-gate/1769758544095-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+    - Note: `fretboard diag suite ui-gallery-virt-retained` now defaults to `--warmup-frames 5` plus the retained VirtualList gates above when not explicitly provided.
     - Evidence bundle (cache+shell, release, minimal harness; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-suite2/1769511343500-script-step-0048-wheel/bundle.json`
-  - Plan (v1; fixed/known height only):
-    - Add a runtime-owned `WindowedSurfaceHost` boundary that can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
-    - Define an opt-in authoring API that stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
-    - Wire the host to `VirtualListMetrics` (Fixed/Known) for window math and item placement, and defer Measured mode.
-    - Add diagnostics export for attach/detach counts + reuse hits, and gate with a scripted UI Gallery harness (no stale paint + bounded work).
-  - Done when:
-    - A prototype host can drive a fixed-height “composable rows” list without forcing a parent cache-root rerender when crossing a window boundary (attach/detach delta only).
-    - A scripted harness bundle can prove: no stale paint, stable hit-testing, and bounded attach/detach work.
+    - Evidence bundle (measured rows; cache+shell, release; passes no-notify + bounded-delta + wheel-scroll + stale-paint gates): `target/fret-diag-vlist-virt-retained-measured-local1/1769676590792-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+    - Gate (suite, measured retained all-in-one): `fretboard diag suite ui-gallery-retained-measured --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --dir target/fret-diag-retained-measured-all-local1 --launch -- cargo run -p fret-ui-gallery --release`
+      - Defaults: `ui-gallery-retained-measured` enables view-cache+shell plus the measured variants for VirtualList/Tree/DataTable/Table, and uses multi-test-id wheel-scroll + stale-paint gates.
+      - Prefetch max gate: defaults to `--check-retained-vlist-prefetch-reconciles-max 30` for `*window-boundary*` scripts (tree drives the budget).
+      - Note: retained-vlist window-boundary gates (reconcile/no-notify/attach-detach bounds) apply only to the boundary scripts in the suite (not to interaction-only scripts).
+      - Evidence bundles (measured all-in-one; cache+shell, release):
+        - `target/fret-diag-retained-measured-all-local1/1769680828211-ui-gallery-virtual-list-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680867856-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680899431-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680928063-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680957492-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769680985681-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769681014581-ui-gallery-table-retained-sort-select-scroll/bundle.json`
+        - `target/fret-diag-retained-measured-all-local1/1769681042494-ui-gallery-table-retained-keyboard-typeahead/bundle.json`
+  - Tree harness (retained host consumer):
+    - Script: `tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json`
+    - Script (toggle + scroll): `tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json`
+    - Run with: `FRET_UI_GALLERY_TREE_RETAINED=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+    - Variant (measured rows): set `FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT=1` to introduce multi-line labels and run the retained host with `VirtualListMeasureMode::Measured`.
+    - Expectation: crossing the overscan boundary reconciles attach/detach deltas (no parent cache-root rerender), and remains stale-paint safe.
+    - Gate (suite): `fretboard diag suite ui-gallery-tree-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-tree-row-0 --check-stale-paint ui-gallery-tree-row-0 ...`
+    - Gate (suite, measured rows): `fretboard diag suite ui-gallery-tree-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-tree-row-0 --check-stale-paint ui-gallery-tree-row-0 ...`
+      - Note: in this multi-script suite, the retained-vlist window-boundary gates apply only to `ui-gallery-tree-window-boundary-scroll-retained.json` (the toggle+scroll script is still gated by wheel-scroll + stale-paint, etc.).
+      - Defaults: `ui-gallery-tree-retained-measured` sets `FRET_UI_GALLERY_TREE_RETAINED=1` and `FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT=1`.
+      - Defaults (bundle size): retained suites cap semantics export by default (`FRET_DIAG_MAX_SEMANTICS_NODES=10000`, `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`, `FRET_DIAG_SCRIPT_AUTO_DUMP=0`).
+      - Prefetch max gate: `ui-gallery-tree-retained` and `ui-gallery-tree-retained-measured` default to `--check-retained-vlist-prefetch-reconciles-max 30` for `*window-boundary*` scripts (tree should stay under budget with `--warmup-frames 5`).
+    - Note: the script uses the sidebar search input (`ui-gallery-nav-search`) to keep navigation stable as the page list grows.
+    - Evidence bundles (cache+shell, release; pass no-notify + bounded-delta + wheel-scroll + stale-paint gates):
+      - `target/fret-diag-tree-retained-suite-shell3/1769649443728-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+      - `target/fret-diag-tree-retained-suite-shell3/1769649473084-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+      - (With staged prefetch max gate) `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch9/1769913766043-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+      - (With staged prefetch max gate) `target/fret-diag-perf-ui-gallery-tree-retained-suite-prefetch9/1769913809155-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+      - (Measured rows) `target/fret-diag-tree-retained-measured-local1/1769678735646-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+      - (Measured rows) `target/fret-diag-tree-retained-measured-local1/1769678769241-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+  - DataTable harness (retained host consumer):
+    - Script: `tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json`
+    - Script (sort + select + scroll): `tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json`
+    - Run with: `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`.
+    - Keep-alive bounce (ADR 0192):
+      - Env: `FRET_UI_GALLERY_DATA_TABLE_KEEP_ALIVE=256`
+      - Script: `tools/diag-scripts/ui-gallery-data-table-window-boundary-bounce-keep-alive.json`
+      - Suite: `fretboard diag suite ui-gallery-data-table-retained-keep-alive --launch -- cargo run -p fret-ui-gallery --release`
+    - Variant (measured rows): set `FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT=1` (enables `DataTable::measure_rows(true)` and introduces multi-line cell content).
+    - Expectation: crossing the overscan boundary reconciles attach/detach deltas (no parent cache-root rerender), and remains stale-paint safe.
+    - Gate (suite): `fretboard diag suite ui-gallery-data-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-data-table-row-0 --check-stale-paint ui-gallery-data-table-row-0 ...`
+    - Gate (suite, measured rows): `fretboard diag suite ui-gallery-data-table-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 2 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-data-table-row-0 --check-stale-paint ui-gallery-data-table-row-0 ...`
+      - Note: in this multi-script suite, the retained-vlist window-boundary gates apply only to `ui-gallery-data-table-window-boundary-scroll-retained.json` (the sort+select+scroll script is still gated by wheel-scroll + stale-paint, etc.).
+      - Defaults: `ui-gallery-data-table-retained-measured` sets `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1` and `FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT=1`.
+      - Prefetch max gate: `ui-gallery-data-table-retained` defaults to `--check-retained-vlist-prefetch-reconciles-max 30` for `*window-boundary*` scripts (observed ~15 prefetch reconciles with `--warmup-frames 5`).
+    - Note: the script uses the sidebar search input (`ui-gallery-nav-search`) to keep navigation stable as the page list grows.
+    - Implementation: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`), via `ecosystem/fret-ui-shadcn/src/data_table.rs` (`DataTable::into_element_retained`).
+    - Evidence bundles (cache+shell, release; pass no-notify + bounded-delta + wheel-scroll + stale-paint gates):
+      - `target/fret-diag-data-table-retained-suite-shell6/1769651477808-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+      - `target/fret-diag-data-table-retained-suite-shell6/1769651504240-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
+      - (With staged prefetch max gate) `target/fret-diag-perf-ui-gallery-data-table-retained-suite-prefetch10/1769913856566-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+      - (With staged prefetch max gate) `target/fret-diag-perf-ui-gallery-data-table-retained-suite-prefetch10/1769913891537-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
+      - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679828598-ui-gallery-data-table-window-boundary-scroll-retained/bundle.json`
+      - (Measured rows) `target/fret-diag-data-table-retained-measured-local1/1769679856618-ui-gallery-data-table-retained-sort-select-scroll/bundle.json`
+      - (Keep-alive bounce) `target/fret-diag/1769961130938-ui-gallery-data-table-window-boundary-bounce-keep-alive/bundle.json`
+  - UI kit list harness (retained host consumer; ADR 0192):
+    - Page: `apps/fret-ui-gallery/src/ui.rs` (`preview_ui_kit_list_torture`), `apps/fret-ui-gallery/src/spec.rs` (`PAGE_UI_KIT_LIST_TORTURE`).
+    - Script: `tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json`
+      - Note: the script targets `ui-gallery-ui-kit-list-row-0-label` for wheel events to ensure the wheel position remains within the visible viewport.
+    - Suite: `fretboard diag suite ui-gallery-ui-kit-list-retained`
+      - Defaults: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_UI_KIT_LIST_LEN=2000`,
+        `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`, and gates `--check-retained-vlist-scroll-window-dirty-max 0`, `--check-view-cache-reuse-min 5`,
+        `--check-wheel-scroll ui-gallery-ui-kit-list-row-0-label`, `--check-stale-paint ui-gallery-ui-kit-list-row-0-label`.
+    - Evidence bundle (smoke; cache+shell, release): `target/fret-diag-ui-kit-list-retained-smoke6/1769945002526-ui-gallery-ui-kit-list-window-boundary-scroll/bundle.json`
+  - Implementation summary (v1):
+    - A runtime-owned `WindowedSurfaceHost` boundary can attach/detach item subtrees during `prepaint` without re-running the parent render closure.
+    - The opt-in authoring API stores `'static` callbacks in element-local state (item key + item render), plus window policy (overscan + keep-alive extent).
+    - The retained host supports fixed/known heights and measured rows (via `VirtualListOptions.measure_mode` + `VirtualListKeyCache`), and is regression-gated with scripted UI Gallery suites (including measured variants).
+  - Next:
+    - Expand retained-table coverage from v0 to more of the existing UI Kit table surface (grouping/pinning/resizing), tracked in `GPUI-MVP5-eco-002`.
+    - Keep tuning measured-mode churn (attach/detach deltas) under overscan-boundary scroll, while `GPUI-MVP5-virt-001` continues to target the default (non-retained) VirtualList path.
 
 - [x] GPUI-MVP5-virt-002 VirtualList: add “known row heights” mode (skip runtime measurement).
   - Goal: support variable-but-deterministic row heights without `measure_in` on visible children.
@@ -697,13 +1115,47 @@ topics (if/when we implement them):
       - `windowed_rows_surface_scroll_refresh`: worst tick ~2.6ms (layout-dominated).
       - `virtual_list_torture`: worst tick ~29.8ms (layout-dominated).
       - Takeaway: large headroom remains for `GPUI-MVP5-virt-001` (prepaint-driven window to reduce scroll-time rerender/layout work).
-- [~] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
+- [x] GPUI-MVP5-eco-002 Migrate table/tree virtualization to the new VirtualList window model.
   - Touches: `ecosystem/fret-ui-kit/src/declarative/table.rs`, `ecosystem/fret-ui-kit/src/declarative/tree.rs`, gallery/demo callsites.
-  - Done when: common table/tree interactions (select, expand/collapse, typeahead) do not cause full cache-root rerenders while scrolling.
+  - Done when: scroll-driven window updates do not mark the nearest cache root dirty (window boundary updates reconcile attach/detach deltas during prepaint under view-cache reuse), and the common interactions remain correct and stale-paint safe:
+    - Tree: expand/collapse (toggle) + scrolling under the retained host path.
+    - Table/DataTable: select + sort + keyboard navigation/typeahead + scrolling under the retained host path (including measured/variable-height variants).
   - Progress (v1):
     - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_DATA_TABLE_TORTURE`)
     - Harness implementation: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_table_torture`, `ui-gallery-data-table-torture-root`)
     - Scripted scroll capture: `tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json`
+    - Tree torture can opt into the retained host path (virt-003 consumer) via `FRET_UI_GALLERY_TREE_RETAINED=1`.
+      - Script: `tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json`
+      - Script (toggle + scroll): `tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json`
+      - Debug affordance: retained tree rows expose deterministic toggle button IDs (`ui-gallery-tree-row-<id>-toggle`) for scripted expand/collapse gates.
+      - Evidence bundles (cache+shell, release):
+        - `target/fret-diag-tree-retained-suite-shell3/1769649443728-ui-gallery-tree-window-boundary-scroll-retained/bundle.json`
+        - `target/fret-diag-tree-retained-suite-shell3/1769649473084-ui-gallery-tree-retained-toggle-and-scroll/bundle.json`
+    - UI Kit table retained harness (virt-003 consumer):
+      - UI Gallery page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_TABLE_RETAINED_TORTURE`)
+      - Scripts:
+        - `tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json`
+        - `tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json`
+        - `tools/diag-scripts/ui-gallery-table-retained-sort-desc.json`
+        - `tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json`
+      - Keyboard nav/typeahead:
+        - `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`, `RetainedTableKeyboardNavState`)
+      - Gate (suite): `fretboard diag suite ui-gallery-table-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 --check-stale-paint ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 ...`
+        - Note: in this multi-script suite, the retained-vlist window-boundary gates apply only to `ui-gallery-table-retained-window-boundary-scroll.json` (the interaction scripts are still gated by wheel-scroll + stale-paint, etc.).
+        - Prefetch max gate: `ui-gallery-table-retained` defaults to `--check-retained-vlist-prefetch-reconciles-max 30` for `*window-boundary*` scripts.
+        - Note: `--check-wheel-scroll <test_id>` asserts that the target's semantics bounds move after the first wheel event (it does not require the debug hit-test node id to change).
+      - Gate (suite, measured rows): `fretboard diag suite ui-gallery-table-retained-measured --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 128 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 --check-stale-paint ui-gallery-table-retained-row-0|ui-gallery-table-retained-row-9999 ...`
+        - Note: in this multi-script suite, the retained-vlist window-boundary gates apply only to `ui-gallery-table-retained-window-boundary-scroll.json` (the interaction scripts are still gated by wheel-scroll + stale-paint, etc.).
+        - Defaults: `ui-gallery-table-retained-measured` sets `FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT=1`.
+        - Note: the measured-row suite currently excludes `ui-gallery-table-retained-sort-desc` until the sort-direction toggle is made deterministic in scripts (avoid flake from multi-click sort state transitions).
+      - Evidence bundles (cache+shell, release):
+        - `target/fret-diag-table-retained-suite-shell1/1769653530154-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-table-retained-suite-shell1/1769653557131-ui-gallery-table-retained-sort-select-scroll/bundle.json`
+        - (Desc sort) `target/fret-diag-table-retained-suite-smoke3/1769698245411-ui-gallery-table-retained-sort-desc/bundle.json`
+        - `target/fret-diag-table-retained-keyboard-local12/1769667088191-ui-gallery-table-retained-keyboard-typeahead/bundle.json`
+        - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678819672-ui-gallery-table-retained-window-boundary-scroll/bundle.json`
+        - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678848174-ui-gallery-table-retained-sort-select-scroll/bundle.json`
+        - (Measured rows) `target/fret-diag-table-retained-measured-local1/1769678876972-ui-gallery-table-retained-keyboard-typeahead/bundle.json`
     - Bundle-based stale-paint check:
       - Generate (example): `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-data-table-torture-scroll-refresh.json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --warmup-frames 5 --dir target/fret-diag-perf-data-table-torture --launch -- cargo run -p fret-ui-gallery --release`
       - Inspect: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-data-table-torture-root`
@@ -718,7 +1170,7 @@ topics (if/when we implement them):
       - Baseline perf (one run, release, view-cache + shell enabled):
         - `ui-gallery-tree-torture-scroll-refresh`: worst tick ~8.6ms (layout-dominated).
         - Example bundle: `target/fret-diag-perf-tree-torture/1769146889956-script-step-0009-wheel/bundle.json`
-- [~] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
+- [x] GPUI-MVP5-eco-003 Identify “code/text window” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-code-view/src/*` (CodeBlock windowed lines; already has a harness).
     - `ecosystem/fret-markdown/src/*` (long scrolling documents; markdown/code blocks).
@@ -729,7 +1181,8 @@ topics (if/when we implement them):
     - Scripted scroll capture exists: `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json` (run with `fretboard diag run ...`).
     - Baseline variant exists (same steps, different label): `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`.
     - Stale-paint check is wired: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`.
-    - First migration target started: `ecosystem/fret-code-view` now supports `CodeBlockUiOptions.windowed_lines` (VirtualList-backed, per-line window).
+    - First migration target complete: `ecosystem/fret-code-view` now supports `CodeBlockUiOptions.windowed_lines` and implements it via a retained
+      VirtualList host (ADR 0192), so window shifts can reconcile without dirtying the parent cache root.
     - Next (v1):
       - First migration target: `ecosystem/fret-code-view` “CodeBlock -> windowed lines” (visible line window + overscan), with regression enforced by the harness above.
       - Run A/B: `FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0|1` toggles the `code_view_torture` page path (default: `1`).
@@ -738,7 +1191,7 @@ topics (if/when we implement them):
       - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_view_torture`, `ui-gallery-code-view-root`)
       - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json`
       - `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`
-    - `ecosystem/fret-code-view/src/code_block.rs` (`render_code_block_windowed_lines`)
+    - `ecosystem/fret-code-view/src/code_block.rs` (`render_code_block_windowed_lines`, retained VirtualList host)
     - A/B bundles (same script steps, different variant):
       - Baseline (`FRET_UI_GALLERY_CODE_VIEW_WINDOWED=0`): `target/fret-diag/1769092650269-ui-gallery-code-view-scroll-refresh-baseline/bundle.json`
         - `diag stats` time sum (us): total=70638041 layout=35427247 paint=35207014
@@ -826,18 +1279,160 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/docking-demo-drag-indicators.json`
     - Gate: `fretboard diag stats <bundle.json> --check-drag-cache-root-paint-only dock-demo-dock-space`
 
-- [ ] GPUI-MVP5-eco-009 Workspace/inspectors: identify list/outline/file-tree surfaces that should be windowed.
+- [x] GPUI-MVP5-eco-009 Workspace/inspectors: identify list/outline/file-tree surfaces that should be windowed.
   - Touches: `ecosystem/fret-workspace/src/*`, `apps/fret-editor/src/*`.
   - Done when: we have (1) an evidence-backed candidate list, (2) one migrated surface (windowed rows or VirtualList v2),
     and (3) a `diag` script that catches “looks stale / click hits correct but paint is stale” regressions.
+  - Progress (v1):
+    - Note: `apps/fret-editor` currently only contains the inspector protocol/services (no large inspector UI surface yet).
+      To keep eco-009 moving, we exercise the “inspector-like property list” shape in UI Gallery as a stand-in harness.
+    - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_INSPECTOR_TORTURE`), root test id `ui-gallery-inspector-root`.
+    - Script: `tools/diag-scripts/ui-gallery-inspector-torture-scroll.json`.
+    - Script (keep-alive bounce; ADR 0192): `tools/diag-scripts/ui-gallery-inspector-torture-bounce-keep-alive.json` (requires `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE>0`).
+    - Gate (cache+shell, retained host, release):
+      - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-inspector-torture-scroll.json --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --check-view-cache-reuse-min 1 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-inspector-root --check-stale-paint ui-gallery-inspector-root --launch -- cargo run -p fret-ui-gallery --release`
+    - Evidence bundle (cache+shell, release): `target/fret-diag-inspector-torture-local2/1769735532323-ui-gallery-inspector-torture-scroll/bundle.json`
+    - Re-verified (cache+shell, release; retained gates enforced incl. attach/detach min): `target/fret-diag-inspector-suite-min-gate/1769756657266-ui-gallery-inspector-torture-scroll/bundle.json`
+    - Evidence (keep-alive suite smoke; cache+shell, release; keep-alive gate enabled):
+      - `target/fret-diag-inspector-keep-alive-smoke4/1769952707386-ui-gallery-inspector-torture-scroll/bundle.json`
+      - `target/fret-diag-inspector-keep-alive-smoke4/1769952733603-ui-gallery-inspector-torture-bounce-keep-alive/bundle.json`
+    - Builtin suite: `fretboard diag suite ui-gallery-inspector-torture --launch -- cargo run -p fret-ui-gallery --release` defaults to `--warmup-frames 5`, enables `cache+shell`, and enforces the retained VirtualList gates above.
+      - Note (2026-01-30): retained VirtualList post-run checks are applied whenever configured (no per-script whitelist), so suite gates are effective.
+    - Builtin suite (keep-alive): `fretboard diag suite ui-gallery-inspector-torture-keep-alive --launch -- cargo run -p fret-ui-gallery --release` defaults to `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=256` and enforces `--check-retained-vlist-keep-alive-reuse-min 1`.
+    - UI Gallery harness page: `apps/fret-ui-gallery/src/spec.rs` (`PAGE_FILE_TREE_TORTURE`), root test id `ui-gallery-file-tree-root`.
+      - Row test ids are stable by identity: `ui-gallery-file-tree-node-{numeric_id}` (not row index).
+    - Script: `tools/diag-scripts/ui-gallery-file-tree-torture-scroll.json`.
+      - Gate (cache+shell, retained host, release):
+        - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-file-tree-torture-scroll.json --warmup-frames 5 --timeout-ms 240000 --poll-ms 200 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --check-view-cache-reuse-min 1 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-wheel-scroll ui-gallery-file-tree-node-0 --check-stale-paint ui-gallery-file-tree-node-0 --launch -- cargo run -p fret-ui-gallery --release`
+    - Evidence bundle (cache+shell, release): `target/fret-diag-file-tree-suite-local3/1769748233062-ui-gallery-file-tree-torture-scroll/bundle.json`
+    - Re-verified (cache+shell, release; retained gates enforced incl. attach/detach min): `target/fret-diag-file-tree-suite-min-gate/1769756694953-ui-gallery-file-tree-torture-scroll/bundle.json`
+    - Builtin suite: `fretboard diag suite ui-gallery-file-tree-torture --launch -- cargo run -p fret-ui-gallery --release` defaults to `--warmup-frames 5`, enables `cache+shell`, and enforces the retained VirtualList gates above.
+    - Interactive script (expand/collapse + selection + scroll): `tools/diag-scripts/ui-gallery-file-tree-torture-toggle.json`.
+      - Builtin suite: `fretboard diag suite ui-gallery-file-tree-torture-interactive --launch -- cargo run -p fret-ui-gallery --release`.
+      - Evidence bundle (cache+shell, release): `target/fret-diag-file-tree-suite-local4/1769748662066-ui-gallery-file-tree-torture-toggle/bundle.json`
+      - Re-verified (cache+shell, release; retained gates enforced incl. attach/detach min): `target/fret-diag-file-tree-suite-min-gate/1769756742386-ui-gallery-file-tree-torture-toggle/bundle.json`
+  - Next steps (eco-009 closure path; keep it “real UI surface” oriented):
+    - [x] Promote the UI Gallery file-tree torture implementation into a reusable `ecosystem/fret-ui-kit` retained component (keep stable test ids),
+      so future workspace adoption is a “swap the consumer” change, not a rewrite.
+      - Implementation:
+        - `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`)
+        - `apps/fret-ui-gallery/src/ui.rs` (`preview_file_tree_torture` calling into ui-kit)
+      - Closure gate (must stay green):
+        - `fretboard diag suite ui-gallery-file-tree-torture --launch -- cargo run -p fret-ui-gallery --release`
+        - `fretboard diag suite ui-gallery-file-tree-torture-interactive --launch -- cargo run -p fret-ui-gallery --release`
+    - [x] Add a short “candidate surface list” with anchors to real code (as it appears).
+      - Workspace shell surfaces (today):
+        - Pane tree + split resize + tab drag/drop: `ecosystem/fret-workspace/src/panes.rs` (`workspace_pane_tree_element_with_resize`)
+        - Tab strip (potentially large; needs stable cache roots + paint-only chrome for hover/drag indicators): `ecosystem/fret-workspace/src/tab_strip.rs` (`WorkspaceTabStrip::into_element`)
+        - Tab MRU/dirty state model (feeds the tab strip): `ecosystem/fret-workspace/src/tabs.rs` (`WorkspaceTabs`)
+        - Inspector/properties surfaces (future; `apps/fret-editor` currently only has protocol/services):
+          - Property edit plumbing: `apps/fret-editor/src/property_edit.rs` (`PropertyEditService`), `apps/fret-editor/src/inspector_edit.rs` (`InspectorEditService`)
+          - Policy recommendation when a real inspector UI lands: adopt retained-host windowed rows by default (ADR 0190/0192),
+            and keep row hover/selection chrome paint-only (ADR 0181) so cache-hit frames remain correct.
+    - [x] Add a “workspace shell” scripted demo that exercises real surfaces (pane tree + tab strip) rather than staying UI-Gallery-only.
+      - Goal: an end-to-end `diag` bundle proves “cache-hit frames stay correct” (no stale paint) while still allowing paint-only chrome and retained windowed surfaces to update.
+      - Implementation sketch:
+        - New demo: `apps/fret-examples/src/workspace_shell_demo.rs` (wired through `fret-demo` like `docking_demo`).
+        - Use real workspace surfaces: `ecosystem/fret-workspace/src/panes.rs` + `ecosystem/fret-workspace/src/tab_strip.rs`.
+        - Script recording: drive + record via `UiDiagnosticsService` (see `apps/fret-examples/src/docking_demo.rs`).
+        - Stable semantics anchors: tab drag handles + pane roots should expose `test_id` values for scripts.
+      - Script: `tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json`
+      - Builtin suite: `fretboard diag suite workspace-shell-demo --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
+        - Defaults: `--warmup-frames 5`, enables `cache+shell`, and enforces:
+          - `--check-view-cache-reuse-min 1`
+          - `--check-retained-vlist-reconcile-no-notify 1`
+          - `--check-retained-vlist-reconcile-cache-reuse 1`
+          - `--check-retained-vlist-scroll-window-dirty-max 0`
+          - `--check-wheel-scroll workspace-shell-file-tree-node-0`
+          - `--check-stale-paint workspace-shell-file-tree-node-0`
+      - Evidence bundle (cache+shell, release): `target/fret-diag-workspace-shell-demo-tighten2/1769932026789-workspace-shell-demo-tab-drag-and-scroll/bundle.json`
+      - Follow-up (keep-alive bounce; ADR 0192):
+        - Env: `FRET_WORKSPACE_SHELL_FILE_TREE_KEEP_ALIVE=256`
+        - Script: `tools/diag-scripts/workspace-shell-demo-file-tree-bounce-keep-alive.json`
+        - Builtin suite: `fretboard diag suite workspace-shell-demo-file-tree-keep-alive --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
+        - Evidence bundle (cache+shell, release; keep-alive gate enabled): `target/fret-diag/1769956458243-workspace-shell-demo-file-tree-bounce-keep-alive/bundle.json`
+    - [x] Adopt the ui-kit retained file tree component in the workspace shell (or a thin adapter), so eco-009 directly validates workspace integration.
+      - Component: `ecosystem/fret-ui-kit/src/declarative/file_tree.rs` (`file_tree_view_retained_v0`).
+      - Expectation: toggling nodes + scrolling should be handled by retained-host reconcile + paint-only chrome (no parent cache-root rerender).
+    - [x] Capture and link evidence bundles for the workspace shell script under `cache+shell` (release), and mark eco-009 `[x]` when the gate stays green.
+    - [x] Migrate exactly one real surface (not UI Gallery) onto the retained/windowed substrate and add a `diag` script for it.
+      - Target (v0): `apps/fret-examples/src/components_gallery.rs` (file-tree panel).
+      - Scripts:
+        - `tools/diag-scripts/components-gallery-file-tree-window-boundary-scroll.json`
+        - `tools/diag-scripts/components-gallery-file-tree-toggle-and-scroll.json`
+      - Env (recommended): `FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`, `FRET_DIAG=1`.
+      - Note: the torture surface includes an expandable `folder_1` at `TreeItemId=1` so the toggle harness can drive expand/collapse while keeping a large list.
+      - Gate (example): `fretboard diag stats <bundle.json> --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-reconcile-cache-reuse 1 --check-retained-vlist-attach-detach-min 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-stale-paint components-gallery-file-tree-root`
+      - Builtin suite:
+        - `cargo run -p fretboard -- diag suite components-gallery-file-tree --launch -- cargo run -p fret-demo --bin components_gallery --release`
+      - Evidence bundles (suite, view-cache, release):
+        - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829965598-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - `C:\fret-diag-components-gallery-file-tree-suite-2scripts\1769829992147-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862343305-components-gallery-file-tree-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862370728-components-gallery-file-tree-toggle-and-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-file-tree-suite-attach64/1769862397267-components-gallery-file-tree-window-boundary-bounce/bundle.json`
+      - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
+        - window-boundary: `C:\fret-diag-perf-components-gallery-file-tree-boundary\1769830674611-script-step-0022-wheel/bundle.json` (2897/2216/30/717)
+        - toggle+scroll: `C:\fret-diag-perf-components-gallery-file-tree-toggle\1769830707477-script-step-0021-wheel/bundle.json` (2719/2035/26/768)
+    - [x] Migrate one more real surface (table) onto the retained/windowed substrate and add a `diag` suite for it.
+      - Target (v0): `apps/fret-examples/src/components_gallery.rs` (table torture mode).
+      - Scripts:
+        - `tools/diag-scripts/components-gallery-table-window-boundary-scroll.json`
+        - `tools/diag-scripts/components-gallery-table-sort-and-scroll.json`
+        - (keep-alive bounce; ADR 0192): `tools/diag-scripts/components-gallery-table-window-boundary-bounce.json`
+      - Env (recommended): `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` (optional `…_N=50000`), `FRET_EXAMPLES_VIEW_CACHE=1`.
+      - Builtin suite:
+        - `cargo run -p fretboard -- diag suite components-gallery-table --launch -- cargo run -p fret-demo --bin components_gallery --release`
+        - Note: the builtin suite sets `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` automatically (override with `--env`).
+      - Keep-alive suite:
+        - `cargo run -p fretboard -- diag suite components-gallery-table-keep-alive --launch -- cargo run -p fret-demo --bin components_gallery --release`
+        - Default env: `FRET_COMPONENTS_GALLERY_TABLE_TORTURE=1` and `FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE=256` (override with `--env`).
+      - Evidence bundles (suite, view-cache, release):
+        - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833380478-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `C:\fret-diag-components-gallery-table-suite-2scripts3\1769833406244-components-gallery-table-sort-and-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862641667-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-smoke-components-gallery-table-suite-attach64/1769862668739-components-gallery-table-sort-and-scroll/bundle.json`
+        - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-table-nonretained0/1770032466340-components-gallery-table-window-boundary-scroll/bundle.json`
+        - `target/fret-diag-suite-components-gallery-table-nonretained0/1770032494240-components-gallery-table-sort-and-scroll/bundle.json`
+      - Gate evidence (suite-level, retained-vlist):
+        - `target/fret-diag-suite-components-gallery-table-nonretained0/check.vlist_window_shifts_non_retained_max.json`
+      - Evidence (keep-alive bounce; cache+shell, release; keep-alive gate enabled):
+        - `target/fret-diag/1769958870151-components-gallery-table-window-boundary-bounce/bundle.json`
+      - Note: in this multi-script suite, retained-vlist *window-boundary* gates apply only to
+        `components-gallery-table-window-boundary-scroll.json` and `components-gallery-table-window-boundary-bounce.json`
+        (the sort+scroll script is still gated by view-cache reuse + wheel-scroll + stale-paint, etc.).
+      - Note: the suite also enables `--check-vlist-policy-key-stable`, applied only to the window-boundary scripts
+        (policy changes are expected in sort/toggle style scripts).
+      - Note: the suite sets `--check-retained-vlist-attach-detach-max 64` on the window-boundary scripts to catch extreme row churn regressions.
+      - Perf baselines (warmup=5, view-cache, release; worst tick max.us total/layout/prepaint/paint):
+        - window-boundary: `C:\fret-diag-perf-components-gallery-table-boundary\1769833617760-script-step-0018-wheel/bundle.json` (2757/1989/13/755)
+        - sort+scroll: `C:\fret-diag-perf-components-gallery-table-sort\1769833651344-script-step-0011-wheel/bundle.json` (6155/4682/11/1462)
+      - After tuned staged prefetch (warmup=5; `--check-retained-vlist-prefetch-reconciles-min 1`):
+        - window-boundary: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json` (2201/1732/21/448)
+        - sort+scroll: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json` (4413/3249/11/1153)
 
-- [ ] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
-  - Touches: `ecosystem/fret-ui-ai/src/*`.
-  - Done when: append-heavy transcript updates no longer rebuild/relayout the entire history while scrolling, and the harness
-    proves stable paint under view-cache reuse.
-- [~] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
+- [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
+  - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
+  - Done when: append-heavy transcript updates no longer rebuild/relayout the entire history while scrolling, and the harness proves stable paint
+    under view-cache reuse.
+  - Progress (v1):
+    - UI Gallery harness: `PAGE_AI_TRANSCRIPT_TORTURE` with root test id `ui-gallery-ai-transcript-root`.
+      - Note: the harness uses a bounded viewport (`h_px(Px(460.0))`) so VirtualList window telemetry is meaningful.
+    - Script: `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`.
+    - Gate (suite): `fretboard diag suite ui-gallery-ai-transcript-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-view-cache-reuse-min 10 --check-wheel-scroll ui-gallery-ai-transcript-row-0 --check-stale-paint ui-gallery-ai-transcript-row-0 ...`
+      - Defaults: enables view-cache + shell and sets `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`.
+    - Evidence bundle (cache+shell): `target/fret-diag/1769689580999-ui-gallery-ai-transcript-torture-scroll/bundle.json`.
+- [x] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
-  - Evidence: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json ...` top-10 bundles show different callsite/root pairing.
+  - Instrumentation (v2): bundles now export bounded `debug.notify_requests` with `notify()` callsite attribution
+    (file/line/col) so notify hotspots are gateable.
+    - Anchors: `crates/fret-ui/src/widget.rs` (`EventCx::notify`), `crates/fret-ui/src/tree/mod.rs` (`UiDebugNotifyRequest`),
+      `crates/fret-ui/src/tree/dispatch.rs` (recording), `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (bundle export).
+    - Gate: `fretboard diag stats <bundle> --check-notify-hotspot-file-max <file> <max>` writes `check.notify_hotspots.json`
+      next to the bundle (even on failure).
+      - Anchors: `apps/fretboard/src/diag/stats.rs`, `apps/fretboard/src/diag/mod.rs`.
   - Baseline note (pre-v1): worst-tick bundles were layout-dominated and frequently attributed dirty views to
     `UiDebugInvalidationDetail::notify_call` from `crates/fret-ui/src/declarative/host_widget/event/pressable.rs:*`.
   - Progress (v1):
@@ -850,8 +1445,15 @@ topics (if/when we implement them):
         - Note: the worst “steady-state” tick in this bundle is layout-dominated, but `diag stats --sort time` no longer reports a dirty-view source
           attributed to `UiDebugInvalidationDetail::notify_call` from `pressable.rs:*`.
   - Done when:
-    - VirtualList torture no longer lists `pressable.rs:*` as a top `notify_call` dirtiness source in warmup-ranked top bundles,
-      and the remaining `notify_call` sources are either required (explicit hooks) or attributable to a smaller cache boundary.
+    - Diagnostics bundles export bounded `debug.notify_requests` with file/line/col attribution for `notify()`.
+    - `fretboard diag stats <bundle> --check-notify-hotspot-file-max crates/fret-ui/src/declarative/host_widget/event/pressable.rs 0`
+      passes for the warmup-ranked worst bundles under the chosen harness/suite.
+    - On failure, the gate writes `check.notify_hotspots.json` next to the bundle (with bounded offender samples and a stable aggregation key).
+  - Evidence (2026-02-03; cache+shell; `FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1`):
+    - Harness: `cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-virtual-list-torture.json --warmup-frames 5 --top 10 --sort time --dir target/fret-diag-perf-notify-hotspots --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS=1 --launch -- cargo run -p fret-ui-gallery --release`
+    - Worst bundle: `target/fret-diag-perf-notify-hotspots/1770107782295-script-step-0011-click/bundle.json`
+    - Gate output: `target/fret-diag-perf-notify-hotspots/1770107782295-script-step-0011-click/check.notify_hotspots.json` (`matched_notify_requests=0`, `max_count=0`)
+    - Suite default: `fretboard diag suite ui-gallery` now defaults the `pressable.rs=0` notify-hotspot budget for `ui-gallery-virtual-list-torture.json` (unless overridden via CLI).
 - [x] GPUI-MVP5-perf-003 Explain and de-risk `scroll_handle_layout` dirtiness when `window_mismatch=false`.
   - Goal: eliminate “looks stale / updates a frame late” and “unexpected relayout” classes of bugs by making scroll-handle invalidation explainable and minimal.
   - Hypothesis: some frames mark scroll-handle changes as `Layout` even when offset is unchanged (e.g. content size changes, viewport changes, or a too-eager upgrade path).

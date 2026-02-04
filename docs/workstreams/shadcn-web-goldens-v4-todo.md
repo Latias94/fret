@@ -39,12 +39,18 @@ Tracking format:
 - 2026-02-02: added a Menubar wheel anchor-stability gate on `menubar-demo.vp375x240.open` (no scroll range; wheel must not move overlay).
 - 2026-02-02: added a NavigationMenu wheel "no-op" gate (wheel over a non-scrollable portal surface must not jitter trigger/content anchor) in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`.
 - 2026-02-03: added a Select wheel gate: wheeling outside the listbox must not scroll the underlay (modal barrier), and wheeling inside the listbox must scroll options without drifting the anchored panel (`ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`).
+- 2026-02-03: fixed the web golden extractor to support hover-only scripted steps (`hoverNoWait=...`) so hover highlight variants don't deadlock waiting for new portal surfaces; regenerated `*.highlight-first-vp375x240.open.json` for `dropdown-menu-demo`, `context-menu-demo`, and `menubar-demo`.
 - [x] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
 - 2026-02-03: added `button-group-demo.destructive-focus` open golden + idle/focused destructive item chrome gates (light/dark) to lock in `bg-destructive/10` vs idle behavior for DropdownMenu.
 - 2026-02-03: added `menubar-demo.destructive-idle` + `menubar-demo.destructive-focus-first` open goldens and matched Menubar destructive idle/focused chrome (light/dark). (NavigationMenu has no destructive variant in upstream v4.)
 - [~] SWG-ovl-030 Add “constrained height” variants for remaining overlay pages that currently only gate default viewport.
   - 2026-02-03: added `vp375x240` open goldens + gates for `hover-card-demo`, `combobox-dropdown-menu`, `command-dialog`, and `select-scrollable` (treat mobile constrained viewports as first-class overlay behavior).
+  - 2026-02-03: added `vp375x240` open goldens + placement/insets gates for modal overlays: `dialog-demo`, `sheet-demo`, `alert-dialog-demo`, `drawer-demo`, and `drawer-dialog`.
+  - 2026-02-03: added `vp375x240` open goldens + menu height/item chrome gates for `dropdown-menu-checkboxes`, `dropdown-menu-radio-group`, and `dropdown-menu-dialog`.
+  - 2026-02-03: added `vp375x240` open goldens + menu/listbox height gates for `item-dropdown`, `breadcrumb-dropdown`, `combobox-popover`, and `combobox-responsive`.
+  - 2026-02-03: added `vp375x240` open goldens + gates for `mode-toggle` and `sheet-side` (top/right/bottom/left), treating Sheet side widths/edge insets as a conformance outcome under constrained mobile height.
+  - 2026-02-03: added `vp375x240` open goldens + placement/menu-height gates for `button-group-demo` (DropdownMenu in a tight horizontal control cluster).
 
 ---
 
@@ -64,6 +70,10 @@ Tracking format:
 - [~] SWG-cal-010 Add selection/hover/disabled state chrome gates on month grids across a constrained viewport.
 - [x] SWG-cal-020 Add nested overlay “stacking order + clamp + scroll” gates (Select inside DatePicker popover).
   - Evidence: `date-picker-with-presets.select-open-vp375x160.open` + `date-picker-with-presets.select-open-vp375x160-scrolled-80.open` + placement + listbox panel-size gate + paint-order gate + scroll parity gate.
+- 2026-02-03: added a DatePicker popover boundary gate: Calendar root background must match web inside PopoverContent scope (`date-picker-demo.open`, light/dark) to lock in `[[data-slot=popover-content]_&]:bg-transparent` behavior.
+- 2026-02-03: moved Calendar range selection background gates into a targeted calendar suite (paint-level start/middle/end backgrounds for `calendar-04` and `calendar-04.vp375x320`, light/dark).
+- 2026-02-03: added deterministic hover goldens + hover background gates for Calendar multiple/range (`calendar-03.hover-day-june-11*`, `calendar-04.hover-day-june-5*`).
+- 2026-02-03: added deterministic keyboard-focus goldens + focus-visible ring gates for Calendar multiple/range (`calendar-03.focus-kbd-selected*`, `calendar-04.focus-kbd-range-start*`).
 - 2026-02-01: fixed Radix popper “size()” available-height metrics to apply collision padding/boundary when computing `--radix-*-content-available-height` equivalents (unblocks strict max-height parity for `SelectPosition::Popper` under constrained viewports).
 - 2026-02-01: hardened the overlay-chrome panel-size matcher to prefer semantics-bounded chrome quads (then fallback by size) to avoid nested-overlay ambiguity (Popover + ListBox in the same scene).
 - 2026-01-31: added `date-picker-with-presets.preset-tomorrow-vp375x240` open golden + placement gate (Select interaction + deterministic date selection).

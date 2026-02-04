@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-01-30
+Last updated: 2026-02-03
 
 This is the checkbox tracker companion to:
 
@@ -39,9 +39,11 @@ Legend:
 
 ### DOM element lifecycle
 
-- [~] Create the hidden textarea element (currently global; TODO per-window + canvas overlay attachment).
+- [x] Create the hidden textarea element (tracked per `AppWindowId` and mounted into a per-canvas wrapper/overlay layer).
 - [x] Define focus/blur rules and map them to `Effect::ImeAllow`.
+- [x] Web runner: flush `Effect::ImeAllow` on pointer-down (user activation) to allow synchronous textarea focus.
 - [x] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
+- [x] Load bundled default fonts during web renderer adoption (avoid “first frame” tofu; keep `TextAddFonts` for user-provided fonts).
 
 ### Event translation
 
@@ -59,6 +61,11 @@ Legend:
 
 - [x] Counters: last `inputType`, whether suppressed, last composing state.
 - [x] Counters: last caret-rect anchor and whether positioning was attempted.
+- [x] Opt-in browser console logging for IME focus/cursor-area updates (`?ime_debug=1` / `window.__FRET_IME_DEBUG=true`).
+- [x] Record a small `recent_events` ring buffer for ordering diagnostics (`beforeinput`/`input`/`composition*`/cursor area updates).
+- [x] Surface `WindowTextInputSnapshotService` + `WindowInputContextService` snapshots in the UI Gallery harness panel for cross-layer debugging.
+- [x] Surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel for font/tofu debugging.
+- [x] Add a UI Gallery “Dump layout…” button that writes a Taffy subtree dump to `.fret/taffy-dumps` for nested scroll/clip/layout debugging.
 
 ### Harness
 
@@ -67,7 +74,8 @@ Legend:
   - commit,
   - backspace/arrows,
   - no double-insert on `compositionend`.
-- [ ] Add a validation note for glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
+- [x] Validate glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
+- [!] Deferred: IME enable/focus is still flaky on some browsers/dev setups (activation-window timing). Keep `?demo=ui_gallery&page=web_ime_harness` as the repro surface and revisit later.
 
 ---
 
@@ -85,13 +93,16 @@ Legend:
 
 - [x] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
 - [x] Ensure double-click selects word and triple-click selects logical line (including trailing newline) (ADR 0151 + ADR 0194).
-- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor).
+- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added).
 
 ### Tests
 
 - [~] Unicode word boundaries: Latin/CJK/emoji (seed tests added; expand coverage).
 - [~] Identifier boundaries: underscores, digits, mixed scripts, punctuation (seed tests added; expand coverage).
+- Note: expanded coverage in `crates/fret-ui/src/text_edit.rs` (mixed Latin/CJK/emoji; identifier punctuation).
 - [~] Double/triple click selection under scroll offsets and transforms (existing SelectableText tests; add mode coverage and TextInput/TextArea click selection).
+  - Done: selectable text double-click respects `WindowTextBoundaryModeService` under `render_transform` and `Scroll` offset.
+  - Done: text input + text area double-click respect `WindowTextBoundaryModeService` under `render_transform` and `Scroll` offset.
 
 Evidence anchors:
 
@@ -102,6 +113,8 @@ Evidence anchors:
 - `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
+- `crates/fret-ui/src/declarative/host_widget.rs` / `crates/fret-ui/src/text_input/bound.rs` / `crates/fret-ui/src/text_area/bound.rs` (platform text input delegation for declarative widgets)
+- `crates/fret-ui/src/declarative/tests/interactions.rs` (scroll/transform double-click selection coverage for TextInput/TextArea)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
@@ -119,19 +132,29 @@ Evidence anchors:
 ### Text preparation + caching
 
 - [x] Prepare text per visible display row only (no monolithic document blob).
-- [x] Define row cache keys and budgets (viewport-bounded, LRU-ish).
+- [~] Define row cache keys and budgets (viewport-bounded, LRU-ish) (row text + syntax spans are bounded; text system cache/telemetry alignment pending).
+- [x] Replace the code editor monospace "cell width" heuristic with cached renderer caret stops for pointer hit-testing, caret, and selection geometry (keep the heuristic as a fallback until every backend implements caret stops).
+- [x] Make vertical caret movement preserve a pixel `preferred_x` (per-row caret stops), not the last display column.
+- [x] Draw selection using `TextService::selection_rects` when a row has a `TextBlobId` (fallback to caret stops / cell width).
 - [x] Ensure theme-only changes remain paint-only (no reshaping).
 
 ### Input/IME integration
 
 - [x] Inline preedit rendering (best-effort; underline + optional range highlight for v1).
 - [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
+- [x] Use renderer text caret rect metrics (caret y/height) when computing `ImeSetCursorArea` for editor-grade surfaces (fallback to row height when unavailable).
 - [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
+- [x] Web/WASM: bind focus/key/command/pointer hooks to the `TextInputRegion` element id scope (not the outer keyed scope) so input routing attaches to the focused region.
+- [x] Web/WASM: emit `ImeAllow` during pointer-down focus for editor-grade `TextInputRegion` surfaces (user-activation friendly textarea focusing).
+- [x] UiTree: treat focused declarative `TextInput` / `TextArea` / `TextInputRegion` as text input when computing `focus_is_text_input` (prevents stale host-widget flags from disabling IME).
 
 ### Harness
 
 - [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
 - [x] Add a “scroll stability / no stale paint” torture harness entry (ui-gallery style).
+- [x] Fix the “no stale lines” torture failure (scroll-driven window changes must not show stale row text).
+  - Mechanism: `ScrollProps.windowed_paint` forces view-cache rerender on scroll offset changes for windowed paint surfaces.
+  - Paint correctness: `windowed_rows_surface` now anchors row rects at the canvas bounds origin to avoid “left clipped / prefixes missing”.
 
 Evidence anchors:
 
@@ -148,7 +171,7 @@ Evidence anchors:
 
 ## M4 — Buffer Model + Undo Hooks
 
-- [~] Choose v1 buffer structure (rope / piece table / hybrid) (seed `TextBuffer` exists; internal structure decision pending).
+- [x] Choose v1 buffer structure: rope (`ropey`) while preserving the UTF-8 byte-index contract.
 - [x] Lock edit op vocabulary (insert/delete/replace) in UTF-8 byte indices.
 - [x] Lock transaction hooks (begin/update/commit/cancel) compatible with ADR 0136.
 - [~] Lock document identity (URI-like) for multi-document workflows.
@@ -174,15 +197,35 @@ Evidence anchors:
 
 ---
 
-## M6 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
+## M6 — Semantics (a11y) and selection state
 
-- [ ] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
+- [~] Define semantics role for the editor surface (current baseline: `TextInputRegion` emits `SemanticsRole::TextField`).
+- [~] Ensure selection and composition ranges follow ADR 0071 rules (baseline: app-provided UTF-8 ranges within an app-provided value; code editor handles `SetTextSelection` best-effort within its windowed value).
+- [x] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (documented in workstream; v1 chooses stub/viewport semantics).
+
+---
+
+## M7 — Diagnostics and perf attribution
+
+- [x] Add bundle-friendly counters (v1 baseline):
+  - visible rows + overscan (windowed surfaces),
+  - editor-local cache hits/misses (row text + syntax).
+- [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+- [x] Export editor/IME harness state into diagnostics snapshots (ui-gallery app snapshot + web IME bridge snapshot; enables “single artifact” repros).
+- [ ] Add renderer-level churn counters (next):
+  - text blob churn and glyph atlas pressure (likely from renderer/canvas caches).
+
+---
+
+## M8 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
+
+- [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels) (column-based baseline; pixel-accurate caret/selection/hit-test is migrating to renderer caret stops).
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 
 ---
 
-## M7 — Retained Host / Composable Rows (only if required)
+## M9 — Retained Host / Composable Rows (only if required)
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.

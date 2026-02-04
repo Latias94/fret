@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
@@ -553,7 +553,10 @@ impl<H: UiHost> UiTree<H> {
         if self.focus == Some(requested_focus) {
             return false;
         }
-        if !self.node_in_any_layer(requested_focus, active_roots) {
+        // Focus gating should be resilient to temporarily-broken parent pointers under retained /
+        // view-cache-reused subtrees. Use reachability from active layer roots via child edges as
+        // the authoritative layer membership check.
+        if !self.is_reachable_from_any_root_via_children(requested_focus, active_roots) {
             return false;
         }
 
@@ -561,6 +564,39 @@ impl<H: UiHost> UiTree<H> {
             return true;
         };
         self.is_descendant(trap_root, requested_focus)
+    }
+
+    fn is_reachable_from_any_root_via_children(&self, target: NodeId, roots: &[NodeId]) -> bool {
+        if roots.is_empty() {
+            return false;
+        }
+        if roots.iter().any(|&root| root == target) {
+            return true;
+        }
+
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = Vec::new();
+        for &root in roots {
+            if visited.insert(root) {
+                stack.push(root);
+            }
+        }
+
+        while let Some(node) = stack.pop() {
+            let Some(entry) = self.nodes.get(node) else {
+                continue;
+            };
+            for &child in &entry.children {
+                if child == target {
+                    return true;
+                }
+                if visited.insert(child) {
+                    stack.push(child);
+                }
+            }
+        }
+
+        false
     }
 
     fn dispatch_event_to_node_chain(
@@ -595,6 +631,7 @@ impl<H: UiHost> UiTree<H> {
                     requested_focus,
                     requested_capture,
                     notify_requested,
+                    notify_requested_location,
                     stop_propagation,
                 ) = self.with_widget_mut(node_id, |widget, tree| {
                     let (children, bounds) = tree
@@ -621,6 +658,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture: None,
                         requested_cursor: None,
                         notify_requested: false,
+                        notify_requested_location: None,
                         stop_propagation: false,
                     };
                     widget.event(&mut cx, &event_for_node);
@@ -629,6 +667,7 @@ impl<H: UiHost> UiTree<H> {
                         cx.requested_focus,
                         cx.requested_capture,
                         cx.notify_requested,
+                        cx.notify_requested_location,
                         cx.stop_propagation,
                     )
                 });
@@ -652,6 +691,11 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    self.debug_record_notify_request(
+                        app.frame_id(),
+                        node_id,
+                        notify_requested_location,
+                    );
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
                         node_id,
@@ -726,6 +770,7 @@ impl<H: UiHost> UiTree<H> {
                 requested_focus,
                 requested_capture,
                 notify_requested,
+                notify_requested_location,
                 stop_propagation,
                 parent,
             ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -753,6 +798,7 @@ impl<H: UiHost> UiTree<H> {
                     requested_capture: None,
                     requested_cursor: None,
                     notify_requested: false,
+                    notify_requested_location: None,
                     stop_propagation: false,
                 };
                 widget.event(&mut cx, event);
@@ -761,6 +807,7 @@ impl<H: UiHost> UiTree<H> {
                     cx.requested_focus,
                     cx.requested_capture,
                     cx.notify_requested,
+                    cx.notify_requested_location,
                     cx.stop_propagation,
                     parent,
                 )
@@ -785,6 +832,11 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                self.debug_record_notify_request(
+                    app.frame_id(),
+                    node_id,
+                    notify_requested_location,
+                );
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     node_id,
@@ -923,7 +975,7 @@ impl<H: UiHost> UiTree<H> {
             self.focus = None;
         }
 
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
@@ -1643,6 +1695,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture,
                         requested_cursor,
                         notify_requested,
+                        notify_requested_location,
                         stop_propagation,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
                         let (children, bounds) = tree
@@ -1669,6 +1722,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture: None,
                             requested_cursor: None,
                             notify_requested: false,
+                            notify_requested_location: None,
                             stop_propagation: false,
                         };
                         widget.event_capture(&mut cx, event_for_node);
@@ -1678,6 +1732,7 @@ impl<H: UiHost> UiTree<H> {
                             cx.requested_capture,
                             cx.requested_cursor,
                             cx.notify_requested,
+                            cx.notify_requested_location,
                             cx.stop_propagation,
                         )
                     });
@@ -1694,6 +1749,11 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        self.debug_record_notify_request(
+                            app.frame_id(),
+                            node_id,
+                            notify_requested_location,
+                        );
                         self.mark_invalidation_with_source(
                             node_id,
                             Invalidation::Paint,
@@ -1761,6 +1821,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture,
                         requested_cursor,
                         notify_requested,
+                        notify_requested_location,
                         stop_propagation,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
                         let (children, bounds) = tree
@@ -1787,6 +1848,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture: None,
                             requested_cursor: None,
                             notify_requested: false,
+                            notify_requested_location: None,
                             stop_propagation: false,
                         };
                         widget.event(&mut cx, &event_for_node);
@@ -1804,6 +1866,7 @@ impl<H: UiHost> UiTree<H> {
                             cx.requested_capture,
                             cx.requested_cursor,
                             cx.notify_requested,
+                            cx.notify_requested_location,
                             cx.stop_propagation,
                         )
                     });
@@ -1820,6 +1883,11 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        self.debug_record_notify_request(
+                            app.frame_id(),
+                            node_id,
+                            notify_requested_location,
+                        );
                         self.mark_invalidation_with_source(
                             node_id,
                             Invalidation::Paint,
@@ -1900,6 +1968,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture,
                             requested_cursor,
                             notify_requested,
+                            notify_requested_location,
                             stop_propagation,
                         ) = self.with_widget_mut(node_id, |widget, tree| {
                             let (children, bounds) = tree
@@ -1926,6 +1995,7 @@ impl<H: UiHost> UiTree<H> {
                                 requested_capture: None,
                                 requested_cursor: None,
                                 notify_requested: false,
+                                notify_requested_location: None,
                                 stop_propagation: false,
                             };
                             widget.event_capture(&mut cx, event);
@@ -1935,6 +2005,7 @@ impl<H: UiHost> UiTree<H> {
                                 cx.requested_capture,
                                 cx.requested_cursor,
                                 cx.notify_requested,
+                                cx.notify_requested_location,
                                 cx.stop_propagation,
                             )
                         });
@@ -1951,6 +2022,11 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            self.debug_record_notify_request(
+                                app.frame_id(),
+                                node_id,
+                                notify_requested_location,
+                            );
                             self.mark_invalidation_with_source(
                                 node_id,
                                 Invalidation::Paint,
@@ -2016,6 +2092,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture,
                             requested_cursor,
                             notify_requested,
+                            notify_requested_location,
                             stop_propagation,
                         ) = self.with_widget_mut(node_id, |widget, tree| {
                             let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
@@ -2044,6 +2121,7 @@ impl<H: UiHost> UiTree<H> {
                                 requested_capture: None,
                                 requested_cursor: None,
                                 notify_requested: false,
+                                notify_requested_location: None,
                                 stop_propagation: false,
                             };
                             widget.event(&mut cx, event);
@@ -2053,6 +2131,7 @@ impl<H: UiHost> UiTree<H> {
                                 cx.requested_capture,
                                 cx.requested_cursor,
                                 cx.notify_requested,
+                                cx.notify_requested_location,
                                 cx.stop_propagation,
                             )
                         });
@@ -2069,6 +2148,11 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            self.debug_record_notify_request(
+                                app.frame_id(),
+                                node_id,
+                                notify_requested_location,
+                            );
                             self.mark_invalidation_with_source(
                                 node_id,
                                 Invalidation::Paint,
@@ -2130,6 +2214,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture,
                         requested_cursor,
                         notify_requested,
+                        notify_requested_location,
                         stop_propagation,
                         parent,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -2158,6 +2243,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture: None,
                             requested_cursor: None,
                             notify_requested: false,
+                            notify_requested_location: None,
                             stop_propagation: false,
                         };
                         widget.event(&mut cx, event);
@@ -2167,6 +2253,7 @@ impl<H: UiHost> UiTree<H> {
                             cx.requested_capture,
                             cx.requested_cursor,
                             cx.notify_requested,
+                            cx.notify_requested_location,
                             cx.stop_propagation,
                             parent,
                         )
@@ -2183,6 +2270,11 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        self.debug_record_notify_request(
+                            app.frame_id(),
+                            node_id,
+                            notify_requested_location,
+                        );
                         self.mark_invalidation_with_source(
                             node_id,
                             Invalidation::Paint,
@@ -2454,7 +2546,7 @@ impl<H: UiHost> UiTree<H> {
                 repeat,
             } = event
         {
-            let focus_is_text_input = self.focus_is_text_input();
+            let focus_is_text_input = self.focus_is_text_input(app);
             let input_ctx_for_shortcuts = InputContext {
                 focus_is_text_input,
                 ..input_ctx.clone()
@@ -2590,7 +2682,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.set_ime_allowed(app, focus_is_text_input);
 
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
@@ -2669,8 +2761,8 @@ impl<H: UiHost> UiTree<H> {
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             for (node_id, event_for_node) in chain {
-                let (invalidations, notify_requested, _parent) =
-                    self.with_widget_mut(node_id, |widget, tree| {
+                let (invalidations, notify_requested, notify_requested_location, _parent) = self
+                    .with_widget_mut(node_id, |widget, tree| {
                         let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                         let (children, bounds) = tree
                             .nodes
@@ -2693,10 +2785,16 @@ impl<H: UiHost> UiTree<H> {
                             bounds,
                             invalidations: Vec::new(),
                             notify_requested: false,
+                            notify_requested_location: None,
                         };
                         widget.event_observer(&mut cx, &event_for_node);
 
-                        (cx.invalidations, cx.notify_requested, parent)
+                        (
+                            cx.invalidations,
+                            cx.notify_requested,
+                            cx.notify_requested_location,
+                            parent,
+                        )
                     });
 
                 if !invalidations.is_empty() || notify_requested {
@@ -2713,6 +2811,11 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    self.debug_record_notify_request(
+                        app.frame_id(),
+                        node_id,
+                        notify_requested_location,
+                    );
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
                         node_id,
@@ -2731,8 +2834,8 @@ impl<H: UiHost> UiTree<H> {
 
         let mut node_id = start;
         loop {
-            let (invalidations, notify_requested, parent) =
-                self.with_widget_mut(node_id, |widget, tree| {
+            let (invalidations, notify_requested, notify_requested_location, parent) = self
+                .with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let (children, bounds) = tree
                         .nodes
@@ -2755,10 +2858,16 @@ impl<H: UiHost> UiTree<H> {
                         bounds,
                         invalidations: Vec::new(),
                         notify_requested: false,
+                        notify_requested_location: None,
                     };
                     widget.event_observer(&mut cx, event);
 
-                    (cx.invalidations, cx.notify_requested, parent)
+                    (
+                        cx.invalidations,
+                        cx.notify_requested,
+                        cx.notify_requested_location,
+                        parent,
+                    )
                 });
 
             if !invalidations.is_empty() || notify_requested {
@@ -2775,6 +2884,11 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                self.debug_record_notify_request(
+                    app.frame_id(),
+                    node_id,
+                    notify_requested_location,
+                );
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     node_id,

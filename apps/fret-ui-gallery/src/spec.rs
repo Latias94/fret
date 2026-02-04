@@ -96,6 +96,7 @@ pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
+pub(crate) const PAGE_UI_KIT_LIST_TORTURE: &str = "ui_kit_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";
 pub(crate) const PAGE_CODE_EDITOR_TORTURE: &str = "code_editor_torture";
@@ -111,6 +112,10 @@ pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
     "windowed_rows_surface_interactive_torture";
 pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
+pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
+pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
+pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
+pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
 pub(crate) const PAGE_CARD: &str = "card";
 pub(crate) const PAGE_BADGE: &str = "badge";
@@ -206,6 +211,7 @@ pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
+pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_kit_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
 pub(crate) const CMD_NAV_CODE_EDITOR_MVP: &str = "ui_gallery.nav.select.code_editor_mvp";
 pub(crate) const CMD_NAV_CODE_EDITOR_TORTURE: &str = "ui_gallery.nav.select.code_editor_torture";
@@ -223,6 +229,12 @@ pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_interactive_torture";
 pub(crate) const CMD_NAV_DATA_TABLE_TORTURE: &str = "ui_gallery.nav.select.data_table_torture";
 pub(crate) const CMD_NAV_TREE_TORTURE: &str = "ui_gallery.nav.select.tree_torture";
+pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
+    "ui_gallery.nav.select.table_retained_torture";
+pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
+    "ui_gallery.nav.select.ai_transcript_torture";
+pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
+pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
 pub(crate) const CMD_NAV_CARD: &str = "ui_gallery.nav.select.card";
 pub(crate) const CMD_NAV_BADGE: &str = "ui_gallery.nav.select.badge";
@@ -364,6 +376,9 @@ pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
 pub(crate) const CMD_CLIPBOARD_COPY_NOTES: &str = "ui_gallery.clipboard.copy_notes";
 
+pub(crate) const CMD_CODE_EDITOR_LOAD_FONTS: &str = "ui_gallery.code_editor.load_fonts";
+pub(crate) const CMD_CODE_EDITOR_DUMP_TAFFY: &str = "ui_gallery.code_editor.dump_taffy";
+
 #[derive(Clone, Copy)]
 pub(crate) struct PageSpec {
     pub(crate) id: &'static str,
@@ -449,6 +464,22 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["virtual_list", "performance", "gpui-parity", "harness"],
                 docs::DOC_VIRTUAL_LIST_TORTURE,
                 docs::USAGE_VIRTUAL_LIST_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_UI_KIT_LIST_TORTURE,
+                "List (UI Kit Torture)",
+                "List / UI Kit Retained Virtualization Harness",
+                "fret-ui-kit (retained-host list surface)",
+                CMD_NAV_UI_KIT_LIST_TORTURE,
+                &[
+                    "list",
+                    "virtual_list",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_UI_KIT_LIST_TORTURE,
+                docs::USAGE_UI_KIT_LIST_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CODE_VIEW_TORTURE,
@@ -645,6 +676,78 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_TREE_TORTURE,
                 docs::USAGE_TREE_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_TABLE_RETAINED_TORTURE,
+                "Table (Retained Torture)",
+                "UI Kit Table / Retained Host Harness",
+                "fret-ui-kit (virt-003 retained table v0)",
+                CMD_NAV_TABLE_RETAINED_TORTURE,
+                &[
+                    "table",
+                    "virtualized",
+                    "retained",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_TABLE_RETAINED_TORTURE,
+                docs::USAGE_TABLE_RETAINED_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_AI_TRANSCRIPT_TORTURE,
+                "AI Transcript (Torture)",
+                "AI Transcript / Long Conversation Harness",
+                "fret-ui-ai (conversation surface)",
+                CMD_NAV_AI_TRANSCRIPT_TORTURE,
+                &[
+                    "ai",
+                    "chat",
+                    "conversation",
+                    "scroll",
+                    "virtualized",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_AI_TRANSCRIPT_TORTURE,
+                docs::USAGE_AI_TRANSCRIPT_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_INSPECTOR_TORTURE,
+                "Inspector (Torture)",
+                "Inspector / Property List Harness",
+                "virtualized property list (retained host)",
+                CMD_NAV_INSPECTOR_TORTURE,
+                &[
+                    "inspector",
+                    "properties",
+                    "outline",
+                    "virtualized",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_INSPECTOR_TORTURE,
+                docs::USAGE_INSPECTOR_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_FILE_TREE_TORTURE,
+                "File Tree (Torture)",
+                "File Tree / Outline Harness",
+                "virtualized tree rows (retained host)",
+                CMD_NAV_FILE_TREE_TORTURE,
+                &[
+                    "file",
+                    "tree",
+                    "outline",
+                    "virtualized",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_FILE_TREE_TORTURE,
+                docs::USAGE_FILE_TREE_TORTURE,
             ),
         ],
     },

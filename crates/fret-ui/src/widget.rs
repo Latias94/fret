@@ -24,6 +24,13 @@ pub enum Invalidation {
     HitTestOnly,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UiSourceLocation {
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub services: &'a mut dyn UiServices,
@@ -42,6 +49,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub requested_capture: Option<Option<NodeId>>,
     pub requested_cursor: Option<fret_core::CursorIcon>,
     pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
     pub stop_propagation: bool,
 }
 
@@ -120,8 +128,17 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     ///
     /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
     /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
     pub fn notify(&mut self) {
         self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 
     pub fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
@@ -149,6 +166,7 @@ pub struct ObserverCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
 }
 
 impl<'a, H: UiHost> ObserverCx<'a, H> {
@@ -183,8 +201,17 @@ impl<'a, H: UiHost> ObserverCx<'a, H> {
     ///
     /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
     /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
     pub fn notify(&mut self) {
         self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 }
 
@@ -524,6 +551,18 @@ pub struct PrepaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    pub fn set_output<T: std::any::Any>(&mut self, value: T) {
+        self.tree.set_prepaint_output(self.node, value);
+    }
+
+    pub fn output<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.prepaint_output(self.node)
+    }
+
+    pub fn output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.prepaint_output_mut(self.node)
+    }
+
     /// Mark an invalidation on `node` for the next frame.
     ///
     /// Prefer `Invalidation::Paint` / `Invalidation::HitTest` here. Invalidating `Layout` from
@@ -535,6 +574,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: Some(node),
                 kind: crate::tree::UiDebugPrepaintActionKind::Invalidate,
                 invalidation: Some(kind),
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         self.tree.invalidate_with_detail(
@@ -559,6 +601,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: None,
                 kind: crate::tree::UiDebugPrepaintActionKind::RequestRedraw,
                 invalidation: None,
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         let Some(window) = self.window else {
@@ -579,6 +624,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: Some(self.node),
                 kind: crate::tree::UiDebugPrepaintActionKind::RequestAnimationFrame,
                 invalidation: Some(Invalidation::Paint),
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
@@ -613,6 +661,14 @@ pub struct PaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
+    pub fn prepaint_output<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.prepaint_output(self.node)
+    }
+
+    pub fn prepaint_output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.prepaint_output_mut(self.node)
+    }
+
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Paint);
         Theme::global(&*self.app)

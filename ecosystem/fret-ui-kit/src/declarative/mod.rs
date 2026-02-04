@@ -8,6 +8,7 @@ pub mod collapsible_motion;
 pub mod collection_semantics;
 pub mod controllable_state;
 pub mod dismissible;
+pub mod file_tree;
 pub mod focus_scope;
 pub mod form;
 #[cfg(feature = "recipes")]
