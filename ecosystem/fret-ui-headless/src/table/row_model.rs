@@ -1579,6 +1579,140 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    fn header_groups_for_sizing(&self, header_id: &str) -> Vec<super::HeaderGroupSnapshot> {
+        if header_id.starts_with("left_") {
+            return self.left_header_groups();
+        }
+        if header_id.starts_with("center_") {
+            return self.center_header_groups();
+        }
+        if header_id.starts_with("right_") {
+            return self.right_header_groups();
+        }
+        self.header_groups()
+    }
+
+    /// TanStack-aligned: `header.getSize()` for header groups (including placeholder headers).
+    pub fn header_size(&self, header_id: &str) -> Option<f32> {
+        let groups = self.header_groups_for_sizing(header_id);
+        let mut by_id: HashMap<Arc<str>, super::HeaderSnapshot> = HashMap::new();
+        for g in &groups {
+            for h in &g.headers {
+                by_id.insert(h.id.clone(), h.clone());
+            }
+        }
+
+        fn size_for<'a, TData>(
+            table: &Table<'a, TData>,
+            by_id: &HashMap<Arc<str>, super::HeaderSnapshot>,
+            cache: &mut HashMap<Arc<str>, f32>,
+            id: &Arc<str>,
+        ) -> f32 {
+            if let Some(v) = cache.get(id) {
+                return *v;
+            }
+
+            let Some(h) = by_id.get(id) else {
+                cache.insert(id.clone(), 0.0);
+                return 0.0;
+            };
+
+            let size = if h.sub_header_ids.is_empty() {
+                table
+                    .column(h.column_id.as_ref())
+                    .map(|c| super::resolved_column_size(&table.state.column_sizing, c))
+                    .unwrap_or(0.0)
+            } else {
+                let mut sum = 0.0;
+                for child in &h.sub_header_ids {
+                    sum += size_for(table, by_id, cache, child);
+                }
+                sum
+            };
+
+            cache.insert(id.clone(), size);
+            size
+        }
+
+        let id = Arc::<str>::from(header_id);
+        if !by_id.contains_key(&id) {
+            return None;
+        }
+        let mut cache: HashMap<Arc<str>, f32> = HashMap::new();
+        Some(size_for(self, &by_id, &mut cache, &id))
+    }
+
+    /// TanStack-aligned: `header.getStart()` computed within its header group.
+    pub fn header_start(&self, header_id: &str) -> Option<f32> {
+        let groups = self.header_groups_for_sizing(header_id);
+        if groups.is_empty() {
+            return None;
+        }
+
+        let mut by_id: HashMap<Arc<str>, super::HeaderSnapshot> = HashMap::new();
+        for g in &groups {
+            for h in &g.headers {
+                by_id.insert(h.id.clone(), h.clone());
+            }
+        }
+
+        fn size_for<'a, TData>(
+            table: &Table<'a, TData>,
+            by_id: &HashMap<Arc<str>, super::HeaderSnapshot>,
+            cache: &mut HashMap<Arc<str>, f32>,
+            id: &Arc<str>,
+        ) -> f32 {
+            if let Some(v) = cache.get(id) {
+                return *v;
+            }
+
+            let Some(h) = by_id.get(id) else {
+                cache.insert(id.clone(), 0.0);
+                return 0.0;
+            };
+
+            let size = if h.sub_header_ids.is_empty() {
+                table
+                    .column(h.column_id.as_ref())
+                    .map(|c| super::resolved_column_size(&table.state.column_sizing, c))
+                    .unwrap_or(0.0)
+            } else {
+                let mut sum = 0.0;
+                for child in &h.sub_header_ids {
+                    sum += size_for(table, by_id, cache, child);
+                }
+                sum
+            };
+
+            cache.insert(id.clone(), size);
+            size
+        }
+
+        let mut cache: HashMap<Arc<str>, f32> = HashMap::new();
+
+        for g in &groups {
+            let mut index: Option<usize> = None;
+            for (i, h) in g.headers.iter().enumerate() {
+                if h.id.as_ref() == header_id {
+                    index = Some(i);
+                    break;
+                }
+            }
+
+            let Some(index) = index else {
+                continue;
+            };
+
+            let mut start = 0.0;
+            for h in g.headers.iter().take(index) {
+                start += size_for(self, &by_id, &mut cache, &h.id);
+            }
+            return Some(start);
+        }
+
+        None
+    }
+
     pub fn core_row_model(&self) -> &RowModel<'a, TData> {
         self.core_row_model.get_or_init(|| {
             build_core_row_model(self.data, &*self.get_row_key, self.get_sub_rows.as_deref())

@@ -383,6 +383,10 @@ type FixtureSnapshot = {
       center: Record<string, number | null>
       right: Record<string, number | null>
     }
+    header_sizing?: {
+      size: Record<string, number>
+      start: Record<string, number>
+    }
     row_pinning?: {
       top: string[]
       center: string[]
@@ -1659,6 +1663,32 @@ function snapshotColumnSizing(table: any): {
       right: after_right,
     },
   }
+}
+
+function snapshotHeaderSizing(
+  table: any,
+): NonNullable<FixtureSnapshot["expect"]["header_sizing"]> {
+  const outSize: Record<string, number> = {}
+  const outStart: Record<string, number> = {}
+
+  const groupsLists = [
+    table.getHeaderGroups?.(),
+    table.getLeftHeaderGroups?.(),
+    table.getCenterHeaderGroups?.(),
+    table.getRightHeaderGroups?.(),
+  ].filter(Boolean)
+
+  for (const groups of groupsLists) {
+    for (const group of groups ?? []) {
+      for (const header of group?.headers ?? []) {
+        const id = String(header?.id)
+        outSize[id] = Number(header.getSize?.() ?? 0)
+        outStart[id] = Number(header.getStart?.() ?? 0)
+      }
+    }
+  }
+
+  return { size: outSize, start: outStart }
 }
 
 function snapshotRenderFallback(table: any): NonNullable<FixtureSnapshot["expect"]["render_fallback"]> {
@@ -3724,86 +3754,71 @@ function snapshotColumnPinning(
       enableColumnResizing: true,
     }
 
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          header_sizing: snapshotHeaderSizing(table),
+        },
+      }
+    }
+
     snapshots = [
-      {
-        id: "group_resize_on_change_move_updates",
-        options: {
+      mkActions(
+        "group_resize_on_change_move_updates",
+        {
           ...baseOptions,
           columnResizeMode: "onChange",
           columnResizeDirection: "ltr",
         },
-        state: {},
-        actions: [
+        {},
+        [
           { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
           { type: "columnResizeMove", client_x: 35 },
         ],
-        expect: snapshotForActions(
-          {
-            ...baseOptions,
-            columnResizeMode: "onChange",
-            columnResizeDirection: "ltr",
-          },
-          {},
-          [
-            { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
-            { type: "columnResizeMove", client_x: 35 },
-          ],
-        ),
-      },
-      {
-        id: "group_resize_on_change_end_resets",
-        options: {
+      ),
+      mkActions(
+        "group_resize_on_change_end_resets",
+        {
           ...baseOptions,
           columnResizeMode: "onChange",
           columnResizeDirection: "ltr",
         },
-        state: {},
-        actions: [
+        {},
+        [
           { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
           { type: "columnResizeMove", client_x: 35 },
           { type: "columnResizeEnd", client_x: 35 },
         ],
-        expect: snapshotForActions(
-          {
-            ...baseOptions,
-            columnResizeMode: "onChange",
-            columnResizeDirection: "ltr",
-          },
-          {},
-          [
-            { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
-            { type: "columnResizeMove", client_x: 35 },
-            { type: "columnResizeEnd", client_x: 35 },
-          ],
-        ),
-      },
-      {
-        id: "group_resize_on_end_end_writes",
-        options: {
+      ),
+      mkActions(
+        "group_resize_on_end_end_writes",
+        {
           ...baseOptions,
           columnResizeMode: "onEnd",
           columnResizeDirection: "ltr",
         },
-        state: {},
-        actions: [
+        {},
+        [
           { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
           { type: "columnResizeMove", client_x: 35 },
           { type: "columnResizeEnd", client_x: 35 },
         ],
-        expect: snapshotForActions(
-          {
-            ...baseOptions,
-            columnResizeMode: "onEnd",
-            columnResizeDirection: "ltr",
-          },
-          {},
-          [
-            { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
-            { type: "columnResizeMove", client_x: 35 },
-            { type: "columnResizeEnd", client_x: 35 },
-          ],
-        ),
-      },
+      ),
     ]
   } else {
     throw new Error(`Unhandled fixture case_id: ${case_id}`)

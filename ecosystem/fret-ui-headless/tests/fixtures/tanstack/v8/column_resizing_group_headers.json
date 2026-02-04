@@ -21,15 +21,18 @@
       "id": "a",
       "size": 100,
       "minSize": 20,
-      "maxSize": 300
+      "maxSize": 300,
+      "enablePinning": true
     },
     {
       "id": "b",
-      "size": 50
+      "size": 50,
+      "enablePinning": false
     },
     {
       "id": "c",
-      "size": 25
+      "size": 25,
+      "enablePinning": true
     }
   ],
   "snapshots": [
@@ -216,6 +219,26 @@
             "right": []
           },
           "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 175,
+            "1_c_c": 25,
+            "a": 116.67,
+            "b": 58.33,
+            "c": 25,
+            "center_1_ab_a": 175,
+            "center_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 175,
+            "a": 0,
+            "b": 116.67,
+            "c": 175,
+            "center_1_ab_a": 0,
+            "center_1_c_c": 175
+          }
         }
       }
     },
@@ -393,6 +416,26 @@
             "right": []
           },
           "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 175,
+            "1_c_c": 25,
+            "a": 116.67,
+            "b": 58.33,
+            "c": 25,
+            "center_1_ab_a": 175,
+            "center_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 175,
+            "a": 0,
+            "b": 116.67,
+            "c": 175,
+            "center_1_ab_a": 0,
+            "center_1_c_c": 175
+          }
         }
       }
     },
@@ -570,6 +613,26 @@
             "right": []
           },
           "columnOrder": []
+        },
+        "header_sizing": {
+          "size": {
+            "1_ab_a": 175,
+            "1_c_c": 25,
+            "a": 116.67,
+            "b": 58.33,
+            "c": 25,
+            "center_1_ab_a": 175,
+            "center_1_c_c": 25
+          },
+          "start": {
+            "1_ab_a": 0,
+            "1_c_c": 175,
+            "a": 0,
+            "b": 116.67,
+            "c": 175,
+            "center_1_ab_a": 0,
+            "center_1_c_c": 175
+          }
         }
       }
     }
