@@ -332,10 +332,13 @@ impl<H: UiHost> UiTree<H> {
             self.begin_debug_frame_if_needed(app.frame_id());
             self.debug_stats.prepaint_time = Duration::default();
             self.debug_stats.prepaint_nodes_visited = 0;
-            self.debug_stats.interaction_cache_hits = 0;
+            // Stable-frame prepaint reuses the previously recorded interaction stream without
+            // rebuilding it. Surface reuse explicitly so tests and perf tooling can still observe
+            // that hit-test relevant metadata remains cached.
+            self.debug_stats.interaction_cache_hits = self.interaction_cache.records.len() as u32;
             self.debug_stats.interaction_cache_misses = 0;
             self.debug_stats.interaction_cache_replayed_records = 0;
-            self.debug_stats.interaction_records = 0;
+            self.debug_stats.interaction_records = self.interaction_cache.records.len() as u32;
         }
 
         self.interaction_cache.begin_frame();
