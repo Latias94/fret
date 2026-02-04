@@ -207,6 +207,14 @@ fn tanstack_v8_column_sizing_parity_totals_and_starts() {
         let tanstack_options =
             TanStackTableOptions::from_json(&snap.options).expect("tanstack options");
         let options = tanstack_options.to_table_options();
+        let sizing_hook_noop = snap
+            .options
+            .get("__onColumnSizingChange")
+            .is_some_and(|v| v == "noop");
+        let sizing_info_hook_noop = snap
+            .options
+            .get("__onColumnSizingInfoChange")
+            .is_some_and(|v| v == "noop");
 
         let subset: TanStackStateSubset =
             serde_json::from_value(snap.state.clone()).expect("tanstack state subset");
@@ -265,7 +273,9 @@ fn tanstack_v8_column_sizing_parity_totals_and_starts() {
                         let next_info = table
                             .started_column_resize(column_id.as_str(), *client_x)
                             .expect("resize column exists");
-                        state.column_sizing_info = next_info;
+                        if !sizing_info_hook_noop {
+                            state.column_sizing_info = next_info;
+                        }
                         active_resize = Some(Arc::<str>::from(column_id.as_str()));
                     }
                     FixtureAction::ColumnResizeMove { client_x } => {
@@ -274,9 +284,15 @@ fn tanstack_v8_column_sizing_parity_totals_and_starts() {
                             "snapshot {} columnResizeMove without begin",
                             snap.id
                         );
-                        let (next_sizing, next_info) = table.dragged_column_resize(*client_x);
-                        state.column_sizing = next_sizing;
-                        state.column_sizing_info = next_info;
+                        // TanStack: size updates depend on `setColumnSizingInfo` running its updater,
+                        // because the computed `newColumnSizing` map is built inside that updater.
+                        if !sizing_info_hook_noop {
+                            let (next_sizing, next_info) = table.dragged_column_resize(*client_x);
+                            if !sizing_hook_noop {
+                                state.column_sizing = next_sizing;
+                            }
+                            state.column_sizing_info = next_info;
+                        }
                     }
                     FixtureAction::ColumnResizeEnd { client_x } => {
                         assert!(
@@ -284,23 +300,34 @@ fn tanstack_v8_column_sizing_parity_totals_and_starts() {
                             "snapshot {} columnResizeEnd without begin",
                             snap.id
                         );
-                        let (next_sizing, next_info) = table.ended_column_resize(Some(*client_x));
-                        state.column_sizing = next_sizing;
-                        state.column_sizing_info = next_info;
+                        if !sizing_info_hook_noop {
+                            let (next_sizing, next_info) =
+                                table.ended_column_resize(Some(*client_x));
+                            if !sizing_hook_noop {
+                                state.column_sizing = next_sizing;
+                            }
+                            state.column_sizing_info = next_info;
+                        }
                         active_resize = None;
                     }
                     FixtureAction::ResetColumnSize { column_id } => {
-                        state.column_sizing = table
-                            .reset_column_size(column_id.as_str())
-                            .expect("reset column exists");
+                        if !sizing_hook_noop {
+                            state.column_sizing = table
+                                .reset_column_size(column_id.as_str())
+                                .expect("reset column exists");
+                        }
                     }
                     FixtureAction::ResetColumnSizing { default_state } => {
-                        state.column_sizing =
-                            table.reset_column_sizing(default_state.unwrap_or(false));
+                        if !sizing_hook_noop {
+                            state.column_sizing =
+                                table.reset_column_sizing(default_state.unwrap_or(false));
+                        }
                     }
                     FixtureAction::ResetHeaderSizeInfo { default_state } => {
-                        state.column_sizing_info =
-                            table.reset_header_size_info(default_state.unwrap_or(false));
+                        if !sizing_info_hook_noop {
+                            state.column_sizing_info =
+                                table.reset_header_size_info(default_state.unwrap_or(false));
+                        }
                     }
                 }
             }

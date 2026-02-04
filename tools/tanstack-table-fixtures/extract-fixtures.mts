@@ -57,6 +57,10 @@ type SnapshotId =
   | "colsize_reset_column_sizing_default_true_clears"
   | "colsize_reset_column_sizing_restores_initial"
   | "colsize_reset_header_size_info_default_true_clears"
+  | "colsize_hook_noop_sizing_move_keeps_sizing"
+  | "colsize_hook_noop_sizing_reset_column_sizing_keeps_state"
+  | "colsize_hook_noop_info_move_keeps_info_and_sizing"
+  | "colsize_hook_noop_info_reset_header_size_info_keeps_state"
   | "group_resize_on_change_move_updates"
   | "group_resize_on_change_end_resets"
   | "group_resize_on_end_end_writes"
@@ -246,6 +250,9 @@ type TanStackOptions = {
   // Fixture-only: when set, the generator injects a deterministic `options.filterFns` map.
   filterFnsMode?: "custom_text_case_sensitive"
   globalFilterFn?: "auto" | string
+  // Fixture-only: simulate controlled state hooks that ignore the updater.
+  __onColumnSizingChange?: "noop"
+  __onColumnSizingInfoChange?: "noop"
 }
 
 type RowModelSnapshot = { root: string[]; flat: string[] }
@@ -1449,11 +1456,17 @@ async function main(): Promise<void> {
         currentState.columnVisibility = next ?? {}
       },
       onColumnSizingChange: (updater: any) => {
+        if (options.__onColumnSizingChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.columnSizing) : updater
         currentState.columnSizing = next ?? {}
       },
       onColumnSizingInfoChange: (updater: any) => {
+        if (options.__onColumnSizingInfoChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.columnSizingInfo) : updater
         currentState.columnSizingInfo = next ?? currentState.columnSizingInfo
@@ -3773,6 +3786,94 @@ function snapshotColumnPinning(
             { type: "columnResizeMove", client_x: 35 },
             { type: "resetHeaderSizeInfo", default_state: true },
           ],
+        ),
+      },
+      {
+        id: "colsize_hook_noop_sizing_move_keeps_sizing",
+        options: {
+          ...baseOptions,
+          __onColumnSizingChange: "noop",
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            __onColumnSizingChange: "noop",
+            columnResizeMode: "onChange",
+            columnResizeDirection: "ltr",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+          ],
+        ),
+      },
+      {
+        id: "colsize_hook_noop_sizing_reset_column_sizing_keeps_state",
+        options: {
+          ...baseOptions,
+          __onColumnSizingChange: "noop",
+        },
+        state: clampedState,
+        actions: [{ type: "resetColumnSizing", default_state: true }],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            __onColumnSizingChange: "noop",
+          },
+          clampedState,
+          [{ type: "resetColumnSizing", default_state: true }],
+        ),
+      },
+      {
+        id: "colsize_hook_noop_info_move_keeps_info_and_sizing",
+        options: {
+          ...baseOptions,
+          __onColumnSizingInfoChange: "noop",
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            __onColumnSizingInfoChange: "noop",
+            columnResizeMode: "onChange",
+            columnResizeDirection: "ltr",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+          ],
+        ),
+      },
+      {
+        id: "colsize_hook_noop_info_reset_header_size_info_keeps_state",
+        options: {
+          ...baseOptions,
+          __onColumnSizingInfoChange: "noop",
+        },
+        state: pinnedOrderedState,
+        actions: [{ type: "resetHeaderSizeInfo", default_state: true }],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            __onColumnSizingInfoChange: "noop",
+          },
+          pinnedOrderedState,
+          [{ type: "resetHeaderSizeInfo", default_state: true }],
         ),
       },
       {
