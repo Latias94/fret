@@ -194,6 +194,16 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) element_children_vec_pool_reuses: u32,
     pub(super) element_children_vec_pool_misses: u32,
     pub(super) layout_time_us: u64,
+    pub(super) layout_collect_roots_time_us: u64,
+    pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
+    pub(super) layout_expand_view_cache_invalidations_time_us: u64,
+    pub(super) layout_request_build_roots_time_us: u64,
+    pub(super) layout_pending_barrier_relayouts_time_us: u64,
+    pub(super) layout_repair_view_cache_bounds_time_us: u64,
+    pub(super) layout_contained_view_cache_roots_time_us: u64,
+    pub(super) layout_collapse_layout_observations_time_us: u64,
+    pub(super) layout_prepaint_after_layout_time_us: u64,
+    pub(super) layout_skipped_engine_frame: bool,
     pub(super) prepaint_time_us: u64,
     pub(super) paint_time_us: u64,
     pub(super) dispatch_time_us: u64,
@@ -1100,6 +1110,46 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_engine_solve_time_us".to_string(),
                     Value::from(row.layout_engine_solve_time_us),
+                );
+                obj.insert(
+                    "layout_collect_roots_time_us".to_string(),
+                    Value::from(row.layout_collect_roots_time_us),
+                );
+                obj.insert(
+                    "layout_invalidate_scroll_handle_bindings_time_us".to_string(),
+                    Value::from(row.layout_invalidate_scroll_handle_bindings_time_us),
+                );
+                obj.insert(
+                    "layout_expand_view_cache_invalidations_time_us".to_string(),
+                    Value::from(row.layout_expand_view_cache_invalidations_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_time_us),
+                );
+                obj.insert(
+                    "layout_pending_barrier_relayouts_time_us".to_string(),
+                    Value::from(row.layout_pending_barrier_relayouts_time_us),
+                );
+                obj.insert(
+                    "layout_repair_view_cache_bounds_time_us".to_string(),
+                    Value::from(row.layout_repair_view_cache_bounds_time_us),
+                );
+                obj.insert(
+                    "layout_contained_view_cache_roots_time_us".to_string(),
+                    Value::from(row.layout_contained_view_cache_roots_time_us),
+                );
+                obj.insert(
+                    "layout_collapse_layout_observations_time_us".to_string(),
+                    Value::from(row.layout_collapse_layout_observations_time_us),
+                );
+                obj.insert(
+                    "layout_prepaint_after_layout_time_us".to_string(),
+                    Value::from(row.layout_prepaint_after_layout_time_us),
+                );
+                obj.insert(
+                    "layout_skipped_engine_frame".to_string(),
+                    Value::from(row.layout_skipped_engine_frame),
                 );
                 obj.insert("cache_roots".to_string(), Value::from(row.cache_roots));
                 obj.insert(
@@ -4203,6 +4253,46 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_collect_roots_time_us = stats
+                .and_then(|m| m.get("layout_collect_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_invalidate_scroll_handle_bindings_time_us = stats
+                .and_then(|m| m.get("layout_invalidate_scroll_handle_bindings_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_expand_view_cache_invalidations_time_us = stats
+                .and_then(|m| m.get("layout_expand_view_cache_invalidations_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_request_build_roots_time_us = stats
+                .and_then(|m| m.get("layout_request_build_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_pending_barrier_relayouts_time_us = stats
+                .and_then(|m| m.get("layout_pending_barrier_relayouts_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_repair_view_cache_bounds_time_us = stats
+                .and_then(|m| m.get("layout_repair_view_cache_bounds_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_contained_view_cache_roots_time_us = stats
+                .and_then(|m| m.get("layout_contained_view_cache_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_collapse_layout_observations_time_us = stats
+                .and_then(|m| m.get("layout_collapse_layout_observations_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_prepaint_after_layout_time_us = stats
+                .and_then(|m| m.get("layout_prepaint_after_layout_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_skipped_engine_frame = stats
+                .and_then(|m| m.get("layout_skipped_engine_frame"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let view_cache_contained_relayouts = stats
                 .and_then(|m| m.get("view_cache_contained_relayouts"))
                 .and_then(|v| v.as_u64())
@@ -4497,6 +4587,16 @@ pub(super) fn bundle_stats_from_json_with_options(
                 element_children_vec_pool_reuses,
                 element_children_vec_pool_misses,
                 layout_time_us,
+                layout_collect_roots_time_us,
+                layout_invalidate_scroll_handle_bindings_time_us,
+                layout_expand_view_cache_invalidations_time_us,
+                layout_request_build_roots_time_us,
+                layout_pending_barrier_relayouts_time_us,
+                layout_repair_view_cache_bounds_time_us,
+                layout_contained_view_cache_roots_time_us,
+                layout_collapse_layout_observations_time_us,
+                layout_prepaint_after_layout_time_us,
+                layout_skipped_engine_frame,
                 prepaint_time_us,
                 paint_time_us,
                 dispatch_time_us,

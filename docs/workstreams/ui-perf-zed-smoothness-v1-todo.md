@@ -64,6 +64,13 @@ Conventions:
   update the canonical perf suite env set accordingly.
 - [x] Export view-cache reuse “miss reasons” as perf-visible counters (so regressions are explainable).
   - Implemented by `feat(diag): export view-cache reuse miss counters` (commit `43f9c73e`).
+- [ ] Export a coarse layout-phase breakdown (so `layout_time_us` is explainable in bundles and stable-frame fast paths).
+  - Add: `layout_collect_roots_time_us`, `layout_invalidate_scroll_handle_bindings_time_us`,
+    `layout_expand_view_cache_invalidations_time_us`, `layout_request_build_roots_time_us`,
+    `layout_pending_barrier_relayouts_time_us`, `layout_repair_view_cache_bounds_time_us`,
+    `layout_contained_view_cache_roots_time_us`, `layout_collapse_layout_observations_time_us`,
+    `layout_prepaint_after_layout_time_us`, `layout_skipped_engine_frame`.
+  - Wire into: `fretboard diag stats --json` so a worst bundle can be inspected without manual JSON digging.
 - [ ] Keep `diag perf` runs comparable by splitting “gate checks” vs “deep profiling”:
   - Gate check (CPU regressions): keep `FRET_DIAG_RENDERER_PERF` off (avoid instrumentation overhead).
   - Deep profiling (churn / GPU triage): turn `FRET_DIAG_RENDERER_PERF=1` on and record churn tables in the log.

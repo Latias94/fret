@@ -476,22 +476,42 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.layout_engine_widget_fallback_solves = 0;
+            self.debug_stats.layout_collect_roots_time = Duration::default();
+            self.debug_stats
+                .layout_invalidate_scroll_handle_bindings_time = Duration::default();
+            self.debug_stats.layout_expand_view_cache_invalidations_time = Duration::default();
+            self.debug_stats.layout_request_build_roots_time = Duration::default();
+            self.debug_stats.layout_pending_barrier_relayouts_time = Duration::default();
+            self.debug_stats.layout_repair_view_cache_bounds_time = Duration::default();
+            self.debug_stats.layout_contained_view_cache_roots_time = Duration::default();
+            self.debug_stats.layout_collapse_layout_observations_time = Duration::default();
+            self.debug_stats.layout_prepaint_after_layout_time = Duration::default();
+            self.debug_stats.layout_skipped_engine_frame = false;
             self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
         }
 
+        let roots_started = self.debug_enabled.then(Instant::now);
         let roots: Vec<NodeId> = self
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
+        if let Some(roots_started) = roots_started {
+            self.debug_stats.layout_collect_roots_time += roots_started.elapsed();
+        }
 
         let mut viewport_cursor: usize = 0;
 
+        let scroll_started = self.debug_enabled.then(Instant::now);
         let started_phase = profile_layout_all.then(Instant::now);
         self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind);
         if let Some(started) = started_phase {
             t_invalidate_scroll_handle_bindings = Some(started.elapsed());
+        }
+        if let Some(scroll_started) = scroll_started {
+            self.debug_stats
+                .layout_invalidate_scroll_handle_bindings_time += scroll_started.elapsed();
         }
 
         let any_root_needs_layout_or_bounds = roots.iter().any(|&root| {
@@ -521,10 +541,19 @@ impl<H: UiHost> UiTree<H> {
                     .is_some_and(|node| node.invalidation.layout)
             });
             if self.semantics_requested {
+                let semantics_started = self.debug_enabled.then(Instant::now);
                 self.semantics_requested = false;
                 self.refresh_semantics_snapshot(app);
+                if let Some(semantics_started) = semantics_started {
+                    self.debug_stats.layout_semantics_refresh_time += semantics_started.elapsed();
+                }
             }
+            let prepaint_started = self.debug_enabled.then(Instant::now);
             self.prepaint_after_layout(app, scale_factor);
+            if let Some(prepaint_started) = prepaint_started {
+                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
+            }
+            self.debug_stats.layout_skipped_engine_frame = true;
 
             let focus_started = self.debug_enabled.then(Instant::now);
             self.repair_focus_node_from_focused_element_if_needed(app);
@@ -544,10 +573,15 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
+            let expand_started = self.debug_enabled.then(Instant::now);
             let started_phase = profile_layout_all.then(Instant::now);
             self.expand_view_cache_layout_invalidations_if_needed();
             if let Some(started) = started_phase {
                 t_expand_view_cache_invalidations = Some(started.elapsed());
+            }
+            if let Some(expand_started) = expand_started {
+                self.debug_stats.layout_expand_view_cache_invalidations_time +=
+                    expand_started.elapsed();
             }
         }
 
@@ -564,6 +598,7 @@ impl<H: UiHost> UiTree<H> {
         };
 
         let started_phase = profile_layout_all.then(Instant::now);
+        let request_build_started = self.debug_enabled.then(Instant::now);
         self.request_build_window_roots_if_final(
             app,
             services,
@@ -574,6 +609,9 @@ impl<H: UiHost> UiTree<H> {
         );
         if let Some(started) = started_phase {
             t_request_build_roots = Some(started.elapsed());
+        }
+        if let Some(request_build_started) = request_build_started {
+            self.debug_stats.layout_request_build_roots_time += request_build_started.elapsed();
         }
 
         let started_phase = profile_layout_all.then(Instant::now);
@@ -611,7 +649,9 @@ impl<H: UiHost> UiTree<H> {
                 t_pending_barriers = Some(started.elapsed());
             }
             if let Some(barrier_started) = barrier_started {
-                self.debug_stats.layout_barrier_relayouts_time += barrier_started.elapsed();
+                let elapsed = barrier_started.elapsed();
+                self.debug_stats.layout_barrier_relayouts_time += elapsed;
+                self.debug_stats.layout_pending_barrier_relayouts_time += elapsed;
             }
         }
 
@@ -619,12 +659,17 @@ impl<H: UiHost> UiTree<H> {
             let view_cache_started = self.debug_enabled.then(Instant::now);
 
             let started_phase = profile_layout_all.then(Instant::now);
+            let repair_started = self.debug_enabled.then(Instant::now);
             self.repair_view_cache_root_bounds_from_engine_if_needed(app);
             if let Some(started) = started_phase {
                 t_repair_view_cache_bounds = Some(started.elapsed());
             }
+            if let Some(repair_started) = repair_started {
+                self.debug_stats.layout_repair_view_cache_bounds_time += repair_started.elapsed();
+            }
 
             let started_phase = profile_layout_all.then(Instant::now);
+            let contained_started = self.debug_enabled.then(Instant::now);
             self.layout_contained_view_cache_roots_if_needed(
                 app,
                 services,
@@ -635,11 +680,20 @@ impl<H: UiHost> UiTree<H> {
             if let Some(started) = started_phase {
                 t_layout_contained_view_cache_roots = Some(started.elapsed());
             }
+            if let Some(contained_started) = contained_started {
+                self.debug_stats.layout_contained_view_cache_roots_time +=
+                    contained_started.elapsed();
+            }
 
             let started_phase = profile_layout_all.then(Instant::now);
+            let collapse_started = self.debug_enabled.then(Instant::now);
             self.collapse_layout_observations_to_view_cache_roots_if_needed();
             if let Some(started) = started_phase {
                 t_collapse_layout_observations = Some(started.elapsed());
+            }
+            if let Some(collapse_started) = collapse_started {
+                self.debug_stats.layout_collapse_layout_observations_time +=
+                    collapse_started.elapsed();
             }
 
             if let Some(view_cache_started) = view_cache_started {
@@ -661,10 +715,14 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if pass_kind == LayoutPassKind::Final {
+            let prepaint_started = self.debug_enabled.then(Instant::now);
             let started_phase = profile_layout_all.then(Instant::now);
             self.prepaint_after_layout(app, scale_factor);
             if let Some(started) = started_phase {
                 t_prepaint_after_layout = Some(started.elapsed());
+            }
+            if let Some(prepaint_started) = prepaint_started {
+                self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
             }
         }
 

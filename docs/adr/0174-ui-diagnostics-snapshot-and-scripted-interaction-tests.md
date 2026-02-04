@@ -120,6 +120,17 @@ Minimum required fields (v1):
 - `layout_engine_solves: u64`, `layout_engine_solve_time_us: u64`
 - `paint_cache_hits: u32`, `paint_cache_misses: u32`, `paint_cache_replayed_ops: u32`
 - `reason_hints: Vec<UiWorkReasonV1>` (model/global/timer/raf/input/engine)
+  - Optional (recommended): a coarse **layout phase breakdown** to make “layout time” actionable in perf bundles:
+    - `layout_collect_roots_time_us`
+    - `layout_invalidate_scroll_handle_bindings_time_us`
+    - `layout_expand_view_cache_invalidations_time_us`
+    - `layout_request_build_roots_time_us`
+    - `layout_pending_barrier_relayouts_time_us`
+    - `layout_repair_view_cache_bounds_time_us`
+    - `layout_contained_view_cache_roots_time_us`
+    - `layout_collapse_layout_observations_time_us`
+    - `layout_prepaint_after_layout_time_us`
+    - `layout_skipped_engine_frame`
 
 **Observation / invalidation linkage (critical for AI debugging)**
 

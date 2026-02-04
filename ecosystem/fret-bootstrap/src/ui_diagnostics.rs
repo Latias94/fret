@@ -6045,6 +6045,26 @@ pub struct UiFrameStatsV1 {
     pub element_children_vec_pool_misses: u32,
     pub layout_time_us: u64,
     #[serde(default)]
+    pub layout_collect_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_invalidate_scroll_handle_bindings_time_us: u64,
+    #[serde(default)]
+    pub layout_expand_view_cache_invalidations_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_pending_barrier_relayouts_time_us: u64,
+    #[serde(default)]
+    pub layout_repair_view_cache_bounds_time_us: u64,
+    #[serde(default)]
+    pub layout_contained_view_cache_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_collapse_layout_observations_time_us: u64,
+    #[serde(default)]
+    pub layout_prepaint_after_layout_time_us: u64,
+    #[serde(default)]
+    pub layout_skipped_engine_frame: bool,
+    #[serde(default)]
     pub layout_roots_time_us: u64,
     #[serde(default)]
     pub layout_barrier_relayouts_time_us: u64,
@@ -6308,6 +6328,31 @@ impl UiFrameStatsV1 {
             element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
             element_children_vec_pool_misses: stats.element_children_vec_pool_misses,
             layout_time_us: stats.layout_time.as_micros() as u64,
+            layout_collect_roots_time_us: stats.layout_collect_roots_time.as_micros() as u64,
+            layout_invalidate_scroll_handle_bindings_time_us: stats
+                .layout_invalidate_scroll_handle_bindings_time
+                .as_micros() as u64,
+            layout_expand_view_cache_invalidations_time_us: stats
+                .layout_expand_view_cache_invalidations_time
+                .as_micros() as u64,
+            layout_request_build_roots_time_us: stats.layout_request_build_roots_time.as_micros()
+                as u64,
+            layout_pending_barrier_relayouts_time_us: stats
+                .layout_pending_barrier_relayouts_time
+                .as_micros() as u64,
+            layout_repair_view_cache_bounds_time_us: stats
+                .layout_repair_view_cache_bounds_time
+                .as_micros() as u64,
+            layout_contained_view_cache_roots_time_us: stats
+                .layout_contained_view_cache_roots_time
+                .as_micros() as u64,
+            layout_collapse_layout_observations_time_us: stats
+                .layout_collapse_layout_observations_time
+                .as_micros() as u64,
+            layout_prepaint_after_layout_time_us: stats
+                .layout_prepaint_after_layout_time
+                .as_micros() as u64,
+            layout_skipped_engine_frame: stats.layout_skipped_engine_frame,
             layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
             layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()
                 as u64,
