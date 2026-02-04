@@ -333,9 +333,8 @@ impl<H: UiHost> UiTree<H> {
         &self,
         barrier_root: Option<NodeId>,
     ) -> Option<(UiLayerId, PointerOcclusion)> {
-        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
         let mut hit_barrier = false;
-        for layer_id in layers.into_iter().rev() {
+        for &layer_id in self.layer_order.iter().rev() {
             let Some(layer) = self.layers.get(layer_id) else {
                 continue;
             };
@@ -359,58 +358,86 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(super) fn active_input_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
-        let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-        if visible.is_empty() {
+        let mut any_visible = false;
+        let mut barrier_root: Option<NodeId> = None;
+        for &layer_id in &self.layer_order {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+            any_visible = true;
+
+            // Modal/pointer barriers can be hit-test-inert (e.g. close transitions, pointer-only
+            // underlay blocking). A barrier must still gate input even when it isn't hit-testable.
+            if layer.blocks_underlay_input {
+                barrier_root = Some(layer.root);
+            }
+        }
+
+        if !any_visible {
             return (Vec::new(), None);
         }
 
-        let mut barrier_index: Option<usize> = None;
-        for (idx, layer) in visible.iter().enumerate() {
-            let l = &self.layers[*layer];
-            // Modal/pointer barriers can be hit-test-inert (e.g. close transitions, pointer-only
-            // underlay blocking). A barrier must still gate input even when it isn't hit-testable.
-            if l.blocks_underlay_input {
-                barrier_index = Some(idx);
-            }
-        }
-
-        let range_start = barrier_index.unwrap_or(0);
         let mut roots: Vec<NodeId> = Vec::new();
-        for layer in visible[range_start..].iter().rev() {
-            let l = &self.layers[*layer];
-            if l.hit_testable {
-                roots.push(l.root);
+        for &layer_id in self.layer_order.iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+
+            if layer.hit_testable {
+                roots.push(layer.root);
+            }
+
+            if barrier_root == Some(layer.root) {
+                break;
             }
         }
-
-        let barrier_root = barrier_index.map(|idx| self.layers[visible[idx]].root);
         (roots, barrier_root)
     }
 
     pub(super) fn active_focus_layers(&self) -> (Vec<NodeId>, Option<NodeId>) {
-        let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-        if visible.is_empty() {
+        let mut any_visible = false;
+        let mut barrier_root: Option<NodeId> = None;
+        for &layer_id in &self.layer_order {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+            any_visible = true;
+
+            if layer.blocks_underlay_focus {
+                barrier_root = Some(layer.root);
+            }
+        }
+
+        if !any_visible {
             return (Vec::new(), None);
         }
 
-        let mut barrier_index: Option<usize> = None;
-        for (idx, layer) in visible.iter().enumerate() {
-            let l = &self.layers[*layer];
-            if l.blocks_underlay_focus {
-                barrier_index = Some(idx);
-            }
-        }
-
-        let range_start = barrier_index.unwrap_or(0);
         let mut roots: Vec<NodeId> = Vec::new();
-        for layer in visible[range_start..].iter().rev() {
-            let l = &self.layers[*layer];
-            if l.hit_testable {
-                roots.push(l.root);
+        for &layer_id in self.layer_order.iter().rev() {
+            let Some(layer) = self.layers.get(layer_id) else {
+                continue;
+            };
+            if !layer.visible {
+                continue;
+            }
+
+            if layer.hit_testable {
+                roots.push(layer.root);
+            }
+
+            if barrier_root == Some(layer.root) {
+                break;
             }
         }
-
-        let barrier_root = barrier_index.map(|idx| self.layers[visible[idx]].root);
         (roots, barrier_root)
     }
 
