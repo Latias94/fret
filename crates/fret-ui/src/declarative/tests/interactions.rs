@@ -4103,3 +4103,71 @@ fn pressable_semantics_checked_is_exposed() {
     assert_eq!(node.flags.checked, Some(true));
     assert!(node.actions.invoke, "expected checkbox to be invokable");
 }
+
+#[test]
+fn text_input_semantics_controls_element_is_exposed() {
+    use std::cell::Cell;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-input-controls",
+        |cx| {
+            let listbox_id_out: Cell<Option<crate::elements::GlobalElementId>> = Cell::new(None);
+            let listbox = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::ListBox,
+                    test_id: Some(Arc::from("listbox")),
+                    ..Default::default()
+                },
+                |_cx, id| {
+                    listbox_id_out.set(Some(id));
+                    Vec::new()
+                },
+            );
+
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.test_id = Some(Arc::from("combo"));
+            props.a11y_role = Some(fret_core::SemanticsRole::ComboBox);
+            props.controls_element = listbox_id_out.get().map(|id| id.0);
+
+            vec![cx.text_input(props), listbox]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let combo = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("combo"))
+        .expect("expected combobox semantics node");
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("listbox"))
+        .expect("expected listbox semantics node");
+
+    assert!(
+        combo.controls.contains(&listbox.id),
+        "expected combobox to control the listbox"
+    );
+}
