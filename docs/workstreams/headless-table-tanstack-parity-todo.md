@@ -180,14 +180,16 @@ ColumnDef keys referenced by upstream feature implementations:
 
 - [ ] HTP-size-010 Implement option gates and transitions:
   - `enableColumnResizing`, `columnResizeMode`, `columnResizeDirection`.
-- [~] HTP-size-020 Ensure pinned start/after offsets match TanStack (left/center/right).
+- [x] HTP-size-020 Ensure pinned start/after offsets match TanStack (left/center/right).
   - Done (parity-gated): pinned totals + `getStart`-equivalent offsets.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
   - Done (parity-gated): `getAfter`-equivalent offsets.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
-  - Remaining: header-group sizing offsets.
+  - Done (parity-gated): header-group `header.getSize()` and `header.getStart()` semantics (including placeholder headers).
+    - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs`
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json`
 - [~] HTP-size-030 Ensure size clamp semantics match TanStack (size/min/max + reset behaviors).
   - Done (parity-gated): `columnSizing` overrides + `minSize/maxSize` clamp on totals/offsets.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
