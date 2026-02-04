@@ -538,6 +538,9 @@ fn combobox_with_patch<H: UiHost>(
                                                 let mut label =
                                                     ui::label(cx, resolved_label.clone())
                                                         .w_full()
+                                                        .min_w_0()
+                                                        .flex_1()
+                                                        .basis_0()
                                                         .text_size_px(label_style.size)
                                                         .font_weight(label_style.weight)
                                                         .text_color(fg_ref.clone())
@@ -813,6 +816,9 @@ fn combobox_with_patch<H: UiHost>(
                                                 let mut label =
                                                     ui::label(cx, resolved_label.clone())
                                                         .w_full()
+                                                        .min_w_0()
+                                                        .flex_1()
+                                                        .basis_0()
                                                         .text_size_px(label_style.size)
                                                         .font_weight(label_style.weight)
                                                         .text_color(fg_ref.clone())
