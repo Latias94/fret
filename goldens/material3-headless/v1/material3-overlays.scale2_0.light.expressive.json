@@ -1514,10 +1514,6 @@
           "kind": "push_clip_rect"
         },
         {
-          "kind": "quad",
-          "order": 0
-        },
-        {
           "kind": "svg_mask_icon",
           "order": 0
         },
@@ -1969,33 +1965,6 @@
             738,
             823,
             1000
-          ],
-          "border": [
-            0,
-            0,
-            0,
-            0
-          ],
-          "corner_radii": [
-            0,
-            0,
-            0,
-            0
-          ]
-        },
-        {
-          "order": 0,
-          "rect": [
-            0,
-            1160,
-            1120,
-            480
-          ],
-          "background": [
-            14,
-            10,
-            15,
-            80
           ],
           "border": [
             0,
