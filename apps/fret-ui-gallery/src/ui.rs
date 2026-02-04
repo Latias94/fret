@@ -2,8 +2,9 @@ use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
 use fret_code_view as code_view;
 use fret_core::{
-    AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
-    Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan, TextStyle, TextWrap,
+    AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, EffectMode,
+    EffectQuality, FontId, ImageId, Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow,
+    TextSpan, TextStyle, TextWrap,
 };
 use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
@@ -50,6 +51,7 @@ pub(crate) fn harness_only_view(
 ) -> Vec<AnyElement> {
     match harness.trim() {
         PAGE_HIT_TEST_TORTURE => preview_hit_test_torture_surface_only(cx),
+        PAGE_EFFECTS_BLUR_TORTURE => preview_effects_blur_torture_surface_only(cx),
         other => vec![
             shadcn::Card::new(vec![
                 shadcn::CardHeader::new(vec![
@@ -1382,6 +1384,195 @@ fn preview_hit_test_torture_surface_only(cx: &mut ElementContext<'_, App>) -> Ve
         area_h,
         stripe_w,
         on_pointer_move,
+    )]
+}
+
+fn preview_effects_blur_torture_surface_only(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+    use fret_ui_kit::declarative::glass::GlassPanelProps;
+    use fret_ui_kit::recipes::glass::{
+        GlassEffectRefinement, GlassEffectTokenKeys, GlassTokenKeys,
+    };
+
+    let frame = cx.with_state(
+        || 0u64,
+        |v| {
+            *v = v.saturating_add(1);
+            *v
+        },
+    );
+
+    let mut needs_lease = false;
+    cx.with_state(
+        || None::<ContinuousFrames>,
+        |lease| {
+            if lease.is_none() {
+                needs_lease = true;
+            }
+        },
+    );
+    if needs_lease {
+        let lease = cx.begin_continuous_frames();
+        cx.with_state(
+            || None::<ContinuousFrames>,
+            |slot| {
+                *slot = Some(lease);
+            },
+        );
+    }
+
+    let mut root_layout = LayoutStyle::default();
+    root_layout.size.width = Length::Fill;
+    root_layout.size.height = Length::Fill;
+    root_layout.overflow = fret_ui::element::Overflow::Clip;
+
+    let root = cx.stack_props(
+        StackProps {
+            layout: root_layout,
+        },
+        move |cx| {
+            use fret_ui::element::{ContainerProps, InsetStyle, PositionStyle};
+
+            let mut out: Vec<AnyElement> = Vec::new();
+
+            // Backdrop content: a few large, high-contrast blocks so the blur path is guaranteed to
+            // have something to sample.
+            for (idx, (left, top, color_key)) in [
+                (0, 0, "ui-gallery.effects_blur.bg0"),
+                (1, 0, "ui-gallery.effects_blur.bg1"),
+                (0, 1, "ui-gallery.effects_blur.bg2"),
+                (1, 1, "ui-gallery.effects_blur.bg3"),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                out.push(cx.keyed(("effects_blur.bg", idx), move |cx| {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = PositionStyle::Absolute;
+                    layout.inset = InsetStyle {
+                        left: Some(Px(if left == 0 { 0.0 } else { 640.0 })),
+                        top: Some(Px(if top == 0 { 0.0 } else { 360.0 })),
+                        ..Default::default()
+                    };
+                    layout.size.width = Length::Px(Px(640.0));
+                    layout.size.height = Length::Px(Px(360.0));
+
+                    let bg = match color_key {
+                        "ui-gallery.effects_blur.bg0" => CoreColor {
+                            r: 0.15,
+                            g: 0.20,
+                            b: 0.45,
+                            a: 1.0,
+                        },
+                        "ui-gallery.effects_blur.bg1" => CoreColor {
+                            r: 0.45,
+                            g: 0.15,
+                            b: 0.20,
+                            a: 1.0,
+                        },
+                        "ui-gallery.effects_blur.bg2" => CoreColor {
+                            r: 0.12,
+                            g: 0.35,
+                            b: 0.18,
+                            a: 1.0,
+                        },
+                        _ => CoreColor {
+                            r: 0.40,
+                            g: 0.33,
+                            b: 0.12,
+                            a: 1.0,
+                        },
+                    };
+
+                    cx.container(
+                        ContainerProps {
+                            layout,
+                            background: Some(bg),
+                            ..Default::default()
+                        },
+                        |_| Vec::new(),
+                    )
+                }));
+            }
+
+            // A small set of glass panels that move and resize on a fixed cadence to exercise the
+            // renderer's effect intermediates (blur + optional color adjust).
+            let panel_count = 6u64;
+            for i in 0..panel_count {
+                let phase = frame.wrapping_add(i.wrapping_mul(31));
+                let tri = (phase % 240) as i32;
+                let tri = if tri < 120 { tri } else { 240 - tri };
+                let dx = (tri - 60) as f32;
+
+                let tri2 = ((phase.wrapping_mul(7)) % 200) as i32;
+                let tri2 = if tri2 < 100 { tri2 } else { 200 - tri2 };
+                let dy = (tri2 - 50) as f32;
+
+                let size_phase = (phase / 30) % 3;
+                let (w, h) = match size_phase {
+                    0 => (Px(320.0), Px(220.0)),
+                    1 => (Px(420.0), Px(260.0)),
+                    _ => (Px(280.0), Px(200.0)),
+                };
+
+                let left = Px(80.0 + (i as f32) * 120.0 + dx);
+                let top = Px(80.0 + (i as f32) * 60.0 + dy);
+
+                out.push(cx.keyed(("effects_blur.panel", i), move |cx| {
+                    let mut layout = LayoutStyle::default();
+                    layout.position = PositionStyle::Absolute;
+                    layout.inset.left = Some(left);
+                    layout.inset.top = Some(top);
+                    layout.size.width = Length::Px(w);
+                    layout.size.height = Length::Px(h);
+
+                    let panel = fret_ui_kit::declarative::glass::glass_panel(
+                        cx,
+                        GlassPanelProps {
+                            layout,
+                            mode: EffectMode::Backdrop,
+                            quality: EffectQuality::High,
+                            chrome: Default::default(),
+                            chrome_keys: GlassTokenKeys::none(),
+                            effect: GlassEffectRefinement {
+                                blur_radius_px: Some(Px(24.0)),
+                                blur_downsample: Some(2),
+                                saturation: Some(1.10),
+                                brightness: Some(1.00),
+                                contrast: Some(1.05),
+                            },
+                            effect_keys: GlassEffectTokenKeys::none(),
+                        },
+                        |cx| {
+                            vec![
+                                cx.text("Backdrop blur"),
+                                cx.text(format!("panel={i} frame={frame}")),
+                            ]
+                        },
+                    );
+
+                    cx.semantics(
+                        SemanticsProps {
+                            test_id: Some(Arc::<str>::from(format!(
+                                "ui-gallery-effects-blur-panel-{i}"
+                            ))),
+                            ..Default::default()
+                        },
+                        move |_cx| [panel],
+                    )
+                }));
+            }
+
+            out
+        },
+    );
+
+    vec![cx.semantics(
+        SemanticsProps {
+            test_id: Some(Arc::<str>::from("ui-gallery-effects-blur-root")),
+            ..Default::default()
+        },
+        move |_cx| [root],
     )]
 }
 

@@ -19,7 +19,7 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-launch = { path = "../../crates/fret-launch", features = ["diag-screenshots"] }
 fret-render = { path = "../../crates/fret-render" }
 fret-ui = { path = "../../crates/fret-ui", features = ["diagnostics"] }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["recipes"] }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
 fret-icons = { path = "../../ecosystem/fret-icons" }
