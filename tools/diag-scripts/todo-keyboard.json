@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "click", "target": { "kind": "test_id", "id": "todo-input" } },
+    { "type": "type_text", "text": "键盘任务" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "todo-item-4-indicator" }
+      },
+      "timeout_frames": 60
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "todo-before-toggle" },
+    { "type": "capture_screenshot", "label": "todo-before-toggle" },
+    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-4-done" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "todo-after-toggle" },
+    { "type": "capture_screenshot", "label": "todo-after-toggle" },
+    { "type": "press_key", "key": "delete" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "todo-after-delete" },
+    { "type": "capture_screenshot", "label": "todo-after-delete" }
+  ]
+}
