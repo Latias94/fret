@@ -163,9 +163,12 @@ Correctness acceptance:
   - Env toggles:
     - `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` disables the index.
     - `FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS` (default: 256) gates building for small trees.
-- [ ] Add a stress script gate that correlates pointer-move frequency with stable frame time.
-  - Candidate: extend `tools/diag-scripts/ui-gallery-hover-layout-torture.json`.
-  - Follow-up: current `diag perf` totals do not include dispatch/hit-test time directly; see next item.
+- [x] Add a pointer-move stress gate that fails on dispatch/hit-test regressions.
+  - Use:
+    - `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+    - `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`,
+      `--max-pointer-move-global-changes` (fretboard `diag perf`)
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `6da92d3d`.
 - [x] Add a dispatch/hit-test time metric to diagnostics so we can gate pointer-move cost explicitly.
   - Implemented by `perf(diag): expose dispatch and hit-test timing` (commit `4b0be50e`).
   - Adds new `fretboard diag perf --sort dispatch|hit_test` modes and exports:
