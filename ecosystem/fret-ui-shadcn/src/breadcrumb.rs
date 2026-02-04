@@ -168,6 +168,7 @@ pub struct BreadcrumbItem {
     command: Option<CommandId>,
     disabled: bool,
     truncate: bool,
+    layout: LayoutRefinement,
 }
 
 impl BreadcrumbItem {
@@ -178,6 +179,7 @@ impl BreadcrumbItem {
             command: None,
             disabled: false,
             truncate: false,
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -188,6 +190,7 @@ impl BreadcrumbItem {
             command: None,
             disabled: true,
             truncate: false,
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -207,6 +210,11 @@ impl BreadcrumbItem {
         self
     }
 
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     fn render<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -216,9 +224,12 @@ impl BreadcrumbItem {
         fg: Color,
     ) -> AnyElement {
         let truncate = self.truncate;
+        let layout = self.layout;
         match self.kind {
             BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted),
-            BreadcrumbItemKind::Page => breadcrumb_text(cx, self.label, base_style, fg, truncate),
+            BreadcrumbItemKind::Page => {
+                breadcrumb_text(cx, self.label, base_style, fg, truncate, layout)
+            }
             BreadcrumbItemKind::Link => {
                 let disabled = self.disabled
                     || crate::command_gating::command_is_disabled_by_gating(
@@ -228,13 +239,13 @@ impl BreadcrumbItem {
                     );
 
                 if disabled {
-                    return breadcrumb_text(cx, self.label, base_style, muted, truncate);
+                    return breadcrumb_text(cx, self.label, base_style, muted, truncate, layout);
                 }
 
                 let Some(command) = self.command else {
                     // Non-clickable link-like text (shadcn allows `<a>` without a URL).
                     return breadcrumb_link_text(
-                        cx, self.label, base_style, muted, fg, false, truncate,
+                        cx, self.label, base_style, muted, fg, false, truncate, layout,
                     );
                 };
 
@@ -249,6 +260,7 @@ impl BreadcrumbItem {
                         fg,
                         st.hovered,
                         truncate,
+                        layout,
                     )]
                 })
             }
@@ -262,6 +274,7 @@ fn breadcrumb_text<H: UiHost>(
     base_style: &TextStyle,
     color: Color,
     truncate: bool,
+    layout: LayoutRefinement,
 ) -> AnyElement {
     let (wrap, overflow) = if truncate {
         (TextWrap::None, TextOverflow::Ellipsis)
@@ -272,6 +285,7 @@ fn breadcrumb_text<H: UiHost>(
         .text_size_px(base_style.size)
         .font_weight(base_style.weight)
         .text_color(ColorRef::Color(color))
+        .layout(layout)
         .wrap(wrap)
         .overflow(overflow);
 
@@ -294,9 +308,10 @@ fn breadcrumb_link_text<H: UiHost>(
     fg: Color,
     hovered: bool,
     truncate: bool,
+    layout: LayoutRefinement,
 ) -> AnyElement {
     let color = if hovered { fg } else { muted };
-    breadcrumb_text(cx, text, base_style, color, truncate)
+    breadcrumb_text(cx, text, base_style, color, truncate, layout)
 }
 
 fn breadcrumb_separator<H: UiHost>(
@@ -321,9 +336,14 @@ fn breadcrumb_separator<H: UiHost>(
             Some(*size),
             Some(fret_ui_kit::ColorRef::Color(muted)),
         ),
-        BreadcrumbSeparator::Text(text) => {
-            breadcrumb_text(cx, text.clone(), base_style, muted, false)
-        }
+        BreadcrumbSeparator::Text(text) => breadcrumb_text(
+            cx,
+            text.clone(),
+            base_style,
+            muted,
+            false,
+            LayoutRefinement::default(),
+        ),
     }
 }
 

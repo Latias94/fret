@@ -5535,6 +5535,8 @@ fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
     _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    let trunc_layout = LayoutRefinement::default().max_w(Px(80.0));
+
     vec![
         shadcn::Breadcrumb::new()
             .items([
@@ -5548,7 +5550,12 @@ fn preview_breadcrumb(
                 shadcn::BreadcrumbItem::new("Home"),
                 shadcn::BreadcrumbItem::ellipsis(),
                 shadcn::BreadcrumbItem::new("Examples"),
-                shadcn::BreadcrumbItem::new("Data Fetching").truncate(true),
+                shadcn::BreadcrumbItem::new("Data Fetching")
+                    .truncate(true)
+                    .refine_layout(trunc_layout.clone()),
+                shadcn::BreadcrumbItem::new("Caching and Revalidating")
+                    .truncate(true)
+                    .refine_layout(trunc_layout),
             ])
             .into_element(cx),
     ]
