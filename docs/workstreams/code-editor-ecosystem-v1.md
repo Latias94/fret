@@ -1,17 +1,44 @@
 # Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
 
 Status: Active (workstream document; normative contracts live in ADRs)
-Last updated: 2026-02-02
+Last updated: 2026-02-03
 
 Recent changes (2026-02-02):
 
 - Branch sync: merge local `main` into `code-editor-ecosystem-v1` to stay aligned with the latest runner/text/diagnostics baselines.
+- Web: fix the UI Gallery code editor MVP being “visible but not editable” by binding focus/key/command/pointer hooks to the `TextInputRegion` element id scope (not the outer keyed scope); this unblocks Web/WASM input routing.
+- Web IME: emit `Effect::ImeAllow { enabled: true }` during pointer-down focus for editor-grade `TextInputRegion` surfaces so the hidden textarea bridge can be focused within the same user-activation gesture (browser restrictions).
+- UiTree: compute `focus_is_text_input` from the declarative element kind (`TextInput` / `TextArea` / `TextInputRegion`) when available, not only from cached host-widget flags (fixes global “IME stays disabled” regressions on web).
+- Web runner: flush effect/event turns synchronously on pointer-button events (`WindowEvent::PointerButton`, press/release) so `Effect::ImeAllow` can focus the hidden textarea within the browser user-activation window (prevents “click input but IME never enables”).
 - Buffer: move `TextBuffer` to rope-backed storage (`ropey`) while preserving the UTF-8 byte-index contract; adapt view/editor consumers to slice-based APIs.
 - Editor geometry: start migrating caret/selection/pointer hit-testing from the monospace "cell width" heuristic to renderer-provided caret stops (per-row cached); add `CanvasPainter::{text_with_blob, rich_text_with_blob}` to support geometry queries.
 - Editor geometry: harden caret-stop hit-testing for non-monotonic X runs (e.g. mixed-direction/bidi rows) while keeping the caret-stop path as the v1 event-stage baseline.
 - Editor code health: split `fret-code-editor` into `editor/*` submodules (`input`, `paint`, `geom`, `a11y`, `tests`) to reduce merge conflicts and unblock follow-up refactors.
 - Editor navigation: preserve a pixel `preferred_x` for caret up/down navigation (via caret stops), not the last display column.
 - Editor harness: show caret geometry hints (`preferred_x`, cached caret stops) in the code editor torture overlay for faster mixed-script debugging.
+
+Recent changes (2026-02-03):
+
+- Web IME: anchor the hidden textarea to the caret rect **center** (instead of origin) and adapt textarea line metrics to caret height to reduce candidate/composition UI drift.
+- Web IME: add an opt-in browser console logger for focus/cursor-area updates (`?ime_debug=1` or `window.__FRET_IME_DEBUG=true`) to debug cases where the in-app panel isn't visible.
+- Scroll/view-cache: add a mechanism switch (`ScrollProps.windowed_paint`) so windowed paint surfaces can force view-cache rerender on scroll-offset changes (prevents “stale lines” when a cached subtree would otherwise replay).
+- Windowed surfaces: fix `windowed_rows_surface` to pass row `Rect`s anchored at the canvas bounds origin (not `0,0`), fixing “left side clipped / prefixes missing” in `code_editor_torture` and the windowed-surface torture pages.
+- Editor UX: scroll the caret into view after edits/navigation and refresh `last_bounds` from paint so IME cursor-area anchoring can follow keyboard-only flows.
+- UI Gallery: make the word-boundary harness render both the fixture and debug output using `CodeEditor` surfaces (avoid backend-dependent multiline text rendering).
+- Editor infra: add `CodeEditor::key(u64)` so multiple editors can coexist under the same element-id scope without keyed-id collisions (fixes semantics snapshot cycles in multi-editor UIs).
+- UI Gallery: add a “Dump layout…” button that writes a Taffy subtree dump to `.fret/taffy-dumps` for debugging nested scroll/clip/layout issues.
+
+Next up (priority order):
+
+1. Re-validate the “no stale lines” torture harness:
+   - confirm the line-prefix invariant visually and keep the view-cache + scroll invalidation tests green.
+2. Editor surface MVP correctness (native first):
+   - ensure typing, selection, undo/redo, and caret navigation remain correct under scroll + soft-wrap.
+3. Fonts on web:
+   - confirm `cjk-lite` default bundle is sufficient for common CJK IME flows; decide whether to enable `emoji-fonts` by default or gate behind a flag (payload tradeoff).
+4. Web IME (wasm): **deferred**
+   - Known issue: IME enable/focus can still be flaky on some browsers/dev setups (activation-window timing).
+   - Keep `?demo=ui_gallery&page=web_ime_harness` as the repro surface and revisit after core editor correctness/stability is locked.
 
 Recent changes (2026-02-01):
 
@@ -107,8 +134,8 @@ We are **not** building “the editor app”; we are building reusable ecosystem
 
 P0 (correctness and contracts):
 
-- Web IME: stabilize caret anchoring and reduce candidate UI jitter across browsers (textarea style + cursor-area mapping).
-- Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
+- Scroll stability: fix the “no stale lines” torture failure (row cache keys, invalidation boundaries, replay correctness).
+- Editing baseline: ensure typing/selection/caret/undo remain correct under scroll + soft-wrap.
 - Selection + composition range invariants: expand ADR 0071 coverage across TextInput/TextArea/CodeEditor (including a11y selection actions).
 - Code editor: keep pointer hit-testing stable on mixed-direction (bidi) rows (caret-stop hit-testing is the event-stage baseline; decide later whether to expose `TextService::hit_test_point` to pointer handlers).
 - Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji).
@@ -130,6 +157,11 @@ P2 (features):
 - Wrap: add a pixel-accurate wrapping mode (measure-driven) while preserving stable buffer ↔ display ↔ pixel mapping.
 - Grow the display-map surface (wrap → fold → inlay) without breaking caret/selection invariants.
 - Diagnostics: add renderer-level churn counters (text blob churn, glyph atlas pressure) to make perf regressions bundle-debuggable.
+
+Deferred (Web/WASM IME):
+
+- Web IME: stabilize enable/focus across browsers (user-activation timing) and reduce candidate UI drift.
+- Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
 
 ---
 

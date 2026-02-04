@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 — TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-02
+Last updated: 2026-02-03
 
 This is the checkbox tracker companion to:
 
@@ -41,6 +41,7 @@ Legend:
 
 - [x] Create the hidden textarea element (tracked per `AppWindowId` and mounted into a per-canvas wrapper/overlay layer).
 - [x] Define focus/blur rules and map them to `Effect::ImeAllow`.
+- [x] Web runner: flush `Effect::ImeAllow` on pointer-down (user activation) to allow synchronous textarea focus.
 - [x] Define best-effort caret anchoring and map it to `Effect::ImeSetCursorArea`.
 - [x] Load bundled default fonts during web renderer adoption (avoid “first frame” tofu; keep `TextAddFonts` for user-provided fonts).
 
@@ -60,9 +61,11 @@ Legend:
 
 - [x] Counters: last `inputType`, whether suppressed, last composing state.
 - [x] Counters: last caret-rect anchor and whether positioning was attempted.
+- [x] Opt-in browser console logging for IME focus/cursor-area updates (`?ime_debug=1` / `window.__FRET_IME_DEBUG=true`).
 - [x] Record a small `recent_events` ring buffer for ordering diagnostics (`beforeinput`/`input`/`composition*`/cursor area updates).
 - [x] Surface `WindowTextInputSnapshotService` + `WindowInputContextService` snapshots in the UI Gallery harness panel for cross-layer debugging.
 - [x] Surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel for font/tofu debugging.
+- [x] Add a UI Gallery “Dump layout…” button that writes a Taffy subtree dump to `.fret/taffy-dumps` for nested scroll/clip/layout debugging.
 
 ### Harness
 
@@ -72,6 +75,7 @@ Legend:
   - backspace/arrows,
   - no double-insert on `compositionend`.
 - [x] Validate glyph coverage (CJK/emoji) by enabling web demo font features (to avoid “tofu” squares).
+- [!] Deferred: IME enable/focus is still flaky on some browsers/dev setups (activation-window timing). Keep `?demo=ui_gallery&page=web_ime_harness` as the repro surface and revisit later.
 
 ---
 
@@ -140,11 +144,17 @@ Evidence anchors:
 - [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
 - [x] Use renderer text caret rect metrics (caret y/height) when computing `ImeSetCursorArea` for editor-grade surfaces (fallback to row height when unavailable).
 - [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
+- [x] Web/WASM: bind focus/key/command/pointer hooks to the `TextInputRegion` element id scope (not the outer keyed scope) so input routing attaches to the focused region.
+- [x] Web/WASM: emit `ImeAllow` during pointer-down focus for editor-grade `TextInputRegion` surfaces (user-activation friendly textarea focusing).
+- [x] UiTree: treat focused declarative `TextInput` / `TextArea` / `TextInputRegion` as text input when computing `focus_is_text_input` (prevents stale host-widget flags from disabling IME).
 
 ### Harness
 
 - [x] Add a UI Gallery page for the editor MVP (manual interaction harness).
 - [x] Add a “scroll stability / no stale paint” torture harness entry (ui-gallery style).
+- [x] Fix the “no stale lines” torture failure (scroll-driven window changes must not show stale row text).
+  - Mechanism: `ScrollProps.windowed_paint` forces view-cache rerender on scroll offset changes for windowed paint surfaces.
+  - Paint correctness: `windowed_rows_surface` now anchors row rects at the canvas bounds origin to avoid “left clipped / prefixes missing”.
 
 Evidence anchors:
 

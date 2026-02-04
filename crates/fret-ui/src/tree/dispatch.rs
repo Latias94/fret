@@ -923,7 +923,7 @@ impl<H: UiHost> UiTree<H> {
             self.focus = None;
         }
 
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
@@ -2454,7 +2454,7 @@ impl<H: UiHost> UiTree<H> {
                 repeat,
             } = event
         {
-            let focus_is_text_input = self.focus_is_text_input();
+            let focus_is_text_input = self.focus_is_text_input(app);
             let input_ctx_for_shortcuts = InputContext {
                 focus_is_text_input,
                 ..input_ctx.clone()
@@ -2590,7 +2590,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.set_ime_allowed(app, focus_is_text_input);
 
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)

@@ -49,6 +49,17 @@ pub(super) fn handle_text_input_region<H: UiHost>(
     };
 
     match event {
+        Event::Pointer(fret_core::PointerEvent::Down { button, .. }) => {
+            // Default focus policy: clicking anywhere inside an enabled text input region should
+            // focus it so subsequent `TextInput` / `Ime` events route correctly.
+            //
+            // Custom surfaces (e.g. code editors) may still attach richer pointer handlers to
+            // descendants to compute caret/selection, but focus should not depend on those handlers
+            // being hit-test reachable.
+            if *button == fret_core::MouseButton::Left {
+                cx.request_focus(cx.node);
+            }
+        }
         Event::TextInput(text) => {
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,

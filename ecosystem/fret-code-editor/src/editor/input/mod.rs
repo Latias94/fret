@@ -2,6 +2,32 @@
 
 use super::*;
 
+#[cfg(feature = "syntax")]
+use super::paint::invalidate_syntax_row_cache_for_delta;
+
+pub(super) fn scroll_caret_into_view(
+    st: &CodeEditorState,
+    row_h: Px,
+    scroll_handle: &fret_ui::scroll::ScrollHandle,
+) {
+    if row_h.0 <= 0.0 {
+        return;
+    }
+
+    let caret = st.selection.caret().min(st.buffer.len_bytes());
+    let caret = st.buffer.clamp_to_char_boundary_left(caret);
+    let row = st.display_map.byte_to_display_point(&st.buffer, caret).row;
+    let y = Px(row_h.0 * row as f32);
+
+    // Keep a small vertical margin so the caret does not sit flush against the viewport edge.
+    let margin = Px(row_h.0 * 2.0);
+    scroll_handle.scroll_to_range_y(
+        Px(y.0 - margin.0),
+        Px(y.0 + row_h.0 + margin.0),
+        fret_ui::scroll::ScrollStrategy::Nearest,
+    );
+}
+
 pub(super) fn push_caret_rect_effect(
     host: &mut dyn UiActionHost,
     action_cx: ActionCx,
@@ -176,6 +202,7 @@ pub(super) fn handle_key_down(
         _ => return false,
     }
 
+    scroll_caret_into_view(&st, row_h, scroll_handle);
     push_caret_rect_effect(host, action_cx, &st, row_h, cell_w_px, scroll_handle);
 
     host.notify(action_cx);

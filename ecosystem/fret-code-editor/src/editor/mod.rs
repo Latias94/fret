@@ -382,6 +382,8 @@ pub struct CodeEditor {
     overscan: usize,
     torture: Option<CodeEditorTorture>,
     soft_wrap_cols: Option<usize>,
+    key: u64,
+    viewport_test_id: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -410,7 +412,18 @@ impl CodeEditor {
             overscan: 16,
             torture: None,
             soft_wrap_cols: None,
+            key: 0,
+            viewport_test_id: None,
         }
+    }
+
+    /// Set a stable key for this editor instance.
+    ///
+    /// This is required when multiple `CodeEditor`s appear under the same element-id scope,
+    /// because the editor uses an internal keyed scope for persistent state.
+    pub fn key(mut self, key: u64) -> Self {
+        self.key = key;
+        self
     }
 
     pub fn overscan(mut self, overscan: usize) -> Self {
@@ -428,6 +441,11 @@ impl CodeEditor {
         self
     }
 
+    pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let scroll_handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
         let cell_w = cx.with_state(|| Cell::new(Px(0.0)), |c| c.clone());
@@ -437,12 +455,12 @@ impl CodeEditor {
         let overscan = self.overscan;
         let torture = self.torture;
         let soft_wrap_cols = self.soft_wrap_cols;
+        let key = self.key;
+        let viewport_test_id = self.viewport_test_id;
         let a11y_label: Arc<str> = Arc::from("Code editor");
 
-        cx.keyed("code-editor", move |cx| {
+        cx.keyed(("code-editor", key), move |cx| {
             let theme = cx.theme().clone();
-            let region_id = cx.root_id();
-            let is_focused = cx.is_focused_element(region_id);
 
             let row_h = theme.metric_required("metric.font.mono_line_height");
             let font_size = theme.metric_required("metric.font.mono_size");
@@ -471,18 +489,14 @@ impl CodeEditor {
                 }
                 let content_len = st.display_map.row_count();
                 let boundary_mode = st.text_boundary_mode;
-                if !is_focused {
-                    (content_len, boundary_mode, None, None, None)
-                } else {
-                    let (value, selection, composition) = a11y_composed_text_window(&st);
-                    (
-                        content_len,
-                        boundary_mode,
-                        Some(Arc::<str>::from(value)),
-                        selection,
-                        composition,
-                    )
-                }
+                let (value, selection, composition) = a11y_composed_text_window(&st);
+                (
+                    content_len,
+                    boundary_mode,
+                    Some(Arc::<str>::from(value)),
+                    selection,
+                    composition,
+                )
             };
 
             let mut region_layout = fret_ui::element::LayoutStyle::default();
@@ -503,265 +517,6 @@ impl CodeEditor {
             let mut pointer_props = PointerRegionProps::default();
             pointer_props.layout.size.width = Length::Fill;
             pointer_props.layout.size.height = Length::Fill;
-
-            let on_pointer_down_state = editor_state.clone();
-            let on_pointer_down_cell_w = cell_w.clone();
-            let on_pointer_down_scroll = scroll_handle.clone();
-            let on_pointer_down: OnWindowedRowsPointerDown = Arc::new(
-                move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, down| {
-                    if down.button != MouseButton::Left {
-                        return false;
-                    }
-
-                    host.request_focus(region_id);
-                    host.capture_pointer();
-
-                    let bounds = host.bounds();
-                    let cell_w = on_pointer_down_cell_w.get();
-                    let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-
-                    let mut st = on_pointer_down_state.borrow_mut();
-                    st.last_bounds = Some(bounds);
-                    st.dragging = true;
-                    st.drag_pointer = Some(down.pointer_id);
-                    st.undo_group = None;
-                    st.preedit = None;
-
-                    let caret = caret_for_pointer(&st, row, bounds, down.position, cell_w);
-                    match down.click_count {
-                        2 => {
-                            let (start, end) =
-                                select_word_range_in_buffer(&st.buffer, caret, st.text_boundary_mode);
-                            st.selection = Selection {
-                                anchor: start,
-                                focus: end,
-                            };
-                            st.caret_preferred_x = None;
-                        }
-                        3 => {
-                            let start = st
-                                .display_map
-                                .display_point_to_byte(&st.buffer, DisplayPoint::new(row, 0));
-                            let line = st.buffer.line_index_at_byte(start);
-                            if let Some(range) = st.buffer.line_byte_range_including_newline(line) {
-                                st.selection = Selection {
-                                    anchor: range.start,
-                                    focus: range.end,
-                                };
-                            }
-                            st.caret_preferred_x = None;
-                        }
-                        _ => {
-                            if down.modifiers.shift {
-                                st.selection.focus = caret;
-                            } else {
-                                st.selection = Selection {
-                                    anchor: caret,
-                                    focus: caret,
-                                };
-                            }
-                            st.caret_preferred_x = None;
-                        }
-                    }
-
-                    let caret_rect =
-                        caret_rect_for_selection(&st, row_h, cell_w, bounds, &on_pointer_down_scroll);
-                    if let Some(rect) = caret_rect {
-                        host.push_effect(Effect::ImeSetCursorArea {
-                            window: action_cx.window,
-                            rect,
-                        });
-                    }
-
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let on_pointer_move_state = editor_state.clone();
-            let on_pointer_move_cell_w = cell_w.clone();
-            let on_pointer_move_scroll = scroll_handle.clone();
-            let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
-                move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, mv| {
-                    let Some(row) = row else {
-                        return false;
-                    };
-                    if !mv.buttons.left {
-                        return false;
-                    }
-                    let mut st = on_pointer_move_state.borrow_mut();
-                    if !st.dragging {
-                        return false;
-                    }
-                    st.undo_group = None;
-
-                    let bounds = host.bounds();
-                    st.last_bounds = Some(bounds);
-
-                    let cell_w = on_pointer_move_cell_w.get();
-                    let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                    let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
-                    st.selection.focus = caret;
-                    st.caret_preferred_x = None;
-
-                    let caret_rect =
-                        caret_rect_for_selection(&st, row_h, cell_w, bounds, &on_pointer_move_scroll);
-                    if let Some(rect) = caret_rect {
-                        host.push_effect(Effect::ImeSetCursorArea {
-                            window: action_cx.window,
-                            rect,
-                        });
-                    }
-
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    true
-                },
-            );
-
-            let on_pointer_up_state = editor_state.clone();
-            let on_pointer_up: OnWindowedRowsPointerUp = Arc::new(
-                move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, _row, up| {
-                    if up.button != MouseButton::Left {
-                        return false;
-                    }
-                    let mut st = on_pointer_up_state.borrow_mut();
-                    st.dragging = false;
-                    st.drag_pointer = None;
-                    st.undo_group = None;
-                    host.release_pointer_capture();
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    false
-                },
-            );
-
-            let on_pointer_cancel_state = editor_state.clone();
-            let on_pointer_cancel: OnWindowedRowsPointerCancel = Arc::new(
-                move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, cancel| {
-                    let mut st = on_pointer_cancel_state.borrow_mut();
-                    if st.drag_pointer == Some(cancel.pointer_id) {
-                        st.dragging = false;
-                        st.drag_pointer = None;
-                    }
-                    st.undo_group = None;
-                    host.release_pointer_capture();
-                    host.notify(action_cx);
-                    host.request_redraw(action_cx.window);
-                    false
-                },
-            );
-
-            let key_state = editor_state.clone();
-            let key_scroll = scroll_handle.clone();
-            let key_cell_w = cell_w.clone();
-            cx.key_on_key_down_for(
-                region_id,
-                Arc::new(
-                    move |host: &mut dyn fret_ui::action::UiFocusActionHost,
-                          action_cx: ActionCx,
-                          down: KeyDownCx| {
-                        if input::handle_key_down(
-                            host,
-                            action_cx,
-                            &key_state,
-                            row_h,
-                            &key_scroll,
-                            &key_cell_w,
-                            down.key,
-                            down.modifiers,
-                        ) {
-                            return true;
-                        }
-                        false
-                    },
-                ),
-            );
-
-            let cmd_state = editor_state.clone();
-            let cmd_scroll = scroll_handle.clone();
-            let cmd_cell_w = cell_w.clone();
-            cx.command_on_command_for(
-                region_id,
-                Arc::new(
-                    move |host: &mut dyn fret_ui::action::UiFocusActionHost,
-                          action_cx: ActionCx,
-                          command| {
-                        let mut st = cmd_state.borrow_mut();
-                        let mut did = false;
-                        match command.as_str() {
-                            "edit.undo" => {
-                                did = input::undo(&mut st);
-                            }
-                            "edit.redo" => {
-                                did = input::redo(&mut st);
-                            }
-                            "text.select_all" => {
-                                let end = st.buffer.len_bytes();
-                                st.selection = Selection {
-                                    anchor: 0,
-                                    focus: end,
-                                };
-                                st.preedit = None;
-                                st.undo_group = None;
-                                did = true;
-                            }
-                            "text.copy" => {
-                                input::copy_selection(host, &st);
-                                did = true;
-                            }
-                            "text.cut" => {
-                                if input::cut_selection(host, &mut st) {
-                                    did = true;
-                                }
-                            }
-                            "text.paste" => {
-                                input::request_paste(host, action_cx);
-                                did = true;
-                            }
-                            "text.move_word_left" => {
-                                st.preedit = None;
-                                did = input::move_word(&mut st, -1, false);
-                            }
-                            "text.move_word_right" => {
-                                st.preedit = None;
-                                did = input::move_word(&mut st, 1, false);
-                            }
-                            "text.select_word_left" => {
-                                st.preedit = None;
-                                did = input::move_word(&mut st, -1, true);
-                            }
-                            "text.select_word_right" => {
-                                st.preedit = None;
-                                did = input::move_word(&mut st, 1, true);
-                            }
-                            _ => return false,
-                        }
-
-                        if did {
-                            input::push_caret_rect_effect(
-                                host,
-                                action_cx,
-                                &st,
-                                row_h,
-                                cmd_cell_w.get(),
-                                &cmd_scroll,
-                            );
-                            host.notify(action_cx);
-                            host.request_redraw(action_cx.window);
-                        }
-                        true
-                    },
-                ),
-            );
-
-            let handlers = WindowedRowsSurfacePointerHandlers {
-                on_pointer_down: Some(on_pointer_down),
-                on_pointer_move: Some(on_pointer_move),
-                on_pointer_up: Some(on_pointer_up),
-                on_pointer_cancel: Some(on_pointer_cancel),
-            };
 
             let mut surface_props = WindowedRowsSurfaceProps::default();
             surface_props.scroll.layout.size.width = Length::Fill;
@@ -870,7 +625,11 @@ impl CodeEditor {
                                 )
                         };
 
-                        let origin = fret_core::Point::new(Px(8.0), Px(offset.y.0 + 8.0));
+                        let bounds = painter.bounds();
+                        let origin = fret_core::Point::new(
+                            Px(bounds.origin.x.0 + 8.0),
+                            Px(bounds.origin.y.0 + offset.y.0 + 8.0),
+                        );
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
                             rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
@@ -930,6 +689,282 @@ impl CodeEditor {
             });
 
             cx.text_input_region(region_props, |cx| {
+                // `TextInputRegion` creates its own element id scope. All focus/key/command hooks
+                // must target this id (not the outer keyed scope), otherwise Web/WASM input routing
+                // will never attach to the focused text region.
+                let region_id = cx.root_id();
+
+                let key_state = editor_state.clone();
+                let key_scroll = scroll_handle.clone();
+                let key_cell_w = cell_w.clone();
+                cx.key_on_key_down_for(
+                    region_id,
+                    Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiFocusActionHost,
+                              action_cx: ActionCx,
+                              down: KeyDownCx| {
+                            input::handle_key_down(
+                                host,
+                                action_cx,
+                                &key_state,
+                                row_h,
+                                &key_scroll,
+                                &key_cell_w,
+                                down.key,
+                                down.modifiers,
+                            )
+                        },
+                    ),
+                );
+
+                let cmd_state = editor_state.clone();
+                let cmd_scroll = scroll_handle.clone();
+                let cmd_cell_w = cell_w.clone();
+                cx.command_on_command_for(
+                    region_id,
+                    Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiFocusActionHost,
+                              action_cx: ActionCx,
+                              command| {
+                            let mut st = cmd_state.borrow_mut();
+                            let mut did = false;
+                            match command.as_str() {
+                                "edit.undo" => {
+                                    did = input::undo(&mut st);
+                                }
+                                "edit.redo" => {
+                                    did = input::redo(&mut st);
+                                }
+                                "text.select_all" => {
+                                    let end = st.buffer.len_bytes();
+                                    st.selection = Selection {
+                                        anchor: 0,
+                                        focus: end,
+                                    };
+                                    st.preedit = None;
+                                    st.undo_group = None;
+                                    did = true;
+                                }
+                                "text.copy" => {
+                                    input::copy_selection(host, &st);
+                                    did = true;
+                                }
+                                "text.cut" => {
+                                    if input::cut_selection(host, &mut st) {
+                                        did = true;
+                                    }
+                                }
+                                "text.paste" => {
+                                    input::request_paste(host, action_cx);
+                                    did = true;
+                                }
+                                "text.move_word_left" => {
+                                    st.preedit = None;
+                                    did = input::move_word(&mut st, -1, false);
+                                }
+                                "text.move_word_right" => {
+                                    st.preedit = None;
+                                    did = input::move_word(&mut st, 1, false);
+                                }
+                                "text.select_word_left" => {
+                                    st.preedit = None;
+                                    did = input::move_word(&mut st, -1, true);
+                                }
+                                "text.select_word_right" => {
+                                    st.preedit = None;
+                                    did = input::move_word(&mut st, 1, true);
+                                }
+                                _ => return false,
+                            }
+
+                            if did {
+                                input::scroll_caret_into_view(&st, row_h, &cmd_scroll);
+                                input::push_caret_rect_effect(
+                                    host,
+                                    action_cx,
+                                    &st,
+                                    row_h,
+                                    cmd_cell_w.get(),
+                                    &cmd_scroll,
+                                );
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            }
+                            true
+                        },
+                    ),
+                );
+
+                let on_pointer_down_state = editor_state.clone();
+                let on_pointer_down_cell_w = cell_w.clone();
+                let on_pointer_down_scroll = scroll_handle.clone();
+                let on_pointer_down: OnWindowedRowsPointerDown = Arc::new(
+                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, down| {
+                        if down.button != MouseButton::Left {
+                            return false;
+                        }
+
+                        host.request_focus(region_id);
+                        host.capture_pointer();
+
+                        let bounds = host.bounds();
+                        let cell_w = on_pointer_down_cell_w.get();
+                        let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+
+                        let mut st = on_pointer_down_state.borrow_mut();
+                        st.last_bounds = Some(bounds);
+                        st.dragging = true;
+                        st.drag_pointer = Some(down.pointer_id);
+                        st.undo_group = None;
+                        st.preedit = None;
+
+                        let caret = caret_for_pointer(&st, row, bounds, down.position, cell_w);
+                        match down.click_count {
+                            2 => {
+                                let (start, end) = select_word_range_in_buffer(
+                                    &st.buffer,
+                                    caret,
+                                    st.text_boundary_mode,
+                                );
+                                st.selection = Selection {
+                                    anchor: start,
+                                    focus: end,
+                                };
+                                st.caret_preferred_x = None;
+                            }
+                            3 => {
+                                let start = st
+                                    .display_map
+                                    .display_point_to_byte(&st.buffer, DisplayPoint::new(row, 0));
+                                let line = st.buffer.line_index_at_byte(start);
+                                if let Some(range) = st.buffer.line_byte_range_including_newline(line)
+                                {
+                                    st.selection = Selection {
+                                        anchor: range.start,
+                                        focus: range.end,
+                                    };
+                                }
+                                st.caret_preferred_x = None;
+                            }
+                            _ => {
+                                if down.modifiers.shift {
+                                    st.selection.focus = caret;
+                                } else {
+                                    st.selection = Selection {
+                                        anchor: caret,
+                                        focus: caret,
+                                    };
+                                }
+                                st.caret_preferred_x = None;
+                            }
+                        }
+
+                        let caret_rect = caret_rect_for_selection(
+                            &st,
+                            row_h,
+                            cell_w,
+                            bounds,
+                            &on_pointer_down_scroll,
+                        );
+                        if let Some(rect) = caret_rect {
+                            host.push_effect(Effect::ImeSetCursorArea {
+                                window: action_cx.window,
+                                rect,
+                            });
+                        }
+
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                        true
+                    },
+                );
+
+                let on_pointer_move_state = editor_state.clone();
+                let on_pointer_move_cell_w = cell_w.clone();
+                let on_pointer_move_scroll = scroll_handle.clone();
+                let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
+                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, mv| {
+                        let Some(row) = row else {
+                            return false;
+                        };
+                        if !mv.buttons.left {
+                            return false;
+                        }
+                        let mut st = on_pointer_move_state.borrow_mut();
+                        if !st.dragging {
+                            return false;
+                        }
+                        st.undo_group = None;
+
+                        let bounds = host.bounds();
+                        st.last_bounds = Some(bounds);
+
+                        let cell_w = on_pointer_move_cell_w.get();
+                        let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
+                        let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
+                        st.selection.focus = caret;
+                        st.caret_preferred_x = None;
+
+                        let caret_rect = caret_rect_for_selection(
+                            &st,
+                            row_h,
+                            cell_w,
+                            bounds,
+                            &on_pointer_move_scroll,
+                        );
+                        if let Some(rect) = caret_rect {
+                            host.push_effect(Effect::ImeSetCursorArea {
+                                window: action_cx.window,
+                                rect,
+                            });
+                        }
+
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                        true
+                    },
+                );
+
+                let on_pointer_up_state = editor_state.clone();
+                let on_pointer_up: OnWindowedRowsPointerUp = Arc::new(
+                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, _row, up| {
+                        if up.button != MouseButton::Left {
+                            return false;
+                        }
+                        let mut st = on_pointer_up_state.borrow_mut();
+                        st.dragging = false;
+                        st.drag_pointer = None;
+                        st.undo_group = None;
+                        host.release_pointer_capture();
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                        false
+                    },
+                );
+
+                let on_pointer_cancel_state = editor_state.clone();
+                let on_pointer_cancel: OnWindowedRowsPointerCancel = Arc::new(
+                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, cancel| {
+                        let mut st = on_pointer_cancel_state.borrow_mut();
+                        if st.drag_pointer == Some(cancel.pointer_id) {
+                            st.dragging = false;
+                            st.drag_pointer = None;
+                        }
+                        st.undo_group = None;
+                        host.release_pointer_capture();
+                        host.notify(action_cx);
+                        host.request_redraw(action_cx.window);
+                        false
+                    },
+                );
+
+                let handlers = WindowedRowsSurfacePointerHandlers {
+                    on_pointer_down: Some(on_pointer_down),
+                    on_pointer_move: Some(on_pointer_move),
+                    on_pointer_up: Some(on_pointer_up),
+                    on_pointer_cancel: Some(on_pointer_cancel),
+                };
+
                 let text_state = editor_state.clone();
                 let text_scroll = scroll_handle.clone();
                 let text_cell_w = cell_w.clone();
@@ -938,6 +973,7 @@ impl CodeEditor {
                         let mut st = text_state.borrow_mut();
                         st.preedit = None;
                         if input::insert_text(&mut st, text).is_some() {
+                            input::scroll_caret_into_view(&st, row_h, &text_scroll);
                             input::push_caret_rect_effect(
                                 host,
                                 action_cx,
@@ -1025,6 +1061,7 @@ impl CodeEditor {
                             }
                         }
 
+                        input::scroll_caret_into_view(&st, row_h, &ime_scroll);
                         input::push_caret_rect_effect(
                             host,
                             action_cx,
@@ -1063,6 +1100,7 @@ impl CodeEditor {
                         };
                         st.undo_group = None;
 
+                        input::scroll_caret_into_view(&st, row_h, &sel_scroll);
                         input::push_caret_rect_effect(
                             host,
                             action_cx,
@@ -1087,6 +1125,7 @@ impl CodeEditor {
                           text: &str| {
                         let mut st = clipboard_state.borrow_mut();
                         let _ = input::insert_text_with_kind(&mut st, text, UndoGroupKind::Paste);
+                        input::scroll_caret_into_view(&st, row_h, &clipboard_scroll);
                         input::push_caret_rect_effect(
                             host,
                             action_cx,
@@ -1109,6 +1148,7 @@ impl CodeEditor {
                     Some(SemanticsProps {
                         role: fret_core::SemanticsRole::Viewport,
                         label: Some(Arc::<str>::from("Editor viewport")),
+                        test_id: viewport_test_id.clone(),
                         ..Default::default()
                     }),
                     move |painter, row, rect| {

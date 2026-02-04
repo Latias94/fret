@@ -150,9 +150,14 @@ impl Default for WindowedRowsSurfaceProps {
 
 /// Build a fixed-row-height scroll surface that paints only the visible row window.
 ///
-/// `paint_row` is called for each visible row (including overscan) with the row bounds in
-/// **content space**. The scroll container applies the scroll transform to descendants, so the
-/// painted rows appear in viewport space automatically.
+/// `paint_row` is called for each visible row (including overscan).
+///
+/// Coordinate space: the provided `Rect` is expressed in the same "content space" that the
+/// scroll container uses for its child subtree. Concretely, it is anchored at the canvas node's
+/// layout bounds (not `0,0`).
+///
+/// This matches how other `CanvasPainter` consumers treat `Rect` coordinates (absolute in the
+/// current transform space) and avoids callers accidentally painting at the window origin.
 #[track_caller]
 pub fn windowed_rows_surface<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -237,6 +242,9 @@ pub fn windowed_rows_surface<H: UiHost>(
 
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
+    // This surface's paint output depends on the scroll offset (visible window changes), so
+    // scroll-handle updates must be allowed to invalidate view-cache reuse.
+    scroll.windowed_paint = true;
 
     canvas.layout.size.width = Length::Fill;
     canvas.layout.size.height = Length::Px(content_h);
@@ -255,7 +263,10 @@ pub fn windowed_rows_surface<H: UiHost>(
                 return;
             };
 
-            let width = Px(painter.bounds().size.width.0.max(0.0));
+            let bounds = painter.bounds();
+            let origin_x = bounds.origin.x;
+            let origin_y = bounds.origin.y;
+            let width = Px(bounds.size.width.0.max(0.0));
             let count = visible.count;
             if count == 0 {
                 return;
@@ -279,7 +290,10 @@ pub fn windowed_rows_surface<H: UiHost>(
             for index in start..=end {
                 let y = metrics.offset_for_index(index);
                 let h = metrics.height_at(index);
-                let rect = Rect::new(Point::new(Px(0.0), y), Size::new(width, h));
+                let rect = Rect::new(
+                    Point::new(origin_x, Px(origin_y.0 + y.0)),
+                    Size::new(width, h),
+                );
                 paint_row(painter, index, rect);
             }
         })]
@@ -520,7 +534,10 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                     return;
                 };
 
-                let width = Px(painter.bounds().size.width.0.max(0.0));
+                let bounds = painter.bounds();
+                let origin_x = bounds.origin.x;
+                let origin_y = bounds.origin.y;
+                let width = Px(bounds.size.width.0.max(0.0));
                 let count = visible.count;
                 if count == 0 {
                     return;
@@ -544,7 +561,10 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                 for index in start..=end {
                     let y = metrics.offset_for_index(index);
                     let h = metrics.height_at(index);
-                    let rect = Rect::new(Point::new(Px(0.0), y), Size::new(width, h));
+                    let rect = Rect::new(
+                        Point::new(origin_x, Px(origin_y.0 + y.0)),
+                        Size::new(width, h),
+                    );
                     paint_row(painter, index, rect);
                 }
             })];

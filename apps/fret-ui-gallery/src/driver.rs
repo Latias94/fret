@@ -50,6 +50,12 @@ struct DebugHudState {
     ema_frame_time_us: Option<f64>,
 }
 
+#[derive(Clone, Debug)]
+struct PendingTaffyDumpRequest {
+    root_label_filter: Option<Arc<str>>,
+    filename_tag: Arc<str>,
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 struct UiGalleryHarnessDiagnosticsStore {
@@ -97,6 +103,7 @@ struct UiGalleryWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     debug_hud: DebugHudState,
+    pending_taffy_dump: Option<PendingTaffyDumpRequest>,
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
@@ -520,6 +527,7 @@ impl UiGalleryDriver {
             ui,
             root: None,
             debug_hud: DebugHudState::default(),
+            pending_taffy_dump: None,
             selected_page,
             workspace_tabs,
             workspace_dirty_tabs,
@@ -740,7 +748,7 @@ impl UiGalleryDriver {
 
     fn handle_gallery_command(
         app: &mut App,
-        state: &UiGalleryWindowState,
+        state: &mut UiGalleryWindowState,
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
@@ -765,6 +773,45 @@ impl UiGalleryDriver {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("code_editor.load_fonts");
                 });
+            }
+            CMD_CODE_EDITOR_DUMP_TAFFY => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    state.pending_taffy_dump = Some(PendingTaffyDumpRequest {
+                        // Prefer dumping the code editor subtree when present; fall back to the
+                        // full UI root when the filter does not match anything.
+                        root_label_filter: Some(Arc::<str>::from("ui-gallery-code-editor-root")),
+                        filename_tag: Arc::<str>::from("ui_gallery.code_editor"),
+                    });
+
+                    let sonner = shadcn::Sonner::global(app);
+                    let mut host = UiActionHostAdapter { app };
+                    sonner.toast_message(
+                        &mut host,
+                        window,
+                        "Layout dump queued",
+                        shadcn::ToastMessageOptions::new().description(
+                            "Will write a Taffy dump to .fret/taffy-dumps on the next frame.",
+                        ),
+                    );
+
+                    let _ = host.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("code_editor.dump_taffy");
+                    });
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let sonner = shadcn::Sonner::global(app);
+                    let mut host = UiActionHostAdapter { app };
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Layout dump unsupported",
+                        shadcn::ToastMessageOptions::new()
+                            .description("Writing debug dumps is not supported on wasm."),
+                    );
+                }
             }
             CMD_APP_TOGGLE_PREFERENCES_ENABLED => {
                 let preferences = CommandId::new(fret_app::core_commands::APP_PREFERENCES);
@@ -3025,6 +3072,52 @@ impl WinitAppDriver for UiGalleryDriver {
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(request) = state.pending_taffy_dump.take() {
+            let root = state.root.or_else(|| state.ui.base_root());
+            let result = if let Some(root) = root {
+                state.ui.debug_write_taffy_subtree_json(
+                    app,
+                    window,
+                    root,
+                    bounds,
+                    scale_factor,
+                    request.root_label_filter.as_deref(),
+                    std::path::Path::new(".fret/taffy-dumps"),
+                    request.filename_tag.as_ref(),
+                )
+            } else {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "missing UiTree root",
+                ))
+            };
+
+            let sonner = shadcn::Sonner::global(app);
+            let mut host = UiActionHostAdapter { app };
+            match result {
+                Ok(path) => {
+                    tracing::info!(path = %path.display(), "wrote taffy dump");
+                    sonner.toast_success_message(
+                        &mut host,
+                        window,
+                        "Layout dump written",
+                        shadcn::ToastMessageOptions::new()
+                            .description(format!("{}", path.display())),
+                    );
+                }
+                Err(err) => {
+                    tracing::warn!(error = %err, "failed to write taffy dump");
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Layout dump failed",
+                        shadcn::ToastMessageOptions::new().description(format!("{err}")),
+                    );
+                }
+            }
+        }
 
         #[cfg(not(target_arch = "wasm32"))]
         {

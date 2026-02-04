@@ -19,7 +19,7 @@ use web_sys::wasm_bindgen::JsCast as _;
 use winit::application::ApplicationHandler;
 use winit::cursor::Cursor;
 use winit::dpi::{LogicalSize, PhysicalSize};
-use winit::event::WindowEvent;
+use winit::event::{ElementState, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{Window, WindowAttributes, WindowId};
 
@@ -1913,6 +1913,32 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     &event,
                     &mut self.pending_events,
                 );
+                // On Web/WASM, focusing the hidden IME textarea must happen within the same
+                // user-activation gesture that triggered the focus change (browser restrictions).
+                //
+                // The normal "queue events -> request redraw -> drain turns during RedrawRequested"
+                // path can run outside of that activation window (e.g. next RAF), causing
+                // `textarea.focus()` to be ignored and leaving IME disabled.
+                //
+                // Flush a bounded number of turns immediately for activation-carrying events so
+                // `Effect::ImeAllow { enabled: true }` can be handled synchronously.
+                let activation_event = matches!(
+                    &event,
+                    // Note: some focus behaviors (and thus `Effect::ImeAllow`) can be driven by
+                    // the "click" completion semantics (pointer-up). Drain on both pressed and
+                    // released to keep textarea `focus()` within the browser activation window.
+                    WindowEvent::PointerButton { .. }
+                );
+                if activation_event
+                    && self.gfx.is_some()
+                    && self.window_state.is_some()
+                    && let (Some(mut gfx), Some(mut state)) =
+                        (self.gfx.take(), self.window_state.take())
+                {
+                    self.drain_turns(event_loop, window, &mut gfx, &mut state);
+                    self.window_state = Some(state);
+                    self.gfx = Some(gfx);
+                }
                 if !self.pending_events.is_empty() {
                     window.request_redraw();
                 }

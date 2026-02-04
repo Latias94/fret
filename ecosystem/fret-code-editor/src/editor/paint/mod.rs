@@ -16,6 +16,8 @@ pub(super) fn paint_row(
     selection_bg: Color,
     caret_color: Color,
 ) {
+    st.last_bounds = Some(painter.bounds());
+
     let row_range = st.display_map.display_row_byte_range(&st.buffer, row);
     let line = cached_row_text(st, row, text_cache_max_entries);
     painter.scene().push(SceneOp::Quad {

@@ -3939,6 +3939,10 @@ pub struct UiWebImeBridgeDebugSnapshotV1 {
     pub composing: bool,
     pub suppress_next_input: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_has_focus: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_element_tag: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mount_kind: Option<String>,
@@ -3971,6 +3975,8 @@ pub struct UiWebImeBridgeDebugSnapshotV1 {
     pub last_key_code: Option<KeyCode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_cursor_area: Option<RectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cursor_anchor_px: Option<(f32, f32)>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub last_preedit_text: Option<String>,
@@ -3997,6 +4003,8 @@ impl UiWebImeBridgeDebugSnapshotV1 {
             enabled: snapshot.enabled,
             composing: snapshot.composing,
             suppress_next_input: snapshot.suppress_next_input,
+            textarea_has_focus: snapshot.textarea_has_focus,
+            active_element_tag: snapshot.active_element_tag.clone(),
             position_mode: snapshot.position_mode.clone(),
             mount_kind: snapshot.mount_kind.clone(),
             device_pixel_ratio: snapshot.device_pixel_ratio,
@@ -4012,6 +4020,7 @@ impl UiWebImeBridgeDebugSnapshotV1 {
             last_input_data: snapshot.last_input_data.clone(),
             last_key_code: snapshot.last_key_code,
             last_cursor_area: snapshot.last_cursor_area.map(RectV1::from),
+            last_cursor_anchor_px: snapshot.last_cursor_anchor_px,
             last_preedit_text: snapshot.last_preedit_text.clone(),
             last_preedit_cursor_utf16: snapshot.last_preedit_cursor_utf16,
             last_commit_text: snapshot.last_commit_text.clone(),

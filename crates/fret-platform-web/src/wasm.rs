@@ -120,6 +120,20 @@ fn debug_update_textarea_metrics(
 ) {
     let mut st = debug.borrow_mut();
 
+    let (has_focus, active_tag) = textarea
+        .owner_document()
+        .and_then(|doc| doc.active_element())
+        .map(|active: web_sys::Element| {
+            let active_tag = active.tag_name();
+            let textarea_node: Node = textarea.clone().unchecked_into();
+            let active_node: Node = active.unchecked_into();
+            let has_focus = active_node.is_same_node(Some(&textarea_node));
+            (Some(has_focus), Some(active_tag))
+        })
+        .unwrap_or((None, None));
+    st.snapshot.textarea_has_focus = has_focus;
+    st.snapshot.active_element_tag = active_tag;
+
     let value = textarea.value();
     st.snapshot.textarea_value_chars = Some(value.chars().count());
     st.snapshot.textarea_selection_start_utf16 = textarea.selection_start().ok().flatten();
@@ -130,6 +144,54 @@ fn debug_update_textarea_metrics(
     st.snapshot.textarea_scroll_height_px = Some(textarea.scroll_height());
 
     st.dirty = true;
+}
+
+#[cfg(debug_assertions)]
+fn ime_console_debug_enabled() -> bool {
+    let Some(win) = window() else {
+        return false;
+    };
+
+    let key = wasm_bindgen::JsValue::from_str("__FRET_IME_DEBUG");
+    if let Ok(v) = js_sys::Reflect::get(&win, &key) {
+        if v.as_bool().unwrap_or(false) {
+            return true;
+        }
+        if let Some(s) = v.as_string() {
+            if s == "1" || s.eq_ignore_ascii_case("true") {
+                return true;
+            }
+        }
+    }
+
+    // Avoid requiring `web-sys`'s `Location` feature: read `window.location.search` via `Reflect`.
+    let search = js_sys::Reflect::get(&win, &wasm_bindgen::JsValue::from_str("location"))
+        .ok()
+        .and_then(|loc| js_sys::Reflect::get(&loc, &wasm_bindgen::JsValue::from_str("search")).ok())
+        .and_then(|v| v.as_string())
+        .unwrap_or_default();
+    search.contains("ime_debug=1") || search.contains("fret_ime_debug=1")
+}
+
+#[cfg(debug_assertions)]
+fn ime_console_log(msg: impl AsRef<str>) {
+    if !ime_console_debug_enabled() {
+        return;
+    }
+    // Avoid requiring `web-sys`'s `console` feature: call `globalThis.console.log` via `Reflect`.
+    let global = js_sys::global();
+    let console = js_sys::Reflect::get(&global, &wasm_bindgen::JsValue::from_str("console"));
+    let Ok(console) = console else {
+        return;
+    };
+    let log = js_sys::Reflect::get(&console, &wasm_bindgen::JsValue::from_str("log"));
+    let Ok(log) = log else {
+        return;
+    };
+    let Ok(log) = log.dyn_into::<js_sys::Function>() else {
+        return;
+    };
+    let _ = log.call1(&console, &wasm_bindgen::JsValue::from_str(msg.as_ref()));
 }
 
 struct WebImeBridge {
@@ -853,12 +915,29 @@ impl WebImeBridge {
         debug_push_recent_event(&self.debug, format!("ime_allow enabled={}", enabled as u8));
 
         if enabled {
-            let _ = self.textarea.focus();
+            let focus_result = self.textarea.focus();
+            #[cfg(debug_assertions)]
+            {
+                if let Err(err) = &focus_result {
+                    ime_console_log(format!("ime_allow enabled=1 focus_err={err:?}"));
+                } else {
+                    ime_console_log("ime_allow enabled=1 focus_ok");
+                }
+                debug_update_textarea_metrics(&self.textarea, &self.debug);
+            }
             self.push_event(Event::Ime(fret_core::ImeEvent::Enabled));
             return;
         }
 
-        let _ = self.textarea.blur();
+        let blur_result = self.textarea.blur();
+        #[cfg(debug_assertions)]
+        {
+            if let Err(err) = &blur_result {
+                ime_console_log(format!("ime_allow enabled=0 blur_err={err:?}"));
+            } else {
+                ime_console_log("ime_allow enabled=0 blur_ok");
+            }
+        }
         self.textarea.set_value("");
         self.composing.set(false);
         self.suppress_next_input.set(false);
@@ -878,10 +957,13 @@ impl WebImeBridge {
 
     fn set_cursor_area(&mut self, rect: fret_core::Rect) {
         self.last_cursor_area = Some(rect);
+        let anchor_x = rect.origin.x.0 + rect.size.width.0 * 0.5;
+        let anchor_y = rect.origin.y.0 + rect.size.height.0 * 0.5;
         #[cfg(debug_assertions)]
         {
             let mut st = self.debug.borrow_mut();
             st.snapshot.last_cursor_area = Some(rect);
+            st.snapshot.last_cursor_anchor_px = Some((anchor_x, anchor_y));
             st.snapshot.cursor_area_set_seen = st.snapshot.cursor_area_set_seen.saturating_add(1);
             st.snapshot.device_pixel_ratio = self
                 .textarea
@@ -896,23 +978,46 @@ impl WebImeBridge {
         debug_push_recent_event(
             &self.debug,
             format!(
-                "cursor_area_set x={} y={} w={} h={}",
-                rect.origin.x.0, rect.origin.y.0, rect.size.width.0, rect.size.height.0
+                "cursor_area_set x={} y={} w={} h={} anchor=({},{})",
+                rect.origin.x.0,
+                rect.origin.y.0,
+                rect.size.width.0,
+                rect.size.height.0,
+                anchor_x,
+                anchor_y
             ),
         );
         let textarea_el: HtmlElement = self.textarea.clone().unchecked_into();
         let style = textarea_el.style();
-        let left_px = rect.origin.x.0.max(0.0).round();
-        let top_px = rect.origin.y.0.max(0.0).round();
+        // Anchor the textarea to the *center* of the caret rect to better match how browsers place
+        // IME candidate/composition UI (similar to egui's web text agent).
+        let left_px = anchor_x.max(0.0).round();
+        let top_px = anchor_y.max(0.0).round();
         let _ = style.set_property("left", &format!("{left_px}px"));
         let _ = style.set_property("top", &format!("{top_px}px"));
+        // Keep textarea line metrics roughly in sync with the caret height to avoid vertical drift
+        // between the app caret and browser IME UI across fonts/zoom levels.
+        let caret_h = rect.size.height.0.max(1.0);
+        let height_px = caret_h.max(20.0).round();
+        let font_px = caret_h.clamp(10.0, 48.0).round();
+        let _ = style.set_property("height", &format!("{height_px}px"));
+        let _ = style.set_property("font-size", &format!("{font_px}px"));
+        let _ = style.set_property("line-height", &format!("{height_px}px"));
+
+        #[cfg(debug_assertions)]
+        ime_console_log(format!(
+            "ime_cursor_area rect=({:.1},{:.1} {:.1}x{:.1}) anchor=({left_px:.0},{top_px:.0}) font_px={font_px:.0} height_px={height_px:.0}",
+            rect.origin.x.0, rect.origin.y.0, rect.size.width.0, rect.size.height.0,
+        ));
 
         #[cfg(debug_assertions)]
         if let Some(overlay) = self.cursor_overlay.as_ref() {
             let style = overlay.style();
             let _ = style.set_property("display", "block");
-            let _ = style.set_property("left", &format!("{left_px}px"));
-            let _ = style.set_property("top", &format!("{top_px}px"));
+            let overlay_left_px = rect.origin.x.0.max(0.0).round();
+            let overlay_top_px = rect.origin.y.0.max(0.0).round();
+            let _ = style.set_property("left", &format!("{overlay_left_px}px"));
+            let _ = style.set_property("top", &format!("{overlay_top_px}px"));
             let _ = style.set_property("width", &format!("{}px", rect.size.width.0.max(0.0)));
             let _ = style.set_property("height", &format!("{}px", rect.size.height.0.max(0.0)));
         }

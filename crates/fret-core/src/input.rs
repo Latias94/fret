@@ -122,6 +122,14 @@ pub struct WebImeBridgeDebugSnapshot {
     pub composing: bool,
     pub suppress_next_input: bool,
 
+    /// Whether the hidden textarea is currently the document's active element (focused).
+    ///
+    /// This is best-effort and intended for diagnosing browser "user activation" restrictions where
+    /// `focus()` calls can be ignored.
+    pub textarea_has_focus: Option<bool>,
+    /// Tag name of `document.activeElement` when available (e.g. `"TEXTAREA"`, `"CANVAS"`).
+    pub active_element_tag: Option<String>,
+
     /// Where the hidden textarea is positioned.
     ///
     /// This is intentionally stringly-typed to keep the snapshot portable across runners.
@@ -152,6 +160,11 @@ pub struct WebImeBridgeDebugSnapshot {
 
     pub last_key_code: Option<KeyCode>,
     pub last_cursor_area: Option<Rect>,
+    /// Where the hidden textarea is anchored (CSS px, relative to its positioning context).
+    ///
+    /// This is derived from `last_cursor_area` by the web runner and helps diagnose candidate UI
+    /// offsets (e.g. top-left vs center anchoring).
+    pub last_cursor_anchor_px: Option<(f32, f32)>,
 
     /// Truncated preedit text observed during `compositionupdate`.
     pub last_preedit_text: Option<String>,

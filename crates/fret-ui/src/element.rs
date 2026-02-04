@@ -1559,6 +1559,14 @@ pub struct ScrollProps {
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
     pub intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
+    /// When true, the scroll subtree's paint output depends on the scroll offset in a
+    /// windowed/virtualized way (e.g. a single `Canvas` that only paints the visible range).
+    ///
+    /// In this mode, scroll-handle updates must be allowed to invalidate view-cache reuse so the
+    /// subtree can re-render and re-run paint handlers for the new visible window.
+    ///
+    /// This is a mechanism-only switch; policy lives in ecosystem layers.
+    pub windowed_paint: bool,
     /// When true (default), scroll containers probe their content with a very large available size
     /// along the scroll axis to measure the full scrollable extent.
     ///
@@ -1578,6 +1586,7 @@ impl Default for ScrollProps {
             axis: ScrollAxis::Y,
             scroll_handle: None,
             intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
+            windowed_paint: false,
             probe_unbounded: true,
         }
     }
