@@ -376,7 +376,7 @@ canonical data flow and invalidation boundaries:
     - painting coordinates,
     - port hit-testing / connection candidate selection,
     - conservative AABBs used for spatial indexing and culling.
-  - Built and cached by: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry.rs`, `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/{cache_keys,updates,spatial_index}.rs`
+  - Built and cached by: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/{base_cache,cache_keys,updates,spatial_index}.rs`
   - Invalidation key (must remain stable and auditable):
     - graph revision + zoom + node-origin + draw order hash + presenter revision + edgeTypes revision.
     - **Pan-only must not invalidate** this cache (it is applied via render transforms).
@@ -400,7 +400,7 @@ canonical data flow and invalidation boundaries:
 - **Hit-testing (consumer)**
   - All pointer hit-testing and connection candidate selection must use `CanvasGeometry` +
     `CanvasSpatialIndex` (never ad-hoc “layout guesses”).
-  - Implemented in: `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs` and `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`
+- Implemented in: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` and `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`
 
 ## 2.1 User node vs internal node separation
 

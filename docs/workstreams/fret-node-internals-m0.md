@@ -31,7 +31,7 @@ In scope (UI-only / derived internals):
 - Measured geometry store: `ecosystem/fret-node/src/ui/measured.rs`
 - Canvas geometry outputs: `ecosystem/fret-node/src/ui/canvas/geometry.rs`
 - Spatial index: `ecosystem/fret-node/src/ui/canvas/spatial.rs`
-- Hit-testing helpers (entry + impl): `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs` and `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`
+- Hit-testing helpers (entry + impl): `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` and `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`
 - Derived/cache wiring: `ecosystem/fret-node/src/ui/canvas/state.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/*`, `ecosystem/fret-node/src/ui/canvas/widget/stores/*`
 
 Out of scope (unless required to validate a contract):
@@ -205,12 +205,12 @@ visible semantics remain locked.
 After M0A gates are green:
 
 - [x] Centralize hit-testing candidate collection + scoring (explicit broad-phase vs narrow-phase).
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test/score.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test/score.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
 - [x] Bundle hit-testing parameters into a single context to avoid call-site drift.
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs` (`HitTestCtx`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` (`HitTestCtx`)
 - [x] Split “derived geometry build” from “spatial index build” into explicit stages.
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry.rs` (`ensure_canvas_derived_base`) + `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/updates.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/base_cache.rs` (`ensure_canvas_derived_base`) + `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/updates.rs`
 - [x] Split “derived build” from “internals publish” into explicit stages.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/stores.rs` (`publish_derived_outputs`) + `ecosystem/fret-node/src/ui/canvas/widget/stores/internals.rs`
 - [x] Introduce a shared derived base cache key to prevent field drift between caches.
@@ -273,7 +273,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/preview/node_resize.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`
 - [x] Lock group preview derived geometry updates (group drag / resize precedence; child clamp; edge index updates).
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry.rs` (`group_rect_with_preview`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/base_cache.rs` (`group_rect_with_preview`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/group_preview_conformance.rs`

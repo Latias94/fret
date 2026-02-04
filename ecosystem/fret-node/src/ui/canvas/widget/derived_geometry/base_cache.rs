@@ -1,12 +1,7 @@
 use super::*;
 
-mod cache_keys;
-mod edge_focus_anchors;
-mod spatial_index;
-mod updates;
-
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    pub(super) fn group_rect_with_preview(
+    pub(in super::super) fn group_rect_with_preview(
         &self,
         group_id: crate::core::GroupId,
         base: crate::core::CanvasRect,
@@ -46,7 +41,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         base
     }
 
-    pub(super) fn canvas_geometry<H: UiHost>(
+    pub(in super::super) fn canvas_geometry<H: UiHost>(
         &mut self,
         host: &H,
         snapshot: &ViewSnapshot,
@@ -54,7 +49,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.ensure_canvas_derived_base(host, snapshot).0
     }
 
-    fn ensure_canvas_derived_base<H: UiHost>(
+    pub(in super::super) fn ensure_canvas_derived_base<H: UiHost>(
         &mut self,
         host: &H,
         snapshot: &ViewSnapshot,

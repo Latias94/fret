@@ -295,7 +295,7 @@ Work items:
     - `NodeGraphEdgeTypes::register_path(...)` + `EdgeCustomPath` (`ecosystem/fret-node/src/ui/edge_types.rs`)
     - Paint + hit-test + AABB alignment:
       - painting: `ecosystem/fret-node/src/ui/canvas/widget/paint_edges.rs`, `ecosystem/fret-node/src/ui/canvas/paint.rs`
-      - hit-test: `ecosystem/fret-node/src/ui/canvas/widget/hit_test.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`, `ecosystem/fret-node/src/ui/canvas/widget/wire_math.rs`
+      - hit-test: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`, `ecosystem/fret-node/src/ui/canvas/widget/wire_math.rs`
       - spatial index patch: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/spatial_index.rs`
       - internals edge centers (EdgeToolbar): `ecosystem/fret-node/src/ui/canvas/widget/stores.rs`
     - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
