@@ -549,7 +549,7 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
             let prepaint_started = self.debug_enabled.then(Instant::now);
-            self.prepaint_after_layout(app, scale_factor);
+            self.prepaint_after_layout_stable_frame(app);
             if let Some(prepaint_started) = prepaint_started {
                 self.debug_stats.layout_prepaint_after_layout_time += prepaint_started.elapsed();
             }

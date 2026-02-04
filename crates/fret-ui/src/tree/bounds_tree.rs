@@ -196,6 +196,27 @@ impl HitTestBoundsTrees {
         }
     }
 
+    pub(super) fn reuse_for_layer(&mut self, layer_root: NodeId) {
+        if hit_test_bounds_tree_disabled() {
+            return;
+        }
+
+        let Some(frame_id) = self.frame_id else {
+            return;
+        };
+
+        if let Some(layer) = self.layers.iter_mut().find(|l| l.root == layer_root) {
+            layer.used_this_frame = true;
+            layer.frame_id = Some(frame_id);
+            return;
+        }
+
+        let mut layer = LayerBoundsTree::new(layer_root);
+        layer.used_this_frame = true;
+        layer.frame_id = Some(frame_id);
+        self.layers.push(layer);
+    }
+
     fn layer_mut(&mut self, layer_root: NodeId) -> &mut LayerBoundsTree {
         let frame_id = self.frame_id;
 

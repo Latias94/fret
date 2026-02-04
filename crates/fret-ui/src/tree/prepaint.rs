@@ -372,6 +372,40 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(super) fn prepaint_after_layout_stable_frame(&mut self, app: &mut H) {
+        if self.inspection_active {
+            self.interaction_cache.invalidate_recording();
+            self.hit_test_bounds_trees.clear();
+            return;
+        }
+
+        let started = self.debug_enabled.then(Instant::now);
+        if self.debug_enabled {
+            self.begin_debug_frame_if_needed(app.frame_id());
+            self.debug_stats.prepaint_time = Duration::default();
+            self.debug_stats.prepaint_nodes_visited = 0;
+            self.debug_stats.interaction_cache_hits = 0;
+            self.debug_stats.interaction_cache_misses = 0;
+            self.debug_stats.interaction_cache_replayed_records = 0;
+            self.debug_stats.interaction_records = 0;
+        }
+
+        self.hit_test_bounds_trees.begin_frame(app.frame_id());
+
+        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        for layer_id in layers {
+            let root = self.layers[layer_id].root;
+            let hit_testable = self.layers[layer_id].hit_testable;
+            if hit_testable {
+                self.hit_test_bounds_trees.reuse_for_layer(root);
+            }
+        }
+
+        if let Some(started) = started {
+            self.debug_stats.prepaint_time = started.elapsed();
+        }
+    }
+
     fn prepaint_interaction_node(
         &mut self,
         app: &mut H,
