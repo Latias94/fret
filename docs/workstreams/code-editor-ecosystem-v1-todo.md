@@ -93,7 +93,7 @@ Legend:
 
 - [x] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
 - [x] Ensure double-click selects word and triple-click selects logical line (including trailing newline) (ADR 0151 + ADR 0194).
-- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added for TextInput/TextArea double-click cancel; CodeEditor click selection cancel).
+- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added for TextInput/TextArea double/triple-click cancel; CodeEditor click selection cancel).
 
 ### Tests
 
