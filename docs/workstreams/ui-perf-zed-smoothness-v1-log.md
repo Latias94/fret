@@ -1415,6 +1415,30 @@ Summary (repeat=3; `--sort time`; p95 total):
 Worst bundle (from `worst_overall`):
 - `target/fret-diag-perf-churn2/1770175928782-ui-gallery-window-resize-stress-steady/bundle.json`
 
+### Renderer churn: deterministic effects workload to exercise intermediate pool
+
+Goal:
+- Ensure the diagnostics/perf pipeline can capture effect intermediate pressure (blur/effects), so we can correlate
+  tail hitches with intermediate pool churn and then close it.
+
+Commits:
+- `feat(ui-gallery): add effects_blur_torture harness + script` (`7519d318`)
+
+Command (dev; harness-only; renderer perf enabled):
+```powershell
+FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json --dir target/fret-diag-effects-blur --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+```
+
+Evidence bundle:
+- `target/fret-diag-effects-blur/1770177186090-ui-gallery-effects-blur-torture-steady/bundle.json`
+
+Observed intermediate pool signals (sum/max across snapshots in this bundle):
+- `renderer_intermediate_peak_in_use_bytes`: sum `2042074800`, max `8403600`
+- `renderer_intermediate_release_targets`: sum `972`, max `4`
+- `renderer_intermediate_pool_reuses`: sum `4860`, max `20`
+- `renderer_intermediate_pool_releases`: sum `4860`, max `20`
+- `renderer_intermediate_pool_evictions`: sum `0`, max `0`
+
 ---
 
 ### Renderer perf exported into diagnostics bundles (primitive-level correlation)

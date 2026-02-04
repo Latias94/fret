@@ -211,10 +211,10 @@ Goal:
 
 TODO:
 
-- [ ] Add a deterministic workload/script that actually exercises blur/effects so intermediate pool counters become non-zero.
-  - Deliverable: a `tools/diag-scripts/*-steady.json` script + a perf log entry that shows
-    `renderer_intermediate_peak_in_use_bytes > 0` and/or `renderer_intermediate_pool_* > 0`.
-  - Use with: `--sort intermediate_peak_bytes` and `--sort pool_evictions`.
+- [x] Add a deterministic workload/script that actually exercises blur/effects so intermediate pool counters become non-zero.
+  - Script: `tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json`
+  - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (entry for `effects_blur_torture`).
 - [ ] Add additional churn accounting beyond text atlas:
   - image uploads (bytes + count),
   - SVG mask atlas churn (page alloc/evict, upload bytes),
