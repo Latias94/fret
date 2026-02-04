@@ -24,8 +24,16 @@ pub(super) enum BundleStatsSort {
     RendererImageUploadBytes,
     RendererSvgRasterCacheMisses,
     RendererSvgRasterBudgetEvictions,
+    RendererIntermediateBudgetBytes,
+    RendererIntermediateInUseBytes,
     RendererIntermediatePeakInUseBytes,
+    RendererIntermediateReleaseTargets,
+    RendererIntermediatePoolAllocations,
+    RendererIntermediatePoolReuses,
+    RendererIntermediatePoolReleases,
     RendererIntermediatePoolEvictions,
+    RendererIntermediatePoolFreeBytes,
+    RendererIntermediatePoolFreeTextures,
 }
 
 impl BundleStatsSort {
@@ -60,16 +68,46 @@ impl BundleStatsSort {
             "svg_evictions"
             | "svg_raster_budget_evictions"
             | "renderer_svg_raster_budget_evictions" => Ok(Self::RendererSvgRasterBudgetEvictions),
+            "intermediate_budget_bytes"
+            | "intermediate_budget"
+            | "renderer_intermediate_budget_bytes" => Ok(Self::RendererIntermediateBudgetBytes),
+            "intermediate_in_use_bytes"
+            | "intermediate_in_use"
+            | "renderer_intermediate_in_use_bytes" => Ok(Self::RendererIntermediateInUseBytes),
             "intermediate_peak_bytes"
             | "intermediate_peak"
             | "renderer_intermediate_peak_in_use_bytes" => {
                 Ok(Self::RendererIntermediatePeakInUseBytes)
             }
+            "intermediate_release_targets" | "renderer_intermediate_release_targets" => {
+                Ok(Self::RendererIntermediateReleaseTargets)
+            }
+            "intermediate_allocations"
+            | "intermediate_pool_allocations"
+            | "renderer_intermediate_pool_allocations" => {
+                Ok(Self::RendererIntermediatePoolAllocations)
+            }
+            "intermediate_reuses"
+            | "intermediate_pool_reuses"
+            | "renderer_intermediate_pool_reuses" => Ok(Self::RendererIntermediatePoolReuses),
+            "intermediate_releases"
+            | "intermediate_pool_releases"
+            | "renderer_intermediate_pool_releases" => Ok(Self::RendererIntermediatePoolReleases),
             "pool_evictions"
             | "intermediate_pool_evictions"
             | "renderer_intermediate_pool_evictions" => Ok(Self::RendererIntermediatePoolEvictions),
+            "intermediate_free_bytes"
+            | "intermediate_pool_free_bytes"
+            | "renderer_intermediate_pool_free_bytes" => {
+                Ok(Self::RendererIntermediatePoolFreeBytes)
+            }
+            "intermediate_free_textures"
+            | "intermediate_pool_free_textures"
+            | "renderer_intermediate_pool_free_textures" => {
+                Ok(Self::RendererIntermediatePoolFreeTextures)
+            }
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_peak_bytes|pool_evictions)"
+                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_budget_bytes|intermediate_in_use_bytes|intermediate_peak_bytes|intermediate_release_targets|intermediate_allocations|intermediate_reuses|intermediate_releases|pool_evictions|intermediate_free_bytes|intermediate_free_textures)"
             )),
         }
     }
@@ -91,8 +129,16 @@ impl BundleStatsSort {
             Self::RendererImageUploadBytes => "image_upload_bytes",
             Self::RendererSvgRasterCacheMisses => "svg_cache_misses",
             Self::RendererSvgRasterBudgetEvictions => "svg_evictions",
+            Self::RendererIntermediateBudgetBytes => "intermediate_budget_bytes",
+            Self::RendererIntermediateInUseBytes => "intermediate_in_use_bytes",
             Self::RendererIntermediatePeakInUseBytes => "intermediate_peak_bytes",
+            Self::RendererIntermediateReleaseTargets => "intermediate_release_targets",
+            Self::RendererIntermediatePoolAllocations => "intermediate_allocations",
+            Self::RendererIntermediatePoolReuses => "intermediate_reuses",
+            Self::RendererIntermediatePoolReleases => "intermediate_releases",
             Self::RendererIntermediatePoolEvictions => "pool_evictions",
+            Self::RendererIntermediatePoolFreeBytes => "intermediate_free_bytes",
+            Self::RendererIntermediatePoolFreeTextures => "intermediate_free_textures",
         }
     }
 }
@@ -184,8 +230,16 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_svg_mask_atlas_entries_evicted: u64,
     pub(super) renderer_text_atlas_upload_bytes: u64,
     pub(super) renderer_text_atlas_evicted_pages: u64,
+    pub(super) renderer_intermediate_budget_bytes: u64,
+    pub(super) renderer_intermediate_in_use_bytes: u64,
     pub(super) renderer_intermediate_peak_in_use_bytes: u64,
+    pub(super) renderer_intermediate_release_targets: u64,
+    pub(super) renderer_intermediate_pool_allocations: u64,
+    pub(super) renderer_intermediate_pool_reuses: u64,
+    pub(super) renderer_intermediate_pool_releases: u64,
     pub(super) renderer_intermediate_pool_evictions: u64,
+    pub(super) renderer_intermediate_pool_free_bytes: u64,
+    pub(super) renderer_intermediate_pool_free_textures: u64,
     pub(super) renderer_draw_calls: u64,
     pub(super) renderer_pipeline_switches: u64,
     pub(super) renderer_bind_group_switches: u64,
@@ -4081,12 +4135,44 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_text_atlas_evicted_pages"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_intermediate_budget_bytes = stats
+                .and_then(|m| m.get("renderer_intermediate_budget_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_in_use_bytes = stats
+                .and_then(|m| m.get("renderer_intermediate_in_use_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_intermediate_peak_in_use_bytes = stats
                 .and_then(|m| m.get("renderer_intermediate_peak_in_use_bytes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_intermediate_release_targets = stats
+                .and_then(|m| m.get("renderer_intermediate_release_targets"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_pool_allocations = stats
+                .and_then(|m| m.get("renderer_intermediate_pool_allocations"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_pool_reuses = stats
+                .and_then(|m| m.get("renderer_intermediate_pool_reuses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_pool_releases = stats
+                .and_then(|m| m.get("renderer_intermediate_pool_releases"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_intermediate_pool_evictions = stats
                 .and_then(|m| m.get("renderer_intermediate_pool_evictions"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_pool_free_bytes = stats
+                .and_then(|m| m.get("renderer_intermediate_pool_free_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_intermediate_pool_free_textures = stats
+                .and_then(|m| m.get("renderer_intermediate_pool_free_textures"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_draw_calls = stats
@@ -4447,8 +4533,16 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_svg_mask_atlas_entries_evicted,
                 renderer_text_atlas_upload_bytes,
                 renderer_text_atlas_evicted_pages,
+                renderer_intermediate_budget_bytes,
+                renderer_intermediate_in_use_bytes,
                 renderer_intermediate_peak_in_use_bytes,
+                renderer_intermediate_release_targets,
+                renderer_intermediate_pool_allocations,
+                renderer_intermediate_pool_reuses,
+                renderer_intermediate_pool_releases,
                 renderer_intermediate_pool_evictions,
+                renderer_intermediate_pool_free_bytes,
+                renderer_intermediate_pool_free_textures,
                 renderer_draw_calls,
                 renderer_pipeline_switches,
                 renderer_bind_group_switches,
@@ -4680,6 +4774,20 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
         }
+        BundleStatsSort::RendererIntermediateBudgetBytes => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_budget_bytes
+                    .cmp(&a.renderer_intermediate_budget_bytes)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediateInUseBytes => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_in_use_bytes
+                    .cmp(&a.renderer_intermediate_in_use_bytes)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
         BundleStatsSort::RendererIntermediatePeakInUseBytes => {
             rows.sort_by(|a, b| {
                 b.renderer_intermediate_peak_in_use_bytes
@@ -4691,6 +4799,38 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
         }
+        BundleStatsSort::RendererIntermediateReleaseTargets => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_release_targets
+                    .cmp(&a.renderer_intermediate_release_targets)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediatePoolAllocations => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_pool_allocations
+                    .cmp(&a.renderer_intermediate_pool_allocations)
+                    .then_with(|| {
+                        b.renderer_intermediate_pool_evictions
+                            .cmp(&a.renderer_intermediate_pool_evictions)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediatePoolReuses => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_pool_reuses
+                    .cmp(&a.renderer_intermediate_pool_reuses)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediatePoolReleases => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_pool_releases
+                    .cmp(&a.renderer_intermediate_pool_releases)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
         BundleStatsSort::RendererIntermediatePoolEvictions => {
             rows.sort_by(|a, b| {
                 b.renderer_intermediate_pool_evictions
@@ -4699,6 +4839,20 @@ pub(super) fn bundle_stats_from_json_with_options(
                         b.renderer_intermediate_peak_in_use_bytes
                             .cmp(&a.renderer_intermediate_peak_in_use_bytes)
                     })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediatePoolFreeBytes => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_pool_free_bytes
+                    .cmp(&a.renderer_intermediate_pool_free_bytes)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererIntermediatePoolFreeTextures => {
+            rows.sort_by(|a, b| {
+                b.renderer_intermediate_pool_free_textures
+                    .cmp(&a.renderer_intermediate_pool_free_textures)
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
         }

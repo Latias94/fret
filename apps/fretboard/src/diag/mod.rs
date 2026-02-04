@@ -2869,11 +2869,35 @@ See: `docs/tracy.md`.\n";
                         let top_renderer_svg_mask_atlas_entries_evicted = top
                             .map(|r| r.renderer_svg_mask_atlas_entries_evicted)
                             .unwrap_or(0);
+                        let top_renderer_intermediate_budget_bytes = top
+                            .map(|r| r.renderer_intermediate_budget_bytes)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_in_use_bytes = top
+                            .map(|r| r.renderer_intermediate_in_use_bytes)
+                            .unwrap_or(0);
                         let top_renderer_intermediate_peak_in_use_bytes = top
                             .map(|r| r.renderer_intermediate_peak_in_use_bytes)
                             .unwrap_or(0);
+                        let top_renderer_intermediate_release_targets = top
+                            .map(|r| r.renderer_intermediate_release_targets)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_pool_allocations = top
+                            .map(|r| r.renderer_intermediate_pool_allocations)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_pool_reuses = top
+                            .map(|r| r.renderer_intermediate_pool_reuses)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_pool_releases = top
+                            .map(|r| r.renderer_intermediate_pool_releases)
+                            .unwrap_or(0);
                         let top_renderer_intermediate_pool_evictions = top
                             .map(|r| r.renderer_intermediate_pool_evictions)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_pool_free_bytes = top
+                            .map(|r| r.renderer_intermediate_pool_free_bytes)
+                            .unwrap_or(0);
+                        let top_renderer_intermediate_pool_free_textures = top
+                            .map(|r| r.renderer_intermediate_pool_free_textures)
                             .unwrap_or(0);
 
                         if stats_json {
@@ -2935,14 +2959,22 @@ See: `docs/tracy.md`.\n";
                                 "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
                                 "top_renderer_svg_mask_atlas_bytes_live": top_renderer_svg_mask_atlas_bytes_live,
                                 "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
-                                "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
-                                "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
-                                "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
-                                "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
-                                "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
-                                "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
-                                "bundle": bundle_path.display().to_string(),
-                            }));
+	                                "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
+	                                "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
+	                                "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
+	                                "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
+	                                "top_renderer_intermediate_budget_bytes": top_renderer_intermediate_budget_bytes,
+	                                "top_renderer_intermediate_in_use_bytes": top_renderer_intermediate_in_use_bytes,
+	                                "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
+	                                "top_renderer_intermediate_release_targets": top_renderer_intermediate_release_targets,
+	                                "top_renderer_intermediate_pool_allocations": top_renderer_intermediate_pool_allocations,
+	                                "top_renderer_intermediate_pool_reuses": top_renderer_intermediate_pool_reuses,
+	                                "top_renderer_intermediate_pool_releases": top_renderer_intermediate_pool_releases,
+	                                "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
+	                                "top_renderer_intermediate_pool_free_bytes": top_renderer_intermediate_pool_free_bytes,
+	                                "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
+	                                "bundle": bundle_path.display().to_string(),
+	                            }));
                         } else {
                             println!(
                                 "PERF {} sort={} top.us(total/layout/solve/prepaint/paint/dispatch/hit_test)={}/{}/{}/{}/{}/{}/{} top.tick={} top.frame={} bundle={}",
@@ -3313,11 +3345,35 @@ See: `docs/tracy.md`.\n";
                     let top_renderer_svg_mask_atlas_entries_evicted = top
                         .map(|r| r.renderer_svg_mask_atlas_entries_evicted)
                         .unwrap_or(0);
+                    let top_renderer_intermediate_budget_bytes = top
+                        .map(|r| r.renderer_intermediate_budget_bytes)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_in_use_bytes = top
+                        .map(|r| r.renderer_intermediate_in_use_bytes)
+                        .unwrap_or(0);
                     let top_renderer_intermediate_peak_in_use_bytes = top
                         .map(|r| r.renderer_intermediate_peak_in_use_bytes)
                         .unwrap_or(0);
+                    let top_renderer_intermediate_release_targets = top
+                        .map(|r| r.renderer_intermediate_release_targets)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_allocations = top
+                        .map(|r| r.renderer_intermediate_pool_allocations)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_reuses = top
+                        .map(|r| r.renderer_intermediate_pool_reuses)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_releases = top
+                        .map(|r| r.renderer_intermediate_pool_releases)
+                        .unwrap_or(0);
                     let top_renderer_intermediate_pool_evictions = top
                         .map(|r| r.renderer_intermediate_pool_evictions)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_free_bytes = top
+                        .map(|r| r.renderer_intermediate_pool_free_bytes)
+                        .unwrap_or(0);
+                    let top_renderer_intermediate_pool_free_textures = top
+                        .map(|r| r.renderer_intermediate_pool_free_textures)
                         .unwrap_or(0);
 
                     runs_total.push(top_total);
@@ -3384,14 +3440,22 @@ See: `docs/tracy.md`.\n";
                         "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
                         "top_renderer_svg_mask_atlas_bytes_live": top_renderer_svg_mask_atlas_bytes_live,
                         "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
-                        "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
-                        "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
-                        "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
-                        "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
-                        "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
-                        "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
-                        "bundle": bundle_path.display().to_string(),
-                    }));
+	                        "top_renderer_svg_mask_atlas_capacity_px": top_renderer_svg_mask_atlas_capacity_px,
+	                        "top_renderer_svg_raster_cache_hits": top_renderer_svg_raster_cache_hits,
+	                        "top_renderer_svg_mask_atlas_page_evictions": top_renderer_svg_mask_atlas_page_evictions,
+	                        "top_renderer_svg_mask_atlas_entries_evicted": top_renderer_svg_mask_atlas_entries_evicted,
+	                        "top_renderer_intermediate_budget_bytes": top_renderer_intermediate_budget_bytes,
+	                        "top_renderer_intermediate_in_use_bytes": top_renderer_intermediate_in_use_bytes,
+	                        "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
+	                        "top_renderer_intermediate_release_targets": top_renderer_intermediate_release_targets,
+	                        "top_renderer_intermediate_pool_allocations": top_renderer_intermediate_pool_allocations,
+	                        "top_renderer_intermediate_pool_reuses": top_renderer_intermediate_pool_reuses,
+	                        "top_renderer_intermediate_pool_releases": top_renderer_intermediate_pool_releases,
+	                        "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
+	                        "top_renderer_intermediate_pool_free_bytes": top_renderer_intermediate_pool_free_bytes,
+	                        "top_renderer_intermediate_pool_free_textures": top_renderer_intermediate_pool_free_textures,
+	                        "bundle": bundle_path.display().to_string(),
+	                    }));
 
                     match &script_worst {
                         Some((prev_us, _)) if *prev_us >= top_total => {}
@@ -3466,9 +3530,25 @@ See: `docs/tracy.md`.\n";
                             Vec::with_capacity(repeat);
                         let mut top_renderer_svg_mask_atlas_used_px: Vec<u64> =
                             Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_budget_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_in_use_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
                         let mut top_renderer_intermediate_peak_in_use_bytes: Vec<u64> =
                             Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_release_targets: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_allocations: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_reuses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_releases: Vec<u64> =
+                            Vec::with_capacity(repeat);
                         let mut top_renderer_intermediate_pool_evictions: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_free_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_intermediate_pool_free_textures: Vec<u64> =
                             Vec::with_capacity(repeat);
                         for run in &runs_json {
                             top_frame_arena_capacity_estimate_bytes.push(
@@ -3626,13 +3706,53 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_intermediate_budget_bytes.push(
+                                run.get("top_renderer_intermediate_budget_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_in_use_bytes.push(
+                                run.get("top_renderer_intermediate_in_use_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                             top_renderer_intermediate_peak_in_use_bytes.push(
                                 run.get("top_renderer_intermediate_peak_in_use_bytes")
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_intermediate_release_targets.push(
+                                run.get("top_renderer_intermediate_release_targets")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_allocations.push(
+                                run.get("top_renderer_intermediate_pool_allocations")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_reuses.push(
+                                run.get("top_renderer_intermediate_pool_reuses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_releases.push(
+                                run.get("top_renderer_intermediate_pool_releases")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                             top_renderer_intermediate_pool_evictions.push(
                                 run.get("top_renderer_intermediate_pool_evictions")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_free_bytes.push(
+                                run.get("top_renderer_intermediate_pool_free_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_intermediate_pool_free_textures.push(
+                                run.get("top_renderer_intermediate_pool_free_textures")
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
@@ -3681,8 +3801,16 @@ See: `docs/tracy.md`.\n";
 	                                "top_renderer_svg_rasters_live": summarize_times_us(&top_renderer_svg_rasters_live),
 	                                "top_renderer_svg_mask_atlas_pages_live": summarize_times_us(&top_renderer_svg_mask_atlas_pages_live),
 	                                "top_renderer_svg_mask_atlas_used_px": summarize_times_us(&top_renderer_svg_mask_atlas_used_px),
+	                                "top_renderer_intermediate_budget_bytes": summarize_times_us(&top_renderer_intermediate_budget_bytes),
+	                                "top_renderer_intermediate_in_use_bytes": summarize_times_us(&top_renderer_intermediate_in_use_bytes),
 	                                "top_renderer_intermediate_peak_in_use_bytes": summarize_times_us(&top_renderer_intermediate_peak_in_use_bytes),
+	                                "top_renderer_intermediate_release_targets": summarize_times_us(&top_renderer_intermediate_release_targets),
+	                                "top_renderer_intermediate_pool_allocations": summarize_times_us(&top_renderer_intermediate_pool_allocations),
+	                                "top_renderer_intermediate_pool_reuses": summarize_times_us(&top_renderer_intermediate_pool_reuses),
+	                                "top_renderer_intermediate_pool_releases": summarize_times_us(&top_renderer_intermediate_pool_releases),
 	                                "top_renderer_intermediate_pool_evictions": summarize_times_us(&top_renderer_intermediate_pool_evictions),
+	                                "top_renderer_intermediate_pool_free_bytes": summarize_times_us(&top_renderer_intermediate_pool_free_bytes),
+	                                "top_renderer_intermediate_pool_free_textures": summarize_times_us(&top_renderer_intermediate_pool_free_textures),
 	                            },
 	                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
 	                                "top_total_time_us": us,

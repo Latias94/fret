@@ -89,11 +89,27 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
             "image_upload_bytes": get_stats("top_renderer_image_upload_bytes"),
             "svg_raster_cache_misses": get_stats("top_renderer_svg_raster_cache_misses"),
             "svg_raster_budget_evictions": get_stats("top_renderer_svg_raster_budget_evictions"),
+            "intermediate_budget_bytes": get_stats("top_renderer_intermediate_budget_bytes"),
+            "intermediate_in_use_bytes": get_stats("top_renderer_intermediate_in_use_bytes"),
             "intermediate_peak_in_use_bytes": get_stats(
                 "top_renderer_intermediate_peak_in_use_bytes"
             ),
+            "intermediate_release_targets": get_stats(
+                "top_renderer_intermediate_release_targets"
+            ),
+            "intermediate_pool_allocations": get_stats(
+                "top_renderer_intermediate_pool_allocations"
+            ),
+            "intermediate_pool_reuses": get_stats("top_renderer_intermediate_pool_reuses"),
+            "intermediate_pool_releases": get_stats("top_renderer_intermediate_pool_releases"),
             "intermediate_pool_evictions": get_stats(
                 "top_renderer_intermediate_pool_evictions"
+            ),
+            "intermediate_pool_free_bytes": get_stats(
+                "top_renderer_intermediate_pool_free_bytes"
+            ),
+            "intermediate_pool_free_textures": get_stats(
+                "top_renderer_intermediate_pool_free_textures"
             ),
         }
 
@@ -212,6 +228,52 @@ def _format_entry_markdown(
                 max_peak=int(intermediate_peak.get("max", 0) or 0),
                 p95_evictions=int(pool_evictions.get("p95", 0) or 0),
                 max_evictions=int(pool_evictions.get("max", 0) or 0),
+            )
+        )
+    lines.append("")
+
+    lines.append("Intermediate pool signals (top frame; p95/max):")
+    lines.append(
+        "| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |"
+    )
+    lines.append(
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+    )
+    for r in rows:
+        churn = r.get("churn", {}) or {}
+        budget = churn.get("intermediate_budget_bytes", {}) or {}
+        in_use = churn.get("intermediate_in_use_bytes", {}) or {}
+        peak = churn.get("intermediate_peak_in_use_bytes", {}) or {}
+        release_targets = churn.get("intermediate_release_targets", {}) or {}
+        allocations = churn.get("intermediate_pool_allocations", {}) or {}
+        reuses = churn.get("intermediate_pool_reuses", {}) or {}
+        releases = churn.get("intermediate_pool_releases", {}) or {}
+        evictions = churn.get("intermediate_pool_evictions", {}) or {}
+        free_bytes = churn.get("intermediate_pool_free_bytes", {}) or {}
+        free_textures = churn.get("intermediate_pool_free_textures", {}) or {}
+        lines.append(
+            "| {script} | {p95_budget} | {max_budget} | {p95_in_use} | {max_in_use} | {p95_peak} | {max_peak} | {p95_release_targets} | {max_release_targets} | {p95_alloc} | {max_alloc} | {p95_reuse} | {max_reuse} | {p95_release} | {max_release} | {p95_evict} | {max_evict} | {p95_free_bytes} | {max_free_bytes} | {p95_free_tex} | {max_free_tex} |".format(
+                script=r["script"],
+                p95_budget=int(budget.get("p95", 0) or 0),
+                max_budget=int(budget.get("max", 0) or 0),
+                p95_in_use=int(in_use.get("p95", 0) or 0),
+                max_in_use=int(in_use.get("max", 0) or 0),
+                p95_peak=int(peak.get("p95", 0) or 0),
+                max_peak=int(peak.get("max", 0) or 0),
+                p95_release_targets=int(release_targets.get("p95", 0) or 0),
+                max_release_targets=int(release_targets.get("max", 0) or 0),
+                p95_alloc=int(allocations.get("p95", 0) or 0),
+                max_alloc=int(allocations.get("max", 0) or 0),
+                p95_reuse=int(reuses.get("p95", 0) or 0),
+                max_reuse=int(reuses.get("max", 0) or 0),
+                p95_release=int(releases.get("p95", 0) or 0),
+                max_release=int(releases.get("max", 0) or 0),
+                p95_evict=int(evictions.get("p95", 0) or 0),
+                max_evict=int(evictions.get("max", 0) or 0),
+                p95_free_bytes=int(free_bytes.get("p95", 0) or 0),
+                max_free_bytes=int(free_bytes.get("max", 0) or 0),
+                p95_free_tex=int(free_textures.get("p95", 0) or 0),
+                max_free_tex=int(free_textures.get("max", 0) or 0),
             )
         )
     lines.append("")
