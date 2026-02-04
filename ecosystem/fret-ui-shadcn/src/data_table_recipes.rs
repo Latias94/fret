@@ -10,6 +10,7 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack::{HStackProps, hstack};
 use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::dropdown_menu::{
@@ -22,12 +23,12 @@ fn is_column_visible(state: &TableState, id: &ColumnId) -> bool {
     state.column_visibility.get(id).copied().unwrap_or(true)
 }
 
-fn normalized_global_filter(value: &str) -> Option<Arc<str>> {
+fn normalized_global_filter(value: &str) -> Option<Value> {
     let next = value.trim();
     if next.is_empty() {
         None
     } else {
-        Some(Arc::from(next.to_string()))
+        Some(Value::String(next.to_string()))
     }
 }
 
@@ -160,8 +161,9 @@ impl<TData> DataTableToolbar<TData> {
             None => {
                 let initial = state_value
                     .global_filter
-                    .clone()
-                    .unwrap_or_else(|| Arc::from(""))
+                    .as_ref()
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
                     .to_string();
                 let m = cx.app.models_mut().insert(initial);
                 let m_for_state = m.clone();
@@ -558,7 +560,10 @@ mod tests {
         st.pagination.page_index = 3;
         assert!(apply_global_filter_change(&mut st, "  foo  "));
         assert_eq!(st.pagination.page_index, 0);
-        assert_eq!(st.global_filter.as_deref(), Some("foo"));
+        assert_eq!(
+            st.global_filter.as_ref().and_then(|v| v.as_str()),
+            Some("foo")
+        );
 
         st.pagination.page_index = 2;
         assert!(!apply_global_filter_change(&mut st, "foo"));

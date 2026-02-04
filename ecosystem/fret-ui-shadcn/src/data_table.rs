@@ -279,7 +279,7 @@ impl DataTable {
                 TableRowMeasureMode::Fixed
             };
             view_props.enable_column_grouping = false;
-            view_props.enable_column_resizing = false;
+            view_props.enable_column_resizing = true;
             view_props.draw_frame = false;
 
             let row_key_at = move |d: &TData, index: usize| (get_row_key)(d, index, None);
