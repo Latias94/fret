@@ -121,6 +121,13 @@ pub struct RenderPerfSnapshot {
     pub prepare_svg_us: u64,
     pub prepare_text_us: u64,
 
+    // Non-text upload churn (best-effort). These counters attempt to make CPU->GPU texture uploads
+    // visible in diagnostics, beyond text atlas updates.
+    pub svg_uploads: u64,
+    pub svg_upload_bytes: u64,
+    pub image_uploads: u64,
+    pub image_upload_bytes: u64,
+
     // Text atlas churn (best-effort). These numbers are per-frame signals and should be treated as
     // diagnostic hints rather than strict correctness metrics.
     pub text_atlas_revision: u64,
@@ -185,6 +192,11 @@ pub(super) struct RenderPerfStats {
     pub(super) encode_scene: Duration,
     pub(super) prepare_svg: Duration,
     pub(super) prepare_text: Duration,
+
+    pub(super) svg_uploads: u64,
+    pub(super) svg_upload_bytes: u64,
+    pub(super) image_uploads: u64,
+    pub(super) image_upload_bytes: u64,
 
     pub(super) text_atlas_revision: u64,
     pub(super) text_atlas_uploads: u64,

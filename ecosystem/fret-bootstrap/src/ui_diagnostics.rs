@@ -6206,6 +6206,14 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_prepare_text_us: u64,
     #[serde(default)]
+    pub renderer_svg_uploads: u64,
+    #[serde(default)]
+    pub renderer_svg_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_image_uploads: u64,
+    #[serde(default)]
+    pub renderer_image_upload_bytes: u64,
+    #[serde(default)]
     pub renderer_text_atlas_revision: u64,
     #[serde(default)]
     pub renderer_text_atlas_uploads: u64,
@@ -6365,6 +6373,10 @@ impl UiFrameStatsV1 {
             renderer_encode_scene_us: 0,
             renderer_prepare_svg_us: 0,
             renderer_prepare_text_us: 0,
+            renderer_svg_uploads: 0,
+            renderer_svg_upload_bytes: 0,
+            renderer_image_uploads: 0,
+            renderer_image_upload_bytes: 0,
             renderer_text_atlas_revision: 0,
             renderer_text_atlas_uploads: 0,
             renderer_text_atlas_upload_bytes: 0,
@@ -6403,6 +6415,10 @@ impl UiFrameStatsV1 {
             out.renderer_encode_scene_us = sample.perf.encode_scene_us;
             out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
             out.renderer_prepare_text_us = sample.perf.prepare_text_us;
+            out.renderer_svg_uploads = sample.perf.svg_uploads;
+            out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
+            out.renderer_image_uploads = sample.perf.image_uploads;
+            out.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
             out.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
             out.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
             out.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;

@@ -10,6 +10,7 @@ mod svg;
 mod svg_cache;
 mod targets;
 mod text;
+mod upload_counters;
 pub mod viewport_overlay;
 
 pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};

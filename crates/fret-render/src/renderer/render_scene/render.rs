@@ -25,6 +25,17 @@ impl Renderer {
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
             frame_perf.frames = 1;
+            let counters = crate::upload_counters::take_upload_counters();
+            frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);
+            frame_perf.svg_upload_bytes = frame_perf
+                .svg_upload_bytes
+                .saturating_add(counters.svg_upload_bytes);
+            frame_perf.image_uploads = frame_perf
+                .image_uploads
+                .saturating_add(counters.image_uploads);
+            frame_perf.image_upload_bytes = frame_perf
+                .image_upload_bytes
+                .saturating_add(counters.image_upload_bytes);
         }
 
         #[cfg(debug_assertions)]
@@ -74,6 +85,19 @@ impl Renderer {
         let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
         let perf_svg_prepare_start = perf_enabled.then(Instant::now);
         self.prepare_svg_ops(device, queue, scene, scale_factor);
+        if perf_enabled {
+            let counters = crate::upload_counters::take_upload_counters();
+            frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);
+            frame_perf.svg_upload_bytes = frame_perf
+                .svg_upload_bytes
+                .saturating_add(counters.svg_upload_bytes);
+            frame_perf.image_uploads = frame_perf
+                .image_uploads
+                .saturating_add(counters.image_uploads);
+            frame_perf.image_upload_bytes = frame_perf
+                .image_upload_bytes
+                .saturating_add(counters.image_upload_bytes);
+        }
         if let Some(svg_prepare_start) = svg_prepare_start {
             self.svg_perf.prepare_svg_ops += svg_prepare_start.elapsed();
         }
@@ -2518,6 +2542,20 @@ impl Renderer {
             self.perf.prepare_svg += frame_perf.prepare_svg;
             self.perf.prepare_text += frame_perf.prepare_text;
 
+            self.perf.svg_uploads = self.perf.svg_uploads.saturating_add(frame_perf.svg_uploads);
+            self.perf.svg_upload_bytes = self
+                .perf
+                .svg_upload_bytes
+                .saturating_add(frame_perf.svg_upload_bytes);
+            self.perf.image_uploads = self
+                .perf
+                .image_uploads
+                .saturating_add(frame_perf.image_uploads);
+            self.perf.image_upload_bytes = self
+                .perf
+                .image_upload_bytes
+                .saturating_add(frame_perf.image_upload_bytes);
+
             self.perf.text_atlas_revision = frame_perf.text_atlas_revision;
             self.perf.text_atlas_uploads = self
                 .perf
@@ -2699,6 +2737,10 @@ impl Renderer {
                 encode_scene_us: frame_perf.encode_scene.as_micros() as u64,
                 prepare_svg_us: frame_perf.prepare_svg.as_micros() as u64,
                 prepare_text_us: frame_perf.prepare_text.as_micros() as u64,
+                svg_uploads: frame_perf.svg_uploads,
+                svg_upload_bytes: frame_perf.svg_upload_bytes,
+                image_uploads: frame_perf.image_uploads,
+                image_upload_bytes: frame_perf.image_upload_bytes,
                 text_atlas_revision: frame_perf.text_atlas_revision,
                 text_atlas_uploads: frame_perf.text_atlas_uploads,
                 text_atlas_upload_bytes: frame_perf.text_atlas_upload_bytes,
