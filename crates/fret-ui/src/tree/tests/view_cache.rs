@@ -515,6 +515,8 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
     for id in [root, boundary, vlist_node] {
         ui.test_clear_node_invalidations(id);
@@ -529,6 +531,8 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
 
     assert!(ui.nodes[boundary].invalidation.hit_test);
@@ -600,6 +604,8 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
     for id in [root, boundary, scroll_node] {
         ui.nodes[id].invalidation.clear();
@@ -614,6 +620,8 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
 
     assert!(ui.nodes[boundary].view_cache_needs_rerender);

@@ -925,6 +925,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                false,
+                false,
             );
         }
 
@@ -2617,6 +2619,8 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                false,
+                false,
             );
 
             self.hit_test_path_cache = None;

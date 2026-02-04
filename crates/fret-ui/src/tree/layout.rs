@@ -75,6 +75,8 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         pass_kind: LayoutPassKind,
+        consume_deferred_scroll_to_item: bool,
+        commit_scroll_handle_baselines: bool,
     ) {
         if pass_kind != LayoutPassKind::Final {
             return;
@@ -83,7 +85,13 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let changed = crate::declarative::frame::take_changed_scroll_handle_keys(app, window);
+        let consume_deferred_scroll_to_item =
+            consume_deferred_scroll_to_item && commit_scroll_handle_baselines;
+        let changed = if commit_scroll_handle_baselines {
+            crate::declarative::frame::take_changed_scroll_handle_keys(app, window)
+        } else {
+            crate::declarative::frame::peek_changed_scroll_handle_keys(app, window)
+        };
         if changed.is_empty() {
             return;
         }
@@ -112,10 +120,12 @@ impl<H: UiHost> UiTree<H> {
 
             // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
             // when offset/viewport/content are unchanged, which makes the change appear as
-            // "layout-affecting". For fixed-size virtual lists, we can consume the deferred
-            // request up-front (using cached metrics + viewport) and convert it into a simple
-            // offset update, avoiding a layout-driven consumption path.
-            if change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout {
+            // "layout-affecting". Consume the deferred request up-front (using cached metrics +
+            // viewport) and convert it into a simple offset update, avoiding a layout-driven
+            // consumption path in the common case.
+            if consume_deferred_scroll_to_item
+                && change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout
+            {
                 let mut consumed_scroll_to_item = false;
                 for element in &bound {
                     if consumed_scroll_to_item {
@@ -163,9 +173,6 @@ impl<H: UiHost> UiTree<H> {
                     else {
                         continue;
                     };
-                    if vlist_measure_mode != crate::element::VirtualListMeasureMode::Fixed {
-                        continue;
-                    }
                     let Some((index, strategy)) = vlist_scroll_handle.deferred_scroll_to_item()
                     else {
                         continue;
@@ -184,6 +191,7 @@ impl<H: UiHost> UiTree<H> {
                                 vlist_gap,
                                 vlist_scroll_margin,
                             );
+                            state.metrics.sync_keys(&state.keys, vlist_items_revision);
                             state.items_revision = vlist_items_revision;
 
                             let viewport_size = vlist_scroll_handle.viewport_size();
@@ -226,7 +234,7 @@ impl<H: UiHost> UiTree<H> {
                             vlist_scroll_handle.set_offset(fret_core::Point::new(applied, prev.y));
                         }
                     }
-                    vlist_scroll_handle.clear_deferred_scroll_to_item();
+                    vlist_scroll_handle.clear_deferred_scroll_to_item(app.frame_id());
 
                     consumed_scroll_to_item = true;
                     change_kind = crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly;
@@ -539,7 +547,7 @@ impl<H: UiHost> UiTree<H> {
             .collect();
 
         let started_phase = profile_layout_all.then(Instant::now);
-        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind);
+        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind, true, true);
         if let Some(started) = started_phase {
             t_invalidate_scroll_handle_bindings = Some(started.elapsed());
         }

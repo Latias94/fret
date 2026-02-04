@@ -424,14 +424,27 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Sketch (target shape):
     - Keep per-item identity stable (do not recycle cells) while making the “range delta” path cheap.
     - Make “range delta” a prepaint-plan update whenever possible (offset/visible range), and keep layout limited to true geometry changes.
-- [ ] GPUI-MVP3-virt-003 VirtualList: consume `scroll_to_item` earlier than final layout (measured-mode).
+- [~] GPUI-MVP3-virt-003 VirtualList: consume `scroll_to_item` earlier than final layout (measured-mode).
   - Goal: reduce “deferred scroll consumed during final layout” work and make `scroll_to_item` behavior less layout-sensitive.
   - Notes:
-    - Fixed-mode already consumes earlier; measured-mode still commonly consumes during final layout.
+    - Fixed-mode already consumed earlier; measured-mode now consumes in the same prepass (probe layout remains non-consuming).
     - Keep the behavior explainable in one bundle (`window_shift_reason=scroll_to_item`, corresponding dirty-view detail).
+  - Progress:
+    - Consume deferred `scroll_to_item` during the scroll-handle invalidation prepass for measured-mode (and keep probe layout non-consuming).
+    - Preserve explainability even when consumption happens before layout by attributing window shifts to `ScrollToItem` when the request was consumed earlier in the same frame.
+    - Avoid pre-render/probe consumption by separating preview vs commit invalidation reads for scroll handles.
+  - Evidence:
+    - `crates/fret-ui/src/tree/layout.rs` (`invalidate_scroll_handle_bindings_for_changed_handles`, prepass consumption + mode flags)
+    - `crates/fret-ui/src/declarative/frame.rs` (`peek_changed_scroll_handle_keys`)
+    - `crates/fret-ui/src/scroll.rs` (`VirtualListScrollHandleState::last_consumed_frame_id`, `scroll_to_item_consumed_in_frame`)
+    - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (layout telemetry: `window_shift_reason=ScrollToItem` even after early consumption)
+    - `crates/fret-ui/src/tree/prepaint.rs` (prepaint telemetry: `window_shift_reason=ScrollToItem` even after early consumption)
+    - `crates/fret-ui/src/declarative/tests/virtual_list.rs` (`virtual_list_measured_scroll_to_item_does_not_force_layout_invalidation_in_common_case`, probe regression)
   - Done when:
     - Measured-mode `scroll_to_item` consumption no longer requires the final layout pass in the common case.
     - `tools/diag-scripts/ui-gallery-virtual-list-torture.json` and `ui-gallery-virtual-list-edit-9000` remain correct under view-cache + shell.
+  - Remaining:
+    - Re-run the two harnesses above under view-cache + shell and attach at least one bundle to lock in the behavior.
 
 - [x] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.

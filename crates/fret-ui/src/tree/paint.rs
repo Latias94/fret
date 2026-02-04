@@ -86,6 +86,8 @@ impl<H: UiHost> UiTree<H> {
         self.invalidate_scroll_handle_bindings_for_changed_handles(
             app,
             crate::layout_pass::LayoutPassKind::Final,
+            false,
+            true,
         );
 
         let cache_enabled = self.paint_cache_enabled();

@@ -162,6 +162,8 @@ where
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        false,
     );
 
     let ui_ref: &UiTree<H> = &*ui;
@@ -633,6 +635,8 @@ where
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        false,
     );
 
     let ui_ref: &UiTree<H> = &*ui;

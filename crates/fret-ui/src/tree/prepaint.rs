@@ -139,7 +139,10 @@ impl<H: UiHost> UiTree<H> {
             fret_core::Axis::Vertical => offset_point.y,
             fret_core::Axis::Horizontal => offset_point.x,
         };
-        let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some();
+        let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some()
+            || inputs
+                .scroll_handle
+                .scroll_to_item_consumed_in_frame(app.frame_id());
         let retained_host = crate::elements::with_window_state(&mut *app, window, |window_state| {
             window_state.has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
                 inputs.element,

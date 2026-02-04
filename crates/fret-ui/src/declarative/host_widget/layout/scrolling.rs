@@ -193,7 +193,9 @@ impl ElementHostWidget {
         {
             deferred_scroll_consumed = true;
             offset = metrics.scroll_offset_for_item(index, viewport, offset, strategy);
-            props.scroll_handle.clear_deferred_scroll_to_item();
+            props
+                .scroll_handle
+                .clear_deferred_scroll_to_item(cx.app.frame_id());
         }
 
         offset = metrics.clamp_offset(offset, viewport);
@@ -448,6 +450,11 @@ impl ElementHostWidget {
         };
 
         if cx.tree.debug_enabled() {
+            let scroll_to_item_consumed_in_frame = props
+                .scroll_handle
+                .scroll_to_item_consumed_in_frame(cx.app.frame_id());
+            let scroll_to_item_in_frame =
+                deferred_scroll_to_item || scroll_to_item_consumed_in_frame;
             let policy_key = {
                 let mut b = CacheKeyBuilder::new();
                 b.write_u32(axis as u32);
@@ -478,7 +485,7 @@ impl ElementHostWidget {
             };
             let (window_shift_reason, window_shift_apply_mode, window_shift_invalidation_detail) =
                 if window_mismatch {
-                    let reason = if deferred_scroll_to_item {
+                    let reason = if scroll_to_item_in_frame {
                         crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem
                     } else if props.items_revision != prev_items_revision {
                         crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision
@@ -551,8 +558,9 @@ impl ElementHostWidget {
                     window_range,
                     prev_window_range,
                     render_window_range,
-                    deferred_scroll_to_item,
-                    deferred_scroll_consumed,
+                    deferred_scroll_to_item: scroll_to_item_in_frame,
+                    deferred_scroll_consumed: deferred_scroll_consumed
+                        || scroll_to_item_consumed_in_frame,
                     window_mismatch,
                     window_shift_kind: if window_mismatch {
                         crate::tree::UiDebugVirtualListWindowShiftKind::Escape
