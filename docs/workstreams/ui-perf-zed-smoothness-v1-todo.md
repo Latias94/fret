@@ -64,6 +64,10 @@ Conventions:
   update the canonical perf suite env set accordingly.
 - [x] Export view-cache reuse “miss reasons” as perf-visible counters (so regressions are explainable).
   - Implemented by `feat(diag): export view-cache reuse miss counters` (commit `43f9c73e`).
+- [ ] Keep `diag perf` runs comparable by splitting “gate checks” vs “deep profiling”:
+  - Gate check (CPU regressions): keep `FRET_DIAG_RENDERER_PERF` off (avoid instrumentation overhead).
+  - Deep profiling (churn / GPU triage): turn `FRET_DIAG_RENDERER_PERF=1` on and record churn tables in the log.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries on 2026-02-04 show the delta.
 
 ### M1: Frame data structures (hashing → dense)
 
@@ -171,6 +175,10 @@ Correctness acceptance:
   - Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
   - Harness-only mode (to remove gallery chrome noise): `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
   - Evidence + metrics: see `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries after commit `811101c3`.
+- [x] Record baseline numbers for the two “realistic move sweep” probes:
+  - Data table sweep: `tools/diag-scripts/ui-gallery-hit-test-data-table-move-sweep-steady.json`
+  - Stripes torture (via nav): `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries on 2026-02-04 (commit `9b2f9fc9`).
 - [x] Add a smaller torture script variant to make scaling runs practical (avoid 10GB+ bundles).
   - Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-mini.json`
   - Implemented by `feat(diag-scripts): add mini hit-test torture sweep` (commit `1b3d2db3`).

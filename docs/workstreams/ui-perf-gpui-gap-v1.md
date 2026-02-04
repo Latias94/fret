@@ -299,6 +299,39 @@ Acceptance:
 
 - Correlate tail hitches with a specific churn signature (CPU or GPU); fix by stabilizing caches or batching.
 
+### Gap E: Invalidation granularity (hover/layout/paint separation)
+
+GPUI:
+
+- “Cached view” + `notify` semantics provide a clear contract for when layout/paint work can be reused.
+
+Fret:
+
+- We can now *measure* dispatch and hit-test cost (`top_dispatch_time_us`, `top_hit_test_time_us`), but the more
+  actionable gap is often **over-invalidation**: pointer-move / hover policies can accidentally trigger layout work
+  (or prepaint work) even when the visual change is paint-only.
+- Evidence pattern (see perf log on 2026-02-04):
+  - `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-via-nav-steady.json` shows p95
+    `top_hit_test_time_us` in single-digit microseconds, while `layout_time_us` dominates the frame.
+
+Impact:
+
+- “Hit-testing is fast” but the UI still feels janky because hover invalidations pull in layout and/or prepaint work.
+
+Proposal:
+
+- Make invalidation intent explicit and enforceable:
+  - introduce a paint-only invalidation path (or harden the existing one) so hover state flips are paint-only unless
+    a layout-affecting style actually changed.
+  - classify style changes into **layout-affecting** vs **paint-only** (padding/size/line-height vs color/opacity).
+- Add a perf gate targeting “hover should not relayout”:
+  - use `tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json`,
+  - add a variant where hover is guaranteed paint-only (no size/spacing changes) to isolate dispatch/hit-test cost.
+
+Acceptance:
+
+- Hover/pointer-move torture probes show `p95 layout_time_us ~ 0` (or near-zero) for paint-only hover changes.
+
 ---
 
 ## 4) Proposed milestone mapping (additive to the Zed smoothness workstream)
