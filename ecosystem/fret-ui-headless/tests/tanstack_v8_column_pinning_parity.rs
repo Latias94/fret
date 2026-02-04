@@ -126,9 +126,10 @@ fn tanstack_v8_column_pinning_parity() {
                     position,
                 } => {
                     let pos = parse_column_pin_position(position.as_deref());
-                    state.column_pinning = table
-                        .toggled_column_pinning(column_id, pos)
+                    let updater = table
+                        .column_pinning_updater(column_id, pos)
                         .unwrap_or_else(|| panic!("unknown column in action: {column_id}"));
+                    state.column_pinning = updater.apply(&state.column_pinning);
                 }
             }
         }

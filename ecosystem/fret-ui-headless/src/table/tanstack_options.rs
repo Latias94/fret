@@ -37,10 +37,16 @@ pub struct TanStackTableOptions {
     pub manual_pagination: bool,
     #[serde(default, rename = "manualExpanding")]
     pub manual_expanding: bool,
+    #[serde(default, rename = "manualGrouping")]
+    pub manual_grouping: bool,
     #[serde(default, rename = "paginateExpandedRows")]
     pub paginate_expanded_rows: bool,
     #[serde(default, rename = "keepPinnedRows")]
     pub keep_pinned_rows: bool,
+    #[serde(default, rename = "enableRowPinning")]
+    pub enable_row_pinning: Option<bool>,
+    #[serde(default = "default_true", rename = "enableGrouping")]
+    pub enable_grouping: bool,
     #[serde(default, rename = "enableColumnPinning")]
     pub enable_column_pinning: Option<bool>,
     #[serde(default, rename = "enablePinning")]
@@ -83,8 +89,11 @@ impl Default for TanStackTableOptions {
             manual_sorting: false,
             manual_pagination: false,
             manual_expanding: false,
+            manual_grouping: false,
             paginate_expanded_rows: true,
             keep_pinned_rows: true,
+            enable_row_pinning: None,
+            enable_grouping: true,
             enable_column_pinning: None,
             enable_pinning: None,
             enable_sorting: true,
@@ -111,6 +120,7 @@ impl TanStackTableOptions {
 
     pub fn to_table_options(&self) -> TableOptions {
         let mut out = TableOptions::default();
+        out.enable_pinning = self.enable_pinning.unwrap_or(out.enable_pinning);
         out.manual_filtering = self.manual_filtering;
         out.enable_filters = self.enable_filters;
         out.enable_column_filters = self.enable_column_filters;
@@ -118,12 +128,12 @@ impl TanStackTableOptions {
         out.manual_sorting = self.manual_sorting;
         out.manual_pagination = self.manual_pagination;
         out.manual_expanding = self.manual_expanding;
+        out.manual_grouping = self.manual_grouping;
         out.paginate_expanded_rows = self.paginate_expanded_rows;
         out.keep_pinned_rows = self.keep_pinned_rows;
-        out.enable_column_pinning = self
-            .enable_column_pinning
-            .or(self.enable_pinning)
-            .unwrap_or(out.enable_column_pinning);
+        out.enable_row_pinning = self.enable_row_pinning.unwrap_or(out.enable_pinning);
+        out.enable_grouping = self.enable_grouping;
+        out.enable_column_pinning = self.enable_column_pinning.unwrap_or(out.enable_pinning);
         out.enable_sorting = self.enable_sorting;
         out.enable_multi_sort = self.enable_multi_sort;
         out.max_multi_sort_col_count = self.max_multi_sort_col_count;

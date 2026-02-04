@@ -44,13 +44,33 @@ pub fn pin_column(
     column: &ColumnId,
     position: Option<ColumnPinPosition>,
 ) {
-    state.left.retain(|c| c.as_ref() != column.as_ref());
-    state.right.retain(|c| c.as_ref() != column.as_ref());
+    pin_columns(state, position, [column.clone()]);
+}
+
+pub fn pin_columns(
+    state: &mut ColumnPinningState,
+    position: Option<ColumnPinPosition>,
+    columns: impl IntoIterator<Item = ColumnId>,
+) {
+    let mut ids: Vec<ColumnId> = Vec::new();
+    let mut id_set: HashSet<ColumnId> = HashSet::new();
+    for id in columns {
+        if id_set.insert(id.clone()) {
+            ids.push(id);
+        }
+    }
+
+    if id_set.is_empty() {
+        return;
+    }
+
+    state.left.retain(|c| !id_set.contains(c));
+    state.right.retain(|c| !id_set.contains(c));
 
     match position {
         None => {}
-        Some(ColumnPinPosition::Left) => state.left.push(column.clone()),
-        Some(ColumnPinPosition::Right) => state.right.push(column.clone()),
+        Some(ColumnPinPosition::Left) => state.left.extend(ids),
+        Some(ColumnPinPosition::Right) => state.right.extend(ids),
     }
 }
 
@@ -61,6 +81,16 @@ pub fn pinned_column(
 ) -> ColumnPinningState {
     let mut next = state.clone();
     pin_column(&mut next, column, position);
+    next
+}
+
+pub fn pinned_columns(
+    state: &ColumnPinningState,
+    position: Option<ColumnPinPosition>,
+    columns: impl IntoIterator<Item = ColumnId>,
+) -> ColumnPinningState {
+    let mut next = state.clone();
+    pin_columns(&mut next, position, columns);
     next
 }
 

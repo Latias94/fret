@@ -237,8 +237,18 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    pub fn enable_pinning(mut self, enabled: bool) -> Self {
+        self.options.enable_pinning = enabled;
+        self
+    }
+
     pub fn enable_column_pinning(mut self, enabled: bool) -> Self {
         self.options.enable_column_pinning = enabled;
+        self
+    }
+
+    pub fn enable_row_pinning(mut self, enabled: bool) -> Self {
+        self.options.enable_row_pinning = enabled;
         self
     }
 
@@ -283,6 +293,7 @@ pub struct Table<'a, TData> {
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
     grouped_row_model: OnceCell<super::GroupedRowModel>,
+    grouped_u64_aggregations: OnceCell<HashMap<RowKey, Arc<[(super::ColumnId, u64)]>>>,
     sorted_row_model: OnceCell<RowModel<'a, TData>>,
     expanded_row_model: OnceCell<RowModel<'a, TData>>,
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
@@ -364,6 +375,7 @@ impl<'a, TData> Table<'a, TData> {
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
             grouped_row_model: OnceCell::new(),
+            grouped_u64_aggregations: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
             expanded_row_model: OnceCell::new(),
             paginated_row_model: OnceCell::new(),
@@ -571,6 +583,47 @@ impl<'a, TData> Table<'a, TData> {
         })
     }
 
+    pub fn grouped_u64_aggregations(&self) -> &HashMap<RowKey, Arc<[(super::ColumnId, u64)]>> {
+        self.grouped_u64_aggregations.get_or_init(|| {
+            if self.options.manual_grouping || self.state.grouping.is_empty() {
+                return Default::default();
+            }
+
+            let grouped = self.grouped_row_model();
+
+            let grouped_columns: std::collections::HashSet<&str> =
+                self.state.grouping.iter().map(|c| c.as_ref()).collect();
+
+            let mut agg_columns: Vec<super::ColumnDef<TData>> = Vec::new();
+            for col in &self.columns {
+                if grouped_columns.contains(col.id.as_ref()) {
+                    continue;
+                }
+
+                let aggregation = if col.aggregation != super::Aggregation::None {
+                    col.aggregation
+                } else if col.value_u64_fn.is_some() || col.facet_key_fn.is_some() {
+                    // TanStack default column def uses `aggregationFn: 'auto'`, which picks `sum`
+                    // for numeric values.
+                    super::Aggregation::SumU64
+                } else {
+                    continue;
+                };
+
+                let mut next = col.clone();
+                next.aggregation = aggregation;
+                agg_columns.push(next);
+            }
+
+            let agg_refs: Vec<&super::ColumnDef<TData>> = agg_columns.iter().collect();
+            super::compute_grouped_u64_aggregations_from_core(
+                grouped,
+                self.core_row_model(),
+                agg_refs.as_slice(),
+            )
+        })
+    }
+
     pub fn is_all_rows_expanded(&self) -> bool {
         match &self.state.expanding {
             super::ExpandingState::All => true,
@@ -622,6 +675,35 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn row_is_pinned(&self, row_key: RowKey) -> Option<super::RowPinPosition> {
         super::is_row_pinned(row_key, &self.state.row_pinning)
+    }
+
+    pub fn row_can_pin(&self, row_key: RowKey) -> Option<bool> {
+        let core = self.core_row_model();
+        if core.row_by_key(row_key).is_none() {
+            return None;
+        }
+        Some(self.options.enable_row_pinning)
+    }
+
+    pub fn row_pinning_updater(
+        &self,
+        row_key: RowKey,
+        position: Option<super::RowPinPosition>,
+        include_leaf_rows: bool,
+        include_parent_rows: bool,
+    ) -> super::Updater<super::RowPinningState> {
+        let keys = super::pin_row_keys(
+            self.core_row_model(),
+            row_key,
+            include_leaf_rows,
+            include_parent_rows,
+        );
+
+        super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            super::pin_rows(&mut next, position, keys.clone());
+            next
+        }))
     }
 
     pub fn top_row_keys(&self) -> Vec<RowKey> {
@@ -689,13 +771,50 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn column_can_pin(&self, column_id: &str) -> Option<bool> {
-        let col = self.column(column_id)?;
-        Some(self.options.enable_column_pinning && col.enable_pinning)
+        fn any_leaf_can_pin<TData>(
+            col: &super::ColumnDef<TData>,
+            enable_column_pinning: bool,
+        ) -> bool {
+            if col.columns.is_empty() {
+                return enable_column_pinning && col.enable_pinning;
+            }
+            col.columns
+                .iter()
+                .any(|c| any_leaf_can_pin(c, enable_column_pinning))
+        }
+
+        let col = self.find_column_in_tree(column_id)?;
+        Some(any_leaf_can_pin(col, self.options.enable_column_pinning))
     }
 
     pub fn column_pin_position(&self, column_id: &str) -> Option<super::ColumnPinPosition> {
-        let col = self.column(column_id)?;
-        super::is_column_pinned(&self.state.column_pinning, &col.id)
+        let leaf_ids = self.column_leaf_ids_for(column_id)?;
+
+        if leaf_ids
+            .iter()
+            .any(|id| self.state.column_pinning.left.iter().any(|c| c == id))
+        {
+            return Some(super::ColumnPinPosition::Left);
+        }
+        if leaf_ids
+            .iter()
+            .any(|id| self.state.column_pinning.right.iter().any(|c| c == id))
+        {
+            return Some(super::ColumnPinPosition::Right);
+        }
+        None
+    }
+
+    pub fn column_pinning_updater(
+        &self,
+        column_id: &str,
+        position: Option<super::ColumnPinPosition>,
+    ) -> Option<super::Updater<super::ColumnPinningState>> {
+        let leaf_ids = self.column_leaf_ids_for(column_id)?;
+
+        Some(super::Updater::Func(Arc::new(move |old| {
+            super::pinned_columns(old, position, leaf_ids.clone())
+        })))
     }
 
     pub fn toggled_column_order_move(
@@ -719,12 +838,8 @@ impl<'a, TData> Table<'a, TData> {
         column_id: &str,
         position: Option<super::ColumnPinPosition>,
     ) -> Option<super::ColumnPinningState> {
-        let col = self.column(column_id)?;
-        Some(super::pinned_column(
-            &self.state.column_pinning,
-            &col.id,
-            position,
-        ))
+        let updater = self.column_pinning_updater(column_id, position)?;
+        Some(updater.apply(&self.state.column_pinning))
     }
 
     pub fn visible_columns(&self) -> Vec<&super::ColumnDef<TData>> {
@@ -1454,6 +1569,44 @@ impl<'a, TData> Table<'a, TData> {
                 .unwrap_or_else(|| self.row_model());
             super::faceted_min_max_u64(model, column)
         })
+    }
+}
+
+impl<'a, TData> Table<'a, TData> {
+    fn find_column_in_tree(&self, column_id: &str) -> Option<&super::ColumnDef<TData>> {
+        fn find<'c, TData>(
+            cols: &'c [super::ColumnDef<TData>],
+            id: &str,
+        ) -> Option<&'c super::ColumnDef<TData>> {
+            for col in cols {
+                if col.id.as_ref() == id {
+                    return Some(col);
+                }
+                if let Some(found) = find(&col.columns, id) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        find(self.column_tree.as_slice(), column_id)
+    }
+
+    fn column_leaf_ids_for(&self, column_id: &str) -> Option<Vec<super::ColumnId>> {
+        fn push_leaf_ids<TData>(col: &super::ColumnDef<TData>, out: &mut Vec<super::ColumnId>) {
+            if col.columns.is_empty() {
+                out.push(col.id.clone());
+                return;
+            }
+            for c in &col.columns {
+                push_leaf_ids(c, out);
+            }
+        }
+
+        let col = self.find_column_in_tree(column_id)?;
+        let mut leaf_ids = Vec::new();
+        push_leaf_ids(col, &mut leaf_ids);
+        Some(leaf_ids)
     }
 }
 

@@ -18,6 +18,7 @@ type CaseId =
   | "state_shapes"
   | "selection"
   | "expanding"
+  | "grouping"
 
 type SnapshotId =
   | "baseline"
@@ -113,6 +114,9 @@ type SnapshotId =
   | "pinning_keep_false_sorted_page_0"
   | "pinning_keep_true_filter_excludes_pinned"
   | "pinning_keep_false_filter_excludes_pinned"
+  | "pinning_enable_row_pinning_false_disables_can_pin"
+  | "pinning_enable_pinning_false_disables_can_pin"
+  | "pinning_enable_pinning_false_enable_row_pinning_true_overrides"
   | "pinning_action_pin_top_bottom"
   | "pinning_action_unpin_top"
   | "pinning_tree_keep_true_child_hidden_when_parent_collapsed"
@@ -126,6 +130,13 @@ type SnapshotId =
   | "column_pinning_action_pin_left_right_unpin"
   | "column_pinning_action_pins_when_enable_column_pinning_false"
   | "column_pinning_action_pins_when_enable_pinning_false"
+  | "grouping_baseline"
+  | "grouping_state_one_column"
+  | "grouping_state_two_columns"
+  | "grouping_manual_grouping_true_noops"
+  | "grouping_state_one_column_sort_role_desc"
+  | "grouping_state_one_column_sort_score_desc"
+  | "grouping_state_two_columns_sort_score_desc"
 
 type DemoProcessRow = {
   id: number
@@ -174,6 +185,7 @@ type TanStackOptions = {
   manualSorting?: boolean
   manualPagination?: boolean
   manualExpanding?: boolean
+  manualGrouping?: boolean
   paginateExpandedRows?: boolean
   keepPinnedRows?: boolean
   enableFilters?: boolean
@@ -191,6 +203,7 @@ type TanStackOptions = {
   enableColumnResizing?: boolean
   enableHiding?: boolean
   enableRowPinning?: boolean
+  enableGrouping?: boolean
   enableColumnPinning?: boolean
   enablePinning?: boolean
   columnResizeMode?: "onChange" | "onEnd"
@@ -350,10 +363,60 @@ type FixtureSnapshot = {
       top: string[]
       center: string[]
       bottom: string[]
+      can_pin: Record<string, boolean>
+      pin_position: Record<string, "top" | "bottom" | null>
       is_some_rows_pinned: boolean
       is_some_top_rows_pinned: boolean
       is_some_bottom_rows_pinned: boolean
     }
+    grouped_row_model?: {
+      root: {
+        kind: "group" | "leaf"
+        depth: number
+        path: { column_id: string; value: unknown }[]
+        grouping_column_id?: string
+        grouping_value?: unknown
+        leaf_row_count?: number
+        first_leaf_row_id?: string | null
+        row_id?: string
+      }[]
+      flat: {
+        kind: "group" | "leaf"
+        depth: number
+        path: { column_id: string; value: unknown }[]
+        grouping_column_id?: string
+        grouping_value?: unknown
+        leaf_row_count?: number
+        first_leaf_row_id?: string | null
+        row_id?: string
+      }[]
+    }
+    sorted_grouped_row_model?: {
+      root: {
+        kind: "group" | "leaf"
+        depth: number
+        path: { column_id: string; value: unknown }[]
+        grouping_column_id?: string
+        grouping_value?: unknown
+        leaf_row_count?: number
+        first_leaf_row_id?: string | null
+        row_id?: string
+      }[]
+      flat: {
+        kind: "group" | "leaf"
+        depth: number
+        path: { column_id: string; value: unknown }[]
+        grouping_column_id?: string
+        grouping_value?: unknown
+        leaf_row_count?: number
+        first_leaf_row_id?: string | null
+        row_id?: string
+      }[]
+    }
+    grouped_aggregations_u64?: {
+      path: { column_id: string; value: unknown }[]
+      values: Record<string, number | null>
+    }[]
     column_pinning?: {
       left: string[]
       center: string[]
@@ -490,7 +553,8 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
         v !== "selection" &&
-        v !== "expanding"
+        v !== "expanding" &&
+        v !== "grouping"
       ) {
         throw new Error(`unknown --case ${v}`)
       }
@@ -501,7 +565,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding|grouping]",
     )
   }
   return { out, case_id }
@@ -747,6 +811,20 @@ async function main(): Promise<void> {
         accessorFn: (row: DemoProcessRow) => row.mem_mb,
         sortingFn: sortNumber,
       },
+    ]
+  } else if (case_id === "grouping") {
+    const rows: { id: number; role: number; team: number; score: number }[] = [
+      { id: 1, role: 1, team: 10, score: 5 },
+      { id: 2, role: 2, team: 20, score: 7 },
+      { id: 3, role: 1, team: 20, score: 1 },
+      { id: 4, role: 2, team: 10, score: 3 },
+      { id: 5, role: 1, team: 10, score: 2 },
+    ]
+    data = rows
+    columns = [
+      { id: "role", accessorFn: (row: any) => row.role },
+      { id: "team", accessorFn: (row: any) => row.team },
+      { id: "score", accessorFn: (row: any) => row.score },
     ]
   } else if (case_id === "expanding" || case_id === "pinning_tree") {
     const tree: DemoProcessRow[] = [
@@ -1147,6 +1225,7 @@ async function main(): Promise<void> {
       manualSorting: options.manualSorting ?? false,
       manualPagination: options.manualPagination ?? false,
       manualExpanding: options.manualExpanding ?? false,
+      manualGrouping: options.manualGrouping ?? false,
       paginateExpandedRows: options.paginateExpandedRows ?? true,
       keepPinnedRows: options.keepPinnedRows ?? true,
       enableFilters: options.enableFilters ?? true,
@@ -1164,6 +1243,7 @@ async function main(): Promise<void> {
       enableColumnResizing: options.enableColumnResizing ?? true,
       enableHiding: options.enableHiding ?? true,
       enableRowPinning: options.enableRowPinning,
+      enableGrouping: options.enableGrouping,
       enableColumnPinning: options.enableColumnPinning,
       enablePinning: options.enablePinning,
       columnResizeMode: options.columnResizeMode,
@@ -1189,6 +1269,7 @@ async function main(): Promise<void> {
       state: currentState,
       getCoreRowModel: tableCore.getCoreRowModel(),
       getFilteredRowModel: tableCore.getFilteredRowModel(),
+      ...(case_id === "grouping" ? { getGroupedRowModel: tableCore.getGroupedRowModel() } : {}),
       getSortedRowModel: tableCore.getSortedRowModel(),
       getPaginationRowModel: tableCore.getPaginationRowModel(),
       getExpandedRowModel: tableCore.getExpandedRowModel(),
@@ -1460,14 +1541,259 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
   const center = (table.getCenterRows?.() ?? []).map((r: any) => String(r.id))
   const bottom = (table.getBottomRows?.() ?? []).map((r: any) => String(r.id))
 
+  const coreRows = table.getCoreRowModel?.()?.flatRows ?? []
+  const can_pin: Record<string, boolean> = {}
+  const pin_position: Record<string, "top" | "bottom" | null> = {}
+  for (const row of coreRows) {
+    const id = String(row.id)
+    const r = table.getRow?.(id, true)
+    if (!r) {
+      continue
+    }
+    can_pin[id] = Boolean(r.getCanPin?.())
+    const pos = r.getIsPinned?.()
+    pin_position[id] = pos === "top" ? "top" : pos === "bottom" ? "bottom" : null
+  }
+
   return {
     top,
     center,
     bottom,
+    can_pin,
+    pin_position,
     is_some_rows_pinned: Boolean(table.getIsSomeRowsPinned?.()),
     is_some_top_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("top")),
     is_some_bottom_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("bottom")),
   }
+}
+
+function snapshotGroupedRowModel(
+  table: any,
+): NonNullable<FixtureSnapshot["expect"]["grouped_row_model"]> {
+  if (typeof table.getGroupedRowModel !== "function") {
+    throw new Error("Grouped row model APIs are not available on this table instance")
+  }
+
+  const grouped = table.getGroupedRowModel()
+  const rootRows = grouped?.rows ?? []
+  const flatRows = grouped?.flatRows ?? []
+
+  type PathEntry = { column_id: string; value: unknown }
+  type Node = NonNullable<FixtureSnapshot["expect"]["grouped_row_model"]>["root"][number]
+
+  const nodesById = new Map<string, Node>()
+  const root: Node[] = []
+
+  const walk = (rows: any[], path: PathEntry[]) => {
+    for (const row of rows) {
+      const isGroup = !!row.groupingColumnId
+      if (isGroup) {
+        const nextPath: PathEntry[] = [
+          ...path,
+          { column_id: String(row.groupingColumnId), value: row.groupingValue },
+        ]
+
+        const node: Node = {
+          kind: "group",
+          depth: Number(row.depth ?? 0),
+          path: nextPath,
+          grouping_column_id: String(row.groupingColumnId),
+          grouping_value: row.groupingValue,
+          leaf_row_count: Number(row.leafRows?.length ?? 0),
+          first_leaf_row_id: row.leafRows?.[0]?.id ?? null,
+        }
+        nodesById.set(String(row.id), node)
+        root.push(node)
+        walk(row.subRows ?? [], nextPath)
+        continue
+      }
+
+      const node: Node = {
+        kind: "leaf",
+        depth: Number(row.depth ?? 0),
+        path,
+        row_id: String(row.id),
+      }
+      nodesById.set(String(row.id), node)
+      root.push(node)
+    }
+  }
+
+  walk(rootRows, [])
+
+  const flat: Node[] = flatRows.map((row: any) => {
+    const id = String(row.id)
+    const cached = nodesById.get(id)
+    if (cached) {
+      return cached
+    }
+
+    const isGroup = !!row.groupingColumnId
+    const path: PathEntry[] = isGroup
+      ? [{ column_id: String(row.groupingColumnId), value: row.groupingValue }]
+      : []
+
+    return isGroup
+      ? {
+          kind: "group",
+          depth: Number(row.depth ?? 0),
+          path,
+          grouping_column_id: String(row.groupingColumnId),
+          grouping_value: row.groupingValue,
+          leaf_row_count: Number(row.leafRows?.length ?? 0),
+          first_leaf_row_id: row.leafRows?.[0]?.id ?? null,
+        }
+      : {
+          kind: "leaf",
+          depth: Number(row.depth ?? 0),
+          path,
+          row_id: id,
+        }
+  })
+
+  return { root, flat }
+}
+
+function snapshotGroupedAggregationsU64(
+  table: any,
+): NonNullable<FixtureSnapshot["expect"]["grouped_aggregations_u64"]> {
+  if (typeof table.getGroupedRowModel !== "function") {
+    throw new Error("Grouped row model APIs are not available on this table instance")
+  }
+
+  const grouped = table.getGroupedRowModel()
+  const rootRows = grouped?.rows ?? []
+
+  const grouping = (table.getState?.().grouping ?? []) as string[]
+  const groupedColumnIds = new Set(grouping.map((v) => String(v)))
+
+  const leaf = (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id))
+  const aggCols = leaf.filter((id) => !groupedColumnIds.has(id))
+
+  if (!aggCols.length) {
+    return []
+  }
+
+  const out: NonNullable<FixtureSnapshot["expect"]["grouped_aggregations_u64"]> = []
+
+  const walk = (rows: any[], path: { column_id: string; value: unknown }[]) => {
+    for (const row of rows) {
+      const isGroup = !!row.groupingColumnId
+      if (!isGroup) {
+        continue
+      }
+
+      const nextPath = [
+        ...path,
+        {
+          column_id: String(row.groupingColumnId),
+          value: String(row.groupingValue),
+        },
+      ]
+
+      const values: Record<string, number | null> = {}
+      for (const colId of aggCols) {
+        const v = row.getValue?.(colId)
+        values[colId] =
+          typeof v === "number" ? v : v == null ? null : Number(v)
+      }
+
+      out.push({ path: nextPath, values })
+      walk(row.subRows ?? [], nextPath)
+    }
+  }
+
+  walk(rootRows, [])
+  return out
+}
+
+function snapshotSortedGroupedRowModel(
+  table: any,
+): NonNullable<FixtureSnapshot["expect"]["sorted_grouped_row_model"]> {
+  if (typeof table.getSortedRowModel !== "function") {
+    throw new Error("Sorted row model APIs are not available on this table instance")
+  }
+
+  const sorted = table.getSortedRowModel()
+  const rootRows = sorted?.rows ?? []
+  const flatRows = sorted?.flatRows ?? []
+
+  type PathEntry = { column_id: string; value: unknown }
+  type Node = NonNullable<
+    FixtureSnapshot["expect"]["sorted_grouped_row_model"]
+  >["root"][number]
+
+  const nodesById = new Map<string, Node>()
+  const root: Node[] = []
+
+  const walk = (rows: any[], path: PathEntry[]) => {
+    for (const row of rows) {
+      const isGroup = !!row.groupingColumnId
+      if (isGroup) {
+        const nextPath: PathEntry[] = [
+          ...path,
+          { column_id: String(row.groupingColumnId), value: row.groupingValue },
+        ]
+
+        const node: Node = {
+          kind: "group",
+          depth: Number(row.depth ?? 0),
+          path: nextPath,
+          grouping_column_id: String(row.groupingColumnId),
+          grouping_value: row.groupingValue,
+          leaf_row_count: Number(row.leafRows?.length ?? 0),
+          first_leaf_row_id: row.leafRows?.[0]?.id ?? null,
+        }
+        nodesById.set(String(row.id), node)
+        root.push(node)
+        walk(row.subRows ?? [], nextPath)
+        continue
+      }
+
+      const node: Node = {
+        kind: "leaf",
+        depth: Number(row.depth ?? 0),
+        path,
+        row_id: String(row.id),
+      }
+      nodesById.set(String(row.id), node)
+      root.push(node)
+    }
+  }
+
+  walk(rootRows, [])
+
+  const flat: Node[] = flatRows.map((row: any) => {
+    const id = String(row.id)
+    const cached = nodesById.get(id)
+    if (cached) {
+      return cached
+    }
+
+    const isGroup = !!row.groupingColumnId
+    const path: PathEntry[] = isGroup
+      ? [{ column_id: String(row.groupingColumnId), value: row.groupingValue }]
+      : []
+
+    return isGroup
+      ? {
+          kind: "group",
+          depth: Number(row.depth ?? 0),
+          path,
+          grouping_column_id: String(row.groupingColumnId),
+          grouping_value: row.groupingValue,
+          leaf_row_count: Number(row.leafRows?.length ?? 0),
+          first_leaf_row_id: row.leafRows?.[0]?.id ?? null,
+        }
+      : {
+          kind: "leaf",
+          depth: Number(row.depth ?? 0),
+          path,
+          row_id: id,
+        }
+  })
+
+  return { root, flat }
 }
 
 function snapshotColumnPinning(
@@ -2446,6 +2772,45 @@ function snapshotColumnPinning(
         [{ type: "toggleColumnVisibility", column_id: "a", value: false }],
       ),
     ]
+  } else if (case_id === "grouping") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      const sorted_grouped_row_model =
+        !options.manualGrouping && (state.grouping?.length ?? 0) > 0
+          ? snapshotSortedGroupedRowModel(table)
+          : undefined
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          grouped_row_model: snapshotGroupedRowModel(table),
+          grouped_aggregations_u64: snapshotGroupedAggregationsU64(table),
+          sorted_grouped_row_model,
+        },
+      }
+    }
+
+    snapshots = [
+      mk("grouping_baseline", {}, {}),
+      mk("grouping_state_one_column", {}, { grouping: ["role"] }),
+      mk("grouping_state_two_columns", {}, { grouping: ["role", "team"] }),
+      mk("grouping_manual_grouping_true_noops", { manualGrouping: true }, { grouping: ["role"] }),
+      mk("grouping_state_one_column_sort_role_desc", {}, {
+        grouping: ["role"],
+        sorting: [{ id: "role", desc: true }],
+      }),
+      mk("grouping_state_one_column_sort_score_desc", {}, {
+        grouping: ["role"],
+        sorting: [{ id: "score", desc: true }],
+      }),
+      mk("grouping_state_two_columns_sort_score_desc", {}, {
+        grouping: ["role", "team"],
+        sorting: [{ id: "score", desc: true }],
+      }),
+    ]
   } else if (case_id === "pinning") {
     const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
       const base = snapshotForState(options, state)
@@ -2533,6 +2898,21 @@ function snapshotColumnPinning(
           ...baseState,
           globalFilter: "Renderer",
         },
+      ),
+      mk(
+        "pinning_enable_row_pinning_false_disables_can_pin",
+        { enableRowPinning: false, keepPinnedRows: true },
+        baseState,
+      ),
+      mk(
+        "pinning_enable_pinning_false_disables_can_pin",
+        { enablePinning: false, keepPinnedRows: true },
+        baseState,
+      ),
+      mk(
+        "pinning_enable_pinning_false_enable_row_pinning_true_overrides",
+        { enablePinning: false, enableRowPinning: true, keepPinnedRows: true },
+        baseState,
       ),
       mkActions(
         "pinning_action_pin_top_bottom",

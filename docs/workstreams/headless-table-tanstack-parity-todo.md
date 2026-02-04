@@ -212,9 +212,18 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## M5 — Grouping + aggregation parity
 
-- [ ] HTP-grp-010 Implement grouped row model parity (including placeholder/aggregated cell flags).
-- [ ] HTP-grp-020 Implement grouped aggregation parity (built-in and custom aggregation fns).
-- [ ] HTP-grp-030 Implement grouped sorting parity (group rows ordering + child ordering).
+- [~] HTP-grp-010 Implement grouped row model parity (including placeholder/aggregated cell flags).
+  - Parity-gated (grouped row model structure + flat rows ordering): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+- [~] HTP-grp-020 Implement grouped aggregation parity (built-in and custom aggregation fns).
+  - Done (parity-gated, u64 built-ins + TanStack `auto`→`sum`): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Remaining: custom aggregation fn registry + non-u64 aggregations (`extent`/`median`/`unique`/etc).
+- [~] HTP-grp-030 Implement grouped sorting parity (group rows ordering + child ordering).
+  - Done (parity-gated for 1-column and 2-column grouping, single sort spec): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/grouped_sorting.rs`.
+  - Remaining: multi-column sort precedence + non-u64 sort keys + fully integrating sorted grouped output into the main row model pipeline.
 - [ ] HTP-grp-040 Align option gates and hooks:
   - `enableGrouping`, `manualGrouping`, `onGroupingChange`, `getGroupedRowModel` override.
 - [ ] HTP-grp-050 Align `groupedColumnMode` behavior and column ordering interactions.
@@ -224,10 +233,10 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## M6 — Pinning/expanding/selection/pagination interactions parity
 
-- [~] HTP-rowpin-010 Align `keepPinnedRows` behavior and its interactions with filtering/sorting/pagination.
+- [x] HTP-rowpin-010 Align `keepPinnedRows` behavior and its interactions with filtering/sorting/pagination.
   - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`.
-- [~] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
+- [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_tree.json`.
@@ -258,7 +267,7 @@ ColumnDef keys referenced by upstream feature implementations:
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_options.rs`
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_selection.rs`
   - Remaining: per-row function options + controlled `onRowSelectionChange` parity.
-- [~] HTP-colpin-010 Align column pinning option gates and hooks:
+- [x] HTP-colpin-010 Align column pinning option gates and hooks:
   - `enablePinning`, `enableColumnPinning`, `onColumnPinningChange`.
   - Parity-gated (option gates + state transition outcomes): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`.
@@ -314,7 +323,7 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` | `column_pinning` | `ColumnPinning` (option gates + `pin()` transitions) | `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection.json` | `selection` | `RowSelection` (selected models + toggle semantics for flat rows) | `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json` | `expanding` | `RowExpanding` (expanded row model + pagination interactions) | `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs` | Partial |
-| (todo) `.../grouping.json` | `grouping` | `ColumnGrouping` (grouped model + aggregation + grouped sorting) | (todo) `.../tanstack_v8_grouping_parity.rs` | Open |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` | `grouping` | `ColumnGrouping` (grouped model + flat row ordering) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` | `visibility_ordering` | `ColumnVisibility` + `ColumnOrdering` (state transitions + derived leaf column order) | `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` | Partial |
 | (todo) `.../faceting.json` | `faceting` | `ColumnFaceting` / `GlobalFaceting` | (todo) `.../tanstack_v8_faceting_parity.rs` | Open |
 | (todo) `.../auto_reset.json` | `auto_reset` | auto-reset semantics across features (`autoResetAll`, `autoResetPageIndex`, etc.) | (todo) `.../tanstack_v8_auto_reset_parity.rs` | Open |

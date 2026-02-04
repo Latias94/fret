@@ -3,6 +3,8 @@ use super::{ColumnResizeDirection, ColumnResizeMode};
 /// Headless table options (TanStack-aligned semantics, Rust-native API).
 #[derive(Debug, Clone, Copy)]
 pub struct TableOptions {
+    /// Enables/disables pinning features globally (TanStack `enablePinning`).
+    pub enable_pinning: bool,
     /// If enabled, filtering is assumed to be done externally (e.g. server-side).
     ///
     /// When `true`, `filtered_row_model()` returns `pre_filtered_row_model()`.
@@ -36,8 +38,11 @@ pub struct TableOptions {
     pub enable_hiding: bool,
     /// Whether to allow column ordering at the table level (TanStack `enableColumnOrdering`).
     pub enable_column_ordering: bool,
-    /// Whether to allow column pinning at the table level (TanStack `enablePinning`).
+    /// Whether to allow column pinning at the table level (TanStack `enableColumnPinning` with
+    /// `enablePinning` fallback).
     pub enable_column_pinning: bool,
+    /// Whether to allow row pinning at the table level (TanStack `enableRowPinning`).
+    pub enable_row_pinning: bool,
     /// Whether to allow column resizing at the table level (TanStack `enableColumnResizing`).
     pub enable_column_resizing: bool,
     /// Enables/disables grouping for the table (TanStack `enableGrouping`).
@@ -75,6 +80,7 @@ pub struct TableOptions {
 impl Default for TableOptions {
     fn default() -> Self {
         Self {
+            enable_pinning: true,
             manual_filtering: false,
             enable_filters: true,
             enable_column_filters: true,
@@ -87,6 +93,7 @@ impl Default for TableOptions {
             enable_hiding: true,
             enable_column_ordering: true,
             enable_column_pinning: true,
+            enable_row_pinning: true,
             enable_column_resizing: true,
             enable_grouping: true,
             enable_sorting: true,

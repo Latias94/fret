@@ -1,10 +1,11 @@
 use std::path::PathBuf;
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
     ColumnDef, FilteringFnSpec, RowKey, RowPinPosition, Table, TanStackTableOptions,
-    TanStackTableState, TanStackValue, pin_row,
+    TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
 
@@ -22,6 +23,10 @@ struct RowPinningExpect {
     top: Vec<String>,
     center: Vec<String>,
     bottom: Vec<String>,
+    #[serde(default)]
+    can_pin: BTreeMap<String, bool>,
+    #[serde(default)]
+    pin_position: BTreeMap<String, Option<String>>,
     is_some_rows_pinned: bool,
     is_some_top_rows_pinned: bool,
     is_some_bottom_rows_pinned: bool,
@@ -150,14 +155,13 @@ fn tanstack_v8_pinning_parity() {
                             .unwrap_or_else(|_| panic!("invalid row_id: {row_id}")),
                     );
                     let pos = parse_row_pin_position(position.as_deref());
-                    pin_row(
-                        &mut state.row_pinning,
-                        pos,
-                        table.core_row_model(),
+                    let updater = table.row_pinning_updater(
                         row_key,
+                        pos,
                         *include_leaf_rows,
                         *include_parent_rows,
                     );
+                    state.row_pinning = updater.apply(&state.row_pinning);
                 }
             }
         }
@@ -215,6 +219,41 @@ fn tanstack_v8_pinning_parity() {
                 "snapshot {} row_pinning.bottom mismatch",
                 snap.id
             );
+
+            for (row_id, expected_can_pin) in &expected.can_pin {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                let can_pin = table
+                    .row_can_pin(row_key)
+                    .unwrap_or_else(|| panic!("unknown row: {row_id}"));
+                assert_eq!(
+                    can_pin, *expected_can_pin,
+                    "snapshot {} can_pin[{}] mismatch",
+                    snap.id, row_id
+                );
+            }
+
+            for (row_id, expected_pos) in &expected.pin_position {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                let pos = table.row_is_pinned(row_key).map(|p| match p {
+                    RowPinPosition::Top => "top",
+                    RowPinPosition::Bottom => "bottom",
+                });
+                assert_eq!(
+                    pos.as_deref(),
+                    expected_pos.as_deref(),
+                    "snapshot {} pin_position[{}] mismatch",
+                    snap.id,
+                    row_id
+                );
+            }
 
             assert_eq!(
                 table.is_some_rows_pinned(None),

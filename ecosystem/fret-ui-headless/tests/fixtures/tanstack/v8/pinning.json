@@ -180,6 +180,20 @@
           "bottom": [
             "5"
           ],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": true
@@ -317,6 +331,20 @@
             "2"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": true
@@ -460,6 +488,20 @@
             "1"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": "top",
+            "3": null,
+            "4": null,
+            "5": null
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -601,6 +643,20 @@
             "1"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": "top",
+            "3": null,
+            "4": null,
+            "5": null
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -714,6 +770,20 @@
           "bottom": [
             "5"
           ],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": true
@@ -823,6 +893,486 @@
             "1"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
+          "is_some_rows_pinned": true,
+          "is_some_top_rows_pinned": true,
+          "is_some_bottom_rows_pinned": true
+        }
+      }
+    },
+    {
+      "id": "pinning_enable_row_pinning_false_disables_can_pin",
+      "options": {
+        "enableRowPinning": false,
+        "keepPinnedRows": true
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        },
+        "rowPinning": {
+          "top": [
+            "4"
+          ],
+          "bottom": [
+            "5"
+          ]
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "row_pinning": {
+          "top": [
+            "4"
+          ],
+          "center": [
+            "1",
+            "2"
+          ],
+          "bottom": [
+            "5"
+          ],
+          "can_pin": {
+            "1": false,
+            "2": false,
+            "3": false,
+            "4": false,
+            "5": false
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
+          "is_some_rows_pinned": true,
+          "is_some_top_rows_pinned": true,
+          "is_some_bottom_rows_pinned": true
+        }
+      }
+    },
+    {
+      "id": "pinning_enable_pinning_false_disables_can_pin",
+      "options": {
+        "enablePinning": false,
+        "keepPinnedRows": true
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        },
+        "rowPinning": {
+          "top": [
+            "4"
+          ],
+          "bottom": [
+            "5"
+          ]
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "row_pinning": {
+          "top": [
+            "4"
+          ],
+          "center": [
+            "1",
+            "2"
+          ],
+          "bottom": [
+            "5"
+          ],
+          "can_pin": {
+            "1": false,
+            "2": false,
+            "3": false,
+            "4": false,
+            "5": false
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
+          "is_some_rows_pinned": true,
+          "is_some_top_rows_pinned": true,
+          "is_some_bottom_rows_pinned": true
+        }
+      }
+    },
+    {
+      "id": "pinning_enable_pinning_false_enable_row_pinning_true_overrides",
+      "options": {
+        "enablePinning": false,
+        "enableRowPinning": true,
+        "keepPinnedRows": true
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        },
+        "rowPinning": {
+          "top": [
+            "4"
+          ],
+          "bottom": [
+            "5"
+          ]
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "row_pinning": {
+          "top": [
+            "4"
+          ],
+          "center": [
+            "1",
+            "2"
+          ],
+          "bottom": [
+            "5"
+          ],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": true
@@ -1092,6 +1642,20 @@
           "bottom": [
             "5"
           ],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": "top",
+            "5": "bottom"
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": true
@@ -1354,6 +1918,20 @@
             "2"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "5": null
+          },
           "is_some_rows_pinned": false,
           "is_some_top_rows_pinned": false,
           "is_some_bottom_rows_pinned": false

@@ -223,6 +223,26 @@
             "4"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "11": "top",
+            "12": null,
+            "31": null,
+            "121": null
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -398,6 +418,26 @@
             "4"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "11": "top",
+            "12": null,
+            "31": null,
+            "121": null
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -573,6 +613,26 @@
             "4"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "11": "top",
+            "12": null,
+            "31": null,
+            "121": null
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -825,6 +885,26 @@
             "4"
           ],
           "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "pin_position": {
+            "1": "top",
+            "2": null,
+            "3": null,
+            "4": null,
+            "11": "top",
+            "12": "top",
+            "31": null,
+            "121": "top"
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -1076,6 +1156,26 @@
           "bottom": [
             "1"
           ],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "11": true,
+            "12": true,
+            "31": true,
+            "121": true
+          },
+          "pin_position": {
+            "1": "bottom",
+            "2": null,
+            "3": null,
+            "4": null,
+            "11": null,
+            "12": "bottom",
+            "31": null,
+            "121": "bottom"
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": false,
           "is_some_bottom_rows_pinned": true
