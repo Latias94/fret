@@ -139,10 +139,15 @@ thrash signature:
 
 Notes:
 
-- The current harness forces per-frame paint execution by keying the Canvas subtree by frame, specifically to avoid
-  paint-cache replay hiding the raster/upload path.
-- This is a *measurement* harness, not a recommended production strategy; follow up by designing an invalidation-driven
-  script (scroll/pan/zoom) that still yields a stable churn signature.
+- The harness forces per-frame paint execution by keying the Canvas subtree by frame, specifically to avoid paint-cache
+  replay hiding the raster/upload path.
+- This is a *measurement* harness, not a recommended production strategy.
+
+An invalidation-driven variant also exists (preferred for “realistic scroll” churn signatures):
+
+- Harness: `FRET_UI_GALLERY_HARNESS_ONLY=svg_scroll_torture`
+- Script: `tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json` (wheel-driven window shifts)
+- Budget override: `FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144` (256KB)
 
 ### 3.2 Same workload, but with Tracy capture
 

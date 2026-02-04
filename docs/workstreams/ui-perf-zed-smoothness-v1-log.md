@@ -1923,3 +1923,31 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-svg-upload-thrash-steady.json`
 - top_total_time_us: `28`
 - bundle: `target/fret-diag/1770186886544-script-step-0008-press_key/bundle.json`
+
+## 2026-02-04 15:38:07 (commit `dd8bc0f8`)
+
+Change:
+- Add invalidation-driven svg scroll churn harness + scripted wheel workload
+
+Suite:
+- `ui-gallery`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json --repeat 5 --warmup-frames 5 --sort svg_upload_bytes --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=svg_scroll_torture --env FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json | 17 | 17 | 17 | 14 | 0 | 1 | 2 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json | 0 | 0 | 0 | 0 | 1179648 | 1179648 | 0 | 0 | 8 | 8 | 7 | 7 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json`
+- top_total_time_us: `17`
+- bundle: `target/fret-diag/1770190559929-script-step-0216-press_key/bundle.json`

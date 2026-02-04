@@ -244,9 +244,12 @@ TODO:
     - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `3d1510a7`
       (see `svg_cache_misses` / `svg_evictions` columns).
   - [ ] path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
-- [ ] Replace keyed repaint forcing with a representative invalidation-driven workload.
-  - Current `svg_upload_torture` harness keys the Canvas subtree by frame to bypass paint-cache replay.
-  - Follow-up: design a scroll/pan/zoom driven invalidation path that still yields a stable upload-churn signature.
+- [x] Replace keyed repaint forcing with a representative invalidation-driven workload.
+  - The legacy `svg_upload_torture` harness keys the Canvas subtree by frame to bypass paint-cache replay.
+  - Added an invalidation-driven scroll workload that uses wheel input to shift the VirtualList window:
+    - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=svg_scroll_torture` (commit `dd8bc0f8`)
+    - Script: `tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json`
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dd8bc0f8`.
 - [ ] Standardize “churn triage checklist” in the perf log template:
   - `top_renderer_text_atlas_upload_bytes`, `top_renderer_text_atlas_evicted_pages`,
     `top_renderer_intermediate_peak_in_use_bytes`, `top_renderer_intermediate_pool_evictions`,
