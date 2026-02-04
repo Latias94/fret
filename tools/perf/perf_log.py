@@ -85,6 +85,8 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
         churn = {
             "text_atlas_upload_bytes": get_stats("top_renderer_text_atlas_upload_bytes"),
             "text_atlas_evicted_pages": get_stats("top_renderer_text_atlas_evicted_pages"),
+            "svg_upload_bytes": get_stats("top_renderer_svg_upload_bytes"),
+            "image_upload_bytes": get_stats("top_renderer_image_upload_bytes"),
             "intermediate_peak_in_use_bytes": get_stats(
                 "top_renderer_intermediate_peak_in_use_bytes"
             ),
@@ -174,24 +176,30 @@ def _format_entry_markdown(
 
     lines.append("Churn signals (top frame; p95/max):")
     lines.append(
-        "| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |"
+        "| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |"
     )
     lines.append(
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
     )
     for r in rows:
         churn = r.get("churn", {}) or {}
         atlas_upload = churn.get("text_atlas_upload_bytes", {}) or {}
         atlas_evicted_pages = churn.get("text_atlas_evicted_pages", {}) or {}
+        svg_upload = churn.get("svg_upload_bytes", {}) or {}
+        image_upload = churn.get("image_upload_bytes", {}) or {}
         intermediate_peak = churn.get("intermediate_peak_in_use_bytes", {}) or {}
         pool_evictions = churn.get("intermediate_pool_evictions", {}) or {}
         lines.append(
-            "| {script} | {p95_upload} | {max_upload} | {p95_evict} | {max_evict} | {p95_peak} | {max_peak} | {p95_evictions} | {max_evictions} |".format(
+            "| {script} | {p95_upload} | {max_upload} | {p95_evict} | {max_evict} | {p95_svg_upload} | {max_svg_upload} | {p95_image_upload} | {max_image_upload} | {p95_peak} | {max_peak} | {p95_evictions} | {max_evictions} |".format(
                 script=r["script"],
                 p95_upload=int(atlas_upload.get("p95", 0) or 0),
                 max_upload=int(atlas_upload.get("max", 0) or 0),
                 p95_evict=int(atlas_evicted_pages.get("p95", 0) or 0),
                 max_evict=int(atlas_evicted_pages.get("max", 0) or 0),
+                p95_svg_upload=int(svg_upload.get("p95", 0) or 0),
+                max_svg_upload=int(svg_upload.get("max", 0) or 0),
+                p95_image_upload=int(image_upload.get("p95", 0) or 0),
+                max_image_upload=int(image_upload.get("max", 0) or 0),
                 p95_peak=int(intermediate_peak.get("p95", 0) or 0),
                 max_peak=int(intermediate_peak.get("max", 0) or 0),
                 p95_evictions=int(pool_evictions.get("p95", 0) or 0),

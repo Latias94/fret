@@ -2834,6 +2834,10 @@ See: `docs/tracy.md`.\n";
                         let top_renderer_text_atlas_evicted_pages = top
                             .map(|r| r.renderer_text_atlas_evicted_pages)
                             .unwrap_or(0);
+                        let top_renderer_svg_upload_bytes =
+                            top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
+                        let top_renderer_image_upload_bytes =
+                            top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
                         let top_renderer_intermediate_peak_in_use_bytes = top
                             .map(|r| r.renderer_intermediate_peak_in_use_bytes)
                             .unwrap_or(0);
@@ -2890,6 +2894,8 @@ See: `docs/tracy.md`.\n";
                                 "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
                                 "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
                                 "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
+                                "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
+                                "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
                                 "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
                                 "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
                                 "bundle": bundle_path.display().to_string(),
@@ -3229,6 +3235,10 @@ See: `docs/tracy.md`.\n";
                     let top_renderer_text_atlas_evicted_pages = top
                         .map(|r| r.renderer_text_atlas_evicted_pages)
                         .unwrap_or(0);
+                    let top_renderer_svg_upload_bytes =
+                        top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
+                    let top_renderer_image_upload_bytes =
+                        top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
                     let top_renderer_intermediate_peak_in_use_bytes = top
                         .map(|r| r.renderer_intermediate_peak_in_use_bytes)
                         .unwrap_or(0);
@@ -3290,6 +3300,8 @@ See: `docs/tracy.md`.\n";
                         "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
                         "top_renderer_text_atlas_upload_bytes": top_renderer_text_atlas_upload_bytes,
                         "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
+                        "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
+                        "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
                         "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
                         "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
                         "bundle": bundle_path.display().to_string(),
@@ -3353,6 +3365,10 @@ See: `docs/tracy.md`.\n";
                         let mut top_renderer_text_atlas_upload_bytes: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_renderer_text_atlas_evicted_pages: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_upload_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_image_upload_bytes: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_renderer_intermediate_peak_in_use_bytes: Vec<u64> =
                             Vec::with_capacity(repeat);
@@ -3479,6 +3495,16 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_svg_upload_bytes.push(
+                                run.get("top_renderer_svg_upload_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_image_upload_bytes.push(
+                                run.get("top_renderer_image_upload_bytes")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                             top_renderer_intermediate_peak_in_use_bytes.push(
                                 run.get("top_renderer_intermediate_peak_in_use_bytes")
                                     .and_then(|v| v.as_u64())
@@ -3527,6 +3553,8 @@ See: `docs/tracy.md`.\n";
 	                                "top_renderer_scene_encoding_cache_misses": summarize_times_us(&top_renderer_scene_encoding_cache_misses),
 	                                "top_renderer_text_atlas_upload_bytes": summarize_times_us(&top_renderer_text_atlas_upload_bytes),
 	                                "top_renderer_text_atlas_evicted_pages": summarize_times_us(&top_renderer_text_atlas_evicted_pages),
+	                                "top_renderer_svg_upload_bytes": summarize_times_us(&top_renderer_svg_upload_bytes),
+	                                "top_renderer_image_upload_bytes": summarize_times_us(&top_renderer_image_upload_bytes),
 	                                "top_renderer_intermediate_peak_in_use_bytes": summarize_times_us(&top_renderer_intermediate_peak_in_use_bytes),
 	                                "top_renderer_intermediate_pool_evictions": summarize_times_us(&top_renderer_intermediate_pool_evictions),
 	                            },

@@ -20,6 +20,8 @@ pub(super) enum BundleStatsSort {
     RendererBindGroupSwitches,
     RendererTextAtlasUploadBytes,
     RendererTextAtlasEvictedPages,
+    RendererSvgUploadBytes,
+    RendererImageUploadBytes,
     RendererIntermediatePeakInUseBytes,
     RendererIntermediatePoolEvictions,
 }
@@ -46,6 +48,10 @@ impl BundleStatsSort {
             "atlas_evicted_pages"
             | "text_atlas_evicted_pages"
             | "renderer_text_atlas_evicted_pages" => Ok(Self::RendererTextAtlasEvictedPages),
+            "svg_upload_bytes" | "renderer_svg_upload_bytes" => Ok(Self::RendererSvgUploadBytes),
+            "image_upload_bytes" | "renderer_image_upload_bytes" => {
+                Ok(Self::RendererImageUploadBytes)
+            }
             "intermediate_peak_bytes"
             | "intermediate_peak"
             | "renderer_intermediate_peak_in_use_bytes" => {
@@ -55,7 +61,7 @@ impl BundleStatsSort {
             | "intermediate_pool_evictions"
             | "renderer_intermediate_pool_evictions" => Ok(Self::RendererIntermediatePoolEvictions),
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|intermediate_peak_bytes|pool_evictions)"
+                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|intermediate_peak_bytes|pool_evictions)"
             )),
         }
     }
@@ -73,6 +79,8 @@ impl BundleStatsSort {
             Self::RendererBindGroupSwitches => "bind_group_switches",
             Self::RendererTextAtlasUploadBytes => "atlas_upload_bytes",
             Self::RendererTextAtlasEvictedPages => "atlas_evicted_pages",
+            Self::RendererSvgUploadBytes => "svg_upload_bytes",
+            Self::RendererImageUploadBytes => "image_upload_bytes",
             Self::RendererIntermediatePeakInUseBytes => "intermediate_peak_bytes",
             Self::RendererIntermediatePoolEvictions => "pool_evictions",
         }
@@ -150,6 +158,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_encode_scene_us: u64,
     pub(super) renderer_prepare_text_us: u64,
     pub(super) renderer_prepare_svg_us: u64,
+    pub(super) renderer_svg_upload_bytes: u64,
+    pub(super) renderer_image_upload_bytes: u64,
     pub(super) renderer_text_atlas_upload_bytes: u64,
     pub(super) renderer_text_atlas_evicted_pages: u64,
     pub(super) renderer_intermediate_peak_in_use_bytes: u64,
@@ -3985,6 +3995,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_prepare_svg_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_svg_upload_bytes = stats
+                .and_then(|m| m.get("renderer_svg_upload_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_image_upload_bytes = stats
+                .and_then(|m| m.get("renderer_image_upload_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_text_atlas_upload_bytes = stats
                 .and_then(|m| m.get("renderer_text_atlas_upload_bytes"))
                 .and_then(|v| v.as_u64())
@@ -4343,6 +4361,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_encode_scene_us,
                 renderer_prepare_text_us,
                 renderer_prepare_svg_us,
+                renderer_svg_upload_bytes,
+                renderer_image_upload_bytes,
                 renderer_text_atlas_upload_bytes,
                 renderer_text_atlas_evicted_pages,
                 renderer_intermediate_peak_in_use_bytes,
@@ -4536,6 +4556,21 @@ pub(super) fn bundle_stats_from_json_with_options(
                             .cmp(&a.renderer_text_atlas_upload_bytes)
                     })
                     .then_with(|| b.renderer_prepare_text_us.cmp(&a.renderer_prepare_text_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererSvgUploadBytes => {
+            rows.sort_by(|a, b| {
+                b.renderer_svg_upload_bytes
+                    .cmp(&a.renderer_svg_upload_bytes)
+                    .then_with(|| b.renderer_prepare_svg_us.cmp(&a.renderer_prepare_svg_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererImageUploadBytes => {
+            rows.sort_by(|a, b| {
+                b.renderer_image_upload_bytes
+                    .cmp(&a.renderer_image_upload_bytes)
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
         }
