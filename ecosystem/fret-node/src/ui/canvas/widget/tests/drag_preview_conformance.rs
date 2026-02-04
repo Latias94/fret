@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
@@ -8,6 +10,114 @@ use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn assert_near(a: f32, b: f32) {
     assert!((a - b).abs() <= 1.0e-5, "{a} != {b}");
+}
+
+#[test]
+fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, _a_in, a_out, _b, b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(500.0);
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone());
+
+    // Ensure base geometry + spatial index caches exist (drag previews are keyed off base_index_key).
+    let snapshot0 = canvas.sync_view_state(&mut host);
+    let _ = canvas.canvas_derived(&host, &snapshot0);
+
+    let pos0 = crate::core::CanvasPoint { x: 600.0, y: 300.0 };
+    let pos1 = crate::core::CanvasPoint { x: 800.0, y: 420.0 };
+
+    let (geom0, index0) = canvas
+        .drag_preview_derived(
+            &host,
+            &snapshot0,
+            super::super::DragPreviewKind::NodeDrag,
+            1,
+            &[(a, pos0)],
+        )
+        .expect("preview");
+    let geom0_ptr = Arc::as_ptr(&geom0) as usize;
+    let index0_ptr = Arc::as_ptr(&index0) as usize;
+    drop(geom0);
+    drop(index0);
+
+    // Bumping preview_rev without moving nodes should not rebuild preview geometry/index.
+    let (geom1, index1) = canvas
+        .drag_preview_derived(
+            &host,
+            &snapshot0,
+            super::super::DragPreviewKind::NodeDrag,
+            2,
+            &[(a, pos0)],
+        )
+        .expect("preview");
+    let geom1_ptr = Arc::as_ptr(&geom1) as usize;
+    let index1_ptr = Arc::as_ptr(&index1) as usize;
+    assert_eq!(
+        geom0_ptr, geom1_ptr,
+        "expected preview_rev bump with no movement to reuse cached preview geometry"
+    );
+    assert_eq!(
+        index0_ptr, index1_ptr,
+        "expected preview_rev bump with no movement to reuse cached preview spatial index"
+    );
+    drop(geom1);
+    drop(index1);
+
+    // Moving nodes should update the preview in-place (still no full rebuild).
+    let (geom2, index2) = canvas
+        .drag_preview_derived(
+            &host,
+            &snapshot0,
+            super::super::DragPreviewKind::NodeDrag,
+            3,
+            &[(a, pos1)],
+        )
+        .expect("preview");
+    let geom2_ptr = Arc::as_ptr(&geom2) as usize;
+    let index2_ptr = Arc::as_ptr(&index2) as usize;
+    assert_eq!(
+        geom1_ptr, geom2_ptr,
+        "expected drag preview movement to update cached preview geometry in-place"
+    );
+    assert_eq!(
+        index1_ptr, index2_ptr,
+        "expected drag preview movement to update cached preview spatial index in-place"
+    );
+
+    // Sanity: the moved node's output port remains hittable in the preview geometry.
+    let _ = geom2.port_center(a_out).expect("preview port center");
+    let _ = geom2.port_center(b_in).expect("preview port center");
+    drop(geom2);
+    drop(index2);
+
+    // If the base spatial index key changes, the preview cache must be invalidated and rebuilt.
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.spatial_index.edge_aabb_pad_screen_px = 200.0;
+    });
+    let snapshot1 = canvas.sync_view_state(&mut host);
+    let _ = canvas.canvas_derived(&host, &snapshot1);
+
+    let (geom3, index3) = canvas
+        .drag_preview_derived(
+            &host,
+            &snapshot1,
+            super::super::DragPreviewKind::NodeDrag,
+            4,
+            &[(a, pos1)],
+        )
+        .expect("preview");
+    let geom3_ptr = Arc::as_ptr(&geom3) as usize;
+    let index3_ptr = Arc::as_ptr(&index3) as usize;
+    assert_ne!(
+        geom2_ptr, geom3_ptr,
+        "expected base index key change to invalidate and rebuild preview geometry"
+    );
+    assert_ne!(
+        index2_ptr, index3_ptr,
+        "expected base index key change to invalidate and rebuild preview spatial index"
+    );
 }
 
 #[test]
