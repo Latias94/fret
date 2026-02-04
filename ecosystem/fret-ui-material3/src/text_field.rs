@@ -559,7 +559,10 @@ impl TextField {
                                 props
                             });
 
-                            let overlay = state_layer.map(|background| {
+                            // Keep subtree shape stable across hover transitions (ADR 0181).
+                            // We always include the overlay node, but only paint when `state_layer`
+                            // is present.
+                            let overlay = {
                                 let mut overlay_layout = fret_ui::element::LayoutStyle::default();
                                 overlay_layout.position = fret_ui::element::PositionStyle::Absolute;
                                 overlay_layout.inset.top = Some(Px(0.0));
@@ -569,17 +572,12 @@ impl TextField {
 
                                 let mut overlay = ContainerProps::default();
                                 overlay.layout = overlay_layout;
-                                overlay.background = Some(background);
+                                overlay.background = state_layer;
                                 overlay.corner_radii = container.corner_radii;
                                 cx.container(overlay, |_cx| Vec::new())
-                            });
+                            };
 
-                            match overlay {
-                                Some(overlay) => {
-                                    cx.container(container, move |_cx| vec![overlay, text_input])
-                                }
-                                None => cx.container(container, move |_cx| vec![text_input]),
-                            }
+                            cx.container(container, move |_cx| vec![overlay, text_input])
                         });
 
                         children.push(input);
