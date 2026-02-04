@@ -827,6 +827,100 @@ fn viewport_rects_do_not_couple_fill_semantics_across_subtrees() {
     assert!((b_b.size.width.0 - viewport_b.size.width.0).abs() < 0.01);
 }
 
+#[test]
+fn attach_semantics_is_layout_transparent_for_flex_items() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_row(cx: &mut ElementContext<'_, TestHost>, decorate: bool) -> Vec<AnyElement> {
+        let mut row = crate::element::FlexProps::default();
+        row.layout.size.width = crate::element::Length::Fill;
+        row.layout.size.height = crate::element::Length::Fill;
+        row.direction = fret_core::Axis::Horizontal;
+
+        vec![cx.flex(row, |cx| {
+            let left = cx.text("x");
+
+            let mut right_props = crate::element::TextProps::new("a much longer title");
+            right_props.wrap = fret_core::TextWrap::None;
+            right_props.overflow = fret_core::TextOverflow::Ellipsis;
+            right_props.layout.flex.grow = 1.0;
+            right_props.layout.flex.shrink = 1.0;
+            right_props.layout.flex.basis = crate::element::Length::Px(Px(0.0));
+            right_props.layout.size.min_width = Some(Px(0.0));
+
+            let mut right = cx.text_props(right_props);
+            if decorate {
+                right = right.attach_semantics(
+                    crate::element::SemanticsDecoration::default().test_id("row-title"),
+                );
+            }
+
+            vec![left, right]
+        })]
+    }
+
+    let root_a = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "attach-semantics-layout-a",
+        |cx| build_row(cx, false),
+    );
+    let root_b = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "attach-semantics-layout-b",
+        |cx| build_row(cx, true),
+    );
+
+    let viewport_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(220.0), Px(40.0)));
+    let viewport_b = Rect::new(
+        Point::new(Px(260.0), Px(0.0)),
+        Size::new(Px(220.0), Px(40.0)),
+    );
+
+    let parent = ui.create_node(TwoViewportRects::new(viewport_a, viewport_b));
+    ui.set_children(parent, vec![root_a, root_b]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let flex_a = ui.children(root_a)[0];
+    let right_a = ui.children(flex_a)[1];
+    let bounds_a = ui
+        .debug_node_bounds(right_a)
+        .expect("decorator-free right text bounds");
+    assert!(
+        bounds_a.size.width.0 > 50.0,
+        "expected flex child to expand, got {:?}",
+        bounds_a
+    );
+
+    let flex_b = ui.children(root_b)[0];
+    let right_b = ui.children(flex_b)[1];
+    let bounds_b = ui
+        .debug_node_bounds(right_b)
+        .expect("decorated right text bounds");
+    assert!(
+        (bounds_a.size.width.0 - bounds_b.size.width.0).abs() < 0.01,
+        "expected attach_semantics to be layout-transparent"
+    );
+}
+
 #[cfg(feature = "layout-engine-v2")]
 #[test]
 fn viewport_root_registration_is_recorded_in_layout_all() {

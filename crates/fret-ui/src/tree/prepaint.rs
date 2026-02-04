@@ -842,6 +842,7 @@ mod tests {
                             visible_items: Vec::new(),
                         },
                     ),
+                    semantics_decoration: None,
                 },
             );
         });
@@ -973,6 +974,7 @@ mod tests {
                             visible_items: Vec::new(),
                         },
                     ),
+                    semantics_decoration: None,
                 },
             );
         });
@@ -1095,6 +1097,7 @@ mod tests {
                             visible_items: Vec::new(),
                         },
                     ),
+                    semantics_decoration: None,
                 },
             );
         });
@@ -1213,6 +1216,7 @@ mod tests {
                             visible_items: Vec::new(),
                         },
                     ),
+                    semantics_decoration: None,
                 },
             );
         });
