@@ -41,23 +41,20 @@ Each TODO is labeled:
 
 ## Near-term Focus (keep tight)
 
-- **MVP2-cache-005**: done (keep overlay/scroll-refresh harnesses green while refactoring other areas).
-- **MVP5-virt-001**: move VirtualList window derivation toward prepaint so window shifts do not necessarily imply cache-root rerender.
-- **MVP5-perf-002**: turn “notify hotspots no longer dominated by Pressable” into a repeatable perf gate (top bundles + callsites).
+- **MVP5-eco-004 / eco-005**: promote the existing canvas/chart harnesses into a first “real migration target” each (prepaint-windowed or sampling-windowed, with a script + gate).
+- **MVP3-virt-003**: remove remaining `scroll_to_item` “layout-only consumption” in measured-mode (keep it explainable + gated).
+- **MVP4-demo-002**: migrate 1–2 UI Gallery hotspots to the new paint-only / retained-windowed patterns (not just add harness pages).
 
 ## Near-term Plan (2026-02; make progress measurable)
 
-- **P1 — MVP5-virt-001 contract + explainability hardening**
-  - Deliverable: tighten ADR 0190/0193 wording for non-retained v2 (“what can change in prepaint” vs “must rerender”), and keep the `ui-gallery-vlist-window-boundary` suite green with `--check-vlist-window-shifts-explainable`.
-- **P2 — MVP5-perf-002 notify hotspots**
-  - Deliverable: pick one stable harness (VirtualList boundary or overlay torture), record `notify_call` hotspots with *callsite attribution*, and add one budget gate that fails fast with evidence JSON.
-  - Checklist:
-    - Add `#[track_caller]` capture for `EventCx::notify()` / `ObserverCx::notify()` and propagate a single callsite per dispatch.
-    - Export bounded per-frame `debug.notify_requests` (file/line/col + caller node + target dirty view/cache root).
-    - Add a `fretboard diag stats` gate that can fail on a specific hotspot file (e.g. `pressable.rs`) and writes `check.notify_hotspots.json`.
-    - Wire the gate into at least one perf suite (warmup-ranked) so it is exercised in CI-style runs.
-- **P3 — MVP5-eco-003 code/text window pilot**
-  - Deliverable: migrate one concrete surface (code-view lines or markdown) onto the prepaint-windowed pattern and add a diag script + stale-paint gate.
+- **P1 — Close remaining “contract drift” items in the tracker**
+  - Deliverable: convert stale `[~]` items that are effectively complete into `[x]` (with anchors/evidence), and split any remaining work into small, gateable `[ ]` follow-ups.
+- **P2 — MVP5-eco-004 canvas/node graph: first migration target**
+  - Deliverable: pick one concrete surface (prefer `ecosystem/fret-node`), add a deterministic pan/zoom script, and gate that small pans stay paint/prepaint-only while culling changes are explainable.
+- **P3 — MVP5-eco-005 chart/plot sampling: first migration target**
+  - Deliverable: define a stable sampling-window key + explainability output (prepaint action + output key), and gate that small pans do not force cache-root rerenders under view-cache + shell.
+- **P4 — MVP3-rec-003 interaction replay expansion**
+  - Deliverable: expand interaction replay/reuse beyond pointer-move (at least one additional pointer event path), with a correctness regression and a perf harness.
 
 ## Baseline (Verified Existing Building Blocks)
 
@@ -356,7 +353,7 @@ Goal: converge on `notify -> dirty views -> cached reuse` as the primary mental 
 
 Goal: make caching a closed loop across paint + interaction (+ semantics later), not “paint-only” (ADR 0182).
 
-- [~] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
+- [x] GPUI-MVP3-virt-002 VirtualList: reduce rerender cost during scroll via incremental range reuse (GPUI-component parity).
   - Motivation: `ui-gallery-virtual-list-torture.json` remains layout-dominated even with view-cache + shell reuse.
   - Progress: measured-mode virtual lists skip redundant per-frame `measure_in` passes for already-measured, clean visible rows.
   - Progress: re-measure is forced when the cross-axis viewport extent changes or when a row is layout-invalidated.
@@ -417,12 +414,21 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     - [x] Move visible-range escape detection toward the runtime dispatch path (GPUI-style "range delta" gate), so scroll-handle changes can schedule a one-shot rerender even when the VirtualList widget does not handle the event directly.
     - [x] Use contained-relayout cache-root hotspot diagnostics to reduce post-pass contained relayouts during steady scroll (target: `cache.contained_relayout_roots` stays near 0 for smooth-wheel frames under view-cache + shell).
       - Evidence: in `tools/diag-scripts/ui-gallery-virtual-list-smooth-scroll.json` with `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, contained relayout is only observed on the two wheel frames where the mounted range escapes the overscan window (typical run: 2/18 snapshots; max 2 roots), e.g. `target/fret-diag-perf-vlist-smooth-cache-shell-r3/*-script-step-0023-wheel/bundle.json`.
-    - [~] Move `scroll_to_item` consumption earlier than layout where possible (fixed-mode early consumption; measured-mode still consumed during final layout).
+    - Follow-up: move remaining measured-mode `scroll_to_item` consumption earlier (tracked as `GPUI-MVP3-virt-003`).
     - [x] Repeat the perf runs (baseline vs cache+shell) and update the p50/p95 snapshots after each structural change (see run dirs above).
   - Sketch (target shape):
     - Keep per-item identity stable (do not recycle cells) while making the “range delta” path cheap.
     - Make “range delta” a prepaint-plan update whenever possible (offset/visible range), and keep layout limited to true geometry changes.
-- [~] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
+- [ ] GPUI-MVP3-virt-003 VirtualList: consume `scroll_to_item` earlier than final layout (measured-mode).
+  - Goal: reduce “deferred scroll consumed during final layout” work and make `scroll_to_item` behavior less layout-sensitive.
+  - Notes:
+    - Fixed-mode already consumes earlier; measured-mode still commonly consumes during final layout.
+    - Keep the behavior explainable in one bundle (`window_shift_reason=scroll_to_item`, corresponding dirty-view detail).
+  - Done when:
+    - Measured-mode `scroll_to_item` consumption no longer requires the final layout pass in the common case.
+    - `tools/diag-scripts/ui-gallery-virtual-list-torture.json` and `ui-gallery-virtual-list-edit-9000` remain correct under view-cache + shell.
+
+- [x] GPUI-MVP3-rec-001 Define the minimal interaction stream vocabulary for replay.
   - Candidates: hit regions, cursor requests, outside-press observers, focus traversal roots.
   - Touches: `crates/fret-ui/src/tree/*`, `crates/fret-core/src/*` (data-only shapes as needed)
   - Progress: add hit-test path reuse (cached “interaction range”) as an incremental, semantics-preserving step toward replayable interaction output.
@@ -440,6 +446,12 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     `crates/fret-ui/src/tree/tests/focus_traversal_prepaint_cache.rs`,
     `crates/fret-ui/src/tree/mod.rs` (`UiDebugLayerInfo` outside-press fields),
     `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiLayerInfoV1` export).
+- [ ] GPUI-MVP3-rec-003 Expand interaction replay/reuse beyond pointer-move.
+  - Goal: reuse prepainted interaction output for at least one additional high-frequency path (e.g. pointer-down-outside arbitration, hover routing, or drag-over) without sacrificing correctness.
+  - Done when:
+    - A regression harness proves correctness under view-cache + shell reuse (hit-test / outside-press / cursor updates stay correct).
+    - A perf bundle shows reduced hot-path work for the chosen event type, and the bundle remains explainable (falls back to full hit-test on dirty/inspection).
+
 - [x] GPUI-MVP3-rec-002 Add a prepaint phase that records interaction ranges (per cache root) in a replayable way.
   - Touches: `crates/fret-ui/src/tree/*`
   - Reference: `repo-ref/zed/crates/gpui/src/element.rs` (prepaint), `repo-ref/zed/crates/gpui/src/view.rs` (`reuse_prepaint`)
@@ -468,10 +480,11 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`, `CachedSubtreeProps`)
 - [~] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
   - Touches: `apps/fret-ui-gallery/src/*`, selected `ecosystem/*` components
-- [~] GPUI-MVP4-demo-003 VirtualList: move “visible range” derivation from declarative render into prepaint-driven state.
+- [x] GPUI-MVP4-demo-003 VirtualList: make scroll-driven window updates correct and explainable under view-cache reuse (no implicit `Pressable` notify).
   - Motivation: reduce cache-root rerenders and layout invalidations during scroll/hover by keeping the element tree more structurally stable.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `apps/fret-ui-gallery/src/*` (migration site), `crates/fret-ui/src/tree/*` (if new hooks needed)
+  - Note: full prepaint-driven window application for non-retained VirtualList is tracked under `GPUI-MVP5-virt-001` (Track A/Track B). This item focuses on correctness under view-cache reuse (`scroll_to_item`/wheel) and removing reliance on implicit `notify()`.
   - Plan (v1, Fret-compatible):
     - Ensure out-of-band `ScrollHandle` revision changes (e.g. `scroll_to_item`) are detected during event dispatch and schedule a redraw even when no
       `notify()` occurred, so view-cache roots cannot replay stale virtual-list output indefinitely.
@@ -634,7 +647,7 @@ topics (if/when we implement them):
       - Command:
         - `cargo run -p fretboard -- diag run tools/diag-scripts/docking-demo-drag-indicators.json --warmup-frames 5 --check-prepaint-actions-min 1 --check-drag-cache-root-paint-only dock-demo-dock-space --check-stale-paint dock-demo-dock-space --env FRET_EXAMPLES_VIEW_CACHE=1 --launch -- cargo run -p fret-demo --bin docking_demo --release`
       - Evidence: `target/fret-diag/1769776050260-docking-demo-drag-indicators/bundle.json`
-- [~] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
+- [x] GPUI-MVP5-virt-001 VirtualList: prepaint-driven visible-range window + overscan stability.
   - Goal: wheel scroll stays “transform-only” until the range window actually changes; avoid view-cache rerenders for small scroll deltas.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
   - Touches: `ecosystem/fret-ui-kit/src/*`, `crates/fret-ui/src/tree/prepaint.rs`, `apps/fret-ui-gallery/src/*`
@@ -644,7 +657,7 @@ topics (if/when we implement them):
     - Remaining work (non-retained v2; keep small and gate-driven):
       - Scope note: for *fully composable* row subtrees, “apply a window shift without rerendering the parent cache root” effectively requires a retained host boundary (ADR 0192 / `GPUI-MVP5-virt-003`).
         This track therefore focuses on: (1) prepaint deriving the *next desired window* (explainable), and (2) making escape ticks cheap and predictable (one-shot rerender, no extra current-frame churn).
-      - [~] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
+      - [x] Define the non-retained v2 contract precisely in ADR 0190/0193 terms (what is allowed to change in prepaint without rerender, what must schedule a dirty-view rerender, and what is “retained-host only”).
         - [x] Make Track B scheduling responsibility explicit and prepaint-driven (avoid duplicated layout side effects).
           - ADR: `docs/adr/0190-prepaint-windowed-virtual-surfaces.md` (“Scheduling responsibility” under Track B).
           - Anchors: `crates/fret-ui/src/tree/prepaint.rs` (non-retained schedules one-shot rerender on `window_shift_kind!=none`),
@@ -1236,9 +1249,10 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json` (drag + wheel).
     - Evidence bundle (cache+shell, release): `target/fret-diag-chart-torture/1769159171953-ui-gallery-chart-torture-pan-zoom/bundle.json`
     - Infrastructure: add `drag_pointer` to UI diagnostics steps (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`).
-- [~] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
+- [x] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
   - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
   - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.
+  - Status note: closure is satisfied by the harnesses below plus at least one real migration target (`GPUI-MVP5-eco-008` docking drag/drop indicators are paint-only under view-cache reuse).
   - Anchors:
     - `ecosystem/fret-code-view/tests/hover_is_paint_only.rs` (existing regression that hover does not force rerender).
   - Proposed harness plan (v1):
