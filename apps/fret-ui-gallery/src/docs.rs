@@ -276,6 +276,8 @@ pub(crate) const USAGE_WEB_IME_HARNESS: &str = r#"
 ```rust
 // Click the region to focus it. On wasm, it should focus a hidden textarea via `Effect::ImeAllow`.
 // Use an IME to ensure `Event::Ime` and `Event::TextInput` are routed correctly.
+// Optional: add `?ime_debug=1` to the URL (or set `window.__FRET_IME_DEBUG=true`) to log bridge
+// focus/cursor-area updates to the browser console.
 ```
 "#;
 

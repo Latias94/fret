@@ -1,5 +1,6 @@
 use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
+use fret_code_editor_view as code_editor_view;
 use fret_code_view as code_view;
 use fret_core::{
     AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
@@ -303,6 +304,7 @@ pub(crate) fn content_view(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -464,6 +466,7 @@ pub(crate) fn content_view(
         virtual_list_torture_scroll,
         code_editor_syntax_rust,
         code_editor_boundary_identifier,
+        code_editor_soft_wrap,
     );
 
     let active_tab: Arc<str> = cx
@@ -644,6 +647,7 @@ fn page_preview(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -674,12 +678,14 @@ fn page_preview(
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(
             cx,
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
@@ -2264,11 +2270,92 @@ fn code_editor_torture_source() -> String {
         .clone()
 }
 
+fn code_editor_word_boundary_fixture() -> String {
+    [
+        "// Word boundary fixture (UI Gallery)\n",
+        "\n",
+        "世界 hello 😀 foo123_bar baz foo.bar\n",
+        "a_b c\t  hello   world\n",
+        "αβγ δ\n",
+    ]
+    .concat()
+}
+
+fn format_word_boundary_debug(text: &str, idx: usize) -> String {
+    let idx = code_editor_view::clamp_to_char_boundary(text, idx).min(text.len());
+    fn move_n_chars_left(text: &str, mut idx: usize, n: usize) -> usize {
+        for _ in 0..n {
+            let prev = code_editor_view::prev_char_boundary(text, idx);
+            if prev == idx {
+                break;
+            }
+            idx = prev;
+        }
+        idx
+    }
+
+    fn move_n_chars_right(text: &str, mut idx: usize, n: usize) -> usize {
+        for _ in 0..n {
+            let next = code_editor_view::next_char_boundary(text, idx);
+            if next == idx {
+                break;
+            }
+            idx = next;
+        }
+        idx
+    }
+
+    fn sanitize_inline(s: &str) -> String {
+        let mut out = String::with_capacity(s.len());
+        for ch in s.chars() {
+            match ch {
+                '\n' => out.push('⏎'),
+                '\t' => out.push('⇥'),
+                '\r' => out.push('␍'),
+                _ => out.push(ch),
+            }
+        }
+        out
+    }
+
+    let ctx_start = move_n_chars_left(text, idx, 16);
+    let ctx_end = move_n_chars_right(text, idx, 16);
+    let ctx_start = code_editor_view::clamp_to_char_boundary(text, ctx_start).min(text.len());
+    let ctx_end = code_editor_view::clamp_to_char_boundary(text, ctx_end).min(text.len());
+    let ctx_before = sanitize_inline(text.get(ctx_start..idx).unwrap_or(""));
+    let ctx_after = sanitize_inline(text.get(idx..ctx_end).unwrap_or(""));
+    let caret_ch = text.get(idx..).and_then(|s| s.chars().next());
+    let caret_ch = caret_ch.map(|c| sanitize_inline(&c.to_string()));
+
+    let unicode = fret_runtime::TextBoundaryMode::UnicodeWord;
+    let ident = fret_runtime::TextBoundaryMode::Identifier;
+
+    let (u_a, u_b) = code_editor_view::select_word_range(text, idx, unicode);
+    let (i_a, i_b) = code_editor_view::select_word_range(text, idx, ident);
+
+    let u_l = code_editor_view::move_word_left(text, idx, unicode);
+    let u_r = code_editor_view::move_word_right(text, idx, unicode);
+    let i_l = code_editor_view::move_word_left(text, idx, ident);
+    let i_r = code_editor_view::move_word_right(text, idx, ident);
+
+    [
+        format!(
+            "idx={idx} caret_char={}",
+            caret_ch.as_deref().unwrap_or("<eof>")
+        ),
+        format!("context: {ctx_before}|{ctx_after}"),
+        format!("UnicodeWord: select={u_a}..{u_b} left={u_l} right={u_r}"),
+        format!("Identifier: select={i_a}..{i_b} left={i_l} right={i_r}"),
+    ]
+    .join("\n")
+}
+
 fn preview_code_editor_mvp(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -2276,6 +2363,49 @@ fn preview_code_editor_mvp(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+        |h| h.clone(),
+    );
+    let word_handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
+        |h| h.clone(),
+    );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        let mode = if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        };
+        handle.set_text_boundary_mode(mode);
+        word_handle.set_text_boundary_mode(mode);
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
+
+    let word_fixture_loaded = cx.with_state(|| Rc::new(Cell::new(true)), |v| v.clone());
+    let word_idx = cx.with_state(|| Rc::new(Cell::new(0usize)), |v| v.clone());
+    let word_debug = cx.with_state(
+        || Rc::new(std::cell::RefCell::new(String::new())),
+        |v| v.clone(),
+    );
+
+    let syntax_rust_switch = syntax_rust.clone();
+    let boundary_identifier_switch = boundary_identifier.clone();
+    let boundary_identifier_for_harness = boundary_identifier.clone();
+    let soft_wrap_switch = soft_wrap.clone();
+    let word_handle_for_harness = word_handle.clone();
+    let word_debug_for_harness = word_debug.clone();
+    let word_debug_for_render = word_debug.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2290,7 +2420,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(syntax_rust.clone())
+                            shadcn::Switch::new(syntax_rust_switch.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
                                 .into_element(cx),
                             cx.text(if syntax_enabled {
@@ -2306,7 +2436,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(boundary_identifier.clone())
+                            shadcn::Switch::new(boundary_identifier_switch.clone())
                                 .a11y_label("Toggle identifier word boundaries")
                                 .into_element(cx),
                             cx.text(if boundary_identifier_enabled {
@@ -2317,31 +2447,319 @@ fn preview_code_editor_mvp(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Button::new("Dump layout…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap_switch.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        let text = word_handle_for_harness.with_buffer(|b| b.text_string());
+                        let caret = word_handle_for_harness.selection().caret().min(text.len());
+                        if word_idx.get() != caret {
+                            word_idx.set(caret);
+                        }
+                        *word_debug_for_harness.borrow_mut() =
+                            format_word_boundary_debug(text.as_str(), caret);
+
+                        let apply_fixture_handle = word_handle_for_harness.clone();
+                        let apply_fixture_loaded = word_fixture_loaded.clone();
+                        let apply_fixture_idx = word_idx.clone();
+                        let apply_fixture_debug = word_debug_for_harness.clone();
+                        let apply_fixture: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let fixture = code_editor_word_boundary_fixture();
+                                apply_fixture_handle.set_text(fixture.clone());
+                                apply_fixture_handle.set_caret(0);
+                                apply_fixture_loaded.set(true);
+                                apply_fixture_idx.set(0);
+                                *apply_fixture_debug.borrow_mut() =
+                                    format_word_boundary_debug(&fixture, 0);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_char_loaded = word_fixture_loaded.clone();
+                        let prev_char_idx = word_idx.clone();
+                        let prev_char_handle = word_handle_for_harness.clone();
+                        let prev_char_debug = word_debug_for_harness.clone();
+                        let prev_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_char_loaded.get() {
+                                    return;
+                                }
+                                let text = prev_char_handle.with_buffer(|b| b.text_string());
+                                let cur = prev_char_idx.get().min(text.len());
+                                let next = code_editor_view::prev_char_boundary(text.as_str(), cur);
+                                prev_char_idx.set(next);
+                                prev_char_handle.set_caret(next);
+                                *prev_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_char_loaded = word_fixture_loaded.clone();
+                        let next_char_idx = word_idx.clone();
+                        let next_char_handle = word_handle_for_harness.clone();
+                        let next_char_debug = word_debug_for_harness.clone();
+                        let next_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_char_loaded.get() {
+                                    return;
+                                }
+                                let text = next_char_handle.with_buffer(|b| b.text_string());
+                                let cur = next_char_idx.get().min(text.len());
+                                let next = code_editor_view::next_char_boundary(text.as_str(), cur);
+                                next_char_idx.set(next);
+                                next_char_handle.set_caret(next);
+                                *next_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_word_loaded = word_fixture_loaded.clone();
+                        let prev_word_idx = word_idx.clone();
+                        let prev_word_handle = word_handle_for_harness.clone();
+                        let prev_word_debug = word_debug_for_harness.clone();
+                        let prev_word_mode = boundary_identifier_for_harness.clone();
+                        let prev_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_word_loaded.get() {
+                                    return;
+                                }
+                                let text = prev_word_handle.with_buffer(|b| b.text_string());
+                                let cur = prev_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&prev_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_left(text.as_str(), cur, mode);
+                                prev_word_idx.set(next);
+                                prev_word_handle.set_caret(next);
+                                *prev_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_word_loaded = word_fixture_loaded.clone();
+                        let next_word_idx = word_idx.clone();
+                        let next_word_handle = word_handle_for_harness.clone();
+                        let next_word_debug = word_debug_for_harness.clone();
+                        let next_word_mode = boundary_identifier_for_harness.clone();
+                        let next_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_word_loaded.get() {
+                                    return;
+                                }
+                                let text = next_word_handle.with_buffer(|b| b.text_string());
+                                let cur = next_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&next_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_right(text.as_str(), cur, mode);
+                                next_word_idx.set(next);
+                                next_word_handle.set_caret(next);
+                                *next_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_caret_loaded = word_fixture_loaded.clone();
+                        let apply_caret_idx = word_idx.clone();
+                        let apply_caret_handle = word_handle_for_harness.clone();
+                        let apply_caret: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_caret_loaded.get() {
+                                    return;
+                                }
+                                let text = apply_caret_handle.with_buffer(|b| b.text_string());
+                                let idx = apply_caret_idx.get().min(text.len());
+                                apply_caret_handle.set_caret(idx);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_word_loaded = word_fixture_loaded.clone();
+                        let apply_word_idx = word_idx.clone();
+                        let apply_word_handle = word_handle_for_harness.clone();
+                        let apply_word_mode = boundary_identifier_for_harness.clone();
+                        let apply_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_word_loaded.get() {
+                                    return;
+                                }
+                                let text = apply_word_handle.with_buffer(|b| b.text_string());
+                                let idx = apply_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&apply_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let (a, b) = code_editor_view::select_word_range(text.as_str(), idx, mode);
+                                apply_word_handle.set_selection(code_editor::Selection {
+                                    anchor: a,
+                                    focus: b,
+                                });
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        vec![
+                            shadcn::Button::new("Load word-boundary fixture")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_fixture)
+                                .into_element(cx),
+                            shadcn::Button::new("Prev char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Prev word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply caret")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_caret)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply selection")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                        ]
+                    },
+                ),
+                cx.keyed("word-boundary-debug", |cx| {
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        move |cx| {
+                            let fixture_editor = code_editor::CodeEditor::new(word_handle.clone())
+                                .key(1)
+                                .overscan(8)
+                                .soft_wrap_cols(None)
+                                .viewport_test_id("ui-gallery-code-editor-word-fixture-viewport")
+                                .into_element(cx);
+                            let fixture_panel = cx.container(
+                                decl_style::container_props(
+                                    theme,
+                                    ChromeRefinement::default()
+                                        .border_1()
+                                        .rounded(Radius::Md)
+                                        .bg(ColorRef::Color(theme.color_required("background"))),
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .h_px(MetricRef::Px(Px(150.0))),
+                                ),
+                                |_cx| vec![fixture_editor],
+                            );
+
+                            let debug = word_debug_for_render.borrow().clone();
+                            let lines: Vec<Arc<str>> = debug
+                                .lines()
+                                .map(|line| Arc::<str>::from(line.to_string()))
+                                .collect();
+                            let debug_lines = stack::vstack(
+                                cx,
+                                stack::VStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N0),
+                                move |cx| {
+                                    lines
+                                        .iter()
+                                        .cloned()
+                                        .map(|line| {
+                                            let mut props = fret_ui::element::TextProps::new(line);
+                                            props.style = Some(TextStyle {
+                                                font: FontId::monospace(),
+                                                size: Px(12.0),
+                                                ..Default::default()
+                                            });
+                                            props.wrap = TextWrap::None;
+                                            props.overflow = TextOverflow::Clip;
+                                            cx.text_props(props)
+                                        })
+                                        .collect::<Vec<_>>()
+                                },
+                            );
+
+                            vec![fixture_panel, debug_lines]
+                        },
+                    )
+                }),
             ]
         },
     );
 
-    let handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
-        |h| h.clone(),
-    );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_applied.get() != Some(syntax_enabled) {
-        handle.set_language(if syntax_enabled { Some("rust") } else { None });
-        last_applied.set(Some(syntax_enabled));
-    }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_boundaries.get() != Some(boundary_identifier_enabled) {
-        handle.set_text_boundary_mode(if boundary_identifier_enabled {
-            fret_runtime::TextBoundaryMode::Identifier
-        } else {
-            fret_runtime::TextBoundaryMode::UnicodeWord
-        });
-        last_boundaries.set(Some(boundary_identifier_enabled));
-    }
-
     let editor = code_editor::CodeEditor::new(handle)
+        .key(0)
         .overscan(32)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
+        .viewport_test_id("ui-gallery-code-editor-mvp-viewport")
         .into_element(cx);
 
     let panel = cx.container(
@@ -2375,6 +2793,7 @@ fn preview_code_editor_torture(
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -2382,6 +2801,9 @@ fn preview_code_editor_torture(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2391,6 +2813,7 @@ fn preview_code_editor_torture(
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+                cx.text("Note: with soft wrap enabled, continuation rows may start mid-token (the numeric prefix does not repeat)."),
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -2423,6 +2846,27 @@ fn preview_code_editor_torture(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
             ]
         },
     );
@@ -2448,7 +2892,9 @@ fn preview_code_editor_torture(
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
         .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+        .viewport_test_id("ui-gallery-code-editor-torture-viewport")
         .into_element(cx);
 
     let panel = cx.container(
@@ -3431,7 +3877,7 @@ fn preview_web_ime_harness(
             .preedit
             .as_deref()
             .unwrap_or("<none>");
-        let ime_enabled = st.ime_enabled as u8;
+        let harness_region_ime_enabled = st.ime_enabled as u8;
 
         let panel = cx.container(
             decl_style::container_props(
@@ -3452,10 +3898,13 @@ fn preview_web_ime_harness(
                         .gap(Space::N2),
                     |cx| {
                         let mut lines = vec![
-                            cx.text(format!("ime_enabled={ime_enabled}")),
+                            cx.text(format!(
+                                "harness_region_ime_enabled={harness_region_ime_enabled}"
+                            )),
                             cx.text(format!("preedit={preedit:?}")),
                             cx.text(format!("committed_tail={committed_tail:?}")),
                             cx.text(format!("last_event={:?}", st.last)),
+                            cx.text("Console logging: add ?ime_debug=1 or set window.__FRET_IME_DEBUG=true"),
                             cx.text(format!(
                                 "counts: text_input={} ime_commit={} ime_preedit={} ime_delete_surrounding={} enabled={} disabled={}",
                                 st.text_input_count,
@@ -3466,6 +3915,94 @@ fn preview_web_ime_harness(
                                 st.ime_disabled_count
                             )),
                         ];
+
+                        if let Some(snapshot) = cx
+                            .app
+                            .global::<fret_runtime::WindowTextInputSnapshotService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_text_input_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} is_composing={}",
+                                snapshot.focus_is_text_input as u8, snapshot.is_composing as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  text_len_utf16={} selection_utf16={:?} marked_utf16={:?}",
+                                snapshot.text_len_utf16, snapshot.selection_utf16, snapshot.marked_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  ime_cursor_area={:?}",
+                                snapshot.ime_cursor_area
+                            )));
+                        } else {
+                            lines.push(cx.text("window_text_input_snapshot: <unavailable>"));
+                        }
+
+                        if let Some(input_ctx) = cx
+                            .app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_input_context_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} text_boundary_mode={:?}",
+                                input_ctx.focus_is_text_input as u8, input_ctx.text_boundary_mode
+                            )));
+                        } else {
+                            lines.push(cx.text("window_input_context_snapshot: <unavailable>"));
+                        }
+
+                        if let Some(key) = cx.app.global::<fret_runtime::TextFontStackKey>() {
+                            lines.push(cx.text(format!("text_font_stack_key={}", key.0)));
+                        } else {
+                            lines.push(cx.text("text_font_stack_key: <unavailable>"));
+                        }
+
+                        if let Some(cfg) = cx.app.global::<fret_core::TextFontFamilyConfig>().cloned()
+                        {
+                            let fmt = |v: &[String]| -> String {
+                                let head = v.iter().take(4).cloned().collect::<Vec<_>>().join(", ");
+                                if v.len() > 4 {
+                                    format!("[{head}, …] (len={})", v.len())
+                                } else {
+                                    format!("[{head}] (len={})", v.len())
+                                }
+                            };
+                            lines.push(cx.text("text_font_families:"));
+                            lines.push(cx.text(format!("  ui_sans={}", fmt(&cfg.ui_sans))));
+                            lines.push(cx.text(format!("  ui_serif={}", fmt(&cfg.ui_serif))));
+                            lines.push(cx.text(format!("  ui_mono={}", fmt(&cfg.ui_mono))));
+                            lines.push(cx.text(format!(
+                                "  common_fallback={}",
+                                fmt(&cfg.common_fallback)
+                            )));
+                        } else {
+                            lines.push(cx.text("text_font_families: <unavailable>"));
+                        }
+
+                        if let Some(catalog) = cx.app.global::<fret_runtime::FontCatalog>().cloned()
+                        {
+                            let head = catalog
+                                .families
+                                .iter()
+                                .take(6)
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            lines.push(cx.text("font_catalog:"));
+                            lines.push(cx.text(format!(
+                                "  revision={} families_len={}",
+                                catalog.revision,
+                                catalog.families.len()
+                            )));
+                            if !catalog.families.is_empty() {
+                                lines.push(cx.text(format!("  head=[{head}]")));
+                            }
+                        } else {
+                            lines.push(cx.text("font_catalog: <unavailable>"));
+                        }
 
                         let snapshot = cx
                             .app
@@ -3478,6 +4015,25 @@ fn preview_web_ime_harness(
                                 snapshot.enabled as u8,
                                 snapshot.composing as u8,
                                 snapshot.suppress_next_input as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_preedit_text={:?} preedit_cursor_utf16={:?}",
+                                snapshot.last_preedit_text.as_deref(),
+                                snapshot.last_preedit_cursor_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_commit_text={:?}",
+                                snapshot.last_commit_text.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  position_mode={:?} mount_kind={:?} dpr={:?}",
+                                snapshot.position_mode.as_deref(),
+                                snapshot.mount_kind.as_deref(),
+                                snapshot.device_pixel_ratio,
+                            )));
+                            lines.push(cx.text(format!(
+                                "  textarea_has_focus={:?} active_element_tag={:?}",
+                                snapshot.textarea_has_focus, snapshot.active_element_tag
                             )));
                             lines.push(cx.text(format!(
                                 "  last_input_type={:?}",
@@ -3496,6 +4052,10 @@ fn preview_web_ime_harness(
                                 snapshot.last_key_code, snapshot.last_cursor_area
                             )));
                             lines.push(cx.text(format!(
+                                "  last_cursor_anchor_px={:?}",
+                                snapshot.last_cursor_anchor_px
+                            )));
+                            lines.push(cx.text(format!(
                                 "  counts: beforeinput={} input={} suppressed={} comp_start={} comp_update={} comp_end={} cursor_area_set={}",
                                 snapshot.beforeinput_seen,
                                 snapshot.input_seen,
@@ -3505,6 +4065,23 @@ fn preview_web_ime_harness(
                                 snapshot.composition_end_seen,
                                 snapshot.cursor_area_set_seen,
                             )));
+                            lines.push(cx.text(format!(
+                                "  textarea: chars={:?} sel_utf16={:?}..{:?} client={:?}x{:?} scroll={:?}x{:?}",
+                                snapshot.textarea_value_chars,
+                                snapshot.textarea_selection_start_utf16,
+                                snapshot.textarea_selection_end_utf16,
+                                snapshot.textarea_client_width_px,
+                                snapshot.textarea_client_height_px,
+                                snapshot.textarea_scroll_width_px,
+                                snapshot.textarea_scroll_height_px,
+                            )));
+
+                            if !snapshot.recent_events.is_empty() {
+                                lines.push(cx.text("  recent_events:"));
+                                for e in snapshot.recent_events.iter().rev().take(10) {
+                                    lines.push(cx.text(format!("    {e}")));
+                                }
+                            }
                         } else {
                             lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
                         }

@@ -4169,6 +4169,7 @@ impl<H: UiHost> UiTree<H> {
                 match &record.instance {
                     crate::declarative::ElementInstance::TextInput(_) => true,
                     crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::TextInputRegion(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
                     _ => false,
                 }
@@ -4237,6 +4238,7 @@ impl<H: UiHost> UiTree<H> {
                 let focusable = match &record.instance {
                     crate::declarative::ElementInstance::TextInput(_) => true,
                     crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::TextInputRegion(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
                     _ => false,
                 };
@@ -4587,10 +4589,22 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn focus_is_text_input(&mut self) -> bool {
+    fn focus_is_text_input(&mut self, app: &mut H) -> bool {
         let Some(focus) = self.focus else {
             return false;
         };
+
+        if let Some(window) = self.window
+            && let Some(record) = crate::declarative::element_record_for_node(app, window, focus)
+        {
+            return matches!(
+                &record.instance,
+                crate::declarative::ElementInstance::TextInput(_)
+                    | crate::declarative::ElementInstance::TextArea(_)
+                    | crate::declarative::ElementInstance::TextInputRegion(_)
+            );
+        }
+
         if self
             .nodes
             .get(focus)
@@ -4609,7 +4623,7 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
         query: &fret_runtime::PlatformTextInputQuery,
     ) -> fret_runtime::PlatformTextInputQueryResult {
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         if !focus_is_text_input {
             return match query {
                 fret_runtime::PlatformTextInputQuery::SelectedTextRange
@@ -4712,7 +4726,7 @@ impl<H: UiHost> UiTree<H> {
         range: fret_runtime::Utf16Range,
         text: &str,
     ) -> bool {
-        if !self.focus_is_text_input() {
+        if !self.focus_is_text_input(app) {
             return false;
         }
         let Some(focus) = self.focus else {
@@ -4747,7 +4761,7 @@ impl<H: UiHost> UiTree<H> {
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
     ) -> bool {
-        if !self.focus_is_text_input() {
+        if !self.focus_is_text_input(app) {
             return false;
         }
         let Some(focus) = self.focus else {

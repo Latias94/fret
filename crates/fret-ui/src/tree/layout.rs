@@ -337,6 +337,26 @@ impl<H: UiHost> UiTree<H> {
                 if inv == Invalidation::HitTestOnly
                     && let Some(record) =
                         crate::declarative::frame::element_record_for_node(&mut *app, window, node)
+                    && let crate::declarative::frame::ElementInstance::Scroll(scroll_props) =
+                        &record.instance
+                    && scroll_props.windowed_paint
+                {
+                    // Windowed paint surfaces (ADR 0190) depend on the scroll offset to determine
+                    // which content is painted into the scrollable space. When view-cache reuse is
+                    // enabled, a scroll transform update alone is insufficient: the cached subtree
+                    // must be allowed to rerender so its paint handlers can run for the new visible
+                    // window. Without this, scroll can appear to show stale content.
+                    if self.view_cache_enabled() && change.offset_changed {
+                        self.mark_nearest_view_cache_root_needs_rerender(
+                            node,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                        );
+                        self.request_redraw_coalesced(app);
+                    }
+                } else if inv == Invalidation::HitTestOnly
+                    && let Some(record) =
+                        crate::declarative::frame::element_record_for_node(&mut *app, window, node)
                     && let crate::declarative::frame::ElementInstance::VirtualList(props) =
                         &record.instance
                 {
@@ -1415,6 +1435,112 @@ impl<H: UiHost> UiTree<H> {
                 "failed to write taffy debug dump"
             ),
         }
+    }
+
+    /// Write a Taffy layout dump for a subtree rooted at `root`.
+    ///
+    /// The dump includes both local and absolute rects plus a debug label per node. When
+    /// `root_label_filter` is provided, the dump will search for the first node whose debug label
+    /// contains the filter string and use that node as the dump root (falling back to `root` when
+    /// the filter does not match anything).
+    ///
+    /// This is a debug-only escape hatch intended for diagnosing layout regressions and scroll /
+    /// clipping issues. The output is JSON and is written to `out_dir`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn debug_write_taffy_subtree_json(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+        root_label_filter: Option<&str>,
+        out_dir: impl AsRef<std::path::Path>,
+        filename_tag: &str,
+    ) -> std::io::Result<std::path::PathBuf> {
+        fn sanitize_for_filename(s: &str) -> String {
+            s.chars()
+                .map(|ch| match ch {
+                    'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => ch,
+                    _ => '_',
+                })
+                .collect()
+        }
+
+        let dump_root = if let Some(filter) = root_label_filter {
+            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            if root_label.contains(filter) {
+                root
+            } else {
+                let mut stack: Vec<NodeId> = vec![root];
+                let mut visited: std::collections::HashSet<NodeId> =
+                    std::collections::HashSet::new();
+                let mut found: Option<NodeId> = None;
+                while let Some(node) = stack.pop() {
+                    if !visited.insert(node) {
+                        continue;
+                    }
+
+                    let label =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                            .map(|r| format!("{:?}", r.instance))
+                            .unwrap_or_default();
+                    if label.contains(filter) {
+                        found = Some(node);
+                        break;
+                    }
+
+                    if let Some(node) = self.nodes.get(node) {
+                        stack.extend(node.children.iter().copied());
+                    }
+                }
+
+                found.unwrap_or(root)
+            }
+        } else {
+            root
+        };
+
+        let tag = sanitize_for_filename(filename_tag);
+        let frame = app.frame_id().0;
+        let root_slug = sanitize_for_filename(&format!("{dump_root:?}"));
+        let filename = if tag.is_empty() {
+            format!("taffy_{frame}_{root_slug}.json")
+        } else {
+            format!("taffy_{frame}_{tag}_{root_slug}.json")
+        };
+
+        let dump = self
+            .layout_engine
+            .debug_dump_subtree_json(dump_root, |node| {
+                crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|r| format!("{:?}", r.instance))
+            });
+
+        let wrapped = serde_json::json!({
+            "meta": {
+                "window": format!("{window:?}"),
+                "root_bounds": {
+                    "x": root_bounds.origin.x.0,
+                    "y": root_bounds.origin.y.0,
+                    "w": root_bounds.size.width.0,
+                    "h": root_bounds.size.height.0,
+                },
+                "scale_factor": scale_factor,
+            },
+            "taffy": dump,
+        });
+
+        let out_dir = out_dir.as_ref();
+        std::fs::create_dir_all(out_dir)?;
+        let path = out_dir.join(filename);
+        let bytes = serde_json::to_vec_pretty(&wrapped).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
+        })?;
+        std::fs::write(&path, bytes)?;
+        Ok(path)
     }
 
     fn request_build_window_roots_if_final(
