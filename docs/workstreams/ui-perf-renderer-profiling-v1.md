@@ -55,6 +55,27 @@ Output includes:
 
 This is the fastest “primitive-level” sanity check before deeper tracing.
 
+### 2.2.1 Renderer perf in diagnostics bundles (preferred for perf log correlation)
+
+For steady scripted workloads, prefer exporting renderer perf into the diagnostics bundle so it can be correlated with:
+
+- `layout_time_us`, `prepaint_time_us`, `paint_time_us` (UI runtime), and
+- scene-level metrics (cache roots, invalidation walks, etc.).
+
+How it works:
+
+- `fretboard diag run/repro/perf/suite/matrix` best-effort enables `FRET_DIAG_RENDERER_PERF=1`.
+- The desktop runner enables renderer perf and records a “last frame” `RenderPerfSnapshot`.
+- The snapshot is exported into `bundle.json` under `.windows[].snapshots[].debug.stats.renderer_*`.
+
+Useful `diag` sort modes:
+
+- `--sort encode_scene` (CPU scene encoding)
+- `--sort prepare_text` (CPU text preparation)
+- `--sort draw_calls` / `--sort pipeline_switches` / `--sort bind_group_switches` (submission complexity proxies)
+
+Tip: You can disable it explicitly by passing `--env FRET_DIAG_RENDERER_PERF=0`.
+
 ### 2.3 Deep CPU attribution: Tracy (`diag repro --with tracy`)
 
 Tracy is the best way to see *where* CPU time goes across the runtime + renderer call stack.
@@ -131,4 +152,3 @@ cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-t
 - Export renderer perf snapshot into diagnostics bundles (so perf logs can include it next to `paint_time_us`).
 - Add GPU timestamp queries (where supported) and export `gpu_render_us` for the “CPU looks fine but it hitches” class of bugs.
 - Add explicit text atlas / eviction / upload counters (bytes + events) to correlate with spikes.
-

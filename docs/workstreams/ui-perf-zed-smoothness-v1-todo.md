@@ -188,10 +188,11 @@ Perf acceptance:
   - Enable: `FRET_UI_GALLERY_RENDERER_PERF=1`
   - Optional pipeline breakdown: `FRET_RENDERER_PERF_PIPELINES=1`
   - Goal: provide low-level “are we draw-call/pipeline-switch bound?” signals before deeper refactors.
-- [ ] Add a short “profiling playbook” that links `diag perf` → renderer perf → Tracy → RenderDoc.
-  - Draft: `docs/workstreams/ui-perf-renderer-profiling-v1.md`
-- [ ] Consider exporting renderer perf snapshots into diagnostics bundles for perf log correlation.
-  - This would allow perf logs to record `encode_scene_us / prepare_text_us / draw_calls / pipeline_switches` next to `paint_time_us`.
+- [x] Add a short “profiling playbook” that links `diag perf` → renderer perf → Tracy → RenderDoc.
+  - `docs/workstreams/ui-perf-renderer-profiling-v1.md` (commit `22671e06`)
+- [x] Export renderer perf snapshots into diagnostics bundles for perf log correlation.
+  - Data lands in `bundle.json` under `.windows[].snapshots[].debug.stats.renderer_*` (commit `0e4928fe`).
+  - `fretboard diag stats/perf` supports sorting by renderer metrics (commit `cf8975ca`).
 
 ### M4: Windowed surfaces (prepaint-driven visible windows)
 

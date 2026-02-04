@@ -1357,6 +1357,53 @@ Worst bundle:
 Notes:
 - A/B deltas are within expected noise for this script.
 
+---
+
+### Renderer perf exported into diagnostics bundles (primitive-level correlation)
+
+Commits:
+
+- `feat(diag): export renderer perf into bundles` (`0e4928fe`)
+- `feat(fretboard): add renderer perf sort modes` (`cf8975ca`)
+
+Verification (macOS; wgpu Metal; short script):
+
+```bash
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-context-menu-right-click.json \
+  --dir target/fret-diag-verify-renderer-perf.v2 \
+  --timeout-ms 240000 \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Evidence bundle:
+
+- `target/fret-diag-verify-renderer-perf.v2/1770168912611-ui-gallery-context-action/bundle.json`
+
+Sanity check (sort by renderer text prep time):
+
+```bash
+cargo run -p fretboard -- diag stats \
+  target/fret-diag-verify-renderer-perf.v2/1770168912611-ui-gallery-context-action/bundle.json \
+  --sort prepare_text \
+  --top 5
+```
+
+`diag perf --json` output now includes `top_renderer_*` fields:
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-context-menu-right-click.json \
+  --dir target/fret-diag-verify-renderer-perf-perf.v4 \
+  --repeat 1 \
+  --timeout-ms 240000 \
+  --sort encode_scene \
+  --json \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Evidence bundle:
+
+- `target/fret-diag-verify-renderer-perf-perf.v4/1770169414415-script-step-0007-click/bundle.json`
+
 ### Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` (validation)
 
 Command (release; steady; repeat=9; relaunch-per-repeat):
