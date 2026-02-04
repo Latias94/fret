@@ -1128,9 +1128,11 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
 
             let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let mut run_launch_env = launch_env.clone();
+            let _ = ensure_env_var(&mut run_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
             let mut child = maybe_launch_demo(
                 &launch,
-                &launch_env,
+                &run_launch_env,
                 &workspace_root,
                 &resolved_out_dir,
                 &resolved_ready_path,
@@ -1329,6 +1331,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
             let mut repro_launch = launch.clone();
             let mut repro_launch_env = launch_env.clone();
+            let _ = ensure_env_var(&mut repro_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
 
             if check_redraw_hitches_max_total_ms_threshold.is_some() {
                 let _ = ensure_env_var(&mut repro_launch_env, "FRET_REDRAW_HITCH_LOG", "1");
@@ -2350,11 +2353,14 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
+            let mut suite_launch_env = launch_env.clone();
+            let _ = ensure_env_var(&mut suite_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
-                    &launch_env,
+                    &suite_launch_env,
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
@@ -2370,7 +2376,7 @@ See: `docs/tracy.md`.\n";
                 if !reuse_process {
                     child = maybe_launch_demo(
                         &launch,
-                        &launch_env,
+                        &suite_launch_env,
                         &workspace_root,
                         &resolved_out_dir,
                         &resolved_ready_path,
@@ -2594,6 +2600,8 @@ See: `docs/tracy.md`.\n";
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
             let mut child: Option<LaunchedDemo> = None;
             let launched_by_fretboard = reuse_launch && launch.is_some();
+            let mut perf_launch_env = launch_env.clone();
+            let _ = ensure_env_var(&mut perf_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
 
             let mut perf_json_rows: Vec<serde_json::Value> = Vec::new();
             let mut perf_threshold_rows: Vec<serde_json::Value> = Vec::new();
@@ -2617,7 +2625,7 @@ See: `docs/tracy.md`.\n";
             if launched_by_fretboard {
                 child = maybe_launch_demo(
                     &launch,
-                    &launch_env,
+                    &perf_launch_env,
                     &workspace_root,
                     &resolved_out_dir,
                     &resolved_ready_path,
@@ -2633,7 +2641,7 @@ See: `docs/tracy.md`.\n";
                     if !reuse_process {
                         child = maybe_launch_demo(
                             &launch,
-                            &launch_env,
+                            &perf_launch_env,
                             &workspace_root,
                             &resolved_out_dir,
                             &resolved_ready_path,
@@ -2802,6 +2810,25 @@ See: `docs/tracy.md`.\n";
                         let top_virtual_list_visible_range_refreshes = top
                             .map(|r| r.virtual_list_visible_range_refreshes)
                             .unwrap_or(0);
+                        let top_renderer_tick_id = top.map(|r| r.renderer_tick_id).unwrap_or(0);
+                        let top_renderer_frame_id = top.map(|r| r.renderer_frame_id).unwrap_or(0);
+                        let top_renderer_encode_scene_us =
+                            top.map(|r| r.renderer_encode_scene_us).unwrap_or(0);
+                        let top_renderer_prepare_text_us =
+                            top.map(|r| r.renderer_prepare_text_us).unwrap_or(0);
+                        let top_renderer_prepare_svg_us =
+                            top.map(|r| r.renderer_prepare_svg_us).unwrap_or(0);
+                        let top_renderer_draw_calls =
+                            top.map(|r| r.renderer_draw_calls).unwrap_or(0);
+                        let top_renderer_pipeline_switches =
+                            top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
+                        let top_renderer_bind_group_switches =
+                            top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
+                        let top_renderer_scissor_sets =
+                            top.map(|r| r.renderer_scissor_sets).unwrap_or(0);
+                        let top_renderer_scene_encoding_cache_misses = top
+                            .map(|r| r.renderer_scene_encoding_cache_misses)
+                            .unwrap_or(0);
 
                         if stats_json {
                             perf_json_rows.push(serde_json::json!({
@@ -2840,6 +2867,16 @@ See: `docs/tracy.md`.\n";
                                 "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
                                 "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
                                 "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
+                                "top_renderer_tick_id": top_renderer_tick_id,
+                                "top_renderer_frame_id": top_renderer_frame_id,
+                                "top_renderer_encode_scene_us": top_renderer_encode_scene_us,
+                                "top_renderer_prepare_text_us": top_renderer_prepare_text_us,
+                                "top_renderer_prepare_svg_us": top_renderer_prepare_svg_us,
+                                "top_renderer_draw_calls": top_renderer_draw_calls,
+                                "top_renderer_pipeline_switches": top_renderer_pipeline_switches,
+                                "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
+                                "top_renderer_scissor_sets": top_renderer_scissor_sets,
+                                "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
                                 "bundle": bundle_path.display().to_string(),
                             }));
                         } else {
@@ -2970,7 +3007,7 @@ See: `docs/tracy.md`.\n";
                     if !reuse_process {
                         child = maybe_launch_demo(
                             &launch,
-                            &launch_env,
+                            &perf_launch_env,
                             &workspace_root,
                             &resolved_out_dir,
                             &resolved_ready_path,
@@ -3154,6 +3191,24 @@ See: `docs/tracy.md`.\n";
                     let top_virtual_list_visible_range_refreshes = top
                         .map(|r| r.virtual_list_visible_range_refreshes)
                         .unwrap_or(0);
+                    let top_renderer_tick_id = top.map(|r| r.renderer_tick_id).unwrap_or(0);
+                    let top_renderer_frame_id = top.map(|r| r.renderer_frame_id).unwrap_or(0);
+                    let top_renderer_encode_scene_us =
+                        top.map(|r| r.renderer_encode_scene_us).unwrap_or(0);
+                    let top_renderer_prepare_text_us =
+                        top.map(|r| r.renderer_prepare_text_us).unwrap_or(0);
+                    let top_renderer_prepare_svg_us =
+                        top.map(|r| r.renderer_prepare_svg_us).unwrap_or(0);
+                    let top_renderer_draw_calls = top.map(|r| r.renderer_draw_calls).unwrap_or(0);
+                    let top_renderer_pipeline_switches =
+                        top.map(|r| r.renderer_pipeline_switches).unwrap_or(0);
+                    let top_renderer_bind_group_switches =
+                        top.map(|r| r.renderer_bind_group_switches).unwrap_or(0);
+                    let top_renderer_scissor_sets =
+                        top.map(|r| r.renderer_scissor_sets).unwrap_or(0);
+                    let top_renderer_scene_encoding_cache_misses = top
+                        .map(|r| r.renderer_scene_encoding_cache_misses)
+                        .unwrap_or(0);
 
                     runs_total.push(top_total);
                     runs_layout.push(top_layout);
@@ -3197,6 +3252,16 @@ See: `docs/tracy.md`.\n";
                         "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
                         "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
                         "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
+                        "top_renderer_tick_id": top_renderer_tick_id,
+                        "top_renderer_frame_id": top_renderer_frame_id,
+                        "top_renderer_encode_scene_us": top_renderer_encode_scene_us,
+                        "top_renderer_prepare_text_us": top_renderer_prepare_text_us,
+                        "top_renderer_prepare_svg_us": top_renderer_prepare_svg_us,
+                        "top_renderer_draw_calls": top_renderer_draw_calls,
+                        "top_renderer_pipeline_switches": top_renderer_pipeline_switches,
+                        "top_renderer_bind_group_switches": top_renderer_bind_group_switches,
+                        "top_renderer_scissor_sets": top_renderer_scissor_sets,
+                        "top_renderer_scene_encoding_cache_misses": top_renderer_scene_encoding_cache_misses,
                         "bundle": bundle_path.display().to_string(),
                     }));
 
@@ -3245,6 +3310,15 @@ See: `docs/tracy.md`.\n";
                         let mut top_virtual_list_visible_range_checks: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_virtual_list_visible_range_refreshes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_encode_scene_us: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_renderer_prepare_text_us: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_renderer_draw_calls: Vec<u64> = Vec::with_capacity(repeat);
+                        let mut top_renderer_pipeline_switches: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_bind_group_switches: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_scene_encoding_cache_misses: Vec<u64> =
                             Vec::with_capacity(repeat);
                         for run in &runs_json {
                             top_frame_arena_capacity_estimate_bytes.push(
@@ -3327,42 +3401,78 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_encode_scene_us.push(
+                                run.get("top_renderer_encode_scene_us")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_prepare_text_us.push(
+                                run.get("top_renderer_prepare_text_us")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_draw_calls.push(
+                                run.get("top_renderer_draw_calls")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_pipeline_switches.push(
+                                run.get("top_renderer_pipeline_switches")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_bind_group_switches.push(
+                                run.get("top_renderer_bind_group_switches")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_scene_encoding_cache_misses.push(
+                                run.get("top_renderer_scene_encoding_cache_misses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                         }
                         perf_json_rows.push(serde_json::json!({
-                            "script": src.display().to_string(),
-                            "sort": sort.as_str(),
-                            "repeat": repeat,
-                            "runs": runs_json,
-                            "stats": {
-                                "total_time_us": summarize_times_us(&runs_total),
-                                "layout_time_us": summarize_times_us(&runs_layout),
-                                "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
-                                "prepaint_time_us": summarize_times_us(&runs_prepaint),
-                                "paint_time_us": summarize_times_us(&runs_paint),
-                                "dispatch_time_us": summarize_times_us(&runs_dispatch),
-                                "hit_test_time_us": summarize_times_us(&runs_hit_test),
-                                "top_frame_arena_capacity_estimate_bytes": summarize_times_us(&top_frame_arena_capacity_estimate_bytes),
-                                "top_frame_arena_grow_events": summarize_times_us(&top_frame_arena_grow_events),
-                                "top_element_children_vec_pool_reuses": summarize_times_us(&top_element_children_vec_pool_reuses),
-                                "top_element_children_vec_pool_misses": summarize_times_us(&top_element_children_vec_pool_misses),
-                                "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
-                                "top_view_cache_roots_total": summarize_times_us(&top_view_cache_roots_total),
-                                "top_view_cache_roots_reused": summarize_times_us(&top_view_cache_roots_reused),
-                                "top_view_cache_roots_cache_key_mismatch": summarize_times_us(&top_view_cache_roots_cache_key_mismatch),
-                                "top_view_cache_roots_needs_rerender": summarize_times_us(&top_view_cache_roots_needs_rerender),
-                                "top_view_cache_roots_layout_invalidated": summarize_times_us(&top_view_cache_roots_layout_invalidated),
-                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
-                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
-                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
-                                "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
-                                "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
-                                "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
-                            },
-                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
-                                "top_total_time_us": us,
-                                "bundle": bundle.display().to_string(),
-                            })),
-                        }));
+	                            "script": src.display().to_string(),
+	                            "sort": sort.as_str(),
+	                            "repeat": repeat,
+	                            "runs": runs_json,
+	                            "stats": {
+	                                "total_time_us": summarize_times_us(&runs_total),
+	                                "layout_time_us": summarize_times_us(&runs_layout),
+	                                "layout_engine_solve_time_us": summarize_times_us(&runs_solve),
+	                                "prepaint_time_us": summarize_times_us(&runs_prepaint),
+	                                "paint_time_us": summarize_times_us(&runs_paint),
+	                                "dispatch_time_us": summarize_times_us(&runs_dispatch),
+	                                "hit_test_time_us": summarize_times_us(&runs_hit_test),
+	                                "top_frame_arena_capacity_estimate_bytes": summarize_times_us(&top_frame_arena_capacity_estimate_bytes),
+	                                "top_frame_arena_grow_events": summarize_times_us(&top_frame_arena_grow_events),
+	                                "top_element_children_vec_pool_reuses": summarize_times_us(&top_element_children_vec_pool_reuses),
+	                                "top_element_children_vec_pool_misses": summarize_times_us(&top_element_children_vec_pool_misses),
+	                                "top_view_cache_contained_relayouts": summarize_times_us(&top_view_cache_contained_relayouts),
+	                                "top_view_cache_roots_total": summarize_times_us(&top_view_cache_roots_total),
+	                                "top_view_cache_roots_reused": summarize_times_us(&top_view_cache_roots_reused),
+	                                "top_view_cache_roots_cache_key_mismatch": summarize_times_us(&top_view_cache_roots_cache_key_mismatch),
+	                                "top_view_cache_roots_needs_rerender": summarize_times_us(&top_view_cache_roots_needs_rerender),
+	                                "top_view_cache_roots_layout_invalidated": summarize_times_us(&top_view_cache_roots_layout_invalidated),
+	                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
+	                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
+	                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
+	                                "top_barrier_relayouts_performed": summarize_times_us(&top_barrier_relayouts_performed),
+	                                "top_virtual_list_visible_range_checks": summarize_times_us(&top_virtual_list_visible_range_checks),
+	                                "top_virtual_list_visible_range_refreshes": summarize_times_us(&top_virtual_list_visible_range_refreshes),
+	                                "top_renderer_encode_scene_us": summarize_times_us(&top_renderer_encode_scene_us),
+	                                "top_renderer_prepare_text_us": summarize_times_us(&top_renderer_prepare_text_us),
+	                                "top_renderer_draw_calls": summarize_times_us(&top_renderer_draw_calls),
+	                                "top_renderer_pipeline_switches": summarize_times_us(&top_renderer_pipeline_switches),
+	                                "top_renderer_bind_group_switches": summarize_times_us(&top_renderer_bind_group_switches),
+	                                "top_renderer_scene_encoding_cache_misses": summarize_times_us(&top_renderer_scene_encoding_cache_misses),
+	                            },
+	                            "worst_run": script_worst.as_ref().map(|(us, bundle)| serde_json::json!({
+	                                "top_total_time_us": us,
+	                                "bundle": bundle.display().to_string(),
+	                            })),
+	                        }));
                     } else {
                         let total = summarize_times_us(&runs_total);
                         let layout = summarize_times_us(&runs_layout);
@@ -3781,7 +3891,10 @@ See: `docs/tracy.md`.\n";
             //   overlay producers always rerendered”).
             // - Otherwise, leave the gate off by default to avoid forcing overlay-specific
             //   assumptions onto non-overlay scripts (e.g. virtual-list torture).
-            let shell_reuse_enabled = launch_env.iter().any(|(k, v)| {
+            let mut matrix_base_env = launch_env.clone();
+            let _ = ensure_env_var(&mut matrix_base_env, "FRET_DIAG_RENDERER_PERF", "1");
+
+            let shell_reuse_enabled = matrix_base_env.iter().any(|(k, v)| {
                 (k.as_str() == "FRET_UI_GALLERY_VIEW_CACHE_SHELL")
                     && !v.trim().is_empty()
                     && (v.as_str() != "0")
@@ -3806,8 +3919,8 @@ See: `docs/tracy.md`.\n";
                 ResolvedScriptPaths::for_out_dir(&workspace_root, &uncached_out_dir);
             let cached_paths = ResolvedScriptPaths::for_out_dir(&workspace_root, &cached_out_dir);
 
-            let uncached_env = matrix_launch_env(&launch_env, false)?;
-            let cached_env = matrix_launch_env(&launch_env, true)?;
+            let uncached_env = matrix_launch_env(&matrix_base_env, false)?;
+            let cached_env = matrix_launch_env(&matrix_base_env, true)?;
 
             let uncached_bundles = run_script_suite_collect_bundles(
                 &scripts,

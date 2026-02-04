@@ -13,6 +13,11 @@ pub(super) enum BundleStatsSort {
     Time,
     Dispatch,
     HitTest,
+    RendererEncodeScene,
+    RendererPrepareText,
+    RendererDrawCalls,
+    RendererPipelineSwitches,
+    RendererBindGroupSwitches,
 }
 
 impl BundleStatsSort {
@@ -22,8 +27,17 @@ impl BundleStatsSort {
             "time" => Ok(Self::Time),
             "dispatch" => Ok(Self::Dispatch),
             "hit_test" => Ok(Self::HitTest),
+            "encode_scene" | "encode" | "renderer_encode_scene" => Ok(Self::RendererEncodeScene),
+            "prepare_text" | "renderer_prepare_text" => Ok(Self::RendererPrepareText),
+            "draw_calls" | "draws" | "renderer_draw_calls" => Ok(Self::RendererDrawCalls),
+            "pipeline_switches" | "pipelines" | "renderer_pipeline_switches" => {
+                Ok(Self::RendererPipelineSwitches)
+            }
+            "bind_group_switches" | "binds" | "renderer_bind_group_switches" => {
+                Ok(Self::RendererBindGroupSwitches)
+            }
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test)"
+                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches)"
             )),
         }
     }
@@ -34,6 +48,11 @@ impl BundleStatsSort {
             Self::Time => "time",
             Self::Dispatch => "dispatch",
             Self::HitTest => "hit_test",
+            Self::RendererEncodeScene => "encode_scene",
+            Self::RendererPrepareText => "prepare_text",
+            Self::RendererDrawCalls => "draw_calls",
+            Self::RendererPipelineSwitches => "pipeline_switches",
+            Self::RendererBindGroupSwitches => "bind_group_switches",
         }
     }
 }
@@ -104,6 +123,16 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
     pub(super) paint_cache_misses: u32,
+    pub(super) renderer_tick_id: u64,
+    pub(super) renderer_frame_id: u64,
+    pub(super) renderer_encode_scene_us: u64,
+    pub(super) renderer_prepare_text_us: u64,
+    pub(super) renderer_prepare_svg_us: u64,
+    pub(super) renderer_draw_calls: u64,
+    pub(super) renderer_pipeline_switches: u64,
+    pub(super) renderer_bind_group_switches: u64,
+    pub(super) renderer_scissor_sets: u64,
+    pub(super) renderer_scene_encoding_cache_misses: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
     pub(super) changed_models: u32,
@@ -3910,6 +3939,46 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let renderer_tick_id = stats
+                .and_then(|m| m.get("renderer_tick_id"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_frame_id = stats
+                .and_then(|m| m.get("renderer_frame_id"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_encode_scene_us = stats
+                .and_then(|m| m.get("renderer_encode_scene_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_text_us = stats
+                .and_then(|m| m.get("renderer_prepare_text_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_prepare_svg_us = stats
+                .and_then(|m| m.get("renderer_prepare_svg_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_draw_calls = stats
+                .and_then(|m| m.get("renderer_draw_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_pipeline_switches = stats
+                .and_then(|m| m.get("renderer_pipeline_switches"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_bind_group_switches = stats
+                .and_then(|m| m.get("renderer_bind_group_switches"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scissor_sets = stats
+                .and_then(|m| m.get("renderer_scissor_sets"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_scene_encoding_cache_misses = stats
+                .and_then(|m| m.get("renderer_scene_encoding_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_engine_solves = stats
                 .and_then(|m| m.get("layout_engine_solves"))
                 .and_then(|v| v.as_u64())
@@ -4227,6 +4296,16 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_nodes_performed,
                 paint_nodes_performed,
                 paint_cache_misses,
+                renderer_tick_id,
+                renderer_frame_id,
+                renderer_encode_scene_us,
+                renderer_prepare_text_us,
+                renderer_prepare_svg_us,
+                renderer_draw_calls,
+                renderer_pipeline_switches,
+                renderer_bind_group_switches,
+                renderer_scissor_sets,
+                renderer_scene_encoding_cache_misses,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
                 changed_models,
@@ -4328,6 +4407,66 @@ pub(super) fn bundle_stats_from_json_with_options(
                     .then_with(|| b.dispatch_time_us.cmp(&a.dispatch_time_us))
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
                     .then_with(|| b.invalidation_walk_nodes.cmp(&a.invalidation_walk_nodes))
+            });
+        }
+        BundleStatsSort::RendererEncodeScene => {
+            rows.sort_by(|a, b| {
+                b.renderer_encode_scene_us
+                    .cmp(&a.renderer_encode_scene_us)
+                    .then_with(|| b.renderer_prepare_text_us.cmp(&a.renderer_prepare_text_us))
+                    .then_with(|| {
+                        b.renderer_pipeline_switches
+                            .cmp(&a.renderer_pipeline_switches)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererPrepareText => {
+            rows.sort_by(|a, b| {
+                b.renderer_prepare_text_us
+                    .cmp(&a.renderer_prepare_text_us)
+                    .then_with(|| b.renderer_encode_scene_us.cmp(&a.renderer_encode_scene_us))
+                    .then_with(|| b.renderer_draw_calls.cmp(&a.renderer_draw_calls))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererDrawCalls => {
+            rows.sort_by(|a, b| {
+                b.renderer_draw_calls
+                    .cmp(&a.renderer_draw_calls)
+                    .then_with(|| {
+                        b.renderer_pipeline_switches
+                            .cmp(&a.renderer_pipeline_switches)
+                    })
+                    .then_with(|| {
+                        b.renderer_bind_group_switches
+                            .cmp(&a.renderer_bind_group_switches)
+                    })
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererPipelineSwitches => {
+            rows.sort_by(|a, b| {
+                b.renderer_pipeline_switches
+                    .cmp(&a.renderer_pipeline_switches)
+                    .then_with(|| {
+                        b.renderer_bind_group_switches
+                            .cmp(&a.renderer_bind_group_switches)
+                    })
+                    .then_with(|| b.renderer_draw_calls.cmp(&a.renderer_draw_calls))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererBindGroupSwitches => {
+            rows.sort_by(|a, b| {
+                b.renderer_bind_group_switches
+                    .cmp(&a.renderer_bind_group_switches)
+                    .then_with(|| {
+                        b.renderer_pipeline_switches
+                            .cmp(&a.renderer_pipeline_switches)
+                    })
+                    .then_with(|| b.renderer_draw_calls.cmp(&a.renderer_draw_calls))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
         }
     }
