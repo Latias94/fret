@@ -40,8 +40,8 @@ pub use column::{
 pub use column_ordering::{ColumnOrderState, order_columns};
 pub use column_ordering::{move_column, moved_column, set_column_order, set_column_order_for};
 pub use column_pinning::{
-    ColumnPinPosition, ColumnPinningState, is_column_pinned, pin_column, pinned_column,
-    split_pinned_columns,
+    ColumnPinPosition, ColumnPinningState, is_column_pinned, is_some_columns_pinned, pin_column,
+    pinned_column, split_pinned_columns,
 };
 pub use column_sizing::{
     ColumnResizeDirection, ColumnResizeMode, begin_column_resize, column_can_resize,

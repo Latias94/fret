@@ -616,6 +616,10 @@ impl<'a, TData> Table<'a, TData> {
         super::is_some_rows_pinned(&self.state.row_pinning, position)
     }
 
+    pub fn is_some_columns_pinned(&self, position: Option<super::ColumnPinPosition>) -> bool {
+        super::is_some_columns_pinned(&self.state.column_pinning, position)
+    }
+
     pub fn row_is_pinned(&self, row_key: RowKey) -> Option<super::RowPinPosition> {
         super::is_row_pinned(row_key, &self.state.row_pinning)
     }

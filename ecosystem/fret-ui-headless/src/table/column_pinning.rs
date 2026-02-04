@@ -9,7 +9,7 @@ pub enum ColumnPinPosition {
 }
 
 /// TanStack-compatible column pinning state.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ColumnPinningState {
     pub left: Vec<ColumnId>,
     pub right: Vec<ColumnId>,
@@ -26,6 +26,17 @@ pub fn is_column_pinned(
         return Some(ColumnPinPosition::Right);
     }
     None
+}
+
+pub fn is_some_columns_pinned(
+    state: &ColumnPinningState,
+    position: Option<ColumnPinPosition>,
+) -> bool {
+    match position {
+        None => !(state.left.is_empty() && state.right.is_empty()),
+        Some(ColumnPinPosition::Left) => !state.left.is_empty(),
+        Some(ColumnPinPosition::Right) => !state.right.is_empty(),
+    }
 }
 
 pub fn pin_column(

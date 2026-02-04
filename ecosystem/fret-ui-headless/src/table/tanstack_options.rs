@@ -41,6 +41,10 @@ pub struct TanStackTableOptions {
     pub paginate_expanded_rows: bool,
     #[serde(default, rename = "keepPinnedRows")]
     pub keep_pinned_rows: bool,
+    #[serde(default, rename = "enableColumnPinning")]
+    pub enable_column_pinning: Option<bool>,
+    #[serde(default, rename = "enablePinning")]
+    pub enable_pinning: Option<bool>,
     #[serde(default = "default_true", rename = "enableSorting")]
     pub enable_sorting: bool,
     #[serde(default = "default_true", rename = "enableMultiSort")]
@@ -81,6 +85,8 @@ impl Default for TanStackTableOptions {
             manual_expanding: false,
             paginate_expanded_rows: true,
             keep_pinned_rows: true,
+            enable_column_pinning: None,
+            enable_pinning: None,
             enable_sorting: true,
             enable_multi_sort: true,
             max_multi_sort_col_count: None,
@@ -114,6 +120,10 @@ impl TanStackTableOptions {
         out.manual_expanding = self.manual_expanding;
         out.paginate_expanded_rows = self.paginate_expanded_rows;
         out.keep_pinned_rows = self.keep_pinned_rows;
+        out.enable_column_pinning = self
+            .enable_column_pinning
+            .or(self.enable_pinning)
+            .unwrap_or(out.enable_column_pinning);
         out.enable_sorting = self.enable_sorting;
         out.enable_multi_sort = self.enable_multi_sort;
         out.max_multi_sort_col_count = self.max_multi_sort_col_count;

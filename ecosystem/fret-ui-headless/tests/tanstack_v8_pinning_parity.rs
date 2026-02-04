@@ -104,15 +104,19 @@ fn tanstack_v8_pinning_parity() {
     let columns: Vec<ColumnDef<FixtureRow>> = vec![
         ColumnDef::<FixtureRow>::new("name")
             .sort_value_by(|row: &FixtureRow| tanstack_value_str(&row.name))
+            .sorting_fn_auto()
             .filtering_fn_auto(),
         ColumnDef::<FixtureRow>::new("status")
             .sort_value_by(|row: &FixtureRow| tanstack_value_str(&row.status))
+            .sorting_fn_auto()
             .filtering_fn_auto(),
         ColumnDef::<FixtureRow>::new("cpu")
             .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.cpu))
+            .sorting_fn_auto()
             .filtering_fn_auto(),
         ColumnDef::<FixtureRow>::new("mem_mb")
             .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.mem_mb))
+            .sorting_fn_auto()
             .filtering_fn_auto(),
     ];
 

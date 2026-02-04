@@ -12,6 +12,7 @@ type CaseId =
   | "visibility_ordering"
   | "pinning"
   | "pinning_tree"
+  | "column_pinning"
   | "column_sizing"
   | "column_resizing_group_headers"
   | "state_shapes"
@@ -107,6 +108,8 @@ type SnapshotId =
   | "expanding_action_toggle_all"
   | "pinning_keep_true_page_0"
   | "pinning_keep_false_page_0"
+  | "pinning_keep_true_sorted_page_0"
+  | "pinning_keep_false_sorted_page_0"
   | "pinning_keep_true_filter_excludes_pinned"
   | "pinning_keep_false_filter_excludes_pinned"
   | "pinning_action_pin_top_bottom"
@@ -116,6 +119,10 @@ type SnapshotId =
   | "pinning_tree_keep_false_never_surfaces_child_row"
   | "pinning_tree_action_pin_root_includes_leaf_rows"
   | "pinning_tree_action_pin_grandchild_includes_parent_rows"
+  | "column_pinning_default_can_pin"
+  | "column_pinning_enable_column_pinning_false_disables_can_pin"
+  | "column_pinning_enable_pinning_false_disables_can_pin"
+  | "column_pinning_action_pin_left_right_unpin"
 
 type DemoProcessRow = {
   id: number
@@ -181,6 +188,8 @@ type TanStackOptions = {
   enableColumnResizing?: boolean
   enableHiding?: boolean
   enableRowPinning?: boolean
+  enableColumnPinning?: boolean
+  enablePinning?: boolean
   columnResizeMode?: "onChange" | "onEnd"
   columnResizeDirection?: "ltr" | "rtl"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
@@ -342,6 +351,16 @@ type FixtureSnapshot = {
       is_some_top_rows_pinned: boolean
       is_some_bottom_rows_pinned: boolean
     }
+    column_pinning?: {
+      left: string[]
+      center: string[]
+      right: string[]
+      can_pin: Record<string, boolean>
+      pin_position: Record<string, "left" | "right" | null>
+      is_some_columns_pinned: boolean
+      is_some_left_columns_pinned: boolean
+      is_some_right_columns_pinned: boolean
+    }
     next_state?: TanStackState
   }
 }
@@ -401,6 +420,11 @@ type FixtureAction =
       include_parent_rows?: boolean
     }
   | {
+      type: "pinColumn"
+      column_id: string
+      position: "left" | "right" | null
+    }
+  | {
       type: "toggleRowSelected"
       row_id: string
       value?: boolean
@@ -458,6 +482,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "visibility_ordering" &&
         v !== "pinning" &&
         v !== "pinning_tree" &&
+        v !== "column_pinning" &&
         v !== "column_sizing" &&
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
@@ -473,7 +498,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding]",
     )
   }
   return { out, case_id }
@@ -1013,9 +1038,9 @@ async function main(): Promise<void> {
     data = rows
 
     const sizingColumns = [
-      { id: "a", size: 100, minSize: 20, maxSize: 300 },
-      { id: "b", size: 50 },
-      { id: "c", size: 25 },
+      { id: "a", size: 100, minSize: 20, maxSize: 300, enablePinning: true },
+      { id: "b", size: 50, enablePinning: false },
+      { id: "c", size: 25, enablePinning: true },
     ]
     columns_meta = sizingColumns
 
@@ -1081,6 +1106,7 @@ async function main(): Promise<void> {
       minSize: c.minSize,
       maxSize: c.maxSize,
       enableResizing: true,
+      enablePinning: c.id !== "b",
     }))
   }
 
@@ -1135,6 +1161,8 @@ async function main(): Promise<void> {
       enableColumnResizing: options.enableColumnResizing ?? true,
       enableHiding: options.enableHiding ?? true,
       enableRowPinning: options.enableRowPinning,
+      enableColumnPinning: options.enableColumnPinning,
+      enablePinning: options.enablePinning,
       columnResizeMode: options.columnResizeMode,
       columnResizeDirection: options.columnResizeDirection,
       ...(options.globalFilterFn !== undefined
@@ -1191,6 +1219,11 @@ async function main(): Promise<void> {
         const next =
           typeof updater === "function" ? updater(currentState.columnSizingInfo) : updater
         currentState.columnSizingInfo = next ?? currentState.columnSizingInfo
+      },
+      onColumnPinningChange: (updater: any) => {
+        const next =
+          typeof updater === "function" ? updater(currentState.columnPinning) : updater
+        currentState.columnPinning = next ?? { left: [], right: [] }
       },
       onColumnOrderChange: (updater: any) => {
         const next =
@@ -1434,6 +1467,42 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
   }
 }
 
+function snapshotColumnPinning(
+  table: any,
+): NonNullable<FixtureSnapshot["expect"]["column_pinning"]> {
+  if (typeof table.getIsSomeColumnsPinned !== "function") {
+    throw new Error("Column pinning APIs are not available on this table instance")
+  }
+
+  const leaf = (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id))
+  const can_pin: Record<string, boolean> = {}
+  const pin_position: Record<string, "left" | "right" | null> = {}
+  for (const id of leaf) {
+    const col = table.getColumn?.(id)
+    if (!col) {
+      continue
+    }
+    can_pin[id] = Boolean(col.getCanPin?.())
+    const pos = col.getIsPinned?.()
+    pin_position[id] = pos === "left" ? "left" : pos === "right" ? "right" : null
+  }
+
+  const left = (table.getLeftLeafColumns?.() ?? []).map((c: any) => String(c.id))
+  const center = (table.getCenterLeafColumns?.() ?? []).map((c: any) => String(c.id))
+  const right = (table.getRightLeafColumns?.() ?? []).map((c: any) => String(c.id))
+
+  return {
+    left,
+    center,
+    right,
+    can_pin,
+    pin_position,
+    is_some_columns_pinned: Boolean(table.getIsSomeColumnsPinned?.()),
+    is_some_left_columns_pinned: Boolean(table.getIsSomeColumnsPinned?.("left")),
+    is_some_right_columns_pinned: Boolean(table.getIsSomeColumnsPinned?.("right")),
+  }
+}
+
   function snapshotForActions(
     options: TanStackOptions,
     state: TanStackState,
@@ -1502,6 +1571,14 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
           action.include_leaf_rows ?? false,
           action.include_parent_rows ?? false,
         )
+        continue
+      }
+      if (action.type === "pinColumn") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        col.pin(action.position === null ? false : action.position)
         continue
       }
       if (action.type === "toggleRowSelected") {
@@ -2418,6 +2495,24 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
         baseState,
       ),
       mk(
+        "pinning_keep_true_sorted_page_0",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          sorting: [{ id: "cpu", desc: true }],
+          pagination: { pageIndex: 0, pageSize: 2 },
+          rowPinning: { top: ["2"], bottom: [] },
+        },
+      ),
+      mk(
+        "pinning_keep_false_sorted_page_0",
+        { enableRowPinning: true, keepPinnedRows: false },
+        {
+          sorting: [{ id: "cpu", desc: true }],
+          pagination: { pageIndex: 0, pageSize: 2 },
+          rowPinning: { top: ["2"], bottom: [] },
+        },
+      ),
+      mk(
         "pinning_keep_true_filter_excludes_pinned",
         { enableRowPinning: true, keepPinnedRows: true },
         {
@@ -2552,6 +2647,67 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
             position: "bottom",
             include_parent_rows: true,
           },
+        ],
+      ),
+    ]
+  } else if (case_id === "column_pinning") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          column_pinning: snapshotColumnPinning(table),
+        },
+      }
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          column_pinning: snapshotColumnPinning(table),
+        },
+      }
+    }
+
+    snapshots = [
+      mk("column_pinning_default_can_pin", {}, {}),
+      mk(
+        "column_pinning_enable_column_pinning_false_disables_can_pin",
+        { enableColumnPinning: false },
+        {},
+      ),
+      mk(
+        "column_pinning_enable_pinning_false_disables_can_pin",
+        { enablePinning: false },
+        {},
+      ),
+      mkActions(
+        "column_pinning_action_pin_left_right_unpin",
+        {},
+        {},
+        [
+          { type: "pinColumn", column_id: "a", position: "left" },
+          { type: "pinColumn", column_id: "c", position: "right" },
+          { type: "pinColumn", column_id: "a", position: null },
         ],
       ),
     ]
