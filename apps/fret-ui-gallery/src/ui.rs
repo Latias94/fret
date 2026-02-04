@@ -11210,13 +11210,23 @@ fn preview_accordion(
 }
 
 fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let crate_w = fret_core::Px(160.0);
+    let layer_w = fret_core::Px(140.0);
+    let notes_w = fret_core::Px(420.0);
+
     let header = shadcn::TableHeader::new(vec![
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableHead::new("Crate").into_element(cx),
-                shadcn::TableHead::new("Layer").into_element(cx),
-                shadcn::TableHead::new("Notes").into_element(cx),
+                shadcn::TableHead::new("Crate")
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Layer")
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Notes")
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .border_bottom(true)
@@ -11235,18 +11245,28 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     },
                     |cx| vec![cx.text("fret-ui")],
                 ))
+                .refine_layout(LayoutRefinement::default().w_px(crate_w))
                 .into_element(cx),
-                shadcn::TableCell::new(cx.text("mechanisms")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Element tree + layout")).into_element(cx),
+                shadcn::TableCell::new(cx.text("mechanisms"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("Element tree + layout"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .into_element(cx),
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.text("fret-ui-kit")).into_element(cx),
-                shadcn::TableCell::new(cx.text("policies")).into_element(cx),
+                shadcn::TableCell::new(cx.text("fret-ui-kit"))
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("policies"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
                 shadcn::TableCell::new(cx.text("Dismiss / focus / menu / overlays"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
                     .into_element(cx),
             ],
         )
@@ -11255,9 +11275,15 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.text("fret-ui-shadcn")).into_element(cx),
-                shadcn::TableCell::new(cx.text("recipes")).into_element(cx),
-                shadcn::TableCell::new(cx.text("skinned components + defaults")).into_element(cx),
+                shadcn::TableCell::new(cx.text("fret-ui-shadcn"))
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("recipes"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("skinned components + defaults"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .into_element(cx),
