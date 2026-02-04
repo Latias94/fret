@@ -2242,3 +2242,43 @@ After (commit `1905de1e4e5bbda5ccab9e2f6d9c2dbd9f968ff0`):
 - bundle: `target/fret-diag-perf/stripes-sweep-perf-fastpath.v6/1770203253914-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
 - `diag perf` worst top_total_time_us: `40406`
 - max stats (us): layout=`30671`, prepaint=`9585`, dispatch=`3594`, hit_test=`664`, paint=`575`
+
+## 2026-02-04 21:12:15 (perf commit `470708b2`)
+
+Change:
+- Gate `UiTree::request_semantics_snapshot()` per-frame requests based on current diagnostics/script needs.
+- During long-running scripted sweeps, avoid refreshing semantics every frame once target geometry is cached.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+- Harness-only: `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
+- Env: `FRET_DIAG_SCRIPT_AUTO_DUMP=0`, `FRET_DIAG_SEMANTICS=0`, `FRET_DIAG_MAX_SNAPSHOTS=240`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json `
+  --dir target/fret-diag-perf/stripes-sweep-semanticgate.470708b2 `
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json `
+  --timeout-ms 300000 --poll-ms 200 `
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Baseline (commit `b02744a8`, before gating semantics requests):
+- dir: `target/fret-diag-perf/stripes-sweep-layoutbreakdown.b02744a8`
+- top frame p50/p95/max total (us): `42225 / 56190 / 56190`
+- top frame p50/p95/max layout (us): `32660 / 39619 / 39619`
+- top frame p50/p95/max prepaint (us): `9761 / 15433 / 15433`
+- semantics refresh was observed on **201/201** sampled frames (bundle inspection).
+
+After (commit `470708b2`):
+- dir: `target/fret-diag-perf/stripes-sweep-semanticgate.470708b2`
+- top frame p50/p95/max total (us): `37866 / 38637 / 38637`
+- top frame p50/p95/max layout (us): `28387 / 29251 / 29251`
+- top frame p50/p95/max prepaint (us): `8984 / 9074 / 9074`
+- semantics refresh was observed on **3/201** sampled frames (bundle inspection).
+
+Notes:
+- This makes the “hit-test torture” probe far more representative: long multi-frame pointer sweeps are no longer
+  dominated by per-frame semantics refresh.
