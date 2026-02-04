@@ -1618,6 +1618,8 @@ name = "fret-ui-headless"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "serde",
+ "serde_json",
  "time",
  "virtualizer",
 ]
