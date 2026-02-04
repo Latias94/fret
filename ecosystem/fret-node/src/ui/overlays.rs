@@ -1069,12 +1069,12 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 if *button != MouseButton::Left {
                     return;
                 }
+                cx.stop_propagation();
                 let Some(btn) = self.button_at(cx.bounds, *position) else {
                     return;
                 };
                 self.pressed = Some(btn);
                 cx.capture_pointer(cx.node);
-                cx.stop_propagation();
                 cx.request_redraw();
                 cx.invalidate_self(Invalidation::Paint);
             }
@@ -1100,6 +1100,13 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             }
             _ => {}
         }
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(fret_core::SemanticsRole::Panel);
+        cx.set_label("Controls");
+        cx.set_test_id("node_graph.controls");
+        cx.set_focusable(false);
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -1487,6 +1494,13 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
             }
             _ => {}
         }
+    }
+
+    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
+        cx.set_role(fret_core::SemanticsRole::Panel);
+        cx.set_label("MiniMap");
+        cx.set_test_id("node_graph.minimap");
+        cx.set_focusable(false);
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {

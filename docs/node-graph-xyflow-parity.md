@@ -247,10 +247,12 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [~] **MiniMap**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/MiniMap/MiniMap.tsx`
   - fret-node: overlay exists; needs polish and API stabilization for B-layer consumption
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
 
 - [~] **Controls**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Controls/Controls.tsx`
   - fret-node: overlay exists; needs a B-layer integration story (store/actions + theming + composition)
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
 
 - [~] **Background**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`

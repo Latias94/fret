@@ -63,6 +63,7 @@ mod op_batching_determinism_conformance;
 mod overlay_group_rename_conformance;
 mod overlay_invalidation_conformance;
 mod overlay_menu_searcher_conformance;
+mod overlay_minimap_controls_conformance;
 mod overlay_toolbars_conformance;
 mod perf_cache;
 mod perf_cache_prune_conformance;

@@ -271,9 +271,11 @@ Work items:
   - Implementation direction: window-space overlay positioned from edge center/label anchors
     (needs a public “edge anchor” query from internals).
   - fret-node implementation: `ecosystem/fret-node/src/ui/overlays.rs` (`NodeGraphEdgeToolbar`) + `NodeGraphInternalsSnapshot.edge_centers_window`
-- [ ] MiniMap/Controls stabilization pass:
+- [x] MiniMap/Controls stabilization pass:
   - Current fret-node: `NodeGraphMiniMapOverlay`, `NodeGraphControlsOverlay` in `ecosystem/fret-node/src/ui/overlays.rs`
   - Add: accessibility baseline + placement APIs + theming tokens + store/action wiring guidance.
+  - Contract doc: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
 ### M3 — Custom edges Stage 2 (edgeTypes parity)
 
