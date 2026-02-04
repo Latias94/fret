@@ -40,9 +40,10 @@ use stats::{
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
     check_bundle_for_vlist_window_shifts_kind_max,
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
-    check_bundle_for_wheel_scroll_hit_changes, check_report_for_hover_layout_invalidations,
-    clear_script_result_files, report_pick_result_and_exit, report_result_and_exit,
-    run_pick_and_wait, run_script_and_wait, wait_for_failure_dump_bundle, write_pick_script,
+    check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
+    check_report_for_hover_layout_invalidations, clear_script_result_files,
+    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
+    wait_for_failure_dump_bundle, write_pick_script,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
@@ -119,6 +120,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_vlist_window_shifts_prefetch_max: Option<u64> = None;
     let mut check_vlist_window_shifts_escape_max: Option<u64> = None;
     let mut check_vlist_policy_key_stable: bool = false;
+    let mut check_windowed_rows_offset_changes_min: Option<u64> = None;
+    let mut check_windowed_rows_offset_changes_eps: f32 = 0.5;
     let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_notify_hotspot_file_max: Vec<(String, u64)> = Vec::new();
@@ -618,6 +621,30 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-vlist-policy-key-stable" => {
                 check_vlist_policy_key_stable = true;
+                i += 1;
+            }
+            "--check-windowed-rows-offset-changes-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-min".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-windowed-rows-offset-changes-eps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-eps".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_eps = v.parse::<f32>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-eps".to_string()
+                })?;
                 i += 1;
             }
             "--check-layout-fast-path-min" => {
@@ -1348,6 +1375,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_vlist_window_shifts_prefetch_max.is_some()
                     || check_vlist_window_shifts_escape_max.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -1397,6 +1425,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_vlist_window_shifts_prefetch_max,
                         check_vlist_window_shifts_escape_max,
                         check_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -1693,6 +1723,7 @@ See: `docs/tracy.md`.\n";
                         || check_vlist_window_shifts_prefetch_max.is_some()
                         || check_vlist_window_shifts_escape_max.is_some()
                         || check_vlist_policy_key_stable
+                        || check_windowed_rows_offset_changes_min.is_some()
                         || check_layout_fast_path_min.is_some()
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
@@ -1740,6 +1771,8 @@ See: `docs/tracy.md`.\n";
                             check_vlist_window_shifts_prefetch_max,
                             check_vlist_window_shifts_escape_max,
                             check_vlist_policy_key_stable,
+                            check_windowed_rows_offset_changes_min,
+                            check_windowed_rows_offset_changes_eps,
                             check_layout_fast_path_min,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
@@ -2803,6 +2836,7 @@ See: `docs/tracy.md`.\n";
                     || check_vlist_window_shifts_explainable
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -3021,6 +3055,8 @@ See: `docs/tracy.md`.\n";
                         check_vlist_window_shifts_escape_max
                             .or(suite_vlist_window_shifts_escape_max),
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -5649,6 +5685,8 @@ fn apply_post_run_checks(
     check_vlist_window_shifts_prefetch_max: Option<u64>,
     check_vlist_window_shifts_escape_max: Option<u64>,
     check_vlist_policy_key_stable: bool,
+    check_windowed_rows_offset_changes_min: Option<u64>,
+    check_windowed_rows_offset_changes_eps: f32,
     check_layout_fast_path_min: Option<u64>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -5748,6 +5786,15 @@ fn apply_post_run_checks(
     }
     if check_vlist_policy_key_stable {
         check_bundle_for_vlist_policy_key_stable(bundle_path, out_dir, warmup_frames)?;
+    }
+    if let Some(min_total_offset_changes) = check_windowed_rows_offset_changes_min {
+        check_bundle_for_windowed_rows_offset_changes_min(
+            bundle_path,
+            out_dir,
+            min_total_offset_changes,
+            warmup_frames,
+            check_windowed_rows_offset_changes_eps,
+        )?;
     }
     if let Some(min_frames) = check_layout_fast_path_min {
         check_bundle_for_layout_fast_path_min(bundle_path, out_dir, min_frames, warmup_frames)?;
@@ -6378,7 +6425,8 @@ mod tests {
         check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
         check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
-        check_bundle_for_wheel_scroll_hit_changes_json, json_pointer_set,
+        check_bundle_for_wheel_scroll_hit_changes_json,
+        check_bundle_for_windowed_rows_offset_changes_min, json_pointer_set,
         scan_semantics_changed_repainted_json,
     };
     use serde_json::json;
@@ -7537,6 +7585,117 @@ mod tests {
             .expect_err("expected unstable vlist policy_key");
         assert!(err.contains("vlist policy-key stability gate failed"));
         assert!(out_dir.join("check.vlist_policy_key_stable.json").is_file());
+    }
+
+    #[test]
+    fn windowed_rows_offset_changes_min_check_passes() {
+        let out_dir = tmp_out_dir("windowed_rows_offset_changes_min_pass");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    { "frame_id": 0, "tick_id": 0, "debug": { "scroll_handle_changes": [], "windowed_rows_surfaces": [] } },
+                    {
+                        "frame_id": 1,
+                        "tick_id": 1,
+                        "debug": {
+                            "scroll_handle_changes": [{ "offset_changed": true }],
+                            "windowed_rows_surfaces": [
+                                {
+                                    "callsite_id": 7,
+                                    "offset_y": 0.0,
+                                    "location": { "file": "x.rs", "line": 1, "column": 1 }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "frame_id": 2,
+                        "tick_id": 2,
+                        "debug": {
+                            "scroll_handle_changes": [{ "offset_changed": true }],
+                            "windowed_rows_surfaces": [
+                                {
+                                    "callsite_id": 7,
+                                    "offset_y": 10.0,
+                                    "location": { "file": "x.rs", "line": 1, "column": 1 }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_windowed_rows_offset_changes_min(&bundle_path, &out_dir, 1, 0, 0.5)
+            .expect("expected windowed rows offset changes >= 1");
+        assert!(
+            out_dir
+                .join("check.windowed_rows_offset_changes_min.json")
+                .is_file()
+        );
+    }
+
+    #[test]
+    fn windowed_rows_offset_changes_min_check_fails_when_offset_is_stable() {
+        let out_dir = tmp_out_dir("windowed_rows_offset_changes_min_fail");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_path = out_dir.join("bundle.json");
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [
+                    {
+                        "frame_id": 1,
+                        "tick_id": 1,
+                        "debug": {
+                            "scroll_handle_changes": [{ "offset_changed": true }],
+                            "windowed_rows_surfaces": [
+                                {
+                                    "callsite_id": 7,
+                                    "offset_y": 0.0,
+                                    "location": { "file": "x.rs", "line": 1, "column": 1 }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "frame_id": 2,
+                        "tick_id": 2,
+                        "debug": {
+                            "scroll_handle_changes": [{ "offset_changed": true }],
+                            "windowed_rows_surfaces": [
+                                {
+                                    "callsite_id": 7,
+                                    "offset_y": 0.0,
+                                    "location": { "file": "x.rs", "line": 1, "column": 1 }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_windowed_rows_offset_changes_min(&bundle_path, &out_dir, 1, 0, 0.5)
+                .expect_err("expected offset changes < 1");
+        assert!(err.contains("total_offset_changes"));
+        assert!(
+            out_dir
+                .join("check.windowed_rows_offset_changes_min.json")
+                .is_file()
+        );
     }
 
     #[test]

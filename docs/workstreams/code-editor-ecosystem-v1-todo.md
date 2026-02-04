@@ -160,6 +160,7 @@ Evidence anchors:
   - Mechanism: `ScrollProps.windowed_paint` forces view-cache rerender on scroll offset changes for windowed paint surfaces.
   - Surface glue: `windowed_rows_surface_with_pointer_region` also sets `scroll.windowed_paint = true` (the code editor uses the pointer-region variant).
   - Paint correctness: `windowed_rows_surface` now anchors row rects at the canvas bounds origin to avoid “left clipped / prefixes missing”.
+  - Diagnostics gate: `tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json` + `--check-windowed-rows-offset-changes-min 1` (with UI Gallery view-cache enabled).
 - [x] Clamp windowed row hit-testing during drags (keeps selection updates continuous when the pointer leaves bounds).
 - [x] Drag-to-select edge autoscroll (Zed-style scaling), including a timer-driven path so it continues while the pointer is stationary at the viewport edge.
 
