@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-hover-baseline-top" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-intro" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-hover-intro-top" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-layout" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-hover-layout-top" },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "card" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-card" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-hover-baseline-card-filter" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-card" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-hover-card-filter" },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "accordion" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-accordion" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-hover-baseline-accordion-filter" },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-accordion" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-nav-hover-accordion-filter" }
+  ]
+}

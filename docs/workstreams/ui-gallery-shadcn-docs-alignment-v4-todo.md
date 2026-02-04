@@ -117,7 +117,15 @@ Component checklist (canonical order from `radix/meta.json`):
 
 ## P2 — Known Issues to Triage (UI Gallery reports)
 
-- [ ] SGD-bug-010 Left-nav hover/selected backgrounds inconsistent (some rows highlight, others do not).
+- [!] SGD-bug-010 Left-nav hover/selected backgrounds inconsistent (some rows highlight, others do not).
+  - Could not reproduce for `SidebarMenuButton` rows via scripted diagnostics.
+  - Evidence:
+    - `tools/diag-scripts/ui-gallery-nav-disabled-scan.json`: 0 disabled `ui-gallery-nav-*` rows in semantics.
+    - `tools/diag-scripts/ui-gallery-nav-hover-inconsistency-screenshots.json` + `FRET_DIAG_SCREENSHOT=1`: hover vs baseline crops differ for `intro/layout/card/accordion`.
+  - Likely explanations:
+    - hovering the group headings (plain text, not pressable),
+    - a different sidebar surface (e.g. the `Sidebar` component demo) rather than the gallery nav.
+  - Next: capture the exact label + page + (ideally) a screenshot or bundle to confirm the target row.
 - [ ] SGD-bug-020 Left-nav “text sinks” on click (pressed state changes layout metrics).
 - [ ] SGD-bug-030 Accordion parity vs upstream (trigger height/padding, chevron behavior, content animation).
 - [ ] SGD-bug-040 Card preview text vertical alignment jitter when switching pages.
