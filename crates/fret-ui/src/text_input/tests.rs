@@ -9,6 +9,30 @@ use fret_core::{
 use fret_runtime::{Effect, PlatformCapabilities};
 use std::sync::Arc;
 
+#[derive(Debug, Clone, Copy)]
+struct RenderTransformWrapper {
+    transform: fret_core::Transform2D,
+}
+
+impl RenderTransformWrapper {
+    fn new(transform: fret_core::Transform2D) -> Self {
+        Self { transform }
+    }
+}
+
+impl Widget<TestHost> for RenderTransformWrapper {
+    fn render_transform(&self, _bounds: Rect) -> Option<fret_core::Transform2D> {
+        Some(self.transform)
+    }
+
+    fn layout(&mut self, cx: &mut crate::widget::LayoutCx<'_, TestHost>) -> Size {
+        let Some(&child) = cx.children.first() else {
+            return Size::default();
+        };
+        cx.layout(child, cx.available)
+    }
+}
+
 #[derive(Default)]
 struct FakeTextService {
     prepared: Vec<String>,
@@ -514,5 +538,62 @@ fn ime_cursor_area_moves_with_preedit_cursor() {
     assert!(
         (x2 - x0 - 2.0).abs() < 0.001,
         "expected IME cursor x to move by preedit prefix width"
+    );
+}
+
+#[test]
+fn ime_cursor_area_is_in_visual_space_after_render_transform() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(300.0), Px(40.0)));
+
+    fn paint_ime_origin_x(
+        transform: fret_core::Transform2D,
+        bounds: Rect,
+        window: AppWindowId,
+    ) -> Point {
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(RenderTransformWrapper::new(transform));
+        let input = ui.create_node(TextInput::new().with_text("hello"));
+        ui.add_child(root, input);
+        ui.set_root(root);
+        ui.set_focus(Some(input));
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut text = ImeTextService::default();
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let _ = app.take_effects();
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+        app.take_effects()
+            .into_iter()
+            .find_map(|e| match e {
+                Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin),
+                _ => None,
+            })
+            .expect("expected an IME cursor area effect")
+    }
+
+    let base = paint_ime_origin_x(fret_core::Transform2D::IDENTITY, bounds, window);
+    let dx = Px(50.0);
+    let dy = Px(20.0);
+    let translated = paint_ime_origin_x(
+        fret_core::Transform2D::translation(Point::new(dx, dy)),
+        bounds,
+        window,
+    );
+
+    assert!(
+        (translated.x.0 - base.x.0 - dx.0).abs() < 0.001,
+        "expected IME cursor x to include render transform translation"
+    );
+    assert!(
+        (translated.y.0 - base.y.0 - dy.0).abs() < 0.001,
+        "expected IME cursor y to include render transform translation"
     );
 }

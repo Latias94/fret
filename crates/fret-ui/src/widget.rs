@@ -618,6 +618,44 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
         Theme::global(&*self.app)
     }
 
+    /// Convert a layout-space rect into the visual rect (AABB) after accumulated render transforms.
+    ///
+    /// This is useful for platform integrations (e.g. IME candidate positioning), where the OS
+    /// expects coordinates in the same space the user sees on screen.
+    pub fn visual_rect_aabb(&self, rect: Rect) -> Rect {
+        let t = self.accumulated_transform;
+        if t == Transform2D::IDENTITY {
+            return rect;
+        }
+
+        let x0 = rect.origin.x.0;
+        let y0 = rect.origin.y.0;
+        let x1 = x0 + rect.size.width.0;
+        let y1 = y0 + rect.size.height.0;
+
+        let p00 = t.apply_point(Point::new(fret_core::Px(x0), fret_core::Px(y0)));
+        let p10 = t.apply_point(Point::new(fret_core::Px(x1), fret_core::Px(y0)));
+        let p01 = t.apply_point(Point::new(fret_core::Px(x0), fret_core::Px(y1)));
+        let p11 = t.apply_point(Point::new(fret_core::Px(x1), fret_core::Px(y1)));
+
+        let min_x = p00.x.0.min(p10.x.0).min(p01.x.0).min(p11.x.0);
+        let max_x = p00.x.0.max(p10.x.0).max(p01.x.0).max(p11.x.0);
+        let min_y = p00.y.0.min(p10.y.0).min(p01.y.0).min(p11.y.0);
+        let max_y = p00.y.0.max(p10.y.0).max(p01.y.0).max(p11.y.0);
+
+        if !min_x.is_finite() || !max_x.is_finite() || !min_y.is_finite() || !max_y.is_finite() {
+            return rect;
+        }
+
+        Rect::new(
+            Point::new(fret_core::Px(min_x), fret_core::Px(min_y)),
+            Size::new(
+                fret_core::Px((max_x - min_x).max(0.0)),
+                fret_core::Px((max_y - min_y).max(0.0)),
+            ),
+        )
+    }
+
     /// Request a window redraw (one-shot).
     ///
     /// Use this for one-shot updates. For frame-driven updates that must repaint continuously,
