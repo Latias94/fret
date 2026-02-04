@@ -1404,6 +1404,93 @@ Evidence bundle:
 
 - `target/fret-diag-verify-renderer-perf-perf.v4/1770169414415-script-step-0007-click/bundle.json`
 
+---
+
+### Renderer metrics baseline: editor autoscroll + chrome torture (bundle-embedded)
+
+Commit: `54e4c587` (includes `0e4928fe` + `cf8975ca`).
+
+#### Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (release; relaunch-per-repeat; repeat=7):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --dir target/fret-diag-perf-editor/renderer-metrics.r1 \
+  --repeat 7 \
+  --timeout-ms 240000 \
+  --sort prepare_text \
+  --top 10 \
+  --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_DIAG_MAX_SNAPSHOTS=180 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; per-run “top frame” selected by `--sort prepare_text`):
+
+| metric | p50 | p95 |
+| --- | ---: | ---: |
+| total | 1288 | 1442 |
+| layout | 906 | 961 |
+| prepaint | 27 | 30 |
+| paint | 359 | 454 |
+| renderer.encode_scene | 625 | 645 |
+| renderer.prepare_text | 548 | 585 |
+| renderer.draw_calls | 59 | 59 |
+| renderer.pipeline_switches | 41 | 41 |
+| renderer.bind_group_switches | 56 | 56 |
+| renderer.scissor_sets | 39 | 39 |
+| renderer.scene_encoding_cache_misses | 1 | 1 |
+
+Worst bundle:
+
+- `target/fret-diag-perf-editor/renderer-metrics.r1/1770170286951-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+#### Script: `tools/diag-scripts/ui-gallery-chrome-torture-steady.json`
+
+Command (release; relaunch-per-repeat; repeat=7):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-chrome-torture-steady.json \
+  --dir target/fret-diag-perf-chrome/renderer-metrics.r1 \
+  --repeat 7 \
+  --timeout-ms 240000 \
+  --sort pipeline_switches \
+  --top 10 \
+  --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_DIAG_MAX_SNAPSHOTS=180 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; per-run “top frame” selected by `--sort pipeline_switches`):
+
+| metric | p50 | p95 |
+| --- | ---: | ---: |
+| total | 901 | 910 |
+| layout | 745 | 758 |
+| prepaint | 21 | 26 |
+| paint | 131 | 143 |
+| renderer.encode_scene | 0 | 0 |
+| renderer.prepare_text | 108 | 110 |
+| renderer.draw_calls | 74 | 74 |
+| renderer.pipeline_switches | 65 | 65 |
+| renderer.bind_group_switches | 79 | 79 |
+| renderer.scissor_sets | 46 | 46 |
+| renderer.scene_encoding_cache_hits | 1 | 1 |
+| renderer.scene_encoding_cache_misses | 0 | 0 |
+
+Worst bundle:
+
+- `target/fret-diag-perf-chrome/renderer-metrics.r1/1770170482121-ui-gallery-chrome-torture-steady/bundle.json`
+
 ### Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` (validation)
 
 Command (release; steady; repeat=9; relaunch-per-repeat):

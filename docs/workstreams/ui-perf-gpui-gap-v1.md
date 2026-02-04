@@ -209,7 +209,7 @@ GPUI:
 
 Fret:
 
-- We have good CPU breakdown (`layout/prepaint/paint`), but we still lack a tight “GPU-side budget” feedback loop:
+- We have good CPU breakdown (`layout/prepaint/paint`), but historically lacked a tight “GPU-side budget” feedback loop:
   - glyph atlas eviction/reupload,
   - texture uploads,
   - draw-call/batch counts,
@@ -221,13 +221,27 @@ Impact:
 
 Proposal:
 
-- Add optional renderer telemetry into perf bundles:
-  - per-frame batch count, text glyph uploads, atlas evictions,
-  - (if available) GPU timestamp queries for scene encoding / render passes.
+- Status: **Partially implemented**.
+  - Basic renderer telemetry is now exported into diagnostics bundles (best-effort) under
+    `.windows[].snapshots[].debug.stats.renderer_*`:
+    `encode_scene_us`, `prepare_text_us`, `prepare_svg_us`, `draw_calls`,
+    `pipeline_switches`, `bind_group_switches`, `scissor_sets`,
+    uniform/instance/vertex byte counts, and scene encoding cache hit/miss counts.
+  - `fretboard diag stats` and `fretboard diag perf --json` can now sort/report by these renderer metrics.
+  - Commits: `0e4928fe` + `cf8975ca`. Evidence runs are logged in
+    `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+
+Next:
+
+- Extend the exported telemetry with “churn” signals that correlate with tail hitches:
+  - glyph atlas upload bytes / evictions / page count,
+  - texture upload bytes (images/SVG masks/path intermediates),
+  - intermediate pool pressure (alloc/free bytes, spill events),
+  - (optional) GPU timestamp queries for render passes + present/submit time when supported.
 
 Acceptance:
 
-- Correlate tail hitches with a specific GPU churn signature; fix by stabilizing caches or batching.
+- Correlate tail hitches with a specific churn signature (CPU or GPU); fix by stabilizing caches or batching.
 
 ---
 
