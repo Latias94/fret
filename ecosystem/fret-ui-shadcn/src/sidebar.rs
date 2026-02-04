@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::{Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::CommandId;
+use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, Overflow, PressableProps, RingStyle, SpacerProps,
 };
@@ -393,7 +394,7 @@ impl SidebarMenuItem {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SidebarMenuButton {
     label: Arc<str>,
     icon: Option<IconId>,
@@ -402,6 +403,24 @@ pub struct SidebarMenuButton {
     collapsed: bool,
     size: SidebarMenuButtonSize,
     on_click: Option<CommandId>,
+    on_activate: Option<OnActivate>,
+    test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for SidebarMenuButton {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SidebarMenuButton")
+            .field("label", &self.label)
+            .field("icon", &self.icon)
+            .field("active", &self.active)
+            .field("disabled", &self.disabled)
+            .field("collapsed", &self.collapsed)
+            .field("size", &self.size)
+            .field("on_click", &self.on_click)
+            .field("on_activate", &self.on_activate.is_some())
+            .field("test_id", &self.test_id)
+            .finish()
+    }
 }
 
 impl SidebarMenuButton {
@@ -414,6 +433,8 @@ impl SidebarMenuButton {
             collapsed: false,
             size: SidebarMenuButtonSize::Default,
             on_click: None,
+            on_activate: None,
+            test_id: None,
         }
     }
 
@@ -447,6 +468,16 @@ impl SidebarMenuButton {
         self
     }
 
+    pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
+        self.on_activate = Some(on_activate);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     fn build_button<H: UiHost>(&self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
@@ -461,6 +492,8 @@ impl SidebarMenuButton {
         };
 
         let on_click = self.on_click.clone();
+        let on_activate = self.on_activate.clone();
+        let test_id = self.test_id.clone();
         let disabled = self.disabled
             || on_click
                 .as_ref()
@@ -475,6 +508,7 @@ impl SidebarMenuButton {
             a11y: fret_ui::element::PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(label.clone()),
+                test_id: test_id.clone(),
                 ..Default::default()
             },
             ..Default::default()
@@ -485,10 +519,12 @@ impl SidebarMenuButton {
         let disabled = disabled;
         let collapsed = self.collapsed;
         let size = self.size;
-        let size = self.size;
 
         cx.pressable(pressable, move |cx, st| {
             cx.pressable_dispatch_command_if_enabled_opt(on_click.clone());
+            if let Some(on_activate) = on_activate.clone() {
+                cx.pressable_on_activate(on_activate);
+            }
             let theme = Theme::global(&*cx.app).clone();
 
             let bg = if active || st.hovered || st.pressed {

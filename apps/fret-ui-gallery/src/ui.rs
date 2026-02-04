@@ -96,24 +96,11 @@ pub(crate) fn sidebar_view(
                 }
 
                 let is_selected = selected == item.id;
-                let variant = if is_selected {
-                    shadcn::ButtonVariant::Secondary
-                } else {
-                    shadcn::ButtonVariant::Ghost
-                };
 
                 group_items.push(cx.keyed(item.id, |cx| {
                     let selected_page_for_activate = selected_page.clone();
                     let workspace_tabs_for_activate = workspace_tabs.clone();
                     let page_id_for_activate: Arc<str> = Arc::from(item.id);
-
-                    let mut button = shadcn::Button::new(item.label)
-                        .variant(variant)
-                        .on_click(item.command)
-                        .refine_layout(LayoutRefinement::default().w_full());
-
-                    button =
-                        button.test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")));
 
                     let on_activate: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
@@ -136,9 +123,13 @@ pub(crate) fn sidebar_view(
                                 action_cx.window,
                             ));
                         });
-                    button = button.on_activate(on_activate);
-
-                    button.into_element(cx)
+                    shadcn::SidebarMenuButton::new(item.label)
+                        .active(is_selected)
+                        .collapsed(false)
+                        .on_click(item.command)
+                        .on_activate(on_activate)
+                        .test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")))
+                        .into_element(cx)
                 }));
             }
 
