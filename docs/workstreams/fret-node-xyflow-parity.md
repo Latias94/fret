@@ -243,7 +243,8 @@ Work items:
   - fret-node building blocks: `ecosystem/fret-node/src/runtime/changes.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
   - guide: `docs/node-graph-controlled-mode.md`
   - runnable example: `ecosystem/fret-node/examples/controlled_mode.rs`
-- [ ] Add conformance tests for the new helpers (deterministic outputs, stable ordering rules).
+- [x] Add conformance tests for the new helpers (deterministic outputs, stable ordering rules).
+  - Evidence: `ecosystem/fret-node/src/runtime/utils.rs` (`helpers_are_deterministic_under_insertion_order_variance`)
 
 ### M2 — Built-in add-ons parity (B-layer components)
 
