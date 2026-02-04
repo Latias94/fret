@@ -358,6 +358,45 @@ Proposal:
 
 ---
 
+### Gap G: Changed-but-unobserved global churn (dispatch tail)
+
+GPUI:
+
+- “Do nothing if you didn’t `notify`” is a core performance contract: if an interaction does not update relevant state,
+  layout/paint reuse stays valid and the runtime does minimal bookkeeping.
+
+Fret:
+
+- In pointer-move heavy probes, diagnostics frequently report the same globals as “changed” on most snapshots while also
+  reporting them as **unobserved** (`unobs.globals`), e.g.:
+  - `fret_runtime::window_input_context::WindowInputContextService`
+  - `fret_runtime::window_command_action_availability::WindowCommandActionAvailabilityService`
+- This suggests a “we publish every frame” pattern that adds dispatch bookkeeping and tail latency even when the UI does
+  not actually observe the values for the current interaction.
+- Evidence:
+  - `fretboard diag stats <bundle> --sort dispatch --json` for the hit-test torture sweep bundles (see perf log entry
+    for commit `1a9c1238`).
+
+Impact:
+
+- Dispatch tails become harder to bound at 120Hz, even when the frame’s layout/paint work is effectively zero.
+
+Proposal:
+
+- Make these window-scoped services publish changes only on actual value changes:
+  - adopt “set-if-changed” semantics (`Eq` / structural equality), or store transient values in a per-frame scratch
+    store rather than a globally observed service.
+- Add (or tighten) an explicit perf gate for pointer-move dispatch:
+  - for the hit-test torture sweep, record per-run max `dispatch_time_us` for frames where `dispatch_events > 0`
+    and treat outliers as regressions.
+
+Acceptance:
+
+- In hit-test torture sweep probes, `snapshots_with_global_changes` drops materially (or `unobs.globals` becomes rare),
+  and per-run max `dispatch_time_us` stabilizes (no outlier spikes) while preserving correctness of cursor/hover/focus.
+
+---
+
 ## 4) Proposed milestone mapping (additive to the Zed smoothness workstream)
 
 These are intended as “fearless refactor” milestones, each with a measurable acceptance gate.

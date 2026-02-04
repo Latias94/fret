@@ -64,13 +64,14 @@ Conventions:
   update the canonical perf suite env set accordingly.
 - [x] Export view-cache reuse “miss reasons” as perf-visible counters (so regressions are explainable).
   - Implemented by `feat(diag): export view-cache reuse miss counters` (commit `43f9c73e`).
-- [ ] Export a coarse layout-phase breakdown (so `layout_time_us` is explainable in bundles and stable-frame fast paths).
+- [x] Export a coarse layout-phase breakdown (so `layout_time_us` is explainable in bundles and stable-frame fast paths).
   - Add: `layout_collect_roots_time_us`, `layout_invalidate_scroll_handle_bindings_time_us`,
     `layout_expand_view_cache_invalidations_time_us`, `layout_request_build_roots_time_us`,
     `layout_pending_barrier_relayouts_time_us`, `layout_repair_view_cache_bounds_time_us`,
     `layout_contained_view_cache_roots_time_us`, `layout_collapse_layout_observations_time_us`,
     `layout_prepaint_after_layout_time_us`, `layout_skipped_engine_frame`.
   - Wire into: `fretboard diag stats --json` so a worst bundle can be inspected without manual JSON digging.
+  - Implemented by `feat(diag): export layout phase breakdown` (commit `b02744a8`).
 - [ ] Keep `diag perf` runs comparable by splitting “gate checks” vs “deep profiling”:
   - Gate check (CPU regressions): keep `FRET_DIAG_RENDERER_PERF` off (avoid instrumentation overhead).
   - Deep profiling (churn / GPU triage): turn `FRET_DIAG_RENDERER_PERF=1` on and record churn tables in the log.
@@ -213,6 +214,16 @@ Perf acceptance:
 
 - [ ] Pointer-move heavy cases should stay paint-only (no layout) unless explicitly required.
 - [ ] Hit-test CPU time should be bounded as node count scales.
+- [ ] Ensure the perf log captures pointer-move dispatch/hit-test costs (not just “top frame” totals).
+  - Today, `perf_log.py` reports “top frame” metrics for each run, which can show `dispatch=0` for probes
+    where the worst total frame is a non-dispatch settle/selector frame.
+  - Proposed: extend `perf_log.py` (or add a sibling helper) to compute per-run max `dispatch_time_us` and
+    per-run max `hit_test_time_us` from bundle frames where `dispatch_events > 0`.
+- [ ] Eliminate changed-but-unobserved global churn in pointer-move heavy probes.
+  - Current hotspots reported by `fretboard diag stats`: `WindowInputContextService`,
+    `WindowCommandActionAvailabilityService` (often changed but unobserved).
+  - Goal: reduce pointer-move dispatch tails by making these globals “notify only on actual value change”
+    (or avoid publishing them every frame unless explicitly needed).
 
 ### M7: Renderer primitive profiling (bottom-up)
 
