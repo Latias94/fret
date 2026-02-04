@@ -454,10 +454,10 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
   - Progress: add a pure cursor request hook (`Widget::cursor_icon_at`) and route pointer-move cursor updates through it when present (cursor requests are now representable without relying on pointer-move side effects).
   - Progress: cache focus traversal gates in prepaint (focusable + traversal + scroll-ancestor) so command availability queries do not re-enter widget hit-test hooks for clean nodes.
   - Progress: export outside-press observer layer metadata (consume flag + branch list) so pointer-down-outside arbitration is explainable from bundles.
-  - Notes: reuse is currently enabled only for pointer-move dispatch; other pointer events rebuild the cache from a full hit-test pass.
+  - Notes: cached hit-test reuse is enabled for cursor-driven hot paths (pointer-move, wheel/pinch, drag-over); discrete click interactions still rebuild from a full hit-test pass.
   - Notes: reuse falls back to full hit-testing if the cached leaf can hit-test children (avoids stale routing when the pointer moves between descendants).
   - Evidence: `crates/fret-ui/src/tree/hit_test.rs` (`hit_test_layers_cached`, `try_hit_test_along_cached_path`),
-    `crates/fret-ui/src/tree/dispatch.rs` (pointer-move-only reuse policy),
+    `crates/fret-ui/src/tree/dispatch.rs` (hit-test reuse policy),
     `crates/fret-ui/src/tree/tests/hit_test.rs` (`hit_test_layers_cached_reuses_path_and_respects_layer_order`),
     `crates/fret-ui/src/widget.rs` (`Widget::cursor_icon_at`),
     `crates/fret-ui/src/tree/tests/cursor_icon_query.rs`,
@@ -465,8 +465,14 @@ Goal: make caching a closed loop across paint + interaction (+ semantics later),
     `crates/fret-ui/src/tree/tests/focus_traversal_prepaint_cache.rs`,
     `crates/fret-ui/src/tree/mod.rs` (`UiDebugLayerInfo` outside-press fields),
     `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiLayerInfoV1` export).
-- [ ] GPUI-MVP3-rec-003 Expand interaction replay/reuse beyond pointer-move.
+- [x] GPUI-MVP3-rec-003 Expand interaction replay/reuse beyond pointer-move.
   - Goal: reuse prepainted interaction output for at least one additional high-frequency path (e.g. pointer-down-outside arbitration, hover routing, or drag-over) without sacrificing correctness.
+  - Progress: extend cached hit-test path reuse to wheel/pinch and drag-over streams (internal/external drag) so repeated non-move events do not rebuild from a full hit-test pass.
+  - Evidence:
+    - `crates/fret-ui/src/tree/mod.rs` (`event_allows_hit_test_path_cache_reuse`)
+    - `crates/fret-ui/src/tree/dispatch.rs` (reuse policy for pointer hit-testing + wheel hover refresh)
+    - `crates/fret-ui/src/tree/tests/hit_test_cache_reuse_policy.rs`
+    - Perf capture (2026-02-04; view-cache + shell; `ui-gallery-file-tree-torture-scroll.json`): `target/fret-diag/1770212880301-script-step-0026-wheel/bundle.json`
   - Done when:
     - A regression harness proves correctness under view-cache + shell reuse (hit-test / outside-press / cursor updates stay correct).
     - A perf bundle shows reduced hot-path work for the chosen event type, and the bundle remains explainable (falls back to full hit-test on dirty/inspection).
