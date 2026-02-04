@@ -693,9 +693,9 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{
-        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
-        Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService,
+        AppWindowId, MouseButton, MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, PathStyle, Point, Px, Rect, Scene, SceneOp, Size as CoreSize, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{
         CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
@@ -1175,5 +1175,186 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("disabled-button"))
             .expect("expected a semantics node for the button test_id");
         assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn button_clears_hover_and_active_visuals_after_click_and_pointer_leave() {
+        fn overlap_area(a: Rect, b: Rect) -> f32 {
+            let ax0 = a.origin.x.0;
+            let ay0 = a.origin.y.0;
+            let ax1 = ax0 + a.size.width.0;
+            let ay1 = ay0 + a.size.height.0;
+
+            let bx0 = b.origin.x.0;
+            let by0 = b.origin.y.0;
+            let bx1 = bx0 + b.size.width.0;
+            let by1 = by0 + b.size.height.0;
+
+            let x0 = ax0.max(bx0);
+            let y0 = ay0.max(by0);
+            let x1 = ax1.min(bx1);
+            let y1 = ay1.min(by1);
+
+            let w = (x1 - x0).max(0.0);
+            let h = (y1 - y0).max(0.0);
+            w * h
+        }
+
+        fn assert_color_close(label: &str, actual: Color, expected: Color, eps: f32) {
+            let dr = (actual.r - expected.r).abs();
+            let dg = (actual.g - expected.g).abs();
+            let db = (actual.b - expected.b).abs();
+            let da = (actual.a - expected.a).abs();
+            assert!(
+                dr <= eps && dg <= eps && db <= eps && da <= eps,
+                "{label}: expected rgba({:.3},{:.3},{:.3},{:.3}) got rgba({:.3},{:.3},{:.3},{:.3})",
+                expected.r,
+                expected.g,
+                expected.b,
+                expected.a,
+                actual.r,
+                actual.g,
+                actual.b,
+                actual.a
+            );
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "button-clears-hover-and-active-after-click",
+            |cx| {
+                vec![
+                    Button::new("Continue")
+                        .test_id("continue-button")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let button = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("continue-button"))
+            .expect("missing semantics node for continue button");
+        let button_bounds = button.bounds;
+
+        let inside = Point::new(
+            Px(button_bounds.origin.x.0 + button_bounds.size.width.0 * 0.5),
+            Px(button_bounds.origin.y.0 + button_bounds.size.height.0 * 0.5),
+        );
+        let outside = Point::new(
+            Px(button_bounds.origin.x.0 + button_bounds.size.width.0 + 80.0),
+            inside.y,
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: inside,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: inside,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: inside,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: outside,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let theme = Theme::global(&app).clone();
+        let (expected_bg, _expected_bg_hover, _expected_bg_active, _border, _fg) =
+            variant_colors(&theme, ButtonVariant::Default);
+
+        let mut best_quad: Option<(Rect, Color, f32)> = None;
+        for op in scene.ops() {
+            let SceneOp::Quad {
+                rect, background, ..
+            } = op
+            else {
+                continue;
+            };
+            if background.a < 0.5 {
+                continue;
+            }
+            let score = overlap_area(*rect, button_bounds);
+            if score <= 0.0 {
+                continue;
+            }
+            let replace = best_quad.is_none_or(|(_, _, best)| score > best);
+            if replace {
+                best_quad = Some((*rect, *background, score));
+            }
+        }
+
+        let (_rect, actual_bg, _score) = best_quad.expect("missing painted quad for button");
+        assert_color_close(
+            "default button background after pointer leave",
+            actual_bg,
+            expected_bg,
+            0.02,
+        );
     }
 }

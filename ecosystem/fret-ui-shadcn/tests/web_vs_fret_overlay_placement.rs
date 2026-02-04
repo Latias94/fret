@@ -2477,6 +2477,12 @@ fn render_frame<I, F>(
         ui.request_semantics_snapshot();
     }
     ui.layout_all(app, services, bounds, 1.0);
+
+    // Overlay placement uses `ElementContext::last_visual_bounds_for_element` to remain render-transform
+    // aware (nested anchored overlays, motion transforms, etc.). The visual-bounds cache is recorded
+    // during paint, so run a paint pass per frame to keep cross-frame placement queries realistic.
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(app, services, bounds, &mut scene, 1.0);
 }
 
 fn find_semantics_by_test_id<'a>(
