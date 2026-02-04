@@ -93,7 +93,7 @@ Legend:
 
 - [x] Ensure `text.move_word_*` and `text.select_word_*` consult the active mode.
 - [x] Ensure double-click selects word and triple-click selects logical line (including trailing newline) (ADR 0151 + ADR 0194).
-- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added).
+- [~] Ensure composing selection operates on display text (ADR 0071) (v1 policy: cancel inline preedit deterministically on selection/navigation; caret rect respects preedit cursor) (TextInput display→base hit-test mapping fixed; tests added for TextInput/TextArea double-click cancel; CodeEditor click selection cancel).
 
 ### Tests
 
@@ -114,8 +114,9 @@ Evidence anchors:
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
 - `crates/fret-ui/src/declarative/host_widget.rs` / `crates/fret-ui/src/text_input/bound.rs` / `crates/fret-ui/src/text_area/bound.rs` (platform text input delegation for declarative widgets)
-- `crates/fret-ui/src/declarative/tests/interactions.rs` (scroll/transform double-click selection coverage for TextInput/TextArea)
+- `crates/fret-ui/src/declarative/tests/interactions.rs` (scroll/transform double-click selection; double-click cancels IME preedit for TextInput/TextArea)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
+- `ecosystem/fret-code-editor/src/editor/tests/mod.rs` (double/triple click selection; a11y preedit window)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
 ---
