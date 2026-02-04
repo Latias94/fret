@@ -592,6 +592,10 @@ impl SidebarMenuButton {
                     if !collapsed {
                         let style = menu_button_style(&theme);
                         let mut text = ui::text(cx, label.clone())
+                            .w_full()
+                            .min_w_0()
+                            .flex_1()
+                            .basis_0()
                             .text_size_px(style.size)
                             .font_weight(style.weight)
                             .text_color(ColorRef::Color(fg))
