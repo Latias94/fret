@@ -31,7 +31,7 @@ Legend:
   - hidden textarea bridge,
   - `beforeinput` + `composition*` translation,
   - proxy mode (no full document mirroring).
-- [~] Add 1–3 evidence anchors per ADR (file paths / tests) once implementation starts.
+- [x] Add 1–3 evidence anchors per ADR (file paths / tests) in ADR 0193/0194/0195.
 
 ---
 
