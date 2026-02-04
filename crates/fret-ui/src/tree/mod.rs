@@ -1265,6 +1265,9 @@ pub struct UiTree<H: UiHost> {
     propagation_chain: Vec<NodeId>,
     propagation_entries: Vec<(u8, u32, u64, NodeId, Invalidation)>,
     invalidation_dedup: InvalidationDedupTable,
+    invalidated_layout_nodes: u32,
+    invalidated_paint_nodes: u32,
+    invalidated_hit_test_nodes: u32,
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
@@ -1679,6 +1682,9 @@ impl<H: UiHost> Default for UiTree<H> {
             propagation_chain: Vec::new(),
             propagation_entries: Vec::new(),
             invalidation_dedup: InvalidationDedupTable::default(),
+            invalidated_layout_nodes: 0,
+            invalidated_paint_nodes: 0,
+            invalidated_hit_test_nodes: 0,
             semantics: None,
             semantics_requested: false,
             layout_node_profile: None,
@@ -1732,6 +1738,40 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn update_invalidation_counters(&mut self, prev: InvalidationFlags, next: InvalidationFlags) {
+        if prev.layout != next.layout {
+            if next.layout {
+                self.invalidated_layout_nodes = self.invalidated_layout_nodes.saturating_add(1);
+            } else {
+                self.invalidated_layout_nodes = self.invalidated_layout_nodes.saturating_sub(1);
+            }
+        }
+        if prev.paint != next.paint {
+            if next.paint {
+                self.invalidated_paint_nodes = self.invalidated_paint_nodes.saturating_add(1);
+            } else {
+                self.invalidated_paint_nodes = self.invalidated_paint_nodes.saturating_sub(1);
+            }
+        }
+        if prev.hit_test != next.hit_test {
+            if next.hit_test {
+                self.invalidated_hit_test_nodes = self.invalidated_hit_test_nodes.saturating_add(1);
+            } else {
+                self.invalidated_hit_test_nodes = self.invalidated_hit_test_nodes.saturating_sub(1);
+            }
+        }
+    }
+
+    fn mark_invalidation_local(&mut self, node: NodeId, inv: Invalidation) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        let prev = n.invalidation;
+        n.invalidation.mark(inv);
+        let next = n.invalidation;
+        self.update_invalidation_counters(prev, next);
+    }
+
     #[cfg(feature = "diagnostics")]
     fn debug_sample_child_elements_head(
         &self,
@@ -2992,12 +3032,17 @@ impl<H: UiHost> UiTree<H> {
     fn mark_view_cache_layout_dirty_subtree(&mut self, root: NodeId) {
         let mut stack: Vec<NodeId> = vec![root];
         while let Some(id) = stack.pop() {
-            let Some(n) = self.nodes.get_mut(id) else {
-                continue;
-            };
-            n.invalidation.mark(Invalidation::Layout);
-            for &child in &n.children {
-                stack.push(child);
+            let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
+            if let Some(n) = self.nodes.get_mut(id) {
+                let prev = n.invalidation;
+                n.invalidation.mark(Invalidation::Layout);
+                counter_update = Some((prev, n.invalidation));
+                for &child in &n.children {
+                    stack.push(child);
+                }
+            }
+            if let Some((prev, next)) = counter_update {
+                self.update_invalidation_counters(prev, next);
             }
         }
     }
@@ -3273,7 +3318,11 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
-        self.nodes.insert(Node::new(widget))
+        let node = Node::new(widget);
+        let inv = node.invalidation;
+        let id = self.nodes.insert(node);
+        self.update_invalidation_counters(InvalidationFlags::default(), inv);
+        id
     }
 
     #[cfg(test)]
@@ -3282,7 +3331,11 @@ impl<H: UiHost> UiTree<H> {
         element: GlobalElementId,
         widget: impl Widget<H> + 'static,
     ) -> NodeId {
-        self.nodes.insert(Node::new_for_element(element, widget))
+        let node = Node::new_for_element(element, widget);
+        let inv = node.invalidation;
+        let id = self.nodes.insert(node);
+        self.update_invalidation_counters(InvalidationFlags::default(), inv);
+        id
     }
 
     pub fn set_root(&mut self, root: NodeId) {
@@ -3295,10 +3348,8 @@ impl<H: UiHost> UiTree<H> {
         }
         if let Some(node) = self.nodes.get_mut(parent) {
             node.children.push(child);
-            node.invalidation.hit_test = true;
-            node.invalidation.layout = true;
-            node.invalidation.paint = true;
         }
+        self.mark_invalidation_local(parent, Invalidation::HitTest);
     }
 
     #[track_caller]
@@ -3389,12 +3440,16 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut propagate = false;
+        let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
+            let prev = n.invalidation;
             n.children = children;
-            n.invalidation.hit_test = true;
-            n.invalidation.layout = true;
-            n.invalidation.paint = true;
+            n.invalidation.mark(Invalidation::HitTest);
+            counter_update = Some((prev, n.invalidation));
             propagate = true;
+        }
+        if let Some((prev, next)) = counter_update {
+            self.update_invalidation_counters(prev, next);
         }
 
         if propagate {
@@ -3500,12 +3555,16 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut propagate = false;
+        let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
+            let prev = n.invalidation;
             n.children = children;
-            n.invalidation.hit_test = true;
-            n.invalidation.layout = true;
-            n.invalidation.paint = true;
+            n.invalidation.mark(Invalidation::HitTest);
+            counter_update = Some((prev, n.invalidation));
             propagate = true;
+        }
+        if let Some((prev, next)) = counter_update {
+            self.update_invalidation_counters(prev, next);
         }
 
         if propagate {
@@ -3629,11 +3688,15 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
+            let prev = n.invalidation;
             n.children = children;
-            n.invalidation.hit_test = true;
-            n.invalidation.layout = true;
-            n.invalidation.paint = true;
+            n.invalidation.mark(Invalidation::HitTest);
+            counter_update = Some((prev, n.invalidation));
+        }
+        if let Some((prev, next)) = counter_update {
+            self.update_invalidation_counters(prev, next);
         }
 
         // Structural changes must invalidate paint/hit-testing so routing and rendering see the
@@ -4069,6 +4132,9 @@ impl<H: UiHost> UiTree<H> {
             self.captured.retain(|_, n| *n != node);
 
             self.cleanup_node_resources(services, node);
+            if let Some(n) = self.nodes.get(node) {
+                self.update_invalidation_counters(n.invalidation, InvalidationFlags::default());
+            }
             self.nodes.remove(node);
             self.observed_in_layout.remove_node(node);
             self.observed_in_paint.remove_node(node);
@@ -5045,8 +5111,13 @@ impl<H: UiHost> UiTree<H> {
             let mut next_parent: Option<NodeId> = None;
             let mut did_stop = false;
             let mut mark_dirty = false;
-            if let Some(n) = self.nodes.get_mut(id) {
+            let (prev, next) = {
+                let Some(n) = self.nodes.get_mut(id) else {
+                    break;
+                };
+                let prev = n.invalidation;
                 n.invalidation.mark(inv);
+                let next = n.invalidation;
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
                     || (n.view_cache.contained_layout
                         && n.view_cache.layout_definite
@@ -5076,9 +5147,9 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     next_parent = n.parent;
                 }
-            } else {
-                break;
-            }
+                (prev, next)
+            };
+            self.update_invalidation_counters(prev, next);
 
             if did_stop {
                 if mark_dirty {
@@ -5109,14 +5180,20 @@ impl<H: UiHost> UiTree<H> {
             while let Some(id) = parent {
                 let next_parent = self.nodes.get(id).and_then(|n| n.parent);
                 let mut mark_dirty = false;
+                let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                 if let Some(n) = self.nodes.get_mut(id)
                     && n.view_cache.enabled
                 {
+                    let prev = n.invalidation;
                     n.invalidation.mark(inv);
+                    counter_update = Some((prev, n.invalidation));
                     if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
                     }
+                }
+                if let Some((prev, next)) = counter_update {
+                    self.update_invalidation_counters(prev, next);
                 }
                 if mark_dirty {
                     self.mark_cache_root_dirty(id, source, detail);
@@ -5185,9 +5262,12 @@ impl<H: UiHost> UiTree<H> {
             let mut did_stop = false;
             let mut mark_dirty = false;
             if let Some(n) = self.nodes.get_mut(id) {
+                let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                 if source == UiDebugInvalidationSource::Notify || (already & needed) != needed {
+                    let prev = n.invalidation;
                     n.invalidation.mark(inv);
                     visited.set_mask(id, already | needed);
+                    counter_update = Some((prev, n.invalidation));
                 }
 
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
@@ -5212,6 +5292,9 @@ impl<H: UiHost> UiTree<H> {
                     did_stop = true;
                 } else {
                     next_parent = n.parent;
+                }
+                if let Some((prev, next)) = counter_update {
+                    self.update_invalidation_counters(prev, next);
                 }
             } else {
                 break;
@@ -5248,14 +5331,20 @@ impl<H: UiHost> UiTree<H> {
                 let already = visited.mask(id);
                 if self.nodes.get(id).is_some_and(|n| n.view_cache.enabled) {
                     let mut mark_dirty = false;
+                    let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
                     if let Some(n) = self.nodes.get_mut(id) {
                         if Self::invalidation_marks_view_dirty(source, inv, detail) {
                             n.view_cache_needs_rerender = true;
                             mark_dirty = true;
                         }
                         if (already & needed) != needed {
+                            let prev = n.invalidation;
                             n.invalidation.mark(inv);
+                            counter_update = Some((prev, n.invalidation));
                         }
+                    }
+                    if let Some((prev, next)) = counter_update {
+                        self.update_invalidation_counters(prev, next);
                     }
                     if mark_dirty {
                         self.mark_cache_root_dirty(id, source, detail);

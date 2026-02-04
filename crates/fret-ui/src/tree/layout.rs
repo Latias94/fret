@@ -486,10 +486,69 @@ impl<H: UiHost> UiTree<H> {
             .map(|layer| self.layers[layer].root)
             .collect();
 
+        let mut viewport_cursor: usize = 0;
+
         let started_phase = profile_layout_all.then(Instant::now);
         self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind);
         if let Some(started) = started_phase {
             t_invalidate_scroll_handle_bindings = Some(started.elapsed());
+        }
+
+        let any_root_needs_layout_or_bounds = roots.iter().any(|&root| {
+            self.nodes
+                .get(root)
+                .is_some_and(|node| node.invalidation.layout || node.bounds != bounds)
+        });
+        let any_pending_barrier_needs_layout = self.pending_barrier_relayouts.iter().any(|&root| {
+            self.nodes
+                .get(root)
+                .is_some_and(|node| node.invalidation.layout)
+        });
+        let any_view_cache_root_needs_layout = self.view_cache_active()
+            && self
+                .nodes
+                .iter()
+                .any(|(_, node)| node.view_cache.enabled && node.invalidation.layout);
+
+        if pass_kind == LayoutPassKind::Final
+            && !any_root_needs_layout_or_bounds
+            && !any_view_cache_root_needs_layout
+            && !any_pending_barrier_needs_layout
+        {
+            self.pending_barrier_relayouts.retain(|&root| {
+                self.nodes
+                    .get(root)
+                    .is_some_and(|node| node.invalidation.layout)
+            });
+            if self.semantics_requested {
+                self.semantics_requested = false;
+                self.refresh_semantics_snapshot(app);
+            }
+            self.prepaint_after_layout(app, scale_factor);
+
+            let focus_started = self.debug_enabled.then(Instant::now);
+            self.repair_focus_node_from_focused_element_if_needed(app);
+            if let Some(focus_started) = focus_started {
+                self.debug_stats.layout_focus_repair_time += focus_started.elapsed();
+            }
+
+            let deferred_cleanup_started = self.debug_enabled.then(Instant::now);
+            self.flush_deferred_cleanup(services);
+            if let Some(deferred_cleanup_started) = deferred_cleanup_started {
+                self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
+            }
+            if let Some(started) = started {
+                self.debug_stats.layout_time = started.elapsed();
+            }
+            return;
+        }
+
+        if pass_kind == LayoutPassKind::Final {
+            let started_phase = profile_layout_all.then(Instant::now);
+            self.expand_view_cache_layout_invalidations_if_needed();
+            if let Some(started) = started_phase {
+                t_expand_view_cache_invalidations = Some(started.elapsed());
+            }
         }
 
         let (layout_engine_solves_start, layout_engine_solve_time_start) = {
@@ -503,15 +562,6 @@ impl<H: UiHost> UiTree<H> {
                 (0, Duration::default())
             }
         };
-
-        let mut viewport_cursor: usize = 0;
-        if pass_kind == LayoutPassKind::Final {
-            let started_phase = profile_layout_all.then(Instant::now);
-            self.expand_view_cache_layout_invalidations_if_needed();
-            if let Some(started) = started_phase {
-                t_expand_view_cache_invalidations = Some(started.elapsed());
-            }
-        }
 
         let started_phase = profile_layout_all.then(Instant::now);
         self.request_build_window_roots_if_final(
@@ -1028,6 +1078,17 @@ impl<H: UiHost> UiTree<H> {
             available,
         );
 
+        if self.invalidated_layout_nodes == 0
+            && self.invalidated_hit_test_nodes == 0
+            && let Some(n) = self.nodes.get(root)
+            && !n.invalidation.layout
+            && !n.invalidation.hit_test
+            && n.bounds == bounds
+            && n.measured_size != Size::default()
+        {
+            return n.measured_size;
+        }
+
         let mut viewport_cursor: usize = 0;
         self.begin_layout_engine_frame(app);
         self.request_build_window_roots_if_final(
@@ -1067,6 +1128,17 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
     ) -> Size {
+        if self.invalidated_layout_nodes == 0
+            && self.invalidated_hit_test_nodes == 0
+            && let Some(n) = self.nodes.get(root)
+            && !n.invalidation.layout
+            && !n.invalidation.hit_test
+            && n.bounds == bounds
+            && n.measured_size != Size::default()
+        {
+            return n.measured_size;
+        }
+
         let mut viewport_cursor: usize = 0;
         self.begin_layout_engine_frame(app);
         self.request_build_window_roots_if_final(
@@ -2092,9 +2164,13 @@ impl<H: UiHost> UiTree<H> {
                 .record(node, observations.as_slice());
             self.observed_globals_in_layout
                 .record(node, global_observations.as_slice());
-            if let Some(n) = self.nodes.get_mut(node) {
+            if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                 n.measured_size = size;
+                let prev = n.invalidation;
                 n.invalidation.layout = false;
+                (prev, n.invalidation)
+            }) {
+                self.update_invalidation_counters(prev, next);
             }
         }
 

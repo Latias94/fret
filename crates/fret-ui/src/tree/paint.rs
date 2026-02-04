@@ -265,7 +265,8 @@ impl<H: UiHost> UiTree<H> {
                     replay_span.record("ops", (end - start) as u64);
                     self.debug_record_paint_cache_replay(node, (end - start) as u32);
 
-                    if let Some(n) = self.nodes.get_mut(node) {
+                    if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
+                        let prev = n.invalidation;
                         n.paint_cache = Some(PaintCacheEntry {
                             generation: self.paint_cache.target_generation,
                             key,
@@ -274,6 +275,9 @@ impl<H: UiHost> UiTree<H> {
                             end: end as u32,
                         });
                         n.invalidation.paint = false;
+                        (prev, n.invalidation)
+                    }) {
+                        self.update_invalidation_counters(prev, next);
                     }
 
                     if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
@@ -337,8 +341,12 @@ impl<H: UiHost> UiTree<H> {
         // Clear the "dirty" flag before invoking widget paint so that paint-triggered invalidations
         // (e.g. `request_animation_frame()`) can be recorded for the next frame even when paint
         // caching is enabled.
-        if let Some(n) = self.nodes.get_mut(node) {
+        if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
+            let prev = n.invalidation;
             n.invalidation.paint = false;
+            (prev, n.invalidation)
+        }) {
+            self.update_invalidation_counters(prev, next);
         }
 
         let mut observations = SmallCopyList::<(ModelId, Invalidation), 8>::default();

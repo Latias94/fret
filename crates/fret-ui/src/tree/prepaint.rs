@@ -300,19 +300,24 @@ impl<H: UiHost> UiTree<H> {
     }
 
     fn apply_interaction_record(&mut self, record: &InteractionRecord) {
-        let Some(n) = self.nodes.get_mut(record.node) else {
-            return;
+        let (prev, next) = {
+            let Some(n) = self.nodes.get_mut(record.node) else {
+                return;
+            };
+            let prev = n.invalidation;
+            n.prepaint_hit_test = Some(super::PrepaintHitTestCache {
+                render_transform_inv: record.render_transform_inv,
+                children_render_transform_inv: record.children_render_transform_inv,
+                clips_hit_test: record.clips_hit_test,
+                clip_hit_test_corner_radii: record.clip_hit_test_corner_radii,
+                is_focusable: record.is_focusable,
+                focus_traversal_children: record.focus_traversal_children,
+                can_scroll_descendant_into_view: record.can_scroll_descendant_into_view,
+            });
+            n.invalidation.hit_test = false;
+            (prev, n.invalidation)
         };
-        n.prepaint_hit_test = Some(super::PrepaintHitTestCache {
-            render_transform_inv: record.render_transform_inv,
-            children_render_transform_inv: record.children_render_transform_inv,
-            clips_hit_test: record.clips_hit_test,
-            clip_hit_test_corner_radii: record.clip_hit_test_corner_radii,
-            is_focusable: record.is_focusable,
-            focus_traversal_children: record.focus_traversal_children,
-            can_scroll_descendant_into_view: record.can_scroll_descendant_into_view,
-        });
-        n.invalidation.hit_test = false;
+        self.update_invalidation_counters(prev, next);
     }
 
     pub(super) fn prepaint_after_layout(&mut self, app: &mut H, scale_factor: f32) {
