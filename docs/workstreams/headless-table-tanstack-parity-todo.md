@@ -178,8 +178,11 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## M4 — Column sizing/resizing parity
 
-- [ ] HTP-size-010 Implement option gates and transitions:
+- [x] HTP-size-010 Implement option gates and transitions:
   - `enableColumnResizing`, `columnResizeMode`, `columnResizeDirection`.
+  - Parity-gated (resize lifecycle + mode/direction): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`.
+  - Covered: `enableColumnResizing=false` yields no-op resize handler effects (snapshot `colsize_enable_column_resizing_false_noops`).
 - [x] HTP-size-020 Ensure pinned start/after offsets match TanStack (left/center/right).
   - Done (parity-gated): pinned totals + `getStart`-equivalent offsets.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
