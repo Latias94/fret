@@ -17,6 +17,7 @@ References:
 - Gallery previews: `apps/fret-ui-gallery/src/ui.rs`
 - Visual parity tracker: `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - Web golden parity: `docs/workstreams/shadcn-web-goldens-v4-todo.md`
+- Semantics decorators adoption: `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
 
 Tracking format:
 

@@ -91,6 +91,7 @@ pub mod typography;
 pub mod app_integration;
 
 mod surface_slot;
+mod test_id;
 mod ui_builder_ext;
 mod ui_ext;
 

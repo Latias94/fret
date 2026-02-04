@@ -16,6 +16,7 @@ Active workstreams:
 - `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ui-gallery-visual-parity.md`
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
+- `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
