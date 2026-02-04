@@ -6,7 +6,7 @@ use fret_ui::ThemeConfig;
 use fret_ui::action::PressablePointerDownResult;
 use fret_ui::element::{
     CrossAlign, FlexProps, LayoutStyle, MainAlign, PressableProps, RovingFlexProps,
-    RovingFocusProps,
+    RovingFocusProps, SemanticsDecoration,
 };
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::primitives::roving_focus_group;
@@ -135,29 +135,23 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
             Some(Px(16.0)),
             Some(ColorRef::Color(theme.color_required("primary-foreground"))),
         )])
-        .into_element(cx);
-    let add_btn = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Button,
-            test_id: Some(Arc::from(TEST_ID_ADD)),
-            ..Default::default()
-        },
-        move |_cx| [add_btn],
-    );
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(TEST_ID_ADD),
+        );
 
     let input = shadcn::Input::new(st.draft.clone())
         .a11y_label("Todo")
         .placeholder("添加新任务...")
         .submit_command(CommandId::new(CMD_ADD))
-        .into_element(cx);
-    let input = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::TextField,
-            test_id: Some(Arc::from(TEST_ID_INPUT)),
-            ..Default::default()
-        },
-        move |_cx| [input],
-    );
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::TextField)
+                .test_id(TEST_ID_INPUT),
+        );
 
     let todos = cx
         .watch_model(&st.todos)
@@ -196,16 +190,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                 .variant(shadcn::ButtonVariant::Secondary)
                 .disabled(!clear_completed_enabled)
                 .on_click(CMD_CLEAR_COMPLETED)
-                .into_element(cx);
-
-            let clear_completed_btn = cx.semantics(
-                SemanticsProps {
-                    role: SemanticsRole::Button,
-                    test_id: Some(Arc::from("todo-clear-completed")),
-                    ..Default::default()
-                },
-                move |_cx| [clear_completed_btn],
-            );
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Button)
+                        .test_id("todo-clear-completed"),
+                );
 
             let progress = shadcn::Badge::new(format!("{completed}/{total}", total = todos.len()))
                 .variant(shadcn::BadgeVariant::Secondary)
@@ -362,13 +352,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
     .h_full()
     .into_element(cx);
 
-    ViewElements::from([cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Panel,
-            label: Some(Arc::from("Debug:todo-demo:page")),
-            ..Default::default()
-        },
-        move |_cx| [page],
+    ViewElements::from([page.attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Panel)
+            .label("Debug:todo-demo:page"),
     )])
 }
 
@@ -616,13 +603,10 @@ fn todo_row(
                 .bg(ColorRef::Color(checkbox_bg))
                 .into_element(cx);
 
-                let indicator = cx.semantics(
-                    SemanticsProps {
-                        role: SemanticsRole::Panel,
-                        test_id: Some(todo_item_test_id(id, "indicator")),
-                        ..Default::default()
-                    },
-                    move |_cx| [indicator],
+                let indicator = indicator.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Panel)
+                        .test_id(todo_item_test_id(id, "indicator")),
                 );
 
                 let label = ui::text(cx, text.clone())
@@ -640,33 +624,31 @@ fn todo_row(
                     .items_center()
                     .into_element(cx);
 
-                let remove_zone = cx.semantics(
-                    SemanticsProps {
-                        role: SemanticsRole::Button,
-                        test_id: Some(todo_item_test_id(id, "remove")),
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        let remove_icon = icon::icon_with(
-                            cx,
-                            IconId::new("lucide.trash"),
-                            Some(Px(16.0)),
-                            Some(ColorRef::Color(theme.color_required("muted-foreground"))),
-                        );
+                let remove_zone = {
+                    let remove_icon = icon::icon_with(
+                        cx,
+                        IconId::new("lucide.trash"),
+                        Some(Px(16.0)),
+                        Some(ColorRef::Color(theme.color_required("muted-foreground"))),
+                    );
 
-                        [ui::container(cx, |cx| {
-                            [ui::h_flex(cx, |_cx| [remove_icon])
-                                .w_full()
-                                .h_full()
-                                .justify_center()
-                                .items_center()
-                                .into_element(cx)]
-                        })
-                        .w_px(delete_zone_w)
-                        .h_full()
-                        .into_element(cx)]
-                    },
-                );
+                    ui::container(cx, |cx| {
+                        [ui::h_flex(cx, |_cx| [remove_icon])
+                            .w_full()
+                            .h_full()
+                            .justify_center()
+                            .items_center()
+                            .into_element(cx)]
+                    })
+                    .w_px(delete_zone_w)
+                    .h_full()
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Button)
+                            .test_id(todo_item_test_id(id, "remove")),
+                    )
+                };
 
                 [ui::h_flex(cx, |_cx| [left, remove_zone.into()])
                     .w_full()
@@ -981,13 +963,10 @@ fn todo_visual_debug_panel(
                     .w_full()
                     .into_element(cx);
 
-                cx.semantics(
-                    SemanticsProps {
-                        role: SemanticsRole::Panel,
-                        test_id: Some(Arc::from(TEST_ID_VISUAL_PANEL)),
-                        ..Default::default()
-                    },
-                    move |_cx| [panel],
+                panel.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Panel)
+                        .test_id(TEST_ID_VISUAL_PANEL),
                 )
             },
         )
