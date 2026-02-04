@@ -1300,6 +1300,9 @@ pub struct NodeGraphMiniMapOverlay {
 }
 
 impl NodeGraphMiniMapOverlay {
+    const KEYBOARD_PAN_STEP_SCREEN_PX: f32 = 24.0;
+    const KEYBOARD_ZOOM_STEP_MUL: f32 = 1.1;
+
     pub fn new(
         canvas_node: fret_core::NodeId,
         graph: Model<crate::Graph>,
@@ -1482,16 +1485,31 @@ impl NodeGraphMiniMapOverlay {
     }
 
     fn update_pan<H: UiHost>(&self, host: &mut H, pan: crate::core::CanvasPoint) {
+        let zoom = self
+            .view_state
+            .read_ref(host, |s| s.zoom)
+            .ok()
+            .unwrap_or(1.0);
+        self.update_viewport(host, pan, zoom);
+    }
+
+    fn update_viewport<H: UiHost>(&self, host: &mut H, pan: crate::core::CanvasPoint, zoom: f32) {
+        let z = if zoom.is_finite() && zoom > 0.0 {
+            zoom
+        } else {
+            1.0
+        };
+
         let _ = self.view_state.update(host, |s, _cx| {
             s.pan = pan;
+            s.zoom = z;
         });
 
         let Some(store) = self.store.as_ref() else {
             return;
         };
         let _ = store.update(host, |store, _cx| {
-            let zoom = store.view_state().zoom;
-            store.set_viewport(pan, zoom);
+            store.set_viewport(pan, z);
         });
     }
 }
@@ -1509,6 +1527,114 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
+            Event::KeyDown {
+                key,
+                modifiers: _,
+                repeat: _,
+            } => match *key {
+                KeyCode::ArrowLeft
+                | KeyCode::ArrowRight
+                | KeyCode::ArrowUp
+                | KeyCode::ArrowDown => {
+                    let (pan, zoom) = self
+                        .view_state
+                        .read_ref(cx.app, |s| (s.pan, s.zoom))
+                        .ok()
+                        .unwrap_or_default();
+                    let zoom = if zoom.is_finite() && zoom > 0.0 {
+                        zoom
+                    } else {
+                        1.0
+                    };
+                    let step = Self::KEYBOARD_PAN_STEP_SCREEN_PX / zoom;
+                    let mut pan = pan;
+                    match *key {
+                        KeyCode::ArrowLeft => pan.x += step,
+                        KeyCode::ArrowRight => pan.x -= step,
+                        KeyCode::ArrowUp => pan.y += step,
+                        KeyCode::ArrowDown => pan.y -= step,
+                        _ => {}
+                    }
+
+                    self.update_pan(cx.app, pan);
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                KeyCode::Equal | KeyCode::NumpadAdd | KeyCode::Minus | KeyCode::NumpadSubtract => {
+                    let snapshot = self.internals.snapshot();
+                    let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
+
+                    let (pan, zoom) = self
+                        .view_state
+                        .read_ref(cx.app, |s| (s.pan, s.zoom))
+                        .ok()
+                        .unwrap_or_default();
+                    let zoom = if zoom.is_finite() && zoom > 0.0 {
+                        zoom
+                    } else {
+                        1.0
+                    };
+
+                    let factor = match *key {
+                        KeyCode::Equal | KeyCode::NumpadAdd => Self::KEYBOARD_ZOOM_STEP_MUL,
+                        KeyCode::Minus | KeyCode::NumpadSubtract => {
+                            1.0 / Self::KEYBOARD_ZOOM_STEP_MUL
+                        }
+                        _ => 1.0,
+                    };
+
+                    let mut new_zoom = zoom * factor;
+                    let min_zoom = self.style.min_zoom;
+                    let max_zoom = self.style.max_zoom;
+                    if min_zoom.is_finite()
+                        && max_zoom.is_finite()
+                        && min_zoom > 0.0
+                        && max_zoom > 0.0
+                    {
+                        let (min_z, max_z) = if min_zoom <= max_zoom {
+                            (min_zoom, max_zoom)
+                        } else {
+                            (max_zoom, min_zoom)
+                        };
+                        new_zoom = new_zoom.clamp(min_z, max_z);
+                    } else {
+                        new_zoom = if new_zoom.is_finite() && new_zoom > 0.0 {
+                            new_zoom
+                        } else {
+                            1.0
+                        };
+                    }
+
+                    // Zoom about the current viewport center in canvas space.
+                    let view = PanZoom2D {
+                        pan: Point::new(Px(pan.x), Px(pan.y)),
+                        zoom,
+                    };
+                    let vis = visible_canvas_rect(canvas_bounds, view);
+                    let cx_canvas = vis.origin.x.0 + 0.5 * vis.size.width.0;
+                    let cy_canvas = vis.origin.y.0 + 0.5 * vis.size.height.0;
+
+                    let bw = canvas_bounds.size.width.0;
+                    let bh = canvas_bounds.size.height.0;
+                    let new_pan = crate::core::CanvasPoint {
+                        x: bw / (2.0 * new_zoom) - cx_canvas,
+                        y: bh / (2.0 * new_zoom) - cy_canvas,
+                    };
+
+                    self.update_viewport(cx.app, new_pan, new_zoom);
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                KeyCode::Escape => {
+                    cx.request_focus(self.canvas_node);
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                _ => {}
+            },
             Event::Pointer(fret_core::PointerEvent::Down {
                 position, button, ..
             }) => {
@@ -1598,7 +1724,10 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
         cx.set_role(fret_core::SemanticsRole::Panel);
         cx.set_label("MiniMap");
         cx.set_test_id("node_graph.minimap");
-        cx.set_focusable(false);
+        cx.set_focusable(true);
+
+        let snapshot = self.internals.snapshot();
+        cx.set_value(format!("zoom {:.3}", snapshot.transform.zoom));
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {

@@ -505,6 +505,147 @@ fn minimap_drag_updates_view_state_and_store_when_attached() {
 }
 
 #[test]
+fn minimap_keyboard_pan_updates_view_state_and_store_when_attached() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let style = test_style();
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+
+    let graph_value = Graph::new(GraphId::new());
+    let graph = host.models.insert(graph_value.clone());
+    let view = host.models.insert(NodeGraphViewState::default());
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        NodeGraphViewState::default(),
+    ));
+
+    let internals = Arc::new(NodeGraphInternalsStore::new());
+    let mut snap = NodeGraphInternalsSnapshot::default();
+    snap.transform.bounds_size = bounds().size;
+    internals.update(snap);
+
+    let minimap_widget =
+        NodeGraphMiniMapOverlay::new(underlay, graph, view.clone(), internals, style)
+            .with_store(store.clone());
+    let minimap_node = ui.create_node_retained(minimap_widget);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, minimap_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(minimap_node));
+    assert_eq!(ui.focus(), Some(minimap_node));
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    // Pan step is expressed in screen px, divided by zoom=1.
+    let expected_pan_x = -24.0;
+    let pan_x = view
+        .read_ref(&host, |s| s.pan.x)
+        .ok()
+        .expect("view state pan");
+    assert!(
+        (pan_x - expected_pan_x).abs() <= 1.0e-4,
+        "{pan_x} != {expected_pan_x}"
+    );
+
+    let store_pan_x = store
+        .read_ref(&host, |s| s.view_state().pan.x)
+        .ok()
+        .expect("store view state pan");
+    assert!(
+        (store_pan_x - expected_pan_x).abs() <= 1.0e-4,
+        "{store_pan_x} != {expected_pan_x}"
+    );
+}
+
+#[test]
+fn minimap_keyboard_zoom_updates_view_state_and_store_zoom_about_center() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let style = test_style();
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+
+    let graph_value = Graph::new(GraphId::new());
+    let graph = host.models.insert(graph_value.clone());
+    let view = host.models.insert(NodeGraphViewState::default());
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        NodeGraphViewState::default(),
+    ));
+
+    let internals = Arc::new(NodeGraphInternalsStore::new());
+    let mut snap = NodeGraphInternalsSnapshot::default();
+    snap.transform.bounds_size = bounds().size;
+    internals.update(snap);
+
+    let minimap_widget =
+        NodeGraphMiniMapOverlay::new(underlay, graph, view.clone(), internals, style)
+            .with_store(store.clone());
+    let minimap_node = ui.create_node_retained(minimap_widget);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, minimap_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(minimap_node));
+    assert_eq!(ui.focus(), Some(minimap_node));
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::NumpadAdd,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let expected_zoom = 1.1;
+    let zoom = view
+        .read_ref(&host, |s| s.zoom)
+        .ok()
+        .expect("view state zoom");
+    assert!(
+        (zoom - expected_zoom).abs() <= 1.0e-6,
+        "{zoom} != {expected_zoom}"
+    );
+
+    let pan = view
+        .read_ref(&host, |s| s.pan)
+        .ok()
+        .expect("view state pan");
+
+    // Zoom about center of an 800x600 viewport.
+    let expected_pan_x = 800.0 / (2.0 * expected_zoom) - 400.0;
+    let expected_pan_y = 600.0 / (2.0 * expected_zoom) - 300.0;
+    assert!((pan.x - expected_pan_x).abs() <= 1.0e-3, "{pan:?}");
+    assert!((pan.y - expected_pan_y).abs() <= 1.0e-3, "{pan:?}");
+
+    let store_zoom = store
+        .read_ref(&host, |s| s.view_state().zoom)
+        .ok()
+        .expect("store view state zoom");
+    assert!((store_zoom - expected_zoom).abs() <= 1.0e-6);
+}
+
+#[test]
 fn controls_overlay_contributes_semantics_test_id() {
     let mut host = TestUiHostImpl::default();
     let mut services = NullServices::default();

@@ -56,6 +56,8 @@ interactive bounds**.
 - View updates: dragging updates `NodeGraphViewState.pan`. When `.with_store(store)` is used, the
   overlay must also update the store viewport (`NodeGraphStore::set_viewport`) for B-layer
   integration.
+- Keyboard: when focused, arrow keys pan the viewport (screen-px invariant), `+/-` zooms about the
+  viewport center, and Escape returns focus to the canvas.
 
 ## Styling / theme tokens
 
