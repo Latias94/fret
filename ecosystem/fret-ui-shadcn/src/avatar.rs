@@ -8,6 +8,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::avatar as radix_avatar;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -272,6 +273,10 @@ impl AvatarFallback {
                 cx.with_state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
                     gate.drive(now_frame, self.delay_frames, want_render)
                 });
+            scheduling::set_continuous_frames(
+                cx,
+                want_render && self.delay_frames.is_some() && !delay_ready,
+            );
 
             let present = if self.show_when_image_missing.is_some() {
                 radix_avatar::fallback_visible(status, delay_ready)
@@ -363,7 +368,7 @@ mod tests {
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
         TextConstraints, TextMetrics, TextService,
     };
-    use fret_runtime::FrameId;
+    use fret_runtime::{Effect, FrameId};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -600,6 +605,63 @@ mod tests {
         assert!(
             image_bounds.size.width.0 > 1.0 && image_bounds.size.height.0 > 1.0,
             "expected image to have non-zero bounds, got {image_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn avatar_fallback_delay_requests_animation_frames_while_pending() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let image = app.models_mut().insert(None::<ImageId>);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            10,
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "expected RequestAnimationFrame while avatar fallback delay is pending"
+        );
+
+        let _ = app
+            .models_mut()
+            .update(&image, |v| *v = Some(ImageId::default()));
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            10,
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "did not expect RequestAnimationFrame after avatar image becomes available"
         );
     }
 }
