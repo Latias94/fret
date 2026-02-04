@@ -207,6 +207,7 @@ Work items (initial):
   - Evidence:
     - `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
     - `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
 - [x] Extend conformance coverage to assert “graph edit commits bump the correct derived revisions”:
   - a graph edit commit must rebuild the affected derived geometry and update internals deterministically,
   - pan-only must not accidentally force the same rebuild path.

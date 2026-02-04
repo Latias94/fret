@@ -47,6 +47,7 @@ For the detailed internals contract checklist, see `docs/workstreams/fret-node-i
 
 - **Pan-only must not rebuild geometry** (derived geometry caches are reused; internals update only).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
 - **Semantic zoom discipline** (node sizes stay constant in window space; geometry rebuild is scoped and deterministic).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - **Hit-testing determinism** (same inputs → same hit results; Strict vs Loose modes are stable).
