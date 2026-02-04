@@ -28,9 +28,9 @@ Tracking format:
 
 ## P0 — Overlays (depth first)
 
-- [ ] SWG-ovl-010 Expand menu/listbox “height as styling” gates to any remaining overlay families not yet covered.
-  - Target families: Popover-like list surfaces, nested listboxes, anything that clamps under low height.
-  - Tooling: run `pwsh -NoProfile -File tools/golden_overlay_depth.ps1 -TrackedOnly -Style v4/new-york-v4 -ConstrainedViewportToken vp375x240 -GroupMissingByPrefix` to find constrained-viewport open keys that still lack a menu/listbox height/scroll gate.
+- [x] SWG-ovl-010 Constrained-viewport menu/list overlays have “height as styling” gates for `vp375x240`.
+  - Scope: overlays whose UX contract is viewport-constrained (menu/listbox-like surfaces that clamp / scroll / show scroll buttons under low height).
+  - Tooling: run `pwsh -NoProfile -File tools/golden_overlay_depth.ps1 -TrackedOnly -Style v4/new-york-v4 -OverlayFamily menu-list -ConstrainedViewportToken vp375x240 -GroupMissingByPrefix`.
 - 2026-02-01: gated NavigationMenu underlay scroll anchor stability and fixed paint-cache replay to keep last-frame visual bounds in sync (prevents scroll-induced anchor drift).
 - 2026-02-02: added `context-menu-demo.vp375x240` + `menubar-demo.vp375x240` panel-size gates (light/dark) to treat constrained viewport menu height as a styling outcome.
 - 2026-02-02: added `context-menu-demo.submenu-kbd-vp375x240` + `menubar-demo.submenu-kbd-vp375x240` submenu panel-size + surface-color + shadow-insets gates (light/dark) to lock in constrained viewport clamping behavior for nested menus.
@@ -43,6 +43,11 @@ Tracking format:
 - 2026-02-04: added Combobox underlay scroll anchor-stability gates: popover-backed combobox must re-anchor after underlay scroll, and the responsive drawer-backed combobox must block underlay scroll (prevents scroll-induced "menu drift") (`ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`).
 - 2026-02-04: added `date-picker-with-presets.select-open-vp375x240` listbox panel-size gates (light/dark) to treat nested listbox max-height clamping under mobile height as a styling outcome (`ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`).
 - 2026-02-03: fixed the web golden extractor to support hover-only scripted steps (`hoverNoWait=...`) so hover highlight variants don't deadlock waiting for new portal surfaces; regenerated `*.highlight-first-vp375x240.open.json` for `dropdown-menu-demo`, `context-menu-demo`, and `menubar-demo`.
+
+- [ ] SWG-ovl-011 Decide the gating boundary for “non-menu” overlays under tiny viewports (popover / hover-card / dialog / alert-dialog / sheet / drawer / date-picker).
+  - Rationale: upstream web behavior may allow modal surfaces to overflow/translate (not necessarily “clamp”), and a panel-size gate is only meaningful when the Rust test page is a 1:1 replica of the web page content.
+  - Tooling (discovery only, not a completion gate yet): run `pwsh -NoProfile -File tools/golden_overlay_depth.ps1 -TrackedOnly -Style v4/new-york-v4 -OverlayFamily all-overlays -ConstrainedViewportToken vp375x240 -GroupMissingByPrefix`.
+  - Snapshot (2026-02-04): `all-overlays` reports 14 missing keys (sheet/date/drawer/alert/dialog/hover), see script output for the exact list.
 - [x] SWG-ovl-020 Add destructive state matrix gates where upstream uses distinct idle vs focused chrome.
   - Target families: DropdownMenu / ContextMenu / Menubar / NavigationMenu.
 - 2026-02-03: added `button-group-demo.destructive-focus` open golden + idle/focused destructive item chrome gates (light/dark) to lock in `bg-destructive/10` vs idle behavior for DropdownMenu.
