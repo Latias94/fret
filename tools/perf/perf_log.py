@@ -82,6 +82,17 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
         paint = get_stats("paint_time_us")
         prepaint = get_stats("prepaint_time_us")
 
+        churn = {
+            "text_atlas_upload_bytes": get_stats("top_renderer_text_atlas_upload_bytes"),
+            "text_atlas_evicted_pages": get_stats("top_renderer_text_atlas_evicted_pages"),
+            "intermediate_peak_in_use_bytes": get_stats(
+                "top_renderer_intermediate_peak_in_use_bytes"
+            ),
+            "intermediate_pool_evictions": get_stats(
+                "top_renderer_intermediate_pool_evictions"
+            ),
+        }
+
         worst_run = row.get("worst_run") or None
         worst_bundle = None
         worst_us = None
@@ -97,6 +108,7 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
                 "solve": solve,
                 "prepaint": prepaint,
                 "paint": paint,
+                "churn": churn,
                 "worst_us": int(worst_us or 0),
                 "worst_bundle": str(worst_bundle or ""),
             }
@@ -156,6 +168,34 @@ def _format_entry_markdown(
                 p95_solve=r["solve"]["p95"],
                 p95_prepaint=r["prepaint"]["p95"],
                 p95_paint=r["paint"]["p95"],
+            )
+        )
+    lines.append("")
+
+    lines.append("Churn signals (top frame; p95/max):")
+    lines.append(
+        "| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |"
+    )
+    lines.append(
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+    )
+    for r in rows:
+        churn = r.get("churn", {}) or {}
+        atlas_upload = churn.get("text_atlas_upload_bytes", {}) or {}
+        atlas_evicted_pages = churn.get("text_atlas_evicted_pages", {}) or {}
+        intermediate_peak = churn.get("intermediate_peak_in_use_bytes", {}) or {}
+        pool_evictions = churn.get("intermediate_pool_evictions", {}) or {}
+        lines.append(
+            "| {script} | {p95_upload} | {max_upload} | {p95_evict} | {max_evict} | {p95_peak} | {max_peak} | {p95_evictions} | {max_evictions} |".format(
+                script=r["script"],
+                p95_upload=int(atlas_upload.get("p95", 0) or 0),
+                max_upload=int(atlas_upload.get("max", 0) or 0),
+                p95_evict=int(atlas_evicted_pages.get("p95", 0) or 0),
+                max_evict=int(atlas_evicted_pages.get("max", 0) or 0),
+                p95_peak=int(intermediate_peak.get("p95", 0) or 0),
+                max_peak=int(intermediate_peak.get("max", 0) or 0),
+                p95_evictions=int(pool_evictions.get("p95", 0) or 0),
+                max_evictions=int(pool_evictions.get("max", 0) or 0),
             )
         )
     lines.append("")
