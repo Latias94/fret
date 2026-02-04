@@ -53,6 +53,7 @@ pub struct DockSpace {
     pending_dock_tabs_drags: HashMap<fret_core::PointerId, PendingDockTabsDrag>,
     hovered_floating_close: Option<DockNodeId>,
     pressed_floating_close: Option<DockNodeId>,
+    hovered_floating_title_bar: Option<DockNodeId>,
     panel_content: HashMap<PanelKey, NodeId>,
     panel_last_sizes: HashMap<PanelKey, Size>,
     viewport_capture: HashMap<fret_core::PointerId, ViewportCaptureState>,
@@ -68,20 +69,35 @@ pub struct DockSpace {
     tab_widths: HashMap<DockNodeId, Arc<[Px]>>,
     tab_close_glyph: Option<PreparedTabTitle>,
     tab_overflow_glyph: Option<PreparedTabTitle>,
+    float_zone_glyph: Option<PreparedTabTitle>,
+    float_zone_tooltip: Option<PreparedTabTitle>,
     tab_text_style: TextStyle,
     tab_close_style: TextStyle,
     empty_state_style: TextStyle,
+    float_zone_style: TextStyle,
+    float_zone_tooltip_style: TextStyle,
     last_empty_state_scale_factor: Option<f32>,
     last_empty_state_theme_revision: Option<u64>,
+    last_float_zone_scale_factor: Option<f32>,
+    last_float_zone_theme_revision: Option<u64>,
+    last_float_zone_tooltip_scale_factor: Option<f32>,
+    last_float_zone_tooltip_theme_revision: Option<u64>,
     last_tab_text_scale_factor: Option<f32>,
     last_theme_revision: Option<u64>,
+    last_active_tabs: Option<DockNodeId>,
+    hovered_float_zone: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
 struct FloatingDragState {
+    pointer_id: fret_core::PointerId,
     floating: DockNodeId,
     grab_offset: Point,
     start_rect: Rect,
+    start: Point,
+    start_tick: fret_runtime::TickId,
+    activated: bool,
+    last_debug_frame: Option<fret_runtime::FrameId>,
 }
 
 #[derive(Debug, Clone)]
@@ -130,6 +146,7 @@ impl DockSpace {
             pending_dock_tabs_drags: HashMap::new(),
             hovered_floating_close: None,
             pressed_floating_close: None,
+            hovered_floating_title_bar: None,
             panel_content: HashMap::new(),
             panel_last_sizes: HashMap::new(),
             viewport_capture: HashMap::new(),
@@ -145,6 +162,8 @@ impl DockSpace {
             tab_widths: HashMap::new(),
             tab_close_glyph: None,
             tab_overflow_glyph: None,
+            float_zone_glyph: None,
+            float_zone_tooltip: None,
             tab_text_style: TextStyle {
                 font: fret_core::FontId::default(),
                 size: Px(13.0),
@@ -160,10 +179,26 @@ impl DockSpace {
                 size: Px(13.0),
                 ..Default::default()
             },
+            float_zone_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(11.0),
+                ..Default::default()
+            },
+            float_zone_tooltip_style: TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+                ..Default::default()
+            },
             last_empty_state_scale_factor: None,
             last_empty_state_theme_revision: None,
+            last_float_zone_scale_factor: None,
+            last_float_zone_theme_revision: None,
+            last_float_zone_tooltip_scale_factor: None,
+            last_float_zone_tooltip_theme_revision: None,
             last_tab_text_scale_factor: None,
             last_theme_revision: None,
+            last_active_tabs: None,
+            hovered_float_zone: false,
         }
     }
 
@@ -588,6 +623,285 @@ impl DockSpace {
             metrics,
             title_hash: 0,
         });
+    }
+
+    fn rebuild_float_zone_glyph(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        theme: fret_ui::ThemeSnapshot,
+        scale_factor: f32,
+    ) {
+        self.float_zone_style.size = theme.metric_required("font.size");
+        if self.last_float_zone_theme_revision == Some(theme.revision)
+            && self.last_float_zone_scale_factor == Some(scale_factor)
+        {
+            return;
+        }
+        self.last_float_zone_theme_revision = Some(theme.revision);
+        self.last_float_zone_scale_factor = Some(scale_factor);
+
+        if let Some(prev) = self.float_zone_glyph.take() {
+            services.text().release(prev.blob);
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(64.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let (blob, metrics) = services
+            .text()
+            .prepare_str("F", &self.float_zone_style, constraints);
+        self.float_zone_glyph = Some(PreparedTabTitle {
+            blob,
+            metrics,
+            title_hash: 0,
+        });
+    }
+
+    fn rebuild_float_zone_tooltip(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        theme: fret_ui::ThemeSnapshot,
+        scale_factor: f32,
+        msg: &str,
+    ) {
+        self.float_zone_tooltip_style.size = theme.metric_required("font.size");
+
+        let hash_title = |s: &str| -> u64 {
+            let mut hasher = std::collections::hash_map::DefaultHasher::new();
+            s.hash(&mut hasher);
+            hasher.finish()
+        };
+        let msg_hash = hash_title(msg);
+
+        if self.last_float_zone_tooltip_theme_revision == Some(theme.revision)
+            && self.last_float_zone_tooltip_scale_factor == Some(scale_factor)
+            && self
+                .float_zone_tooltip
+                .as_ref()
+                .is_some_and(|t| t.title_hash == msg_hash)
+        {
+            return;
+        }
+        self.last_float_zone_tooltip_theme_revision = Some(theme.revision);
+        self.last_float_zone_tooltip_scale_factor = Some(scale_factor);
+
+        if let Some(prev) = self.float_zone_tooltip.take() {
+            services.text().release(prev.blob);
+        }
+
+        let constraints = TextConstraints {
+            max_width: Some(Px(280.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor,
+        };
+        let (blob, metrics) =
+            services
+                .text()
+                .prepare_str(msg, &self.float_zone_tooltip_style, constraints);
+
+        self.float_zone_tooltip = Some(PreparedTabTitle {
+            blob,
+            metrics,
+            title_hash: msg_hash,
+        });
+    }
+
+    fn paint_float_zone_hint(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        theme: fret_ui::ThemeSnapshot,
+        scale_factor: f32,
+        dock_bounds: Rect,
+        tear_off_possible: bool,
+        scene: &mut fret_core::Scene,
+    ) {
+        let rect = float_zone(dock_bounds);
+        self.rebuild_float_zone_glyph(services, theme, scale_factor);
+
+        let border = theme.color_required("border");
+        let card = theme.color_required("card");
+        let hover_bg = theme.color_required("accent");
+        let fg = theme.color_required("muted-foreground");
+
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(20),
+            rect,
+            background: if self.hovered_float_zone {
+                Color {
+                    a: 0.20,
+                    ..hover_bg
+                }
+            } else {
+                card
+            },
+            border: Edges::all(Px(1.0)),
+            border_color: border,
+            corner_radii: fret_core::Corners::all(Px(6.0)),
+        });
+
+        let Some(glyph) = self.float_zone_glyph else {
+            return;
+        };
+
+        let x = rect.origin.x.0 + (rect.size.width.0 - glyph.metrics.size.width.0) * 0.5;
+        let y = rect.origin.y.0
+            + (rect.size.height.0 - glyph.metrics.size.height.0) * 0.5
+            + glyph.metrics.baseline.0;
+
+        scene.push(SceneOp::Text {
+            order: fret_core::DrawOrder(21),
+            origin: Point::new(Px(x), Px(y)),
+            text: glyph.blob,
+            color: fg,
+        });
+
+        if !self.hovered_float_zone {
+            return;
+        }
+
+        let msg = if tear_off_possible {
+            "Click: float active tabs (in-window).\nDrag tab outside the window: tear-off (OS window)."
+        } else {
+            "Click: float active tabs (in-window).\nTear-off (OS window) is disabled on this platform/session."
+        };
+
+        self.rebuild_float_zone_tooltip(services, theme, scale_factor, msg);
+
+        let Some(tooltip) = self.float_zone_tooltip else {
+            return;
+        };
+
+        let pad = theme.metric_required("metric.padding.sm").0.max(4.0);
+        let border_px = Px(1.0);
+        let gap = Px(8.0);
+
+        let size = Size::new(
+            Px((tooltip.metrics.size.width.0 + pad * 2.0).max(0.0)),
+            Px((tooltip.metrics.size.height.0 + pad * 2.0).max(0.0)),
+        );
+
+        let desired = Rect::new(
+            Point::new(
+                Px(rect.origin.x.0 + rect.size.width.0 + gap.0),
+                rect.origin.y,
+            ),
+            size,
+        );
+        let tooltip_rect = Self::clamp_rect_to_bounds(desired, dock_bounds);
+
+        scene.push(SceneOp::Quad {
+            order: fret_core::DrawOrder(22),
+            rect: tooltip_rect,
+            background: theme.color_required("popover"),
+            border: Edges::all(border_px),
+            border_color: border,
+            corner_radii: fret_core::Corners::all(Px(8.0)),
+        });
+
+        let text_origin = Point::new(
+            Px(tooltip_rect.origin.x.0 + pad),
+            Px(tooltip_rect.origin.y.0 + pad + tooltip.metrics.baseline.0),
+        );
+        scene.push(SceneOp::Text {
+            order: fret_core::DrawOrder(23),
+            origin: text_origin,
+            text: tooltip.blob,
+            color: theme.color_required("popover-foreground"),
+        });
+    }
+
+    fn find_first_tabs(graph: &DockGraph, node: DockNodeId) -> Option<DockNodeId> {
+        let Some(n) = graph.node(node) else {
+            return None;
+        };
+        match n {
+            DockNode::Tabs { tabs, .. } => (!tabs.is_empty()).then_some(node),
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .find_map(|child| Self::find_first_tabs(graph, child)),
+            DockNode::Floating { child } => Self::find_first_tabs(graph, *child),
+        }
+    }
+
+    fn graph_contains_node(graph: &DockGraph, root: DockNodeId, needle: DockNodeId) -> bool {
+        if root == needle {
+            return true;
+        }
+        let Some(n) = graph.node(root) else {
+            return false;
+        };
+        match n {
+            DockNode::Tabs { .. } => false,
+            DockNode::Split { children, .. } => children
+                .iter()
+                .copied()
+                .any(|child| Self::graph_contains_node(graph, child, needle)),
+            DockNode::Floating { child } => Self::graph_contains_node(graph, *child, needle),
+        }
+    }
+
+    fn find_floating_container_for_tabs(
+        &self,
+        graph: &DockGraph,
+        tabs: DockNodeId,
+    ) -> Option<DockNodeId> {
+        graph
+            .floating_windows(self.window)
+            .iter()
+            .find_map(|w| Self::graph_contains_node(graph, w.floating, tabs).then_some(w.floating))
+    }
+
+    fn float_zone_click_op(
+        &mut self,
+        graph: &DockGraph,
+        root: DockNodeId,
+        dock_bounds: Rect,
+        window_bounds: Rect,
+    ) -> Option<DockOp> {
+        let tabs = self
+            .last_active_tabs
+            .filter(|tabs_node| {
+                graph.node(*tabs_node).is_some_and(|n| match n {
+                    DockNode::Tabs { tabs, .. } => !tabs.is_empty(),
+                    _ => false,
+                })
+            })
+            .or_else(|| Self::find_first_tabs(graph, root))?;
+
+        if let Some(floating) = self.find_floating_container_for_tabs(graph, tabs) {
+            return Some(DockOp::RaiseFloating {
+                window: self.window,
+                floating,
+            });
+        }
+
+        let panel = graph.node(tabs).and_then(|n| match n {
+            DockNode::Tabs { tabs, active } => tabs.get(*active).cloned(),
+            _ => None,
+        })?;
+
+        let cursor = Point::new(
+            Px(dock_bounds.origin.x.0 + dock_bounds.size.width.0 * 0.5),
+            Px(dock_bounds.origin.y.0 + dock_bounds.size.height.0 * 0.25),
+        );
+        let rect = self.default_floating_rect_for_panel(
+            &panel,
+            cursor,
+            Point::new(Px(0.0), Px(0.0)),
+            window_bounds,
+        );
+
+        Some(DockOp::FloatTabsInWindow {
+            source_window: self.window,
+            source_tabs: tabs,
+            target_window: self.window,
+            rect,
+        })
     }
 
     fn paint_empty_state<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -1575,9 +1889,27 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
                             let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                             let mut handled = false;
+                            let float_zone_rect = float_zone(dock_bounds);
 
                             if *button == fret_core::MouseButton::Left && dock_bounds.contains(*position)
                             {
+                                if float_zone_rect.contains(*position) {
+                                    if let Some(op) = self.float_zone_click_op(
+                                        &dock.graph,
+                                        root,
+                                        dock_bounds,
+                                        self.last_bounds,
+                                    ) {
+                                        pending_effects.push(Effect::Dock(op));
+                                        invalidate_layout = true;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                        dock.hover = None;
+                                        stop_propagation = true;
+                                        handled = true;
+                                    }
+                                }
+
                                 let mut layout_all = compute_layout_map(
                                     &dock.graph,
                                     root,
@@ -1621,6 +1953,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 *position,
                                             );
                                             if let Some(ix) = row {
+                                                self.last_active_tabs = Some(menu.tabs);
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::SetActiveTab {
                                                         tabs: menu.tabs,
@@ -1734,13 +2067,30 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             .iter()
                                             .find(|w| w.floating == floating)
                                         {
+                                            if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    pointer_id = ?pointer_id,
+                                                    floating = ?floating,
+                                                    start_rect = ?entry.rect,
+                                                    start = ?position,
+                                                    "floating drag start (title bar)"
+                                                );
+                                            }
                                             self.floating_drag = Some(FloatingDragState {
+                                                pointer_id,
                                                 floating,
                                                 grab_offset: Point::new(
                                                     Px(position.x.0 - entry.rect.origin.x.0),
                                                     Px(position.y.0 - entry.rect.origin.y.0),
                                                 ),
                                                 start_rect: entry.rect,
+                                                start: *position,
+                                                start_tick: now_tick,
+                                                activated: true,
+                                                last_debug_frame: None,
                                             });
                                             request_pointer_capture = Some(Some(dock_space_node));
                                             request_cursor = Some(fret_core::CursorIcon::Default);
@@ -1822,6 +2172,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         pending_redraws.push(self.window);
                                         handled = true;
                                     } else {
+                                        self.last_active_tabs = Some(tabs_node);
                                         pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
                                             tabs: tabs_node,
                                             active: tab_index,
@@ -1862,19 +2213,63 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             Px((position.x.0 - tab_rect.origin.x.0).max(0.0)),
                                             Px((position.y.0 - tab_rect.origin.y.0).max(0.0)),
                                         );
-                                        self.pending_dock_drags.insert(
-                                            pointer_id,
-                                            PendingDockDrag {
+                                        // If this tab is already in an in-window floating container, prefer moving
+                                        // the floating window itself by dragging the tab (imgui/egui parity).
+                                        // Hold Alt to force the dock drag behavior (tear-off / docking previews).
+                                        if layout_root != root
+                                            && !modifiers.alt
+                                            && let Some(entry) = dock
+                                                .graph
+                                                .floating_windows(self.window)
+                                                .iter()
+                                                .find(|w| w.floating == layout_root)
+                                        {
+                                            if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    pointer_id = ?pointer_id,
+                                                    floating = ?layout_root,
+                                                    start_rect = ?entry.rect,
+                                                    start = ?position,
+                                                    "floating drag start (tab)"
+                                                );
+                                            }
+                                            self.floating_drag = Some(FloatingDragState {
+                                                pointer_id,
+                                                floating: layout_root,
+                                                grab_offset: Point::new(
+                                                    Px(position.x.0 - entry.rect.origin.x.0),
+                                                    Px(position.y.0 - entry.rect.origin.y.0),
+                                                ),
+                                                start_rect: entry.rect,
                                                 start: *position,
-                                                panel: panel_key,
-                                                grab_offset: tab_local,
                                                 start_tick: now_tick,
-                                            },
-                                        );
-                                        request_pointer_capture = Some(Some(dock_space_node));
-                                        dock.hover = None;
-                                        invalidate_paint = true;
-                                        handled = true;
+                                                activated: false,
+                                                last_debug_frame: None,
+                                            });
+                                            request_pointer_capture = Some(Some(dock_space_node));
+                                            request_cursor =
+                                                Some(fret_core::CursorIcon::Default);
+                                            dock.hover = None;
+                                            invalidate_paint = true;
+                                            handled = true;
+                                        } else {
+                                            self.pending_dock_drags.insert(
+                                                pointer_id,
+                                                PendingDockDrag {
+                                                    start: *position,
+                                                    panel: panel_key,
+                                                    grab_offset: tab_local,
+                                                    start_tick: now_tick,
+                                                },
+                                            );
+                                            request_pointer_capture = Some(Some(dock_space_node));
+                                            dock.hover = None;
+                                            invalidate_paint = true;
+                                            handled = true;
+                                        }
                                     }
                                 }
                             }
@@ -1909,24 +2304,66 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     && !tab_overflow_button_rect(theme, tab_bar)
                                         .contains(*position)
                                 {
-                                    let tab_local = Point::new(
-                                        Px((position.x.0 - tab_bar.origin.x.0).max(0.0)),
-                                        Px((position.y.0 - tab_bar.origin.y.0).max(0.0)),
-                                    );
-                                    self.pending_dock_tabs_drags.insert(
-                                        pointer_id,
-                                        PendingDockTabsDrag {
+                                    // If the tab bar belongs to an in-window floating container, prefer moving the
+                                    // floating window itself over starting a "tabs group" dock drag.
+                                    if let Some(floating) = self
+                                        .find_floating_container_for_tabs(&dock.graph, tabs_node)
+                                        && let Some(entry) = dock
+                                            .graph
+                                            .floating_windows(self.window)
+                                            .iter()
+                                            .find(|w| w.floating == floating)
+                                    {
+                                        if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                            .is_some_and(|v| !v.is_empty())
+                                        {
+                                            tracing::info!(
+                                                window = ?self.window,
+                                                pointer_id = ?pointer_id,
+                                                floating = ?floating,
+                                                start_rect = ?entry.rect,
+                                                start = ?position,
+                                                "floating drag start (tab bar)"
+                                            );
+                                        }
+                                        self.floating_drag = Some(FloatingDragState {
+                                            pointer_id,
+                                            floating,
+                                            grab_offset: Point::new(
+                                                Px(position.x.0 - entry.rect.origin.x.0),
+                                                Px(position.y.0 - entry.rect.origin.y.0),
+                                            ),
+                                            start_rect: entry.rect,
                                             start: *position,
-                                            tabs: tabs_node,
-                                            grab_offset: tab_local,
                                             start_tick: now_tick,
-                                        },
-                                    );
-                                    request_pointer_capture = Some(Some(dock_space_node));
-                                    dock.hover = None;
-                                    invalidate_paint = true;
-                                    pending_redraws.push(self.window);
-                                    handled = true;
+                                            activated: false,
+                                            last_debug_frame: None,
+                                        });
+                                        request_pointer_capture = Some(Some(dock_space_node));
+                                        dock.hover = None;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                        handled = true;
+                                    } else {
+                                        let tab_local = Point::new(
+                                            Px((position.x.0 - tab_bar.origin.x.0).max(0.0)),
+                                            Px((position.y.0 - tab_bar.origin.y.0).max(0.0)),
+                                        );
+                                        self.pending_dock_tabs_drags.insert(
+                                            pointer_id,
+                                            PendingDockTabsDrag {
+                                                start: *position,
+                                                tabs: tabs_node,
+                                                grab_offset: tab_local,
+                                                start_tick: now_tick,
+                                            },
+                                        );
+                                        request_pointer_capture = Some(Some(dock_space_node));
+                                        dock.hover = None;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                        handled = true;
+                                    }
                                 }
                             }
 
@@ -1942,6 +2379,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         *position,
                                     )
                             {
+                                self.last_active_tabs = Some(tabs_node);
                                 pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
                                     tabs: tabs_node,
                                     active: tab_index,
@@ -2007,25 +2445,101 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             {
                                 return;
                             }
-                            if let Some(drag) = self.floating_drag {
-                                let desired = Rect::new(
-                                    Point::new(
-                                        Px(position.x.0 - drag.grab_offset.x.0),
-                                        Px(position.y.0 - drag.grab_offset.y.0),
-                                    ),
-                                    drag.start_rect.size,
-                                );
-                                let rect = Self::clamp_rect_to_bounds(desired, window_bounds);
-                                pending_effects.push(Effect::Dock(DockOp::SetFloatingRect {
-                                    window: self.window,
-                                    floating: drag.floating,
-                                    rect,
-                                }));
-                                request_cursor = Some(fret_core::CursorIcon::Default);
-                                invalidate_layout = true;
+
+                            let float_zone_hovered_now = matches!(
+                                *pointer_type,
+                                fret_core::PointerType::Mouse | fret_core::PointerType::Unknown
+                            )
+                                && !buttons.left
+                                && !buttons.right
+                                && !buttons.middle
+                                && dock_bounds.contains(*position)
+                                && float_zone(dock_bounds).contains(*position);
+                            if float_zone_hovered_now != self.hovered_float_zone {
+                                self.hovered_float_zone = float_zone_hovered_now;
                                 invalidate_paint = true;
                                 pending_redraws.push(self.window);
-                                stop_propagation = true;
+                            }
+                            if self.hovered_float_zone && request_cursor.is_none() {
+                                request_cursor = Some(fret_core::CursorIcon::Pointer);
+                            }
+                            if !buttons.left
+                                && self
+                                    .floating_drag
+                                    .as_ref()
+                                    .is_some_and(|d| d.pointer_id == pointer_id)
+                            {
+                                // Defensive: if we missed the corresponding `Up`, don't keep
+                                // holding the drag session forever.
+                                self.floating_drag = None;
+                            }
+                            if let Some(drag) = self.floating_drag.as_mut() {
+                                if drag.pointer_id == pointer_id && buttons.left {
+                                    if !drag.activated {
+                                        let activation =
+                                            fret_dnd::ActivationConstraint::Distance {
+                                                px: docking_interaction_settings
+                                                    .tab_drag_threshold
+                                                    .0,
+                                            };
+                                        let should_activate = activation.is_satisfied(
+                                            drag.start_tick.0,
+                                            now_tick.0,
+                                            drag.start,
+                                            *position,
+                                        );
+                                        if should_activate {
+                                            drag.activated = true;
+                                            if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                                .is_some_and(|v| !v.is_empty())
+                                            {
+                                                tracing::info!(
+                                                    window = ?self.window,
+                                                    pointer_id = ?pointer_id,
+                                                    floating = ?drag.floating,
+                                                    "floating drag activated"
+                                                );
+                                            }
+                                        }
+                                    }
+                                    if drag.activated {
+                                        let desired = Rect::new(
+                                            Point::new(
+                                                Px(position.x.0 - drag.grab_offset.x.0),
+                                                Px(position.y.0 - drag.grab_offset.y.0),
+                                            ),
+                                            drag.start_rect.size,
+                                        );
+                                        let rect =
+                                            Self::clamp_rect_to_bounds(desired, window_bounds);
+                                        pending_effects
+                                            .push(Effect::Dock(DockOp::SetFloatingRect {
+                                                window: self.window,
+                                                floating: drag.floating,
+                                                rect,
+                                            }));
+                                        if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
+                                            .is_some_and(|v| !v.is_empty())
+                                            && drag.last_debug_frame != Some(now_frame)
+                                        {
+                                            drag.last_debug_frame = Some(now_frame);
+                                            tracing::info!(
+                                                window = ?self.window,
+                                                pointer_id = ?pointer_id,
+                                                floating = ?drag.floating,
+                                                desired = ?desired,
+                                                rect = ?rect,
+                                                bounds = ?window_bounds,
+                                                "floating drag move"
+                                            );
+                                        }
+                                        invalidate_layout = true;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
+                                    }
+                                    request_cursor = Some(fret_core::CursorIcon::Default);
+                                    stop_propagation = true;
+                                }
                             } else if has_pending_dock_drag {
                                 if !buttons.left {
                                     self.pending_dock_drags.remove(&pointer_id);
@@ -2143,6 +2657,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             } else {
                                 let hovered_floating =
                                     hit_test_floating(&dock.graph, self.window, *position);
+                                let hovered_title =
+                                    hovered_floating.and_then(|(floating, _chrome, kind)| {
+                                        (kind == FloatingHitKind::TitleBar).then_some(floating)
+                                    });
                                 let hovered_close =
                                     hovered_floating.and_then(|(floating, _chrome, kind)| {
                                         if kind == FloatingHitKind::Close {
@@ -2153,6 +2671,11 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     });
                                 if hovered_close != self.hovered_floating_close {
                                     self.hovered_floating_close = hovered_close;
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                }
+                                if hovered_title != self.hovered_floating_title_bar {
+                                    self.hovered_floating_title_bar = hovered_title;
                                     invalidate_paint = true;
                                     pending_redraws.push(self.window);
                                 }
@@ -3681,6 +4204,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .and_then(|drag| drag.payload::<DockTabsDragPayload>())
             .map(|payload| payload.source_tabs);
 
+        let caps = app
+            .global::<fret_runtime::PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        let tear_off_possible = caps.ui.window_tear_off
+            && caps.ui.multi_window
+            && caps.ui.window_hover_detection != fret_runtime::WindowHoverDetectionQuality::None;
+
         let paint_panels = app.with_global_mut_untracked(DockManager::default, |dock, _app| {
             dock.register_dock_space_node(self.window, dock_space_node);
             let Some(root) = dock.graph.window_root(self.window) else {
@@ -3850,7 +4381,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(1),
                     rect: chrome.title_bar,
-                    background: surface,
+                    background: if self.hovered_floating_title_bar == Some(floating.floating) {
+                        Color {
+                            a: 0.22,
+                            ..hover_bg
+                        }
+                    } else {
+                        surface
+                    },
                     border: Edges::all(Px(0.0)),
                     border_color: Color::TRANSPARENT,
                     corner_radii: fret_core::Corners::all(Px(0.0)),
@@ -3923,6 +4461,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 split_handle_gap,
                 split_handle_hit_thickness,
                 scale_factor,
+                scene,
+            );
+
+            self.paint_float_zone_hint(
+                services,
+                theme,
+                scale_factor,
+                dock_bounds,
+                tear_off_possible,
                 scene,
             );
 

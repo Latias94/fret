@@ -1,6 +1,6 @@
 # ADR 0192: Retained Windowed Surface Hosts (Sliver-Style, GPUI/Flutter-Aligned)
 
-Status: Proposed
+Status: Accepted (v0 fixed-height hosts; extended coverage in progress)
 
 ## Context
 
@@ -47,6 +47,29 @@ A retained windowed surface host MUST:
 - keep hit-testing and semantics coherent under scroll transforms,
 - provide bounded caching / retention policy for off-window items (keep-alive extent).
 
+#### Keep-alive bucket (Flutter-aligned)
+
+To minimize churn during scroll oscillation / backtracking, the host SHOULD maintain a bounded “keep-alive bucket” of
+recently-detached item subtrees:
+
+- Keys: stable per-item identity (Fret: `ItemKey`).
+- Values: the detached item root `NodeId` (entire subtree).
+- Budget: `keep_alive` item count (a hard upper bound).
+- Reuse: when an item re-enters the desired window, reuse the keep-alive subtree without re-mounting.
+- Eviction: when the budget is exceeded, evict arbitrary items (v1); future iterations may use LRU to better match user
+  scroll patterns.
+
+Correctness constraints:
+
+- A kept-alive subtree is **not** reachable from the window/layer roots, so it must be included in the window's explicit
+  GC liveness roots (ADR 0191); otherwise cache-hit frames can sweep the subtree as a stale “island”.
+- The keep-alive bucket itself is stored in element-local state. If it is only accessed during reconcile, it can be
+  dropped by the element-state buffer advance before the next reconcile frame. Retained hosts SHOULD touch the keep-alive
+  state key during normal render (and under view-cache scope) so cache-hit frames can keep it alive via recorded
+  view-cache state keys.
+- Keep-alive reuse MUST preserve the item's stable identity boundaries (no cross-key reuse), and MUST clear any per-item
+  ephemeral prepaint outputs when the host's prepaint key changes.
+
 ### 2) Authoring surface
 
 The host exposes an authoring API that separates:
@@ -57,6 +80,32 @@ The host exposes an authoring API that separates:
 
 To be usable from the existing declarative layer, the host MUST support row rendering via a `'static` callback stored in
 element-local state (same pattern as `Canvas` paint handlers; ADR 0156), rather than encoding it in cloneable props.
+
+#### Callback lifetime and “no snapshot captures” rule (normative)
+
+Retained hosts store author-provided callbacks in element-local state so the runtime can reconcile window membership
+without re-running the parent cache-root render closure. This has two important consequences:
+
+1) **Callbacks must be `'static`.** They are stored across frames, so they cannot capture references to frame-local data
+   (e.g. `&Theme`, `&[T]`, temporary maps/vectors). Capture owned values (`Arc<T>`, `Model<T>`, `CommandId`, keys) instead.
+
+2) **Callbacks must not capture stale snapshots.** A retained host may call `render_item` on a later frame to mount newly
+   visible rows. If the closure captured a one-frame snapshot (e.g. a copied `HashSet` of expanded ids, a computed
+   `Vec<Row>`), newly-mounted rows will be built from out-of-date state.
+
+Best-practice patterns (Flutter/GPUI-aligned):
+
+- Capture **stable handles**, not snapshots:
+  - `Model<T>` / `Global<T>` handles (read inside the callback on demand),
+  - `Arc<DataSource>` that owns its own revisioning,
+  - stable ids/keys used to query current state.
+- If a derived structure is expensive (e.g. flattened tree entries), store it in a model/state object with an explicit
+  revision and re-derive it at a single well-defined point (not ad-hoc per row closure capture).
+
+Non-goal:
+
+- Retained hosts are not intended to make arbitrary “closure captures” safe. Correctness requires that the captured state
+  be stable and revisioned, or queryable from stable handles.
 
 ### 3) Fixed/known-height first
 
@@ -93,6 +142,28 @@ Scripted harnesses (fretboard diag bundles) SHOULD include:
 - attach/detach counts,
 - stale-paint checks for scroll and drag interactions.
 
+### 6) Implementation checklist (copy/paste)
+
+Retained windowed surface implementers SHOULD verify:
+
+- Identity
+  - Stable item identity is truly stable (`ItemKey` does not change across reorder/expand/collapse).
+  - `items_revision` bumps on data changes that should affect membership or row content.
+- State persistence
+  - Host callbacks are stored in element-local state (`'static` closures), not only in frame-local props.
+  - Any long-lived host state that is only accessed during reconcile (e.g. keep-alive bucket) is also touched during
+    normal render so it survives state-buffer advancement and participates in view-cache state-key recording.
+- Liveness / GC
+  - Detached-but-retained subtrees are included in explicit liveness roots (ADR 0191); do not rely on parent pointers.
+  - When running under view-cache reuse, liveness is explainable from one bundle (layer roots + reuse roots + membership
+    lists + keep-alive roots).
+- Scheduling / coalescing
+  - Scroll/window changes schedule reconcile without forcing a parent cache-root rerender.
+  - Reconcile work is coalesced to the next frame (do not do heavy attach/detach directly in event handlers).
+- Correctness gates
+  - `--check-retained-vlist-reconcile-cache-reuse-min` (reconcile on cache-hit frames),
+    `--check-retained-vlist-attach-detach-min/max`, `--check-stale-paint`, and (if enabled) keep-alive reuse gates.
+
 ## Consequences
 
 - Composable virtualized surfaces (tables, trees, code views with rich rows) can become scroll-stable without forcing
@@ -115,6 +186,9 @@ Scripted harnesses (fretboard diag bundles) SHOULD include:
 - GPUI VirtualList (prepaint-driven windowing):
   - `repo-ref/gpui-component/crates/ui/src/virtual_list.rs`
 - Flutter slivers / retained element lifecycle:
-  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`_InactiveElements`, `finalizeTree`)
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart`
+    - `_InactiveElements` (~`framework.dart:2099`)
+    - `BuildOwner.finalizeTree` (~`framework.dart:3339`)
+    - `Element.deactivateChild` (~`framework.dart:4632`)
   - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`
-
+    - `RenderSliverMultiBoxAdaptor._keepAliveBucket` (~`sliver_multi_box_adaptor.dart:233`)

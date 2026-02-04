@@ -2,6 +2,8 @@
 
 mod code_block;
 mod copy_button;
+#[cfg(feature = "imui")]
+pub mod imui;
 mod prepare;
 mod syntax;
 

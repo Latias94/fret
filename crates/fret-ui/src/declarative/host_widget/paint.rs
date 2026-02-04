@@ -105,6 +105,14 @@ impl ElementHostWidget {
                     None,
                 );
             }
+            #[cfg(feature = "unstable-retained-bridge")]
+            ElementInstance::RetainedSubtree(props) => {
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+            }
             ElementInstance::FocusScope(props) => {
                 paint_children_clipped_if(
                     cx,

@@ -152,6 +152,12 @@ Even with dirty views + cache roots in place, “stable feel + stable perf” re
   recommended key inputs toward GPUI’s `bounds/content_mask/text_style` model (ADR 1152 §7).
 - **Explainability under reuse**: diagnostics bundles should make it obvious whether we missed reuse due to dirtiness vs
   key mismatch vs inspection mode, so “why didn’t this update?” questions have a single-run answer.
+- **Notify hotspot regression gates**: input-driven `notify()` hotspots should be attributable by callsite and
+  budgeted in scripted harnesses, so “this got slower” regressions are caught automatically.
+  - Gate: `fretboard diag stats <bundle> --check-notify-hotspot-file-max <file> <max>` (writes `check.notify_hotspots.json`).
+  - Default: `fretboard diag suite ui-gallery` applies a `pressable.rs=0` notify-hotspot budget for
+    `tools/diag-scripts/ui-gallery-virtual-list-torture.json` unless overridden via CLI.
+  - Workstream tracker: `docs/workstreams/gpui-parity-refactor-todo.md` (MVP5-perf-002).
 
 ### 1.6 Ecosystem adoption patterns (how we get ROI beyond a single widget)
 

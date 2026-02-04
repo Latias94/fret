@@ -233,6 +233,18 @@ pub trait UiActionHost {
     fn next_timer_token(&mut self) -> TimerToken;
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken;
 
+    /// Record a transient, per-element event for the current dispatch cycle.
+    ///
+    /// This is a mechanism-only escape hatch intended for cases where an action hook needs to
+    /// communicate a one-shot signal to the next declarative render pass without allocating a
+    /// dedicated model. The event is keyed by `(ActionCx.target, key)` and is typically consumed
+    /// by declarative authoring code via an element-scoped "take" API.
+    ///
+    /// Notes:
+    /// - Hosts that are not running inside a UI tree event dispatch may leave this as a no-op.
+    /// - Callers should treat `key` as a stable, deterministic identifier (e.g. a const hash).
+    fn record_transient_event(&mut self, _cx: ActionCx, _key: u64) {}
+
     /// Mark the nearest view-cache root for `cx.target` as dirty (GPUI-style `notify`).
     ///
     /// Notes:
@@ -357,6 +369,10 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
 
     fn next_clipboard_token(&mut self) -> fret_runtime::ClipboardToken {
         self.app.next_clipboard_token()
+    }
+
+    fn record_transient_event(&mut self, cx: ActionCx, key: u64) {
+        crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
     }
 }
 

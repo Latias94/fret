@@ -18,6 +18,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
         window: AppWindowId,
         element: crate::GlobalElementId,
         notify_requested: &'a mut bool,
+        notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
 
     impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
@@ -59,8 +60,17 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
+            if self.notify_requested_location.is_none() {
+                let caller = std::panic::Location::caller();
+                *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+            }
         }
     }
 
@@ -87,6 +97,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                     window,
                     element: this.element,
                     notify_requested: &mut cx.notify_requested,
+                    notify_requested_location: &mut cx.notify_requested_location,
                 };
                 let mut req = action::DismissRequestCx::new(DismissReason::OutsidePress {
                     pointer: Some(action::OutsidePressCx {
@@ -149,6 +160,7 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                 window,
                 element: this.element,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             let handled = h(
                 &mut host,
@@ -184,6 +196,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
         window: AppWindowId,
         element: crate::GlobalElementId,
         notify_requested: &'a mut bool,
+        notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
 
     impl<H: UiHost> action::UiActionHost for DismissibleHookHost<'_, H> {
@@ -225,8 +238,17 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
+            if self.notify_requested_location.is_none() {
+                let caller = std::panic::Location::caller();
+                *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+            }
         }
     }
 
@@ -250,6 +272,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                     window,
                     element: this.element,
                     notify_requested: &mut cx.notify_requested,
+                    notify_requested_location: &mut cx.notify_requested_location,
                 };
                 let mut req = action::DismissRequestCx::new(DismissReason::Escape);
                 h(
@@ -306,6 +329,7 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                 window,
                 element: this.element,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             let handled = h(
                 &mut host,

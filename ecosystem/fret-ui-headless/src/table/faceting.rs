@@ -1,6 +1,10 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use super::{ColumnDef, ColumnFilter, GlobalFilterState, RowModel};
+use super::{
+    ColumnDef, ColumnFilter, FilterFnDef, FilteringFnSpec, GlobalFilterState, RowModel,
+    TableOptions,
+};
 
 pub type FacetKey = u64;
 pub type FacetCounts = HashMap<FacetKey, usize>;
@@ -12,6 +16,10 @@ pub fn faceted_row_model_excluding<'a, TData>(
     columns: &[ColumnDef<TData>],
     column_filters: &[ColumnFilter],
     global_filter: GlobalFilterState,
+    options: TableOptions,
+    filter_fns: &HashMap<Arc<str>, FilterFnDef>,
+    global_filter_fn: &FilteringFnSpec,
+    get_column_can_global_filter: Option<&dyn Fn(&ColumnDef<TData>, &TData) -> bool>,
     exclude_column_id: Option<&str>,
 ) -> RowModel<'a, TData> {
     let other_filters: Vec<ColumnFilter> = column_filters
@@ -19,7 +27,16 @@ pub fn faceted_row_model_excluding<'a, TData>(
         .filter(|f| exclude_column_id.is_none_or(|id| f.column.as_ref() != id))
         .cloned()
         .collect();
-    super::filter_row_model(pre_filtered, columns, &other_filters, global_filter)
+    super::filter_row_model(
+        pre_filtered,
+        columns,
+        &other_filters,
+        global_filter,
+        options,
+        filter_fns,
+        global_filter_fn,
+        get_column_can_global_filter,
+    )
 }
 
 pub fn faceted_unique_values<'a, TData>(
@@ -150,11 +167,11 @@ mod tests {
         state.column_filters = vec![
             ColumnFilter {
                 column: "status".into(),
-                value: "A".into(),
+                value: serde_json::Value::from("A"),
             },
             ColumnFilter {
                 column: "role".into(),
-                value: "X".into(),
+                value: serde_json::Value::from("X"),
             },
         ];
         state.global_filter = None;
@@ -167,6 +184,10 @@ mod tests {
             table.columns(),
             &table.state().column_filters,
             table.state().global_filter.clone(),
+            TableOptions::default(),
+            &HashMap::new(),
+            &FilteringFnSpec::Auto,
+            None,
             Some("status"),
         );
         let counts = faceted_unique_values(&model, table.column("status").unwrap());

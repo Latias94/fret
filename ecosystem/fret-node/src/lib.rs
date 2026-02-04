@@ -22,6 +22,8 @@ pub mod runtime;
 pub mod schema;
 pub mod types;
 
+#[cfg(feature = "imui")]
+pub mod imui;
 #[cfg(feature = "fret-ui")]
 pub mod ui;
 

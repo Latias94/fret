@@ -115,6 +115,7 @@ pub fn selected_root_row_count<'a, TData>(
 pub fn is_all_rows_selected<'a, TData>(
     row_model: &RowModel<'a, TData>,
     selection: &RowSelectionState,
+    enable_row_selection: bool,
 ) -> bool {
     if row_model.flat_rows().is_empty() {
         return false;
@@ -122,11 +123,16 @@ pub fn is_all_rows_selected<'a, TData>(
     if selection.is_empty() {
         return false;
     }
-    row_model
-        .flat_rows()
-        .iter()
-        .filter_map(|&i| row_model.row(i).map(|r| r.key))
-        .all(|k| is_row_selected(k, selection))
+
+    row_model.flat_rows().iter().all(|&i| {
+        let Some(row) = row_model.row(i) else {
+            return true;
+        };
+        if !enable_row_selection {
+            return true;
+        }
+        is_row_selected(row.key, selection)
+    })
 }
 
 pub fn is_some_rows_selected<'a, TData>(
@@ -145,16 +151,20 @@ pub fn toggle_all_rows_selected<'a, TData>(
     row_model: &RowModel<'a, TData>,
     selection: &RowSelectionState,
     value: Option<bool>,
+    enable_row_selection: bool,
 ) -> RowSelectionState {
     let mut next = selection.clone();
-    let value = value.unwrap_or_else(|| !is_all_rows_selected(row_model, selection));
+    let value =
+        value.unwrap_or_else(|| !is_all_rows_selected(row_model, selection, enable_row_selection));
 
     if value {
         for &i in row_model.flat_rows() {
             let Some(row) = row_model.row(i) else {
                 continue;
             };
-            next.insert(row.key);
+            if enable_row_selection {
+                next.insert(row.key);
+            }
         }
     } else {
         for &i in row_model.flat_rows() {
@@ -172,8 +182,9 @@ pub fn toggle_all_page_rows_selected<'a, TData>(
     page_row_model: &RowModel<'a, TData>,
     selection: &RowSelectionState,
     value: Option<bool>,
+    enable_row_selection: bool,
 ) -> RowSelectionState {
-    toggle_all_rows_selected(page_row_model, selection, value)
+    toggle_all_rows_selected(page_row_model, selection, value, enable_row_selection)
 }
 
 pub fn toggle_row_selected<'a, TData>(
@@ -182,11 +193,22 @@ pub fn toggle_row_selected<'a, TData>(
     row_key: RowKey,
     value: Option<bool>,
     select_children: bool,
+    enable_row_selection: bool,
+    enable_multi_row_selection: bool,
+    enable_sub_row_selection: bool,
 ) -> RowSelectionState {
     let mut next = selection.clone();
 
     let current = is_row_selected(row_key, selection);
     let value = value.unwrap_or(!current);
+
+    if value && !enable_row_selection {
+        return next;
+    }
+
+    if value && !enable_multi_row_selection {
+        next.clear();
+    }
 
     if value {
         next.insert(row_key);
@@ -194,7 +216,7 @@ pub fn toggle_row_selected<'a, TData>(
         next.remove(&row_key);
     }
 
-    if !select_children {
+    if !select_children || !enable_sub_row_selection {
         return next;
     }
 
@@ -223,6 +245,53 @@ pub fn toggle_row_selected<'a, TData>(
     }
 
     next
+}
+
+/// TanStack `getIsAllPageRowsSelected` semantics.
+///
+/// Notes:
+/// - Only rows that can be selected are considered.
+/// - Unlike `getIsAllRowsSelected`, this does not require `rowSelection` to be non-empty.
+pub fn is_all_page_rows_selected<'a, TData>(
+    page_row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    enable_row_selection: bool,
+) -> bool {
+    if !enable_row_selection {
+        return false;
+    }
+
+    let mut any = false;
+    for &i in page_row_model.flat_rows() {
+        let Some(row) = page_row_model.row(i) else {
+            continue;
+        };
+        any = true;
+        if !is_row_selected(row.key, selection) {
+            return false;
+        }
+    }
+    any
+}
+
+pub fn is_some_page_rows_selected<'a, TData>(
+    page_row_model: &RowModel<'a, TData>,
+    selection: &RowSelectionState,
+    enable_row_selection: bool,
+) -> bool {
+    if is_all_page_rows_selected(page_row_model, selection, enable_row_selection) {
+        return false;
+    }
+    if !enable_row_selection {
+        return false;
+    }
+
+    page_row_model.flat_rows().iter().any(|&i| {
+        let Some(row) = page_row_model.row(i) else {
+            return false;
+        };
+        is_row_selected(row.key, selection)
+    })
 }
 
 /// TanStack-compatible `selectRowsFn`: returns a [`RowModel`] containing only selected rows in the
@@ -420,10 +489,10 @@ mod tests {
         let model = table.core_row_model();
 
         let selection = RowSelectionState::default();
-        let selection = toggle_all_rows_selected(model, &selection, Some(true));
-        assert!(is_all_rows_selected(model, &selection));
+        let selection = toggle_all_rows_selected(model, &selection, Some(true), true);
+        assert!(is_all_rows_selected(model, &selection, true));
 
-        let selection = toggle_all_rows_selected(model, &selection, Some(false));
+        let selection = toggle_all_rows_selected(model, &selection, Some(false), true);
         assert!(selection.is_empty());
         assert!(!is_some_rows_selected(model, &selection));
     }
@@ -477,12 +546,30 @@ mod tests {
         let child1_key = model.row(child1).unwrap().key;
 
         let selection = RowSelectionState::default();
-        let selection = toggle_row_selected(model, &selection, root_key, Some(true), true);
+        let selection = toggle_row_selected(
+            model,
+            &selection,
+            root_key,
+            Some(true),
+            true,
+            true,
+            true,
+            true,
+        );
         assert!(is_row_selected(root_key, &selection));
         assert!(is_row_selected(child0_key, &selection));
         assert!(is_row_selected(child1_key, &selection));
 
-        let selection = toggle_row_selected(model, &selection, root_key, Some(false), true);
+        let selection = toggle_row_selected(
+            model,
+            &selection,
+            root_key,
+            Some(false),
+            true,
+            true,
+            true,
+            true,
+        );
         assert!(!is_row_selected(root_key, &selection));
         assert!(!is_row_selected(child0_key, &selection));
         assert!(!is_row_selected(child1_key, &selection));

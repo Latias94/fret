@@ -11,6 +11,7 @@ use fret_ui::Theme;
 use fret_ui::element::{CanvasProps, StackProps};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
@@ -29,18 +30,35 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
     }
 
     let q_lower = q.to_ascii_lowercase();
-    if item.id.to_ascii_lowercase().contains(&q_lower) {
+    let q_norm: String = q_lower
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
+
+    let matches_norm = |haystack: &str| {
+        if q_norm.is_empty() {
+            return false;
+        }
+        let norm: String = haystack
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        norm.contains(&q_norm)
+    };
+
+    if item.id.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.id) {
         return true;
     }
-    if item.label.to_ascii_lowercase().contains(&q_lower) {
+    if item.label.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.label) {
         return true;
     }
-    if item.origin.to_ascii_lowercase().contains(&q_lower) {
+    if item.origin.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.origin) {
         return true;
     }
     item.tags
         .iter()
-        .any(|t| t.to_ascii_lowercase().contains(&q_lower))
+        .any(|t| t.to_ascii_lowercase().contains(&q_lower) || matches_norm(t))
 }
 
 pub(crate) fn sidebar_view(
@@ -196,7 +214,11 @@ pub(crate) fn sidebar_view(
         decl_style::container_props(
             theme,
             ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required("muted")))
+                .bg(ColorRef::Color(
+                    theme
+                        .color_by_key("sidebar")
+                        .unwrap_or_else(|| theme.color_required("background")),
+                ))
                 .p(Space::N4),
             LayoutRefinement::default().w_px(Px(280.0)).h_full(),
         ),
@@ -240,6 +262,8 @@ pub(crate) fn content_view(
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
+    time_picker_open: Model<bool>,
+    time_picker_selected: Model<time::Time>,
     resizable_h_fractions: Model<Vec<f32>>,
     resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
@@ -399,6 +423,8 @@ pub(crate) fn content_view(
         date_picker_open,
         date_picker_month,
         date_picker_selected,
+        time_picker_open,
+        time_picker_selected,
         resizable_h_fractions,
         resizable_v_fractions,
         data_table_state,
@@ -577,6 +603,8 @@ fn page_preview(
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
+    time_picker_open: Model<bool>,
+    time_picker_selected: Model<time::Time>,
     resizable_h_fractions: Model<Vec<f32>>,
     resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
@@ -639,6 +667,7 @@ fn page_preview(
             virtual_list_torture_edit_text,
             virtual_list_torture_scroll,
         ),
+        PAGE_UI_KIT_LIST_TORTURE => preview_ui_kit_list_torture(cx, theme),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
         PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(
             cx,
@@ -681,6 +710,10 @@ fn page_preview(
         }
         PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
+        PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
+        PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
+        PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
+        PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -724,6 +757,49 @@ fn page_preview(
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
+        PAGE_SONNER => preview_toast(cx, last_action.clone()),
+        PAGE_ALERT => preview_alert(cx),
+        PAGE_ALERT_DIALOG => preview_alert_dialog(cx, alert_dialog_open),
+        PAGE_ASPECT_RATIO => preview_aspect_ratio(cx),
+        PAGE_BREADCRUMB => preview_breadcrumb(cx, last_action.clone()),
+        PAGE_BUTTON_GROUP => preview_button_group(cx),
+        PAGE_CALENDAR => preview_calendar(cx, date_picker_month, date_picker_selected),
+        PAGE_CAROUSEL => preview_carousel(cx),
+        PAGE_CHART => preview_chart(cx),
+        PAGE_CHECKBOX => preview_checkbox(cx, checkbox),
+        PAGE_COLLAPSIBLE => preview_collapsible(cx),
+        PAGE_CONTEXT_MENU => {
+            preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
+        }
+        PAGE_DIALOG => preview_dialog(cx, dialog_open),
+        PAGE_DRAWER => preview_drawer(cx),
+        PAGE_DROPDOWN_MENU => {
+            preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
+        }
+        PAGE_EMPTY => preview_empty(cx),
+        PAGE_FORM => preview_forms(cx, text_input, text_area, checkbox, switch),
+        PAGE_HOVER_CARD => preview_hover_card(cx),
+        PAGE_INPUT => preview_input(cx, text_input),
+        PAGE_INPUT_GROUP => preview_input_group(cx),
+        PAGE_INPUT_OTP => preview_input_otp(cx),
+        PAGE_ITEM => preview_item(cx),
+        PAGE_KBD => preview_kbd(cx),
+        PAGE_LABEL => preview_label(cx),
+        PAGE_MENUBAR => preview_menubar(cx),
+        PAGE_NATIVE_SELECT => preview_native_select(cx),
+        PAGE_NAVIGATION_MENU => preview_navigation_menu(cx),
+        PAGE_PAGINATION => preview_pagination(cx),
+        PAGE_POPOVER => preview_popover(cx, popover_open),
+        PAGE_RADIO_GROUP => preview_radio_group(cx),
+        PAGE_SEPARATOR => preview_separator(cx),
+        PAGE_SHEET => preview_sheet(cx, sheet_open),
+        PAGE_SIDEBAR => preview_sidebar(cx),
+        PAGE_SPINNER => preview_spinner(cx),
+        PAGE_SWITCH => preview_switch(cx, switch),
+        PAGE_TEXTAREA => preview_textarea(cx, text_area),
+        PAGE_TOGGLE => preview_toggle(cx),
+        PAGE_TOGGLE_GROUP => preview_toggle_group(cx),
+        PAGE_TYPOGRAPHY => preview_typography(cx),
         PAGE_MATERIAL3_GALLERY => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_gallery(
                 cx,
@@ -784,6 +860,39 @@ fn page_preview(
         PAGE_MATERIAL3_RADIO => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_radio(cx, material3_radio_value)
         }),
+        PAGE_MATERIAL3_BADGE => {
+            material3_scoped_page(cx, material3_expressive.clone(), preview_material3_badge)
+        }
+        PAGE_MATERIAL3_TOP_APP_BAR => material3_scoped_page(
+            cx,
+            material3_expressive.clone(),
+            preview_material3_top_app_bar,
+        ),
+        PAGE_MATERIAL3_BOTTOM_SHEET => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_bottom_sheet(cx, sheet_open)
+            })
+        }
+        PAGE_MATERIAL3_DATE_PICKER => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_date_picker(
+                    cx,
+                    date_picker_open,
+                    date_picker_month,
+                    date_picker_selected,
+                )
+            })
+        }
+        PAGE_MATERIAL3_TIME_PICKER => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_time_picker(cx, time_picker_open, time_picker_selected)
+            })
+        }
+        PAGE_MATERIAL3_SEGMENTED_BUTTON => material3_scoped_page(
+            cx,
+            material3_expressive.clone(),
+            preview_material3_segmented_button,
+        ),
         PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_select(cx)
         }),
@@ -1342,13 +1451,22 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
+    let variable_height =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let retained_host =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_RETAINED").filter(|v| !v.is_empty()) {
             Some(v) => {
                 let v = v.to_string_lossy().trim().to_ascii_lowercase();
                 !(v == "0" || v == "false" || v == "no" || v == "off")
             }
-            None => false,
+            None => true,
         };
 
     let row_cache =
@@ -1359,6 +1477,11 @@ fn preview_virtual_list_torture(
             }
             None => false,
         };
+
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_VLIST_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(0);
 
     let header_editing_row = (!minimal_harness)
         .then(|| {
@@ -1484,6 +1607,11 @@ fn preview_virtual_list_torture(
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
+                cx.text(if keep_alive > 0 {
+                    format!("Mode: keep-alive enabled (budget={keep_alive}).")
+                } else {
+                    "Mode: keep-alive disabled (budget=0).".to_string()
+                }),
             ];
 
             if minimal_harness {
@@ -1519,6 +1647,12 @@ fn preview_virtual_list_torture(
         fret_ui::element::VirtualListOptions::new(Px(28.0), 10)
     };
 
+    let options = if retained_host && keep_alive > 0 {
+        options.keep_alive(keep_alive)
+    } else {
+        options
+    };
+
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
         let list = if minimal_harness {
             if retained_host {
@@ -1534,20 +1668,35 @@ fn preview_virtual_list_torture(
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                     let row_label = cx.text(format!("Row {index}"));
+                    let extra_line = cx.text(format!(
+                        "Details: index={index} seed={} repeat={}",
+                        index.wrapping_mul(2654435761),
+                        (index % 7) + 1
+                    ));
 
                     let mut container_props = decl_style::container_props(
                         &theme,
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
+                        {
+                            let mut layout = LayoutRefinement::default().w_full();
+                            if !variable_height {
+                                layout = layout.h_px(MetricRef::Px(height_hint));
+                            }
+                            layout
+                        },
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                     let row_layout = container_props.layout;
-                    let container = cx.container(container_props, |_cx| vec![row_label]);
+                    let container = cx.container(container_props, |_cx| {
+                        if variable_height && index % 15 == 0 {
+                            vec![row_label, extra_line]
+                        } else {
+                            vec![row_label]
+                        }
+                    });
                     let mut semantics = fret_ui::element::SemanticsProps::default();
                     semantics.layout = row_layout;
                     semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
@@ -1581,20 +1730,35 @@ fn preview_virtual_list_torture(
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                         let row_label = cx.text(format!("Row {index}"));
+                        let extra_line = cx.text(format!(
+                            "Details: index={index} seed={} repeat={}",
+                            index.wrapping_mul(2654435761),
+                            (index % 7) + 1
+                        ));
 
                         let mut container_props = decl_style::container_props(
                             theme,
                             ChromeRefinement::default()
                                 .bg(ColorRef::Color(background))
                                 .p(Space::N2),
-                            LayoutRefinement::default()
-                                .w_full()
-                                .h_px(MetricRef::Px(height_hint)),
+                            {
+                                let mut layout = LayoutRefinement::default().w_full();
+                                if !variable_height {
+                                    layout = layout.h_px(MetricRef::Px(height_hint));
+                                }
+                                layout
+                            },
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                         let row_layout = container_props.layout;
-                        let container = cx.container(container_props, |_cx| vec![row_label]);
+                        let container = cx.container(container_props, |_cx| {
+                            if variable_height && index % 15 == 0 {
+                                vec![row_label, extra_line]
+                            } else {
+                                vec![row_label]
+                            }
+                        });
                         let mut semantics = fret_ui::element::SemanticsProps::default();
                         semantics.layout = row_layout;
                         semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
@@ -1863,6 +2027,121 @@ fn preview_virtual_list_torture(
         fret_ui::element::SemanticsProps {
             role: fret_core::SemanticsRole::Group,
             test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-torture-root")),
+            ..Default::default()
+        },
+        |_cx| [root],
+    );
+
+    vec![root]
+}
+
+#[derive(Default)]
+struct UiKitListTortureModels {
+    selection: Option<Model<Option<usize>>>,
+}
+
+fn preview_ui_kit_list_torture(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    let selection = cx.with_state(UiKitListTortureModels::default, |st| st.selection.clone());
+    let selection = match selection {
+        Some(selection) => selection,
+        None => {
+            let selection = cx.app.models_mut().insert(Option::<usize>::None);
+            cx.with_state(UiKitListTortureModels::default, |st| {
+                st.selection = Some(selection.clone());
+            });
+            selection
+        }
+    };
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text(
+                    "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0192).",
+                ),
+                cx.text("Expect: scroll boundary shifts reconcile without scroll-window dirty views."),
+            ]
+        },
+    );
+
+    let len: usize = std::env::var("FRET_UI_GALLERY_UI_KIT_LIST_LEN")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10_000)
+        .clamp(16, 200_000);
+    let overscan: usize = 6;
+
+    let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+        vec![
+            fret_ui_kit::declarative::list::list_virtualized_copyable_retained_v0(
+                cx,
+                selection,
+                fret_ui_kit::Size::Medium,
+                None,
+                len,
+                overscan,
+                &scroll_handle,
+                0,
+                |i| i as u64,
+                Arc::new(|_models, i| Some(format!("Item {i}"))),
+                |_i| None,
+                |cx, i| {
+                    let mut out = Vec::new();
+                    let label = cx.text(format!("Item {i}"));
+                    let label = if i == 0 {
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::<str>::from(
+                                    "ui-gallery-ui-kit-list-row-0-label",
+                                )),
+                                ..Default::default()
+                            },
+                            |_cx| [label],
+                        )
+                    } else {
+                        label
+                    };
+                    out.push(label);
+                    out.push(cx.spacer(fret_ui::element::SpacerProps {
+                        min: Px(0.0),
+                        ..Default::default()
+                    }));
+                    out
+                },
+            ),
+        ]
+    });
+
+    let list = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::List,
+            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-root")),
+            ..Default::default()
+        },
+        |_cx| [list],
+    );
+
+    let root = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |_cx| vec![header, list],
+    );
+
+    let root = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-torture-root")),
             ..Default::default()
         },
         |_cx| [root],
@@ -4383,6 +4662,894 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     vec![variants, sizes]
 }
 
+fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        shadcn::Alert::new([
+            shadcn::AlertTitle::new("Heads up!").into_element(cx),
+            shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::Alert::new([
+            shadcn::AlertTitle::new("Error").into_element(cx),
+            shadcn::AlertDescription::new("Something went wrong.").into_element(cx),
+        ])
+        .variant(shadcn::AlertVariant::Destructive)
+        .into_element(cx),
+    ]
+}
+
+fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+    let checked = cx
+        .get_model_copied(&model, Invalidation::Layout)
+        .unwrap_or(false);
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Checkbox::new(model)
+                    .a11y_label("Accept terms")
+                    .into_element(cx),
+                ui::label(cx, "Accept terms").into_element(cx),
+                cx.text(format!("checked={}", checked as u8)),
+            ]
+        },
+    )]
+}
+
+fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+    let on = cx
+        .get_model_copied(&model, Invalidation::Layout)
+        .unwrap_or(false);
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Switch::new(model)
+                    .a11y_label("Enable feature")
+                    .into_element(cx),
+                ui::label(cx, "Enable feature").into_element(cx),
+                cx.text(format!("on={}", on as u8)),
+            ]
+        },
+    )]
+}
+
+fn preview_input(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        move |cx| {
+            vec![
+                shadcn::Label::new("Email").into_element(cx),
+                shadcn::Input::new(value)
+                    .a11y_label("Email")
+                    .placeholder("name@example.com")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+                    .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        move |cx| {
+            vec![
+                shadcn::Label::new("Message").into_element(cx),
+                shadcn::Textarea::new(value)
+                    .a11y_label("Message")
+                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)).h_px(Px(120.0)))
+                    .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        move |cx| {
+            vec![
+                shadcn::Label::new("Label").into_element(cx),
+                shadcn::Label::new("Required label").into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Kbd::new("Ctrl").into_element(cx),
+                shadcn::Kbd::new("K").into_element(cx),
+                shadcn::KbdGroup::new([
+                    shadcn::Kbd::new("⌘").into_element(cx),
+                    shadcn::Kbd::new("P").into_element(cx),
+                ])
+                .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    cx.text("Left"),
+                    shadcn::Separator::new()
+                        .orientation(shadcn::SeparatorOrientation::Vertical)
+                        .flex_stretch_cross_axis(true)
+                        .into_element(cx),
+                    cx.text("Right"),
+                ]
+            },
+        ),
+        shadcn::Separator::new().into_element(cx),
+    ]
+}
+
+fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Spinner::new().into_element(cx),
+                shadcn::Spinner::new()
+                    .refine_layout(LayoutRefinement::default().w_px(Px(24.0)).h_px(Px(24.0)))
+                    .into_element(cx),
+                shadcn::Spinner::new().speed(0.0).into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let theme = Theme::global(&*cx.app).clone();
+    let muted = theme.color_required("muted");
+    let child = cx.container(
+        fret_ui::element::ContainerProps {
+            background: Some(muted),
+            ..Default::default()
+        },
+        |cx| vec![cx.text("16:9")],
+    );
+
+    vec![
+        shadcn::AspectRatio::new(16.0 / 9.0, child)
+            .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
+            .into_element(cx),
+    ]
+}
+
+fn preview_breadcrumb(
+    cx: &mut ElementContext<'_, App>,
+    _last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    vec![
+        shadcn::Breadcrumb::new()
+            .items([
+                shadcn::BreadcrumbItem::new("Home"),
+                shadcn::BreadcrumbItem::new("Components"),
+                shadcn::BreadcrumbItem::new("Breadcrumb"),
+            ])
+            .into_element(cx),
+        shadcn::Breadcrumb::new()
+            .items([
+                shadcn::BreadcrumbItem::new("Home"),
+                shadcn::BreadcrumbItem::ellipsis(),
+                shadcn::BreadcrumbItem::new("Examples"),
+                shadcn::BreadcrumbItem::new("Data Fetching"),
+            ])
+            .into_element(cx),
+    ]
+}
+
+fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let group = shadcn::ButtonGroup::new([
+        shadcn::Button::new("Left").into(),
+        shadcn::Button::new("Middle").into(),
+        shadcn::Button::new("Right").into(),
+    ])
+    .a11y_label("Button group")
+    .into_element(cx);
+
+    vec![group]
+}
+
+fn preview_calendar(
+    cx: &mut ElementContext<'_, App>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<Date>>,
+) -> Vec<AnyElement> {
+    let calendar = shadcn::Calendar::new(month, selected)
+        .number_of_months(1)
+        .into_element(cx);
+    vec![calendar]
+}
+
+fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let collapsible = shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
+        cx,
+        |cx, open, is_open| {
+            let label = if is_open {
+                "Hide details"
+            } else {
+                "Show details"
+            };
+            shadcn::Button::new(label)
+                .variant(shadcn::ButtonVariant::Outline)
+                .toggle_model(open)
+                .into_element(cx)
+        },
+        |cx| {
+            shadcn::CollapsibleContent::new(vec![
+                cx.text("This content is toggled by a Collapsible."),
+                cx.text("Use it for disclosure panels, advanced options, etc."),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
+        },
+    );
+
+    vec![collapsible]
+}
+
+fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        shadcn::Drawer::new_controllable(cx, None, false).into_element(
+            cx,
+            |cx| shadcn::Button::new("Open drawer").into_element(cx),
+            |cx| {
+                shadcn::DrawerContent::new(vec![
+                    shadcn::DrawerHeader::new(vec![
+                        shadcn::DrawerTitle::new("Drawer").into_element(cx),
+                        shadcn::DrawerDescription::new("A bottom sheet-style overlay.")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::DrawerFooter::new(vec![shadcn::Button::new("Done").into_element(cx)])
+                        .into_element(cx),
+                ])
+                .into_element(cx)
+            },
+        ),
+    ]
+}
+
+fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let trigger = shadcn::Button::new("Hover me")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx);
+    let content = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("HoverCard").into_element(cx)])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![
+            cx.text("HoverCard content lives in a hover overlay."),
+            cx.text("Useful for previews, profile cards, etc."),
+        ])
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+    .into_element(cx);
+
+    vec![shadcn::HoverCard::new_controllable(cx, None, false, trigger, content).into_element(cx)]
+}
+
+fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct InputGroupModels {
+        value: Option<Model<String>>,
+    }
+
+    let value = cx.with_state(InputGroupModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(InputGroupModels::default, |st| {
+                st.value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let group = shadcn::InputGroup::new(value)
+        .a11y_label("Search")
+        .leading([shadcn::InputGroupText::new("Search").into_element(cx)])
+        .trailing([shadcn::InputGroupButton::new("Go")
+            .on_click(CMD_APP_OPEN)
+            .into_element(cx)])
+        .into_element(cx);
+
+    vec![group]
+}
+
+fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct InputOtpModels {
+        value: Option<Model<String>>,
+    }
+
+    let value = cx.with_state(InputOtpModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(InputOtpModels::default, |st| st.value = Some(model.clone()));
+            model
+        }
+    };
+
+    let otp = shadcn::InputOtp::new(value).length(6).into_element(cx);
+    vec![otp]
+}
+
+fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use shadcn::{MenubarEntry, MenubarItem, MenubarMenu};
+
+    let file = MenubarMenu::new("File").entries([
+        MenubarEntry::Item(MenubarItem::new("Open").on_select(CMD_APP_OPEN)),
+        MenubarEntry::Item(MenubarItem::new("Save").on_select(CMD_APP_SAVE)),
+        MenubarEntry::Separator,
+        MenubarEntry::Item(MenubarItem::new("Settings").on_select(CMD_APP_SETTINGS)),
+    ]);
+
+    let edit = MenubarMenu::new("Edit").entries([
+        MenubarEntry::Item(MenubarItem::new("Undo").on_select(fret_app::core_commands::EDIT_UNDO)),
+        MenubarEntry::Item(MenubarItem::new("Redo").on_select(fret_app::core_commands::EDIT_REDO)),
+    ]);
+
+    vec![shadcn::Menubar::new([file, edit]).into_element(cx)]
+}
+
+fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let intro = shadcn::NavigationMenuItem::new(
+        "intro",
+        "Introduction",
+        vec![
+            cx.text("A basic NavigationMenu item."),
+            cx.text("Content is shown in a popover."),
+        ],
+    );
+    let components = shadcn::NavigationMenuItem::new(
+        "components",
+        "Components",
+        vec![
+            cx.text("This demo is intentionally lightweight."),
+            cx.text("We can expand it to match shadcn/ui registry examples."),
+        ],
+    );
+
+    vec![
+        shadcn::NavigationMenu::uncontrolled(Some("intro"))
+            .indicator(true)
+            .list(shadcn::NavigationMenuList::new([intro, components]))
+            .into_element(cx),
+    ]
+}
+
+fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let content = shadcn::PaginationContent::new([
+        shadcn::PaginationItem::new(
+            shadcn::PaginationPrevious::new()
+                .on_click(CMD_APP_OPEN)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("1")])
+                .on_click(CMD_APP_OPEN)
+                .active(true)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("2")])
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(shadcn::PaginationEllipsis::new().into_element(cx))
+            .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationLink::new([cx.text("10")])
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+        shadcn::PaginationItem::new(
+            shadcn::PaginationNext::new()
+                .on_click(CMD_APP_SAVE)
+                .into_element(cx),
+        )
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let pagination = shadcn::Pagination::new([content]).into_element(cx);
+
+    vec![pagination]
+}
+
+fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let theme = Theme::global(&*cx.app).clone();
+    let muted = theme.color_required("muted");
+
+    let item = |cx: &mut ElementContext<'_, App>, label: &'static str| {
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![shadcn::CardTitle::new(label).into_element(cx)])
+                .into_element(cx),
+            shadcn::CardContent::new(vec![
+                cx.text("Drag to swipe, or use the previous/next buttons."),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+        .into_element(cx)
+    };
+
+    let carousel = shadcn::Carousel::new([
+        item(cx, "Slide 1"),
+        item(cx, "Slide 2"),
+        item(cx, "Slide 3"),
+    ])
+    .item_basis_main_px(Px(260.0))
+    .refine_layout(LayoutRefinement::default().w_px(Px(360.0)))
+    .into_element(cx);
+
+    let wrapper = cx.container(
+        fret_ui::element::ContainerProps {
+            background: Some(muted),
+            ..Default::default()
+        },
+        |_cx| vec![carousel],
+    );
+
+    vec![wrapper]
+}
+
+fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let theme = Theme::global(&*cx.app).clone();
+    let chart_1 = theme.color_required("chart-1");
+    let chart_2 = theme.color_required("chart-2");
+
+    let tooltip = shadcn::ChartTooltipContent::new()
+        .label("January")
+        .items([
+            shadcn::ChartTooltipItem::new("Desktop", "186").color(ColorRef::Color(chart_1)),
+            shadcn::ChartTooltipItem::new("Mobile", "80").color(ColorRef::Color(chart_2)),
+        ])
+        .into_element(cx);
+
+    let legend = shadcn::ChartLegendContent::new()
+        .items([
+            shadcn::ChartLegendItem::new("Desktop").color(ColorRef::Color(chart_1)),
+            shadcn::ChartLegendItem::new("Mobile").color(ColorRef::Color(chart_2)),
+        ])
+        .wrap(true)
+        .into_element(cx);
+
+    vec![
+        cx.text("Chart in shadcn/ui is Recharts composition; here we demo tooltip/legend skins."),
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_px(Px(360.0)))
+                .gap(Space::N3),
+            |_cx| vec![tooltip, legend],
+        ),
+    ]
+}
+
+fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let icon = |name: &'static str| fret_icons::IconId::new_static(name);
+
+    let row = |cx: &mut ElementContext<'_, App>, title: &'static str, desc: &'static str| {
+        shadcn::Item::new([
+            shadcn::ItemMedia::new([shadcn::icon::icon(cx, icon("lucide.file-text"))])
+                .variant(shadcn::ItemMediaVariant::Icon)
+                .into_element(cx),
+            shadcn::ItemContent::new([
+                shadcn::ItemTitle::new(title).into_element(cx),
+                shadcn::ItemDescription::new(desc).into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::ItemActions::new([shadcn::Button::new("Open")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_APP_OPEN)
+                .into_element(cx)])
+            .into_element(cx),
+        ])
+        .on_click(CMD_APP_OPEN)
+        .into_element(cx)
+    };
+
+    let group = shadcn::ItemGroup::new([
+        row(cx, "Invoice.pdf", "Updated 2 days ago"),
+        shadcn::ItemSeparator::new().into_element(cx),
+        row(cx, "Report.md", "Draft"),
+        shadcn::ItemSeparator::new().into_element(cx),
+        row(cx, "Notes.txt", "Personal"),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+    .into_element(cx);
+
+    vec![group]
+}
+
+fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let row = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_px(Px(320.0)))
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                shadcn::NativeSelect::new("Select a fruit").into_element(cx),
+                shadcn::NativeSelect::new("Small select")
+                    .size(shadcn::NativeSelectSize::Sm)
+                    .into_element(cx),
+                shadcn::NativeSelect::new("Invalid")
+                    .aria_invalid(true)
+                    .into_element(cx),
+                shadcn::NativeSelect::new("Disabled")
+                    .disabled(true)
+                    .into_element(cx),
+            ]
+        },
+    );
+    vec![row]
+}
+
+fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct SidebarModels {
+        collapsed: Option<Model<bool>>,
+    }
+
+    let collapsed = cx.with_state(SidebarModels::default, |st| st.collapsed.clone());
+    let collapsed = match collapsed {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(SidebarModels::default, |st| {
+                st.collapsed = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let is_collapsed = cx
+        .watch_model(&collapsed)
+        .layout()
+        .copied()
+        .unwrap_or(false);
+
+    let header = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                shadcn::Button::new("Toggle")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .toggle_model(collapsed.clone())
+                    .into_element(cx),
+                cx.text(if is_collapsed {
+                    "collapsed"
+                } else {
+                    "expanded"
+                }),
+            ]
+        },
+    );
+
+    let sidebar = shadcn::Sidebar::new([
+        shadcn::SidebarHeader::new([cx.text("Workspace")]).into_element(cx),
+        shadcn::SidebarContent::new([shadcn::SidebarGroup::new([
+            shadcn::SidebarGroupLabel::new("General").into_element(cx),
+            shadcn::SidebarMenu::new([
+                shadcn::SidebarMenuItem::new(
+                    shadcn::SidebarMenuButton::new("Home")
+                        .icon(fret_icons::IconId::new_static("lucide.home"))
+                        .active(true)
+                        .collapsed(is_collapsed)
+                        .on_click(CMD_APP_OPEN)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(
+                    shadcn::SidebarMenuButton::new("Settings")
+                        .icon(fret_icons::IconId::new_static("lucide.settings"))
+                        .collapsed(is_collapsed)
+                        .on_click(CMD_APP_SETTINGS)
+                        .into_element(cx),
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx)])
+        .collapsed(is_collapsed)
+        .into_element(cx),
+        shadcn::SidebarFooter::new([cx.text("Footer")]).into_element(cx),
+    ])
+    .collapsed(is_collapsed)
+    .into_element(cx);
+
+    let content = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Content").into_element(cx)])
+            .into_element(cx),
+        shadcn::CardContent::new(vec![cx.text("Sidebar is a composable surface.")])
+            .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().h_full())
+    .into_element(cx);
+
+    vec![
+        header,
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_start(),
+            |_cx| vec![sidebar, content],
+        ),
+    ]
+}
+
+fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct RadioGroupModels {
+        value: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let model = cx.with_state(RadioGroupModels::default, |st| st.value.clone());
+    let model = match model {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(RadioGroupModels::default, |st| {
+                st.value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let group = shadcn::RadioGroup::new(model.clone())
+        .a11y_label("Options")
+        .item(shadcn::RadioGroupItem::new("default", "Default"))
+        .item(shadcn::RadioGroupItem::new("comfortable", "Comfortable"))
+        .item(shadcn::RadioGroupItem::new("compact", "Compact"))
+        .into_element(cx);
+
+    let value = cx
+        .get_model_cloned(&model, Invalidation::Layout)
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    vec![group, cx.text(format!("value={}", value.as_ref()))]
+}
+
+fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct ToggleModels {
+        pressed: Option<Model<bool>>,
+    }
+
+    let pressed = cx.with_state(ToggleModels::default, |st| st.pressed.clone());
+    let pressed = match pressed {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ToggleModels::default, |st| st.pressed = Some(model.clone()));
+            model
+        }
+    };
+
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        move |cx| {
+            vec![
+                shadcn::Toggle::new(pressed.clone())
+                    .label("Bold")
+                    .a11y_label("Bold")
+                    .into_element(cx),
+                shadcn::Toggle::new(pressed.clone())
+                    .label("Outline")
+                    .variant(shadcn::ToggleVariant::Outline)
+                    .a11y_label("Bold (outline)")
+                    .into_element(cx),
+            ]
+        },
+    )]
+}
+
+fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    #[derive(Default)]
+    struct ToggleGroupModels {
+        value: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let value = cx.with_state(ToggleGroupModels::default, |st| st.value.clone());
+    let value = match value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(ToggleGroupModels::default, |st| {
+                st.value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let group = shadcn::ToggleGroup::single(value.clone())
+        .item(shadcn::ToggleGroupItem::new(
+            "bold",
+            [ui::label(cx, "B").into_element(cx)],
+        ))
+        .item(shadcn::ToggleGroupItem::new(
+            "italic",
+            [ui::label(cx, "I").into_element(cx)],
+        ))
+        .item(shadcn::ToggleGroupItem::new(
+            "underline",
+            [ui::label(cx, "U").into_element(cx)],
+        ))
+        .into_element(cx);
+
+    let selected = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    vec![group, cx.text(format!("selected={}", selected.as_ref()))]
+}
+
+fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N3).items_start(),
+        move |cx| {
+            vec![
+                shadcn::typography::h1(cx, "The Joke Tax Chronicles"),
+                shadcn::typography::lead(cx, "Once upon a time, in a far-off land..."),
+                shadcn::typography::p(
+                    cx,
+                    "The king, seeing how much happier his subjects were, realized the error of his ways and repealed the joke tax.",
+                ),
+                shadcn::typography::blockquote(
+                    cx,
+                    "After all, everyone enjoys a good joke, so it's only fair that they should pay for the privilege.",
+                ),
+                shadcn::typography::inline_code(cx, "cargo run -p fret-ui-gallery"),
+            ]
+        },
+    )]
+}
+
+fn preview_alert_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    let open_for_children = open.clone();
+    let dialog = shadcn::AlertDialog::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open alert dialog").into_element(cx),
+        |cx| {
+            shadcn::AlertDialogContent::new(vec![
+                shadcn::AlertDialogHeader::new(vec![
+                    shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+                    shadcn::AlertDialogDescription::new(
+                        "This action cannot be undone. This will permanently delete your data.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::AlertDialogFooter::new(vec![
+                    shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
+                        .into_element(cx),
+                    shadcn::AlertDialogAction::new("Continue", open_for_children.clone())
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    );
+
+    vec![dialog]
+}
+
+fn preview_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    let open_for_close = open.clone();
+    let dialog = shadcn::Dialog::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open dialog").into_element(cx),
+        |cx| {
+            shadcn::DialogContent::new(vec![
+                shadcn::DialogHeader::new(vec![
+                    shadcn::DialogTitle::new("Edit profile").into_element(cx),
+                    shadcn::DialogDescription::new(
+                        "Make changes to your profile here. Click save when you're done.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::DialogFooter::new(vec![
+                    shadcn::Button::new("Save changes").into_element(cx),
+                    shadcn::DialogClose::new(open_for_close.clone()).into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    );
+
+    vec![dialog]
+}
+
+fn preview_popover(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    vec![shadcn::Popover::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open popover").into_element(cx),
+        |cx| {
+            shadcn::PopoverContent::new(vec![
+                shadcn::PopoverTitle::new("Popover").into_element(cx),
+                shadcn::PopoverDescription::new("Non-modal overlay content.").into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    )]
+}
+
+fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    vec![shadcn::Sheet::new(open).into_element(
+        cx,
+        |cx| shadcn::Button::new("Open sheet").into_element(cx),
+        |cx| {
+            shadcn::SheetContent::new(vec![
+                shadcn::SheetHeader::new(vec![
+                    shadcn::SheetTitle::new("Sheet").into_element(cx),
+                    shadcn::SheetDescription::new("A side panel overlay.").into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::SheetFooter::new(vec![shadcn::Button::new("Done").into_element(cx)])
+                    .into_element(cx),
+            ])
+            .into_element(cx)
+        },
+    )]
+}
+
+fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    vec![
+        shadcn::Empty::new([
+            shadcn::empty::EmptyHeader::new([
+                shadcn::empty::EmptyTitle::new("No results.").into_element(cx),
+                shadcn::empty::EmptyDescription::new("Try adjusting your filters.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::empty::EmptyContent::new([
+                shadcn::Button::new("Clear filters").into_element(cx)
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx),
+    ]
+}
+
 fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
@@ -4533,6 +5700,31 @@ fn preview_material3_gallery(
                 material3::IconButton::new(ids::ui::SEARCH)
                     .a11y_label("Override")
                     .style(hover_style)
+                    .into_element(cx),
+            ]
+        },
+    ));
+
+    out.push(cx.text("— FAB —"));
+    out.push(stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N2).items_center(),
+        |cx| {
+            vec![
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search")
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search (small)")
+                    .size(material3::FabSize::Small)
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search (large)")
+                    .size(material3::FabSize::Large)
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .a11y_label("Search (primary)")
+                    .variant(material3::FabVariant::Primary)
                     .into_element(cx),
             ]
         },
@@ -4841,6 +6033,9 @@ fn material3_state_matrix_content(
     out.push(cx.text("— Icon Buttons —"));
     out.extend(preview_material3_icon_button(cx));
 
+    out.push(cx.text("— FAB —"));
+    out.extend(preview_material3_fab(cx, last_action.clone()));
+
     out.push(cx.text("— Checkbox —"));
     out.extend(preview_material3_checkbox(cx, material3_checkbox));
 
@@ -4994,7 +6189,7 @@ fn preview_material3_chip(
     let activate_row1 = activate.clone();
     let activate_row2 = activate.clone();
     let activate_row3 = activate.clone();
-    let _activate_row4 = activate.clone();
+    let activate_row4 = activate.clone();
 
     let last_action_for_input_selected = last_action.clone();
     let activate_input_selected_primary: OnActivate = Arc::new(move |host, _acx, _reason| {
@@ -5054,6 +6249,14 @@ fn preview_material3_chip(
     let input_selected_row1 = input_selected.clone();
     let input_unselected_row1 = input_unselected.clone();
     let input_unselected_row2 = input_unselected.clone();
+    let activate_filter_primary_row = activate_filter_primary.clone();
+    let activate_filter_trailing_row = activate_filter_trailing.clone();
+    let activate_filter_primary_for_set = activate_filter_primary.clone();
+    let activate_filter_trailing_for_set = activate_filter_trailing.clone();
+    let activate_input_unselected_primary_row = activate_input_unselected_primary.clone();
+    let activate_input_unselected_trailing_row = activate_input_unselected_trailing.clone();
+    let activate_input_unselected_primary_for_set = activate_input_unselected_primary.clone();
+    let activate_input_unselected_trailing_for_set = activate_input_unselected_trailing.clone();
 
     vec![
         cx.text("Material 3 AssistChip: token-driven shape/colors + state layer + bounded ripple."),
@@ -5146,18 +6349,18 @@ fn preview_material3_chip(
                 vec![
                     material3::FilterChip::new(filter_selected_row1.clone(), "Filter")
                         .trailing_icon(ids::ui::CLOSE)
-                        .on_activate(activate_filter_primary.clone())
-                        .on_trailing_icon_activate(activate_filter_trailing.clone())
+                        .on_activate(activate_filter_primary_row.clone())
+                        .on_trailing_icon_activate(activate_filter_trailing_row.clone())
                         .test_id("ui-gallery-material3-filter-chip-selected")
                         .into_element(cx),
                     material3::FilterChip::new(filter_unselected_row1.clone(), "Filter")
-                        .on_activate(activate_filter_primary.clone())
+                        .on_activate(activate_filter_primary_row.clone())
                         .test_id("ui-gallery-material3-filter-chip-unselected")
                         .into_element(cx),
                     material3::FilterChip::new(filter_selected_row2.clone(), "Override")
                         .variant(material3::FilterChipVariant::Elevated)
                         .style(filter_override_style_row.clone())
-                        .on_activate(activate_filter_primary.clone())
+                        .on_activate(activate_filter_primary_row.clone())
                         .test_id("ui-gallery-material3-filter-chip-override")
                         .into_element(cx),
                     material3::FilterChip::new(filter_unselected_row2.clone(), "Disabled")
@@ -5179,8 +6382,8 @@ fn preview_material3_chip(
                         .into_element(cx),
                     material3::InputChip::new(input_unselected_row1.clone(), "Input")
                         .trailing_icon(ids::ui::CLOSE)
-                        .on_activate(activate_input_unselected_primary.clone())
-                        .on_trailing_icon_activate(activate_input_unselected_trailing.clone())
+                        .on_activate(activate_input_unselected_primary_row.clone())
+                        .on_trailing_icon_activate(activate_input_unselected_trailing_row.clone())
                         .test_id("ui-gallery-material3-input-chip-unselected")
                         .into_element(cx),
                     material3::InputChip::new(input_unselected_row2.clone(), "Disabled")
@@ -5190,6 +6393,40 @@ fn preview_material3_chip(
                 ]
             },
         ),
+        cx.text(
+            "Material 3 ChipSet: roving focus (ArrowLeft/Right + Home/End). Multi-action chips use ArrowLeft/Right to move focus between primary/trailing actions, then roving continues to the next chip.",
+        ),
+        material3::ChipSet::new(vec![
+            material3::ChipSetItem::from(
+                material3::AssistChip::new("Assist")
+                    .leading_icon(ids::ui::SETTINGS)
+                    .on_activate(activate_row4.clone())
+                    .test_id("ui-gallery-material3-chip-set-assist"),
+            ),
+            material3::ChipSetItem::from(
+                material3::SuggestionChip::new("Suggestion")
+                    .leading_icon(ids::ui::SEARCH)
+                    .on_activate(activate_row4.clone())
+                    .test_id("ui-gallery-material3-chip-set-suggestion"),
+            ),
+            material3::ChipSetItem::from(
+                material3::FilterChip::new(filter_selected.clone(), "Filter")
+                    .trailing_icon(ids::ui::CLOSE)
+                    .on_activate(activate_filter_primary_for_set.clone())
+                    .on_trailing_icon_activate(activate_filter_trailing_for_set.clone())
+                    .test_id("ui-gallery-material3-chip-set-filter"),
+            ),
+            material3::ChipSetItem::from(
+                material3::InputChip::new(input_unselected.clone(), "Input")
+                    .trailing_icon(ids::ui::CLOSE)
+                    .on_activate(activate_input_unselected_primary_for_set.clone())
+                    .on_trailing_icon_activate(activate_input_unselected_trailing_for_set.clone())
+                    .test_id("ui-gallery-material3-chip-set-input"),
+            ),
+        ])
+        .a11y_label("chip set")
+        .test_id("ui-gallery-material3-chip-set")
+        .into_element(cx),
     ]
 }
 
@@ -5627,6 +6864,127 @@ fn preview_material3_icon_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     ]
 }
 
+fn preview_material3_fab(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    use fret_icons::ids;
+    use fret_ui::action::OnActivate;
+
+    fn on_activate(id: &'static str, last_action: Model<Arc<str>>) -> OnActivate {
+        Arc::new(move |host, _acx, _reason| {
+            let _ = host.models_mut().update(&last_action, |v| {
+                *v = Arc::<str>::from(id);
+            });
+        })
+    }
+
+    let row = {
+        let last_action = last_action.clone();
+        move |cx: &mut ElementContext<'_, App>,
+              variant: material3::FabVariant,
+              label: &'static str| {
+            let last_action = last_action.clone();
+            stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N2).items_center(),
+                move |cx| {
+                    vec![
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label(label)
+                            .on_activate(on_activate(
+                                "material3.fab.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Small")
+                            .size(material3::FabSize::Small)
+                            .on_activate(on_activate(
+                                "material3.fab.small.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Large")
+                            .size(material3::FabSize::Large)
+                            .on_activate(on_activate(
+                                "material3.fab.large.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Lowered")
+                            .lowered(true)
+                            .on_activate(on_activate(
+                                "material3.fab.lowered.activated",
+                                last_action.clone(),
+                            ))
+                            .into_element(cx),
+                        material3::Fab::new(ids::ui::SEARCH)
+                            .variant(variant)
+                            .a11y_label("Disabled")
+                            .disabled(true)
+                            .into_element(cx),
+                    ]
+                },
+            )
+        }
+    };
+
+    let extended = {
+        let last_action = last_action.clone();
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                vec![
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(material3::FabVariant::Surface)
+                        .label("Create")
+                        .on_activate(on_activate(
+                            "material3.extended_fab.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(material3::FabVariant::Primary)
+                        .label("Create")
+                        .on_activate(on_activate(
+                            "material3.extended_fab.primary.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(material3::FabVariant::Surface)
+                        .label("Reroute")
+                        .icon(None)
+                        .on_activate(on_activate(
+                            "material3.extended_fab.no_icon.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                ]
+            },
+        )
+    };
+
+    vec![
+        cx.text(
+            "Material 3 FAB: token-driven variants + focus ring + state layer + bounded ripple.",
+        ),
+        row(cx, material3::FabVariant::Surface, "Surface"),
+        row(cx, material3::FabVariant::Primary, "Primary"),
+        row(cx, material3::FabVariant::Secondary, "Secondary"),
+        row(cx, material3::FabVariant::Tertiary, "Tertiary"),
+        extended,
+    ]
+}
+
 fn preview_material3_checkbox(
     cx: &mut ElementContext<'_, App>,
     checked: Model<bool>,
@@ -5882,12 +7240,575 @@ fn preview_material3_radio(
     ]
 }
 
+fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_core::{Corners, Px};
+    use fret_ui::element::{AnyElement, ContainerProps, Length};
+
+    let theme = Theme::global(&*cx.app).clone();
+    let theme_for_anchor = theme.clone();
+
+    let anchor = move |cx: &mut ElementContext<'_, App>, size: Px, test_id: &'static str| {
+        let mut props = ContainerProps::default();
+        props.layout.size.width = Length::Px(size);
+        props.layout.size.height = Length::Px(size);
+        props.background =
+            Some(theme_for_anchor.color_required("md.sys.color.surface-container-low"));
+        props.corner_radii = Corners::all(Px(8.0));
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                test_id: Some(Arc::<str>::from(test_id)),
+                ..Default::default()
+            },
+            move |cx| vec![cx.container(props, |_cx| Vec::<AnyElement>::new())],
+        )
+    };
+
+    let row = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        |cx| {
+            let small = Px(24.0);
+            vec![
+                material3::Badge::dot()
+                    .navigation_anchor_size(small)
+                    .test_id("ui-gallery-material3-badge-dot-nav")
+                    .into_element(cx, |cx| vec![anchor(cx, small, "badge-anchor-dot-nav")]),
+                material3::Badge::text("9")
+                    .navigation_anchor_size(small)
+                    .test_id("ui-gallery-material3-badge-text-nav")
+                    .into_element(cx, |cx| vec![anchor(cx, small, "badge-anchor-text-nav")]),
+                material3::Badge::dot()
+                    .placement(material3::BadgePlacement::TopRight)
+                    .test_id("ui-gallery-material3-badge-dot-top-right")
+                    .into_element(cx, |cx| {
+                        vec![anchor(cx, Px(40.0), "badge-anchor-dot-top-right")]
+                    }),
+                material3::Badge::text("99+")
+                    .placement(material3::BadgePlacement::TopRight)
+                    .test_id("ui-gallery-material3-badge-text-top-right")
+                    .into_element(cx, |cx| {
+                        vec![anchor(cx, Px(40.0), "badge-anchor-text-top-right")]
+                    }),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Badge: dot + large/value variants via md.comp.badge.*."),
+        row,
+    ]
+}
+
+fn preview_material3_top_app_bar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant,
+    };
+
+    let bar = |cx: &mut ElementContext<'_, App>,
+               variant: TopAppBarVariant,
+               scrolled: bool,
+               title: &'static str,
+               test_id: &'static str| {
+        TopAppBar::new(title)
+            .variant(variant)
+            .scrolled(scrolled)
+            .navigation_icon(
+                TopAppBarAction::new(ids::ui::CHEVRON_RIGHT)
+                    .a11y_label("Navigate")
+                    .test_id(format!("{test_id}-nav")),
+            )
+            .actions(vec![
+                TopAppBarAction::new(ids::ui::SEARCH)
+                    .a11y_label("Search")
+                    .test_id(format!("{test_id}-search")),
+                TopAppBarAction::new(ids::ui::MORE_HORIZONTAL)
+                    .a11y_label("More actions")
+                    .test_id(format!("{test_id}-more")),
+            ])
+            .test_id(test_id)
+            .into_element(cx)
+    };
+
+    let scroll_demo = |cx: &mut ElementContext<'_, App>,
+                       key: &'static str,
+                       title: &'static str,
+                       variant: TopAppBarVariant,
+                       behavior: fn(fret_ui::scroll::ScrollHandle) -> TopAppBarScrollBehavior,
+                       test_prefix: &'static str| {
+        cx.keyed(key, |cx| {
+            let scroll_handle =
+                cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
+            let behavior = cx.with_state(
+                || behavior(scroll_handle.clone()),
+                |behavior| behavior.clone(),
+            );
+            let bar = TopAppBar::new(title)
+                .variant(variant)
+                .scroll_behavior(behavior)
+                .navigation_icon(
+                    TopAppBarAction::new(ids::ui::CHEVRON_RIGHT)
+                        .a11y_label("Navigate")
+                        .test_id(format!("{test_prefix}-nav")),
+                )
+                .actions(vec![
+                    TopAppBarAction::new(ids::ui::MORE_HORIZONTAL)
+                        .a11y_label("More actions")
+                        .test_id(format!("{test_prefix}-more")),
+                ])
+                .test_id(test_prefix)
+                .into_element(cx);
+
+            let mut content_props = stack::VStackProps::default();
+            content_props.gap = Space::N2;
+            let content = stack::vstack(cx, content_props, |cx| {
+                let mut out: Vec<AnyElement> = Vec::new();
+                out.push(cx.text("Scroll this area to drive the TopAppBar scroll behavior."));
+                for i in 0..80usize {
+                    out.push(cx.text(format!("Row {i:02}")));
+                }
+                out
+            });
+
+            let scroll = shadcn::ScrollArea::new([content])
+                .scroll_handle(scroll_handle.clone())
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
+                .viewport_test_id(format!("{test_prefix}-scroll-viewport"))
+                .into_element(cx);
+
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4),
+                |_cx| [bar, scroll],
+            )
+        })
+    };
+
+    let mut props = stack::VStackProps::default();
+    props.gap = Space::N4;
+    let content = stack::vstack(cx, props, |cx| {
+        vec![
+            cx.text("Material 3 Top App Bar: primitives driven by md.comp.top-app-bar.* tokens."),
+            cx.text("Scroll behavior demos (policy-only, no fret-ui mechanism changes):"),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-pinned",
+                "Pinned scroll behavior (toggle scrolled container treatment)",
+                TopAppBarVariant::Small,
+                TopAppBarScrollBehavior::pinned,
+                "ui-gallery-material3-top-app-bar-pinned",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-enter-always",
+                "EnterAlways scroll behavior (collapses fully, shows on reverse scroll)",
+                TopAppBarVariant::Small,
+                TopAppBarScrollBehavior::enter_always,
+                "ui-gallery-material3-top-app-bar-enter-always",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-enter-always-settle-on-idle",
+                "EnterAlways + settleOnIdle (policy-only spring settle after idle)",
+                TopAppBarVariant::Small,
+                |h| TopAppBarScrollBehavior::enter_always(h).settle_on_idle(),
+                "ui-gallery-material3-top-app-bar-enter-always-settle-on-idle",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-exit-until-collapsed",
+                "ExitUntilCollapsed scroll behavior (Large collapses down to Small height)",
+                TopAppBarVariant::Large,
+                TopAppBarScrollBehavior::exit_until_collapsed,
+                "ui-gallery-material3-top-app-bar-exit-until-collapsed",
+            ),
+            scroll_demo(
+                cx,
+                "ui-gallery-material3-top-app-bar-scroll-exit-until-collapsed-settle-on-idle",
+                "ExitUntilCollapsed + settleOnIdle (policy-only snap; content moves)",
+                TopAppBarVariant::Large,
+                |h| TopAppBarScrollBehavior::exit_until_collapsed(h).settle_on_idle(),
+                "ui-gallery-material3-top-app-bar-exit-until-collapsed-settle-on-idle",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Small,
+                false,
+                "Small (idle)",
+                "ui-gallery-material3-top-app-bar-small",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Small,
+                true,
+                "Small (scrolled)",
+                "ui-gallery-material3-top-app-bar-small-scrolled",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::SmallCentered,
+                false,
+                "Small Centered (idle)",
+                "ui-gallery-material3-top-app-bar-small-centered",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::SmallCentered,
+                true,
+                "Small Centered (scrolled)",
+                "ui-gallery-material3-top-app-bar-small-centered-scrolled",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Medium,
+                false,
+                "Medium (idle)",
+                "ui-gallery-material3-top-app-bar-medium",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Medium,
+                true,
+                "Medium (scrolled)",
+                "ui-gallery-material3-top-app-bar-medium-scrolled",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Large,
+                false,
+                "Large (idle)",
+                "ui-gallery-material3-top-app-bar-large",
+            ),
+            bar(
+                cx,
+                TopAppBarVariant::Large,
+                true,
+                "Large (scrolled)",
+                "ui-gallery-material3-top-app-bar-large-scrolled",
+            ),
+        ]
+    });
+
+    vec![content]
+}
+
+fn preview_material3_bottom_sheet(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui_material3::{
+        Button, ButtonVariant, DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet,
+    };
+
+    let open_sheet: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let close_sheet: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let underlay = move |cx: &mut ElementContext<'_, App>| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N4),
+            move |cx| {
+                let docked =
+                    DockedBottomSheet::new()
+                        .variant(DockedBottomSheetVariant::Standard)
+                        .test_id("ui-gallery-material3-bottom-sheet-docked")
+                        .into_element(cx, |cx| {
+                            vec![
+                        cx.text("Docked (standard) sheet: token-driven container + drag handle."),
+                        Button::new("Primary action")
+                            .variant(ButtonVariant::Filled)
+                            .test_id("ui-gallery-material3-bottom-sheet-docked-primary")
+                            .into_element(cx),
+                        Button::new("Secondary action")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("ui-gallery-material3-bottom-sheet-docked-secondary")
+                            .into_element(cx),
+                    ]
+                        });
+
+                vec![
+                cx.text(
+                    "Material 3 Bottom Sheet: primitives driven by md.comp.sheet.bottom.* tokens.",
+                ),
+                Button::new("Open modal bottom sheet")
+                    .variant(ButtonVariant::Filled)
+                    .on_activate(open_sheet.clone())
+                    .test_id("ui-gallery-material3-bottom-sheet-open")
+                    .into_element(cx),
+                Button::new("Underlay focus probe")
+                    .variant(ButtonVariant::Outlined)
+                    .test_id("ui-gallery-material3-bottom-sheet-underlay-probe")
+                    .into_element(cx),
+                cx.text(
+                    "Tip: click the scrim to dismiss; Tab should stay inside the sheet while open.",
+                ),
+                docked,
+            ]
+            },
+        )
+    };
+
+    let sheet = ModalBottomSheet::new(open)
+        .test_id("ui-gallery-material3-bottom-sheet")
+        .into_element(cx, underlay, move |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N4),
+                move |cx| {
+                    vec![
+                        cx.text("Modal bottom sheet content."),
+                        Button::new("Close")
+                            .variant(ButtonVariant::Filled)
+                            .on_activate(close_sheet.clone())
+                            .test_id("ui-gallery-material3-bottom-sheet-close")
+                            .into_element(cx),
+                    ]
+                },
+            )]
+        });
+
+    vec![sheet]
+}
+
+fn preview_material3_date_picker(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<time::Date>>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui_material3::{Button, ButtonVariant, DatePickerDialog, DockedDatePicker};
+
+    let open_dialog: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let selected_value = cx
+        .get_model_cloned(&selected, Invalidation::Layout)
+        .unwrap_or(None);
+    let selected_label: Arc<str> = match selected_value {
+        Some(date) => Arc::from(format!("Selected: {date}")),
+        None => Arc::<str>::from("Selected: <none>"),
+    };
+
+    let dialog = DatePickerDialog::new(open.clone(), month.clone(), selected.clone())
+        .test_id("ui-gallery-material3-date-picker")
+        .into_element(cx, move |cx| {
+            stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N4),
+                move |cx| {
+                    let docked = DockedDatePicker::new(month.clone(), selected.clone())
+                        .test_id("ui-gallery-material3-date-picker-docked")
+                        .into_element(cx);
+
+                    vec![
+                        cx.text(
+                            "Material 3 Date Picker: primitives driven by md.comp.date-picker.* tokens.",
+                        ),
+                        cx.text(selected_label.clone()),
+                        Button::new("Open date picker dialog")
+                            .variant(ButtonVariant::Filled)
+                            .on_activate(open_dialog.clone())
+                            .test_id("ui-gallery-material3-date-picker-open")
+                            .into_element(cx),
+                        Button::new("Underlay focus probe")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("ui-gallery-material3-date-picker-underlay-probe")
+                            .into_element(cx),
+                        docked,
+                    ]
+                },
+            )
+        });
+
+    vec![dialog]
+}
+
+fn preview_material3_time_picker(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    selected: Model<time::Time>,
+) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+    use fret_ui_material3::{Button, ButtonVariant, DockedTimePicker, TimePickerDialog};
+
+    let open_dialog: OnActivate = {
+        let open = open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let selected_value = cx
+        .get_model_copied(&selected, Invalidation::Layout)
+        .unwrap_or_else(|| time::Time::from_hms(9, 41, 0).expect("valid time"));
+    let selected_label: Arc<str> = Arc::from(format!(
+        "Selected: {:02}:{:02}",
+        selected_value.hour(),
+        selected_value.minute()
+    ));
+
+    let dialog = TimePickerDialog::new(open.clone(), selected.clone())
+        .test_id("ui-gallery-material3-time-picker")
+        .into_element(cx, move |cx| {
+            stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N4),
+                move |cx| {
+                    let docked = DockedTimePicker::new(selected.clone())
+                        .test_id("ui-gallery-material3-time-picker-docked")
+                        .into_element(cx);
+
+                    vec![
+                        cx.text(
+                            "Material 3 Time Picker: primitives driven by md.comp.time-picker.* tokens.",
+                        ),
+                        cx.text(selected_label.clone()),
+                        Button::new("Open time picker dialog")
+                            .variant(ButtonVariant::Filled)
+                            .on_activate(open_dialog.clone())
+                            .test_id("ui-gallery-material3-time-picker-open")
+                            .into_element(cx),
+                        Button::new("Underlay focus probe")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("ui-gallery-material3-time-picker-underlay-probe")
+                            .into_element(cx),
+                        docked,
+                    ]
+                },
+            )
+        });
+
+    vec![dialog]
+}
+
+fn preview_material3_segmented_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use std::collections::BTreeSet;
+
+    use fret_ui_material3::{SegmentedButtonItem, SegmentedButtonSet};
+
+    #[derive(Default)]
+    struct SegmentedButtonPageModels {
+        single_value: Option<Model<Arc<str>>>,
+        multi_value: Option<Model<BTreeSet<Arc<str>>>>,
+    }
+
+    let single_value = cx.with_state(SegmentedButtonPageModels::default, |st| {
+        st.single_value.clone()
+    });
+    let single_value = match single_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("alpha"));
+            cx.with_state(SegmentedButtonPageModels::default, |st| {
+                st.single_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let multi_value = cx.with_state(SegmentedButtonPageModels::default, |st| {
+        st.multi_value.clone()
+    });
+    let multi_value = match multi_value {
+        Some(model) => model,
+        None => {
+            let initial: BTreeSet<Arc<str>> = [Arc::<str>::from("alpha")].into_iter().collect();
+            let model = cx.app.models_mut().insert(initial);
+            cx.with_state(SegmentedButtonPageModels::default, |st| {
+                st.multi_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let single_current = cx
+        .get_model_cloned(&single_value, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let multi_current_len = cx
+        .get_model_cloned(&multi_value, Invalidation::Layout)
+        .map(|set| set.len())
+        .unwrap_or(0);
+
+    let content = stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N4).items_start(),
+        |cx| {
+            vec![
+                SegmentedButtonSet::single(single_value.clone())
+                    .items(vec![
+                        SegmentedButtonItem::new("alpha", "Alpha")
+                            .icon(fret_icons::ids::ui::SEARCH)
+                            .test_id("ui-gallery-material3-segmented-single-alpha"),
+                        SegmentedButtonItem::new("beta", "Beta")
+                            .icon(fret_icons::ids::ui::SETTINGS)
+                            .test_id("ui-gallery-material3-segmented-single-beta"),
+                        SegmentedButtonItem::new("gamma", "Gamma (disabled)")
+                            .disabled(true)
+                            .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                            .test_id("ui-gallery-material3-segmented-single-gamma-disabled"),
+                    ])
+                    .a11y_label("Material 3 Segmented Button (single)")
+                    .test_id("ui-gallery-material3-segmented-single")
+                    .into_element(cx),
+                cx.text(format!("single={}", single_current.as_ref())),
+                SegmentedButtonSet::multi(multi_value.clone())
+                    .items(vec![
+                        SegmentedButtonItem::new("alpha", "Alpha")
+                            .test_id("ui-gallery-material3-segmented-multi-alpha"),
+                        SegmentedButtonItem::new("beta", "Beta")
+                            .test_id("ui-gallery-material3-segmented-multi-beta"),
+                        SegmentedButtonItem::new("gamma", "Gamma (disabled)")
+                            .disabled(true)
+                            .test_id("ui-gallery-material3-segmented-multi-gamma-disabled"),
+                    ])
+                    .a11y_label("Material 3 Segmented Button (multi)")
+                    .test_id("ui-gallery-material3-segmented-multi")
+                    .into_element(cx),
+                cx.text(format!("multi_count={multi_current_len}")),
+            ]
+        },
+    );
+
+    vec![
+        cx.text("Material 3 Segmented Buttons: token-driven outcomes + roving focus + selection."),
+        content,
+    ]
+}
+
 fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
 
     #[derive(Default)]
     struct SelectPageModels {
         selected: Option<Model<Option<Arc<str>>>>,
+        selected_unclamped: Option<Model<Option<Arc<str>>>>,
+        selected_typeahead: Option<Model<Option<Arc<str>>>>,
+        selected_rich: Option<Model<Option<Arc<str>>>>,
+        selected_transformed: Option<Model<Option<Arc<str>>>>,
+        menu_width_floor_enabled: Option<Model<bool>>,
+        typeahead_delay_ms: Option<Model<u32>>,
     }
 
     let selected = cx.with_state(SelectPageModels::default, |st| st.selected.clone());
@@ -5901,6 +7822,94 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             model
         }
     };
+
+    let selected_unclamped = cx.with_state(SelectPageModels::default, |st| {
+        st.selected_unclamped.clone()
+    });
+    let selected_unclamped = match selected_unclamped {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_unclamped = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_typeahead = cx.with_state(SelectPageModels::default, |st| {
+        st.selected_typeahead.clone()
+    });
+    let selected_typeahead = match selected_typeahead {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_typeahead = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_rich = cx.with_state(SelectPageModels::default, |st| st.selected_rich.clone());
+    let selected_rich = match selected_rich {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_rich = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_transformed = cx.with_state(SelectPageModels::default, |st| {
+        st.selected_transformed.clone()
+    });
+    let selected_transformed = match selected_transformed {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.selected_transformed = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let menu_width_floor_enabled = cx.with_state(SelectPageModels::default, |st| {
+        st.menu_width_floor_enabled.clone()
+    });
+    let menu_width_floor_enabled = match menu_width_floor_enabled {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.menu_width_floor_enabled = Some(model.clone())
+            });
+            model
+        }
+    };
+    let menu_width_floor_enabled_now = cx
+        .get_model_copied(&menu_width_floor_enabled, Invalidation::Layout)
+        .unwrap_or(true);
+
+    let typeahead_delay_ms = cx.with_state(SelectPageModels::default, |st| {
+        st.typeahead_delay_ms.clone()
+    });
+    let typeahead_delay_ms = match typeahead_delay_ms {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(200u32);
+            cx.with_state(SelectPageModels::default, |st| {
+                st.typeahead_delay_ms = Some(model.clone())
+            });
+            model
+        }
+    };
+    let typeahead_delay_ms_now = cx
+        .get_model_copied(&typeahead_delay_ms, Invalidation::Layout)
+        .unwrap_or(200);
 
     let theme = Theme::global(&*cx.app).clone();
 
@@ -5948,14 +7957,219 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-material3-select-overridden")
         .into_element(cx);
 
+    let unclamped_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("short", "Short")
+            .test_id("ui-gallery-material3-select-unclamped-item-short"),
+        material3::SelectItem::new("medium", "Medium option")
+            .test_id("ui-gallery-material3-select-unclamped-item-medium"),
+        material3::SelectItem::new(
+            "long",
+            "A very long option label that should expand the menu beyond the anchor width",
+        )
+        .test_id("ui-gallery-material3-select-unclamped-item-long"),
+        material3::SelectItem::new("long2", "Another long-ish label for measuring menu width")
+            .test_id("ui-gallery-material3-select-unclamped-item-long2"),
+        material3::SelectItem::new(
+            "xl",
+            "Extra long: The quick brown fox jumps over the lazy dog",
+        )
+        .test_id("ui-gallery-material3-select-unclamped-item-xl"),
+    ]
+    .into();
+
+    let unclamped = material3::Select::new(selected_unclamped.clone())
+        .a11y_label("Material 3 Select (unclamped menu width)")
+        .placeholder("Unclamped")
+        .items(unclamped_items)
+        .match_anchor_width(false)
+        .menu_width_floor(if menu_width_floor_enabled_now {
+            Px(210.0)
+        } else {
+            Px(0.0)
+        })
+        .typeahead_delay_ms(typeahead_delay_ms_now)
+        .test_id("ui-gallery-material3-select-unclamped")
+        .into_element(cx);
+
+    let floor_toggle = material3::Switch::new(menu_width_floor_enabled.clone())
+        .a11y_label("Select menu width floor (210px)")
+        .test_id("ui-gallery-material3-select-menu-width-floor-toggle")
+        .into_element(cx);
+
+    let typeahead_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("beta", "Beta")
+            .test_id("ui-gallery-material3-select-typeahead-item-beta"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .disabled(true)
+            .test_id("ui-gallery-material3-select-typeahead-item-charlie-disabled"),
+        material3::SelectItem::new("delta", "Delta")
+            .test_id("ui-gallery-material3-select-typeahead-item-delta"),
+        material3::SelectItem::new("echo", "Echo")
+            .test_id("ui-gallery-material3-select-typeahead-item-echo"),
+    ]
+    .into();
+
+    let set_delay_button = |cx: &mut ElementContext<'_, App>, ms: u32| -> AnyElement {
+        use fret_ui::action::OnActivate;
+
+        let delay_model = typeahead_delay_ms.clone();
+        let on_activate: OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&delay_model, |v| *v = ms);
+            host.request_redraw(action_cx.window);
+        });
+
+        material3::Button::new(format!("{ms}ms"))
+            .variant(if typeahead_delay_ms_now == ms {
+                material3::ButtonVariant::Filled
+            } else {
+                material3::ButtonVariant::Outlined
+            })
+            .test_id(format!("ui-gallery-material3-select-typeahead-delay-{ms}"))
+            .on_activate(on_activate)
+            .into_element(cx)
+    };
+
+    let typeahead_select = material3::Select::new(selected_typeahead.clone())
+        .a11y_label("Material 3 Select (typeahead delay)")
+        .placeholder("Typeahead probe")
+        .items(typeahead_items)
+        .typeahead_delay_ms(typeahead_delay_ms_now)
+        .test_id("ui-gallery-material3-select-typeahead")
+        .into_element(cx);
+
+    let rich_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha")
+            .supporting_text("Supporting: quick summary")
+            .trailing_supporting_text("⌘A")
+            .leading_icon(fret_icons::ids::ui::SEARCH)
+            .test_id("ui-gallery-material3-select-rich-item-alpha"),
+        material3::SelectItem::new("beta", "Beta")
+            .supporting_text("Supporting: secondary line")
+            .trailing_supporting_text("⌘B")
+            .leading_icon(fret_icons::ids::ui::SETTINGS)
+            .test_id("ui-gallery-material3-select-rich-item-beta"),
+        material3::SelectItem::new("charlie", "Charlie (disabled)")
+            .supporting_text("Disabled items are skipped by typeahead/roving")
+            .disabled(true)
+            .leading_icon(fret_icons::ids::ui::SLASH)
+            .test_id("ui-gallery-material3-select-rich-item-charlie-disabled"),
+        material3::SelectItem::new("delta", "Delta")
+            .supporting_text("Trailing-only still aligns")
+            .trailing_supporting_text("⌘D")
+            .test_id("ui-gallery-material3-select-rich-item-delta"),
+    ]
+    .into();
+
+    let rich_select = material3::Select::new(selected_rich.clone())
+        .a11y_label("Material 3 Select (supporting text options)")
+        .placeholder("Option richness probe")
+        .items(rich_items)
+        .typeahead_delay_ms(typeahead_delay_ms_now)
+        .test_id("ui-gallery-material3-select-rich")
+        .into_element(cx);
+
+    let transformed_items: Arc<[material3::SelectItem]> = vec![
+        material3::SelectItem::new("alpha", "Alpha")
+            .test_id("ui-gallery-material3-select-transformed-item-alpha"),
+        material3::SelectItem::new("beta", "Beta")
+            .test_id("ui-gallery-material3-select-transformed-item-beta"),
+        material3::SelectItem::new("gamma", "Gamma")
+            .test_id("ui-gallery-material3-select-transformed-item-gamma"),
+    ]
+    .into();
+
+    let transformed_select = material3::Select::new(selected_transformed.clone())
+        .a11y_label("Material 3 Select (transformed)")
+        .placeholder("Transformed")
+        .items(transformed_items)
+        .test_id("ui-gallery-material3-select-transformed")
+        .into_element(cx);
+
+    let transformed_probe = cx.container(
+        fret_ui::element::ContainerProps {
+            layout: {
+                let mut l = fret_ui::element::LayoutStyle::default();
+                l.size.width = fret_ui::element::Length::Fill;
+                l.size.height = fret_ui::element::Length::Px(Px(88.0));
+                l.overflow = fret_ui::element::Overflow::Clip;
+                l
+            },
+            background: Some(
+                theme
+                    .color_by_key("md.sys.color.surface-container")
+                    .unwrap_or_else(|| {
+                        theme
+                            .color_by_key("md.sys.color.surface")
+                            .unwrap_or(fret_core::Color::TRANSPARENT)
+                    }),
+            ),
+            border: fret_core::Edges::all(Px(1.0)),
+            border_color: Some(
+                theme
+                    .color_by_key("md.sys.color.outline-variant")
+                    .unwrap_or(fret_core::Color::TRANSPARENT),
+            ),
+            corner_radii: fret_core::Corners::all(Px(12.0)),
+            padding: fret_core::Edges::all(Px(12.0)),
+            ..Default::default()
+        },
+        move |cx| {
+            let transform =
+                fret_core::Transform2D::translation(fret_core::Point::new(Px(12.0), Px(6.0)))
+                    * fret_core::Transform2D::scale_uniform(0.92);
+            vec![cx.visual_transform(transform, |_cx| vec![transformed_select.clone()])]
+        },
+    );
+
     vec![
         cx.text(
             "Material 3 Select: token-driven trigger + listbox overlay + ADR 1159 style overrides.",
         ),
-        stack::hstack(
+        stack::vstack(
             cx,
-            stack::HStackProps::default().gap(Space::N4).items_center(),
-            move |_cx| vec![default, overridden],
+            stack::VStackProps::default().gap(Space::N4).items_start(),
+            move |cx| {
+                vec![
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N4).items_center(),
+                        move |_cx| vec![default, overridden],
+                    ),
+                    cx.text("Option richness probe (Material Web select-option supporting slots):"),
+                    rich_select,
+                    cx.text("Menu width probe (Material Web min-width behavior + optional 210px floor):"),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |cx| {
+                            vec![
+                                cx.text("menu_width_floor=210px"),
+                                floor_toggle,
+                                cx.text(if menu_width_floor_enabled_now { "on" } else { "off" }),
+                            ]
+                        },
+                    ),
+                    unclamped,
+                    cx.text(format!(
+                        "Typeahead delay probe (Material Web typeaheadDelay): current={}ms",
+                        typeahead_delay_ms_now
+                    )),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |cx| vec![
+                            set_delay_button(cx, 200),
+                            set_delay_button(cx, 500),
+                            set_delay_button(cx, 1000),
+                        ],
+                    ),
+                    typeahead_select,
+                    cx.text(
+                        "Menu positioning probe (Material Web menuPositioning): select is render-transformed + clipped; overlay should still align and avoid clipping.",
+                    ),
+                    transformed_probe,
+                ]
+            },
         ),
     ]
 }
@@ -6224,12 +8438,14 @@ fn preview_material3_navigation_bar(
         .test_id("ui-gallery-material3-navigation-bar")
         .items(vec![
             material3::NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                .badge_dot()
                 .a11y_label("Destination Search")
                 .test_id("ui-gallery-material3-nav-search"),
             material3::NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS)
                 .a11y_label("Destination Settings")
                 .test_id("ui-gallery-material3-nav-settings"),
             material3::NavigationBarItem::new("more", "More", ids::ui::MORE_HORIZONTAL)
+                .badge_text("9")
                 .a11y_label("Destination More")
                 .test_id("ui-gallery-material3-nav-more"),
         ])
@@ -6257,12 +8473,14 @@ fn preview_material3_navigation_rail(
         .test_id("ui-gallery-material3-navigation-rail")
         .items(vec![
             material3::NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                .badge_dot()
                 .a11y_label("Destination Search")
                 .test_id("ui-gallery-material3-rail-search"),
             material3::NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS)
                 .a11y_label("Destination Settings")
                 .test_id("ui-gallery-material3-rail-settings"),
             material3::NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                .badge_text("99+")
                 .a11y_label("Destination Play")
                 .test_id("ui-gallery-material3-rail-play"),
             material3::NavigationRailItem::new("disabled", "Disabled", ids::ui::SLASH)
@@ -6309,9 +8527,11 @@ fn preview_material3_navigation_drawer(
                 .a11y_label("Destination Search")
                 .test_id("ui-gallery-material3-drawer-search"),
             material3::NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                .badge_label("2")
                 .a11y_label("Destination Settings")
                 .test_id("ui-gallery-material3-drawer-settings"),
             material3::NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                .badge_label("99+")
                 .a11y_label("Destination Play")
                 .test_id("ui-gallery-material3-drawer-play"),
             material3::NavigationDrawerItem::new("disabled", "Disabled", ids::ui::SLASH)
@@ -6381,9 +8601,11 @@ fn preview_material3_modal_navigation_drawer(
                             "Settings",
                             ids::ui::SETTINGS,
                         )
+                        .badge_label("2")
                         .a11y_label("Destination Settings")
                         .test_id("ui-gallery-material3-modal-drawer-settings"),
                         material3::NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                            .badge_label("99+")
                             .a11y_label("Destination Play")
                             .test_id("ui-gallery-material3-modal-drawer-play"),
                         material3::NavigationDrawerItem::new("disabled", "Disabled", ids::ui::SLASH)
@@ -6453,6 +8675,7 @@ fn preview_material3_dialog(
     #[derive(Default)]
     struct DialogPageModels {
         override_open: Option<Model<bool>>,
+        selected: Option<Model<Option<Arc<str>>>>,
     }
 
     let override_open = cx.with_state(DialogPageModels::default, |st| st.override_open.clone());
@@ -6462,6 +8685,18 @@ fn preview_material3_dialog(
             let model = cx.app.models_mut().insert(false);
             cx.with_state(DialogPageModels::default, |st| {
                 st.override_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected = cx.with_state(DialogPageModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(DialogPageModels::default, |st| {
+                st.selected = Some(model.clone())
             });
             model
         }
@@ -6503,6 +8738,16 @@ fn preview_material3_dialog(
     };
 
     let theme = cx.theme().clone();
+    let select_items: Arc<[material3::SelectItem]> = (0..20)
+        .map(|i| {
+            material3::SelectItem::new(
+                Arc::<str>::from(format!("item-{i:02}")),
+                Arc::<str>::from(format!("Item {i:02}")),
+            )
+            .test_id(format!("ui-gallery-material3-dialog-select-item-{i:02}"))
+        })
+        .collect::<Vec<_>>()
+        .into();
     let override_style = material3::DialogStyle::default()
         .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
             theme.color_required("md.sys.color.secondary-container"),
@@ -6591,7 +8836,53 @@ fn preview_material3_dialog(
                     },
                 )
             },
-            |_cx| std::iter::empty::<AnyElement>(),
+            {
+                let selected = selected.clone();
+                let select_items = select_items.clone();
+                move |cx| {
+                    let spacer = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = fret_ui::element::Length::Fill;
+                                l.size.height = fret_ui::element::Length::Px(Px(480.0));
+                                l
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    );
+
+                    vec![stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N4),
+                        move |cx| {
+                            vec![
+                                material3::Select::new(selected.clone())
+                                    .a11y_label("Material 3 Select (dialog)")
+                                    .placeholder("Pick one")
+                                    .items(select_items.clone())
+                                    .match_anchor_width(false)
+                                    .test_id(format!("{id_prefix}-select"))
+                                    .into_element(cx),
+                                cx.text(
+                                    "Bottom-edge clamping probe: open the Select menu near the window bottom.",
+                                ),
+                                spacer,
+                                material3::Select::new(selected.clone())
+                                    .a11y_label("Material 3 Select (dialog, bottom)")
+                                    .placeholder("Pick one")
+                                    .items(select_items.clone())
+                                    .match_anchor_width(false)
+                                    .test_id(format!("{id_prefix}-select-bottom"))
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                }
+            },
         )
     };
 
@@ -7929,6 +10220,14 @@ fn preview_data_table_torture(
 ) -> Vec<AnyElement> {
     use fret_ui_headless::table::{ColumnDef, RowKey};
 
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_DATA_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
     #[derive(Debug, Clone)]
     struct Row {
         id: u64,
@@ -8019,10 +10318,61 @@ fn preview_data_table_torture(
                     ..Default::default()
                 },
                 |cx| {
-                    vec![
-                        shadcn::DataTable::new()
-                            .overscan(10)
+                    let retained =
+                        std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
+                    vec![if retained {
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
                             .row_height(Px(28.0))
+                            .measure_rows(variable_height)
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                            .into_element_retained(
+                                cx,
+                                data.clone(),
+                                1,
+                                state,
+                                columns.clone(),
+                                |row, _index, _parent| RowKey(row.id),
+                                |col| Arc::<str>::from(col.id.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
+                                    "status" => cx.text(row.status.as_ref()),
+                                    "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                    _ => cx.text("?"),
+                                },
+                                Some(Arc::<str>::from("ui-gallery-data-table-header-")),
+                                Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                            )
+                    } else {
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
+                            .row_height(Px(28.0))
+                            .measure_rows(variable_height)
                             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
@@ -8032,15 +10382,33 @@ fn preview_data_table_torture(
                                 columns.clone(),
                                 |row, _index, _parent| RowKey(row.id),
                                 |col| Arc::<str>::from(col.id.as_ref()),
-                                |cx, col, row| match col.id.as_ref() {
-                                    "name" => cx.text(row.name.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
                                     "status" => cx.text(row.status.as_ref()),
                                     "cpu%" => cx.text(format!("{}%", row.cpu)),
                                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                                     _ => cx.text("?"),
                                 },
-                            ),
-                    ]
+                            )
+                    }]
                 },
             )]
         });
@@ -8048,7 +10416,7 @@ fn preview_data_table_torture(
     let mut container_props = decl_style::container_props(
         theme,
         ChromeRefinement::default(),
-        LayoutRefinement::default().w_full(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -8060,6 +10428,10 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
 
     use fret_ui_kit::TreeItem;
     use fret_ui_kit::TreeState;
+
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
 
     #[derive(Default)]
     struct TreeTortureModels {
@@ -8094,10 +10466,16 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                             Vec::with_capacity(leaves_per_folder as usize);
                         for l in 0..leaves_per_folder {
                             let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
-                            leaves.push(
-                                TreeItem::new(leaf_id, format!("Leaf {r}/{f}/{l} (id={leaf_id})"))
-                                    .disabled(leaf_id % 97 == 0),
-                            );
+                            let label = if variable_height && leaf_id % 15 == 0 {
+                                format!(
+                                    "Leaf {r}/{f}/{l} (id={leaf_id})\nDetails: id={} seed={}",
+                                    leaf_id,
+                                    leaf_id.wrapping_mul(2654435761)
+                                )
+                            } else {
+                                format!("Leaf {r}/{f}/{l} (id={leaf_id})")
+                            };
+                            leaves.push(TreeItem::new(leaf_id, label).disabled(leaf_id % 97 == 0));
                         }
 
                         folders.push(
@@ -8148,12 +10526,39 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 ..Default::default()
             },
             |cx| {
-                vec![fret_ui_kit::declarative::tree::tree_view(
-                    cx,
-                    items,
-                    state,
-                    fret_ui_kit::Size::Medium,
-                )]
+                let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
+                    .filter(|v| !v.is_empty())
+                    .is_some();
+
+                if retained {
+                    if variable_height {
+                        vec![
+                            fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
+                                cx,
+                                items,
+                                state,
+                                fret_ui_kit::Size::Medium,
+                                fret_ui::element::VirtualListMeasureMode::Measured,
+                                Some(Arc::<str>::from("ui-gallery-tree-row")),
+                            ),
+                        ]
+                    } else {
+                        vec![fret_ui_kit::declarative::tree::tree_view_retained(
+                            cx,
+                            items,
+                            state,
+                            fret_ui_kit::Size::Medium,
+                            Some(Arc::<str>::from("ui-gallery-tree-row")),
+                        )]
+                    }
+                } else {
+                    vec![fret_ui_kit::declarative::tree::tree_view(
+                        cx,
+                        items,
+                        state,
+                        fret_ui_kit::Size::Medium,
+                    )]
+                }
             },
         )]
     });
@@ -8166,6 +10571,512 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
     vec![header, cx.container(container_props, |_cx| vec![tree])]
+}
+
+fn preview_ai_transcript_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let message_count = std::env::var("FRET_UI_GALLERY_AI_TRANSCRIPT_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(5_000);
+
+    #[derive(Default)]
+    struct TranscriptModels {
+        messages: Option<Arc<[ui_ai::ConversationMessage]>>,
+    }
+
+    let messages = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
+    let messages = match messages {
+        Some(messages) => messages,
+        None => {
+            let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
+            for i in 0..message_count as u64 {
+                let role = match i % 4 {
+                    0 => ui_ai::MessageRole::User,
+                    1 => ui_ai::MessageRole::Assistant,
+                    2 => ui_ai::MessageRole::Tool,
+                    _ => ui_ai::MessageRole::System,
+                };
+                let text = if variable_height && i % 7 == 0 {
+                    Arc::<str>::from(format!(
+                        "Message {i}\nDetails: seed={} tokens={} latency={}ms",
+                        (i * 31) % 97,
+                        16 + (i % 64),
+                        10 + (i % 120)
+                    ))
+                } else {
+                    Arc::<str>::from(format!("Message {i}: hello world"))
+                };
+                out.push(ui_ai::ConversationMessage::new(i, role, text));
+            }
+
+            let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
+            cx.with_state(TranscriptModels::default, |st| {
+                st.messages = Some(out.clone())
+            });
+            out
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
+                cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
+            ]
+        },
+    );
+
+    let transcript =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let revision = messages.len().min(u64::MAX as usize) as u64;
+
+            vec![
+                ui_ai::ConversationTranscript::from_arc(messages.clone())
+                    .content_revision(revision)
+                    .scroll_handle(scroll_handle)
+                    .stick_to_bottom(false)
+                    .show_scroll_to_bottom_button(false)
+                    .debug_root_test_id("ui-gallery-ai-transcript-root")
+                    .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
+                    .into_element(cx),
+            ]
+        });
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![
+        header,
+        cx.container(container_props, |_cx| vec![transcript]),
+    ]
+}
+
+fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let len: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(50_000)
+        .clamp(16, 200_000);
+    let row_height = Px(28.0);
+    let overscan = 12;
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(0)
+        .clamp(0, 4096);
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(460.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    let options =
+        fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height)
+            .keep_alive(keep_alive);
+
+    let theme = theme.clone();
+    let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
+        let zebra = (index % 2) == 0;
+        let background = if zebra {
+            theme.color_required("muted")
+        } else {
+            theme.color_required("background")
+        };
+
+        let depth = (index % 8) as f32;
+        let indent_px = Px(depth * 12.0);
+
+        let name = cx.text(format!("prop_{index}"));
+        let value = cx.text(format!("value {index}"));
+
+        let spacer = cx.container(
+            fret_ui::element::ContainerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: fret_ui::element::Length::Px(indent_px),
+                        height: fret_ui::element::Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        let mut row_props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(background))
+                .p(Space::N2),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(row_height)),
+        );
+        row_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+        let row_layout = row_props.layout;
+        let row = cx.container(row_props, |cx| {
+            vec![stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .gap(Space::N2)
+                    .items_center(),
+                |_cx| vec![spacer, name, value],
+            )]
+        });
+
+        let mut semantics = fret_ui::element::SemanticsProps::default();
+        semantics.layout = row_layout;
+        semantics.test_id = Some(Arc::<str>::from(format!(
+            "ui-gallery-inspector-row-{index}-label"
+        )));
+        cx.semantics(semantics, |_cx| vec![row])
+    };
+
+    let list = cx.virtual_list_keyed_retained_with_layout_fn(
+        list_layout,
+        len,
+        options,
+        &scroll_handle,
+        |i| i as fret_ui::ItemKey,
+        row,
+    );
+
+    let mut semantics = fret_ui::element::SemanticsProps::default();
+    semantics.role = fret_core::SemanticsRole::List;
+    semantics.layout = list_layout;
+    semantics.test_id = Some(Arc::<str>::from("ui-gallery-inspector-root"));
+    let list = cx.semantics(semantics, |_cx| vec![list]);
+
+    vec![cx.cached_subtree_with(
+        CachedSubtreeProps::default().contained_layout(true),
+        |_cx| vec![list],
+    )]
+}
+
+fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let _ = theme;
+    use std::collections::HashSet;
+
+    let row_height = Px(26.0);
+    let overscan = 12;
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(460.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    use fret_ui_kit::{TreeItem, TreeItemId, TreeState};
+
+    #[derive(Default)]
+    struct FileTreeTortureModels {
+        items: Option<Model<Vec<TreeItem>>>,
+        state: Option<Model<TreeState>>,
+    }
+
+    let (items, state) = cx.with_state(FileTreeTortureModels::default, |st| {
+        (st.items.clone(), st.state.clone())
+    });
+    let (items, state) = match (items, state) {
+        (Some(items), Some(state)) => (items, state),
+        _ => {
+            let (items_value, state_value) = {
+                let root_count: u64 = std::env::var("FRET_UI_GALLERY_FILE_TREE_ROOTS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(200);
+                let folders_per_root = 10u64;
+                let leaves_per_folder = 25u64;
+
+                let mut expanded: HashSet<TreeItemId> = HashSet::new();
+                let mut roots: Vec<TreeItem> = Vec::with_capacity(root_count as usize);
+
+                for r in 0..root_count {
+                    let root_id = r;
+                    expanded.insert(root_id);
+
+                    let mut folders: Vec<TreeItem> = Vec::with_capacity(folders_per_root as usize);
+                    for f in 0..folders_per_root {
+                        let folder_id = 1_000_000 + r * 100 + f;
+                        expanded.insert(folder_id);
+
+                        let mut leaves: Vec<TreeItem> =
+                            Vec::with_capacity(leaves_per_folder as usize);
+                        for l in 0..leaves_per_folder {
+                            let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
+                            leaves.push(TreeItem::new(
+                                leaf_id,
+                                Arc::<str>::from(format!("file_{r}_{f}_{l}.rs")),
+                            ));
+                        }
+
+                        folders.push(
+                            TreeItem::new(folder_id, Arc::<str>::from(format!("dir_{r}_{f}")))
+                                .children(leaves),
+                        );
+                    }
+
+                    roots.push(
+                        TreeItem::new(root_id, Arc::<str>::from(format!("root_{r}")))
+                            .children(folders),
+                    );
+                }
+
+                (
+                    roots,
+                    TreeState {
+                        expanded,
+                        selected: None,
+                    },
+                )
+            };
+
+            let items = cx.app.models_mut().insert(items_value);
+            let state = cx.app.models_mut().insert(state_value);
+            cx.with_state(FileTreeTortureModels::default, |st| {
+                st.items = Some(items.clone());
+                st.state = Some(state.clone());
+            });
+            (items, state)
+        }
+    };
+
+    let mut props = fret_ui_kit::declarative::file_tree::FileTreeViewProps::default();
+    props.layout = list_layout;
+    props.row_height = row_height;
+    props.overscan = overscan;
+    props.debug_root_test_id = Some(Arc::<str>::from("ui-gallery-file-tree-root"));
+    props.debug_row_test_id_prefix = Some(Arc::<str>::from("ui-gallery-file-tree-node"));
+
+    vec![
+        fret_ui_kit::declarative::file_tree::file_tree_view_retained_v0(
+            cx,
+            items,
+            state,
+            &scroll_handle,
+            props,
+        ),
+    ]
+}
+
+fn preview_table_retained_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
+    #[derive(Clone)]
+    struct TableRow {
+        id: u64,
+        name: Arc<str>,
+        status: Arc<str>,
+        cpu: u32,
+        mem_mb: u32,
+    }
+
+    #[derive(Default)]
+    struct TableTortureModels {
+        data: Option<Arc<[TableRow]>>,
+        columns: Option<Arc<[ColumnDef<TableRow>]>>,
+        state: Option<Model<TableState>>,
+    }
+
+    let (data, columns, state) = cx.with_state(TableTortureModels::default, |st| {
+        (st.data.clone(), st.columns.clone(), st.state.clone())
+    });
+
+    let (data, columns, state) = match (data, columns, state) {
+        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+        _ => {
+            let mut rows: Vec<TableRow> = Vec::with_capacity(50_000);
+            for i in 0..50_000u64 {
+                rows.push(TableRow {
+                    id: i,
+                    name: Arc::from(format!("Row {i}")),
+                    status: Arc::from(if i % 3 == 0 {
+                        "idle"
+                    } else if i % 3 == 1 {
+                        "busy"
+                    } else {
+                        "offline"
+                    }),
+                    cpu: ((i * 7) % 100) as u32,
+                    mem_mb: (128 + (i % 4096)) as u32,
+                });
+            }
+            let data: Arc<[TableRow]> = Arc::from(rows);
+
+            let cols: Vec<ColumnDef<TableRow>> = vec![
+                ColumnDef::new("name").sort_by(|a: &TableRow, b: &TableRow| a.name.cmp(&b.name)),
+                ColumnDef::new("status")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.status.cmp(&b.status)),
+                ColumnDef::new("cpu%").sort_by(|a: &TableRow, b: &TableRow| a.cpu.cmp(&b.cpu)),
+                ColumnDef::new("mem_mb")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.mem_mb.cmp(&b.mem_mb)),
+            ];
+            let columns: Arc<[ColumnDef<TableRow>]> = Arc::from(cols);
+
+            let state = cx.app.models_mut().insert(TableState::default());
+
+            cx.with_state(TableTortureModels::default, |st| {
+                st.data = Some(data.clone());
+                st.columns = Some(columns.clone());
+                st.state = Some(state.clone());
+            });
+
+            (data, columns, state)
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text(
+                    "Goal: baseline harness for `fret-ui-kit::declarative::table` running on the virt-003 retained host path.",
+                ),
+                cx.text(
+                    "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
+                ),
+            ]
+        },
+    );
+
+    let table =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-table-retained-torture-root")),
+                    ..Default::default()
+                },
+                |cx| {
+                    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+                    let state_revision = cx.app.models().revision(&state).unwrap_or(0);
+                    let items_revision = 1 ^ state_revision.rotate_left(17);
+
+                    let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
+                    props.overscan = 10;
+                    props.row_height = Some(Px(28.0));
+                    if keep_alive > 0 {
+                        props.keep_alive = Some(keep_alive);
+                    }
+                    props.row_measure_mode = if variable_height {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Measured
+                    } else {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed
+                    };
+                    props.enable_column_grouping = false;
+                    props.enable_column_resizing = false;
+
+                    let header_label =
+                        Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
+                    let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
+                    let cell_at = Arc::new(
+                        move |cx: &mut ElementContext<'_, App>,
+                              col: &ColumnDef<TableRow>,
+                              row: &TableRow| {
+                            match col.id.as_ref() {
+                                "name" => {
+                                    if variable_height && row.id % 15 == 0 {
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N0),
+                                            |cx| {
+                                                vec![
+                                                    cx.text(row.name.as_ref()),
+                                                    cx.text(format!(
+                                                        "Details: id={} cpu={} mem={}",
+                                                        row.id, row.cpu, row.mem_mb
+                                                    )),
+                                                ]
+                                            },
+                                        )
+                                    } else {
+                                        cx.text(row.name.as_ref())
+                                    }
+                                }
+                                "status" => cx.text(row.status.as_ref()),
+                                "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                _ => cx.text("?"),
+                            }
+                        },
+                    );
+
+                    vec![
+                        fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                            cx,
+                            data.clone(),
+                            columns.clone(),
+                            state.clone(),
+                            &scroll_handle,
+                            items_revision,
+                            row_key_at,
+                            Some(Arc::new(|row: &TableRow, _index: usize| {
+                                Arc::from(row.id.to_string())
+                            })),
+                            props,
+                            header_label,
+                            cell_at,
+                            Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
+                            Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+                        ),
+                    ]
+                },
+            )]
+        });
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![header, cx.container(container_props, |_cx| vec![table])]
 }
 
 fn preview_data_grid(
@@ -8235,30 +11146,27 @@ fn preview_tabs(
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     let tabs = shadcn::Tabs::new(value)
-        .refine_layout(LayoutRefinement::default().w_full())
+        .refine_layout(LayoutRefinement::default().w_px(Px(400.0)))
         .list_full_width(false)
         .items([
             shadcn::TabsItem::new(
-                "overview",
-                "Overview",
-                vec![cx.text("Tabs are stateful and roving-focus friendly.")],
+                "account",
+                "Account",
+                vec![cx.text("Make changes to your account here.")],
             ),
             shadcn::TabsItem::new(
-                "details",
-                "Details",
-                vec![cx.text("Use Tabs for sections within a single page.")],
-            ),
-            shadcn::TabsItem::new(
-                "notes",
-                "Notes",
-                vec![cx.text(
-                    "In this gallery, the outer shell also uses Tabs (Preview/Usage/Notes).",
-                )],
+                "password",
+                "Password",
+                vec![cx.text("Change your password here.")],
             ),
         ])
         .into_element(cx);
 
-    vec![tabs, cx.text(format!("Selected: {selected}"))]
+    vec![
+        tabs,
+        cx.text("Note: this gallery uses Tabs for the Preview/Usage/Docs shell."),
+        cx.text(format!("Selected: {selected}")),
+    ]
 }
 
 fn preview_accordion(
@@ -8302,13 +11210,23 @@ fn preview_accordion(
 }
 
 fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let crate_w = fret_core::Px(160.0);
+    let layer_w = fret_core::Px(140.0);
+    let notes_w = fret_core::Px(420.0);
+
     let header = shadcn::TableHeader::new(vec![
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableHead::new("Crate").into_element(cx),
-                shadcn::TableHead::new("Layer").into_element(cx),
-                shadcn::TableHead::new("Notes").into_element(cx),
+                shadcn::TableHead::new("Crate")
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Layer")
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Notes")
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .border_bottom(true)
@@ -8327,18 +11245,28 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     },
                     |cx| vec![cx.text("fret-ui")],
                 ))
+                .refine_layout(LayoutRefinement::default().w_px(crate_w))
                 .into_element(cx),
-                shadcn::TableCell::new(cx.text("mechanisms")).into_element(cx),
-                shadcn::TableCell::new(cx.text("Element tree + layout")).into_element(cx),
+                shadcn::TableCell::new(cx.text("mechanisms"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("Element tree + layout"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .into_element(cx),
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.text("fret-ui-kit")).into_element(cx),
-                shadcn::TableCell::new(cx.text("policies")).into_element(cx),
+                shadcn::TableCell::new(cx.text("fret-ui-kit"))
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("policies"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
                 shadcn::TableCell::new(cx.text("Dismiss / focus / menu / overlays"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
                     .into_element(cx),
             ],
         )
@@ -8347,9 +11275,15 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.text("fret-ui-shadcn")).into_element(cx),
-                shadcn::TableCell::new(cx.text("recipes")).into_element(cx),
-                shadcn::TableCell::new(cx.text("skinned components + defaults")).into_element(cx),
+                shadcn::TableCell::new(cx.text("fret-ui-shadcn"))
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("recipes"))
+                    .refine_layout(LayoutRefinement::default().w_px(layer_w))
+                    .into_element(cx),
+                shadcn::TableCell::new(cx.text("skinned components + defaults"))
+                    .refine_layout(LayoutRefinement::default().w_px(notes_w))
+                    .into_element(cx),
             ],
         )
         .into_element(cx),

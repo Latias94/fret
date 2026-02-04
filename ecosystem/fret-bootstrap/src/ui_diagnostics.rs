@@ -3851,7 +3851,11 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub dirty_views: Vec<UiDirtyViewV1>,
     #[serde(default)]
+    pub notify_requests: Vec<UiNotifyRequestV1>,
+    #[serde(default)]
     pub virtual_list_windows: Vec<UiVirtualListWindowV1>,
+    #[serde(default)]
+    pub virtual_list_window_shift_samples: Vec<UiVirtualListWindowShiftSampleV1>,
     #[serde(default)]
     pub retained_virtual_list_reconciles: Vec<UiRetainedVirtualListReconcileV1>,
     #[serde(default)]
@@ -3943,10 +3947,20 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiDirtyViewV1::from_dirty_view)
                 .collect(),
+            notify_requests: ui
+                .debug_notify_requests()
+                .iter()
+                .map(UiNotifyRequestV1::from_notify_request)
+                .collect(),
             virtual_list_windows: ui
                 .debug_virtual_list_windows()
                 .iter()
                 .map(UiVirtualListWindowV1::from_window)
+                .collect(),
+            virtual_list_window_shift_samples: ui
+                .debug_virtual_list_window_shift_samples()
+                .iter()
+                .map(UiVirtualListWindowShiftSampleV1::from_sample)
                 .collect(),
             retained_virtual_list_reconciles: ui
                 .debug_retained_virtual_list_reconciles()
@@ -4287,6 +4301,78 @@ impl UiVirtualListMeasureModeV1 {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowShiftKindV1 {
+    None,
+    Prefetch,
+    Escape,
+}
+
+impl Default for UiVirtualListWindowShiftKindV1 {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl UiVirtualListWindowShiftKindV1 {
+    fn from_kind(kind: fret_ui::tree::UiDebugVirtualListWindowShiftKind) -> Self {
+        match kind {
+            fret_ui::tree::UiDebugVirtualListWindowShiftKind::None => Self::None,
+            fret_ui::tree::UiDebugVirtualListWindowShiftKind::Prefetch => Self::Prefetch,
+            fret_ui::tree::UiDebugVirtualListWindowShiftKind::Escape => Self::Escape,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowShiftReasonV1 {
+    ScrollOffset,
+    ViewportResize,
+    ItemsRevision,
+    ScrollToItem,
+    InputsChange,
+    Unknown,
+}
+
+impl UiVirtualListWindowShiftReasonV1 {
+    fn from_reason(reason: fret_ui::tree::UiDebugVirtualListWindowShiftReason) -> Self {
+        match reason {
+            fret_ui::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset => Self::ScrollOffset,
+            fret_ui::tree::UiDebugVirtualListWindowShiftReason::ViewportResize => {
+                Self::ViewportResize
+            }
+            fret_ui::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision => {
+                Self::ItemsRevision
+            }
+            fret_ui::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem => Self::ScrollToItem,
+            fret_ui::tree::UiDebugVirtualListWindowShiftReason::InputsChange => Self::InputsChange,
+            fret_ui::tree::UiDebugVirtualListWindowShiftReason::Unknown => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiVirtualListWindowShiftApplyModeV1 {
+    RetainedReconcile,
+    NonRetainedRerender,
+}
+
+impl UiVirtualListWindowShiftApplyModeV1 {
+    fn from_mode(mode: fret_ui::tree::UiDebugVirtualListWindowShiftApplyMode) -> Self {
+        match mode {
+            fret_ui::tree::UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile => {
+                Self::RetainedReconcile
+            }
+            fret_ui::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender => {
+                Self::NonRetainedRerender
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct UiVirtualRangeV1 {
     pub start_index: u64,
     pub end_index: u64,
@@ -4319,6 +4405,10 @@ pub struct UiVirtualListWindowV1 {
     pub prev_items_revision: u64,
     pub measure_mode: UiVirtualListMeasureModeV1,
     pub overscan: u64,
+    #[serde(default)]
+    pub policy_key: u64,
+    #[serde(default)]
+    pub inputs_key: u64,
     pub viewport: f32,
     pub prev_viewport: f32,
     pub offset: f32,
@@ -4335,6 +4425,14 @@ pub struct UiVirtualListWindowV1 {
     pub deferred_scroll_consumed: bool,
     #[serde(default)]
     pub window_mismatch: bool,
+    #[serde(default)]
+    pub window_shift_kind: UiVirtualListWindowShiftKindV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_shift_reason: Option<UiVirtualListWindowShiftReasonV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_shift_apply_mode: Option<UiVirtualListWindowShiftApplyModeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_shift_invalidation_detail: Option<String>,
 }
 
 impl UiVirtualListWindowV1 {
@@ -4350,6 +4448,8 @@ impl UiVirtualListWindowV1 {
             prev_items_revision: window.prev_items_revision,
             measure_mode: UiVirtualListMeasureModeV1::from_mode(window.measure_mode),
             overscan: window.overscan as u64,
+            policy_key: window.policy_key,
+            inputs_key: window.inputs_key,
             viewport: window.viewport.0,
             prev_viewport: window.prev_viewport.0,
             offset: window.offset.0,
@@ -4360,6 +4460,61 @@ impl UiVirtualListWindowV1 {
             deferred_scroll_to_item: window.deferred_scroll_to_item,
             deferred_scroll_consumed: window.deferred_scroll_consumed,
             window_mismatch: window.window_mismatch,
+            window_shift_kind: UiVirtualListWindowShiftKindV1::from_kind(window.window_shift_kind),
+            window_shift_reason: window
+                .window_shift_reason
+                .map(UiVirtualListWindowShiftReasonV1::from_reason),
+            window_shift_apply_mode: window
+                .window_shift_apply_mode
+                .map(UiVirtualListWindowShiftApplyModeV1::from_mode),
+            window_shift_invalidation_detail: window
+                .window_shift_invalidation_detail
+                .and_then(|d| d.as_str())
+                .map(|s| s.to_string()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiVirtualListWindowShiftSampleV1 {
+    pub frame_id: u64,
+    pub source: UiVirtualListWindowSourceV1,
+    pub node: u64,
+    pub element: u64,
+    pub window_shift_kind: UiVirtualListWindowShiftKindV1,
+    pub window_shift_reason: UiVirtualListWindowShiftReasonV1,
+    pub window_shift_apply_mode: UiVirtualListWindowShiftApplyModeV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_shift_invalidation_detail: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prev_window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub window_range: Option<UiVirtualRangeV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_window_range: Option<UiVirtualRangeV1>,
+}
+
+impl UiVirtualListWindowShiftSampleV1 {
+    fn from_sample(sample: &fret_ui::tree::UiDebugVirtualListWindowShiftSample) -> Self {
+        Self {
+            frame_id: sample.frame_id.0,
+            source: UiVirtualListWindowSourceV1::from_source(sample.source),
+            node: key_to_u64(sample.node),
+            element: sample.element.0,
+            window_shift_kind: UiVirtualListWindowShiftKindV1::from_kind(sample.window_shift_kind),
+            window_shift_reason: UiVirtualListWindowShiftReasonV1::from_reason(
+                sample.window_shift_reason,
+            ),
+            window_shift_apply_mode: UiVirtualListWindowShiftApplyModeV1::from_mode(
+                sample.window_shift_apply_mode,
+            ),
+            window_shift_invalidation_detail: sample
+                .window_shift_invalidation_detail
+                .and_then(|d| d.as_str())
+                .map(|s| s.to_string()),
+            prev_window_range: sample.prev_window_range.map(UiVirtualRangeV1::from_range),
+            window_range: sample.window_range.map(UiVirtualRangeV1::from_range),
+            render_window_range: sample.render_window_range.map(UiVirtualRangeV1::from_range),
         }
     }
 }
@@ -4379,6 +4534,10 @@ pub struct UiRetainedVirtualListReconcileV1 {
     pub kept_alive_items: u64,
     #[serde(default)]
     pub evicted_keep_alive_items: u64,
+    #[serde(default)]
+    pub keep_alive_pool_len_before: u64,
+    #[serde(default)]
+    pub keep_alive_pool_len_after: u64,
 }
 
 impl UiRetainedVirtualListReconcileV1 {
@@ -4391,11 +4550,11 @@ impl UiRetainedVirtualListReconcileV1 {
             preserved_items: record.preserved_items as u64,
             attached_items: record.attached_items as u64,
             detached_items: record.detached_items as u64,
-            // Keep-alive counters are not yet exported by `fret-ui`'s debug record, but we keep
-            // the serialized fields for forward compatibility with newer bundles.
-            reused_from_keep_alive_items: 0,
-            kept_alive_items: 0,
-            evicted_keep_alive_items: 0,
+            reused_from_keep_alive_items: record.reused_from_keep_alive_items as u64,
+            kept_alive_items: record.kept_alive_items as u64,
+            evicted_keep_alive_items: record.evicted_keep_alive_items as u64,
+            keep_alive_pool_len_before: record.keep_alive_pool_len_before as u64,
+            keep_alive_pool_len_after: record.keep_alive_pool_len_after as u64,
         }
     }
 }
@@ -4524,6 +4683,7 @@ pub enum UiPrepaintActionKindV1 {
     Invalidate,
     RequestRedraw,
     RequestAnimationFrame,
+    VirtualListWindowShift,
 }
 
 impl UiPrepaintActionKindV1 {
@@ -4533,6 +4693,9 @@ impl UiPrepaintActionKindV1 {
             fret_ui::tree::UiDebugPrepaintActionKind::RequestRedraw => Self::RequestRedraw,
             fret_ui::tree::UiDebugPrepaintActionKind::RequestAnimationFrame => {
                 Self::RequestAnimationFrame
+            }
+            fret_ui::tree::UiDebugPrepaintActionKind::VirtualListWindowShift => {
+                Self::VirtualListWindowShift
             }
         }
     }
@@ -4546,6 +4709,12 @@ pub struct UiPrepaintActionV1 {
     pub kind: UiPrepaintActionKindV1,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub invalidation: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub virtual_list_window_shift_kind: Option<UiVirtualListWindowShiftKindV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub virtual_list_window_shift_reason: Option<UiVirtualListWindowShiftReasonV1>,
     #[serde(default)]
     pub frame_id: u64,
 }
@@ -4564,6 +4733,13 @@ impl UiPrepaintActionV1 {
             target_node: action.target.map(key_to_u64),
             kind: UiPrepaintActionKindV1::from_kind(action.kind),
             invalidation: invalidation.map(|s| s.to_string()),
+            element: action.element.map(|id| id.0),
+            virtual_list_window_shift_kind: action
+                .virtual_list_window_shift_kind
+                .map(UiVirtualListWindowShiftKindV1::from_kind),
+            virtual_list_window_shift_reason: action
+                .virtual_list_window_shift_reason
+                .map(UiVirtualListWindowShiftReasonV1::from_reason),
             frame_id: action.frame_id.0,
         }
     }
@@ -5269,6 +5445,29 @@ impl UiDirtyViewV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiNotifyRequestV1 {
+    pub frame_id: u64,
+    pub caller_node: u64,
+    pub target_view: u64,
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+impl UiNotifyRequestV1 {
+    fn from_notify_request(req: &fret_ui::tree::UiDebugNotifyRequest) -> Self {
+        Self {
+            frame_id: req.frame_id.0,
+            caller_node: key_to_u64(req.caller_node),
+            target_view: key_to_u64(req.target_view.0),
+            file: req.file.to_string(),
+            line: req.line,
+            column: req.column,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiCacheRootStatsV1 {
     pub root: u64,
     pub element: Option<u64>,
@@ -5928,6 +6127,10 @@ pub struct UiFrameStatsV1 {
     pub layout_engine_solve_time_us: u64,
     pub layout_engine_widget_fallback_solves: u64,
     #[serde(default)]
+    pub layout_fast_path_taken: bool,
+    #[serde(default)]
+    pub layout_invalidations_count: u32,
+    #[serde(default)]
     pub model_change_invalidation_roots: u32,
     #[serde(default)]
     pub model_change_models: u32,
@@ -5996,6 +6199,10 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub virtual_list_visible_range_refreshes: u32,
     #[serde(default)]
+    pub virtual_list_window_shifts_total: u32,
+    #[serde(default)]
+    pub virtual_list_window_shifts_non_retained: u32,
+    #[serde(default)]
     pub retained_virtual_list_reconciles: u32,
     #[serde(default)]
     pub retained_virtual_list_attached_items: u32,
@@ -6034,6 +6241,8 @@ impl UiFrameStatsV1 {
             layout_engine_solves: stats.layout_engine_solves,
             layout_engine_solve_time_us: stats.layout_engine_solve_time.as_micros() as u64,
             layout_engine_widget_fallback_solves: stats.layout_engine_widget_fallback_solves,
+            layout_fast_path_taken: stats.layout_fast_path_taken,
+            layout_invalidations_count: stats.layout_invalidations_count,
             model_change_invalidation_roots: stats.model_change_invalidation_roots,
             model_change_models: stats.model_change_models,
             model_change_observation_edges: stats.model_change_observation_edges,
@@ -6069,6 +6278,8 @@ impl UiFrameStatsV1 {
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
             virtual_list_visible_range_checks: stats.virtual_list_visible_range_checks,
             virtual_list_visible_range_refreshes: stats.virtual_list_visible_range_refreshes,
+            virtual_list_window_shifts_total: stats.virtual_list_window_shifts_total,
+            virtual_list_window_shifts_non_retained: stats.virtual_list_window_shifts_non_retained,
             retained_virtual_list_reconciles: stats.retained_virtual_list_reconciles,
             retained_virtual_list_attached_items: stats.retained_virtual_list_attached_items,
             retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
@@ -6325,6 +6536,12 @@ pub struct ElementDiagnosticsSnapshotV1 {
     #[serde(default)]
     pub view_cache_reuse_root_element_samples: Vec<ElementViewCacheReuseRootElementsSampleV1>,
     #[serde(default)]
+    pub retained_keep_alive_roots_len: u32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub retained_keep_alive_roots_head: Vec<u64>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub retained_keep_alive_roots_tail: Vec<u64>,
+    #[serde(default)]
     pub node_entry_root_overwrites: Vec<ElementNodeEntryRootOverwriteV1>,
 }
 
@@ -6461,6 +6678,17 @@ impl ElementDiagnosticsSnapshotV1 {
                     elements_head: s.elements_head.into_iter().map(|id| id.0).collect(),
                     elements_tail: s.elements_tail.into_iter().map(|id| id.0).collect(),
                 })
+                .collect(),
+            retained_keep_alive_roots_len: snapshot.retained_keep_alive_roots_len,
+            retained_keep_alive_roots_head: snapshot
+                .retained_keep_alive_roots_head
+                .into_iter()
+                .map(|n| n.data().as_ffi())
+                .collect(),
+            retained_keep_alive_roots_tail: snapshot
+                .retained_keep_alive_roots_tail
+                .into_iter()
+                .map(|n| n.data().as_ffi())
                 .collect(),
             node_entry_root_overwrites: snapshot
                 .node_entry_root_overwrites
@@ -6820,6 +7048,7 @@ pub(crate) fn semantics_role_label(role: SemanticsRole) -> &'static str {
         SemanticsRole::Generic => "generic",
         SemanticsRole::Window => "window",
         SemanticsRole::Panel => "panel",
+        SemanticsRole::Toolbar => "toolbar",
         SemanticsRole::Dialog => "dialog",
         SemanticsRole::AlertDialog => "alert_dialog",
         SemanticsRole::Alert => "alert",
@@ -6857,6 +7086,7 @@ fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
         "generic" => SemanticsRole::Generic,
         "window" => SemanticsRole::Window,
         "panel" => SemanticsRole::Panel,
+        "toolbar" => SemanticsRole::Toolbar,
         "dialog" => SemanticsRole::Dialog,
         "alert_dialog" => SemanticsRole::AlertDialog,
         "alert" => SemanticsRole::Alert,
@@ -8913,7 +9143,7 @@ mod tests {
             }"#,
         )
         .expect("parse barrier_roots predicate");
-        svc.pending_script = Some(script);
+        svc.pending_script = PendingScript::from_v1(script);
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();

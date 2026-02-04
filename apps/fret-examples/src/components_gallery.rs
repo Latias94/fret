@@ -1,6 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
 use fret_app::{App, CommandId, CommandMeta, Effect, Model, WhenExpr, WindowRequest};
+use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{
     AppWindowId, Corners, Edges, Event, FileDialogFilter, FileDialogOptions, FileDialogToken,
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
@@ -13,9 +14,14 @@ use fret_markdown as markdown;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, TextProps,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    SemanticsProps, TextProps,
 };
-use fret_ui::{Invalidation, Theme, UiTree};
+use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui_kit::declarative::cached_subtree::{CachedSubtreeExt, CachedSubtreeProps};
+use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
+use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::tree::{TreeItem, TreeItemId, TreeState};
 use fret_ui_kit::{ColorRef, LayoutRefinement, OverlayController, Space, UiExt, ui};
 use fret_ui_shadcn as shadcn;
@@ -27,6 +33,7 @@ struct ComponentsGalleryWindowState {
     root: Option<fret_core::NodeId>,
     items: Model<Vec<TreeItem>>,
     tree_state: Model<TreeState>,
+    file_tree_scroll: VirtualListScrollHandle,
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -71,13 +78,50 @@ impl ComponentsGalleryDriver {
         ]
     }
 
-    fn build_ui(app: &mut App, window: AppWindowId) -> ComponentsGalleryWindowState {
-        let items = app.models_mut().insert(Self::sample_tree_items());
+    fn tree_items_for_demo() -> (Vec<TreeItem>, TreeState) {
+        if std::env::var_os("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE").is_some() {
+            let n: u64 = std::env::var("FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(50_000);
+
+            // Keep a large, mostly-flat surface for window-boundary perf/regression suites, but
+            // also include at least one expandable folder near the top so scripted harnesses can
+            // exercise expand/collapse (items_revision + entry-list churn) without collapsing the
+            // entire surface.
+            let nested_count: u64 = 128;
+            let mut children: Vec<TreeItem> =
+                Vec::with_capacity((n as usize).saturating_add(nested_count as usize));
+
+            let folder_id: TreeItemId = 1;
+            let folder_children: Vec<TreeItem> = (0..nested_count)
+                .map(|i| TreeItem::new(n + 1 + i, format!("nested_{i}.rs")))
+                .collect();
+            children.push(TreeItem::new(folder_id, "folder_1").children(folder_children));
+
+            for i in 2..=n {
+                children.push(TreeItem::new(i, format!("file_{i}.rs")));
+            }
+
+            let root_id: TreeItemId = 0;
+            let items = vec![TreeItem::new(root_id, "root").children(children)];
+            let initial_state = TreeState {
+                selected: Some(root_id),
+                expanded: [root_id].into_iter().collect(),
+            };
+            return (items, initial_state);
+        }
 
         let initial_state = TreeState {
             selected: Some(1),
             expanded: [1, 10, 20].into_iter().collect(),
         };
+        (Self::sample_tree_items(), initial_state)
+    }
+
+    fn build_ui(app: &mut App, window: AppWindowId) -> ComponentsGalleryWindowState {
+        let (items_value, initial_state) = Self::tree_items_for_demo();
+        let items = app.models_mut().insert(items_value);
         let tree_state = app.models_mut().insert(initial_state);
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
@@ -110,12 +154,15 @@ impl ComponentsGalleryDriver {
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
+        ui.set_view_cache_enabled(std::env::var_os("FRET_EXAMPLES_VIEW_CACHE").is_some());
+        ui.set_debug_enabled(std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
 
         ComponentsGalleryWindowState {
             ui,
             root: None,
             items,
             tree_state,
+            file_tree_scroll: VirtualListScrollHandle::new(),
             progress,
             checkbox,
             switch,
@@ -187,6 +234,7 @@ impl ComponentsGalleryDriver {
 
         let items = state.items.clone();
         let tree_state = state.tree_state.clone();
+        let file_tree_scroll = state.file_tree_scroll.clone();
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
@@ -213,6 +261,162 @@ impl ComponentsGalleryDriver {
 
         let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
             .render_root("components-gallery", |cx| {
+                if std::env::var_os("FRET_COMPONENTS_GALLERY_TABLE_TORTURE").is_some() {
+                    #[derive(Default)]
+                    struct TableTortureModels {
+                        data: Option<Arc<[u64]>>,
+                        columns: Option<Arc<[ColumnDef<u64>]>>,
+                        state: Option<Model<TableState>>,
+                    }
+
+                    let (data, columns, table_state) =
+                        cx.with_state(TableTortureModels::default, |st| {
+                            (st.data.clone(), st.columns.clone(), st.state.clone())
+                        });
+
+                    let (data, columns, table_state) = match (data, columns, table_state) {
+                        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+                        _ => {
+                            let n: u64 =
+                                std::env::var("FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N")
+                                    .ok()
+                                    .and_then(|v| v.parse().ok())
+                                    .unwrap_or(50_000);
+
+                            let data: Arc<[u64]> = Arc::from((0..n).collect::<Vec<u64>>());
+
+                            let cols: Vec<ColumnDef<u64>> = vec![
+                                ColumnDef::new("id").sort_by(|a: &u64, b: &u64| a.cmp(b)),
+                                ColumnDef::new("status").sort_by(|a: &u64, b: &u64| {
+                                    (a % 3).cmp(&(b % 3))
+                                }),
+                                ColumnDef::new("cpu").sort_by(|a: &u64, b: &u64| {
+                                    (((a * 7) % 100) as u32)
+                                        .cmp(&(((b * 7) % 100) as u32))
+                                }),
+                                ColumnDef::new("mem_mb").sort_by(|a: &u64, b: &u64| {
+                                    ((128 + (a % 4096)) as u32)
+                                        .cmp(&((128 + (b % 4096)) as u32))
+                                }),
+                            ];
+                            let columns: Arc<[ColumnDef<u64>]> = Arc::from(cols);
+
+                            let state = cx.app.models_mut().insert(TableState::default());
+
+                            cx.with_state(TableTortureModels::default, |st| {
+                                st.data = Some(data.clone());
+                                st.columns = Some(columns.clone());
+                                st.state = Some(state.clone());
+                            });
+
+                            (data, columns, state)
+                        }
+                    };
+
+                    let theme = Theme::global(&*cx.app).clone();
+                    let padding = theme.metric_required("metric.padding.md");
+
+                    let mut root_layout = LayoutStyle::default();
+                    root_layout.size.width = Length::Fill;
+                    root_layout.size.height = Length::Fill;
+
+                    let header: Arc<str> = Arc::from(
+                        "Table torture (retained host): click headers to sort; wheel scroll crosses overscan boundaries.",
+                    );
+
+                    let header = cx.text(header);
+
+                    let table = cx.cached_subtree_with(
+                        CachedSubtreeProps::default().contained_layout(true),
+                        |cx| {
+                            vec![cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::List,
+                                    test_id: Some(Arc::<str>::from("components-gallery-table-root")),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    let scroll_handle =
+                                        cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+                                    let state_revision =
+                                        cx.app.models().revision(&table_state).unwrap_or(0);
+                                    let items_revision = 1 ^ state_revision.rotate_left(17);
+
+                                    let mut props =
+                                        fret_ui_kit::declarative::table::TableViewProps::default();
+                                    props.overscan = 10;
+                                    props.row_height = Some(Px(28.0));
+                                    props.row_measure_mode =
+                                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed;
+                                    props.keep_alive = std::env::var(
+                                        "FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE",
+                                    )
+                                    .ok()
+                                    .and_then(|v| v.parse().ok());
+                                    props.enable_column_grouping = false;
+                                    props.enable_column_resizing = false;
+
+                                    let header_label = Arc::new(|col: &ColumnDef<u64>| {
+                                        Arc::<str>::from(col.id.as_ref())
+                                    });
+                                    let row_key_at =
+                                        Arc::new(|row: &u64, _index: usize| RowKey(*row));
+                                    let cell_at = Arc::new(
+                                        move |cx: &mut ElementContext<'_, App>,
+                                              col: &ColumnDef<u64>,
+                                              row: &u64| {
+                                            match col.id.as_ref() {
+                                                "id" => cx.text(row.to_string()),
+                                                "status" => cx.text(if row % 3 == 0 {
+                                                    "idle"
+                                                } else if row % 3 == 1 {
+                                                    "busy"
+                                                } else {
+                                                    "offline"
+                                                }),
+                                                "cpu" => cx.text(format!("{}%", (row * 7) % 100)),
+                                                "mem_mb" => cx.text(format!(
+                                                    "{} MB",
+                                                    128 + (row % 4096)
+                                                )),
+                                                _ => cx.text("?"),
+                                            }
+                                        },
+                                    );
+
+                                    vec![fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                                        cx,
+                                        data.clone(),
+                                        columns.clone(),
+                                        table_state.clone(),
+                                        &scroll_handle,
+                                        items_revision,
+                                        row_key_at,
+                                        Some(Arc::new(|row: &u64, _index: usize| {
+                                            Arc::from(row.to_string())
+                                        })),
+                                        props,
+                                        header_label,
+                                        cell_at,
+                                        Some(Arc::<str>::from(
+                                            "components-gallery-table-header-",
+                                        )),
+                                        Some(Arc::<str>::from("components-gallery-table-row-")),
+                                    )]
+                                },
+                            )]
+                        },
+                    );
+
+                    let mut props = ContainerProps::default();
+                    props.layout = root_layout;
+                    props.padding = Edges::all(padding);
+                    props.background = Some(theme.color_required("background"));
+
+                    return vec![cx.container(props, |_cx| vec![header, table])];
+                }
+
                 cx.observe_model(&tree_state, Invalidation::Layout);
                 let theme = Theme::global(&*cx.app).clone();
                 let selected = cx
@@ -251,16 +455,11 @@ impl ComponentsGalleryDriver {
                 let padding = theme.metric_required("metric.padding.md");
                 let bg = theme.color_required("background");
 
-                vec![ui::v_flex(cx, |cx| {
-                    let mut renderer = |cx: &mut fret_ui::ElementContext<'_, App>,
-                                        entry: &fret_ui_kit::TreeEntry,
-                                        _state: fret_ui_kit::TreeRowState| {
-                        vec![cx.text(entry.label.as_ref())]
-                    };
-                                vec![
-                                    cx.text(title),
-                                    cx.text(subtitle),
-                                    markdown::Markdown::new(markdown_sample.clone())
+                 vec![ui::v_flex(cx, |cx| {
+                                 vec![
+                                     cx.text(title),
+                                     cx.text(subtitle),
+                                     markdown::Markdown::new(markdown_sample.clone())
                                         .into_element(cx),
                                     cx.flex(
                                         FlexProps {
@@ -1141,25 +1340,32 @@ impl ComponentsGalleryDriver {
                                             cx.text(
                                                 "cmdk: Ctrl/Cmd+P opens, arrows/hover highlight, Enter selects",
                                             ),
-                                            cmdk,
-                                        ]
+                                             cmdk,
+                                         ]
+                                     },
+                                 ),
+                                file_tree_view_retained_v0(
+                                    cx,
+                                    items,
+                                    tree_state,
+                                    &file_tree_scroll,
+                                    FileTreeViewProps {
+                                        layout: tree_slot_layout,
+                                        row_height: Px(26.0),
+                                        overscan: 12,
+                                        keep_alive: std::env::var(
+                                            "FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE",
+                                        )
+                                        .ok()
+                                        .and_then(|v| v.parse().ok()),
+                                        debug_root_test_id: Some(Arc::<str>::from(
+                                            "components-gallery-file-tree-root",
+                                        )),
+                                        debug_row_test_id_prefix: Some(Arc::<str>::from(
+                                            "components-gallery-file-tree-node",
+                                        )),
                                     },
                                 ),
-                                    cx.container(
-                                        ContainerProps {
-                                            layout: tree_slot_layout,
-                                            ..Default::default()
-                                        },
-                                        |cx| {
-                                            vec![fret_ui_kit::declarative::tree::tree_view_with_renderer(
-                                                cx,
-                                                items,
-                                                tree_state,
-                                                fret_ui_kit::Size::Medium,
-                                                &mut renderer,
-                                            )]
-                                        },
-                                    ),
                                 ]
                     })
                     .size_full()
@@ -1356,8 +1562,13 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[fret_app::ModelId],
     ) {
-        let WinitWindowContext { app, state, .. } = context;
+        let WinitWindowContext {
+            app, state, window, ..
+        } = context;
 
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_model_changes(window, changed);
+        });
         state.ui.propagate_model_changes(app, changed);
 
         if changed.contains(&state.ui_font_override.id()) {
@@ -1384,7 +1595,12 @@ impl WinitAppDriver for ComponentsGalleryDriver {
         context: WinitWindowContext<'_, Self::WindowState>,
         changed: &[std::any::TypeId],
     ) {
-        let WinitWindowContext { app, state, .. } = context;
+        let WinitWindowContext {
+            app, state, window, ..
+        } = context;
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_global_changes(app, window, changed);
+        });
         state.ui.propagate_global_changes(app, changed);
     }
 
@@ -1523,6 +1739,19 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             window,
             state,
         } = context;
+
+        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            if !svc.is_enabled() {
+                return false;
+            }
+            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                return true;
+            }
+            svc.maybe_intercept_event_for_picking(app, window, event)
+        });
+        if consumed {
+            return;
+        }
         if matches!(event, Event::WindowCloseRequested) {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
@@ -1652,11 +1881,102 @@ impl WinitAppDriver for ComponentsGalleryDriver {
 
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
+
+        let inspection_active = app
+            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                svc.wants_inspection_active(window)
+            });
+        state.ui.set_inspection_active(inspection_active);
+
         scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+
+        let semantics_snapshot = state.ui.semantics_snapshot();
+        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.drive_script_for_window(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                semantics_snapshot,
+                element_runtime,
+            )
+        });
+
+        if drive.request_redraw {
+            app.request_redraw(window);
+            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+            // scene is otherwise idle. Requesting an animation frame ensures the runner
+            // schedules another render tick.
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+
+        let mut injected_any = false;
+        for event in drive.events {
+            injected_any = true;
+            state.ui.dispatch_event(app, services, &event);
+        }
+
+        if injected_any {
+            let mut deferred_effects: Vec<Effect> = Vec::new();
+            loop {
+                let effects = app.flush_effects();
+                if effects.is_empty() {
+                    break;
+                }
+
+                let mut applied_any_command = false;
+                for effect in effects {
+                    match effect {
+                        Effect::Command { window: w, command } => {
+                            if w.is_none() || w == Some(window) {
+                                let _ = state.ui.dispatch_command(app, services, &command);
+                                applied_any_command = true;
+                            } else {
+                                deferred_effects.push(Effect::Command { window: w, command });
+                            }
+                        }
+                        other => deferred_effects.push(other),
+                    }
+                }
+
+                if !applied_any_command {
+                    break;
+                }
+            }
+            for effect in deferred_effects {
+                app.push_effect(effect);
+            }
+
+            state.ui.request_semantics_snapshot();
+            let mut frame =
+                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+            frame.layout_all();
+        }
+
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.paint_all(scene);
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+            svc.record_snapshot(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                &state.ui,
+                element_runtime,
+                scene,
+            );
+            let _ = svc.maybe_dump_if_triggered();
+            if svc.is_enabled() {
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
+        });
     }
 
     fn window_create_spec(

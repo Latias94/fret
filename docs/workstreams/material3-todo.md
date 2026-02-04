@@ -1,6 +1,6 @@
 # Material 3 / Expressive Alignment (TODO)
 
-Status: Work-in-progress
+Status: Complete (MVP landed; follow-ups tracked in `docs/workstreams/material3-next-wave-v2.md`)
 
 This workstream tracks **visual + interaction outcome alignment** for Material Design 3 (and
 Material 3 Expressive) in Fret.
@@ -21,6 +21,7 @@ Prefer reusing these primitives over re-inventing per-component state precedence
 - State-driven style resolution v1: `docs/workstreams/state-driven-style-resolution-v1.md`
   - Contract gate: `docs/adr/1158-state-driven-style-resolution-v1.md`
   - Ecosystem override surface: `docs/adr/1159-ecosystem-style-override-surface-v1.md`
+- Post-MVP next wave: `docs/workstreams/material3-next-wave-v2.md`
 
 ## Goals
 
@@ -157,7 +158,9 @@ These files are primarily *shared policy primitives*, not one-off component layo
       Fret's `RovingFlex` now mirrors that behavior by resolving the active item index from descendant focus.
   - Evidence: `ecosystem/fret-ui-material3/src/chip_set.rs`,
     `crates/fret-ui/src/declarative/host_widget/event/roving_flex.rs`,
-    tests in `crates/fret-ui/src/declarative/tests/interactions.rs` (`roving_flex_treats_descendant_focus_as_active_item`).
+    tests in `crates/fret-ui/src/declarative/tests/interactions.rs` (`roving_flex_treats_descendant_focus_as_active_item`),
+    tests in `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`chip_set_roving_treats_trailing_action_focus_as_active_chip`),
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_chip`).
 
 ## Tracking Checklist
 
@@ -578,21 +581,39 @@ These files are primarily *shared policy primitives*, not one-off component layo
 - [x] Navigation bar (MVP: roving focus + state layer + bounded ripple + active indicator)
   - Evidence: `ecosystem/fret-ui-material3/src/navigation_bar.rs` (`NavigationBar`, `NavigationBarItem`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_bar_*`),
-    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_navigation_bar`).
+    `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_navigation_bar`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_navigation_suite_goldens_v1`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_bar_roving_skips_disabled_and_updates_model`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_bar_roving_wraps_and_skips_disabled_on_reverse`),
+    `goldens/material3-headless/v1/material3-navigation.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated).
 - [x] Navigation rail (MVP: roving focus + state layer + bounded ripple + active indicator)
   - Evidence: `ecosystem/fret-ui-material3/src/navigation_rail.rs` (`NavigationRail`, `NavigationRailItem`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_rail_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_navigation_rail`),
-    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_NAVIGATION_RAIL`).
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_NAVIGATION_RAIL`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_navigation_suite_goldens_v1`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_rail_roving_skips_disabled_and_updates_model`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_rail_roving_wraps_and_skips_disabled_on_reverse`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_rail_roving_does_not_wrap_when_loop_navigation_false`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_rail_roving_single_enabled_item_does_not_move_under_no_loop`),
+    `goldens/material3-headless/v1/material3-navigation.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated).
 - [x] Navigation drawer (MVP: roving focus + state layer + bounded ripple + selected pill background)
   - Evidence: `ecosystem/fret-ui-material3/src/navigation_drawer.rs` (`NavigationDrawer`, `NavigationDrawerItem`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_navigation_drawer_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_navigation_drawer`),
-    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_NAVIGATION_DRAWER`).
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_NAVIGATION_DRAWER`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_navigation_suite_goldens_v1`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_drawer_roving_skips_disabled_and_updates_model`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_drawer_roving_wraps_and_skips_disabled_on_reverse`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_drawer_roving_does_not_wrap_when_loop_navigation_false`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`navigation_drawer_roving_single_enabled_item_does_not_move_under_no_loop`),
+    `goldens/material3-headless/v1/material3-navigation.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated).
 - [x] Modal navigation drawer (MVP: modal overlay + scrim + slide-in motion + focus trap/restore)
   - Evidence: `ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs` (`ModalNavigationDrawer`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_modal_navigation_drawer`),
-    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER`).
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_MODAL_NAVIGATION_DRAWER`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_navigation_suite_goldens_v1`),
+    `goldens/material3-headless/v1/material3-navigation.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated).
 - [x] Menu (MVP: in-place list + dropdown overlay, roving focus + prefix typeahead, state layer + bounded ripple)
   - Evidence: `ecosystem/fret-ui-material3/src/menu.rs` (`Menu`, `MenuItem`, `roving_typeahead_prefix_arc_str_always_wrap`),
     `ecosystem/fret-ui-material3/src/dropdown_menu.rs` (`DropdownMenu`),
@@ -632,7 +653,11 @@ These files are primarily *shared policy primitives*, not one-off component layo
   - Evidence: `ecosystem/fret-ui-material3/src/snackbar.rs` (`SnackbarHost`, `SnackbarController`),
     `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_snackbar_*`),
     `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_snackbar`),
-    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_SNACKBAR`).
+    `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_SNACKBAR`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_snackbar_suite_goldens_v1`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`snackbar_action_emits_command_and_dismisses`),
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`snackbar_dismiss_button_dismisses_without_emitting_command`),
+    `goldens/material3-headless/v1/material3-snackbar.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated).
 
 ### Conformance / Regression
 

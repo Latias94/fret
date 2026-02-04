@@ -5,6 +5,8 @@
 
 pub mod cartesian;
 pub mod chart;
+#[cfg(feature = "imui")]
+pub mod imui;
 pub mod input_map;
 pub mod linking;
 pub mod plot;

@@ -396,11 +396,27 @@ where
 #[derive(Debug, Clone)]
 pub struct TableHead {
     text: Arc<str>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl TableHead {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -414,13 +430,14 @@ impl TableHead {
         };
         let fg = foreground(&theme);
 
-        let chrome = ChromeRefinement::default().px(px).py(py);
+        let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
         let props = decl_style::container_props(
             &theme,
             chrome,
             LayoutRefinement::default()
                 .w_full()
-                .min_h(row_min_h(&theme)),
+                .min_h(row_min_h(&theme))
+                .merge(self.layout),
         );
 
         let text = self.text;

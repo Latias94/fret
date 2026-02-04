@@ -1,0 +1,1038 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "filtering_fns",
+  "data": [
+    {
+      "id": 1,
+      "text": "apple",
+      "num": 3,
+      "flag": true,
+      "tags": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "id": 2,
+      "text": "Banana",
+      "num": 5,
+      "flag": false,
+      "tags": [
+        "b"
+      ]
+    },
+    {
+      "id": 3,
+      "text": "carrot",
+      "num": 10,
+      "flag": true,
+      "tags": []
+    },
+    {
+      "id": 4,
+      "text": null,
+      "num": 0,
+      "flag": false,
+      "tags": [
+        "x",
+        "y"
+      ]
+    },
+    {
+      "id": 5,
+      "text": "apricot",
+      "num": 7,
+      "flag": true,
+      "tags": [
+        "a"
+      ]
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "filtering_fns_text_auto_includes",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "text_auto",
+            "value": "ap"
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_text_equals_string",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "text_equals_string",
+            "value": "banana"
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_num_in_number_range",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "num_range",
+            "value": [
+              4,
+              8
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2",
+            "5"
+          ],
+          "flat": [
+            "2",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2",
+            "5"
+          ],
+          "flat": [
+            "2",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2",
+            "5"
+          ],
+          "flat": [
+            "2",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2",
+            "5"
+          ],
+          "flat": [
+            "2",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_tags_arr_includes_all",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "tags_all",
+            "value": [
+              "a",
+              "b"
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_bool_equals",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "flag_equals",
+            "value": true
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_weak_equals_string_number",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "num_weak",
+            "value": "5"
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_global_filter_includes",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "globalFilter": "ap"
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_global_filter_default_excludes_bool",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "globalFilter": "true"
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [],
+          "flat": []
+        },
+        "sorted": {
+          "root": [],
+          "flat": []
+        },
+        "paginated": {
+          "root": [],
+          "flat": []
+        },
+        "row_model": {
+          "root": [],
+          "flat": []
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_global_filter_disabled_when_enable_filters_false",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "enableFilters": false
+      },
+      "state": {
+        "globalFilter": "ap"
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_registry_custom_text_case_sensitive",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "filterFnsMode": "custom_text_case_sensitive"
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "text_custom",
+            "value": "A"
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [],
+          "flat": []
+        },
+        "sorted": {
+          "root": [],
+          "flat": []
+        },
+        "paginated": {
+          "root": [],
+          "flat": []
+        },
+        "row_model": {
+          "root": [],
+          "flat": []
+        }
+      }
+    },
+    {
+      "id": "filtering_fns_action_set_empty_removes",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "columnFilters": [
+          {
+            "id": "text_auto",
+            "value": "ap"
+          }
+        ]
+      },
+      "actions": [
+        {
+          "type": "setColumnFilterValue",
+          "column_id": "text_auto",
+          "value": ""
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "text_auto": 0,
+            "text_equals_string": 150,
+            "num_range": 300,
+            "num_weak": 450,
+            "tags_all": 600,
+            "flag_equals": 750,
+            "text_custom": 900
+          },
+          "left": {
+            "text_auto": null,
+            "text_equals_string": null,
+            "num_range": null,
+            "num_weak": null,
+            "tags_all": null,
+            "flag_equals": null,
+            "text_custom": null
+          },
+          "center": {
+            "text_auto": 0,
+            "text_equals_string": 150,
+            "num_range": 300,
+            "num_weak": 450,
+            "tags_all": 600,
+            "flag_equals": 750,
+            "text_custom": 900
+          },
+          "right": {
+            "text_auto": null,
+            "text_equals_string": null,
+            "num_range": null,
+            "num_weak": null,
+            "tags_all": null,
+            "flag_equals": null,
+            "text_custom": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "text_auto": 900,
+            "text_equals_string": 750,
+            "num_range": 600,
+            "num_weak": 450,
+            "tags_all": 300,
+            "flag_equals": 150,
+            "text_custom": 0
+          },
+          "left": {
+            "text_auto": null,
+            "text_equals_string": null,
+            "num_range": null,
+            "num_weak": null,
+            "tags_all": null,
+            "flag_equals": null,
+            "text_custom": null
+          },
+          "center": {
+            "text_auto": 900,
+            "text_equals_string": 750,
+            "num_range": 600,
+            "num_weak": 450,
+            "tags_all": 300,
+            "flag_equals": 150,
+            "text_custom": 0
+          },
+          "right": {
+            "text_auto": null,
+            "text_equals_string": null,
+            "num_range": null,
+            "num_weak": null,
+            "tags_all": null,
+            "flag_equals": null,
+            "text_custom": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    }
+  ]
+}

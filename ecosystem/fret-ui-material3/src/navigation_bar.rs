@@ -33,6 +33,7 @@ use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::surface::material_surface_style;
 use crate::motion::SpringAnimator;
 use crate::tokens::navigation_bar as nav_tokens;
+use crate::{Badge, BadgePlacement, BadgeValue};
 
 #[derive(Debug, Default, Clone)]
 struct NavigationBarLayoutRuntime {
@@ -44,6 +45,7 @@ pub struct NavigationBarItem {
     value: Arc<str>,
     label: Arc<str>,
     icon: IconId,
+    badge: Option<BadgeValue>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -55,10 +57,26 @@ impl NavigationBarItem {
             value: value.into(),
             label: label.into(),
             icon,
+            badge: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    pub fn badge(mut self, badge: BadgeValue) -> Self {
+        self.badge = Some(badge);
+        self
+    }
+
+    pub fn badge_dot(mut self) -> Self {
+        self.badge = Some(BadgeValue::Dot);
+        self
+    }
+
+    pub fn badge_text(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.badge = Some(BadgeValue::Text(value.into()));
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -353,6 +371,7 @@ fn navigation_bar_item<H: UiHost>(
     let value = item.value.clone();
     let label = item.label.clone();
     let icon = item.icon.clone();
+    let badge = item.badge.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
 
@@ -459,6 +478,26 @@ fn navigation_bar_item<H: UiHost>(
                     });
 
                     let icon_el = nav_icon(cx, theme, &icon, icon_color);
+                    let icon_el = if let Some(badge) = badge.clone() {
+                        let badge = match badge {
+                            BadgeValue::Dot => Badge::dot(),
+                            BadgeValue::Text(value) => Badge::text(value),
+                        };
+                        let badge_test_id = test_id
+                            .as_ref()
+                            .map(|id| Arc::<str>::from(format!("{id}-badge")));
+                        let badge = badge
+                            .placement(BadgePlacement::NavigationIcon)
+                            .navigation_anchor_size(nav_tokens::icon_size(theme));
+                        let badge = if let Some(badge_test_id) = badge_test_id {
+                            badge.test_id(badge_test_id)
+                        } else {
+                            badge
+                        };
+                        badge.into_element(cx, move |_cx| vec![icon_el])
+                    } else {
+                        icon_el
+                    };
                     cx.flex(
                         FlexProps {
                             layout: {
