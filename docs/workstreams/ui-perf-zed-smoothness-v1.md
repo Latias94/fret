@@ -162,6 +162,8 @@ Notes:
 - `fretboard diag perf` defaults `--timeout-ms 30000`. If `--launch -- cargo run ... --release` triggers a rebuild,
   compilation alone can exceed 30s, so the suite can time out before the app even starts. Prefer passing an
   explicit `--timeout-ms` (e.g. 300000).
+- If you see timeouts or flakiness with `--launch -- cargo run -p fret-ui-gallery --release`, prebuild the demo once
+  (`cargo build -p fret-ui-gallery --release`) and then launch `target/release/fret-ui-gallery` directly.
 - If `--reuse-launch --repeat 7` is flaky on your machine, start with `--repeat 3` and record the results in the perf
   log. Keep the “Tier B” gate at repeat=7 once the harness is stable.
 
