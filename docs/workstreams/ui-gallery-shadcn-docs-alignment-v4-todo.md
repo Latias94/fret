@@ -27,12 +27,12 @@ Tracking format:
 
 ## P0 — Information Architecture (make parity debuggable)
 
-- [ ] SGD-ia-010 Reorder the `Shadcn` page group to match `radix/meta.json` order.
-- [ ] SGD-ia-020 Resolve non-upstream pages in the Shadcn group (e.g. `Icons`, `DataGrid`, hub pages like `Forms/Menus/Overlay`).
+- [x] SGD-ia-010 Reorder the `Shadcn` page group to match `radix/meta.json` order.
+- [x] SGD-ia-020 Resolve non-upstream pages in the Shadcn group (e.g. `Icons`, `DataGrid`, hub pages like `Forms/Menus/Overlay`).
   - Option A (preferred): move to a separate “Shadcn (Extras)” group.
   - Option B: keep them, but place strictly after `typography` and label them “extras”.
-- [ ] SGD-ia-030 Ensure the gallery left-nav has a persistent selected state (matches shadcn docs UX).
-- [ ] SGD-ia-040 Remove the “pressed text sinks / baseline shifts” effect from nav rows (should not change layout metrics).
+- [x] SGD-ia-030 Ensure the gallery left-nav has a persistent selected state (matches shadcn docs UX).
+- [~] SGD-ia-040 Remove the “pressed text sinks / baseline shifts” effect from nav rows (should not change layout metrics).
 
 ---
 
@@ -59,7 +59,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] avatar
 - [ ] badge
 - [ ] breadcrumb
-- [ ] button
+- [~] button (page examples re-ordered + expanded; still validating interactions)
 - [ ] button-group
 - [ ] calendar
 - [ ] card
@@ -95,7 +95,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] radio-group
 - [ ] resizable
 - [ ] scroll-area
-- [ ] select
+- [~] select (group semantics + default alignment audited; needs full docs example order)
 - [ ] separator
 - [ ] sheet
 - [ ] sidebar
@@ -121,7 +121,8 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] SGD-bug-020 Left-nav “text sinks” on click (pressed state changes layout metrics).
 - [ ] SGD-bug-030 Accordion parity vs upstream (trigger height/padding, chevron behavior, content animation).
 - [ ] SGD-bug-040 Card preview text vertical alignment jitter when switching pages.
-- [ ] SGD-bug-050 Calendar “blank space to the right”: confirm this is intentional `w-fit` behavior vs a layout/centering bug.
+- [x] SGD-bug-050 Calendar “blank space to the right”: confirmed calendar examples are narrow in web goldens (expected whitespace in wide viewports).
+- [x] SGD-bug-060 Switch thumb vertical centering: covered by `Switch` unit + web golden geometry tests (no repro in automated checks).
 
 ---
 
@@ -130,4 +131,3 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] SGD-tool-010 Add a lightweight “walk pages in docs order” smoke runner (jump + layout + paint once).
 - [ ] SGD-tool-020 Add per-page state matrix helpers for rich components (Button, Toggle, Switch, Select, Tabs).
 - [ ] SGD-tool-030 Add a golden-friendly “one-shot snapshot” mode for UI gallery pages (deterministic, no input).
-
