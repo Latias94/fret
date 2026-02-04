@@ -812,7 +812,40 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn ordered_columns(&self) -> Vec<&super::ColumnDef<TData>> {
-        super::order_columns(&self.columns, &self.state.column_order)
+        let ordered = super::order_columns(&self.columns, &self.state.column_order);
+        let mode = self.options.grouped_column_mode;
+        let grouping = self.state.grouping.as_slice();
+
+        if grouping.is_empty() || mode == super::GroupedColumnMode::None {
+            return ordered;
+        }
+
+        let is_grouped =
+            |c: &&super::ColumnDef<TData>| grouping.iter().any(|id| id.as_ref() == c.id.as_ref());
+
+        let non_grouped: Vec<&super::ColumnDef<TData>> = ordered
+            .iter()
+            .copied()
+            .filter(|c| !is_grouped(&c))
+            .collect();
+
+        if mode == super::GroupedColumnMode::Remove {
+            return non_grouped;
+        }
+
+        let by_id: HashMap<&str, &super::ColumnDef<TData>> = ordered
+            .iter()
+            .copied()
+            .map(|c| (c.id.as_ref(), c))
+            .collect();
+        let mut grouped_cols: Vec<&super::ColumnDef<TData>> = Vec::new();
+        for id in grouping {
+            if let Some(col) = by_id.get(id.as_ref()).copied() {
+                grouped_cols.push(col);
+            }
+        }
+        grouped_cols.extend(non_grouped);
+        grouped_cols
     }
 
     pub fn column_order(&self) -> &super::ColumnOrderState {

@@ -233,6 +233,11 @@ ColumnDef keys referenced by upstream feature implementations:
     - `onGroupingChange(updater)` controlled-state semantics (fixtures assert `next_state.grouping`).
     - `getGroupedRowModel` override (fixture-only marker `__getGroupedRowModel=pre_grouped`).
 - [ ] HTP-grp-050 Align `groupedColumnMode` behavior and column ordering interactions.
+- [x] HTP-grp-050 Align `groupedColumnMode` behavior and column ordering interactions.
+  - Parity-gated via header/cell + core-model snapshots:
+    - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
+    - Snapshots: `headers_cells_grouped_column_mode_*`
 - [ ] HTP-grp-060 Align `aggregationFns` registry and `renderFallbackValue` behavior.
 
 ---

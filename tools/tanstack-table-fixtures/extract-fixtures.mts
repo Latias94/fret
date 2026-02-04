@@ -81,6 +81,10 @@ type SnapshotId =
   | "headers_cells_hide_right_leaf"
   | "headers_cells_hide_left_leaf"
   | "headers_cells_column_order_reorders"
+  | "headers_cells_grouped_column_mode_reorder_moves_grouped_first"
+  | "headers_cells_grouped_column_mode_remove_hides_grouped_column"
+  | "headers_cells_grouped_column_mode_remove_drops_pinned_grouped_column"
+  | "headers_cells_grouped_column_mode_reorder_respects_column_order_after_grouping"
   | "visord_baseline"
   | "visord_toggle_column_a_off"
   | "visord_toggle_all_off_keeps_non_hideable"
@@ -212,6 +216,7 @@ type TanStackOptions = {
   enableGrouping?: boolean
   enableColumnPinning?: boolean
   enablePinning?: boolean
+  groupedColumnMode?: "reorder" | "remove" | false
   columnResizeMode?: "onChange" | "onEnd"
   columnResizeDirection?: "ltr" | "rtl"
   // Fixture-only: override `getGroupedRowModel` with a deterministic implementation.
@@ -1267,6 +1272,7 @@ async function main(): Promise<void> {
       enableGrouping: options.enableGrouping,
       enableColumnPinning: options.enableColumnPinning,
       enablePinning: options.enablePinning,
+      groupedColumnMode: options.groupedColumnMode,
       columnResizeMode: options.columnResizeMode,
       columnResizeDirection: options.columnResizeDirection,
       ...(options.globalFilterFn !== undefined
@@ -2660,8 +2666,8 @@ function snapshotColumnPinning(
     ]
   } else if (case_id === "headers_cells") {
     const base = defaultOptions
-    const mk = (id: SnapshotId, state: TanStackState) => {
-      const { table } = buildTable(base, state)
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const { table } = buildTable(options, state)
 
       const baseExpect: FixtureSnapshot["expect"] = {
         core: snapshotRowModel(table.getCoreRowModel()),
@@ -2679,7 +2685,7 @@ function snapshotColumnPinning(
 
       return {
         id,
-        options: base,
+        options,
         state,
         expect: {
           ...baseExpect,
@@ -2720,22 +2726,44 @@ function snapshotColumnPinning(
     }
 
     snapshots = [
-      mk("baseline", { columnPinning: { left: ["name"], right: ["mem_mb"] } }),
-      mk("headers_cells_order_and_pinning", {
+      mk("baseline", base, { columnPinning: { left: ["name"], right: ["mem_mb"] } }),
+      mk("headers_cells_order_and_pinning", base, {
         columnOrder: ["mem_mb", "cpu", "name"],
         columnPinning: { left: ["cpu"], right: [] },
       }),
-      mk("headers_cells_hide_right_leaf", {
+      mk("headers_cells_hide_right_leaf", base, {
         columnPinning: { left: ["name"], right: ["mem_mb"] },
         columnVisibility: { mem_mb: false },
       }),
-      mk("headers_cells_hide_left_leaf", {
+      mk("headers_cells_hide_left_leaf", base, {
         columnPinning: { left: ["cpu"], right: ["mem_mb"] },
         columnVisibility: { cpu: false },
       }),
-      mk("headers_cells_column_order_reorders", {
+      mk("headers_cells_column_order_reorders", base, {
         columnOrder: ["cpu", "name", "mem_mb"],
       }),
+      mk(
+        "headers_cells_grouped_column_mode_reorder_moves_grouped_first",
+        { ...base, groupedColumnMode: "reorder" },
+        {
+        grouping: ["mem_mb"],
+        },
+      ),
+      mk("headers_cells_grouped_column_mode_remove_hides_grouped_column", { ...base, groupedColumnMode: "remove" }, {
+        grouping: ["cpu"],
+      }),
+      mk("headers_cells_grouped_column_mode_remove_drops_pinned_grouped_column", { ...base, groupedColumnMode: "remove" }, {
+        grouping: ["cpu"],
+        columnPinning: { left: ["cpu"], right: [] },
+      }),
+      mk(
+        "headers_cells_grouped_column_mode_reorder_respects_column_order_after_grouping",
+        { ...base, groupedColumnMode: "reorder" },
+        {
+        columnOrder: ["mem_mb", "cpu", "name"],
+        grouping: ["cpu"],
+        },
+      ),
     ]
   } else if (case_id === "visibility_ordering") {
     const coreModelForState = (options: TanStackOptions, state: TanStackState) => {

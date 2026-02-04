@@ -1,4 +1,4 @@
-use super::{ColumnResizeDirection, ColumnResizeMode};
+use super::{ColumnResizeDirection, ColumnResizeMode, GroupedColumnMode};
 
 /// Headless table options (TanStack-aligned semantics, Rust-native API).
 #[derive(Debug, Clone, Copy)]
@@ -70,6 +70,9 @@ pub struct TableOptions {
     ///
     /// When `true`, `grouped_row_model()` returns `pre_grouped_row_model()`.
     pub manual_grouping: bool,
+    /// Determines how grouped columns are ordered in the leaf column list (TanStack
+    /// `groupedColumnMode`).
+    pub grouped_column_mode: GroupedColumnMode,
     /// Determines when `column_sizing` updates during a resize interaction (TanStack
     /// `columnResizeMode`).
     pub column_resize_mode: ColumnResizeMode,
@@ -106,6 +109,7 @@ impl Default for TableOptions {
             enable_multi_row_selection: true,
             enable_sub_row_selection: true,
             manual_grouping: false,
+            grouped_column_mode: GroupedColumnMode::Reorder,
             column_resize_mode: ColumnResizeMode::OnEnd,
             column_resize_direction: ColumnResizeDirection::Ltr,
         }

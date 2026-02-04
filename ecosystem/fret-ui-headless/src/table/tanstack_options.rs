@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{ColumnResizeDirection, ColumnResizeMode, TableOptions};
+use super::{ColumnResizeDirection, ColumnResizeMode, GroupedColumnMode, TableOptions};
 
 fn default_true() -> bool {
     true
@@ -19,6 +19,20 @@ pub enum TanStackColumnResizeMode {
 pub enum TanStackColumnResizeDirection {
     Ltr,
     Rtl,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TanStackGroupedColumnModeStr {
+    Reorder,
+    Remove,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum TanStackGroupedColumnMode {
+    Bool(bool),
+    Str(TanStackGroupedColumnModeStr),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,6 +61,8 @@ pub struct TanStackTableOptions {
     pub enable_row_pinning: Option<bool>,
     #[serde(default = "default_true", rename = "enableGrouping")]
     pub enable_grouping: bool,
+    #[serde(default, rename = "groupedColumnMode")]
+    pub grouped_column_mode: Option<TanStackGroupedColumnMode>,
     #[serde(default, rename = "enableColumnPinning")]
     pub enable_column_pinning: Option<bool>,
     #[serde(default, rename = "enablePinning")]
@@ -94,6 +110,7 @@ impl Default for TanStackTableOptions {
             keep_pinned_rows: true,
             enable_row_pinning: None,
             enable_grouping: true,
+            grouped_column_mode: None,
             enable_column_pinning: None,
             enable_pinning: None,
             enable_sorting: true,
@@ -133,6 +150,17 @@ impl TanStackTableOptions {
         out.keep_pinned_rows = self.keep_pinned_rows;
         out.enable_row_pinning = self.enable_row_pinning.unwrap_or(out.enable_pinning);
         out.enable_grouping = self.enable_grouping;
+        out.grouped_column_mode = match self.grouped_column_mode {
+            None => out.grouped_column_mode,
+            Some(TanStackGroupedColumnMode::Bool(false)) => GroupedColumnMode::None,
+            Some(TanStackGroupedColumnMode::Bool(true)) => GroupedColumnMode::Reorder,
+            Some(TanStackGroupedColumnMode::Str(TanStackGroupedColumnModeStr::Reorder)) => {
+                GroupedColumnMode::Reorder
+            }
+            Some(TanStackGroupedColumnMode::Str(TanStackGroupedColumnModeStr::Remove)) => {
+                GroupedColumnMode::Remove
+            }
+        };
         out.enable_column_pinning = self.enable_column_pinning.unwrap_or(out.enable_pinning);
         out.enable_sorting = self.enable_sorting;
         out.enable_multi_sort = self.enable_multi_sort;
