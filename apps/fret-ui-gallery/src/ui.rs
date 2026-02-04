@@ -196,7 +196,11 @@ pub(crate) fn sidebar_view(
         decl_style::container_props(
             theme,
             ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required("muted")))
+                .bg(ColorRef::Color(
+                    theme
+                        .color_by_key("sidebar")
+                        .unwrap_or_else(|| theme.color_required("background")),
+                ))
                 .p(Space::N4),
             LayoutRefinement::default().w_px(Px(280.0)).h_full(),
         ),
