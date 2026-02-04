@@ -24,8 +24,10 @@ scroll buttons + max-height clamping), not as incidental layout.
 - Menu content insets + overall menu height: **Gated**
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
-- Hovered/highlighted item chrome: **Gated** (`menubar-demo.highlight-first.open.json`)
-- Focus ring + roving focus visuals: **Partially gated** (focused item bg/fg via `menubar-demo.focus-first.open.json`)
+- Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`, `*.submenu-kbd-vp1440x240.open.json`)
+- SubTrigger open-state chrome (`data-state=open` bg/fg): **Gated** (`*.submenu-kbd.open.json`)
+- Hovered/highlighted item chrome (bg/fg): **Gated** (`menubar-demo.highlight-first.open.json`)
+- Keyboard roving focus visuals (focused item bg/fg): **Gated** (`menubar-demo.focus-first.open.json`)
 
 Evidence anchors:
 
@@ -37,7 +39,13 @@ Evidence anchors:
   `assert_menubar_demo_constrained_scroll_state_matches`,
   `assert_menubar_demo_submenu_*`)
   and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-  (`web_vs_fret_menubar_demo_highlighted_item_background_matches_web`,
+  (`web_vs_fret_menubar_demo_panel_size_matches_web`,
+  `web_vs_fret_menubar_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_menubar_demo_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_menubar_demo_submenu_kbd_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web`,
   `web_vs_fret_menubar_demo_focused_item_chrome_matches_web`)
 
 ### DropdownMenu (`dropdown-menu-demo*`, `context-menu-demo*`)
@@ -48,8 +56,12 @@ Evidence anchors:
 - Menu content insets + overall menu height: **Gated**
 - Scroll state (first visible item under clamp): **Gated**
 - Submenu placement + constrained submenu: **Gated** (`*.submenu*`)
-- Hovered/highlighted item chrome: **Gated** (`*.highlight-first.open.json`)
-- Focus ring + roving focus visuals: **Partially gated** (focused item bg/fg via `*.focus-first.open.json`)
+- Submenu panel size (portal `w/h`): **Gated** (`*.submenu-kbd.open.json`, `*.submenu-kbd-vp1440x240.open.json`)
+- SubTrigger open-state chrome (`data-state=open` bg/fg): **Gated** (`*.submenu-kbd.open.json`)
+- Hovered/highlighted item chrome (bg/fg): **Gated** (`*.highlight-first.open.json`)
+- Keyboard roving focus visuals (focused item bg/fg): **Gated** (`*.focus-first.open.json`)
+- Destructive variant focus tint (bg/fg): **Gated** (`context-menu-demo.submenu-kbd-delete-focus.open.json`)
+- Destructive variant idle fg (no highlight): **Gated** (`context-menu-demo.submenu-kbd.open.json`)
 
 Evidence anchors:
 
@@ -60,13 +72,33 @@ Evidence anchors:
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.highlight-first.open.json`
   - `goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.focus-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.focus-first.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/context-menu-demo.submenu-kbd-delete-focus.open.json`
+  - Note: `context-menu-demo.focus-first` is captured by opening via pointer context menu and then
+    forcing focus onto the first `[role='menuitem']` (scripted `steps=keys=[role='menuitem']@Home`),
+    because the upstream `context-menu-demo` does not reliably open from the keyboard in our
+    extractor harness.
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
   (`assert_dropdown_menu_demo_constrained_scroll_state_matches`,
   `assert_context_menu_demo_constrained_scroll_state_matches`)
-  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
-  (`web_vs_fret_dropdown_menu_demo_highlighted_item_background_matches_web`,
-  `web_vs_fret_context_menu_demo_highlighted_item_background_matches_web`,
-  `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`)
+  and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` (item state chrome + panel size)
+  (`web_vs_fret_dropdown_menu_demo_panel_size_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_context_menu_demo_panel_size_matches_web`,
+  `web_vs_fret_context_menu_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_context_menu_demo_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_context_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web`,
+  `web_vs_fret_context_menu_demo_submenu_kbd_tiny_viewport_panel_size_matches_web_dark`,
+  `web_vs_fret_dropdown_menu_demo_highlighted_item_chrome_matches_web`,
+  `web_vs_fret_dropdown_menu_demo_focused_item_chrome_matches_web`,
+  `web_vs_fret_context_menu_demo_highlighted_item_chrome_matches_web`,
+  `web_vs_fret_context_menu_demo_focused_item_chrome_matches_web`,
+  `web_vs_fret_context_menu_demo_submenu_destructive_focused_item_chrome_matches_web`, plus `*_dark` variants).
 
 ### Select / Combobox listboxes
 
@@ -98,6 +130,89 @@ Evidence anchors:
   `web_vs_fret_combobox_demo_focused_option_chrome_matches_web`,
   `web_vs_fret_command_dialog_focused_item_chrome_matches_web`, and `*_dark` variants)
 
+## Overlays: popover / tooltip / hover card
+
+Goal: gate panel sizing (padding/border outcomes) under constrained viewports early, so "clamp/shift/flip"
+changes do not hide styling regressions.
+
+### Popover (`popover-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`popover-demo.vp1440x240.open.json`)
+- Panel size (portal `w/h`): **Gated** (`popover-demo.open.json`, `popover-demo.vp1440x240.open.json`)
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/popover-demo*.open.json`
+- Placement gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_popover_demo_overlay_placement_matches`, `web_vs_fret_popover_demo_overlay_placement_matches_tiny_viewport`)
+- Panel size gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_popover_demo_panel_size_matches_web`, `web_vs_fret_popover_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_popover_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_popover_demo_tiny_viewport_panel_size_matches_web_dark`)
+
+### Tooltip (`tooltip-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`tooltip-demo.vp1440x240.open.json`)
+- Panel size (portal `w/h`): **Gated** (`tooltip-demo.open.json`, `tooltip-demo.vp1440x240.open.json`)
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/tooltip-demo*.open.json`
+- Placement gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_tooltip_demo_overlay_placement_matches`, `web_vs_fret_tooltip_demo_overlay_placement_matches_tiny_viewport`)
+- Panel size gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_tooltip_demo_panel_size_matches_web`, `web_vs_fret_tooltip_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_tooltip_demo_tiny_viewport_panel_size_matches_web_dark`)
+
+### HoverCard (`hover-card-demo*`)
+
+- Open state: **Gated**
+- Constrained height (viewport clamp): **Gated** (`hover-card-demo.vp1440x240.open.json`)
+- Panel size (portal `w/h`): **Gated** (`hover-card-demo.open.json`, `hover-card-demo.vp1440x240.open.json`)
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/hover-card-demo*.open.json`
+- Placement gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_hover_card_demo_overlay_placement_matches`, `web_vs_fret_hover_card_demo_overlay_placement_matches_tiny_viewport`)
+- Panel size gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs`
+  (`web_vs_fret_hover_card_demo_panel_size_matches_web`, `web_vs_fret_hover_card_demo_panel_size_matches_web_dark`,
+  `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web_dark`)
+
+### Toasts (Sonner) (`sonner-demo*`, `sonner-types*`)
+
+- Open state: **Gated**
+- Toast geometry (rect `x/y/w/h`): **Gated**
+- Constrained height (tiny viewport): **Gated** (`*.vp1440x240.open`)
+
+Notes:
+
+- Sonner's toaster container (`[data-sonner-toaster]`) can have `h=0` in DOM snapshots because toasts are
+  positioned absolutely; gates target the toast item rect (`[data-sonner-toast]`) instead.
+
+Evidence anchors:
+
+- Goldens:
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-demo*.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-types*.open.json` (variant matrix + constrained viewport variants)
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_sonner_demo_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_demo_tiny_viewport_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_error_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_promise_loading_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_error_open_toast_rect_matches_web`)
+
 ## Controls: pressed / disabled states
 
 ### Button (`button-default*`)
@@ -115,11 +230,37 @@ Evidence anchors:
 - Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_button.rs`
   (`web_vs_fret_button_default_hover_matches_web`, `web_vs_fret_button_default_pressed_matches_web`, `web_vs_fret_button_default_disabled_matches_web`)
 
+## Dates: calendar / date pickers
+
+- Single-month calendar geometry: **Gated** (`calendar-01`, `calendar-04`, `calendar-06`, `calendar-08`, `calendar-10`, `calendar-13..21`)
+- Calendar root background (standalone): **Gated** (`calendar-01` background quad matches web)
+- Calendar root background (nested popover): **Gated** (`calendar-22.open` background matches web)
+- Note: upstream `Calendar` becomes background-transparent inside `PopoverContent` / `CardContent` via selector overrides
+  (`[[data-slot=popover-content]_&]:bg-transparent` / `[[data-slot=card-content]_&]:bg-transparent`).
+  In Fret, this is modeled as a "surface slot" context installed by the `Popover` recipe for its
+  content subtree (see `ecosystem/fret-ui-shadcn/src/surface_slot.rs`, `ecosystem/fret-ui-shadcn/src/popover.rs`).
+  CardContent propagation is modeled via `fret_ui_shadcn::card::card_content` (provider-based, for
+  cases where descendants need to observe `data-slot=card-content` semantics).
+  - Many upstream `calendar-*` blocks that embed a Calendar inside a Card explicitly pass `className="bg-transparent ..."`,
+    which makes it hard to isolate "selector override works" vs "caller opted in".
+  - We currently keep a contract-only gate for the CardContent scope (transparent background within the scope).
+    A future depth step would be to add a dedicated upstream page (or a repo-local test harness page) that relies
+    solely on the `[[data-slot=card-content]_&]:bg-transparent` override so the behavior can be compared 1:1 against shadcn-web.
+
+Evidence anchors:
+
+- Goldens: `goldens/shadcn-web/v4/new-york-v4/calendar-*.json`
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+  (`assert_calendar_single_month_variant_geometry_matches_web`, `web_vs_fret_layout_calendar_01_background_matches_web`,
+  `web_vs_fret_layout_calendar_22_open_background_matches_web`,
+  `web_vs_fret_layout_calendar_background_transparent_in_card_content_scope`)
+
 ## Charts (wrapper UI + interaction snapshots)
 
 - Tooltip panel geometry (wrapper): **Gated**
+- Tooltip internal row layout (advanced): **Gated** (`chart-tooltip-advanced` item rows + “Total” row bounds)
 - Legend panel geometry (wrapper): **Gated**
-- Interactive hover tooltip + cursor rect (scripted): **Gated** (`*.hover-mid`)
+- Interactive hover tooltip + cursor rect + active marker rect (scripted): **Gated** (`*.hover-mid`)
 - Full chart engine rendering parity (axes/ticks/marks/hit-test): **Not gated** (not implemented as a shadcn chart engine yet)
 
 Evidence anchors:

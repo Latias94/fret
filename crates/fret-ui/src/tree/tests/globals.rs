@@ -31,7 +31,7 @@ fn global_change_invalidates_observers() {
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let mut scene = Scene::default();
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
-    ui.nodes.get_mut(node).unwrap().invalidation.clear();
+    ui.test_clear_node_invalidations(node);
 
     let changed = vec![TypeId::of::<u32>()];
     assert!(ui.propagate_global_changes(&mut app, &changed));

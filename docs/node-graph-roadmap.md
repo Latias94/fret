@@ -39,6 +39,12 @@ Design constraints:
 
 ## Current Status (Snapshot)
 
+Now / Next / Later (high level):
+
+- **Now**: lock refactor invariants (derived internals + invalidation discipline) via conformance tests (workstream M0).
+- **Next**: stabilize built-in add-ons API (minimap/controls/background theming) without policy bleed (workstream M2).
+- **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M5 + future milestones).
+
 ### Headless substrate (present)
 
 - Serializable graph model with stable IDs: `Graph`, `Node`, `Port`, `Edge`, `Group`, `StickyNote`.
@@ -88,6 +94,19 @@ To run:
 ## Missing Pieces (Gap Analysis)
 
 See `docs/node-graph-xyflow-parity.md` for the detailed parity and gap map (mechanism-first).
+
+## Refactor tracking (workstreams)
+
+When doing larger refactors, treat `docs/workstreams/fret-node-xyflow-parity.md` as the active
+execution plan (milestones + gates + evidence anchors). This roadmap remains a “what/why” view and
+should not accumulate ambiguous TODOs that aren’t tied to an exit criterion.
+
+Suggested mapping (high level):
+
+- NG0 (Contracts + Harness) ↔ workstream M0/M1
+- NG1 (Editor Usability) ↔ workstream M2 (add-ons stabilization) + selected A-layer fixes
+- NG2 (Domain Readiness) ↔ typed connections + profile pipeline hardening (domain demos)
+- NG3 (Scale + Collaboration) ↔ derived geometry invalidation + culling + deterministic patch units
 
 ## Milestones and Exit Criteria
 

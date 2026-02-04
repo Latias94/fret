@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use fret_core::{
     AttributedText, Edges, FontId, FontWeight, Px, TextOverflow, TextPaintStyle, TextSpan,
@@ -122,6 +125,8 @@ pub enum CodeBlockWrap {
     ScrollX,
     /// Wrap at word boundaries (best-effort, depends on the text system).
     Word,
+    /// Wrap between grapheme clusters when needed (recommended for long identifiers/paths).
+    Grapheme,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -313,7 +318,7 @@ impl CodeBlock {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         code_block_with(
             cx,
             &self.code,
@@ -340,7 +345,7 @@ impl CodeBlock {
     }
 }
 
-pub fn code_block<H: UiHost>(
+pub fn code_block<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -396,7 +401,7 @@ impl Default for CodeBlockUiOptions {
     }
 }
 
-pub fn code_block_with<H: UiHost>(
+pub fn code_block_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -413,7 +418,7 @@ pub fn code_block_with<H: UiHost>(
     )
 }
 
-pub fn code_block_with_header_slots<H: UiHost>(
+pub fn code_block_with_header_slots<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -616,7 +621,7 @@ fn render_code_block_header<H: UiHost>(
     })
 }
 
-fn render_code_block_body<H: UiHost>(
+fn render_code_block_body<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
@@ -637,8 +642,8 @@ fn render_code_block_body<H: UiHost>(
     cx.container(props, |cx| {
         let wrap = if prepared.show_line_numbers {
             debug_assert!(
-                !matches!(wrap, CodeBlockWrap::Word),
-                "word wrap with line numbers is not supported yet"
+                !matches!(wrap, CodeBlockWrap::Word | CodeBlockWrap::Grapheme),
+                "wrapping with line numbers is not supported yet"
             );
             CodeBlockWrap::ScrollX
         } else {
@@ -777,7 +782,7 @@ fn render_code_block_body<H: UiHost>(
 }
 
 fn build_code_block_line_rich(
-    theme: &Theme,
+    row_theme: &CodeBlockLineRowTheme,
     prepared: &crate::prepare::PreparedCodeBlock,
     line_i: usize,
 ) -> AttributedText {
@@ -792,7 +797,7 @@ fn build_code_block_line_rich(
         if seg.text.is_empty() {
             continue;
         }
-        let color = seg.highlight.and_then(|h| syntax_color(theme, h));
+        let color = seg.highlight.and_then(|h| row_theme.syntax_color(h));
         text.push_str(seg.text.as_ref());
         spans.push(TextSpan {
             len: seg.text.len(),
@@ -807,24 +812,61 @@ fn build_code_block_line_rich(
     AttributedText::new(Arc::<str>::from(text), spans)
 }
 
+#[derive(Debug, Clone)]
+struct CodeBlockLineRowTheme {
+    mono_size: Px,
+    mono_line_height: Px,
+    fg: fret_core::Color,
+    muted_fg: fret_core::Color,
+    border: fret_core::Color,
+    syntax_colors: HashMap<&'static str, Option<fret_core::Color>>,
+}
+
+impl CodeBlockLineRowTheme {
+    fn new(theme: &Theme, prepared: &crate::prepare::PreparedCodeBlock) -> Self {
+        let mut unique_highlights: HashSet<&'static str> = HashSet::new();
+        for line in &prepared.lines {
+            for segment in &line.segments {
+                if let Some(highlight) = segment.highlight {
+                    unique_highlights.insert(highlight);
+                }
+            }
+        }
+
+        let syntax_colors = unique_highlights
+            .into_iter()
+            .map(|highlight| (highlight, syntax_color(theme, highlight)))
+            .collect::<HashMap<_, _>>();
+
+        Self {
+            mono_size: theme.metric_required("metric.font.mono_size"),
+            mono_line_height: theme.metric_required("metric.font.mono_line_height"),
+            fg: theme.color_required("foreground"),
+            muted_fg: theme.color_required("muted-foreground"),
+            border: theme.color_required("border"),
+            syntax_colors,
+        }
+    }
+
+    fn syntax_color(&self, highlight: &'static str) -> Option<fret_core::Color> {
+        self.syntax_colors.get(highlight).copied().flatten()
+    }
+}
+
 fn render_code_block_line_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    theme: &Theme,
+    row_theme: &CodeBlockLineRowTheme,
     prepared: &crate::prepare::PreparedCodeBlock,
     line_i: usize,
 ) -> AnyElement {
     let text_style = TextStyle {
         font: FontId::monospace(),
-        size: theme.metric_required("metric.font.mono_size"),
+        size: row_theme.mono_size,
         weight: FontWeight::NORMAL,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(row_theme.mono_line_height),
         letter_spacing_em: None,
     };
-
-    let fg = theme.color_required("foreground");
-    let muted_fg = theme.color_required("muted-foreground");
-    let border = theme.color_required("border");
 
     let code = cx.styled_text_props(StyledTextProps {
         layout: {
@@ -832,9 +874,9 @@ fn render_code_block_line_row<H: UiHost>(
             layout.size.width = Length::Auto;
             layout
         },
-        rich: build_code_block_line_rich(theme, prepared, line_i),
+        rich: build_code_block_line_rich(row_theme, prepared, line_i),
         style: Some(text_style),
-        color: Some(fg),
+        color: Some(row_theme.fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     });
@@ -851,10 +893,10 @@ fn render_code_block_line_row<H: UiHost>(
 
     let number_style = TextStyle {
         font: FontId::monospace(),
-        size: theme.metric_required("metric.font.mono_size"),
+        size: row_theme.mono_size,
         weight: FontWeight::NORMAL,
         slant: Default::default(),
-        line_height: Some(theme.metric_required("metric.font.mono_line_height")),
+        line_height: Some(row_theme.mono_line_height),
         letter_spacing_em: None,
     };
 
@@ -866,7 +908,7 @@ fn render_code_block_line_row<H: UiHost>(
         },
         text: number,
         style: Some(number_style),
-        color: Some(muted_fg),
+        color: Some(row_theme.muted_fg),
         wrap: TextWrap::None,
         overflow: TextOverflow::Clip,
     });
@@ -888,7 +930,7 @@ fn render_code_block_line_row<H: UiHost>(
                 bottom: Px(0.0),
                 left: Px(0.0),
             },
-            border_color: Some(border),
+            border_color: Some(row_theme.border),
             corner_radii: fret_core::Corners::all(Px(0.0)),
             ..Default::default()
         },
@@ -905,7 +947,7 @@ fn render_code_block_line_row<H: UiHost>(
     )
 }
 
-fn render_code_block_windowed_lines<H: UiHost>(
+fn render_code_block_windowed_lines<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
@@ -928,6 +970,8 @@ fn render_code_block_windowed_lines<H: UiHost>(
 
     let len = prepared.lines.len();
     let prepared_for_rows = prepared.clone();
+    let row_theme = Arc::new(CodeBlockLineRowTheme::new(theme, prepared.as_ref()));
+    let row_theme_for_rows = Arc::clone(&row_theme);
 
     let list_layout = {
         let mut layout = LayoutStyle::default();
@@ -937,13 +981,20 @@ fn render_code_block_windowed_lines<H: UiHost>(
         layout
     };
 
-    let list = cx.virtual_list_keyed_with_layout(
+    let list = cx.virtual_list_keyed_retained_with_layout_fn(
         list_layout,
         len,
         list_options,
         &scroll_y_handle,
         |i| i as u64,
-        |cx, i| render_code_block_line_row(cx, theme, prepared_for_rows.as_ref(), i),
+        move |cx, i| {
+            render_code_block_line_row(
+                cx,
+                row_theme_for_rows.as_ref(),
+                prepared_for_rows.as_ref(),
+                i,
+            )
+        },
     );
 
     let list_id = list.id;
@@ -963,6 +1014,7 @@ fn render_code_block_windowed_lines<H: UiHost>(
             axis: ScrollAxis::X,
             scroll_handle: Some(scroll_x_handle.clone()),
             probe_unbounded: true,
+            ..Default::default()
         },
         |_cx| vec![list],
     );
@@ -1160,10 +1212,8 @@ fn render_code_block_text<H: UiHost>(
     };
     let fg = theme.color_required("foreground");
 
-    let (text_wrap, overflow) = match wrap {
-        CodeBlockWrap::ScrollX => (TextWrap::None, TextOverflow::Clip),
-        CodeBlockWrap::Word => (TextWrap::Word, TextOverflow::Clip),
-    };
+    let text_wrap = text_wrap_for_code_block_wrap(wrap);
+    let overflow = TextOverflow::Clip;
 
     let mut scroll_layout = LayoutStyle::default();
     scroll_layout.size.width = Length::Fill;
@@ -1173,7 +1223,7 @@ fn render_code_block_text<H: UiHost>(
             let lines = line_count.max(1) as f32;
             Length::Px(Px(line_height.0 * lines))
         }
-        TextWrap::Word => Length::Auto,
+        TextWrap::Word | TextWrap::Grapheme => Length::Auto,
     };
     scroll_layout.overflow = Overflow::Clip;
 
@@ -1181,7 +1231,7 @@ fn render_code_block_text<H: UiHost>(
         let mut layout = LayoutStyle::default();
         layout.size.width = match text_wrap {
             TextWrap::None => Length::Auto,
-            TextWrap::Word => Length::Fill,
+            TextWrap::Word | TextWrap::Grapheme => Length::Fill,
         };
         layout
     };
@@ -1193,6 +1243,7 @@ fn render_code_block_text<H: UiHost>(
             axis: ScrollAxis::X,
             scroll_handle: Some(handle.clone()),
             probe_unbounded: matches!(text_wrap, TextWrap::None),
+            ..Default::default()
         },
         |cx| {
             vec![cx.selectable_text_props(SelectableTextProps {
@@ -1257,4 +1308,33 @@ fn render_code_block_text<H: UiHost>(
             ]
         },
     )
+}
+
+fn text_wrap_for_code_block_wrap(wrap: CodeBlockWrap) -> TextWrap {
+    match wrap {
+        CodeBlockWrap::ScrollX => TextWrap::None,
+        CodeBlockWrap::Word => TextWrap::Word,
+        CodeBlockWrap::Grapheme => TextWrap::Grapheme,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn code_block_wrap_maps_to_text_wrap() {
+        assert_eq!(
+            text_wrap_for_code_block_wrap(CodeBlockWrap::ScrollX),
+            TextWrap::None
+        );
+        assert_eq!(
+            text_wrap_for_code_block_wrap(CodeBlockWrap::Word),
+            TextWrap::Word
+        );
+        assert_eq!(
+            text_wrap_for_code_block_wrap(CodeBlockWrap::Grapheme),
+            TextWrap::Grapheme
+        );
+    }
 }

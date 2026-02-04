@@ -86,6 +86,7 @@ fn parse_space(s: &str) -> Option<Space> {
         "8" => Some(Space::N8),
         "10" => Some(Space::N10),
         "11" => Some(Space::N11),
+        "12" => Some(Space::N12),
         _ => None,
     }
 }
@@ -106,6 +107,7 @@ fn space_to_str(space: Space) -> &'static str {
         Space::N8 => "8",
         Space::N10 => "10",
         Space::N11 => "11",
+        Space::N12 => "12",
     }
 }
 

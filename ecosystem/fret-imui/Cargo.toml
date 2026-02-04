@@ -1,0 +1,22 @@
+[package]
+name = "fret-imui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = []
+
+[dependencies]
+fret-authoring = { path = "../fret-authoring" }
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+
+[dev-dependencies]
+fret-ui-kit = { path = "../fret-ui-kit", features = ["imui"] }

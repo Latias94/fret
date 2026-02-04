@@ -1,7 +1,7 @@
 //! Winit `ApplicationHandler` integration.
 
 use super::*;
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
@@ -30,6 +30,20 @@ fn redraw_hitch_config() -> Option<RedrawHitchConfig> {
 
 fn redraw_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     let mut paths = Vec::new();
+
+    if let Some(custom) = std::env::var_os("FRET_REDRAW_HITCH_LOG_PATH")
+        && !custom.is_empty()
+    {
+        let mut path = std::path::PathBuf::from(custom);
+        if path.is_relative()
+            && let Some(diag_dir) = std::env::var_os("FRET_DIAG_DIR")
+            && !diag_dir.is_empty()
+        {
+            path = std::path::Path::new(&diag_dir).join(path);
+        }
+        paths.push(path);
+    }
+
     paths.push(std::path::Path::new(".fret").join("redraw_hitches.log"));
 
     let tmp = std::env::temp_dir();
@@ -39,9 +53,68 @@ fn redraw_hitch_log_paths() -> impl Iterator<Item = std::path::PathBuf> {
     paths.into_iter()
 }
 
-fn write_redraw_hitch_log(line: &str) {
-    use std::io::Write as _;
+struct HitchLogWriter {
+    file: std::io::BufWriter<std::fs::File>,
+}
 
+struct HitchLogState {
+    writers: Vec<HitchLogWriter>,
+    writes_since_flush: u32,
+    last_flush: std::time::Instant,
+}
+
+impl HitchLogState {
+    fn new() -> Self {
+        let mut writers = Vec::new();
+        for path in redraw_hitch_log_paths() {
+            if let Some(dir) = path.parent() {
+                let _ = std::fs::create_dir_all(dir);
+            }
+            if let Ok(file) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+            {
+                writers.push(HitchLogWriter {
+                    file: std::io::BufWriter::with_capacity(16 * 1024, file),
+                });
+            }
+        }
+
+        Self {
+            writers,
+            writes_since_flush: 0,
+            last_flush: std::time::Instant::now(),
+        }
+    }
+
+    fn write_line(&mut self, msg: &str) {
+        use std::io::Write as _;
+
+        let mut i = 0;
+        while i < self.writers.len() {
+            let ok = self.writers[i].file.write_all(msg.as_bytes()).is_ok();
+            if ok {
+                i += 1;
+            } else {
+                self.writers.swap_remove(i);
+            }
+        }
+
+        self.writes_since_flush = self.writes_since_flush.saturating_add(1);
+        let should_flush =
+            self.writes_since_flush >= 64 || self.last_flush.elapsed().as_millis() >= 250;
+        if should_flush {
+            for w in self.writers.iter_mut() {
+                let _ = w.file.flush();
+            }
+            self.writes_since_flush = 0;
+            self.last_flush = std::time::Instant::now();
+        }
+    }
+}
+
+fn write_redraw_hitch_log(line: &str) {
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .map(|d| d.as_millis())
@@ -49,19 +122,10 @@ fn write_redraw_hitch_log(line: &str) {
     let thread_id = format!("{:?}", std::thread::current().id());
     let msg = format!("[{ts}] [thread={thread_id}] {line}\n");
 
-    for path in redraw_hitch_log_paths() {
-        if let Some(dir) = path.parent() {
-            let _ = std::fs::create_dir_all(dir);
-        }
-        if let Ok(mut file) = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&path)
-        {
-            let _ = file.write_all(msg.as_bytes());
-            let _ = file.flush();
-        }
-    }
+    static STATE: OnceLock<Mutex<HitchLogState>> = OnceLock::new();
+    let state = STATE.get_or_init(|| Mutex::new(HitchLogState::new()));
+    let mut state = state.lock().unwrap_or_else(|e| e.into_inner());
+    state.write_line(&msg);
 }
 
 impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
@@ -802,6 +866,38 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         hitch_render_ms = Some(started.elapsed().as_millis() as u64);
                     }
 
+                    // Consume the window-scoped text-input snapshot after render so the runner can
+                    // position the IME candidate window based on the final painted caret rect.
+                    //
+                    // Note: v1 still emits `Effect::ImeSetCursorArea` from widgets; this snapshot
+                    // path is a runner-level fallback and an integration seam for future macOS
+                    // (NSTextInputClient) interop.
+                    if let Some(snapshot) = self
+                        .app
+                        .global::<fret_runtime::WindowTextInputSnapshotService>()
+                        .and_then(|svc| svc.snapshot(app_window))
+                    {
+                        let mut dirty = false;
+                        dirty |= state.platform.set_ime_allowed(snapshot.focus_is_text_input);
+                        if snapshot.focus_is_text_input
+                            && let Some(rect) = snapshot.ime_cursor_area
+                        {
+                            dirty |= state.platform.set_ime_cursor_area(rect);
+                        }
+
+                        if dirty {
+                            if std::env::var_os("FRET_IME_DEBUG").is_some_and(|v| !v.is_empty()) {
+                                tracing::info!(
+                                    "IME_DEBUG snapshot: window={:?} focus={} cursor_area={:?}",
+                                    app_window,
+                                    snapshot.focus_is_text_input,
+                                    snapshot.ime_cursor_area
+                                );
+                            }
+                            state.platform.prepare_frame(state.window.as_ref());
+                        }
+                    }
+
                     validate_scene_if_enabled(&state.scene);
 
                     if let Some(a11y) = state.accessibility.as_mut()
@@ -1013,7 +1109,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         let total_ms = started.elapsed().as_millis() as u64;
                         if total_ms >= cfg.hitch_ms {
                             write_redraw_hitch_log(&format!(
-                                "redraw hitch window={app_window:?} total_ms={total_ms} prepare_ms={prepare_ms:?} render_ms={render_ms:?} record_ms={record_ms:?} present_ms={present_ms:?} scene_ops={scene_ops} bounds={bounds:?} scale_factor={scale_factor}",
+                                "redraw hitch window={app_window:?} tick_id={tick_id} frame_id={frame_id} total_ms={total_ms} prepare_ms={prepare_ms:?} render_ms={render_ms:?} record_ms={record_ms:?} present_ms={present_ms:?} scene_ops={scene_ops} bounds={bounds:?} scale_factor={scale_factor}",
+                                tick_id = self.tick_id.0,
+                                frame_id = self.frame_id.0,
                                 prepare_ms = hitch_prepare_ms,
                                 render_ms = hitch_render_ms,
                                 record_ms = hitch_record_ms,

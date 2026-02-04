@@ -1,5 +1,7 @@
 use fret_core::{Color, Edges, Px};
-use fret_ui::element::{AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, Overflow,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 fn fill_layout() -> LayoutStyle {
@@ -20,7 +22,9 @@ fn row_layout(height: Px) -> LayoutStyle {
 fn flex_grow_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
+    layout.size.min_width = Some(Px(0.0));
     layout.flex.grow = 1.0;
+    layout.flex.shrink = 1.0;
     layout
 }
 
@@ -29,6 +33,12 @@ fn fill_grow_layout() -> LayoutStyle {
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
     layout.flex.grow = 1.0;
+    layout
+}
+
+fn no_shrink_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.flex.shrink = 0.0;
     layout
 }
 
@@ -219,12 +229,22 @@ impl WorkspaceTopBar {
                     },
                     |cx| {
                         let mut children = Vec::new();
-                        children.extend(self.left);
+                        for child in self.left {
+                            children.push(cx.container(
+                                ContainerProps {
+                                    layout: no_shrink_layout(),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![child],
+                            ));
+                        }
 
                         if !self.center.is_empty() {
+                            let mut center_layout = flex_grow_layout();
+                            center_layout.overflow = Overflow::Clip;
                             children.push(cx.flex(
                                 FlexProps {
-                                    layout: flex_grow_layout(),
+                                    layout: center_layout,
                                     direction: fret_core::Axis::Horizontal,
                                     gap: Px(8.0),
                                     align: CrossAlign::Center,
@@ -236,7 +256,15 @@ impl WorkspaceTopBar {
                             children.push(cx.spacer(Default::default()));
                         }
 
-                        children.extend(self.right);
+                        for child in self.right {
+                            children.push(cx.container(
+                                ContainerProps {
+                                    layout: no_shrink_layout(),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![child],
+                            ));
+                        }
                         children
                     },
                 )]

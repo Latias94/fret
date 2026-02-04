@@ -15,6 +15,7 @@ pub mod keys {
 
     pub const CLIPBOARD_TEXT: &str = "clipboard.text";
     pub const CLIPBOARD_FILES: &str = "clipboard.files";
+    pub const CLIPBOARD_PRIMARY_TEXT: &str = "clipboard.primary_text";
 
     pub const DND_EXTERNAL: &str = "dnd.external";
     pub const DND_EXTERNAL_PAYLOAD: &str = "dnd.external_payload";
@@ -54,6 +55,7 @@ pub const KNOWN_BOOL_CAPABILITY_KEYS: &[&str] = &[
     keys::UI_CURSOR_ICONS,
     keys::CLIPBOARD_TEXT,
     keys::CLIPBOARD_FILES,
+    keys::CLIPBOARD_PRIMARY_TEXT,
     keys::DND_EXTERNAL,
     keys::IME,
     keys::IME_ENABLED,
@@ -361,6 +363,12 @@ pub struct UiCapabilities {
 pub struct ClipboardCapabilities {
     pub text: bool,
     pub files: bool,
+    /// Linux/X11/Wayland primary selection text support.
+    ///
+    /// This is intentionally modeled as a capability separate from `clipboard.text`:
+    /// on Linux, primary selection is typically used as "copy-on-select" + middle-click paste,
+    /// and should not overwrite the explicit clipboard used by `Ctrl+C` / `edit.copy`.
+    pub primary_text: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -426,6 +434,15 @@ impl Default for PlatformCapabilities {
             clipboard: ClipboardCapabilities {
                 text: true,
                 files: false,
+                primary_text: cfg!(all(
+                    unix,
+                    not(any(
+                        target_os = "macos",
+                        target_os = "android",
+                        target_os = "emscripten",
+                        target_arch = "wasm32"
+                    ))
+                )),
             },
             dnd: DndCapabilities {
                 external: true,
@@ -457,6 +474,7 @@ impl PlatformCapabilities {
             keys::UI_CURSOR_ICONS => Some(self.ui.cursor_icons),
             keys::CLIPBOARD_TEXT => Some(self.clipboard.text),
             keys::CLIPBOARD_FILES => Some(self.clipboard.files),
+            keys::CLIPBOARD_PRIMARY_TEXT => Some(self.clipboard.primary_text),
             keys::DND_EXTERNAL => Some(self.dnd.external),
             keys::IME | keys::IME_ENABLED => Some(self.ime.enabled),
             keys::IME_SET_CURSOR_AREA => Some(self.ime.set_cursor_area),

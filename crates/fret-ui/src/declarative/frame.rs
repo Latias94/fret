@@ -1,22 +1,33 @@
 use super::prelude::*;
+use std::sync::Arc;
 
 #[derive(Default)]
 pub(crate) struct ElementFrame {
     pub(super) windows: HashMap<AppWindowId, WindowFrame>,
 }
 
+#[derive(Default, Clone)]
+pub(crate) struct ElementIdMapCache {
+    pub revision: u64,
+    pub map: Arc<HashMap<u64, NodeId>>,
+}
+
 pub(crate) struct WindowFrame {
     pub(super) frame_id: FrameId,
+    pub(super) revision: u64,
     pub(crate) instances: HashMap<NodeId, ElementRecord>,
-    pub(crate) children: HashMap<NodeId, Vec<NodeId>>,
+    pub(crate) children: HashMap<NodeId, Arc<[NodeId]>>,
+    pub(super) element_id_map_cache: Option<ElementIdMapCache>,
 }
 
 impl Default for WindowFrame {
     fn default() -> Self {
         Self {
             frame_id: FrameId(0),
+            revision: 0,
             instances: HashMap::new(),
             children: HashMap::new(),
+            element_id_map_cache: None,
         }
     }
 }
@@ -54,6 +65,8 @@ pub(crate) enum ElementInstance {
     Grid(crate::element::GridProps),
     Image(crate::element::ImageProps),
     Canvas(crate::element::CanvasProps),
+    #[cfg(feature = "unstable-retained-bridge")]
+    RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
     ViewportSurface(crate::element::ViewportSurfaceProps),
     SvgIcon(crate::element::SvgIconProps),
     Spinner(SpinnerProps),
@@ -97,6 +110,8 @@ impl ElementInstance {
             Self::Grid(_) => "Grid",
             Self::Image(_) => "Image",
             Self::Canvas(_) => "Canvas",
+            #[cfg(feature = "unstable-retained-bridge")]
+            Self::RetainedSubtree(_) => "RetainedSubtree",
             Self::ViewportSurface(_) => "ViewportSurface",
             Self::SvgIcon(_) => "SvgIcon",
             Self::Spinner(_) => "Spinner",
@@ -152,6 +167,21 @@ pub(crate) fn element_record_for_node<H: UiHost>(
             .get(&window)
             .and_then(|w| w.instances.get(&node))
             .cloned()
+    })
+}
+
+pub(crate) fn with_element_record_for_node<H: UiHost, R>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+    f: impl FnOnce(&ElementRecord) -> R,
+) -> Option<R> {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&node))
+            .map(f)
     })
 }
 
@@ -354,19 +384,27 @@ pub(crate) struct ScrollHandleChange {
 pub(crate) fn element_id_map_for_window<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
-) -> HashMap<u64, NodeId> {
+) -> Arc<HashMap<u64, NodeId>> {
     app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-        frame
-            .windows
-            .get(&window)
-            .map(|w| {
-                let mut out = HashMap::with_capacity(w.instances.len());
-                for (node, record) in w.instances.iter() {
-                    out.insert(record.element.0, *node);
-                }
-                out
-            })
-            .unwrap_or_default()
+        let Some(window_frame) = frame.windows.get_mut(&window) else {
+            return Arc::new(HashMap::new());
+        };
+        if let Some(cache) = window_frame.element_id_map_cache.as_ref()
+            && cache.revision == window_frame.revision
+        {
+            return cache.map.clone();
+        }
+
+        let mut out = HashMap::with_capacity(window_frame.instances.len());
+        for (node, record) in window_frame.instances.iter() {
+            out.insert(record.element.0, *node);
+        }
+        let map = Arc::new(out);
+        window_frame.element_id_map_cache = Some(ElementIdMapCache {
+            revision: window_frame.revision,
+            map: map.clone(),
+        });
+        map
     })
 }
 
@@ -403,6 +441,8 @@ pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutSty
         ElementInstance::Grid(p) => p.layout,
         ElementInstance::Image(p) => p.layout,
         ElementInstance::Canvas(p) => p.layout,
+        #[cfg(feature = "unstable-retained-bridge")]
+        ElementInstance::RetainedSubtree(p) => p.layout,
         ElementInstance::ViewportSurface(p) => p.layout,
         ElementInstance::SvgIcon(p) => p.layout,
         ElementInstance::Spinner(p) => p.layout,

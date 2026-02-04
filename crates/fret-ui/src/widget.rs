@@ -24,6 +24,13 @@ pub enum Invalidation {
     HitTestOnly,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct UiSourceLocation {
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+}
+
 pub struct EventCx<'a, H: UiHost> {
     pub app: &'a mut H,
     pub services: &'a mut dyn UiServices,
@@ -42,6 +49,7 @@ pub struct EventCx<'a, H: UiHost> {
     pub requested_capture: Option<Option<NodeId>>,
     pub requested_cursor: Option<fret_core::CursorIcon>,
     pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
     pub stop_propagation: bool,
 }
 
@@ -120,8 +128,17 @@ impl<'a, H: UiHost> EventCx<'a, H> {
     ///
     /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
     /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
     pub fn notify(&mut self) {
         self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 
     pub fn set_cursor_icon(&mut self, icon: fret_core::CursorIcon) {
@@ -149,6 +166,7 @@ pub struct ObserverCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub invalidations: Vec<(NodeId, Invalidation)>,
     pub notify_requested: bool,
+    pub notify_requested_location: Option<UiSourceLocation>,
 }
 
 impl<'a, H: UiHost> ObserverCx<'a, H> {
@@ -183,8 +201,17 @@ impl<'a, H: UiHost> ObserverCx<'a, H> {
     ///
     /// In view-cache mode, this forces the nearest cache root to rerender (skip view-cache reuse)
     /// and prevents paint replay of stale recorded ranges.
+    #[track_caller]
     pub fn notify(&mut self) {
         self.notify_requested = true;
+        if self.notify_requested_location.is_none() {
+            let caller = std::panic::Location::caller();
+            self.notify_requested_location = Some(UiSourceLocation {
+                file: caller.file(),
+                line: caller.line(),
+                column: caller.column(),
+            });
+        }
     }
 }
 
@@ -524,6 +551,18 @@ pub struct PrepaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PrepaintCx<'a, H> {
+    pub fn set_output<T: std::any::Any>(&mut self, value: T) {
+        self.tree.set_prepaint_output(self.node, value);
+    }
+
+    pub fn output<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.prepaint_output(self.node)
+    }
+
+    pub fn output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.prepaint_output_mut(self.node)
+    }
+
     /// Mark an invalidation on `node` for the next frame.
     ///
     /// Prefer `Invalidation::Paint` / `Invalidation::HitTest` here. Invalidating `Layout` from
@@ -535,6 +574,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: Some(node),
                 kind: crate::tree::UiDebugPrepaintActionKind::Invalidate,
                 invalidation: Some(kind),
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         self.tree.invalidate_with_detail(
@@ -559,6 +601,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: None,
                 kind: crate::tree::UiDebugPrepaintActionKind::RequestRedraw,
                 invalidation: None,
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         let Some(window) = self.window else {
@@ -579,6 +624,9 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 target: Some(self.node),
                 kind: crate::tree::UiDebugPrepaintActionKind::RequestAnimationFrame,
                 invalidation: Some(Invalidation::Paint),
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
                 frame_id: self.app.frame_id(),
             });
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
@@ -613,9 +661,55 @@ pub struct PaintCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> PaintCx<'a, H> {
+    pub fn prepaint_output<T: std::any::Any>(&mut self) -> Option<&T> {
+        self.tree.prepaint_output(self.node)
+    }
+
+    pub fn prepaint_output_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
+        self.tree.prepaint_output_mut(self.node)
+    }
+
     pub fn theme(&mut self) -> &Theme {
-        self.observe_global::<Theme>(Invalidation::Layout);
+        self.observe_global::<Theme>(Invalidation::Paint);
         Theme::global(&*self.app)
+    }
+
+    /// Convert a layout-space rect into the visual rect (AABB) after accumulated render transforms.
+    ///
+    /// This is useful for platform integrations (e.g. IME candidate positioning), where the OS
+    /// expects coordinates in the same space the user sees on screen.
+    pub fn visual_rect_aabb(&self, rect: Rect) -> Rect {
+        let t = self.accumulated_transform;
+        if t == Transform2D::IDENTITY {
+            return rect;
+        }
+
+        let x0 = rect.origin.x.0;
+        let y0 = rect.origin.y.0;
+        let x1 = x0 + rect.size.width.0;
+        let y1 = y0 + rect.size.height.0;
+
+        let p00 = t.apply_point(Point::new(fret_core::Px(x0), fret_core::Px(y0)));
+        let p10 = t.apply_point(Point::new(fret_core::Px(x1), fret_core::Px(y0)));
+        let p01 = t.apply_point(Point::new(fret_core::Px(x0), fret_core::Px(y1)));
+        let p11 = t.apply_point(Point::new(fret_core::Px(x1), fret_core::Px(y1)));
+
+        let min_x = p00.x.0.min(p10.x.0).min(p01.x.0).min(p11.x.0);
+        let max_x = p00.x.0.max(p10.x.0).max(p01.x.0).max(p11.x.0);
+        let min_y = p00.y.0.min(p10.y.0).min(p01.y.0).min(p11.y.0);
+        let max_y = p00.y.0.max(p10.y.0).max(p01.y.0).max(p11.y.0);
+
+        if !min_x.is_finite() || !max_x.is_finite() || !min_y.is_finite() || !max_y.is_finite() {
+            return rect;
+        }
+
+        Rect::new(
+            Point::new(fret_core::Px(min_x), fret_core::Px(min_y)),
+            Size::new(
+                fret_core::Px((max_x - min_x).max(0.0)),
+                fret_core::Px((max_y - min_y).max(0.0)),
+            ),
+        )
     }
 
     /// Request a window redraw (one-shot).
@@ -883,6 +977,10 @@ pub trait Widget<H: UiHost> {
     /// (ADR 0069).
     fn event_observer(&mut self, _cx: &mut ObserverCx<'_, H>, _event: &Event) {}
 
+    fn debug_type_name(&self) -> &'static str {
+        std::any::type_name::<Self>()
+    }
+
     fn event(&mut self, _cx: &mut EventCx<'_, H>, _event: &Event) {}
     fn command(&mut self, _cx: &mut CommandCx<'_, H>, _command: &CommandId) -> bool {
         false
@@ -992,6 +1090,14 @@ pub trait Widget<H: UiHost> {
     fn semantics_children(&self) -> bool {
         true
     }
+    /// Optional synchronization hook for declarative `InteractivityGate` nodes.
+    ///
+    /// Declarative `InteractivityGate` is allowed to short-circuit layout when `present == false`
+    /// (display-none behavior). In those frames the layout engine may skip calling `layout()` for
+    /// the gate node, leaving cached widget gates stale. Declarative host widgets can override
+    /// this hook so the mount pipeline can keep semantics/hit-test traversal consistent even when
+    /// layout is skipped.
+    fn sync_interactivity_gate(&mut self, _present: bool, _interactive: bool) {}
     /// Whether focus traversal should recurse into this node's children.
     ///
     /// This is a mechanism-only gate used by `UiTree` to model "inert" subtrees during
@@ -1006,6 +1112,69 @@ pub trait Widget<H: UiHost> {
         false
     }
     fn is_text_input(&self) -> bool {
+        false
+    }
+
+    /// Optional platform-facing text input snapshot for the focused widget.
+    ///
+    /// This exists to support editor-grade IME and accessibility bridges that need UTF-16 ranges
+    /// and an IME cursor anchor, without depending on widget internals.
+    ///
+    /// Coordinate model: UTF-16 code units over the widget's "composed view" (base text with the
+    /// active preedit spliced at the caret).
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        None
+    }
+
+    /// Returns the focused selection range (UTF-16 code units over the composed view).
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        None
+    }
+
+    /// Returns the marked (preedit) range (UTF-16 code units over the composed view).
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        None
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        _range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        None
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        None
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _point: Point,
+    ) -> Option<u32> {
+        None
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _range: fret_runtime::Utf16Range,
+        _text: &str,
+    ) -> bool {
+        false
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        _range: fret_runtime::Utf16Range,
+        _text: &str,
+        _marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
         false
     }
     /// Whether this node can scroll a focused descendant into view.
@@ -1049,4 +1218,19 @@ pub struct ScrollIntoViewCx<'a, H: UiHost> {
     pub node: NodeId,
     pub window: Option<AppWindowId>,
     pub bounds: Rect,
+}
+
+pub struct PlatformTextInputCx<'a, H: UiHost> {
+    pub app: &'a mut H,
+    pub services: &'a mut dyn UiServices,
+    pub window: Option<AppWindowId>,
+    pub node: NodeId,
+    pub bounds: Rect,
+    pub scale_factor: f32,
+}
+
+impl<'a, H: UiHost> PlatformTextInputCx<'a, H> {
+    pub fn theme(&self) -> &Theme {
+        Theme::global(&*self.app)
+    }
 }

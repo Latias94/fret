@@ -5,12 +5,22 @@
 
 #![forbid(unsafe_code)]
 
+pub mod badge;
+pub mod bottom_sheet;
 pub mod button;
+pub mod card;
 pub mod checkbox;
+pub mod chip;
+pub mod chip_set;
+pub mod date_picker;
 pub mod dialog;
+pub mod divider;
 pub mod dropdown_menu;
+pub mod fab;
+pub mod filter_chip;
 mod foundation;
 pub mod icon_button;
+pub mod input_chip;
 pub mod interaction;
 pub mod list;
 pub mod menu;
@@ -19,35 +29,59 @@ pub mod motion;
 pub mod navigation_bar;
 pub mod navigation_drawer;
 pub mod navigation_rail;
+pub mod progress_indicator;
 pub mod radio;
+pub mod segmented_button;
 pub mod select;
+pub mod slider;
 pub mod snackbar;
+pub mod suggestion_chip;
 pub mod switch;
 pub mod tabs;
 pub mod text_field;
 pub mod theme;
+pub mod time_picker;
 pub mod tokens;
 pub mod tooltip;
+pub mod top_app_bar;
 
+pub use badge::{Badge, BadgePlacement, BadgeValue};
+pub use bottom_sheet::{DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet};
 pub use button::{Button, ButtonStyle, ButtonVariant};
+pub use card::{Card, CardStyle, CardVariant};
 pub use checkbox::{Checkbox, CheckboxStyle};
+pub use chip::{AssistChip, AssistChipStyle, AssistChipVariant};
+pub use chip_set::{ChipSet, ChipSetItem};
 pub use context::{MaterialDesignVariant, with_material_design_variant};
-pub use dialog::{Dialog, DialogAction};
+pub use date_picker::{DatePickerDialog, DatePickerVariant, DockedDatePicker};
+pub use dialog::{Dialog, DialogAction, DialogStyle};
+pub use divider::Divider;
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
+pub use fab::{Fab, FabSize, FabStyle, FabVariant};
+pub use filter_chip::{FilterChip, FilterChipStyle, FilterChipVariant};
 pub use icon_button::{IconButton, IconButtonSize, IconButtonStyle, IconButtonVariant};
+pub use input_chip::{InputChip, InputChipStyle};
 pub use list::{List, ListItem};
-pub use menu::{Menu, MenuEntry, MenuItem};
+pub use menu::{Menu, MenuEntry, MenuItem, MenuStyle};
 pub use modal_navigation_drawer::ModalNavigationDrawer;
 pub use navigation_bar::{NavigationBar, NavigationBarItem};
 pub use navigation_drawer::{NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant};
 pub use navigation_rail::{NavigationRail, NavigationRailItem};
+pub use progress_indicator::{CircularProgressIndicator, LinearProgressIndicator};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation, RadioStyle};
+pub use segmented_button::{SegmentedButtonItem, SegmentedButtonSet};
 pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
+pub use slider::{RangeSlider, Slider, SliderStyle};
 pub use snackbar::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};
+pub use suggestion_chip::{SuggestionChip, SuggestionChipStyle, SuggestionChipVariant};
 pub use switch::{Switch, SwitchStyle};
 pub use tabs::{TabItem, Tabs, TabsStyle};
 pub use text_field::{TextField, TextFieldStyle, TextFieldVariant};
+pub use time_picker::{
+    DockedTimePicker, TimePickerDialog, TimePickerDisplayMode, TimePickerVariant,
+};
 pub use tooltip::{PlainTooltip, TooltipAlign, TooltipProvider, TooltipSide};
+pub use top_app_bar::{TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant};
 
 pub mod context {
     //! Tree-local overrides for Material 3 rendering.
@@ -112,9 +146,17 @@ mod tests {
     fn material3_component_sources_do_not_fallback_to_non_material_tokens() {
         let sources = [
             include_str!("button.rs"),
+            include_str!("badge.rs"),
+            include_str!("bottom_sheet.rs"),
+            include_str!("card.rs"),
             include_str!("checkbox.rs"),
+            include_str!("chip.rs"),
+            include_str!("date_picker.rs"),
+            include_str!("time_picker.rs"),
+            include_str!("divider.rs"),
             include_str!("dialog.rs"),
             include_str!("dropdown_menu.rs"),
+            include_str!("fab.rs"),
             include_str!("icon_button.rs"),
             include_str!("list.rs"),
             include_str!("menu.rs"),
@@ -122,20 +164,33 @@ mod tests {
             include_str!("navigation_bar.rs"),
             include_str!("navigation_drawer.rs"),
             include_str!("navigation_rail.rs"),
+            include_str!("progress_indicator.rs"),
             include_str!("radio.rs"),
+            include_str!("segmented_button.rs"),
+            include_str!("slider.rs"),
             include_str!("select.rs"),
             include_str!("snackbar.rs"),
             include_str!("switch.rs"),
             include_str!("tabs.rs"),
             include_str!("text_field.rs"),
+            include_str!("top_app_bar.rs"),
             include_str!("tooltip.rs"),
             include_str!("foundation/indication.rs"),
             include_str!("foundation/focus_ring.rs"),
             include_str!("foundation/geometry.rs"),
+            include_str!("foundation/interaction.rs"),
             include_str!("foundation/tokens.rs"),
             include_str!("tokens/icon_button.rs"),
+            include_str!("tokens/badge.rs"),
             include_str!("tokens/button.rs"),
+            include_str!("tokens/card.rs"),
             include_str!("tokens/checkbox.rs"),
+            include_str!("tokens/chip.rs"),
+            include_str!("tokens/date_picker.rs"),
+            include_str!("tokens/time_picker.rs"),
+            include_str!("tokens/progress_indicator.rs"),
+            include_str!("tokens/divider.rs"),
+            include_str!("tokens/fab.rs"),
             include_str!("tokens/switch.rs"),
             include_str!("tokens/radio.rs"),
             include_str!("tokens/dialog.rs"),
@@ -145,7 +200,11 @@ mod tests {
             include_str!("tokens/text_field.rs"),
             include_str!("tokens/list.rs"),
             include_str!("tokens/dropdown_menu.rs"),
+            include_str!("tokens/segmented_button.rs"),
+            include_str!("tokens/sheet_bottom.rs"),
             include_str!("tokens/tooltip.rs"),
+            include_str!("tokens/slider.rs"),
+            include_str!("tokens/top_app_bar.rs"),
         ];
 
         for src in sources {
@@ -205,7 +264,10 @@ mod tests {
 
         let sources = [
             include_str!("button.rs"),
+            include_str!("card.rs"),
             include_str!("checkbox.rs"),
+            include_str!("chip.rs"),
+            include_str!("date_picker.rs"),
             include_str!("dialog.rs"),
             include_str!("dropdown_menu.rs"),
             include_str!("icon_button.rs"),
@@ -215,6 +277,7 @@ mod tests {
             include_str!("navigation_bar.rs"),
             include_str!("navigation_drawer.rs"),
             include_str!("navigation_rail.rs"),
+            include_str!("slider.rs"),
             include_str!("radio.rs"),
             include_str!("select.rs"),
             include_str!("snackbar.rs"),
@@ -225,10 +288,14 @@ mod tests {
             include_str!("foundation/indication.rs"),
             include_str!("foundation/focus_ring.rs"),
             include_str!("foundation/geometry.rs"),
+            include_str!("foundation/interaction.rs"),
             include_str!("foundation/tokens.rs"),
             include_str!("tokens/icon_button.rs"),
             include_str!("tokens/button.rs"),
+            include_str!("tokens/card.rs"),
             include_str!("tokens/checkbox.rs"),
+            include_str!("tokens/chip.rs"),
+            include_str!("tokens/date_picker.rs"),
             include_str!("tokens/switch.rs"),
             include_str!("tokens/radio.rs"),
             include_str!("tokens/dialog.rs"),
@@ -240,6 +307,7 @@ mod tests {
             include_str!("tokens/dropdown_menu.rs"),
             include_str!("tokens/select.rs"),
             include_str!("tokens/tooltip.rs"),
+            include_str!("tokens/slider.rs"),
         ];
 
         let mut keys: Vec<&str> = sources

@@ -31,6 +31,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
         requested_capture: &'a mut Option<Option<NodeId>>,
         requested_cursor: &'a mut Option<fret_core::CursorIcon>,
         notify_requested: &'a mut bool,
+        notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
         invalidations: &'a mut Vec<(NodeId, Invalidation)>,
     }
 
@@ -73,8 +74,17 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
+            if self.notify_requested_location.is_none() {
+                let caller = std::panic::Location::caller();
+                *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+            }
         }
     }
 
@@ -226,6 +236,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
                 invalidations: &mut cx.invalidations,
             };
             let handled = h(
@@ -249,6 +260,13 @@ pub(super) fn handle_pointer_region<H: UiHost>(
             pointer_id,
             ..
         }) => {
+            // PointerRegion hooks are bubble-phase interactions. Suppress them during preview-phase
+            // observer dispatch (used for hover bookkeeping) so underlay hooks do not fire while
+            // occluded (e.g. Radix `disableOutsidePointerEvents` outcomes).
+            if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,
@@ -271,6 +289,21 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 pointer_type: *pointer_type,
             };
 
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_HOOK").is_some() {
+                eprintln!(
+                    "pointer_region_move_hook: element={:?} node={:?} phase={:?} pos={:?} buttons={:?}",
+                    this.element, cx.node, cx.input_ctx.dispatch_phase, position, buttons
+                );
+            }
+            #[cfg(debug_assertions)]
+            if std::env::var_os("FRET_DEBUG_POINTER_REGION_MOVE_BACKTRACE").is_some() {
+                eprintln!(
+                    "pointer_region_move_hook backtrace:\n{}",
+                    std::backtrace::Backtrace::force_capture()
+                );
+            }
+
             let mut host = PointerHookHost {
                 app: &mut *cx.app,
                 window,
@@ -283,6 +316,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
                 invalidations: &mut cx.invalidations,
             };
             let handled = h(
@@ -340,6 +374,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
                 invalidations: &mut cx.invalidations,
             };
             let handled = h(
@@ -397,6 +432,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 requested_capture: &mut cx.requested_capture,
                 requested_cursor: &mut cx.requested_cursor,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
                 invalidations: &mut cx.invalidations,
             };
             let handled = h(
@@ -457,6 +493,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     requested_capture: &mut cx.requested_capture,
                     requested_cursor: &mut cx.requested_cursor,
                     notify_requested: &mut cx.notify_requested,
+                    notify_requested_location: &mut cx.notify_requested_location,
                     invalidations: &mut cx.invalidations,
                 };
                 let handled = h(
@@ -512,6 +549,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                     requested_capture: &mut cx.requested_capture,
                     requested_cursor: &mut cx.requested_cursor,
                     notify_requested: &mut cx.notify_requested,
+                    notify_requested_location: &mut cx.notify_requested_location,
                     invalidations: &mut cx.invalidations,
                 };
                 let handled = h(

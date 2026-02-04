@@ -45,6 +45,10 @@ impl Args {
             "md.sys.shape.".to_string(),
             // MVP component prefixes we actively align today.
             "md.comp.button.".to_string(),
+            "md.comp.badge.".to_string(),
+            "md.comp.fab".to_string(),
+            "md.comp.extended-fab".to_string(),
+            "md.comp.outlined-segmented-button.".to_string(),
             "md.comp.radio-button.".to_string(),
             "md.comp.checkbox.".to_string(),
             "md.comp.switch.".to_string(),
@@ -58,12 +62,31 @@ impl Args {
             "md.comp.plain-tooltip.".to_string(),
             "md.comp.rich-tooltip.".to_string(),
             "md.comp.snackbar.".to_string(),
+            "md.comp.top-app-bar.small.".to_string(),
+            "md.comp.top-app-bar.small.centered.".to_string(),
+            "md.comp.top-app-bar.medium.".to_string(),
+            "md.comp.top-app-bar.large.".to_string(),
+            "md.comp.sheet.bottom.".to_string(),
+            "md.comp.date-picker.docked.".to_string(),
+            "md.comp.date-picker.modal.".to_string(),
+            "md.comp.time-picker.".to_string(),
+            "md.comp.time-input.".to_string(),
             "md.comp.outlined-text-field.".to_string(),
             "md.comp.filled-text-field.".to_string(),
             "md.comp.outlined-select.".to_string(),
             "md.comp.filled-select.".to_string(),
             "md.comp.dialog.".to_string(),
             "md.comp.full-screen-dialog.".to_string(),
+            "md.comp.divider.".to_string(),
+            "md.comp.progress-indicator.".to_string(),
+            "md.comp.slider.".to_string(),
+            "md.comp.assist-chip.".to_string(),
+            "md.comp.filter-chip.".to_string(),
+            "md.comp.input-chip.".to_string(),
+            "md.comp.suggestion-chip.".to_string(),
+            "md.comp.filled-card.".to_string(),
+            "md.comp.elevated-card.".to_string(),
+            "md.comp.outlined-card.".to_string(),
         ];
         let mut debug = false;
         let mut check = false;
@@ -327,7 +350,7 @@ fn generate_output(args: &Args) -> Result<String, Box<dyn std::error::Error>> {
 
 fn rustfmt_file(path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let output = Command::new("rustfmt")
-        .args(["--edition", "2021"])
+        .args(["--edition", "2024"])
         .arg(path)
         .output()?;
 
@@ -501,8 +524,7 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     )
     .ok();
     writeln!(out).ok();
-    writeln!(out, "use fret_ui::theme::CubicBezier;").ok();
-    writeln!(out, "use fret_ui::ThemeConfig;").ok();
+    writeln!(out, "use fret_ui::{{theme::CubicBezier, ThemeConfig}};").ok();
     writeln!(
         out,
         "use fret_core::{{Corners, FontId, FontWeight, Px, TextSlant, TextStyle}};"
@@ -554,6 +576,41 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.button.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.button."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_badge_scalars",
+        "md.comp.badge.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.badge."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_fab_scalars",
+        "md.comp.fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_extended_fab_scalars",
+        "md.comp.extended-fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.extended-fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_outlined_segmented_button_scalars",
+        "md.comp.outlined-segmented-button.",
+        defs.iter()
+            .filter(|d| {
+                d.token_key
+                    .starts_with("md.comp.outlined-segmented-button.")
+            })
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_scalars(
@@ -678,6 +735,86 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     );
     emit_inject_comp_scalars(
         &mut out,
+        "inject_comp_divider_scalars",
+        "md.comp.divider.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.divider."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_progress_indicator_scalars",
+        "md.comp.progress-indicator.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.progress-indicator."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_slider_scalars",
+        "md.comp.slider.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.slider."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_assist_chip_scalars",
+        "md.comp.assist-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.assist-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_filter_chip_scalars",
+        "md.comp.filter-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filter-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_input_chip_scalars",
+        "md.comp.input-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.input-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_suggestion_chip_scalars",
+        "md.comp.suggestion-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.suggestion-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_filled_card_scalars",
+        "md.comp.filled-card.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-card."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_elevated_card_scalars",
+        "md.comp.elevated-card.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.elevated-card."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_outlined_card_scalars",
+        "md.comp.outlined-card.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-card."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
         "inject_comp_outlined_text_field_scalars",
         "md.comp.outlined-text-field.",
         defs.iter()
@@ -708,6 +845,38 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
             .filter(|d| d.token_key.starts_with("md.comp.filled-select."))
             .collect::<Vec<_>>(),
     );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_date_picker_docked_scalars",
+        "md.comp.date-picker.docked.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.docked."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_date_picker_modal_scalars",
+        "md.comp.date-picker.modal.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.modal."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_time_picker_scalars",
+        "md.comp.time-picker.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-picker."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_time_input_scalars",
+        "md.comp.time-input.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-input."))
+            .collect::<Vec<_>>(),
+    );
 
     emit_copy_color_helper(&mut out);
     emit_inject_comp_color_aliases(
@@ -716,6 +885,41 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.button.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.button."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_badge_colors_from_sys",
+        "md.comp.badge.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.badge."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_fab_colors_from_sys",
+        "md.comp.fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_extended_fab_colors_from_sys",
+        "md.comp.extended-fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.extended-fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_outlined_segmented_button_colors_from_sys",
+        "md.comp.outlined-segmented-button.",
+        defs.iter()
+            .filter(|d| {
+                d.token_key
+                    .starts_with("md.comp.outlined-segmented-button.")
+            })
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_color_aliases(
@@ -856,6 +1060,38 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     );
     emit_inject_comp_color_aliases(
         &mut out,
+        "inject_comp_date_picker_docked_colors_from_sys",
+        "md.comp.date-picker.docked.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.docked."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_date_picker_modal_colors_from_sys",
+        "md.comp.date-picker.modal.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.modal."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_time_picker_colors_from_sys",
+        "md.comp.time-picker.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-picker."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_time_input_colors_from_sys",
+        "md.comp.time-input.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-input."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
         "inject_comp_dialog_colors_from_sys",
         "md.comp.dialog.",
         defs.iter()
@@ -868,6 +1104,86 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.full-screen-dialog.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.full-screen-dialog."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_divider_colors_from_sys",
+        "md.comp.divider.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.divider."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_progress_indicator_colors_from_sys",
+        "md.comp.progress-indicator.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.progress-indicator."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_slider_colors_from_sys",
+        "md.comp.slider.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.slider."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_assist_chip_colors_from_sys",
+        "md.comp.assist-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.assist-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_filter_chip_colors_from_sys",
+        "md.comp.filter-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filter-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_input_chip_colors_from_sys",
+        "md.comp.input-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.input-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_suggestion_chip_colors_from_sys",
+        "md.comp.suggestion-chip.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.suggestion-chip."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_filled_card_colors_from_sys",
+        "md.comp.filled-card.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-card."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_elevated_card_colors_from_sys",
+        "md.comp.elevated-card.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.elevated-card."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_outlined_card_colors_from_sys",
+        "md.comp.outlined-card.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-card."))
             .collect::<Vec<_>>(),
     );
 

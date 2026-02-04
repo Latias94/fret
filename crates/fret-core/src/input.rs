@@ -102,6 +102,89 @@ pub enum ImeEvent {
         text: String,
         cursor: Option<(usize, usize)>,
     },
+    /// Delete text surrounding the cursor or selection.
+    ///
+    /// This event does not affect the preedit string. See winit's `Ime::DeleteSurrounding` docs.
+    ///
+    /// Offsets are expressed in UTF-8 bytes.
+    DeleteSurrounding {
+        before_bytes: usize,
+        after_bytes: usize,
+    },
+}
+
+/// Debug snapshot for the wasm textarea IME bridge (ADR 0195).
+///
+/// This is intended for diagnostics/harness views and is not a normative contract surface.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct WebImeBridgeDebugSnapshot {
+    pub enabled: bool,
+    pub composing: bool,
+    pub suppress_next_input: bool,
+
+    /// Whether the hidden textarea is currently the document's active element (focused).
+    ///
+    /// This is best-effort and intended for diagnosing browser "user activation" restrictions where
+    /// `focus()` calls can be ignored.
+    pub textarea_has_focus: Option<bool>,
+    /// Tag name of `document.activeElement` when available (e.g. `"TEXTAREA"`, `"CANVAS"`).
+    pub active_element_tag: Option<String>,
+
+    /// Where the hidden textarea is positioned.
+    ///
+    /// This is intentionally stringly-typed to keep the snapshot portable across runners.
+    /// Expected values: `"absolute"`, `"fixed"`, or `None` if not initialized.
+    pub position_mode: Option<String>,
+    /// Describes what the textarea is mounted into.
+    ///
+    /// Expected values: `"overlay"`, `"mount"`, `"body"`, or `None` if not initialized.
+    pub mount_kind: Option<String>,
+    /// Device pixel ratio at the time the bridge was initialized or last updated.
+    pub device_pixel_ratio: Option<f64>,
+
+    /// Debug-only textarea metrics (DOM-reported).
+    ///
+    /// These help diagnose candidate UI jitter and unexpected wrapping/scrolling behaviors across
+    /// browsers and IMEs. Units are CSS pixels unless otherwise noted.
+    pub textarea_value_chars: Option<usize>,
+    pub textarea_selection_start_utf16: Option<u32>,
+    pub textarea_selection_end_utf16: Option<u32>,
+    pub textarea_client_width_px: Option<i32>,
+    pub textarea_client_height_px: Option<i32>,
+    pub textarea_scroll_width_px: Option<i32>,
+    pub textarea_scroll_height_px: Option<i32>,
+
+    pub last_input_type: Option<String>,
+    pub last_beforeinput_data: Option<String>,
+    pub last_input_data: Option<String>,
+
+    pub last_key_code: Option<KeyCode>,
+    pub last_cursor_area: Option<Rect>,
+    /// Where the hidden textarea is anchored (CSS px, relative to its positioning context).
+    ///
+    /// This is derived from `last_cursor_area` by the web runner and helps diagnose candidate UI
+    /// offsets (e.g. top-left vs center anchoring).
+    pub last_cursor_anchor_px: Option<(f32, f32)>,
+
+    /// Truncated preedit text observed during `compositionupdate`.
+    pub last_preedit_text: Option<String>,
+    /// Preedit cursor range in UTF-16 code units (begin, end) as reported by the textarea.
+    pub last_preedit_cursor_utf16: Option<(u32, u32)>,
+    /// Truncated committed text observed during `compositionend` or `input`.
+    pub last_commit_text: Option<String>,
+
+    /// Recent IME-related DOM events (debug-only ring buffer).
+    ///
+    /// Intended to help diagnose ordering differences across browsers/IMEs.
+    pub recent_events: Vec<String>,
+
+    pub beforeinput_seen: u64,
+    pub input_seen: u64,
+    pub suppressed_input_seen: u64,
+    pub composition_start_seen: u64,
+    pub composition_update_seen: u64,
+    pub composition_end_seen: u64,
+    pub cursor_area_set_seen: u64,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -293,6 +376,17 @@ pub enum Event {
     },
     /// Clipboard read completed without a text payload (clipboard empty/unavailable/error).
     ClipboardTextUnavailable {
+        token: ClipboardToken,
+    },
+    /// Linux primary selection text payload delivered to the focused widget.
+    ///
+    /// This typically originates from middle-click paste when primary selection is enabled.
+    PrimarySelectionText {
+        token: ClipboardToken,
+        text: String,
+    },
+    /// Primary selection read completed without a text payload (unavailable/empty/error).
+    PrimarySelectionTextUnavailable {
         token: ClipboardToken,
     },
     /// File dialog selection metadata (token + names). Bytes must be requested via effects.

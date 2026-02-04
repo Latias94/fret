@@ -12,7 +12,7 @@ pub(crate) enum SelectableTextCommandOutcome {
 }
 
 fn line_start(text: &str, caret: usize) -> usize {
-    let caret = utf8::clamp_to_char_boundary(text, caret);
+    let caret = utf8::clamp_to_grapheme_boundary(text, caret);
     text[..caret]
         .rfind('\n')
         .map(|i| (i + 1).min(text.len()))
@@ -20,7 +20,7 @@ fn line_start(text: &str, caret: usize) -> usize {
 }
 
 fn line_end(text: &str, caret: usize) -> usize {
-    let caret = utf8::clamp_to_char_boundary(text, caret);
+    let caret = utf8::clamp_to_grapheme_boundary(text, caret);
     text[caret..]
         .find('\n')
         .map(|i| (caret + i).min(text.len()))
@@ -39,8 +39,8 @@ pub(crate) fn apply_selectable_text_command(
         other => other,
     };
 
-    state.caret = utf8::clamp_to_char_boundary(text, state.caret);
-    state.selection_anchor = utf8::clamp_to_char_boundary(text, state.selection_anchor);
+    state.caret = utf8::clamp_to_grapheme_boundary(text, state.caret);
+    state.selection_anchor = utf8::clamp_to_grapheme_boundary(text, state.selection_anchor);
     state.dragging = false;
 
     let mut needs_repaint = false;
@@ -60,26 +60,26 @@ pub(crate) fn apply_selectable_text_command(
             needs_repaint = true;
         }
         "text.move_left" => {
-            let next = utf8::prev_char_boundary(text, state.caret);
+            let next = utf8::prev_grapheme_boundary(text, state.caret);
             state.selection_anchor = next;
             state.caret = next;
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }
         "text.move_right" => {
-            let next = utf8::next_char_boundary(text, state.caret);
+            let next = utf8::next_grapheme_boundary(text, state.caret);
             state.selection_anchor = next;
             state.caret = next;
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }
         "text.select_left" => {
-            state.caret = utf8::prev_char_boundary(text, state.caret);
+            state.caret = utf8::prev_grapheme_boundary(text, state.caret);
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }
         "text.select_right" => {
-            state.caret = utf8::next_char_boundary(text, state.caret);
+            state.caret = utf8::next_grapheme_boundary(text, state.caret);
             state.affinity = fret_core::CaretAffinity::Downstream;
             needs_repaint = true;
         }

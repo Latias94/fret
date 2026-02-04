@@ -3,8 +3,8 @@ use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle,
-    TextWrap, UvRect, ViewportFit,
+    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
+    TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -88,6 +88,9 @@ pub enum ElementKind {
     Image(ImageProps),
     /// A declarative, leaf canvas element for custom scene emission (ADR 0156).
     Canvas(CanvasProps),
+    /// Unstable bridge element for hosting a retained subtree under declarative mount.
+    #[cfg(feature = "unstable-retained-bridge")]
+    RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
     /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0125).
     ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),
@@ -124,11 +127,22 @@ pub struct PointerRegionProps {
 }
 
 /// A focusable event region that participates in text input / IME routing.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TextInputRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
     pub text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
+    /// Optional accessibility label for this text input region.
+    pub a11y_label: Option<Arc<str>>,
+    /// Optional accessibility value text for this text input region.
+    ///
+    /// When present, selection and composition ranges are interpreted as UTF-8 byte offsets within
+    /// this value (ADR 0071).
+    pub a11y_value: Option<Arc<str>>,
+    /// Optional selection range (anchor, focus) in UTF-8 byte offsets within `a11y_value`.
+    pub a11y_text_selection: Option<(u32, u32)>,
+    /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
+    pub a11y_text_composition: Option<(u32, u32)>,
 }
 
 /// An internal drag event listener region primitive.
@@ -164,6 +178,10 @@ impl Default for TextInputRegionProps {
             layout: LayoutStyle::default(),
             enabled: true,
             text_boundary_mode_override: None,
+            a11y_label: None,
+            a11y_value: None,
+            a11y_text_selection: None,
+            a11y_text_composition: None,
         }
     }
 }
@@ -324,6 +342,8 @@ pub struct ContainerProps {
     /// When true, focus state is derived from any focused descendant (focus-within).
     pub focus_within: bool,
     pub corner_radii: Corners,
+    /// When true, snap paint bounds to device pixels (policy-only).
+    pub snap_to_device_pixels: bool,
 }
 
 impl Default for ContainerProps {
@@ -339,6 +359,7 @@ impl Default for ContainerProps {
             focus_border_color: None,
             focus_within: false,
             corner_radii: Corners::all(Px(0.0)),
+            snap_to_device_pixels: false,
         }
     }
 }
@@ -910,6 +931,7 @@ pub struct SelectableTextState {
     pub selection_anchor: usize,
     pub caret: usize,
     pub affinity: CaretAffinity,
+    pub preferred_x: Option<Px>,
     pub dragging: bool,
     pub last_pointer_pos: Option<fret_core::Point>,
 }
@@ -920,6 +942,7 @@ impl Default for SelectableTextState {
             selection_anchor: 0,
             caret: 0,
             affinity: CaretAffinity::Downstream,
+            preferred_x: None,
             dragging: false,
             last_pointer_pos: None,
         }
@@ -929,6 +952,8 @@ impl Default for SelectableTextState {
 #[derive(Clone)]
 pub struct TextInputProps {
     pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub a11y_role: Option<SemanticsRole>,
@@ -946,6 +971,8 @@ impl TextInputProps {
     pub fn new(model: Model<String>) -> Self {
         Self {
             layout: LayoutStyle::default(),
+            enabled: true,
+            focusable: true,
             model,
             a11y_label: None,
             a11y_role: None,
@@ -965,6 +992,8 @@ impl std::fmt::Debug for TextInputProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextInputProps")
             .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("a11y_role", &self.a11y_role)
@@ -985,6 +1014,8 @@ impl std::fmt::Debug for TextInputProps {
 #[derive(Clone)]
 pub struct TextAreaProps {
     pub layout: LayoutStyle,
+    pub enabled: bool,
+    pub focusable: bool,
     pub model: Model<String>,
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
@@ -997,6 +1028,8 @@ impl TextAreaProps {
     pub fn new(model: Model<String>) -> Self {
         Self {
             layout: LayoutStyle::default(),
+            enabled: true,
+            focusable: true,
             model,
             a11y_label: None,
             test_id: None,
@@ -1011,6 +1044,8 @@ impl std::fmt::Debug for TextAreaProps {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextAreaProps")
             .field("layout", &self.layout)
+            .field("enabled", &self.enabled)
+            .field("focusable", &self.focusable)
             .field("model", &"<model>")
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
@@ -1278,6 +1313,18 @@ impl TextProps {
             overflow: TextOverflow::Clip,
         }
     }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_plain(self.text.clone(), style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
+    }
 }
 
 impl StyledTextProps {
@@ -1291,6 +1338,18 @@ impl StyledTextProps {
             overflow: TextOverflow::Clip,
         }
     }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_attributed(&self.rich, style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
+    }
 }
 
 impl SelectableTextProps {
@@ -1303,6 +1362,18 @@ impl SelectableTextProps {
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
         }
+    }
+
+    pub(crate) fn resolved_text_style(&self, theme: crate::ThemeSnapshot) -> TextStyle {
+        crate::text_props::resolve_text_style(theme, self.style.clone())
+    }
+
+    pub(crate) fn build_text_input_with_style(&self, style: TextStyle) -> fret_core::TextInput {
+        crate::text_props::build_text_input_attributed(&self.rich, style)
+    }
+
+    pub(crate) fn build_text_input(&self, theme: crate::ThemeSnapshot) -> fret_core::TextInput {
+        self.build_text_input_with_style(self.resolved_text_style(theme))
     }
 }
 
@@ -1366,6 +1437,12 @@ pub struct VirtualListProps {
     pub measure_mode: VirtualListMeasureMode,
     pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
+    /// Number of off-window items that a retained virtual-list host may keep alive for reuse.
+    ///
+    /// This is primarily consumed by retained/windowed host implementations (ADR 0192) so window
+    /// shifts can reuse previously-mounted item subtrees without forcing the parent cache root to
+    /// rerender.
+    pub keep_alive: usize,
     pub scroll_margin: Px,
     pub gap: Px,
     pub scroll_handle: crate::scroll::VirtualListScrollHandle,
@@ -1412,6 +1489,7 @@ pub struct VirtualListOptions {
     pub measure_mode: VirtualListMeasureMode,
     pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
+    pub keep_alive: usize,
     pub scroll_margin: Px,
     pub gap: Px,
     pub known_row_height_at: Option<Arc<dyn Fn(usize) -> Px + Send + Sync>>,
@@ -1426,10 +1504,16 @@ impl VirtualListOptions {
             measure_mode: VirtualListMeasureMode::Measured,
             key_cache: VirtualListKeyCacheMode::AllKeys,
             overscan,
+            keep_alive: 0,
             scroll_margin: Px(0.0),
             gap: Px(0.0),
             known_row_height_at: None,
         }
+    }
+
+    pub fn keep_alive(mut self, keep_alive: usize) -> Self {
+        self.keep_alive = keep_alive;
+        self
     }
 
     pub fn fixed(estimate_row_height: Px, overscan: usize) -> Self {
@@ -1460,6 +1544,7 @@ impl std::fmt::Debug for VirtualListOptions {
             .field("measure_mode", &self.measure_mode)
             .field("key_cache", &self.key_cache)
             .field("overscan", &self.overscan)
+            .field("keep_alive", &self.keep_alive)
             .field("scroll_margin", &self.scroll_margin)
             .field("gap", &self.gap)
             .field("known_row_height_at", &self.known_row_height_at.is_some())
@@ -1476,6 +1561,7 @@ pub struct VirtualListState {
     pub viewport_h: Px,
     pub(crate) window_range: Option<crate::virtual_list::VirtualRange>,
     pub(crate) render_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub(crate) last_scroll_direction_forward: Option<bool>,
     pub(crate) has_final_viewport: bool,
     pub(crate) deferred_scroll_offset_hint: Option<Px>,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
@@ -1490,6 +1576,15 @@ pub struct ScrollProps {
     pub layout: LayoutStyle,
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
+    pub intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
+    /// When true, the scroll subtree's paint output depends on the scroll offset in a
+    /// windowed/virtualized way (e.g. a single `Canvas` that only paints the visible range).
+    ///
+    /// In this mode, scroll-handle updates must be allowed to invalidate view-cache reuse so the
+    /// subtree can re-render and re-run paint handlers for the new visible window.
+    ///
+    /// This is a mechanism-only switch; policy lives in ecosystem layers.
+    pub windowed_paint: bool,
     /// When true (default), scroll containers probe their content with a very large available size
     /// along the scroll axis to measure the full scrollable extent.
     ///
@@ -1508,9 +1603,26 @@ impl Default for ScrollProps {
             layout,
             axis: ScrollAxis::Y,
             scroll_handle: None,
+            intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
+            windowed_paint: false,
             probe_unbounded: true,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScrollIntrinsicMeasureMode {
+    /// Default behavior: scroll measurement probes children (potentially using MaxContent on the
+    /// scroll axis when `probe_unbounded` is true).
+    Content,
+    /// Treat the scroll container as a viewport-sized barrier in intrinsic measurement contexts.
+    ///
+    /// This avoids recursively measuring large scrollable subtrees (virtualized surfaces, large
+    /// tables, code views) during Min/MaxContent measurement passes.
+    ///
+    /// Note: this affects only `measure()` / intrinsic sizing; final layout under definite
+    /// available space is unchanged.
+    Viewport,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1534,6 +1646,22 @@ impl ScrollAxis {
 #[derive(Debug, Default, Clone)]
 pub struct ScrollState {
     pub scroll_handle: crate::scroll::ScrollHandle,
+    pub(crate) intrinsic_measure_cache: Option<ScrollIntrinsicMeasureCache>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ScrollIntrinsicMeasureCacheKey {
+    pub avail_w: u64,
+    pub avail_h: u64,
+    pub axis: u8,
+    pub probe_unbounded: bool,
+    pub scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ScrollIntrinsicMeasureCache {
+    pub key: ScrollIntrinsicMeasureCacheKey,
+    pub max_child: Size,
 }
 
 #[derive(Debug, Clone, Copy)]

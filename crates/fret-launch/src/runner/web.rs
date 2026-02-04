@@ -15,10 +15,11 @@ use fret_runtime::{
     FrameId, PlatformCapabilities, TickId, WindowRequest, apply_window_metrics_event,
 };
 use wasm_bindgen_futures::spawn_local;
+use web_sys::wasm_bindgen::JsCast as _;
 use winit::application::ApplicationHandler;
 use winit::cursor::Cursor;
 use winit::dpi::{LogicalSize, PhysicalSize};
-use winit::event::WindowEvent;
+use winit::event::{ElementState, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{Window, WindowAttributes, WindowId};
 
@@ -32,6 +33,82 @@ use super::{
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use crate::RunnerError;
+
+fn ensure_canvas_ime_mount(canvas: &web_sys::HtmlCanvasElement) -> Option<web_sys::HtmlElement> {
+    let canvas_el: web_sys::HtmlElement = canvas.clone().unchecked_into();
+
+    if let Some(parent) = canvas_el.parent_element() {
+        // Preferred: a dedicated overlay layer inside the wrapper.
+        if parent.get_attribute("data-fret-ime-wrapper").as_deref() == Some("1") {
+            if let Ok(Some(overlay)) = parent.query_selector("[data-fret-ime-overlay='1']") {
+                if let Ok(overlay) = overlay.dyn_into::<web_sys::HtmlElement>() {
+                    return Some(overlay);
+                }
+            }
+
+            let document = canvas_el.owner_document()?;
+            let el = document.create_element("div").ok()?;
+            let overlay: web_sys::HtmlElement = el.dyn_into().ok()?;
+            let _ = overlay.set_attribute("data-fret-ime-overlay", "1");
+            let _ = overlay.set_attribute("data-fret-ime-mount", "1");
+
+            let style = overlay.style();
+            let _ = style.set_property("position", "absolute");
+            let _ = style.set_property("left", "0");
+            let _ = style.set_property("top", "0");
+            let _ = style.set_property("width", "100%");
+            let _ = style.set_property("height", "100%");
+            let _ = style.set_property("pointer-events", "none");
+            let _ = style.set_property("overflow", "hidden");
+
+            let _ = parent.append_child(&overlay);
+            return Some(overlay);
+        }
+
+        // Back-compat: older mount strategy uses the direct parent as the mount.
+        if parent.get_attribute("data-fret-ime-mount").as_deref() == Some("1") {
+            if let Ok(parent) = parent.dyn_into::<web_sys::HtmlElement>() {
+                return Some(parent);
+            }
+        }
+    }
+
+    let document = canvas_el.owner_document()?;
+    let el = document.create_element("div").ok()?;
+    let wrapper: web_sys::HtmlElement = el.dyn_into().ok()?;
+    let _ = wrapper.set_attribute("data-fret-ime-wrapper", "1");
+
+    let style = wrapper.style();
+    let _ = style.set_property("position", "relative");
+    let _ = style.set_property("margin", "0");
+    let _ = style.set_property("padding", "0");
+    let _ = style.set_property("border", "0");
+    let _ = style.set_property("overflow", "hidden");
+    let _ = style.set_property("display", "block");
+
+    let parent = canvas_el.parent_node()?;
+    let wrapper_node: web_sys::Node = wrapper.clone().unchecked_into();
+    let canvas_node: web_sys::Node = canvas_el.clone().unchecked_into();
+
+    let _ = parent.replace_child(&wrapper_node, &canvas_node);
+    let _ = wrapper.append_child(&canvas_node);
+
+    let el = document.create_element("div").ok()?;
+    let overlay: web_sys::HtmlElement = el.dyn_into().ok()?;
+    let _ = overlay.set_attribute("data-fret-ime-overlay", "1");
+    let _ = overlay.set_attribute("data-fret-ime-mount", "1");
+    let style = overlay.style();
+    let _ = style.set_property("position", "absolute");
+    let _ = style.set_property("left", "0");
+    let _ = style.set_property("top", "0");
+    let _ = style.set_property("width", "100%");
+    let _ = style.set_property("height", "100%");
+    let _ = style.set_property("pointer-events", "none");
+    let _ = style.set_property("overflow", "hidden");
+    let _ = wrapper.append_child(&overlay);
+
+    Some(overlay)
+}
 
 struct GfxState {
     ctx: WgpuContext,
@@ -236,7 +313,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.dnd.external_payload = fret_runtime::ExternalDragPayloadKind::None;
         available.dnd.external_position = fret_runtime::ExternalDragPositionQuality::None;
         available.ime.enabled = true;
-        available.ime.set_cursor_area = false;
+        available.ime.set_cursor_area = true;
         available.fs.real_paths = false;
         available.fs.file_dialogs = true;
         available.shell.open_url = true;
@@ -310,11 +387,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let _ = gfx
             .renderer
             .set_text_font_families(&self.config.text_font_families);
-        let _ = fret_runtime::apply_font_catalog_update(
+
+        // Web/WASM cannot access system fonts. Load our bundled defaults as soon as the renderer
+        // becomes available, then seed `TextFontFamilyConfig` deterministically.
+        let default_fonts = fret_fonts::default_fonts()
+            .iter()
+            .map(|bytes| bytes.to_vec())
+            .collect::<Vec<_>>();
+        let _ = gfx.renderer.add_fonts(default_fonts);
+
+        let update = fret_runtime::apply_font_catalog_update(
             &mut self.app,
             gfx.renderer.all_font_names(),
-            fret_runtime::FontFamilyDefaultsPolicy::None,
+            fret_runtime::FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates,
         );
+        let _ = gfx.renderer.set_text_font_families(&update.config);
         self.app
             .set_global::<fret_runtime::TextFontStackKey>(fret_runtime::TextFontStackKey(
                 gfx.renderer.text_font_stack_key(),
@@ -829,7 +916,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             return false;
         };
 
-        let t0 = std::time::Instant::now();
+        let t0 = fret_core::time::Instant::now();
         let Ok(uploaded_bytes) = super::yuv_gpu::write_nv12_rect(
             &gfx.ctx.queue,
             planes,
@@ -1017,30 +1104,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     };
                     window.set_cursor(Cursor::Icon(cursor));
                 }
-                Effect::ImeAllow {
-                    window: target,
-                    enabled,
-                } => {
-                    if target != self.app_window {
-                        continue;
-                    }
-                    let dirty = self.platform.set_ime_allowed(enabled);
-                    if dirty {
-                        self.platform.prepare_frame(window);
-                    }
-                }
-                Effect::ImeSetCursorArea {
-                    window: target,
-                    rect,
-                } => {
-                    if target != self.app_window {
-                        continue;
-                    }
-                    let dirty = self.platform.set_ime_cursor_area(rect);
-                    if dirty {
-                        self.platform.prepare_frame(window);
-                    }
-                }
                 Effect::ImageRegisterRgba8 {
                     window: target_window,
                     token,
@@ -1184,7 +1247,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     ) {
                         continue;
                     }
-                    let t0 = std::time::Instant::now();
+                    let t0 = fret_core::time::Instant::now();
                     match super::yuv::nv12_to_rgba8_rect(super::yuv::Nv12ToRgba8RectInput {
                         width,
                         height,
@@ -1253,7 +1316,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 } => {
                     stats.yuv_conversions_attempted =
                         stats.yuv_conversions_attempted.saturating_add(1);
-                    let t0 = std::time::Instant::now();
+                    let t0 = fret_core::time::Instant::now();
                     match super::yuv::i420_to_rgba8_rect(super::yuv::I420ToRgba8RectInput {
                         width,
                         height,
@@ -1328,7 +1391,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                         event_loop.exit();
                         return true;
                     }
-                    WindowRequest::Create(_) | WindowRequest::Raise { .. } => {}
+                    WindowRequest::Create(_)
+                    | WindowRequest::Raise { .. }
+                    | WindowRequest::SetInnerSize { .. } => {}
                 },
                 Effect::QuitApp => {
                     self.exiting = true;
@@ -1694,11 +1759,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        let fonts = fret_fonts::default_fonts()
-            .iter()
-            .map(|bytes| bytes.to_vec())
-            .collect::<Vec<_>>();
-        self.app.push_effect(Effect::TextAddFonts { fonts });
+        if let Some(canvas) = window.canvas().map(|c| c.clone())
+            && let Some(mount) = ensure_canvas_ime_mount(&canvas)
+        {
+            self.web_services.register_ime_mount(self.app_window, mount);
+        }
 
         if let Some(canvas) = window.canvas().map(|c| c.clone()) {
             let gfx_slot = self.pending_gfx.clone();
@@ -1848,6 +1913,32 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     &event,
                     &mut self.pending_events,
                 );
+                // On Web/WASM, focusing the hidden IME textarea must happen within the same
+                // user-activation gesture that triggered the focus change (browser restrictions).
+                //
+                // The normal "queue events -> request redraw -> drain turns during RedrawRequested"
+                // path can run outside of that activation window (e.g. next RAF), causing
+                // `textarea.focus()` to be ignored and leaving IME disabled.
+                //
+                // Flush a bounded number of turns immediately for activation-carrying events so
+                // `Effect::ImeAllow { enabled: true }` can be handled synchronously.
+                let activation_event = matches!(
+                    &event,
+                    // Note: some focus behaviors (and thus `Effect::ImeAllow`) can be driven by
+                    // the "click" completion semantics (pointer-up). Drain on both pressed and
+                    // released to keep textarea `focus()` within the browser activation window.
+                    WindowEvent::PointerButton { .. }
+                );
+                if activation_event
+                    && self.gfx.is_some()
+                    && self.window_state.is_some()
+                    && let (Some(mut gfx), Some(mut state)) =
+                        (self.gfx.take(), self.window_state.take())
+                {
+                    self.drain_turns(event_loop, window, &mut gfx, &mut state);
+                    self.window_state = Some(state);
+                    self.gfx = Some(gfx);
+                }
                 if !self.pending_events.is_empty() {
                     window.request_redraw();
                 }

@@ -26,11 +26,13 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
     material_pressable_indication_config,
 };
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::navigation_rail as rail_tokens;
+use crate::{Badge, BadgePlacement, BadgeValue};
 
 #[derive(Debug, Default, Clone)]
 struct NavigationRailLayoutRuntime {
@@ -42,6 +44,7 @@ pub struct NavigationRailItem {
     value: Arc<str>,
     label: Arc<str>,
     icon: IconId,
+    badge: Option<BadgeValue>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -53,10 +56,26 @@ impl NavigationRailItem {
             value: value.into(),
             label: label.into(),
             icon,
+            badge: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    pub fn badge(mut self, badge: BadgeValue) -> Self {
+        self.badge = Some(badge);
+        self
+    }
+
+    pub fn badge_dot(mut self) -> Self {
+        self.badge = Some(BadgeValue::Dot);
+        self
+    }
+
+    pub fn badge_text(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.badge = Some(BadgeValue::Text(value.into()));
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -349,6 +368,7 @@ fn navigation_rail_item<H: UiHost>(
     let value = item.value.clone();
     let label = item.label.clone();
     let icon = item.icon.clone();
+    let badge = item.badge.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
 
@@ -477,6 +497,26 @@ fn navigation_rail_item<H: UiHost>(
                     });
 
                     let icon_el = rail_icon(cx, theme, &icon, icon_color);
+                    let icon_el = if let Some(badge) = badge.clone() {
+                        let badge = match badge {
+                            BadgeValue::Dot => Badge::dot(),
+                            BadgeValue::Text(value) => Badge::text(value),
+                        };
+                        let badge_test_id = test_id
+                            .as_ref()
+                            .map(|id| Arc::<str>::from(format!("{id}-badge")));
+                        let badge = badge
+                            .placement(BadgePlacement::NavigationIcon)
+                            .navigation_anchor_size(rail_tokens::icon_size(theme));
+                        let badge = if let Some(badge_test_id) = badge_test_id {
+                            badge.test_id(badge_test_id)
+                        } else {
+                            badge
+                        };
+                        badge.into_element(cx, move |_cx| vec![icon_el])
+                    } else {
+                        icon_el
+                    };
                     cx.flex(
                         FlexProps {
                             layout: {
@@ -648,14 +688,11 @@ fn interaction_state(
     hovered: bool,
     focused: bool,
 ) -> rail_tokens::NavigationRailItemInteraction {
-    if pressed {
-        rail_tokens::NavigationRailItemInteraction::Pressed
-    } else if focused {
-        rail_tokens::NavigationRailItemInteraction::Focused
-    } else if hovered {
-        rail_tokens::NavigationRailItemInteraction::Hovered
-    } else {
-        rail_tokens::NavigationRailItemInteraction::Default
+    match pressable_interaction(pressed, hovered, focused) {
+        Some(PressableInteraction::Pressed) => rail_tokens::NavigationRailItemInteraction::Pressed,
+        Some(PressableInteraction::Focused) => rail_tokens::NavigationRailItemInteraction::Focused,
+        Some(PressableInteraction::Hovered) => rail_tokens::NavigationRailItemInteraction::Hovered,
+        None => rail_tokens::NavigationRailItemInteraction::Default,
     }
 }
 

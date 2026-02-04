@@ -57,6 +57,14 @@ enable bundle screenshots:
 When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
 `bundle.json`).
 
+Notes:
+
+- This is **bundle-scoped** and **dump-triggered**:
+  - The runtime writes a `screenshot.request` file into the bundle directory when dumping `bundle.json`.
+  - The desktop runner detects that request and writes `frame.bmp` (and `screenshot.done`) as best-effort.
+- This is intentionally separate from the on-demand PNG screenshot protocol used by scripted steps
+  like `capture_screenshot` (see below).
+
 ## Offline bundle viewer (optional)
 
 This repo includes an offline web viewer for `bundle.json` at `tools/fret-bundle-viewer`.
@@ -124,6 +132,12 @@ Workflow tip:
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
 
+Screenshot note:
+
+- `capture_screenshot` requires the **on-demand PNG screenshot protocol**:
+  - Enable via `FRET_DIAG_SCREENSHOTS=1` (default disabled).
+  - This is distinct from `FRET_DIAG_SCREENSHOT=1`, which only writes `frame.bmp` during bundle dumps.
+
 ## Quick Start (scripted perf triage)
 
 Use this when the UI "feels slow" and you need a repeatable way to find the worst frames.
@@ -159,6 +173,11 @@ Notes:
 - When view caching is active, bundles include cache-root stats (replay ops, reuse reasons) to help
   identify "cache misses" vs "we are repainting anyway".
 - For a CPU timeline view of these same frames, see: `docs/tracy.md`.
+- For overall process resource footprint (especially "idle CPU" and memory regressions), use `fretboard diag repro`
+  to run a script and capture a `resource.footprint.json` summary (CPU + working set / pagefile on Windows).
+  This is designed for CI/automation gates:
+  - `cargo run -p fretboard -- diag repro <script.json> --max-cpu-avg-percent-total-cores 2.0 --max-peak-working-set-bytes 800000000 --launch -- <cmd...>`
+  - `avg_cpu_percent_total_cores` is normalized to *all* logical cores (e.g. ~3% on a 32-core machine is ~1 full core).
 
 ## Quick Start (picking / "inspect target")
 
@@ -275,12 +294,17 @@ Core:
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
+  - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
+    (e.g. unix ms) to trigger a dump; `fretboard diag poke` does this for you.
 - `FRET_DIAG_MAX_EVENTS=...`: ring size for events.
 - `FRET_DIAG_MAX_SNAPSHOTS=...`: ring size for snapshots.
 
 Semantics export:
 
 - `FRET_DIAG_SEMANTICS=0`: disable exporting `debug.semantics` into bundles (default enabled).
+- `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
+- `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
+- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0192).
 
 Privacy / size:
 
@@ -298,6 +322,7 @@ Script harness:
 
 Screenshot capture:
 
+- Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
 - `FRET_DIAG_SCREENSHOTS=1`: enable GPU readback screenshots (default disabled).
 - `FRET_DIAG_SCREENSHOT_REQUEST_PATH=...`: screenshot request JSON path (default `<dir>/screenshots.request.json`).
 - `FRET_DIAG_SCREENSHOT_TRIGGER_PATH=...`: screenshot request trigger file (default `<dir>/screenshots.touch`).
@@ -340,7 +365,7 @@ Supported selectors (v1 MVP):
 - `move_pointer`
 - `drag_pointer` (optional `button`, `steps`)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
-- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
+- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`, `a-z`, `0-9`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
@@ -352,8 +377,28 @@ Supported selectors (v1 MVP):
 
 Notes:
 
-- `capture_bundle` always writes a new `bundle.json` directory. When `FRET_DIAG_SCREENSHOTS=1`, the step waits until the corresponding screenshot has been written (so downstream automation can rely on it deterministically).
-- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`). It also waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness will create one first.
+- `capture_bundle` always writes a new `bundle.json` directory.
+  - When `FRET_DIAG_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
+  - If you want an explicit screenshot step, follow with `capture_screenshot`.
+- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
+- `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
+
+## Script schema v2 (intent-level steps)
+
+Schema v2 keeps the same `steps` array shape, but adds higher-level intent steps that are still semantics-first
+(selectors + window-bounds predicates), and can internally perform multi-frame behavior (wait/retry loops) without forcing
+authors to hand-write brittle `wait_frames` chains.
+
+Supported intent steps (v2):
+
+- `ensure_visible` (wait until visible/within window bounds)
+- `scroll_into_view` (wheel a container until a target becomes visible)
+- `type_text_into` (wait + click + type)
+- `menu_select` (wait + open menu + click item)
+- `drag_to` (drag between two semantics targets)
+- `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
+
+Example: `tools/diag-scripts/ui-gallery-slider-set-value.json`.
 
 Note: `drag_pointer` also emits `Event::InternalDrag` (`over` per move + final `drop`). This is
 useful for exercising cross-window internal drag routes (e.g. docking drop indicators) in scripted
@@ -415,7 +460,7 @@ Predicates (v1 MVP):
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"focus_is","target":<selector>}`
  - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
- - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0}` (target bounds must be fully contained within the window, optionally padded inward)
+ - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

@@ -26,10 +26,14 @@ Quick workflow (recommended default paths under `.fret/`):
 $env:FRET_DIAG=1
 $env:FRET_DIAG_DIR=".fret\\diag"
 
-# Optional: enable GPU readback screenshots + completion log.
+# Optional: enable screenshot protocol (required for `capture_screenshot` if the app is started outside `fretboard --launch`).
 $env:FRET_DIAG_SCREENSHOTS=1
 
 # Run a deterministic scripted repro and auto-pack a shareable zip.
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
+  --launch -- cargo run -p fret-ui-gallery --release
+
+# Equivalent (lower-level) form:
 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-intro-idle-screenshot.json `
   --pack --include-all `
   --launch -- cargo run -p fret-ui-gallery --release
@@ -39,6 +43,127 @@ Notes:
 
 - `fretboard diag inspect on` enables a GPUI/Zed-style picker overlay and writes `pick.result.json` for stable selectors.
 - `fretboard diag pack --include-all` and `diag run --pack --include-all` produce a `.zip` that the offline viewer can open (`tools/fret-bundle-viewer`).
+- `diag repro` writes `repro.zip` and `repro.summary.json` into `FRET_DIAG_DIR` (useful as a single “attach this” artifact).
+  - When running a suite, `repro.zip` includes multiple bundles under stable prefixes, plus script sources under `_root/scripts/`.
+
+Framework consistency checks (automation-friendly):
+
+- **Stale paint detection**: fails when a semantics node moves but the scene fingerprint does not change (common symptom:
+  “UI updated but pixels didn’t repaint”).
+- **Stale scene detection**: fails when a semantics node’s label/value changes (or moves) but the scene fingerprint does
+  not change (common symptom: “search results changed but text didn’t repaint / disappeared”).
+- **Semantics repaint detection**: fails when the bundle’s `semantics_fingerprint` changes but `scene_fingerprint` does
+  not (a coarse “something semantic changed but we didn’t repaint” signal).
+- **Pixels changed detection**: fails when a screenshot-backed region hash inside the target semantics bounds does not
+  change across captures (tooling: `--check-pixels-changed <test_id>`; evidence: `check.pixels_changed.json`).
+
+Example:
+
+```powershell
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-sidebar-scroll-refresh.json `
+  --check-stale-paint ui-gallery-nav-intro `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+```powershell
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-code-view-scroll-refresh.json `
+  --check-stale-scene <test_id> `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Screenshot-backed example (requires `capture_screenshot` steps):
+
+```powershell
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-view-scroll-refresh-pixels-changed.json `
+  --check-pixels-changed ui-gallery-code-view-root `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Perf regression gate example (writes `check.perf_thresholds.json` to `FRET_DIAG_DIR`):
+
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery `
+  --repeat 5 `
+  --warmup-frames 5 `
+  --max-top-total-us 25000 `
+  --max-top-layout-us 15000 `
+  --max-top-solve-us 8000 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Resource footprint gate example (writes `check.resource_footprint.json` to `FRET_DIAG_DIR`):
+
+```powershell
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-intro-idle.json `
+  --max-working-set-bytes 1200000000 `
+  --max-peak-working-set-bytes 1600000000 `
+  --max-cpu-avg-percent-total-cores 250 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Redraw hitch gate example (writes `check.redraw_hitches.json` and includes `redraw_hitches.log` in `repro.zip`):
+
+```powershell
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-window-resize-stress.json `
+  --check-redraw-hitches-max-total-ms 120 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Widget-level layout hotspot attribution (useful for “resize feels laggy” reports):
+
+```powershell
+# Frame phase breakdown.
+$env:FRET_LAYOUT_ALL_PROFILE=1
+
+# Per-node layout profiling (logs `layout_node profile` lines).
+$env:FRET_LAYOUT_NODE_PROFILE=1
+# Optional tuning:
+$env:FRET_LAYOUT_NODE_PROFILE_TOP=20
+$env:FRET_LAYOUT_NODE_PROFILE_MIN_US=500
+
+cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Notes:
+
+- `layout_all profile` attributes frame time to phases (e.g. `layout_roots_ms` vs `refresh_semantics_ms`).
+- `layout_node profile` reports **exclusive** widget `layout()` time (`self_us`), which includes widget-local
+  intrinsic measurement and layout-engine subtree setup, but excludes child `layout()` calls.
+- If a `Scroll` node dominates, enable `FRET_SCROLL_LAYOUT_PROFILE=1` to split it into
+  `measure_children_us` / `solve_barrier_us` / `layout_children_us`.
+- If `measure_children_us` dominates, enable `FRET_MEASURE_NODE_PROFILE=1` to attribute intrinsic `measure()` time to
+  nodes (look for `avail_h=MaxContent|MinContent` entries to spot “unbounded probe” cascades).
+
+Measure-node profiling example:
+
+```powershell
+$env:FRET_MEASURE_NODE_PROFILE=1
+# Optional tuning:
+$env:FRET_MEASURE_NODE_PROFILE_TOP=20
+$env:FRET_MEASURE_NODE_PROFILE_MIN_US=20000
+```
+
+Baseline workflow (write once, then gate from the baseline file):
+
+```powershell
+# Write a baseline (adds headroom to measured maxima).
+cargo run -p fretboard -- diag perf ui-gallery `
+  --repeat 5 `
+  --warmup-frames 5 `
+  --perf-baseline-out .fret/perf.baseline.json `
+  --perf-baseline-headroom-pct 20 `
+  --launch -- cargo run -p fret-ui-gallery --release
+
+# Gate against the baseline.
+cargo run -p fretboard -- diag perf ui-gallery `
+  --repeat 5 `
+  --warmup-frames 5 `
+  --perf-baseline .fret/perf.baseline.json `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
 
 ## 1) GPU / renderer: debug specific passes
 
@@ -398,11 +523,26 @@ the UI tree work (e.g. surface acquire/present or GPU work). Enable redraw hitch
 ```powershell
 $env:FRET_REDRAW_HITCH_LOG=1
 $env:FRET_REDRAW_HITCH_MS=24
+# Optional: write into `FRET_DIAG_DIR` when set (relative paths are resolved against it).
+$env:FRET_REDRAW_HITCH_LOG_PATH="redraw_hitches.log"
 cargo run -p fret-demo --bin todo_demo
 ```
 
-The log is written to `.fret/redraw_hitches.log` and includes `prepare` / `render` / `record` /
-`present` timings plus any surface error.
+The log is written to `.fret/redraw_hitches.log` (and/or `FRET_REDRAW_HITCH_LOG_PATH`) and includes `tick_id` / `frame_id` plus
+`prepare` / `render` / `record` / `present` timings and any surface error.
+
+If `render_ms` is clearly CPU-dominated but you still can’t tell where the time went, you can
+enable internal layout profiling logs (best-effort, debug-only surface; useful while iterating on
+hot paths):
+
+```powershell
+$env:FRET_LAYOUT_ALL_PROFILE=1
+$env:RUST_LOG="info,fret_ui=info"
+cargo run -p fret-ui-gallery --release
+```
+
+This logs a per-frame breakdown of `layout_all` sub-phases (root request/build, root layout,
+barrier relayouts, view-cache contained relayouts, semantics refresh, etc).
 
 Recommended approach:
 

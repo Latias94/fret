@@ -5,7 +5,7 @@ use fret_core::{
 use fret_runtime::{CommandId, Effect};
 
 use super::TextInput;
-use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, Widget};
+use crate::widget::{CommandCx, EventCx, LayoutCx, PaintCx, PlatformTextInputCx, Widget};
 use crate::{Invalidation, UiHost};
 
 impl<H: UiHost> Widget<H> for TextInput {
@@ -20,18 +20,413 @@ impl<H: UiHost> Widget<H> for TextInput {
     }
 
     fn is_focusable(&self) -> bool {
-        true
+        self.enabled && self.focusable
     }
 
     fn is_text_input(&self) -> bool {
         true
     }
 
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let selection_anchor =
+            crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.selection_anchor);
+
+        let preedit_len = self.preedit.len();
+        let is_composing = self.is_ime_composing();
+
+        let (display_anchor, display_focus) = if is_composing {
+            let caret_display = crate::text_edit::ime::caret_display_index(
+                caret,
+                &self.preedit,
+                self.preedit_cursor,
+            );
+            (caret_display, caret_display)
+        } else {
+            (
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, selection_anchor),
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, caret),
+            )
+        };
+
+        let anchor_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_anchor,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        let focus_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_focus,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+
+        let marked_utf16 = is_composing.then(|| {
+            crate::text_edit::ime::composed_utf16_range_for_display_byte_range(
+                &self.text,
+                caret,
+                &self.preedit,
+                caret,
+                caret.saturating_add(preedit_len),
+            )
+        });
+
+        Some(fret_runtime::WindowTextInputSnapshot {
+            focus_is_text_input: true,
+            is_composing,
+            text_len_utf16: crate::text_edit::ime::composed_utf16_len(&self.text, &self.preedit),
+            selection_utf16: Some((anchor_u16, focus_u16)),
+            marked_utf16,
+            ime_cursor_area: self.last_sent_cursor,
+        })
+    }
+
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let selection_anchor =
+            crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.selection_anchor);
+
+        let preedit_len = self.preedit.len();
+        let is_composing = self.is_ime_composing();
+
+        let (display_anchor, display_focus) = if is_composing {
+            let caret_display = crate::text_edit::ime::caret_display_index(
+                caret,
+                &self.preedit,
+                self.preedit_cursor,
+            );
+            (caret_display, caret_display)
+        } else {
+            (
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, selection_anchor),
+                crate::text_edit::ime::base_to_display_index(caret, preedit_len, caret),
+            )
+        };
+
+        let anchor_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_anchor,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        let focus_u16 = crate::text_edit::ime::composed_utf16_offset_for_display_byte_offset(
+            &self.text,
+            caret,
+            &self.preedit,
+            display_focus,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+
+        Some(fret_runtime::Utf16Range::new(anchor_u16, focus_u16).normalized())
+    }
+
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let preedit_len = self.preedit.len();
+        let is_composing = self.is_ime_composing();
+        let (start, end) = is_composing.then(|| {
+            crate::text_edit::ime::composed_utf16_range_for_display_byte_range(
+                &self.text,
+                caret,
+                &self.preedit,
+                caret,
+                caret.saturating_add(preedit_len),
+            )
+        })?;
+        Some(fret_runtime::Utf16Range::new(start, end).normalized())
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+
+        let r = range.normalized();
+        let (bs, be) = fret_core::utf::utf16_range_to_utf8_byte_range(
+            composed.as_str(),
+            r.start as usize,
+            r.end as usize,
+        );
+        Some(composed.get(bs..be)?.to_string())
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+
+        let padding_left = self.chrome_style.padding.left;
+        let padding_top = self.chrome_style.padding.top;
+        let padding_bottom = self.chrome_style.padding.bottom;
+
+        let inner_width = Px((self.last_bounds.size.width.0
+            - padding_left.0
+            - self.chrome_style.padding.right.0)
+            .max(0.0));
+
+        let constraints = TextConstraints {
+            max_width: Some(inner_width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+        let (blob, metrics) =
+            cx.services
+                .text()
+                .prepare_str(composed.as_str(), &self.style, constraints);
+
+        let text_height = metrics.size.height;
+        let inner_height = Px(
+            (self.last_bounds.size.height.0 - padding_top.0 - padding_bottom.0)
+                .max(0.0)
+                .max(text_height.0),
+        );
+        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+
+        let origin = fret_core::Point::new(
+            self.last_bounds.origin.x + padding_left,
+            Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
+        );
+
+        let r = range.normalized();
+        let (bs, be) = fret_core::utf::utf16_range_to_utf8_byte_range(
+            composed.as_str(),
+            r.start as usize,
+            r.end as usize,
+        );
+
+        let out = if bs == be {
+            let caret = cx
+                .services
+                .caret_rect(blob, bs, fret_core::CaretAffinity::Downstream);
+            Some(Rect::new(
+                fret_core::Point::new(origin.x + caret.origin.x, origin.y + caret.origin.y),
+                Size::new(Px(caret.size.width.0.max(1.0)), caret.size.height),
+            ))
+        } else {
+            let mut rects: Vec<Rect> = Vec::new();
+            cx.services.selection_rects(blob, (bs, be), &mut rects);
+
+            let mut min_x = f32::INFINITY;
+            let mut min_y = f32::INFINITY;
+            let mut max_x = f32::NEG_INFINITY;
+            let mut max_y = f32::NEG_INFINITY;
+            for r in rects {
+                if r.size.width.0 <= 0.0 || r.size.height.0 <= 0.0 {
+                    continue;
+                }
+                min_x = min_x.min(r.origin.x.0);
+                min_y = min_y.min(r.origin.y.0);
+                max_x = max_x.max(r.origin.x.0 + r.size.width.0);
+                max_y = max_y.max(r.origin.y.0 + r.size.height.0);
+            }
+
+            if !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite()
+            {
+                None
+            } else {
+                Some(Rect::new(
+                    fret_core::Point::new(Px(origin.x.0 + min_x), Px(origin.y.0 + min_y)),
+                    Size::new(Px((max_x - min_x).max(1.0)), Px((max_y - min_y).max(1.0))),
+                ))
+            }
+        };
+
+        cx.services.text().release(blob);
+        out
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        point: fret_core::Point,
+    ) -> Option<u32> {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+
+        let padding_left = self.chrome_style.padding.left;
+        let padding_top = self.chrome_style.padding.top;
+        let padding_bottom = self.chrome_style.padding.bottom;
+
+        let inner_width = Px((self.last_bounds.size.width.0
+            - padding_left.0
+            - self.chrome_style.padding.right.0)
+            .max(0.0));
+        let constraints = TextConstraints {
+            max_width: Some(inner_width),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+        let (blob, metrics) =
+            cx.services
+                .text()
+                .prepare_str(composed.as_str(), &self.style, constraints);
+
+        let text_height = metrics.size.height;
+        let inner_height = Px(
+            (self.last_bounds.size.height.0 - padding_top.0 - padding_bottom.0)
+                .max(0.0)
+                .max(text_height.0),
+        );
+        let vertical_offset = Px(((inner_height.0 - text_height.0).max(0.0)) / 2.0);
+
+        let origin = fret_core::Point::new(
+            self.last_bounds.origin.x + padding_left,
+            Px(self.last_bounds.origin.y.0 + padding_top.0 + vertical_offset.0),
+        );
+
+        let local = fret_core::Point::new(point.x - origin.x, point.y - origin.y);
+        let hit = cx.services.hit_test_point(blob, local);
+        cx.services.text().release(blob);
+
+        let u16 = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+            composed.as_str(),
+            hit.index,
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        Some(u16.min(u32::MAX as usize) as u32)
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        _cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+    ) -> bool {
+        let composed = if self.preedit.is_empty() {
+            self.text.clone()
+        } else {
+            crate::text_edit::ime::compose_text_at_caret(&self.text, self.caret, &self.preedit)
+                .unwrap_or_else(|| self.text.clone())
+        };
+        let r = range.normalized();
+        let (bs, be) = fret_core::utf::utf16_range_to_utf8_byte_range(
+            composed.as_str(),
+            r.start as usize,
+            r.end as usize,
+        );
+
+        let preedit_len = self.preedit.len();
+        let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+        let (start_base, end_base) = if preedit_len == 0 {
+            (bs, be)
+        } else {
+            (
+                crate::text_edit::ime::display_to_base_index(caret, preedit_len, bs),
+                crate::text_edit::ime::display_to_base_index(caret, preedit_len, be),
+            )
+        };
+
+        let insert = text.replace(['\r', '\n'], " ");
+
+        let mut edit = self.edit_state();
+        edit.set_selection_grapheme_clamped(start_base, end_base);
+        edit.replace_selection(&insert)
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+        marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        let Some(marked) = marked else {
+            return self.platform_text_input_replace_text_in_range_utf16(cx, range, text);
+        };
+
+        let insert = text.replace(['\r', '\n'], " ");
+        let insert_utf16_len = fret_core::utf::utf8_byte_offset_to_utf16_offset(
+            insert.as_str(),
+            insert.len(),
+            fret_core::utf::UtfIndexClamp::Down,
+        );
+        let insert_utf16_len = u32::try_from(insert_utf16_len).unwrap_or(u32::MAX);
+
+        let r = range.normalized();
+        let expected_marked =
+            fret_runtime::Utf16Range::new(r.start, r.start.saturating_add(insert_utf16_len));
+        if marked.normalized() != expected_marked.normalized() {
+            // v1 preedit is always a single caret-anchored marked range.
+            return false;
+        }
+
+        if insert.is_empty() && marked.start == marked.end {
+            self.clear_ime_composition();
+            self.mark_text_blobs_dirty();
+            return true;
+        }
+
+        if self.is_ime_composing() {
+            let caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+            let preedit_len = self.preedit.len();
+            let (start, end) = crate::text_edit::ime::composed_utf16_range_for_display_byte_range(
+                &self.text,
+                caret,
+                &self.preedit,
+                caret,
+                caret.saturating_add(preedit_len),
+            );
+            let current_marked = fret_runtime::Utf16Range::new(start, end).normalized();
+            if r != current_marked {
+                // v1 only supports replacing the current marked range during composition.
+                return false;
+            }
+        } else {
+            if r.start != r.end {
+                // v1 preedit is caret-anchored and cannot replace an arbitrary base range.
+                return false;
+            }
+            // Starting composition: map the requested (UTF-16) replace range into base UTF-8 bytes.
+            let (start_base, _) = fret_core::utf::utf16_range_to_utf8_byte_range(
+                self.text.as_str(),
+                r.start as usize,
+                r.end as usize,
+            );
+
+            self.caret = crate::text_edit::utf8::clamp_to_char_boundary(&self.text, start_base);
+            self.selection_anchor = self.caret;
+
+            self.ime_replace_range = None;
+        }
+
+        self.preedit = insert;
+        let preedit_len = self.preedit.len();
+        self.preedit_cursor = Some((preedit_len, preedit_len));
+        self.mark_text_blobs_dirty();
+        true
+    }
+
     fn semantics(&mut self, cx: &mut crate::widget::SemanticsCx<'_, H>) {
         cx.set_role(self.a11y_role);
-        cx.set_focusable(true);
-        cx.set_value_editable(true);
-        cx.set_text_selection_supported(true);
+        cx.set_focusable(self.enabled && self.focusable);
+        if !self.enabled {
+            cx.set_disabled(true);
+        }
+        cx.set_value_editable(self.enabled);
+        cx.set_text_selection_supported(self.enabled);
 
         let (value, text_selection, text_composition) = if self.is_ime_composing()
             && let Some(value) =
@@ -48,9 +443,16 @@ impl<H: UiHost> Widget<H> for TextInput {
                 Some((self.caret as u32, (self.caret + self.preedit.len()) as u32)),
             )
         } else {
+            let mut selection_anchor = self.selection_anchor;
+            let mut caret = self.caret;
+            crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                &self.text,
+                &mut selection_anchor,
+                &mut caret,
+            );
             (
                 self.text().to_string(),
-                Some((self.selection_anchor as u32, self.caret as u32)),
+                Some((selection_anchor as u32, caret as u32)),
                 None,
             )
         };
@@ -69,6 +471,9 @@ impl<H: UiHost> Widget<H> for TextInput {
     }
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+        if !self.enabled {
+            return;
+        }
         let focused = self.is_focused(cx);
 
         match event {
@@ -78,7 +483,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
                 let mut edit = self.edit_state();
                 edit.clear_ime_composition();
-                edit.set_selection_char_clamped(*anchor as usize, *focus as usize);
+                edit.set_selection_grapheme_clamped(*anchor as usize, *focus as usize);
 
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
@@ -89,49 +494,109 @@ impl<H: UiHost> Widget<H> for TextInput {
                 position,
                 click_count,
                 modifiers,
+                pointer_type,
                 ..
-            }) => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                cx.request_focus(cx.node);
-                cx.capture_pointer(cx.node);
-                self.last_sent_cursor = None;
-                let padding = self.chrome_style.padding.left;
-                let local_x =
-                    Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
-                let caret = self
-                    .text_blob
-                    .map(|blob| cx.services.hit_test_x(blob, local_x))
-                    .unwrap_or_else(|| self.caret_from_x(local_x));
+            }) => match *button {
+                MouseButton::Left => {
+                    cx.request_focus(cx.node);
+                    cx.capture_pointer(cx.node);
+                    self.last_sent_cursor = None;
+                    let padding = self.chrome_style.padding.left;
+                    let local_x =
+                        Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
+                    let mut caret = self
+                        .text_blob
+                        .map(|blob| cx.services.hit_test_x(blob, local_x))
+                        .unwrap_or_else(|| self.caret_from_x(local_x));
 
-                self.caret = caret;
-                match *click_count {
-                    2 => {
-                        let (anchor, caret) = crate::text_edit::utf8::select_word_range(
-                            self.text.as_str(),
+                    // While IME preedit is active, the displayed text is the base buffer with the
+                    // preedit spliced at the caret (ADR 0071). Pointer hit-testing is performed
+                    // against that composed view, but the widget's internal indices are tracked in
+                    // base-text byte offsets. Map the display index back into base coordinates
+                    // before applying selection/navigation and then cancel the inline preedit
+                    // deterministically (v1 policy).
+                    if !self.preedit.is_empty() {
+                        caret = crate::text_edit::ime::display_to_base_index(
+                            self.caret,
+                            self.preedit.len(),
                             caret,
-                            cx.input_ctx.text_boundary_mode,
                         );
-                        self.selection_anchor = anchor;
-                        self.caret = caret;
                     }
-                    3 => {
-                        let (anchor, caret) =
-                            crate::text_edit::utf8::select_line_range(self.text.as_str(), caret);
-                        self.selection_anchor = anchor;
-                        self.caret = caret;
-                    }
-                    _ => {
-                        if !modifiers.shift {
-                            self.selection_anchor = self.caret;
+
+                    self.caret = caret;
+                    match *click_count {
+                        2 => {
+                            let (anchor, caret) = crate::text_edit::utf8::select_word_range(
+                                self.text.as_str(),
+                                caret,
+                                cx.input_ctx.text_boundary_mode,
+                            );
+                            self.selection_anchor = anchor;
+                            self.caret = caret;
+                        }
+                        3 => {
+                            let (anchor, caret) = crate::text_edit::utf8::select_line_range(
+                                self.text.as_str(),
+                                caret,
+                            );
+                            self.selection_anchor = anchor;
+                            self.caret = caret;
+                        }
+                        _ => {
+                            if !modifiers.shift {
+                                self.selection_anchor = self.caret;
+                            }
                         }
                     }
+                    self.clear_ime_composition();
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
                 }
-                self.clear_ime_composition();
-                cx.invalidate_self(Invalidation::Layout);
-                cx.request_redraw();
-            }
+                MouseButton::Middle => {
+                    if *pointer_type != fret_core::PointerType::Mouse {
+                        return;
+                    }
+                    let settings = cx
+                        .app
+                        .global::<fret_runtime::TextInteractionSettings>()
+                        .copied()
+                        .unwrap_or_default();
+                    if !settings.linux_primary_selection
+                        || !cx.input_ctx.caps.clipboard.primary_text
+                    {
+                        return;
+                    }
+                    if self.is_ime_composing() {
+                        return;
+                    }
+                    let Some(window) = cx.window else {
+                        return;
+                    };
+
+                    cx.request_focus(cx.node);
+                    self.last_sent_cursor = None;
+
+                    let padding = self.chrome_style.padding.left;
+                    let local_x =
+                        Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
+                    let caret = self
+                        .text_blob
+                        .map(|blob| cx.services.hit_test_x(blob, local_x))
+                        .unwrap_or_else(|| self.caret_from_x(local_x));
+                    self.caret = caret;
+                    self.selection_anchor = caret;
+                    self.clear_ime_composition();
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+
+                    let token = cx.app.next_clipboard_token();
+                    self.pending_primary_selection_token = Some(token);
+                    cx.app
+                        .push_effect(Effect::PrimarySelectionGetText { window, token });
+                    cx.stop_propagation();
+                }
+                _ => {}
+            },
             Event::Pointer(fret_core::PointerEvent::Move {
                 position, buttons, ..
             }) => {
@@ -156,6 +621,29 @@ impl<H: UiHost> Widget<H> for TextInput {
             Event::Pointer(fret_core::PointerEvent::Up { button, .. }) => {
                 if cx.captured == Some(cx.node) && *button == MouseButton::Left {
                     cx.release_pointer_capture();
+
+                    let settings = cx
+                        .app
+                        .global::<fret_runtime::TextInteractionSettings>()
+                        .copied()
+                        .unwrap_or_default();
+                    if settings.linux_primary_selection
+                        && cx.input_ctx.caps.clipboard.primary_text
+                        && !self.is_ime_composing()
+                    {
+                        let (start, end) = crate::text_edit::buffer::selection_range(
+                            self.selection_anchor,
+                            self.caret,
+                        );
+                        if start != end
+                            && end <= self.text.len()
+                            && let Some(sel) = self.text.get(start..end)
+                        {
+                            cx.app.push_effect(Effect::PrimarySelectionSetText {
+                                text: sel.to_string(),
+                            });
+                        }
+                    }
                 }
             }
             Event::KeyDown { key, modifiers, .. } => {
@@ -343,6 +831,34 @@ impl<H: UiHost> Widget<H> for TextInput {
                     self.pending_clipboard_token = None;
                 }
             }
+            Event::PrimarySelectionText { token, text } => {
+                if !focused {
+                    return;
+                }
+                if self.is_ime_composing() {
+                    return;
+                }
+                if self.pending_primary_selection_token != Some(*token) {
+                    return;
+                }
+                self.pending_primary_selection_token = None;
+
+                let outcome = crate::text_edit::commands::apply_clipboard_text(
+                    &mut self.edit_state(),
+                    crate::text_edit::commands::ClipboardTextPolicy::SingleLine,
+                    text.as_str(),
+                );
+                if outcome.invalidate_layout {
+                    self.mark_text_blobs_dirty();
+                    cx.invalidate_self(Invalidation::Layout);
+                    cx.request_redraw();
+                }
+            }
+            Event::PrimarySelectionTextUnavailable { token } => {
+                if self.pending_primary_selection_token == Some(*token) {
+                    self.pending_primary_selection_token = None;
+                }
+            }
             Event::Ime(ime) => {
                 if !focused {
                     return;
@@ -513,7 +1029,8 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         cx.observe_global::<fret_runtime::TextFontStackKey>(Invalidation::Layout);
 
-        self.edit_state().clamp_caret_and_anchor_to_char_boundary();
+        self.edit_state()
+            .clamp_caret_and_anchor_to_grapheme_boundary();
 
         let theme = cx.theme().snapshot();
         self.sync_chrome_from_theme(theme);
@@ -525,10 +1042,24 @@ impl<H: UiHost> Widget<H> for TextInput {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics =
+        // `TextSystem` returns zero-height metrics for empty strings (no shaped lines). Text inputs
+        // want stable line metrics even when the field is empty (caret/placeholder alignment),
+        // so measure a single space as a fallback.
+        let measure_text = if self.text.is_empty() {
+            " "
+        } else {
+            self.text.as_str()
+        };
+        let mut metrics =
             cx.services
                 .text()
-                .measure_str(self.text.as_str(), &self.style, base_constraints);
+                .measure_str(measure_text, &self.style, base_constraints);
+        if metrics.size.height.0 <= 0.01 {
+            metrics = cx
+                .services
+                .text()
+                .measure_str(" ", &self.style, base_constraints);
+        }
         self.text_metrics = Some(metrics);
 
         let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(0.0);
@@ -805,9 +1336,12 @@ impl<H: UiHost> Widget<H> for TextInput {
             caret_local.size,
         );
 
-        // Anchor IME UI to the *current* caret position (including preedit cursor offset).
-        // This keeps the IME candidate/composition UI tracking the cursor within the preedit text.
-        let ime_rect = caret;
+        // Anchor IME UI to the *visual* caret position (including preedit cursor offset).
+        //
+        // Note that render transforms (scrolling, anchored popovers, etc) do not affect layout
+        // bounds. For platform IME positioning we must apply the accumulated transform so the OS
+        // sees the same coordinates the user sees on screen.
+        let ime_rect = cx.visual_rect_aabb(caret);
 
         if self.last_sent_cursor != Some(ime_rect) {
             self.last_sent_cursor = Some(ime_rect);

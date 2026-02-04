@@ -315,6 +315,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                 }
                 let input = self.text_input.as_mut().expect("text input");
+                input.set_enabled(props.enabled);
+                input.set_focusable(props.focusable);
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
@@ -336,6 +338,8 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                     }
                 }
                 let area = self.text_area.as_mut().expect("text area");
+                area.set_enabled(props.enabled);
+                area.set_focusable(props.focusable);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
@@ -526,12 +530,128 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         self.semantics_children
     }
 
+    fn sync_interactivity_gate(&mut self, present: bool, interactive: bool) {
+        // Keep gate-derived traversal flags in sync even if layout is skipped for display-none
+        // subtrees.
+        self.hit_testable = false;
+        self.hit_test_children = present && interactive;
+        self.focus_traversal_children = present && interactive;
+        self.semantics_present = present;
+        self.semantics_children = present;
+        self.is_focusable = false;
+        self.is_text_input = false;
+    }
+
     fn is_focusable(&self) -> bool {
         self.is_focusable
     }
 
     fn is_text_input(&self) -> bool {
         self.is_text_input
+    }
+
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        if let Some(input) = self.text_input.as_ref() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_snapshot(
+                input,
+            );
+        }
+        if let Some(area) = self.text_area.as_ref() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_snapshot(area);
+        }
+        None
+    }
+
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        if let Some(input) = self.text_input.as_ref() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_selected_range_utf16(input);
+        }
+        if let Some(area) = self.text_area.as_ref() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_selected_range_utf16(area);
+        }
+        None
+    }
+
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        if let Some(input) = self.text_input.as_ref() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_marked_range_utf16(input);
+        }
+        if let Some(area) = self.text_area.as_ref() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_marked_range_utf16(area);
+        }
+        None
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        if let Some(input) = self.text_input.as_ref() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_text_for_range_utf16(input, range);
+        }
+        if let Some(area) = self.text_area.as_ref() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_text_for_range_utf16(area, range);
+        }
+        None
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        cx: &mut crate::widget::PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        if let Some(input) = self.text_input.as_mut() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_bounds_for_range_utf16(input, cx, range);
+        }
+        if let Some(area) = self.text_area.as_mut() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_bounds_for_range_utf16(area, cx, range);
+        }
+        None
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        cx: &mut crate::widget::PlatformTextInputCx<'_, H>,
+        point: Point,
+    ) -> Option<u32> {
+        if let Some(input) = self.text_input.as_mut() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_character_index_for_point_utf16(input, cx, point);
+        }
+        if let Some(area) = self.text_area.as_mut() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_character_index_for_point_utf16(area, cx, point);
+        }
+        None
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        cx: &mut crate::widget::PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+    ) -> bool {
+        if let Some(input) = self.text_input.as_mut() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_replace_text_in_range_utf16(input, cx, range, text);
+        }
+        if let Some(area) = self.text_area.as_mut() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_replace_text_in_range_utf16(area, cx, range, text);
+        }
+        false
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        cx: &mut crate::widget::PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+        marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        if let Some(input) = self.text_input.as_mut() {
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(input, cx, range, text, marked);
+        }
+        if let Some(area) = self.text_area.as_mut() {
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(area, cx, range, text, marked);
+        }
+        false
     }
 
     fn can_scroll_descendant_into_view(&self) -> bool {

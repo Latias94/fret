@@ -12,6 +12,13 @@ It complements (but does not replace) ADRs:
 - When an item is resolved, either delete it or move it into `docs/known-issues.md` (if it becomes a long-lived limitation).
 - Deep-dive gap/backlog notes live under `docs/archive/backlog/` to keep `docs/` entrypoints small.
 
+## P1 - Authoring surfaces (imui convergence)
+
+- Track the fearless v2 consolidation of immediate-style authoring in:
+  - `docs/workstreams/imui-authoring-facade-v2.md`
+  - `docs/workstreams/imui-authoring-facade-v2-todo.md`
+- Keep official ecosystem `imui` adapters accepting `&mut impl fret_authoring::UiWriter<H>` to avoid concrete `ImUi` coupling.
+
 ## P0 - IME / Text Input
 
 - **Preedit-first key arbitration end-to-end (runner + routing)**
@@ -51,7 +58,7 @@ It complements (but does not replace) ADRs:
   - Current: `fret-fonts` bundles a UI sans + monospace baseline for wasm (`Inter` + `JetBrains Mono` subsets).
   - Current: optional `emoji` font bundle is available (`Noto Color Emoji`), gated behind `fret-fonts/emoji`.
   - Current: optional `cjk-lite` font bundle is available (`Noto Sans CJK SC`), gated behind `fret-fonts/cjk-lite`.
-  - Current: web runner seeds `TextFontFamilyConfig` from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
+  - Current: web runner seeds `TextFontFamilyConfig` (generic family picks + `common_fallback`) from curated defaults when empty, and bumps `TextFontStackKey` via `apply_font_catalog_update` after font injection.
 
 - **Fallback list participates in `TextBlobId` caching / invalidation**
   - Problem: changing configured fallbacks or font DB state must invalidate cached shaping/rasterization results.
@@ -203,12 +210,26 @@ It complements (but does not replace) ADRs:
 
 ## P0 - Radix/shadcn Overlay Conformance (Goldens + Downshift)
 
+- **Core overlay correctness anchors (occlusion + focus restore)**
+  - Current: pointer occlusion for Radix `disableOutsidePointerEvents` suppresses hit-tested pointer
+    dispatch (including mouse move) to underlay layers while keeping wheel routing and overlay
+    pointer-move observers active.
+  - Regressions: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+    (`non_modal_overlay_can_disable_outside_pointer_events_while_open`).
+  - Current: non-modal focus restoration on close/unmount is gated so it cannot override a new
+    underlay focus (outside press can legitimately move focus under the pointer).
+  - Regressions: `ecosystem/fret-ui-kit/src/window_overlays/tests.rs`
+    (`popover_outside_press_closes_without_overriding_new_focus`,
+    `non_modal_overlay_does_not_restore_focus_when_focus_moves_to_underlay_on_unmount`).
+
 - **Downshift hover-overlay intent drivers into `fret-ui-kit::headless`**
   - Problem: hover-driven overlays (Tooltip/HoverCard) currently contain substantial state/intent logic in shadcn recipes, which makes long-term 1:1 Radix matching harder (logic drift is easy when it is not shared/reused).
   - ADRs: `docs/adr/0090-radix-aligned-headless-primitives-in-fret-components-ui.md`, `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
   - Targets (examples to audit/move):
     - `ecosystem/fret-ui-shadcn/src/hover_card.rs` (`HoverCardIntentDriverState`, frame-tick fallback, close suppression heuristics).
     - `ecosystem/fret-ui-shadcn/src/tooltip.rs` (pointermove gating + suppress-after-pointerdown/focus heuristics).
+  - Progress:
+    - Extracted tooltip reopen suppression gates into `ecosystem/fret-ui-headless/src/tooltip_intent.rs` and wired `ecosystem/fret-ui-shadcn/src/tooltip.rs` to consume it (with unit tests in the headless module).
   - Approach:
     - keep wiring in shadcn recipes, but move the deterministic state machine and timers into `ecosystem/fret-ui-kit/src/headless/*` (or extend existing headless primitives like `hover_intent`).
     - add unit tests at the headless layer for the intent driver (open/close timing, suppression edges), then keep only "wiring smoke" in shadcn.
@@ -226,6 +247,30 @@ It complements (but does not replace) ADRs:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-grace-corridor.light.json`
       - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-grace-corridor.light.json`
       - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-grace-corridor.light.json`
+    - Added submenu unsafe-leave (submenu closes, root stays open) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-unsafe-leave.light.json`
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-unsafe-leave.light.json`
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-unsafe-leave.light.json`
+    - Added menubar hover-switch-trigger (switch open menu File → Edit) timeline:
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.hover-switch-trigger.light.json`
+    - Added menubar outside-click-close (click outside closes root menu) timeline:
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.outside-click-close.light.json`
+    - Added menubar submenu-outside-click-close (click outside closes root + submenu) timeline:
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-outside-click-close.light.json`
+    - Added menubar submenu-arrowleft-escape-close (ArrowLeft closes submenu; Escape closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/menubar-example.menubar.submenu-arrowleft-escape-close.light.json`
+    - Added dropdown-menu submenu-arrowleft-escape-close (ArrowLeft closes submenu; Escape closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-arrowleft-escape-close.light.json`
+    - Added context-menu submenu-arrowleft-escape-close (ArrowLeft closes submenu; Escape closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-arrowleft-escape-close.light.json`
+    - Added dropdown-menu outside-click-close (click outside closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.outside-click-close.light.json`
+    - Added dropdown-menu submenu-outside-click-close (click outside closes root + submenu) timeline:
+      - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-outside-click-close.light.json`
+    - Added context-menu outside-click-close (click outside closes root) timeline:
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.outside-click-close.light.json`
+    - Added context-menu submenu-outside-click-close (click outside closes root + submenu) timeline:
+      - `goldens/radix-web/v4/radix-vega/context-menu-example.context-menu.submenu-outside-click-close.light.json`
     - Added Fret gates covering pointer-grace corridor staying open: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added submenu keyboard open/close timelines:
       - `goldens/radix-web/v4/radix-vega/dropdown-menu-example.dropdown-menu.submenu-keyboard-open-close.light.json`
@@ -245,6 +290,10 @@ It complements (but does not replace) ADRs:
     - `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
     - `docs/adr/0072-docking-interaction-arbitration-matrix.md`
     - Added Fret gates covering submenu ArrowRight open + ArrowLeft close + focus restore:
+      `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+    - Added Fret gates covering layered submenu close (ArrowLeft closes submenu; Escape closes root):
+      `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
+    - Added Fret gates covering outside click closes (root-only + with-submenu):
       `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs`.
     - Added/updated Radix Vega timeline state gates for:
       - tooltip hover open/close + Escape dismissal,
@@ -279,6 +328,15 @@ It complements (but does not replace) ADRs:
   - Fret gates to add:
     - behavior/semantics sequence parity: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (new scenarios).
     - placement/chrome parity: extend `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_*` to cover submenu content and multi-layer placement.
+
+- **Dismiss-cause-aware focus restore for menu-like overlays** (done)
+  - Problem: Radix menus differ in how they restore focus on dismissal (e.g. DropdownMenu restores focus to the trigger on outside click; Menubar clears focus; ContextMenu clears focus on Escape/outside click). A one-size-fits-all "restore focus to trigger" policy breaks 1:1 parity.
+  - Current: `OverlayRequest` carries per-overlay policy (`restore_focus_on_escape`, `restore_focus_on_outside_press`) and the window overlay policy layer records the dismissal cause and applies the corresponding restore/clear behavior on close/unmount.
+  - Evidence:
+    - Policy wiring: `ecosystem/fret-ui-kit/src/overlay_controller.rs`, `ecosystem/fret-ui-kit/src/window_overlays/requests.rs`.
+    - Runtime policy: `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (records `DismissCause` and applies per-cause focus restore/clear).
+    - Menubar/ContextMenu policy: `ecosystem/fret-ui-shadcn/src/menubar.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`.
+    - Parity gates: `ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs` (outside click + Escape focus expectations).
 
 ## P0 - Docking / Overlays / Viewport Capture
 

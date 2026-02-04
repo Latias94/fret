@@ -12,6 +12,7 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::direction as direction_prim;
@@ -23,6 +24,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, OverlayPresence,
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 
 fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
     fn visit(node: &AnyElement, best: &mut Option<Size>) {
@@ -394,7 +396,11 @@ impl Popover {
                     let inner_size_hint: Rc<Cell<Option<Size>>> = Rc::new(Cell::new(None));
                     let inner_size_hint_for_scope = inner_size_hint.clone();
                     let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
-                        let inner = content(cx, anchor_fallback.unwrap_or_default());
+                        let inner = with_surface_slot_provider(
+                            cx,
+                            ShadcnSurfaceSlot::PopoverContent,
+                            |cx| content(cx, anchor_fallback.unwrap_or_default()),
+                        );
                         inner_id_for_scope.set(Some(inner.id));
                         inner_size_hint_for_scope.set(fixed_size_hint_px(&inner));
                         vec![inner]
@@ -644,7 +650,10 @@ impl PopoverContent {
         Self {
             children,
             chrome: ChromeRefinement::default(),
-            layout: LayoutRefinement::default().w_px(Px(288.0)),
+            layout: LayoutRefinement::default()
+                .w_px(Px(288.0))
+                .min_w_0()
+                .min_h_0(),
             a11y_label: None,
         }
     }
@@ -671,7 +680,14 @@ impl PopoverContent {
         let children = self.children;
         let label = self.a11y_label;
 
-        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
+        let container = shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
+            children,
+        );
 
         cx.semantics(
             SemanticsProps {
@@ -700,7 +716,7 @@ impl PopoverHeader {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
             ChromeRefinement::default().pb(Space::N4),
-            LayoutRefinement::default(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
         let children = self.children;
         shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)

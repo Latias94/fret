@@ -19,6 +19,8 @@ fn allowlisted_non_material_web_tokens() -> BTreeSet<&'static str> {
     BTreeSet::from([
         // Fret-specific: enforced minimum touch target policy.
         "md.sys.layout.minimum-touch-target.size",
+        // Fret-specific: layout direction marker (0 = LTR, 1 = RTL).
+        "md.sys.fret.layout.is-rtl",
         // Fret-specific: opt into using expressive component token variants when configured.
         "md.sys.fret.material.is-expressive",
         // Fret-specific escape hatch: allow overriding shadow color without forking the elevation logic.
@@ -45,7 +47,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _ = std::io::stderr().flush();
     }
     let used = extract_used_keys_from_rs_tree(&source_dir)?;
-    let (expanded_from_templates, unexpanded_templates) = expand_key_templates(&used.templates);
+    let (expanded_from_templates, unexpanded_templates) =
+        expand_key_templates(&source_dir, &used.templates);
     let used_expanded = {
         let mut out = used.exact.clone();
         out.extend(expanded_from_templates.iter().cloned());
@@ -159,7 +162,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let allowlisted = allowlisted_non_material_web_tokens();
             unknown_vs_material_web = used_expanded
                 .difference(&material_web)
-                .filter(|k| !allowlisted.contains(k.as_str()))
+                .filter(|k| {
+                    !allowlisted.contains(k.as_str()) && !k.starts_with("md.sys.fret.material.")
+                })
                 .cloned()
                 .collect::<BTreeSet<_>>();
             if !unknown_vs_material_web.is_empty() {
@@ -321,12 +326,15 @@ struct KeyScan {
     templates: BTreeSet<String>,
 }
 
-fn expand_key_templates(templates: &BTreeSet<String>) -> (BTreeSet<String>, BTreeSet<String>) {
+fn expand_key_templates(
+    source_dir: &Path,
+    templates: &BTreeSet<String>,
+) -> (BTreeSet<String>, BTreeSet<String>) {
     let mut expanded = BTreeSet::new();
     let mut unexpanded = BTreeSet::new();
 
     for t in templates {
-        if let Some(keys) = expand_key_template(t) {
+        if let Some(keys) = expand_key_template(source_dir, t) {
             expanded.extend(keys);
         } else {
             unexpanded.insert(t.clone());
@@ -336,7 +344,7 @@ fn expand_key_templates(templates: &BTreeSet<String>) -> (BTreeSet<String>, BTre
     (expanded, unexpanded)
 }
 
-fn expand_key_template(template: &str) -> Option<BTreeSet<String>> {
+fn expand_key_template(source_dir: &Path, template: &str) -> Option<BTreeSet<String>> {
     if template.starts_with("md.comp.button.") {
         return expand_button_template(template);
     }
@@ -346,8 +354,16 @@ fn expand_key_template(template: &str) -> Option<BTreeSet<String>> {
     if template.starts_with("md.comp.radio-button.") {
         return expand_radio_button_template(template);
     }
+    if template.starts_with("md.comp.outlined-segmented-button.") {
+        return expand_outlined_segmented_button_template(template);
+    }
     if template.starts_with("md.comp.switch.") {
         return expand_switch_template(template);
+    }
+    if template.starts_with("md.comp.date-picker.docked.")
+        || template.starts_with("md.comp.date-picker.modal.")
+    {
+        return expand_date_picker_template(source_dir, template);
     }
     if template.starts_with("md.sys.typescale.") {
         return expand_typescale_template(template);
@@ -384,6 +400,28 @@ fn expand_placeholder(
     out
 }
 
+fn expand_placeholder_dynamic(
+    keys: &BTreeSet<String>,
+    placeholder: &str,
+    values: &[String],
+) -> BTreeSet<String> {
+    if !keys.iter().any(|k| k.contains(placeholder)) {
+        return keys.clone();
+    }
+
+    let mut out = BTreeSet::new();
+    for k in keys {
+        if k.contains(placeholder) {
+            for v in values {
+                out.insert(k.replace(placeholder, v));
+            }
+        } else {
+            out.insert(k.clone());
+        }
+    }
+    out
+}
+
 fn expand_button_template(template: &str) -> Option<BTreeSet<String>> {
     const VARIANTS: &[&str] = &["filled", "tonal", "elevated", "outlined", "text"];
     const SUFFIXES: &[&str] = &[
@@ -398,6 +436,49 @@ fn expand_button_template(template: &str) -> Option<BTreeSet<String>> {
     keys = expand_placeholder(&keys, "{suffix}", SUFFIXES);
 
     ensure_no_template_braces(&keys)
+}
+
+fn expand_outlined_segmented_button_template(template: &str) -> Option<BTreeSet<String>> {
+    const BASES: &[&str] = &["selected", "unselected"];
+
+    let mut keys = BTreeSet::from([template.to_string()]);
+    keys = expand_placeholder(&keys, "{base}", BASES);
+
+    ensure_no_template_braces(&keys)
+}
+
+fn expand_date_picker_template(source_dir: &Path, template: &str) -> Option<BTreeSet<String>> {
+    let suffixes = date_picker_suffixes_from_source(source_dir)?;
+
+    let mut keys = BTreeSet::from([template.to_string()]);
+    keys = expand_placeholder_dynamic(&keys, "{suffix}", &suffixes);
+
+    ensure_no_template_braces(&keys)
+}
+
+fn date_picker_suffixes_from_source(source_dir: &Path) -> Option<Vec<String>> {
+    let path = source_dir.join("tokens").join("date_picker.rs");
+    let content = fs::read_to_string(path).ok()?;
+
+    let mut suffixes: BTreeSet<String> = BTreeSet::new();
+    let mut remaining = content.as_str();
+    while let Some(pos) = remaining.find("token_key(variant,") {
+        remaining = &remaining[pos..];
+        let Some(start_quote) = remaining.find('"') else {
+            break;
+        };
+        let after_quote = &remaining[start_quote + 1..];
+        let Some(end_quote) = after_quote.find('"') else {
+            break;
+        };
+        let literal = &after_quote[..end_quote];
+        suffixes.insert(literal.to_string());
+        remaining = &after_quote[end_quote + 1..];
+    }
+
+    // `token_key(variant, "...")` always uses a string literal suffix in this module.
+    // If that ever changes, prefer making the suffixes explicit rather than weakening `--check`.
+    (!suffixes.is_empty()).then_some(suffixes.into_iter().collect())
 }
 
 fn expand_icon_button_template(template: &str) -> Option<BTreeSet<String>> {
@@ -626,7 +707,19 @@ fn extract_md_keys_from_material_web_sassvars(
                     .unwrap_or("")
                     .trim_end_matches(')');
                 if !token.is_empty() {
-                    out.insert(format!("md.{token}"));
+                    let key = format!("md.{token}");
+                    out.insert(key.clone());
+
+                    // Material Web emits typography tokens as leaf scalars (font/size/line-height/...),
+                    // but Fret represents them as a grouped `TextStyle` token (e.g.
+                    // `md.comp.date-picker.modal.header.headline`). To keep `--check` strict while still
+                    // allowing these derived keys, also treat the group key as "known" when we see a
+                    // typography leaf.
+                    for leaf in ["font", "line-height", "size", "tracking", "weight", "type"] {
+                        if let Some(base) = key.strip_suffix(&format!(".{leaf}")) {
+                            out.insert(base.to_string());
+                        }
+                    }
                 }
             }
         }
@@ -755,7 +848,10 @@ fn should_ignore_material_web_missing_key(key: &str) -> bool {
     // Fret represents typography via `ThemeConfig.text_styles` (TextStyle), so these are expected
     // to be "missing" when comparing raw sassvar keys.
     let last = key.rsplit('.').next().unwrap_or(key);
-    if matches!(last, "font" | "line-height" | "size" | "tracking" | "type") {
+    if matches!(
+        last,
+        "font" | "line-height" | "size" | "tracking" | "type" | "weight"
+    ) {
         return true;
     }
 

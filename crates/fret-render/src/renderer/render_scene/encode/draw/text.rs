@@ -1,7 +1,8 @@
 use super::super::state::{EncodeState, apply_transform_px};
 use super::super::*;
 
-use crate::text::GlyphQuadKind;
+use crate::text::{GlyphQuadKind, TextDecorationKind};
+use fret_core::{Corners, Edges};
 
 pub(in super::super) fn encode_text(
     renderer: &Renderer,
@@ -25,8 +26,56 @@ pub(in super::super) fn encode_text(
 
     let base_x = origin.x.0 * state.scale_factor;
     let base_y = origin.y.0 * state.scale_factor;
-    let base_color = EncodeState::color_with_opacity(color, group_opacity);
     let paint_opacity = group_opacity * color.a;
+    let baseline = blob.shape.metrics.baseline;
+
+    let resolve_decoration_color = |paint_span: Option<u16>, explicit: Option<Color>| -> Color {
+        if let Some(c) = explicit {
+            let mut out = c;
+            out.a *= color.a;
+            return out;
+        }
+
+        if let Some(slot) = paint_span
+            && let Some(palette) = blob.paint_palette.as_ref()
+            && let Some(Some(c)) = palette.get(slot as usize)
+        {
+            let mut out = *c;
+            out.a *= color.a;
+            return out;
+        }
+
+        color
+    };
+
+    if !blob.decorations.is_empty() {
+        for d in blob
+            .decorations
+            .as_ref()
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Underline)
+        {
+            let rect = Rect::new(
+                Point::new(
+                    Px(origin.x.0 + d.rect.origin.x.0),
+                    Px(origin.y.0 + d.rect.origin.y.0 - baseline.0),
+                ),
+                d.rect.size,
+            );
+            let bg = resolve_decoration_color(d.paint_span, d.color);
+            super::encode_quad(
+                state,
+                rect,
+                bg,
+                Edges::all(Px(0.0)),
+                Color::TRANSPARENT,
+                Corners::all(Px(0.0)),
+            );
+        }
+        state.flush_quad_batch();
+    }
+
+    let base_color = EncodeState::color_with_opacity(color, group_opacity);
 
     let mut active_kind: Option<TextDrawKind> = None;
     let mut active_page: u16 = 0;
@@ -137,5 +186,32 @@ pub(in super::super) fn encode_text(
                 atlas_page: active_page,
             });
         }
+    }
+
+    if !blob.decorations.is_empty() {
+        for d in blob
+            .decorations
+            .as_ref()
+            .iter()
+            .filter(|d| d.kind == TextDecorationKind::Strikethrough)
+        {
+            let rect = Rect::new(
+                Point::new(
+                    Px(origin.x.0 + d.rect.origin.x.0),
+                    Px(origin.y.0 + d.rect.origin.y.0 - baseline.0),
+                ),
+                d.rect.size,
+            );
+            let bg = resolve_decoration_color(d.paint_span, d.color);
+            super::encode_quad(
+                state,
+                rect,
+                bg,
+                Edges::all(Px(0.0)),
+                Color::TRANSPARENT,
+                Corners::all(Px(0.0)),
+            );
+        }
+        state.flush_quad_batch();
     }
 }

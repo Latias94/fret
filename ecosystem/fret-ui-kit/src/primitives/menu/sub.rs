@@ -17,7 +17,9 @@ use std::time::Duration;
 use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, PointerMoveCx, UiActionHost, UiFocusActionHost};
-use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
+use fret_ui::overlay_placement::{
+    Align, AnchoredPanelOptions, Offset, ShiftOptions, Side, StickyMode, anchored_panel_layout_ex,
+};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::overlay;
@@ -95,7 +97,32 @@ pub fn default_submenu_bounds(outer: Rect, trigger_anchor: Rect, desired: Size) 
     } else {
         Align::Start
     };
-    anchored_panel_bounds_sized(outer, trigger_anchor, desired, Px(2.0), Side::Right, align)
+
+    // Submenus should not be shifted along the main (side) axis: Radix keeps the submenu aligned to
+    // its trigger for pointer-grace ergonomics, flipping to the opposite side when it overflows.
+    // However, it still shifts/clamps along the cross axis to remain vertically usable.
+    let options = AnchoredPanelOptions {
+        direction: fret_ui::overlay_placement::LayoutDirection::Ltr,
+        offset: Offset::default(),
+        shift: ShiftOptions {
+            main_axis: false,
+            cross_axis: true,
+        },
+        arrow: None,
+        collision: Default::default(),
+        sticky: StickyMode::Partial,
+    };
+
+    anchored_panel_layout_ex(
+        outer,
+        trigger_anchor,
+        desired,
+        Px(2.0),
+        Side::Right,
+        align,
+        options,
+    )
+    .rect
 }
 
 /// Estimate a scrollable menu panel viewport height for `row_count` rows.
@@ -1397,6 +1424,7 @@ pub fn open_on_arrow_right(
     host: &mut dyn UiActionHost,
     acx: ActionCx,
     models: &MenuSubmenuModels,
+    trigger_id: GlobalElementId,
     value: Arc<str>,
     focus_delay: Duration,
 ) {
@@ -1419,7 +1447,7 @@ pub fn open_on_arrow_right(
         .update(&models.open_value, |v| *v = Some(value));
     let _ = host
         .models_mut()
-        .update(&models.trigger, |v| *v = Some(acx.target));
+        .update(&models.trigger, |v| *v = Some(trigger_id));
 
     let token = host.next_timer_token();
     host.push_effect(Effect::SetTimer {

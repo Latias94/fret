@@ -8,6 +8,30 @@ use fret_core::{
 };
 use fret_runtime::{Effect, PlatformCapabilities};
 
+#[derive(Debug, Clone, Copy)]
+struct RenderTransformWrapper {
+    transform: fret_core::Transform2D,
+}
+
+impl RenderTransformWrapper {
+    fn new(transform: fret_core::Transform2D) -> Self {
+        Self { transform }
+    }
+}
+
+impl Widget<TestHost> for RenderTransformWrapper {
+    fn render_transform(&self, _bounds: Rect) -> Option<fret_core::Transform2D> {
+        Some(self.transform)
+    }
+
+    fn layout(&mut self, cx: &mut crate::widget::LayoutCx<'_, TestHost>) -> Size {
+        let Some(&child) = cx.children.first() else {
+            return Size::default();
+        };
+        cx.layout(child, cx.available)
+    }
+}
+
 #[derive(Default)]
 struct FakeTextService {}
 
@@ -67,6 +91,30 @@ impl fret_core::SvgService for FakeTextService {
     }
 }
 
+fn command_cx<'a>(
+    app: &'a mut TestHost,
+    services: &'a mut FakeTextService,
+    tree: &'a mut UiTree<TestHost>,
+    node: fret_core::NodeId,
+    window: fret_core::AppWindowId,
+) -> crate::widget::CommandCx<'a, TestHost> {
+    crate::widget::CommandCx {
+        app,
+        services,
+        tree,
+        node,
+        window: Some(window),
+        input_ctx: fret_runtime::InputContext {
+            caps: PlatformCapabilities::default(),
+            ..Default::default()
+        },
+        focus: Some(node),
+        invalidations: Vec::new(),
+        requested_focus: None,
+        stop_propagation: false,
+    }
+}
+
 #[test]
 fn text_area_hover_sets_text_cursor_effect() {
     let window = AppWindowId::default();
@@ -111,6 +159,99 @@ fn text_area_hover_sets_text_cursor_effect() {
         )),
         "expected a text cursor effect when hovering a text area"
     );
+}
+
+#[test]
+fn ime_cursor_area_is_in_visual_space_after_render_transform() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    fn paint_ime_origin(
+        transform: fret_core::Transform2D,
+        bounds: Rect,
+        window: AppWindowId,
+    ) -> Point {
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let root = ui.create_node(RenderTransformWrapper::new(transform));
+        let area = ui.create_node(TextArea::new("hello"));
+        ui.add_child(root, area);
+        ui.set_root(root);
+        ui.set_focus(Some(area));
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let _ = app.take_effects();
+
+        let mut scene = Scene::default();
+        ui.paint(&mut app, &mut services, root, bounds, &mut scene, 1.0);
+
+        app.take_effects()
+            .into_iter()
+            .find_map(|e| match e {
+                Effect::ImeSetCursorArea { rect, .. } => Some(rect.origin),
+                _ => None,
+            })
+            .expect("expected an IME cursor area effect")
+    }
+
+    let base = paint_ime_origin(fret_core::Transform2D::IDENTITY, bounds, window);
+    let dx = Px(50.0);
+    let dy = Px(20.0);
+    let translated = paint_ime_origin(
+        fret_core::Transform2D::translation(Point::new(dx, dy)),
+        bounds,
+        window,
+    );
+
+    assert!(
+        (translated.x.0 - base.x.0 - dx.0).abs() < 0.001,
+        "expected IME cursor x to include render transform translation"
+    );
+    assert!(
+        (translated.y.0 - base.y.0 - dy.0).abs() < 0.001,
+        "expected IME cursor y to include render transform translation"
+    );
+}
+
+#[test]
+fn text_area_copy_clamps_out_of_range_selection_indices() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    let mut area = TextArea::default();
+    area.text = "hello\nworld".to_string();
+    area.selection_anchor = 0;
+    area.caret = 999;
+
+    let mut cx = command_cx(&mut app, &mut services, &mut ui, node, window);
+    assert!(
+        area.command(&mut cx, &fret_runtime::CommandId::from("edit.copy")),
+        "expected edit.copy to be handled"
+    );
+
+    assert!(
+        app.take_effects()
+            .iter()
+            .any(|e| matches!(e, Effect::ClipboardSetText { text } if text == "hello\nworld")),
+        "expected edit.copy to clamp indices and copy the selected text"
+    );
+    assert_eq!(area.selection_anchor, 0);
+    assert_eq!(area.caret, 11);
 }
 
 #[test]
@@ -292,6 +433,7 @@ fn event_cx<'a>(
         requested_capture: None,
         requested_cursor: None,
         notify_requested: false,
+        notify_requested_location: None,
         stop_propagation: false,
     }
 }
@@ -328,6 +470,50 @@ fn ime_commit_normalizes_newlines_to_lf() {
     assert_eq!(area.text(), "a\nb\nc");
     assert!(area.preedit.is_empty());
     assert!(area.preedit_cursor.is_none());
+}
+
+#[test]
+fn ime_delete_surrounding_deletes_base_text_without_clearing_preedit() {
+    let window = AppWindowId::default();
+    let node = fret_core::NodeId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(200.0)),
+    );
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+
+    let mut area = TextArea::new("hello\nworld");
+    area.caret = 2;
+    area.selection_anchor = 2;
+    area.preedit = "X".to_string();
+    area.preedit_cursor = Some((0, 1));
+
+    let mut cx = event_cx(
+        &mut app,
+        &mut services,
+        node,
+        window,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    area.event(
+        &mut cx,
+        &Event::Ime(fret_core::ImeEvent::DeleteSurrounding {
+            before_bytes: 1,
+            after_bytes: 2,
+        }),
+    );
+
+    assert_eq!(area.text(), "ho\nworld");
+    assert_eq!(area.caret, 1);
+    assert_eq!(area.selection_anchor, 1);
+    assert_eq!(area.preedit, "X");
+    assert_eq!(area.preedit_cursor, Some((0, 1)));
 }
 
 #[test]

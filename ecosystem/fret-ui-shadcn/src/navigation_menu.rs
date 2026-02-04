@@ -85,13 +85,19 @@ fn nav_menu_trigger_text_style(theme: &Theme) -> TextStyle {
 fn nav_menu_trigger_padding_x(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_x")
-        .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
+        .unwrap_or(Px(16.0))
 }
 
 fn nav_menu_trigger_padding_y(theme: &Theme) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_y")
-        .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
+        .unwrap_or(Px(8.0))
+}
+
+fn nav_menu_trigger_space_px(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("component.navigation_menu.trigger.space_px")
+        .unwrap_or(Px(3.92))
 }
 
 fn nav_menu_trigger_radius(theme: &Theme) -> Px {
@@ -690,6 +696,24 @@ impl NavigationMenu {
             left: content_pad_left,
         };
 
+        if std::env::var("FRET_DEBUG_NAV_MENU_TRIGGER")
+            .ok()
+            .is_some_and(|v| v == "1")
+        {
+            static PRINT_ONCE: std::sync::Once = std::sync::Once::new();
+            PRINT_ONCE.call_once(|| {
+                let trigger_space_px = nav_menu_trigger_space_px(&theme);
+                eprintln!(
+                    "nav-menu trigger metrics: pad_x={} pad_y={} space_px={} text_px={} line_height={}",
+                    trigger_pad_x.0,
+                    trigger_pad_y.0,
+                    trigger_space_px.0,
+                    trigger_text_style.size.0,
+                    trigger_text_style.line_height.map(|v| v.0).unwrap_or(-1.0),
+                );
+            });
+        }
+
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
         cx.container(root_props, move |cx| {
@@ -802,14 +826,15 @@ impl NavigationMenu {
                 &values,
             );
 
+            let md_breakpoint = cx.bounds.size.width >= Px(768.0);
             let list_props = FlexProps {
                 layout: LayoutStyle::default(),
                 direction: fret_core::Axis::Horizontal,
                 gap: Px(4.0), // Tailwind `space-x-1`
                 padding: Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
+                justify: MainAlign::Center,
                 align: fret_ui::element::CrossAlign::Center,
-                wrap: false,
+                wrap: true,
                 ..Default::default()
             };
 
@@ -1035,13 +1060,15 @@ impl NavigationMenu {
                                         let mut row_children = content_children;
                                         // Upstream adds a literal `" "` text node between the label
                                         // and the chevron icon, in addition to `ml-1` on the icon.
-                                        // We model that as a deterministic, non-semantic spacer.
+                                        // We model the outcome as a spacer metric so the trigger
+                                        // width matches the extracted web goldens closely.
+                                        let space_px = nav_menu_trigger_space_px(&theme_for_item);
                                         row_children.push(cx.container(
                                             ContainerProps {
                                                 layout: {
                                                     let mut layout = LayoutStyle::default();
                                                     layout.size = SizeStyle {
-                                                        width: Length::Px(Px(4.0)),
+                                                        width: Length::Px(space_px),
                                                         height: Length::Px(Px(0.0)),
                                                         ..Default::default()
                                                     };
@@ -1101,12 +1128,13 @@ impl NavigationMenu {
                 let window_margin = nav_menu_viewport_window_margin(&theme);
                 let indicator_size = if indicator_enabled { side_offset } else { Px(0.0) };
                 let indicator_diamond_size = nav_menu_indicator_diamond_size(&theme);
-                let indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(2.0));
                 let indicator_diamond_corners = {
                     let mut corners = Corners::all(Px(0.0));
                     corners.top_left = Px(2.0);
                     corners
                 };
+                let mut indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(0.0));
+                indicator_diamond_shadow.corner_radii = indicator_diamond_corners;
 
                 let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
                 let measured = selected_local
@@ -1129,7 +1157,7 @@ impl NavigationMenu {
                 }
 
                 let fallback = measured.unwrap_or(estimated);
-                let content_size = if viewport_enabled {
+                let mut content_size = if viewport_enabled {
                     radix_navigation_menu::navigation_menu_viewport_size_for_transition(
                         cx,
                         root_id,
@@ -1185,8 +1213,14 @@ impl NavigationMenu {
                     //
                     // We apply this even when the first measurement hasn't been observed yet so
                     // popper placement and panel layout remain consistent across frames.
-                    panel_props.layout.size.width = Length::Px(content_size.width);
                     panel_props.layout.size.height = Length::Px(content_size.height);
+                    panel_props.layout.size.width = if md_breakpoint {
+                        // Desktop: `md:w-[var(--radix-navigation-menu-viewport-width)]`.
+                        Length::Px(content_size.width)
+                    } else {
+                        // Mobile: `w-full` so the panel tracks the anchor width.
+                        Length::Fill
+                    };
                 }
 
                 let placement = popper::PopperContentPlacement::new(
@@ -1202,6 +1236,7 @@ impl NavigationMenu {
                     placement_anchor_override: viewport_enabled.then_some(root_id),
                     content_size,
                     indicator_size,
+                    width_tracks_anchor: !md_breakpoint,
                 };
 
                 let opacity = opacity;
@@ -1271,9 +1306,17 @@ impl NavigationMenu {
                                 let value_for_registry = selected_value_for_registry.clone();
                                 let content_id_for_registry = content_id;
                                 let viewport_enabled_for_registry = viewport_enabled;
+                                let md_breakpoint_for_registry = md_breakpoint;
                                 let children = vec![cx.container(panel_props, move |cx| {
                                     let mut clip_layout = LayoutStyle::default();
                                     clip_layout.overflow = fret_ui::element::Overflow::Clip;
+                                    if viewport_enabled_for_registry {
+                                        clip_layout.size = SizeStyle {
+                                            width: Length::Fill,
+                                            height: Length::Fill,
+                                            ..Default::default()
+                                        };
+                                    }
 
                                     let clip_props = ContainerProps {
                                         layout: clip_layout,
@@ -1285,11 +1328,16 @@ impl NavigationMenu {
                                     let Some((t, forward, from_children)) = content_switch.clone()
                                     else {
                                         let children = viewport_children.clone();
-                                        let body = cx.keyed("viewport-body", |cx| {
-                                            let layout = LayoutStyle::default();
+                                        let viewport_enabled_for_body = viewport_enabled_for_registry;
+                                        let md_breakpoint_for_body = md_breakpoint_for_registry;
+                                        let body = cx.keyed("viewport-body", move |cx| {
+                                            let mut body_layout = LayoutStyle::default();
+                                            if viewport_enabled_for_body && !md_breakpoint_for_body {
+                                                body_layout.size.width = Length::Fill;
+                                            }
                                             cx.container(
                                                 ContainerProps {
-                                                    layout,
+                                                    layout: body_layout,
                                                     padding: content_padding,
                                                     ..Default::default()
                                                 },
@@ -1326,11 +1374,6 @@ impl NavigationMenu {
 
                                     let value_for_registry_for_layers = value_for_registry.clone();
 
-                                    // In shadcn/ui (Radix), `NavigationMenuContent` keeps its
-                                    // intrinsic size even during switch animations. In Fret, we
-                                    // must preserve that intrinsic sizing so overlay placement can
-                                    // converge to the same bounds and so viewport sizing can
-                                    // observe the real content size (not the previous panel size).
                                     let mut layout_for_layers = LayoutStyle::default();
                                     layout_for_layers.overflow = fret_ui::element::Overflow::Clip;
 
@@ -1344,10 +1387,17 @@ impl NavigationMenu {
                                             let from_opacity = 1.0 - t;
                                             let to_opacity = t;
 
-                                            let from_children = vec![cx.keyed("from-body", |cx| {
+                                            let viewport_enabled_for_body = viewport_enabled_for_registry;
+                                            let md_breakpoint_for_body = md_breakpoint_for_registry;
+
+                                            let from_children = vec![cx.keyed("from-body", move |cx| {
+                                                let mut body_layout = LayoutStyle::default();
+                                                if viewport_enabled_for_body && !md_breakpoint_for_body {
+                                                    body_layout.size.width = Length::Fill;
+                                                }
                                                 cx.container(
                                                     ContainerProps {
-                                                        layout: LayoutStyle::default(),
+                                                        layout: body_layout,
                                                         padding: content_padding,
                                                         ..Default::default()
                                                     },
@@ -1357,10 +1407,16 @@ impl NavigationMenu {
                                                     },
                                                 )
                                             })];
-                                            let to_body = cx.keyed("to-body", |cx| {
+                                            let viewport_enabled_for_body = viewport_enabled_for_registry;
+                                            let md_breakpoint_for_body = md_breakpoint_for_registry;
+                                            let to_body = cx.keyed("to-body", move |cx| {
+                                                let mut body_layout = LayoutStyle::default();
+                                                if viewport_enabled_for_body && !md_breakpoint_for_body {
+                                                    body_layout.size.width = Length::Fill;
+                                                }
                                                 cx.container(
                                                     ContainerProps {
-                                                        layout: LayoutStyle::default(),
+                                                        layout: body_layout,
                                                         padding: content_padding,
                                                         ..Default::default()
                                                     },
@@ -1411,14 +1467,7 @@ impl NavigationMenu {
                                             vec![from, to]
                                         },
                                     );
-                                    if viewport_enabled_for_registry {
-                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                            cx,
-                                            root_id_for_registry,
-                                            value_for_registry.clone(),
-                                            stack.id,
-                                        );
-                                    } else {
+                                    if !viewport_enabled_for_registry {
                                         radix_navigation_menu::navigation_menu_register_viewport_content_id(
                                             cx,
                                             root_id_for_registry,
@@ -1450,15 +1499,25 @@ impl NavigationMenu {
                         );
 
                         // `NavigationMenuContent` (desktop) and `NavigationMenuViewport` (mobile)
-                        // are intrinsically sized in Radix/shadcn. Use an autosizing wrapper so we
-                        // don't have to provide a fixed `placed.size` up-front (which would
-                        // otherwise lock the content to an estimated/previous size during switch
-                        // interactions).
-                        let panel = popper_content::popper_wrapper_at_autosize(
-                            cx,
-                            layout.placed.origin,
-                            move |_cx| vec![content],
-                        );
+                        // are intrinsically sized in Radix/shadcn.
+                        //
+                        // We keep an autosizing wrapper for desktop-style transitions, but use a
+                        // fixed-size wrapper on mobile when the panel is `w-full` (fill-based),
+                        // otherwise `Length::Fill` has no definite width to resolve against.
+                        let panel = if viewport_enabled && !md_breakpoint {
+                            popper_content::popper_wrapper_at(
+                                cx,
+                                layout.placed,
+                                Edges::all(Px(0.0)),
+                                move |_cx| vec![content],
+                            )
+                        } else {
+                            popper_content::popper_wrapper_at_autosize(
+                                cx,
+                                layout.placed.origin,
+                                move |_cx| vec![content],
+                            )
+                        };
 
                         if viewport_enabled {
                             radix_navigation_menu::navigation_menu_register_viewport_panel_id(
@@ -1555,23 +1614,7 @@ impl NavigationMenu {
                 );
             }
 
-            vec![cx.flex(
-                FlexProps {
-                    layout: LayoutStyle::default(),
-                    direction: fret_core::Axis::Vertical,
-                    gap: root_gap,
-                    padding: Edges::all(Px(0.0)),
-                    justify: MainAlign::Start,
-                    align: fret_ui::element::CrossAlign::Stretch,
-                    wrap: false,
-                    ..Default::default()
-                },
-                move |_cx| {
-                    let mut out = Vec::new();
-                    out.push(list);
-                    out
-                },
-            )]
+            vec![list]
         })
     }
 }

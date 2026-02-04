@@ -13,6 +13,7 @@ documentation.workspace = true
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-authoring = { path = "../fret-authoring", optional = true }
 fret-dnd = { path = "../fret-dnd", optional = true }
 fret-ui-headless = { path = "../fret-ui-headless" }
 fret-ui-primitives = { path = "../fret-ui-primitives" }
@@ -27,6 +28,9 @@ smallvec.workspace = true
 [features]
 # Default to a minimal, third-party-friendly foundation surface.
 default = []
+
+# Optional integration helpers for immediate-mode authoring frontends (`fret-imui` via `UiWriter`).
+imui = ["dep:fret-authoring"]
 
 # Headless drag-and-drop policy toolbox integration.
 dnd = ["dep:fret-dnd"]

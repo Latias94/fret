@@ -5,6 +5,8 @@
 
 use crate::{UiHost, UiTree};
 use fret_core::NodeId;
+use std::any::Any;
+use std::sync::Arc;
 
 pub use crate::resizable_panel_group::{ResizablePanelGroupLayout, ResizablePanelGroupStyle};
 pub use crate::resize_handle::ResizeHandle;
@@ -22,6 +24,60 @@ pub trait UiTreeRetainedExt<H: UiHost> {
 impl<H: UiHost> UiTreeRetainedExt<H> for UiTree<H> {
     fn create_node_retained(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
         self.create_node(widget)
+    }
+}
+
+/// Unstable declarative bridge for hosting retained subtrees inside the element runtime.
+///
+/// This is intended as a migration aid for policy-heavy ecosystems (docking, node graphs, charts)
+/// while the primary authoring direction remains declarative (ADR 0028 / ADR 0039).
+#[derive(Clone)]
+pub struct RetainedSubtreeFactory {
+    inner: Arc<dyn Any>,
+}
+
+impl std::fmt::Debug for RetainedSubtreeFactory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RetainedSubtreeFactory")
+            .finish_non_exhaustive()
+    }
+}
+
+impl RetainedSubtreeFactory {
+    pub fn new<H: UiHost + 'static>(f: impl Fn(&mut UiTree<H>) -> NodeId + 'static) -> Self {
+        let f: Arc<dyn Fn(&mut UiTree<H>) -> NodeId> = Arc::new(f);
+        Self { inner: Arc::new(f) }
+    }
+
+    pub(crate) fn build<H: UiHost + 'static>(&self, ui: &mut UiTree<H>) -> NodeId {
+        let f = self
+            .inner
+            .downcast_ref::<Arc<dyn Fn(&mut UiTree<H>) -> NodeId>>()
+            .expect("retained subtree factory type mismatch (host type changed?)");
+        (f)(ui)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RetainedSubtreeProps {
+    pub layout: crate::element::LayoutStyle,
+    pub factory: RetainedSubtreeFactory,
+}
+
+impl RetainedSubtreeProps {
+    pub fn new<H: UiHost + 'static>(f: impl Fn(&mut UiTree<H>) -> NodeId + 'static) -> Self {
+        let mut layout = crate::element::LayoutStyle::default();
+        layout.size.width = crate::element::Length::Fill;
+        layout.size.height = crate::element::Length::Fill;
+        Self {
+            layout,
+            factory: RetainedSubtreeFactory::new(f),
+        }
+    }
+
+    pub fn with_layout(mut self, layout: crate::element::LayoutStyle) -> Self {
+        self.layout = layout;
+        self
     }
 }
 

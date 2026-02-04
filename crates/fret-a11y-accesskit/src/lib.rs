@@ -42,6 +42,7 @@ fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::Window => Role::Pane,
         SemanticsRole::Panel => Role::Pane,
         SemanticsRole::Group => Role::Group,
+        SemanticsRole::Toolbar => Role::Toolbar,
         SemanticsRole::Dialog => Role::Dialog,
         SemanticsRole::AlertDialog => Role::AlertDialog,
         SemanticsRole::Alert => Role::Alert,
@@ -502,6 +503,7 @@ mod tests {
             Role::MenuItemRadio
         );
         assert_eq!(super::map_role(SemanticsRole::Tooltip), Role::Tooltip);
+        assert_eq!(super::map_role(SemanticsRole::Toolbar), Role::Toolbar);
     }
 
     #[test]

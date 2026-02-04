@@ -1,6 +1,6 @@
 # Material 3 Refactor: Style API Alignment v1 (Design-System-Agnostic Interfaces)
 
-Status: In progress (core controls aligned; overlay-heavy components pending)
+Status: Complete (core controls and overlay-heavy components aligned)
 
 This workstream exists to ensure `ecosystem/fret-ui-material3` becomes a *reference consumer* of
 Fret’s ecosystem style authoring contracts, instead of inventing a parallel styling API.
@@ -111,8 +111,8 @@ wired into the crate and therefore do not represent the current public surface.
 | Radio | `ecosystem/fret-ui-material3/src/radio.rs` | Yes (`RadioStyle`) | Yes | Yes | Exposes icon + state-layer color overrides; maps `checked` to `WidgetStates::SELECTED`. |
 | Tabs | `ecosystem/fret-ui-material3/src/tabs.rs` | Yes (`TabsStyle`) | Yes | Yes | Overrides: container/label/state-layer/active-indicator colors; maps active tab to `WidgetStates::SELECTED`. |
 | TextField | `ecosystem/fret-ui-material3/src/text_field.rs` | Yes (`TextFieldStyle`) | Yes | Yes | Keeps `error` as a bespoke boolean; style overrides apply to the existing token-derived defaults. |
-| Menu | `ecosystem/fret-ui-material3/src/menu.rs` | No | N/A | No | Policy-heavy; needs a careful, minimal override surface if we expose one. |
-| Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | No | N/A | No | Same as Menu (overlay surface + motion + focus). |
+| Menu | `ecosystem/fret-ui-material3/src/menu.rs` | Yes (`MenuStyle`) | Yes | Yes | Minimal container + item-color override surface; overlay/roving/dismiss remain policy-only. |
+| Dialog | `ecosystem/fret-ui-material3/src/dialog.rs` | Yes (`DialogStyle`) | Yes | Yes | Minimal scrim + surface + headline/supporting color overrides; focus/motion/dismiss remain policy-only. |
 | Tooltip | `ecosystem/fret-ui-material3/src/tooltip.rs` | No | N/A | No | Often provider-driven; may stay policy-only in v1. |
 | Snackbar | `ecosystem/fret-ui-material3/src/snackbar.rs` | No | N/A | No | Typically a higher-level pattern; likely v2. |
 
@@ -156,11 +156,12 @@ Suggested initial slot sets:
 - TextField: container/outline/focus-ring + text/placeholder/supporting.
 - Menu / MenuItem: container + item background/foreground + selection state.
 
-- [~] For each component, document which slots are public and which remain policy-only.
+- [x] For each component, document which slots are public and which remain policy-only.
   - [x] Select (slot boundary documented below).
   - [x] Button / IconButton
   - [x] Checkbox / Switch / Radio / Tabs / TextField
-  - [x] Menu / Dialog / Tooltip (policy-only in v1)
+  - [x] Menu / Dialog (minimal style surface in v1)
+  - [x] Tooltip (policy-only in v1)
   - [x] Confirm how `WidgetState::Open` / `Selected` are used (e.g. menus/selects/tabs).
 
 Widget state conventions (v1):
@@ -307,10 +308,40 @@ Policy-only in v1 (not exposed as slots):
 
 #### Menu / Dialog / Tooltip slot boundary (v1)
 
-In v1, these overlays are intentionally policy-owned and do not expose a public `*Style` override
-surface. Customization is expected to happen via theme token overrides and/or higher-level
-ecosystem components, until we have strong downstream evidence that a small, stable override surface
-is required.
+Menu and Dialog expose a minimal `*Style` surface to support app-level overrides without forcing
+component forks, while keeping the bulk of overlay behavior policy-owned.
+
+Public override surface (`MenuStyle` in `ecosystem/fret-ui-material3/src/menu.rs`):
+
+- `container_background` — Menu container background.
+- `container_corner_radii` — Menu container shape.
+- `container_elevation` — Menu container elevation (tint + shadow via `foundation::surface`).
+- `item_label_color` — Menu item label text color (stateful).
+- `item_state_layer_color` — Menu item state layer color (stateful).
+- `item_label_text_style` — Menu item label typography.
+
+Policy-only in v1 (not exposed as slots):
+
+- Overlay mechanics: placement, collision padding, dismissal policy, motion.
+- Interaction: roving focus/typeahead mechanics, ripple/state-layer policy.
+- Density: row height and padding/insets.
+
+Public override surface (`DialogStyle` in `ecosystem/fret-ui-material3/src/dialog.rs`):
+
+- `scrim_color` — Scrim base color (alpha composed with `scrim_opacity` and motion progress).
+- `container_background` — Dialog container background.
+- `container_corner_radii` — Dialog container shape.
+- `container_elevation` — Dialog container elevation (tint + shadow via `foundation::surface`).
+- `headline_color` — Headline text color.
+- `supporting_text_color` — Supporting text color.
+
+Policy-only in v1 (not exposed as slots):
+
+- Focus trap/restore behavior and dismissal policy.
+- Layout: panel padding / max width / action layout and spacing.
+- Motion: durations/easing and transform choreography.
+
+Tooltip remains policy-only in v1 (customize via theme tokens or higher-level components).
 
 ### M3SA-200 — Implement `*Style` surfaces per component (incremental)
 
@@ -333,7 +364,7 @@ Recommended order:
 - [x] Button
 - [x] Checkbox / Switch / Radio
 - [x] Tabs
-- [ ] Menu / Dialog surfaces (only if the override surface remains small)
+- [x] Menu / Dialog surfaces (kept intentionally small)
 
 ### M3SA-300 — Gallery validation pages
 
@@ -341,6 +372,9 @@ For each component that gains a `*Style` surface:
 
 - [x] Add a “Default vs Override” comparison block in `apps/fret-ui-gallery` (done: Button/IconButton/Checkbox/Switch/Radio/Tabs/TextField).
 - [x] Include at least one partial override example (hover-only or focus-ring-only) (done: Button/IconButton/Checkbox/Switch/Radio/Tabs/TextField).
+  - Menu/Dialog: default vs override blocks live in the gallery pages for those components.
+  - Headless suites: `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_menu_dialog_style_suite_goldens_v1`)
+    + `goldens/material3-headless/v1/material3-menu-dialog-style.*.json` (default vs override).
 
 ### M3SA-400 — Decide how to model “invalid/error” (TextField)
 

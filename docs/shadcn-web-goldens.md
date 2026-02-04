@@ -15,6 +15,13 @@ For each component page, the exporter writes a JSON file with:
 - optional scroll metrics for scrollable viewports (`scrollWidth/clientWidth`, `scrollHeight/clientHeight`, `scrollLeft/scrollTop`, ...).
 - `portals[]` and `portalWrappers[]` snapshots for Radix portal content (wrapper geometry is used for placement checks).
 
+## Stability notes
+
+- Recharts-backed `chart-*` pages render key SVG nodes asynchronously (ResizeObserver + RAF + JS-driven animation).
+  The extractor waits for series nodes to reach stable geometry (and may fall back to SVG bbox transforms for
+  Recharts layers) to avoid capturing partial frames (e.g. `chart-bar-default` missing `path.recharts-rectangle`,
+  or radar/radial charts captured at their animation origin).
+
 ## Prerequisites
 
 - `pnpm`
@@ -25,6 +32,12 @@ For each component page, the exporter writes a JSON file with:
   - use `--startServer` to start/stop a production server in-process
 
 ## Run
+
+Note:
+
+- Positional arguments are **route names** (e.g. `chart-line-interactive`), not output keys.
+- Do not pass suffixes like `.hover-mid` / `.open` as part of the name. Use `--variants=...` and/or
+  `--modes=...` instead.
 
 1) Install deps:
 
@@ -37,7 +50,11 @@ Force webpack instead, and provide the required `NEXT_PUBLIC_*` env vars at buil
 
 `pnpm -C repo-ref/ui --filter shadcn build`
 
-`cd repo-ref/ui/apps/v4; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
+If your environment cannot reach Google Fonts during `next build`, you can still build shadcn v4
+offline by using Next's `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` hook (maps requested families to local
+Windows font files):
+
+`cd repo-ref/ui/apps/v4; $env:NEXT_FONT_GOOGLE_MOCKED_RESPONSES=(Resolve-Path ../../../../goldens/shadcn-web/scripts/next-font-google-mock.cjs).Path; $env:NEXT_PUBLIC_APP_URL='http://localhost:4020'; $env:NEXT_PUBLIC_V0_URL='https://v0.dev'; pnpm exec next build --webpack`
 
 3) Start a production server (Terminal A):
 
@@ -57,7 +74,23 @@ when invoking the extractor from the outer repo root.
 
 Extract both closed + open overlay states (writes `*.open.json` alongside the base file):
 
-`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts popover-demo dropdown-menu-demo dropdown-menu-dialog item-dropdown select-scrollable --modes=open --update --baseUrl=http://localhost:4020`
+
+Freeze time (optional):
+
+Some pages depend on `new Date()` (notably DatePicker presets). To keep goldens deterministic across days,
+pass `--freezeDate=YYYY-MM-DD`.
+
+Example (pick “Tomorrow” with a fixed baseline date):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 --freezeDate=2026-01-15 --style=new-york-v4 --modes=open --variants=preset-tomorrow --openAction=click --openSelector=\"[data-fret-golden-target] button[aria-controls]\" --openSteps=\"click=[data-slot=select-trigger];waitFor=[data-slot=select-content]\" --steps=\"click=[data-radix-select-viewport] [data-slot=select-item]:nth-of-type(2);wait=50\" date-picker-with-presets --update`
+
+Hover-only scripted steps:
+
+Some variants (e.g. “highlight-first”) only require a hover/focus change and do not open a new portal surface.
+Use `hoverNoWait=...` to avoid deadlocking on the default “wait for new portal” heuristic:
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 --style=new-york-v4 --modes=open --variants=highlight-first-vp375x240 --viewportW=375 --viewportH=240 --openSteps=\"hoverNoWait=[data-slot='dropdown-menu-item']\" dropdown-menu-demo --update`
 
 Extract open overlay states that require non-click input (the script infers the right open action per page):
 
@@ -67,9 +100,23 @@ DropdownMenu open-state examples (checkboxes / radio group):
 
 `pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts dropdown-menu-checkboxes dropdown-menu-radio-group --modes=open --update --baseUrl=http://localhost:4020`
 
+DropdownMenu open-state examples (button-group-demo / mode-toggle):
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-group-demo --modes=open --update --baseUrl=http://localhost:4020 --openAction=click --openSelector=\"[data-fret-golden-target] button[aria-label='More Options']\"`
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts button-group-demo --modes=open --update --baseUrl=http://localhost:4020 --openVariants=\"submenu-kbd=[data-fret-golden-target] button[aria-label='More Options']\" --openSteps=\"keys=[data-slot='dropdown-menu-sub-trigger']@ArrowRight\"`
+
+`pnpm -C repo-ref/ui/apps/v4 exec tsx --tsconfig ./tsconfig.scripts.json ../../../../goldens/shadcn-web/scripts/extract-golden.mts mode-toggle --modes=open --update --baseUrl=http://localhost:4020 --openAction=click --openSelector=\"[data-fret-golden-target] button\"`
+
 Combobox open-state examples:
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --openSelector=\"[data-fret-golden-target] button[role='combobox']\"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-popover --modes=open --update --openSelector=\"[data-fret-golden-target] [data-state='closed'][aria-haspopup]\"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-dropdown-menu --modes=open --update --openSelector=\"[data-fret-golden-target] [aria-haspopup='menu'][data-state='closed']\"`
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-responsive --modes=open --update --openSelector=\"[data-fret-golden-target] [data-state='closed'][aria-haspopup]\"`
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 combobox-demo --modes=open --update --viewportW=375 --viewportH=320 --openVariants=\"vp375x320=[data-fret-golden-target] button[role='combobox']\"`
 
@@ -158,10 +205,12 @@ On the current setup, `--all` (default `--modes=closed`) generates `370` JSON fi
 This number can drift as `repo-ref/ui` adds/removes routable pages.
 
 If you also extract open overlay states (`--modes=open` or `--open`), you will get additional
-`*.open.json` files alongside the base closed-mode goldens. In this repo, the current snapshot is:
+`*.open.json` files alongside the base closed-mode goldens. The exact counts drift as upstream
+adds/removes routable pages.
 
-- `370` closed-mode files (`*.json`, excluding `*.open.json`)
-- `66` open-mode files (`*.open.json`)
+To compute the current snapshot counts (PowerShell):
+
+`$open=(Get-ChildItem -Path goldens/shadcn-web/v4/new-york-v4 -Filter *.open.json -File).Count; $closed=(Get-ChildItem -Path goldens/shadcn-web/v4/new-york-v4 -Filter *.json -File | Where-Object { $_.Name -notmatch '\\.open\\.json$' }).Count; \"$closed closed, $open open\"`
 
 Note: `*.open.json` also matches the glob `*.json`, so "total .json files" will include open-mode
 snapshots unless you exclude `*.open.json`.
@@ -193,13 +242,21 @@ Desktop (viewport disabled):
 
 Mobile (viewport enabled, 375x812):
 
-`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=812 --openAction=click --openVariants="home-mobile=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']"`
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=812 --openAction=click --openVariants="home-mobile=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger'];components-mobile=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger']"`
 
 Constrained viewport (useful for clamping/placement regressions):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=1440 --viewportH=320 --openAction=click --openVariants="components-vp1440x320=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];list-vp1440x320=[data-fret-golden-target] li:nth-of-type(4) [data-slot='navigation-menu-trigger'];simple-vp1440x320=[data-fret-golden-target] li:nth-of-type(5) [data-slot='navigation-menu-trigger'];with-icon-vp1440x320=[data-fret-golden-target] li:nth-of-type(6) [data-slot='navigation-menu-trigger']"`
 
-`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']"`
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger'];components-mobile-vp375x320=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger']"`
+
+Constrained mobile hover-switch (click Home, then hover Components):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo --modes=open --update --viewportW=375 --viewportH=320 --openAction=click --openVariants="home-mobile-vp375x320-then-hover-components=[data-fret-golden-target] li:nth-of-type(1) [data-slot='navigation-menu-trigger']" --steps="hover=[data-fret-golden-target] li:nth-of-type(2) [data-slot='navigation-menu-trigger'];wait=300"`
+
+Indicator (opt-in child, `shadow-md` diamond):
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 navigation-menu-demo-indicator --modes=open --update`
 
 Other constrained overlay variants (useful for tight-height flip/shift behavior):
 
@@ -259,7 +316,8 @@ width/height) so variant panels (e.g. `simple`, `with-icon`) can't silently drif
 shadcn layout contract.
 
 It also includes geometry gates for cmdk-derived listboxes such as `combobox-demo` (option row
-height and option insets within the listbox).
+height and option insets within the listbox), and menu item metrics for mixed cmdk+menu recipes
+such as `combobox-dropdown-menu` (menu item height + dropdown content insets).
 
 Overlay chrome conformance (border, radii, and selected colors):
 
@@ -311,14 +369,15 @@ Current layout gates include:
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--openKeys=<chord>` (optional; only used when `openAction=keys`; e.g. `Control+KeyJ` or `Meta+KeyJ`; env: `OPEN_KEYS`)
-- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
-- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
+- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll|scrollTo`)
+- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll|scrollTo`)
   - `keys=<selector>` uses `--openKeys` / `OPEN_KEYS`.
   - `keys=<selector>@<keys>` uses an inline key spec. `<keys>` supports a chord (`Shift+F10`) or a sequence (`ArrowDown ArrowRight` or `ArrowDown,ArrowRight`).
   - `type=<selector>@<text>` sets a controlled `<input>/<textarea>` value and dispatches `input`/`change` (React-friendly).
   - `waitFor=<selector>` waits for a selector to appear (useful for hover-gated ScrollArea scrollbars).
   - `move=<x>,<y>` moves the mouse to an absolute viewport position (useful to force pointerenter/leave).
   - `scroll=<selector>@<dx>,<dy>` scrolls an element via `scrollBy(dx, dy)`.
+  - `scrollTo=<selector>@<left>,<top>` sets `scrollLeft/scrollTop` via `scrollTo(left, top)` (useful when a component re-syncs scroll on open).
 - `--baseUrl=http://localhost:4000`
 - `--startServer` (env: `START_SERVER=1`)
 - `--nextDir=<path>` (env: `NEXT_DIR=...`; default: `repo-ref/ui/apps/v4`)

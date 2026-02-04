@@ -34,6 +34,9 @@ This ADR locks the contract needed to:
 - **Liveness roots**: the root set used for reachability under GC.
   - **Layer roots**: installed layer roots for the window (including invisible layers).
   - **View-cache reuse roots**: cache-root elements that are marked as reused for this frame.
+  - **Retained keep-alive roots**: runtime-owned keep-alive buckets that must remain live even when
+    they are not currently in the visible/active window (e.g. retained virtual-list keep-alive,
+    ADR 0192).
 - **ViewCache root**: an element/node that defines a reuse boundary and a cache key boundary (ADR 1152).
 - **Cache hit**: reusing a ViewCache root without re-running its declarative child render closure.
 - **Structural detach**: an explicit parent/child relationship removal (e.g. `set_children` dropping a
@@ -50,9 +53,15 @@ The contract is the source of truth; the mapping may evolve.
 
 - **Layer roots**: `UiTree::all_layer_roots` (`crates/fret-ui/src/tree/layers.rs`).
 - **View-cache reuse roots**: `WindowElementState::{mark_view_cache_reuse_root, view_cache_reuse_roots}` (`crates/fret-ui/src/elements/runtime.rs`).
+- **Retained keep-alive roots**: `WindowElementState::retained_virtual_list_keep_alive_roots` (`crates/fret-ui/src/elements/runtime.rs`).
 - **Subtree membership list**: `WindowElementState::view_cache_elements_for_root` (`crates/fret-ui/src/elements/runtime.rs`).
 - **GC reachability under reuse**: `crates/fret-ui/src/declarative/mount.rs` (see the `reachable_from_view_cache_roots` set and the sweep predicate).
 - **Removed-subtree attribution** (diagnostics): `UiDebugRemoveSubtreeRecord` exported from `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
+  - Note: `removed_subtrees.reachable_from_layer_roots` MUST reflect the same conservative reachability used by GC, not just `UiTree.children`.
+    Cache-hit frames can temporarily have incomplete `UiTree` child edges, while the last mounted `WindowFrame.children` still retains authoritative
+    element-tree edges. For GC and diagnostics, reachability should be computed from the liveness roots using the union of both sources.
+  - Note: the field name is historical. In current implementations it represents reachability from the
+    window's liveness roots (layer roots + retained keep-alive roots), not strictly from layer roots.
 - **Ownership root**: `NodeEntry.root` (`crates/fret-ui/src/elements/runtime.rs`); cross-root overwrites must not be “repaired” implicitly (ADR 0191).
 
 ## Non-normative reference patterns (best practice survey)
@@ -69,7 +78,8 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
 - **GPUI-style view caching**: cache hits reuse recorded frame ranges and keep view dependencies/state live because the view is still present in the window's view graph.
   - View caching is gated by "dirty views" (e.g. `WindowInvalidator.dirty_views`) plus a cache key (bounds/content mask/text style).
   - Cache hits still restore dependency tracking (e.g. extend `accessed_entities`) and preserve element-local state by "accessing" it as part of `prepaint`/`paint` replay.
-  - Concretely, the per-frame element-state map is driven by an explicit "accessed set": `with_element_state` records keys, and `reuse_prepaint`/`reuse_paint` replay extends `next_frame.accessed_element_states` by copying the recorded key slice from the previous frame's range. A cache hit therefore cannot accidentally drop state simply because a subtree did not rebuild.
+  - Concretely, the per-frame element-state map is driven by an explicit "accessed set": `Window::with_element_state` records keys, and `Window::reuse_prepaint`/`Window::reuse_paint` replays extend `next_frame.accessed_element_states` by copying the recorded key slice from the previous frame's range. A cache hit therefore cannot accidentally drop state simply because a subtree did not rebuild.
+  - This is the closest GPUI analogue of "subtree membership lists": the cached output carries an explicit, replayable summary of which state keys were used, and reusing the cached output reuses that summary.
 
 ### Upstream anchors (non-normative; line numbers may drift)
 
@@ -85,6 +95,10 @@ These systems converge on the same core idea: **GC must be reachability/ownershi
       - https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/framework.dart
       - https://github.com/flutter/flutter/blob/master/packages/flutter/lib/src/widgets/overlay.dart
 
+- **Pinned references in this repo** (preferred for audits; URLs/line numbers drift):
+  - `repo-ref/zed/crates/gpui/src/{window.rs,view.rs}`
+  - `repo-ref/flutter/packages/flutter/lib/src/{widgets/framework.dart,rendering/sliver_multi_box_adaptor.dart,widgets/overlay.dart}`
+
 In all cases, "not rebuilt this frame" is not a signal for disposal. Liveness comes from explicit roots (composition/window roots) and ownership bookkeeping.
 
 ### Failure mode we are preventing (workstream MVP2-cache-005)
@@ -96,6 +110,10 @@ The overlay torture regression (when the global stopgap is disabled) demonstrate
 
 In other words, the GC is correctly acting on the reachable graph it sees; the bug is that the ownership/attachment bookkeeping allowed a still-needed subtree to become structurally detached.
 
+Important clarification for triage:
+
+- When a failing bundle shows `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false` (and/or `unreachable_from_liveness_roots=true`), treat it as a **liveness/ownership/membership bookkeeping regression** (a true island), not primarily as a “parent pointer broke” story. The edge graph can be internally consistent while the root set or bookkeeping drift makes the subtree unreachable.
+
 In practice, the most common way for this to happen in a cache-hit system is **incomplete liveness bookkeeping under reuse**:
 
 - a cache root swaps or re-parents its child subtree (e.g. a content slot changes pages),
@@ -105,6 +123,43 @@ In practice, the most common way for this to happen in a cache-hit system is **i
 
 The best-practice implication (seen in Flutter/React/Compose/GPUI) is that optimizations must not create implicit structural detaches, and root membership must be explicit and diagnosable.
 
+### Failure taxonomy (normative for triage)
+
+This taxonomy is intentionally operational: it tells us what to do when a `bundle.json` fails a cache-005 harness.
+
+1. **True island under reuse (bookkeeping regression)**
+   - Symptom: the removed subtree record shows `unreachable_from_liveness_roots=true` (and typically `reachable_from_layer_roots=false` and `reachable_from_view_cache_roots=false`).
+   - Likely causes: missing liveness roots for the frame, ownership drift, or stale/incomplete subtree membership list under the active reuse roots.
+   - Expected remediation surface: liveness root set construction, ownership invariants (`NodeEntry.root`), membership list refresh/touch logic.
+2. **Swept while still reachable (reachability computation bug)**
+   - Symptom: the removed record suggests it was still reachable (e.g. `reachable_from_layer_roots=true`), yet it was removed.
+   - Likely causes: reachability traversal did not use the union of authoritative edge sources, or used a stale/staged graph incorrectly.
+   - Expected remediation surface: reachability walk implementation and edge-source union (UiTree + WindowFrame children).
+3. **Implicit structural detach under reuse (illegal mutation)**
+   - Symptom: the record attributes a detach to a structural write (e.g. a parent children write location), and the detached parent/root is part of (or adjacent to) a reuse root.
+   - Likely causes: a cache-hit path calling `set_children(..)` with an incomplete list, or interpreting “empty children” as authoritative while reuse is active.
+   - Expected remediation surface: enforce the cache-hit invariants (no structural mutation without full child knowledge).
+4. **Ownership corruption / cross-root identity collision**
+   - Symptom: ownership overwrite samples exist, or an element appears under a different element runtime root than its established owner.
+   - Likely causes: implicit “repair” in touch paths, or accidental reuse of a `GlobalElementId` across roots.
+   - Expected remediation surface: hard ownership invariant enforcement + diagnostics; forbid implicit ownership reassignment.
+5. **Keep-alive liveness root omission**
+   - Symptom: a kept-alive subtree becomes unreachable while keep-alive buckets should be present.
+   - Likely causes: keep-alive roots not included in the liveness root set, or membership lists not covering kept-alive descendants.
+   - Expected remediation surface: keep-alive root enumeration + membership list completeness under nesting.
+
+#### Post-run gate taxonomy keys (non-normative; must remain aligned)
+
+`fretboard diag stats --check-gc-sweep-liveness` writes `check.gc_sweep_liveness.json` next to the bundle and classifies offenders using stable keys.
+These keys are designed to align with the categories above and speed up triage:
+
+- `swept_while_reachable`: category (2) “swept while still reachable”.
+- `missing_view_cache_reachability_evidence`: missing `reachable_from_view_cache_roots` / reuse-root counters while reuse is active (diagnostics gap).
+- `reuse_roots_unmapped`: reuse roots exist but cannot be mapped to node ids (`view_cache_reuse_root_nodes_len=0`), pointing to identity bookkeeping drift.
+- `missing_reuse_root_membership_samples`: reuse roots exist but membership list samples are missing (diagnostics gap; cache-005 not actionable from one bundle).
+- `keep_alive_liveness_mismatch`: category (5) “keep-alive liveness root omission/mismatch”.
+- `reuse_membership_mismatch`: category (1) “true island under reuse”, likely driven by stale/incomplete membership/touch logic.
+
 ### Derived best practices (applicable to Fret)
 
 1. **Separate lifetime from visibility.** A layer can be `visible=false` while still being live; lifetime changes only when a root is uninstalled.
@@ -112,6 +167,21 @@ The best-practice implication (seen in Flutter/React/Compose/GPUI) is that optim
 3. **Make cache hits explicitly "touch" dependencies and state**, the same way a full rebuild would. In GPUI this happens by replaying prepaint/paint and restoring accessed dependencies; in Flutter it happens by staying in the active tree.
 4. **Keep multi-root ownership stable and diagnosable.** Cross-root identity reuse is either forbidden (bug) or must be modeled explicitly; "touch" paths must not silently reassign ownership.
 5. **Treat structural detaches as explicit lifecycle events.** Detach should be attributable (callsite/root), and there should be a clear policy for "inactive limbo" vs immediate disposal (Flutter's `_InactiveElements` is a proven pattern).
+
+## Prior art (GPUI / Flutter; non-normative)
+
+This ADR is intentionally aligned with patterns proven in production UI frameworks:
+
+- **Zed/GPUI**: element-local state is retained across frames via an *explicit accessed set*.
+  - `Window::with_element_state` records `(GlobalElementId, TypeId)` into `next_frame.accessed_element_states` and moves state from `rendered_frame` → `next_frame` when accessed. (`repo-ref/zed/crates/gpui/src/window.rs`)
+  - View cache hits still call `with_element_state`, reuse prepaint/paint ranges, and re-touch dependencies (`extend_accessed`) so cache hits do not change lifetime/ownership semantics. (`repo-ref/zed/crates/gpui/src/view.rs`)
+  - “Dirty views” are tracked per view/entity and propagated to ancestors (`mark_view_dirty`), keeping correctness aligned with range reuse. (`repo-ref/zed/crates/gpui/src/window.rs`)
+
+- **Flutter**: “keep alive” is implemented as *owner-managed retention* rather than “recently visited” heuristics.
+  - `RenderSliverMultiBoxAdaptor` maintains a `_keepAliveBucket` holding offscreen children, and explicitly wires them into lifecycle hooks (`adoptChild`, `attach/detach`, `visitChildren`) so they remain live even when not in the active child list. (`repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`)
+  - Semantics visitation is intentionally different for kept-alive children (`visitChildrenForSemantics` excludes the bucket), making visibility/semantics a policy decision rather than an accidental lifetime artifact.
+
+Fret’s “liveness roots + reachability sweep + lag” model is the equivalent of GPUI’s accessed-set retention combined with Flutter’s keep-alive bucket ownership, adapted for a hybrid (declarative rebuild + retained UiTree) architecture.
 
 ## Decision
 
@@ -128,7 +198,8 @@ When view-cache is enabled, the liveness root set MUST include:
 
 1. **All installed layer roots** for the window (base root + overlay/popup/modal roots).
 2. **All ViewCache reuse roots**, mapped to their current `NodeId` via the element runtime's identity map.
-3. Optional: additional explicitly pinned roots (future: long-lived background roots, debugging tools).
+3. **All retained keep-alive roots** (e.g. retained VirtualList keep-alive buckets; ADR 0192).
+4. Optional: additional explicitly pinned roots (future: long-lived background roots, debugging tools).
 
 Critically:
 
@@ -218,12 +289,22 @@ and best-aligned choice for long-term extensibility.
 
 - **The view graph is the liveness root set.** A cached view remains part of the window's view graph,
   so it is still "owned" even when its output is reused.
-- **Cache hit still "touches" what matters.** GPUI-style reuse tracks accessed dependencies
-  (`accessed_entities`) and reuses prepaint/paint ranges while keeping dependency/state tracking
-  consistent.
-- **Implication for Fret**: our `view_cache_subtree_element_lists` are the local equivalent of the
-  "accessed set" needed to keep element runtime entries alive under reuse. The membership list must
-  be complete and deterministically touchable on cache-hit frames.
+- **Cache hit still "touches" what matters.** On a cache hit, GPUI consults per-view element state
+  (`Window::with_element_state`) and reuses `prepaint`/`paint` ranges (`reuse_prepaint`/`reuse_paint`)
+  while also extending dependency tracking (`accessed_entities`) and carrying forward `accessed_element_states`
+  for the reused range. The reuse gate is driven by
+  `dirty_views` (and ancestor propagation via `mark_view_dirty`), not by incidental "was this view
+  visited this frame?" heuristics.
+- **Why Fret needs an explicit GC contract**: GPUI does not maintain a retained declarative node tree
+  that can be swept independently of the view graph; the reused output is range-based. In Fret, we
+  intentionally skip mounting/execution on cache-hit frames *while still retaining node identity and
+  element runtime bookkeeping*, which makes a reachability-based "liveness roots" contract necessary.
+- **Implication for Fret**: our `view_cache_subtree_element_lists` + explicit liveness roots are the
+  local equivalent of "touch the right dependencies on cache-hit frames". The membership list must
+  be complete (including nested cache roots) and deterministically refreshable on cache-hit frames.
+- Evidence anchors:
+  - `repo-ref/zed/crates/gpui/src/window.rs` (`WindowFrame.element_states`, `WindowFrame.accessed_element_states`, `Window::with_element_state`, `Window::reuse_prepaint`, `Window::reuse_paint`)
+  - `repo-ref/zed/crates/gpui/src/view.rs` (`AnyView::cached`, `dirty_views` reuse gate, `reuse_prepaint`/`reuse_paint`)
 
 ### Flutter lifecycle / ownership
 
@@ -232,8 +313,14 @@ and best-aligned choice for long-term extensibility.
 - **Inactive limbo exists.** Flutter explicitly models a subtree that is detached but not yet
   disposed (`_InactiveElements`), then finalizes at the end of the frame (`BuildOwner.finalizeTree`).
 - **Visibility does not define lifetime.** A subtree can be offstage/invisible and still owned.
+- **Virtualization keeps explicit ownership buckets.** Sliver lists can keep offscreen children alive
+  via a dedicated keep-alive bucket (`RenderSliverMultiBoxAdaptor`’s `_keepAliveBucket`), which makes
+  “not currently built/laid out” orthogonal to lifetime.
 - **Implication for Fret**: our GC-lag window is analogous to "inactive limbo", but it must be
   driven by explicit detach + reachability, not by "not visited due to caching".
+- Evidence anchors:
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`class _InactiveElements`, `BuildOwner.finalizeTree`)
+  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart` (`_keepAliveBucket`)
 
 ## Diagnostics and explainability (hard requirement)
 
@@ -254,6 +341,41 @@ When diagnostics are enabled and a subtree is removed during GC, a single `bundl
 
 Diagnostics SHOULD prefer capturing debug paths at the time of removal/attribution (when the identity
 is still available), rather than trying to resolve paths after the fact from a pruned identity map.
+
+### Minimum required evidence fields (normative)
+
+For each removed subtree record in `bundle.json` (see `debug.removed_subtrees[*]`), diagnostics MUST provide:
+
+- Reachability classification:
+  - `reachable_from_layer_roots` (required)
+  - `reachable_from_view_cache_roots` (required when reuse roots exist)
+  - `unreachable_from_liveness_roots` (required)
+  - `liveness_layer_roots_len`, `view_cache_reuse_roots_len`, `view_cache_reuse_root_nodes_len` (required when available)
+- Structural context:
+  - `root`, `root_element`, `root_parent`, `root_root`, `root_layer`, `root_layer_visible`
+  - Edge sanity samples: `root_path`, `root_path_edge_ui_contains_child`, `root_path_edge_frame_contains_child`
+- Attribution:
+  - `trigger_element`, `trigger_element_root` and best-effort debug paths when available
+  - Best-effort detach attribution: `root_root_parent_sever_*` and/or `root_parent_children_last_set_*` when available
+- Bookkeeping probes:
+  - `trigger_element_in_view_cache_keep_alive`, `trigger_element_listed_under_reuse_root` when available (bounded probes are acceptable)
+
+In addition, when a failure matches the **True island under reuse** category above, bundles MUST include enough evidence to distinguish:
+
+- “root set omission” vs “membership list omission” vs “ownership drift”.
+
+This is intentionally satisfied today via existing bounded diagnostics:
+
+- `debug.element_runtime.view_cache_reuse_root_element_samples`
+- `debug.element_runtime.node_entry_root_overwrites`
+
+Post-run gates (e.g. `fretboard diag stats --check-gc-sweep-liveness`) SHOULD fail fast and write an evidence JSON payload whenever these required fields are missing or inconsistent.
+
+For cache-005 triage, the gate evidence JSON (`check.gc_sweep_liveness.json`) SHOULD include:
+
+- `offender_taxonomy_counts` and `offender_samples[*].taxonomy` (see taxonomy keys above),
+- `offender_samples[*].taxonomy_flags` (optional, but recommended),
+- and a small `debug_summary` with counts of relevant bounded diagnostics (ownership overwrites, membership samples, keep-alive roots).
 
 ## Additional invariants (nested cache roots + ownership)
 
@@ -346,10 +468,17 @@ Success criteria:
     - `_InactiveElements` (~`framework.dart:2099`)
     - `BuildOwner.finalizeTree` (~`framework.dart:3339`)
     - `Element.deactivateChild` (~`framework.dart:4632`)
+- Flutter keep-alive bucket reference: `packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart`.
+  - Anchors (pinned `repo-ref/flutter`, may drift upstream):
+    - `RenderSliverMultiBoxAdaptor._keepAliveBucket` (~`sliver_multi_box_adaptor.dart:233`)
 - GPUI view caching reference: `crates/gpui/src/view.rs`, `crates/gpui/src/window.rs` (Zed upstream).
   - Anchors (pinned `repo-ref/zed`, may drift upstream):
+    - `ViewCacheKey` (~`view.rs:22`)
     - `AnyView::cached` (~`view.rs:103`)
     - `reuse_prepaint` (~`view.rs:216`)
+    - `detect_accessed_entities` (~`view.rs:227`)
     - `reuse_paint` (~`view.rs:280`)
-    - `WindowInvalidator.dirty_views` (~`window.rs:102`)
-    - `Window::mark_view_dirty` (~`window.rs:1476`)
+    - `WindowInvalidatorInner.dirty_views` (~`window.rs:105`)
+    - `Window::mark_view_dirty` (~`window.rs:1466`)
+    - `Window::use_keyed_state` / `with_global_id` (~`window.rs:2839`)
+    - `Window::with_element_state` (~`window.rs:2840`)

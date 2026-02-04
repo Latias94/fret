@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontWeight, KeyCode, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
@@ -13,14 +13,61 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{CalendarMonth, month_grid_compact, week_number};
 use time::Month;
+
+pub(crate) fn calendar_day_grid_step_for_key(
+    dir: direction_prim::LayoutDirection,
+    key: KeyCode,
+) -> Option<i32> {
+    match key {
+        KeyCode::ArrowUp => Some(-7),
+        KeyCode::ArrowDown => Some(7),
+        KeyCode::ArrowLeft => Some(if dir == direction_prim::LayoutDirection::Rtl {
+            1
+        } else {
+            -1
+        }),
+        KeyCode::ArrowRight => Some(if dir == direction_prim::LayoutDirection::Rtl {
+            -1
+        } else {
+            1
+        }),
+        _ => None,
+    }
+}
+
+pub(crate) fn calendar_day_grid_row_edge_target_for_key(
+    dir: direction_prim::LayoutDirection,
+    key: KeyCode,
+    current: usize,
+    len: usize,
+) -> Option<usize> {
+    let row_start = (current / 7) * 7;
+    let row_end = (row_start + 6).min(len.saturating_sub(1));
+
+    match key {
+        KeyCode::Home => Some(if dir == direction_prim::LayoutDirection::Rtl {
+            row_end
+        } else {
+            row_start
+        }),
+        KeyCode::End => Some(if dir == direction_prim::LayoutDirection::Rtl {
+            row_start
+        } else {
+            row_end
+        }),
+        _ => None,
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CalendarLocale {
@@ -403,10 +450,41 @@ impl Calendar {
             day_grid_width
         };
 
-        let chrome = ChromeRefinement::default().p(Space::N3).merge(self.chrome);
-        let root = LayoutRefinement::default().w_full().merge(self.layout);
+        let bg = theme.color_required("background");
+        let mut chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(bg))
+            .p(Space::N3);
+        if matches!(
+            surface_slot_in_scope(cx),
+            Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+        ) {
+            chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+        }
+        let chrome = chrome.merge(self.chrome);
+        let root = LayoutRefinement::default().merge(self.layout);
 
-        let container_props = decl_style::container_props(&theme, chrome, root);
+        let mut container_props = decl_style::container_props(&theme, chrome, root);
+
+        // Align with shadcn-web: the calendar root is `w-fit` so it doesn't stretch to the full
+        // width of its parent (e.g. gallery preview columns).
+        if matches!(container_props.layout.size.width, Length::Auto) {
+            let content_w = if number_of_months > 1 {
+                // Use the same breakpoint rule as our multi-month layout (`md:flex-row`).
+                let is_row = cx.bounds.size.width.0 >= 768.0;
+                let gap_px = decl_style::space(&theme, Space::N4);
+                if is_row {
+                    Px(month_width.0 * (number_of_months as f32)
+                        + gap_px.0 * ((number_of_months - 1) as f32))
+                } else {
+                    month_width
+                }
+            } else {
+                month_width
+            };
+            let w =
+                Px(content_w.0 + container_props.padding.left.0 + container_props.padding.right.0);
+            container_props.layout.size.width = Length::Px(w);
+        }
         cx.container(container_props, move |cx| {
             if number_of_months > 1 {
                 return calendar_multi_month_view(
@@ -587,7 +665,10 @@ impl Calendar {
                             },
                             direction: fret_core::Axis::Horizontal,
                             gap: day_col_gap,
-                            padding: fret_core::Edges::all(Px(0.0)),
+                            padding: fret_core::Edges {
+                                top: week_row_gap,
+                                ..fret_core::Edges::all(Px(0.0))
+                            },
                             justify: MainAlign::Start,
                             align: fret_ui::element::CrossAlign::Start,
                             wrap: true,
@@ -609,6 +690,7 @@ impl Calendar {
                     };
 
                     let days_grid = cx.roving_flex(roving_props, move |cx| {
+                        let direction = direction_prim::use_direction_in_scope(cx, None);
                         let month_model = month_model_days.clone();
                         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
                             use fret_core::KeyCode;
@@ -618,13 +700,7 @@ impl Calendar {
                                 return RovingNavigateResult::NotHandled;
                             };
 
-                            let step = match it.key {
-                                KeyCode::ArrowLeft => Some(-1),
-                                KeyCode::ArrowRight => Some(1),
-                                KeyCode::ArrowUp => Some(-7),
-                                KeyCode::ArrowDown => Some(7),
-                                _ => None,
-                            };
+                            let step = calendar_day_grid_step_for_key(direction, it.key);
 
                             if let Some(step) = step {
                                 let next = (current as i32 + step)
@@ -633,20 +709,15 @@ impl Calendar {
                                 return RovingNavigateResult::Handled { target: Some(next) };
                             }
 
+                            if let Some(target) = calendar_day_grid_row_edge_target_for_key(
+                                direction, it.key, current, it.len,
+                            ) {
+                                return RovingNavigateResult::Handled {
+                                    target: Some(target),
+                                };
+                            }
+
                             match it.key {
-                                KeyCode::Home => {
-                                    let row_start = (current / 7) * 7;
-                                    RovingNavigateResult::Handled {
-                                        target: Some(row_start),
-                                    }
-                                }
-                                KeyCode::End => {
-                                    let row_start = (current / 7) * 7;
-                                    let row_end = (row_start + 6).min(it.len.saturating_sub(1));
-                                    RovingNavigateResult::Handled {
-                                        target: Some(row_end),
-                                    }
-                                }
                                 KeyCode::PageUp => {
                                     let _ = host.models_mut().update(&month_model, |m| {
                                         *m = m.prev_month();
@@ -667,9 +738,14 @@ impl Calendar {
                             }
                         }));
 
+                        let week_count = (grid.len() / 7).max(1);
                         grid.iter()
                             .enumerate()
                             .map(|(idx, day)| {
+                                let week_idx = idx / 7;
+                                let is_last_week = week_idx + 1 >= week_count;
+                                let row_bottom_gap =
+                                    if is_last_week { Px(0.0) } else { week_row_gap };
                                 let is_hidden =
                                     (!day.in_month && !show_outside_days) || !in_bounds(day.date);
                                 if is_hidden {
@@ -677,7 +753,7 @@ impl Calendar {
                                         cx,
                                         &theme_days_for_days,
                                         day_size,
-                                        week_row_gap,
+                                        row_bottom_gap,
                                     );
                                 }
 
@@ -696,7 +772,7 @@ impl Calendar {
                                     is_disabled,
                                     focus_date.is_some_and(|d| d == day.date),
                                     day_size,
-                                    week_row_gap,
+                                    row_bottom_gap,
                                     &selected_model,
                                     close_on_select.clone(),
                                     disabled_predicate.clone(),
@@ -719,15 +795,20 @@ impl Calendar {
                                 },
                                 direction: fret_core::Axis::Vertical,
                                 gap: Px(0.0),
-                                padding: fret_core::Edges::all(Px(0.0)),
+                                padding: fret_core::Edges {
+                                    top: week_row_gap,
+                                    ..fret_core::Edges::all(Px(0.0))
+                                },
                                 justify: MainAlign::Start,
                                 align: fret_ui::element::CrossAlign::Start,
                                 wrap: false,
                             },
                             move |cx| {
+                                let week_count = week_numbers.len().max(1);
                                 week_numbers
                                     .iter()
-                                    .map(|n: &u32| {
+                                    .enumerate()
+                                    .map(|(idx, n): (usize, &u32)| {
                                         let mut props = TextProps::new(Arc::from(n.to_string()));
                                         props.style = Some(grid_text_style_week_numbers.clone());
                                         props.color = theme_days_for_week_numbers
@@ -738,8 +819,11 @@ impl Calendar {
                                         let mut layout = LayoutStyle::default();
                                         layout.size.width = Length::Px(day_size);
                                         layout.size.height = Length::Px(day_size);
-                                        layout.margin.bottom =
-                                            fret_ui::element::MarginEdge::Px(week_row_gap);
+                                        let is_last_week = idx + 1 >= week_count;
+                                        if !is_last_week {
+                                            layout.margin.bottom =
+                                                fret_ui::element::MarginEdge::Px(week_row_gap);
+                                        }
                                         props.layout = layout;
                                         cx.text_props(props)
                                     })
@@ -771,7 +855,7 @@ impl Calendar {
 
                     let body = stack::vstack(
                         cx,
-                        stack::VStackProps::default().gap(Space::N2),
+                        stack::VStackProps::default().gap(Space::N0),
                         move |_cx| vec![weekday_row, days],
                     );
 
@@ -1153,7 +1237,10 @@ fn calendar_month_view<H: UiHost>(
             },
             direction: fret_core::Axis::Horizontal,
             gap: Px(0.0),
-            padding: fret_core::Edges::all(Px(0.0)),
+            padding: fret_core::Edges {
+                top: week_row_gap,
+                ..fret_core::Edges::all(Px(0.0))
+            },
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Start,
             wrap: true,
@@ -1175,6 +1262,7 @@ fn calendar_month_view<H: UiHost>(
     };
 
     let days_grid = cx.roving_flex(roving_props, move |cx| {
+        let direction = direction_prim::use_direction_in_scope(cx, None);
         let month_model = month_model.clone();
         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
             use fret_core::KeyCode;
@@ -1184,13 +1272,7 @@ fn calendar_month_view<H: UiHost>(
                 return RovingNavigateResult::NotHandled;
             };
 
-            let step = match it.key {
-                KeyCode::ArrowLeft => Some(-1),
-                KeyCode::ArrowRight => Some(1),
-                KeyCode::ArrowUp => Some(-7),
-                KeyCode::ArrowDown => Some(7),
-                _ => None,
-            };
+            let step = calendar_day_grid_step_for_key(direction, it.key);
 
             if let Some(step) = step {
                 let next =
@@ -1198,20 +1280,15 @@ fn calendar_month_view<H: UiHost>(
                 return RovingNavigateResult::Handled { target: Some(next) };
             }
 
+            if let Some(target) =
+                calendar_day_grid_row_edge_target_for_key(direction, it.key, current, it.len)
+            {
+                return RovingNavigateResult::Handled {
+                    target: Some(target),
+                };
+            }
+
             match it.key {
-                KeyCode::Home => {
-                    let row_start = (current / 7) * 7;
-                    RovingNavigateResult::Handled {
-                        target: Some(row_start),
-                    }
-                }
-                KeyCode::End => {
-                    let row_start = (current / 7) * 7;
-                    let row_end = (row_start + 6).min(it.len.saturating_sub(1));
-                    RovingNavigateResult::Handled {
-                        target: Some(row_end),
-                    }
-                }
                 KeyCode::PageUp => {
                     let _ = host.models_mut().update(&month_model, |m| {
                         *m = m.prev_month();
@@ -1232,16 +1309,20 @@ fn calendar_month_view<H: UiHost>(
             }
         }));
 
+        let week_count = (grid.len() / 7).max(1);
         grid.iter()
             .enumerate()
             .map(|(idx, day)| {
+                let week_idx = idx / 7;
+                let is_last_week = week_idx + 1 >= week_count;
+                let row_bottom_gap = if is_last_week { Px(0.0) } else { week_row_gap };
                 let is_hidden = (!day.in_month && !show_outside_days) || !in_bounds(day.date);
                 if is_hidden {
                     return calendar_hidden_day_cell(
                         cx,
                         &theme_days_for_days,
                         day_size,
-                        week_row_gap,
+                        row_bottom_gap,
                     );
                 }
 
@@ -1260,7 +1341,7 @@ fn calendar_month_view<H: UiHost>(
                     is_disabled,
                     focus_date.is_some_and(|d| d == day.date),
                     day_size,
-                    week_row_gap,
+                    row_bottom_gap,
                     &selected_model,
                     close_on_select.clone(),
                     disabled_predicate.clone(),
@@ -1283,15 +1364,20 @@ fn calendar_month_view<H: UiHost>(
                 },
                 direction: fret_core::Axis::Vertical,
                 gap: Px(0.0),
-                padding: fret_core::Edges::all(Px(0.0)),
+                padding: fret_core::Edges {
+                    top: week_row_gap,
+                    ..fret_core::Edges::all(Px(0.0))
+                },
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: false,
             },
             move |cx| {
+                let week_count = week_numbers.len().max(1);
                 week_numbers
                     .iter()
-                    .map(|n: &u32| {
+                    .enumerate()
+                    .map(|(idx, n): (usize, &u32)| {
                         let mut props = TextProps::new(Arc::from(n.to_string()));
                         props.style = Some(grid_text_style_week_numbers.clone());
                         props.color = theme_days_for_week_numbers.color_by_key("muted-foreground");
@@ -1301,7 +1387,10 @@ fn calendar_month_view<H: UiHost>(
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Px(day_size);
                         layout.size.height = Length::Px(day_size);
-                        layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
+                        let is_last_week = idx + 1 >= week_count;
+                        if !is_last_week {
+                            layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
+                        }
                         props.layout = layout;
                         cx.text_props(props)
                     })
@@ -1333,7 +1422,7 @@ fn calendar_month_view<H: UiHost>(
 
     let body = stack::vstack(
         cx,
-        stack::VStackProps::default().gap(Space::N2),
+        stack::VStackProps::default().gap(Space::N0),
         move |_cx| vec![weekday_row, days],
     );
 
@@ -1539,7 +1628,7 @@ fn calendar_hidden_day_cell<H: UiHost>(
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
-        chrome_props.layout = layout;
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1669,7 +1758,9 @@ fn calendar_day_cell<H: UiHost>(
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
-        chrome_props.layout = layout;
+        // Margins are outside the control box (CSS mental model). Keep them on the pressable node
+        // so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1689,17 +1780,136 @@ fn calendar_day_cell<H: UiHost>(
         };
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![
-                ui::label(cx, day_text.clone())
-                    .text_size_px(text_sm_px)
-                    .line_height_px(text_sm_line_height)
-                    .font_medium()
-                    .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
-                    .nowrap()
-                    .into_element(cx),
-            ]
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: fret_ui::element::CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    let label = ui::label(cx, day_text.clone())
+                        .text_size_px(text_sm_px)
+                        .line_height_px(text_sm_line_height)
+                        .font_medium()
+                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .nowrap();
+
+                    let label = if disabled {
+                        cx.opacity(0.5, |cx| vec![label.into_element(cx)])
+                    } else {
+                        label.into_element(cx)
+                    };
+
+                    vec![label]
+                },
+            )]
         };
 
         (pressable, chrome_props, children)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn calendar_day_grid_step_matches_direction_semantics() {
+        use direction_prim::LayoutDirection;
+
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Ltr, KeyCode::ArrowLeft),
+            Some(-1)
+        );
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Ltr, KeyCode::ArrowRight),
+            Some(1)
+        );
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Rtl, KeyCode::ArrowLeft),
+            Some(1)
+        );
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Rtl, KeyCode::ArrowRight),
+            Some(-1)
+        );
+
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Ltr, KeyCode::ArrowUp),
+            Some(-7)
+        );
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Rtl, KeyCode::ArrowUp),
+            Some(-7)
+        );
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Ltr, KeyCode::ArrowDown),
+            Some(7)
+        );
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Rtl, KeyCode::ArrowDown),
+            Some(7)
+        );
+
+        assert_eq!(
+            calendar_day_grid_step_for_key(LayoutDirection::Ltr, KeyCode::Home),
+            None
+        );
+    }
+
+    #[test]
+    fn calendar_day_grid_home_end_follow_direction_semantics() {
+        use direction_prim::LayoutDirection;
+
+        let current = 10;
+        let len = 42;
+
+        assert_eq!(
+            calendar_day_grid_row_edge_target_for_key(
+                LayoutDirection::Ltr,
+                KeyCode::Home,
+                current,
+                len
+            ),
+            Some(7)
+        );
+        assert_eq!(
+            calendar_day_grid_row_edge_target_for_key(
+                LayoutDirection::Ltr,
+                KeyCode::End,
+                current,
+                len
+            ),
+            Some(13)
+        );
+        assert_eq!(
+            calendar_day_grid_row_edge_target_for_key(
+                LayoutDirection::Rtl,
+                KeyCode::Home,
+                current,
+                len
+            ),
+            Some(13)
+        );
+        assert_eq!(
+            calendar_day_grid_row_edge_target_for_key(
+                LayoutDirection::Rtl,
+                KeyCode::End,
+                current,
+                len
+            ),
+            Some(7)
+        );
+    }
 }

@@ -222,6 +222,21 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.window_state.root_bounds(root)
     }
 
+    /// Consume a transient event flag for the current element.
+    ///
+    /// This returns `true` at most once per recorded event (clear-on-read).
+    pub fn take_transient(&mut self, key: u64) -> bool {
+        let element = self.root_id();
+        self.take_transient_for(element, key)
+    }
+
+    /// Consume a transient event flag for the specified element.
+    ///
+    /// This returns `true` at most once per recorded event (clear-on-read).
+    pub fn take_transient_for(&mut self, element: GlobalElementId, key: u64) -> bool {
+        self.window_state.take_transient_event(element, key)
+    }
+
     pub fn with_root_name<R>(&mut self, root_name: &str, f: impl FnOnce(&mut Self) -> R) -> R {
         let root = global_root(self.window, root_name);
 
@@ -252,6 +267,17 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.app.request_redraw(self.window);
     }
 
+    /// Mark the nearest cache root as needing a paint notification on the next mount.
+    ///
+    /// This is a lightweight way to force paint-cache roots to rerun paint (e.g. while animating
+    /// opacity/transform) without necessarily requesting a new animation frame from the runner.
+    pub fn notify_for_animation_frame(&mut self) {
+        // Drive invalidation from the current element, letting propagation and cache-root
+        // truncation pick the appropriate boundary (e.g. nearest view-cache root when enabled).
+        self.window_state
+            .request_notify_for_animation_frame(self.root_id());
+    }
+
     /// Request the next animation frame for this window.
     ///
     /// Use this for frame-driven updates that must advance without input events.
@@ -259,13 +285,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     /// This is a one-shot request. Prefer `begin_continuous_frames()` when driving animations from
     /// declarative UI code.
     pub fn request_animation_frame(&mut self) {
-        // Match GPUI: requesting an animation frame implies the current view's output may change
-        // on the next tick, so view-cache reuse must be disabled for the nearest cache root.
-        let root = self
-            .window_state
-            .current_view_cache_root()
-            .unwrap_or_else(|| self.stack[0]);
-        self.window_state.request_notify_for_animation_frame(root);
+        self.notify_for_animation_frame();
         self.app
             .push_effect(Effect::RequestAnimationFrame(self.window));
     }
@@ -2188,6 +2208,18 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         })
     }
 
+    #[cfg(feature = "unstable-retained-bridge")]
+    #[track_caller]
+    pub fn retained_subtree(
+        &mut self,
+        props: crate::retained_bridge::RetainedSubtreeProps,
+    ) -> AnyElement {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            cx.new_any_element(id, ElementKind::RetainedSubtree(props), Vec::new())
+        })
+    }
+
     #[track_caller]
     pub fn viewport_surface(&mut self, target: fret_core::RenderTargetId) -> AnyElement {
         self.viewport_surface_props(ViewportSurfaceProps::new(target))
@@ -2583,13 +2615,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
                     let visible = state.metrics.visible_range(preview_offset, viewport, 0);
                     if let (Some(prev), Some(visible)) = (range, visible) {
+                        let prev_visible_len = prev
+                            .end_index
+                            .saturating_sub(prev.start_index)
+                            .saturating_add(1);
+                        let visible_len = visible
+                            .end_index
+                            .saturating_sub(visible.start_index)
+                            .saturating_add(1);
+
                         let win_start = prev.start_index.saturating_sub(prev.overscan);
                         let win_end =
                             (prev.end_index + prev.overscan).min(prev.count.saturating_sub(1));
                         let out_of_window =
                             visible.start_index < win_start || visible.end_index > win_end;
 
-                        if out_of_window {
+                        // If the viewport grows (e.g. after intrinsic probes settle), the stored
+                        // render-derived window may under-estimate the visible span while still
+                        // appearing "within overscan". Force a one-shot recompute so we don't get
+                        // stuck in a too-small window forever under view-cache reuse.
+                        if visible_len > prev_visible_len || out_of_window {
                             range = state.metrics.visible_range(
                                 preview_offset,
                                 viewport,
@@ -2656,6 +2701,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     measure_mode: options.measure_mode,
                     key_cache,
                     overscan: options.overscan,
+                    keep_alive: options.keep_alive,
                     scroll_margin: options.scroll_margin,
                     gap: options.gap,
                     scroll_handle,
@@ -2760,6 +2806,28 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn virtual_list_keyed_retained_fn(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        self.virtual_list_keyed_retained_with_layout_fn(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            row,
+        )
+    }
+
+    #[track_caller]
     pub fn virtual_list_keyed_retained_with_layout(
         &mut self,
         layout: LayoutStyle,
@@ -2779,6 +2847,31 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             scroll_handle,
             key_at,
             crate::virtual_list::default_range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_retained_with_layout_fn(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn = Arc::new(key_at);
+        let row: crate::windowed_surface_host::RetainedVirtualListRowFn<H> = Arc::new(row);
+        self.virtual_list_keyed_retained_with_layout(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
             row,
         )
     }
@@ -2811,6 +2904,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     crate::windowed_surface_host::RetainedVirtualListHostMarker::default,
                     |_| {},
                 );
+                // Keep the retained keep-alive bucket's element-local state alive across frames
+                // (including view-cache hits) so window shifts can actually reuse previously
+                // mounted item subtrees. The actual budget is controlled by `VirtualListProps`.
+                cx.with_state(
+                    crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
+                    |_| {},
+                );
                 cx.with_state(
                     || crate::windowed_surface_host::RetainedVirtualListHostCallbacks::<H> {
                         key_at: Arc::clone(&key_at),
@@ -2832,6 +2932,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     })
                     .collect::<Vec<_>>()
             },
+        )
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub fn virtual_list_keyed_retained_with_layout_ex_fn(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        range_extractor: crate::windowed_surface_host::RetainedVirtualListRangeExtractor,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn = Arc::new(key_at);
+        let row: crate::windowed_surface_host::RetainedVirtualListRowFn<H> = Arc::new(row);
+        self.virtual_list_keyed_retained_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            range_extractor,
+            row,
         )
     }
 

@@ -1,7 +1,7 @@
 use super::hit_test::hit_test_drop_target;
 use super::layout::{
     active_panel_content_bounds, compute_layout_map, dock_hint_rects_with_font, dock_space_regions,
-    split_tab_bar,
+    float_zone, split_tab_bar,
 };
 use super::prelude_core::*;
 use super::prelude_runtime::*;
@@ -3963,8 +3963,13 @@ fn dock_tab_drop_on_float_zone_floats_in_window_even_when_tear_off_enabled() {
     let size = Size::new(Px(800.0), Px(600.0));
     let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
 
-    // Inside `float_zone(...)`: (8..42, 8..42) in the default dock bounds.
-    let pos = Point::new(Px(16.0), Px(16.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let zone = float_zone(dock_bounds);
+    let pos = Point::new(
+        Px(zone.origin.x.0 + zone.size.width.0 * 0.5),
+        Px(zone.origin.y.0 + zone.size.height.0 * 0.5),
+    );
 
     ui.dispatch_event(
         &mut app,
@@ -3993,6 +3998,72 @@ fn dock_tab_drop_on_float_zone_floats_in_window_even_when_tear_off_enabled() {
                 if *panel == PanelKey::new("core.hierarchy")
         )),
         "float_zone(...) must not request a new OS window"
+    );
+}
+
+#[test]
+fn dock_space_paints_float_zone_affordance() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![PanelKey::new("core.hierarchy")],
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+        dock.panels.insert(
+            PanelKey::new("core.hierarchy"),
+            DockPanel {
+                title: "Hierarchy".to_string(),
+                color: Color::TRANSPARENT,
+                viewport: None,
+            },
+        );
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let rect = float_zone(dock_bounds);
+
+    let has_background = scene.ops().iter().any(|op| {
+        matches!(
+            op,
+            SceneOp::Quad { order, rect: r, .. }
+                if *order == fret_core::DrawOrder(20) && *r == rect
+        )
+    });
+    assert!(
+        has_background,
+        "expected a float-zone background quad at {rect:?}"
+    );
+
+    let has_glyph = scene.ops().iter().any(|op| match op {
+        SceneOp::Text { order, origin, .. } if *order == fret_core::DrawOrder(21) => {
+            // `FakeTextService` returns a very wide `TextMetrics.size.width`, so the centered
+            // origin can end up outside the float-zone rect. The Y coordinate (baseline origin)
+            // still tracks the float-zone placement.
+            origin.y.0 >= rect.origin.y.0 && origin.y.0 <= rect.origin.y.0 + rect.size.height.0
+        }
+        _ => false,
+    });
+    assert!(
+        has_glyph,
+        "expected a float-zone glyph draw call at {rect:?}"
     );
 }
 
@@ -4097,6 +4168,139 @@ fn dock_drag_over_floating_title_bar_resolves_center_dock_target() {
         ),
         "expected center dock target when hovering floating title bar, got: {hover:?}"
     );
+}
+
+#[test]
+fn floating_window_can_be_dragged_from_tab() {
+    // This verifies imgui/egui-style affordance: dragging a tab in an in-window floating container
+    // moves the container itself (unless Alt is held).
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let (floating, floating_tabs, start_rect) =
+        app.with_global_mut(DockManager::default, |dock, _app| {
+            let main_tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("core.hierarchy")],
+                active: 0,
+            });
+            dock.graph.set_window_root(window, main_tabs);
+
+            let floating_tabs = dock.graph.insert_node(DockNode::Tabs {
+                tabs: vec![PanelKey::new("core.inspector")],
+                active: 0,
+            });
+            let floating = dock.graph.insert_node(DockNode::Floating {
+                child: floating_tabs,
+            });
+            let start_rect = Rect::new(
+                Point::new(Px(180.0), Px(140.0)),
+                Size::new(Px(320.0), Px(240.0)),
+            );
+            dock.graph
+                .floating_windows_mut(window)
+                .push(fret_core::DockFloatingWindow {
+                    floating,
+                    rect: start_rect,
+                });
+
+            dock.panels.insert(
+                PanelKey::new("core.hierarchy"),
+                DockPanel {
+                    title: "Hierarchy".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+            dock.panels.insert(
+                PanelKey::new("core.inspector"),
+                DockPanel {
+                    title: "Inspector".to_string(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+
+            (floating, floating_tabs, start_rect)
+        });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    // Derive the floating tab-bar position from the same layout math DockSpace uses.
+    let border = Px(1.0);
+    let title_h = Px(22.0);
+    let inner = Rect::new(
+        Point::new(
+            Px(start_rect.origin.x.0 + border.0),
+            Px(start_rect.origin.y.0 + border.0 + title_h.0),
+        ),
+        Size::new(
+            Px((start_rect.size.width.0 - border.0 * 2.0).max(0.0)),
+            Px((start_rect.size.height.0 - border.0 * 2.0 - title_h.0).max(0.0)),
+        ),
+    );
+    let settings = fret_runtime::DockingInteractionSettings::default();
+    let layout = app.with_global_mut(DockManager::default, |dock, _app| {
+        compute_layout_map(
+            &dock.graph,
+            floating,
+            inner,
+            settings.split_handle_gap,
+            settings.split_handle_hit_thickness,
+        )
+    });
+    let tabs_rect = *layout.get(&floating_tabs).expect("floating tabs rect");
+    let (tab_bar, _content) = split_tab_bar(tabs_rect);
+
+    let down = Point::new(Px(tab_bar.origin.x.0 + 40.0), Px(tab_bar.origin.y.0 + 10.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            pointer_id: fret_core::PointerId(0),
+            position: down,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let mut buttons = fret_core::MouseButtons::default();
+    buttons.left = true;
+    let moved = Point::new(Px(down.x.0 + 50.0), Px(down.y.0 + 20.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId(0),
+            position: moved,
+            buttons,
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let effects = app.take_effects();
+    let set_rect = effects.iter().find_map(|e| match e {
+        Effect::Dock(DockOp::SetFloatingRect {
+            window: w,
+            floating: f,
+            rect,
+        }) if *w == window && *f == floating => Some(*rect),
+        _ => None,
+    });
+    let rect = set_rect.expect("expected SetFloatingRect during floating drag");
+    assert_eq!(rect.origin.x, Px(start_rect.origin.x.0 + 50.0));
+    assert_eq!(rect.origin.y, Px(start_rect.origin.y.0 + 20.0));
 }
 
 #[test]

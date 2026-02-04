@@ -9,6 +9,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
@@ -96,7 +97,12 @@ impl Table {
         props.layout.overflow = Overflow::Visible;
 
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -120,7 +126,12 @@ impl TableHeader {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -144,7 +155,12 @@ impl TableBody {
             LayoutRefinement::default(),
         );
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -180,7 +196,12 @@ impl TableFooter {
         };
 
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            children,
+        )
     }
 }
 
@@ -375,11 +396,27 @@ where
 #[derive(Debug, Clone)]
 pub struct TableHead {
     text: Arc<str>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl TableHead {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -393,13 +430,14 @@ impl TableHead {
         };
         let fg = foreground(&theme);
 
-        let chrome = ChromeRefinement::default().px(px).py(py);
+        let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
         let props = decl_style::container_props(
             &theme,
             chrome,
             LayoutRefinement::default()
                 .w_full()
-                .min_h(row_min_h(&theme)),
+                .min_h(row_min_h(&theme))
+                .merge(self.layout),
         );
 
         let text = self.text;
@@ -487,6 +525,11 @@ impl TableCell {
         let child = self.child;
         cx.container(props, move |cx| {
             let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+            let wrapper_props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default().flex_1().min_w_0(),
+            );
             vec![cx.flex(
                 FlexProps {
                     layout,
@@ -497,7 +540,7 @@ impl TableCell {
                     align: CrossAlign::Center,
                     wrap: false,
                 },
-                move |_cx| vec![child.clone()],
+                move |cx| vec![cx.container(wrapper_props, move |_cx| vec![child.clone()])],
             )]
         })
     }

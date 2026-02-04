@@ -28,6 +28,13 @@ impl ElementHostWidget {
                         crate::element::SelectableTextState::default,
                         |state| (state.selection_anchor, state.caret),
                     );
+                    let mut anchor = anchor.min(props.rich.text.len());
+                    let mut caret = caret.min(props.rich.text.len());
+                    crate::text_edit::utf8::clamp_selection_to_grapheme_boundaries(
+                        &props.rich.text,
+                        &mut anchor,
+                        &mut caret,
+                    );
                     cx.set_text_selection(anchor as u32, caret as u32);
                 } else {
                     cx.clear_text_selection();
@@ -91,6 +98,8 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_enabled(props.enabled);
+                input.set_focusable(props.focusable);
                 input.set_a11y_role(props.a11y_role.unwrap_or(SemanticsRole::TextField));
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
@@ -119,6 +128,8 @@ impl ElementHostWidget {
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
+                area.set_enabled(props.enabled);
+                area.set_focusable(props.focusable);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_min_height(props.min_height);
@@ -204,6 +215,39 @@ impl ElementHostWidget {
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);
             }
+            ElementInstance::TextInputRegion(props) => {
+                cx.set_role(SemanticsRole::TextField);
+                if let Some(label) = props.a11y_label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(value) = props.a11y_value.as_ref() {
+                    cx.set_value(value.as_ref().to_string());
+                }
+                cx.set_disabled(!props.enabled);
+                cx.set_focusable(props.enabled);
+
+                // This is a mechanism-only surface: it can accept selection updates via hooks, but
+                // does not provide an internal buffer for `SetValue` edits.
+                cx.set_value_editable(false);
+                cx.set_text_selection_supported(props.enabled);
+
+                // Only publish ranges when focused, matching TextInput/TextArea behavior.
+                if cx.focus == Some(cx.node) && props.a11y_value.is_some() {
+                    if let Some((anchor, focus)) = props.a11y_text_selection {
+                        cx.set_text_selection(anchor, focus);
+                    } else {
+                        cx.clear_text_selection();
+                    }
+                    if let Some((start, end)) = props.a11y_text_composition {
+                        cx.set_text_composition(start, end);
+                    } else {
+                        cx.clear_text_composition();
+                    }
+                } else {
+                    cx.clear_text_selection();
+                    cx.clear_text_composition();
+                }
+            }
             ElementInstance::Flex(_)
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::FocusScope(_)
@@ -214,7 +258,6 @@ impl ElementHostWidget {
             }
             ElementInstance::Image(_)
             | ElementInstance::PointerRegion(_)
-            | ElementInstance::TextInputRegion(_)
             | ElementInstance::InternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)

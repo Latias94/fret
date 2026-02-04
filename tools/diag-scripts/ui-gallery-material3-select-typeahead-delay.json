@@ -1,0 +1,92 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "select" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-select" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-material3-select" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-select" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 30 },
+
+    { "type": "ensure_visible", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-delay-1000" }, "within_window": true, "padding_px": 8.0, "timeout_frames": 600 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-delay-1000" } },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "ensure_visible", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead" }, "within_window": true, "padding_px": 8.0, "timeout_frames": 600 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-listbox" } },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "press_key", "key": "d" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-item-delta" } } },
+
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "e" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-item-delta" } } },
+
+    { "type": "wait_frames", "n": 70 },
+    { "type": "press_key", "key": "e" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-item-echo" } } },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_until", "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-listbox" } }, "timeout_frames": 600 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-delay-200" } },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-listbox" } },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "press_key", "key": "d" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-item-delta" } } },
+
+    { "type": "wait_frames", "n": 20 },
+    { "type": "press_key", "key": "e" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "assert", "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-material3-select-typeahead-item-echo" } } },
+
+    { "type": "capture_screenshot", "label": "m3-select-typeahead-delay" },
+    { "type": "capture_bundle", "label": "ui-gallery-material3-select-typeahead-delay" }
+  ]
+}

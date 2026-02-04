@@ -201,9 +201,13 @@ mod tests {
 }
 
 pub(super) fn float_zone(bounds: Rect) -> Rect {
-    let size = Px(34.0);
+    // Keep this affordance within the tab bar height so it does not overlap panel content
+    // (especially viewports). The tab bar height is `DOCK_TAB_H` (currently 28px).
+    let pad = 2.0;
+    let size = Px((DOCK_TAB_H.0 - pad * 2.0).max(0.0));
+    let x = (bounds.origin.x.0 + bounds.size.width.0 - pad - size.0).max(bounds.origin.x.0 + pad);
     Rect {
-        origin: Point::new(Px(bounds.origin.x.0 + 8.0), Px(bounds.origin.y.0 + 8.0)),
+        origin: Point::new(Px(x), Px(bounds.origin.y.0 + pad)),
         size: Size::new(size, size),
     }
 }

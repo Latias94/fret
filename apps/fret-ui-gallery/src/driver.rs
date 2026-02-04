@@ -3,8 +3,8 @@ use fret_app::{
     MenuItem, Model, Platform, SettingsFileV1, WindowRequest, load_layered_settings,
 };
 use fret_core::{
-    AlphaMode, AppWindowId, Event, ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole,
-    UiServices,
+    AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
+    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, UiServices,
 };
 use fret_kit::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
@@ -32,6 +32,8 @@ use fret_workspace::commands::{
 use fret_workspace::{
     WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
 };
+#[cfg(not(target_arch = "wasm32"))]
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use time::Date;
@@ -46,6 +48,29 @@ use crate::ui;
 struct DebugHudState {
     last_tick: Option<fret_core::time::Instant>,
     ema_frame_time_us: Option<f64>,
+}
+
+#[derive(Clone, Debug)]
+struct PendingTaffyDumpRequest {
+    root_label_filter: Option<Arc<str>>,
+    filename_tag: Arc<str>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Default)]
+struct UiGalleryHarnessDiagnosticsStore {
+    per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Clone)]
+struct UiGalleryHarnessModelIds {
+    selected_page: Model<Arc<str>>,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
+    text_input: Model<String>,
+    text_area: Model<String>,
 }
 
 impl DebugHudState {
@@ -78,6 +103,7 @@ struct UiGalleryWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     debug_hud: DebugHudState,
+    pending_taffy_dump: Option<PendingTaffyDumpRequest>,
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
@@ -117,6 +143,8 @@ struct UiGalleryWindowState {
     date_picker_open: Model<bool>,
     date_picker_month: Model<fret_ui_headless::calendar::CalendarMonth>,
     date_picker_selected: Model<Option<Date>>,
+    time_picker_open: Model<bool>,
+    time_picker_selected: Model<time::Time>,
     resizable_h_fractions: Model<Vec<f32>>,
     resizable_v_fractions: Model<Vec<f32>>,
     data_table_state: Model<fret_ui_headless::table::TableState>,
@@ -128,6 +156,9 @@ struct UiGalleryWindowState {
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
+    code_editor_syntax_rust: Model<bool>,
+    code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
     material3_checkbox: Model<bool>,
     material3_switch: Model<bool>,
     material3_radio_value: Model<Option<Arc<str>>>,
@@ -147,6 +178,7 @@ struct UiGalleryWindowState {
     text_area: Model<String>,
     dropdown_open: Model<bool>,
     context_menu_open: Model<bool>,
+    context_menu_edge_open: Model<bool>,
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
@@ -223,7 +255,7 @@ impl UiGalleryDriver {
         ui: &UiTree<App>,
         window: AppWindowId,
         pointer: Option<fret_core::Point>,
-    ) -> (Arc<str>, Arc<str>, Arc<str>) {
+    ) -> (Arc<str>, Arc<str>, Arc<str>, Arc<str>) {
         let hit = pointer.map(|p| ui.debug_hit_test(p));
         let hit_node = hit.as_ref().and_then(|h| h.hit);
         let hit_layers = hit
@@ -292,7 +324,18 @@ impl UiGalleryDriver {
             focused_path.as_deref().unwrap_or(""),
         ));
 
-        (cursor, hit, focus)
+        let text = if let Some(node) = hit_node {
+            let bounds = ui.debug_node_bounds(node);
+            let constraints = ui.debug_text_constraints_snapshot(node);
+            Arc::<str>::from(format!(
+                "text node={:?} bounds={bounds:?} measured={:?} prepared={:?}",
+                node, constraints.measured, constraints.prepared,
+            ))
+        } else {
+            Arc::<str>::from("text node=<none>")
+        };
+
+        (cursor, hit, focus, text)
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> UiGalleryWindowState {
@@ -381,6 +424,10 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(fret_ui_headless::calendar::CalendarMonth::from_date(today));
         let date_picker_selected = app.models_mut().insert(None::<Date>);
+        let time_picker_open = app.models_mut().insert(false);
+        let time_picker_selected = app
+            .models_mut()
+            .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
 
         let resizable_h_fractions = app.models_mut().insert(vec![0.3, 0.7]);
         let resizable_v_fractions = app.models_mut().insert(vec![0.5, 0.5]);
@@ -411,6 +458,9 @@ impl UiGalleryDriver {
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
         let switch = app.models_mut().insert(true);
+        let code_editor_syntax_rust = app.models_mut().insert(true);
+        let code_editor_boundary_identifier = app.models_mut().insert(true);
+        let code_editor_soft_wrap = app.models_mut().insert(false);
         let material3_checkbox = app.models_mut().insert(false);
         let material3_switch = app.models_mut().insert(false);
         let material3_radio_value = app.models_mut().insert(None::<Arc<str>>);
@@ -430,6 +480,7 @@ impl UiGalleryDriver {
         let text_area = app.models_mut().insert(String::new());
         let dropdown_open = app.models_mut().insert(false);
         let context_menu_open = app.models_mut().insert(false);
+        let context_menu_edge_open = app.models_mut().insert(false);
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
@@ -478,10 +529,11 @@ impl UiGalleryDriver {
 
         Self::sync_undo_availability(app, window, &undo_doc);
 
-        UiGalleryWindowState {
+        let state = UiGalleryWindowState {
             ui,
             root: None,
             debug_hud: DebugHudState::default(),
+            pending_taffy_dump: None,
             selected_page,
             workspace_tabs,
             workspace_dirty_tabs,
@@ -519,6 +571,8 @@ impl UiGalleryDriver {
             date_picker_open,
             date_picker_month,
             date_picker_selected,
+            time_picker_open,
+            time_picker_selected,
             resizable_h_fractions,
             resizable_v_fractions,
             data_table_state,
@@ -530,6 +584,9 @@ impl UiGalleryDriver {
             progress,
             checkbox,
             switch,
+            code_editor_syntax_rust,
+            code_editor_boundary_identifier,
+            code_editor_soft_wrap,
             material3_checkbox,
             material3_switch,
             material3_radio_value,
@@ -549,6 +606,7 @@ impl UiGalleryDriver {
             text_area,
             dropdown_open,
             context_menu_open,
+            context_menu_edge_open,
             cmdk_open,
             cmdk_query,
             last_action,
@@ -557,7 +615,24 @@ impl UiGalleryDriver {
             virtual_list_torture_edit_text,
             virtual_list_torture_scroll,
             last_config_files_status_seq: 0,
-        }
+        };
+
+        #[cfg(not(target_arch = "wasm32"))]
+        app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
+            store.per_window.insert(
+                window,
+                UiGalleryHarnessModelIds {
+                    selected_page: state.selected_page.clone(),
+                    code_editor_syntax_rust: state.code_editor_syntax_rust.clone(),
+                    code_editor_boundary_identifier: state.code_editor_boundary_identifier.clone(),
+                    code_editor_soft_wrap: state.code_editor_soft_wrap.clone(),
+                    text_input: state.text_input.clone(),
+                    text_area: state.text_area.clone(),
+                },
+            );
+        });
+
+        state
     }
 
     fn handle_nav_command(
@@ -681,11 +756,71 @@ impl UiGalleryDriver {
 
     fn handle_gallery_command(
         app: &mut App,
-        state: &UiGalleryWindowState,
+        state: &mut UiGalleryWindowState,
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
         match command.as_str() {
+            CMD_CODE_EDITOR_LOAD_FONTS => {
+                app.push_effect(Effect::FileDialogOpen {
+                    window,
+                    options: FileDialogOptions {
+                        title: Some("Load fonts".to_string()),
+                        multiple: true,
+                        filters: vec![FileDialogFilter {
+                            name: "Font files".to_string(),
+                            extensions: vec![
+                                "ttf".to_string(),
+                                "otf".to_string(),
+                                "ttc".to_string(),
+                            ],
+                        }],
+                    },
+                });
+
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("code_editor.load_fonts");
+                });
+            }
+            CMD_CODE_EDITOR_DUMP_TAFFY => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    state.pending_taffy_dump = Some(PendingTaffyDumpRequest {
+                        // Prefer dumping the code editor subtree when present; fall back to the
+                        // full UI root when the filter does not match anything.
+                        root_label_filter: Some(Arc::<str>::from("ui-gallery-code-editor-root")),
+                        filename_tag: Arc::<str>::from("ui_gallery.code_editor"),
+                    });
+
+                    let sonner = shadcn::Sonner::global(app);
+                    let mut host = UiActionHostAdapter { app };
+                    sonner.toast_message(
+                        &mut host,
+                        window,
+                        "Layout dump queued",
+                        shadcn::ToastMessageOptions::new().description(
+                            "Will write a Taffy dump to .fret/taffy-dumps on the next frame.",
+                        ),
+                    );
+
+                    let _ = host.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("code_editor.dump_taffy");
+                    });
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let sonner = shadcn::Sonner::global(app);
+                    let mut host = UiActionHostAdapter { app };
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Layout dump unsupported",
+                        shadcn::ToastMessageOptions::new()
+                            .description("Writing debug dumps is not supported on wasm."),
+                    );
+                }
+            }
             CMD_APP_TOGGLE_PREFERENCES_ENABLED => {
                 let preferences = CommandId::new(fret_app::core_commands::APP_PREFERENCES);
                 let is_disabled = app
@@ -974,6 +1109,8 @@ impl UiGalleryDriver {
         let date_picker_open = state.date_picker_open.clone();
         let date_picker_month = state.date_picker_month.clone();
         let date_picker_selected = state.date_picker_selected.clone();
+        let time_picker_open = state.time_picker_open.clone();
+        let time_picker_selected = state.time_picker_selected.clone();
         let resizable_h_fractions = state.resizable_h_fractions.clone();
         let resizable_v_fractions = state.resizable_v_fractions.clone();
         let data_table_state = state.data_table_state.clone();
@@ -984,6 +1121,9 @@ impl UiGalleryDriver {
         let progress = state.progress.clone();
         let checkbox = state.checkbox.clone();
         let switch = state.switch.clone();
+        let code_editor_syntax_rust = state.code_editor_syntax_rust.clone();
+        let code_editor_boundary_identifier = state.code_editor_boundary_identifier.clone();
+        let code_editor_soft_wrap = state.code_editor_soft_wrap.clone();
         let material3_checkbox = state.material3_checkbox.clone();
         let material3_switch = state.material3_switch.clone();
         let material3_radio_value = state.material3_radio_value.clone();
@@ -1004,6 +1144,7 @@ impl UiGalleryDriver {
         let text_area = state.text_area.clone();
         let dropdown_open = state.dropdown_open.clone();
         let context_menu_open = state.context_menu_open.clone();
+        let context_menu_edge_open = state.context_menu_edge_open.clone();
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
@@ -1100,7 +1241,7 @@ impl UiGalleryDriver {
         };
 
         let show_debug_hud = debug_on;
-        let debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
+        let mut debug_hud_lines: Vec<Arc<str>> = if show_debug_hud {
             let mut lines: Vec<Arc<str>> = Vec::new();
 
             lines.push(Arc::from(format!(
@@ -1203,6 +1344,13 @@ impl UiGalleryDriver {
         } else {
             None
         };
+        if show_debug_hud && let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
+            debug_hud_lines.push(Arc::from("--- inspector ---"));
+            debug_hud_lines.push(cursor.clone());
+            debug_hud_lines.push(hit.clone());
+            debug_hud_lines.push(focus.clone());
+            debug_hud_lines.push(text.clone());
+        }
 
         let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
@@ -1352,6 +1500,8 @@ impl UiGalleryDriver {
                                             date_picker_open.clone(),
                                             date_picker_month.clone(),
                                             date_picker_selected.clone(),
+                                            time_picker_open.clone(),
+                                            time_picker_selected.clone(),
                                             resizable_h_fractions.clone(),
                                             resizable_v_fractions.clone(),
                                             data_table_state.clone(),
@@ -1381,6 +1531,7 @@ impl UiGalleryDriver {
                                             text_area.clone(),
                                             dropdown_open.clone(),
                                             context_menu_open.clone(),
+                                            context_menu_edge_open.clone(),
                                             cmdk_open.clone(),
                                             cmdk_query.clone(),
                                             last_action.clone(),
@@ -1388,6 +1539,9 @@ impl UiGalleryDriver {
                                             virtual_list_torture_edit_row.clone(),
                                             virtual_list_torture_edit_text.clone(),
                                             virtual_list_torture_scroll.clone(),
+                                            code_editor_syntax_rust.clone(),
+                                            code_editor_boundary_identifier.clone(),
+                                            code_editor_soft_wrap.clone(),
                                         )
                                     }
                                 })]
@@ -1440,6 +1594,8 @@ impl UiGalleryDriver {
                                         date_picker_open.clone(),
                                         date_picker_month.clone(),
                                         date_picker_selected.clone(),
+                                        time_picker_open.clone(),
+                                        time_picker_selected.clone(),
                                         resizable_h_fractions.clone(),
                                         resizable_v_fractions.clone(),
                                         data_table_state.clone(),
@@ -1469,6 +1625,7 @@ impl UiGalleryDriver {
                                         text_area.clone(),
                                         dropdown_open.clone(),
                                         context_menu_open.clone(),
+                                        context_menu_edge_open.clone(),
                                         cmdk_open.clone(),
                                         cmdk_query.clone(),
                                         last_action.clone(),
@@ -1476,6 +1633,9 @@ impl UiGalleryDriver {
                                         virtual_list_torture_edit_row.clone(),
                                         virtual_list_torture_edit_text.clone(),
                                         virtual_list_torture_scroll.clone(),
+                                        code_editor_syntax_rust.clone(),
+                                        code_editor_boundary_identifier.clone(),
+                                        code_editor_soft_wrap.clone(),
                                     )
                                 }
                             })
@@ -1549,6 +1709,7 @@ impl UiGalleryDriver {
                         .center(vec![tab_strip])
                         .right(vec![
                             shadcn::Button::new("Command palette")
+                                .test_id("ui-gallery-command-palette")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
                                 .on_click(fret_app::core_commands::COMMAND_PALETTE)
@@ -1579,10 +1740,11 @@ impl UiGalleryDriver {
                             last_debug_stats.layout_time.as_micros(),
                             last_debug_stats.paint_time.as_micros()
                         ))];
-                        if let Some((cursor, hit, focus)) = inspector_status.as_ref() {
+                        if let Some((cursor, hit, focus, text)) = inspector_status.as_ref() {
                             right_items.push(cx.text(format!("inspect: {}", cursor.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", hit.as_ref())));
                             right_items.push(cx.text(format!("inspect: {}", focus.as_ref())));
+                            right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
                         }
 
                         WorkspaceStatusBar::new()
@@ -2078,13 +2240,87 @@ pub fn build_app() -> App {
         menu_bar,
     });
 
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.set_app_snapshot_provider(Some(Arc::new(|app, window| {
+                let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
+                let ids = store.per_window.get(&window)?;
+
+                let selected_page = app.models().get_cloned(&ids.selected_page)?;
+                let syntax_rust = app.models().get_cloned(&ids.code_editor_syntax_rust)?;
+                let boundary_identifier = app.models().get_cloned(&ids.code_editor_boundary_identifier)?;
+                let soft_wrap = app.models().get_cloned(&ids.code_editor_soft_wrap)?;
+                let text_input = app.models().get_cloned(&ids.text_input)?;
+                let text_area = app.models().get_cloned(&ids.text_area)?;
+
+                let mut out = serde_json::Map::new();
+                out.insert("schema_version".to_string(), serde_json::json!(1));
+                out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
+                out.insert(
+                    "selected_page".to_string(),
+                    serde_json::Value::String(selected_page.to_string()),
+                );
+                out.insert(
+                    "code_editor".to_string(),
+                    serde_json::json!({
+                        "syntax_rust": syntax_rust,
+                        "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
+                        "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                    }),
+                );
+                out.insert(
+                    "text_widgets".to_string(),
+                    serde_json::json!({
+                        "text_input_chars": text_input.chars().count(),
+                        "text_area_chars": text_area.chars().count(),
+                    }),
+                );
+
+                Some(serde_json::Value::Object(out))
+            })));
+        });
+    }
+
     app
 }
 
 pub fn build_runner_config() -> WinitRunnerConfig {
+    fn parse_main_window_size_override() -> Option<winit::dpi::LogicalSize<f64>> {
+        let raw = std::env::var("FRET_UI_GALLERY_MAIN_WINDOW_SIZE").ok()?;
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        let mut parts = trimmed
+            .split(|c: char| c == 'x' || c == 'X' || c == ',' || c.is_whitespace())
+            .filter(|p| !p.trim().is_empty());
+
+        let w = parts.next()?.trim().parse::<f64>().ok()?;
+        let h = parts.next()?.trim().parse::<f64>().ok()?;
+        if w <= 0.0 || h <= 0.0 {
+            return None;
+        }
+
+        Some(winit::dpi::LogicalSize::new(w, h))
+    }
+
+    let main_window_size = match parse_main_window_size_override() {
+        Some(size) => {
+            tracing::info!(
+                w = size.width,
+                h = size.height,
+                "ui-gallery overriding main_window_size via FRET_UI_GALLERY_MAIN_WINDOW_SIZE"
+            );
+            size
+        }
+        None => winit::dpi::LogicalSize::new(1080.0, 720.0),
+    };
+
     WinitRunnerConfig {
         main_window_title: "fret-ui-gallery".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(1080.0, 720.0),
+        main_window_size,
         ..Default::default()
     }
 }
@@ -2500,24 +2736,24 @@ impl WinitAppDriver for UiGalleryDriver {
                 });
             }
             CMD_APP_SETTINGS_WRITE_PROJECT => {
-                let os = app
-                    .models()
-                    .get_cloned(&state.settings_menu_bar_os)
-                    .flatten()
-                    .as_deref()
-                    .map(str::to_string);
-                let in_window = app
-                    .models()
-                    .get_cloned(&state.settings_menu_bar_in_window)
-                    .flatten()
-                    .as_deref()
-                    .map(str::to_string);
-
-                let os = Self::menu_bar_mode_from_key(os.as_deref());
-                let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
-
                 #[cfg(not(target_arch = "wasm32"))]
                 {
+                    let os = app
+                        .models()
+                        .get_cloned(&state.settings_menu_bar_os)
+                        .flatten()
+                        .as_deref()
+                        .map(str::to_string);
+                    let in_window = app
+                        .models()
+                        .get_cloned(&state.settings_menu_bar_in_window)
+                        .flatten()
+                        .as_deref()
+                        .map(str::to_string);
+
+                    let os = Self::menu_bar_mode_from_key(os.as_deref());
+                    let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
+
                     let result =
                         Self::write_project_settings_menu_bar(os, in_window).and_then(|_| {
                             let paths = LayeredConfigPaths::for_project_root(".");
@@ -2610,11 +2846,12 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_DEFAULT => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Default toast",
-                    shadcn::ToastMessageOptions::new().description("Hello from fret-ui-gallery."),
+                    shadcn::ToastRequest::new("Default toast")
+                        .id(shadcn::ToastId(100))
+                        .description("Hello from fret-ui-gallery."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.default");
@@ -2623,11 +2860,13 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_SUCCESS => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_success_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Success",
-                    shadcn::ToastMessageOptions::new().description("Everything worked."),
+                    shadcn::ToastRequest::new("Success")
+                        .id(shadcn::ToastId(101))
+                        .variant(shadcn::ToastVariant::Success)
+                        .description("Everything worked."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.success");
@@ -2636,11 +2875,13 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_ERROR => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_error_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Error",
-                    shadcn::ToastMessageOptions::new().description("Something failed."),
+                    shadcn::ToastRequest::new("Error")
+                        .id(shadcn::ToastId(102))
+                        .variant(shadcn::ToastVariant::Error)
+                        .description("Something failed."),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.error");
@@ -2649,15 +2890,21 @@ impl WinitAppDriver for UiGalleryDriver {
             CMD_TOAST_SHOW_ACTION_CANCEL => {
                 let sonner = shadcn::Sonner::global(app);
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
+                sonner.toast(
                     &mut host,
                     window,
-                    "Action toast",
-                    shadcn::ToastMessageOptions::new()
+                    shadcn::ToastRequest::new("Action toast")
+                        .id(shadcn::ToastId(103))
                         .description("Try the action/cancel buttons.")
-                        .action("Undo", CMD_TOAST_ACTION)
-                        .cancel("Cancel", CMD_TOAST_CANCEL)
-                        .duration(Duration::from_secs(6)),
+                        .action(shadcn::ToastAction {
+                            label: Arc::from("Undo"),
+                            command: CommandId::new(CMD_TOAST_ACTION),
+                        })
+                        .cancel(shadcn::ToastAction {
+                            label: Arc::from("Cancel"),
+                            command: CommandId::new(CMD_TOAST_CANCEL),
+                        })
+                        .duration(Some(Duration::from_secs(6))),
                 );
                 let _ = host.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("toast.action_cancel");
@@ -2706,6 +2953,85 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         match event {
+            Event::FileDialogSelection(selection) => {
+                app.push_effect(Effect::FileDialogReadAllWithLimits {
+                    window,
+                    token: selection.token,
+                    limits: ExternalDropReadLimits {
+                        max_total_bytes: 128 * 1024 * 1024,
+                        max_file_bytes: 128 * 1024 * 1024,
+                        max_files: 8,
+                    },
+                });
+            }
+            Event::FileDialogData(data) => {
+                let is_font_blob = |bytes: &[u8]| -> bool {
+                    bytes.starts_with(b"OTTO")
+                        || bytes.starts_with(b"ttcf")
+                        || bytes
+                            .get(0..4)
+                            .is_some_and(|b| b == [0x00, 0x01, 0x00, 0x00])
+                };
+
+                let mut fonts: Vec<Vec<u8>> = Vec::new();
+                for file in &data.files {
+                    let name = file.name.to_ascii_lowercase();
+                    let looks_like_font = name.ends_with(".ttf")
+                        || name.ends_with(".otf")
+                        || name.ends_with(".ttc")
+                        || is_font_blob(&file.bytes);
+                    if looks_like_font {
+                        fonts.push(file.bytes.clone());
+                    }
+                }
+
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+
+                if fonts.is_empty() {
+                    let description = if data.errors.is_empty() {
+                        "No font files found in selection.".to_string()
+                    } else {
+                        format!("No fonts loaded ({} read errors).", data.errors.len())
+                    };
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Load fonts failed",
+                        shadcn::ToastMessageOptions::new().description(description),
+                    );
+                } else {
+                    host.push_effect(Effect::TextAddFonts { fonts });
+                    let description = if data.errors.is_empty() {
+                        "Fonts added to TextSystem.".to_string()
+                    } else {
+                        format!(
+                            "Fonts added to TextSystem ({} read errors).",
+                            data.errors.len()
+                        )
+                    };
+                    sonner.toast_success_message(
+                        &mut host,
+                        window,
+                        "Fonts loaded",
+                        shadcn::ToastMessageOptions::new().description(description),
+                    );
+                }
+
+                host.push_effect(Effect::FileDialogRelease { token: data.token });
+                host.request_redraw(window);
+            }
+            Event::FileDialogCanceled => {
+                let sonner = shadcn::Sonner::global(app);
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_message(
+                    &mut host,
+                    window,
+                    "Load fonts canceled",
+                    shadcn::ToastMessageOptions::new()
+                        .description("The file dialog completed without a selection."),
+                );
+            }
             Event::ImageRegistered { token, image, .. } => {
                 if state.avatar_demo_image_token == Some(*token) {
                     state.avatar_demo_image_token = None;
@@ -2748,17 +3074,64 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let inspection_active = app
+            let (inspection_active, diag_enabled) = app
                 .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    svc.wants_inspection_active(window)
+                    (svc.wants_inspection_active(window), svc.is_enabled())
                 });
             state.ui.set_inspection_active(inspection_active);
+            state.ui.set_debug_enabled(diag_enabled);
         }
 
         scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(request) = state.pending_taffy_dump.take() {
+            let root = state.root.or_else(|| state.ui.base_root());
+            let result = if let Some(root) = root {
+                state.ui.debug_write_taffy_subtree_json(
+                    app,
+                    window,
+                    root,
+                    bounds,
+                    scale_factor,
+                    request.root_label_filter.as_deref(),
+                    std::path::Path::new(".fret/taffy-dumps"),
+                    request.filename_tag.as_ref(),
+                )
+            } else {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "missing UiTree root",
+                ))
+            };
+
+            let sonner = shadcn::Sonner::global(app);
+            let mut host = UiActionHostAdapter { app };
+            match result {
+                Ok(path) => {
+                    tracing::info!(path = %path.display(), "wrote taffy dump");
+                    sonner.toast_success_message(
+                        &mut host,
+                        window,
+                        "Layout dump written",
+                        shadcn::ToastMessageOptions::new()
+                            .description(format!("{}", path.display())),
+                    );
+                }
+                Err(err) => {
+                    tracing::warn!(error = %err, "failed to write taffy dump");
+                    sonner.toast_error_message(
+                        &mut host,
+                        window,
+                        "Layout dump failed",
+                        shadcn::ToastMessageOptions::new().description(format!("{err}")),
+                    );
+                }
+            }
+        }
 
         #[cfg(not(target_arch = "wasm32"))]
         {
@@ -2769,10 +3142,15 @@ impl WinitAppDriver for UiGalleryDriver {
                     app,
                     window,
                     bounds,
+                    scale_factor,
                     semantics_snapshot,
                     element_runtime,
                 )
             });
+
+            for effect in drive.effects {
+                app.push_effect(effect);
+            }
 
             if drive.request_redraw {
                 app.request_redraw(window);
@@ -2805,7 +3183,15 @@ impl WinitAppDriver for UiGalleryDriver {
                         match effect {
                             Effect::Command { window: w, command } => {
                                 if w.is_none() || w == Some(window) {
-                                    let _ = state.ui.dispatch_command(app, services, &command);
+                                    self.handle_command(
+                                        WinitCommandContext {
+                                            app,
+                                            services,
+                                            window,
+                                            state,
+                                        },
+                                        command,
+                                    );
                                     applied_any_command = true;
                                 } else {
                                     deferred_effects.push(Effect::Command { window: w, command });

@@ -453,29 +453,40 @@ pub fn navigation_menu_indicator_rect(
     anchor: Rect,
     viewport_rect: Rect,
     side: Side,
-    indicator_size: Px,
+    indicator_thickness: Px,
 ) -> Rect {
-    let half = indicator_size.0 * 0.5;
-    let anchor_center_x = anchor.origin.x.0 + anchor.size.width.0 * 0.5;
-    let anchor_center_y = anchor.origin.y.0 + anchor.size.height.0 * 0.5;
+    let thickness = indicator_thickness.0.max(0.0);
 
-    let (x, y) = match side {
-        Side::Bottom => (anchor_center_x - half, viewport_rect.origin.y.0 - half),
-        Side::Top => (
-            anchor_center_x - half,
-            viewport_rect.origin.y.0 + viewport_rect.size.height.0 - half,
+    match side {
+        // Match Radix/shadcn behavior:
+        // - width tracks the active trigger width,
+        // - offset tracks the active trigger edge aligned to the viewport panel,
+        // - thickness fills the gap between trigger row and viewport panel.
+        Side::Bottom => Rect::new(
+            Point::new(anchor.origin.x, Px(viewport_rect.origin.y.0 - thickness)),
+            Size::new(anchor.size.width, Px(thickness)),
         ),
-        Side::Right => (viewport_rect.origin.x.0 - half, anchor_center_y - half),
-        Side::Left => (
-            viewport_rect.origin.x.0 + viewport_rect.size.width.0 - half,
-            anchor_center_y - half,
+        Side::Top => Rect::new(
+            Point::new(
+                anchor.origin.x,
+                Px(viewport_rect.origin.y.0 + viewport_rect.size.height.0),
+            ),
+            Size::new(anchor.size.width, Px(thickness)),
         ),
-    };
-
-    Rect::new(
-        Point::new(Px(x), Px(y)),
-        Size::new(indicator_size, indicator_size),
-    )
+        // Vertical orientation (rare in shadcn skins): treat thickness as the gutter width and
+        // track the active trigger height.
+        Side::Right => Rect::new(
+            Point::new(Px(viewport_rect.origin.x.0 - thickness), anchor.origin.y),
+            Size::new(Px(thickness), anchor.size.height),
+        ),
+        Side::Left => Rect::new(
+            Point::new(
+                Px(viewport_rect.origin.x.0 + viewport_rect.size.width.0),
+                anchor.origin.y,
+            ),
+            Size::new(Px(thickness), anchor.size.height),
+        ),
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -497,6 +508,10 @@ pub struct NavigationMenuViewportOverlayRequestArgs {
     pub placement_anchor_override: Option<GlobalElementId>,
     pub content_size: Size,
     pub indicator_size: Px,
+    /// When `true`, the viewport panel width matches the computed placement anchor width.
+    ///
+    /// This matches the upstream shadcn/ui mobile behavior (`w-full` on the viewport panel).
+    pub width_tracks_anchor: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -537,8 +552,8 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         };
         let trigger_anchor_id = navigation_menu_trigger_id(cx, root_id, value);
         let trigger_anchor = trigger_anchor_id.and_then(|id| {
-            cx.last_bounds_for_element(id)
-                .or_else(|| cx.last_visual_bounds_for_element(id))
+            cx.last_visual_bounds_for_element(id)
+                .or_else(|| cx.last_bounds_for_element(id))
         });
         let Some(trigger_anchor) = trigger_anchor else {
             return Vec::new();
@@ -547,8 +562,8 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         let placement_anchor = args
             .placement_anchor_override
             .and_then(|id| {
-                cx.last_bounds_for_element(id)
-                    .or_else(|| cx.last_visual_bounds_for_element(id))
+                cx.last_visual_bounds_for_element(id)
+                    .or_else(|| cx.last_bounds_for_element(id))
             })
             .map(|override_anchor| match args.placement.side {
                 Side::Top | Side::Bottom => Rect::new(
@@ -562,13 +577,40 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
             })
             .unwrap_or(trigger_anchor);
 
+        let content_size = if args.width_tracks_anchor {
+            Size::new(placement_anchor.size.width, args.content_size.height)
+        } else {
+            args.content_size
+        };
+
+        if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
+            eprintln!(
+                "nav-menu overlay root={:?} selected={:?} trigger_anchor={:?} override={:?} placement_anchor={:?} content_size={:?} width_tracks_anchor={}",
+                root_id,
+                selected_value,
+                trigger_anchor,
+                args.placement_anchor_override.and_then(|id| cx.last_bounds_for_element(id)),
+                placement_anchor,
+                content_size,
+                args.width_tracks_anchor
+            );
+        }
+
+        let outer = overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin);
         let popper_layout = popper::popper_content_layout_unclamped(
-            overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin),
+            outer,
             placement_anchor,
-            args.content_size,
+            content_size,
             args.placement,
         );
         let placed = popper_layout.rect;
+
+        if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
+            eprintln!(
+                "nav-menu overlay outer={:?} window_margin={:?} placed={:?}",
+                outer, args.window_margin, placed
+            );
+        }
 
         let transform_origin =
             popper::popper_content_transform_origin(&popper_layout, placement_anchor, None);
@@ -1967,10 +2009,10 @@ mod tests {
             Point::new(Px(0.0), Px(100.0)),
             Size::new(Px(200.0), Px(80.0)),
         );
-        let out = navigation_menu_indicator_rect(anchor, viewport, Side::Bottom, Px(14.0));
-        assert_eq!(out.origin.x, Px(60.0 - 7.0));
-        assert_eq!(out.origin.y, Px(100.0 - 7.0));
-        assert_eq!(out.size, Size::new(Px(14.0), Px(14.0)));
+        let out = navigation_menu_indicator_rect(anchor, viewport, Side::Bottom, Px(6.0));
+        assert_eq!(out.origin.x, Px(10.0));
+        assert_eq!(out.origin.y, Px(100.0 - 6.0));
+        assert_eq!(out.size, Size::new(Px(100.0), Px(6.0)));
     }
 
     #[test]

@@ -63,12 +63,37 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         }
     }
 
+    fn node_contains_in_window_frame<H: UiHost>(
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+        needle: NodeId,
+    ) -> bool {
+        if root == needle {
+            return true;
+        }
+
+        let mut stack = vec![root];
+        while let Some(node) = stack.pop() {
+            let children =
+                crate::declarative::mount::children_for_node_in_window_frame(app, window, node);
+            for child in children {
+                if child == needle {
+                    return true;
+                }
+                stack.push(child);
+            }
+        }
+        false
+    }
+
     struct RovingHookHost<'a, H: UiHost> {
         app: &'a mut H,
         window: AppWindowId,
         element: crate::GlobalElementId,
         requested_focus: &'a mut Option<NodeId>,
         notify_requested: &'a mut bool,
+        notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
 
     impl<H: UiHost> action::UiActionHost for RovingHookHost<'_, H> {
@@ -110,8 +135,17 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
+            if self.notify_requested_location.is_none() {
+                let caller = std::panic::Location::caller();
+                *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+            }
         }
     }
 
@@ -154,6 +188,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             element: this.element,
             requested_focus: &mut cx.requested_focus,
             notify_requested: &mut cx.notify_requested,
+            notify_requested_location: &mut cx.notify_requested_location,
         };
         let handled = h(
             &mut host,
@@ -203,9 +238,13 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
-    let current = cx
-        .focus
-        .and_then(|focus| roving_items.iter().position(|n| *n == focus));
+    let current = cx.focus.and_then(|focus| {
+        roving_items.iter().position(|n| *n == focus).or_else(|| {
+            roving_items
+                .iter()
+                .position(|&root| node_contains_in_window_frame(cx.app, window, root, focus))
+        })
+    });
 
     let navigate_hook = crate::elements::with_element_state(
         &mut *cx.app,
@@ -225,6 +264,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             element: this.element,
             requested_focus: &mut cx.requested_focus,
             notify_requested: &mut cx.notify_requested,
+            notify_requested_location: &mut cx.notify_requested_location,
         };
         let result = h(
             &mut host,
@@ -273,6 +313,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
                 element: this.element,
                 requested_focus: &mut cx.requested_focus,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             target = h(
                 &mut host,
@@ -327,6 +368,7 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             element: this.element,
             requested_focus: &mut cx.requested_focus,
             notify_requested: &mut cx.notify_requested,
+            notify_requested_location: &mut cx.notify_requested_location,
         };
         h(
             &mut host,

@@ -21,6 +21,7 @@ use crate::button::{ButtonSize, ButtonVariant};
 use crate::calendar::{
     CalendarLocale, clamp_start_month, date_in_month_bounds, max_start_month, month_le, month_lt,
 };
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{CalendarMonth, month_grid_compact, week_number};
 
@@ -247,8 +248,18 @@ impl CalendarMultiple {
             day_grid_width
         };
 
-        let chrome = ChromeRefinement::default().p(Space::N3).merge(self.chrome);
-        let root = LayoutRefinement::default().w_full().merge(self.layout);
+        let bg = theme.color_required("background");
+        let mut chrome = ChromeRefinement::default()
+            .bg(ColorRef::Color(bg))
+            .p(Space::N3);
+        if matches!(
+            surface_slot_in_scope(cx),
+            Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+        ) {
+            chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+        }
+        let chrome = chrome.merge(self.chrome);
+        let root = LayoutRefinement::default().merge(self.layout);
 
         let container_props = decl_style::container_props(&theme, chrome, root);
         cx.container(container_props, move |cx| {
@@ -897,7 +908,8 @@ fn calendar_hidden_day_cell<H: UiHost>(
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
-        chrome_props.layout = layout;
+        // Keep margins on the pressable node so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1045,7 +1057,8 @@ fn calendar_multi_day_cell<H: UiHost>(
 
         let mut chrome_props =
             decl_style::container_props(theme, chrome, LayoutRefinement::default());
-        chrome_props.layout = layout;
+        // Keep margins on the pressable node so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,
@@ -1064,15 +1077,40 @@ fn calendar_multi_day_cell<H: UiHost>(
         };
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            vec![
-                ui::label(cx, day_text.clone())
-                    .text_size_px(text_sm_px)
-                    .line_height_px(text_sm_line_height)
-                    .font_medium()
-                    .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
-                    .nowrap()
-                    .into_element(cx),
-            ]
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: fret_ui::element::CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    let label = ui::label(cx, day_text.clone())
+                        .text_size_px(text_sm_px)
+                        .line_height_px(text_sm_line_height)
+                        .font_medium()
+                        .text_color(ColorRef::Color(if disabled { muted_fg } else { fg }))
+                        .nowrap();
+
+                    let label = if disabled {
+                        cx.opacity(0.5, |cx| vec![label.into_element(cx)])
+                    } else {
+                        label.into_element(cx)
+                    };
+
+                    vec![label]
+                },
+            )]
         };
 
         (pressable, chrome_props, children)

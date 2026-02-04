@@ -37,10 +37,12 @@ use crate::foundation::floating_label;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
+use crate::tokens::list as list_tokens;
 use crate::tokens::select as select_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -50,10 +52,35 @@ pub enum SelectVariant {
     Filled,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SelectMenuAlign {
+    #[default]
+    Start,
+    End,
+}
+
 #[derive(Debug, Clone)]
 pub struct SelectItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
+    /// Optional supporting text shown under the label in the listbox.
+    ///
+    /// Material Web exposes this via the `"supporting-text"` slot on `md-select-option`.
+    pub supporting_text: Option<Arc<str>>,
+    /// Optional trailing supporting text shown on the supporting text row in the listbox.
+    ///
+    /// Material Web exposes this via the `"trailing-supporting-text"` slot on `md-select-option`.
+    pub trailing_supporting_text: Option<Arc<str>>,
+    /// Optional label text used when this option is displayed in the Select trigger.
+    ///
+    /// Material Web calls this `displayText`. When unset, we fall back to `typeahead_text` and then
+    /// to `label`.
+    pub display_text: Option<Arc<str>>,
+    /// Optional text used for prefix typeahead matching in the listbox.
+    ///
+    /// Material Web calls this `typeaheadText`. When unset, we fall back to `display_text` and
+    /// then to `label`.
+    pub typeahead_text: Option<Arc<str>>,
     pub leading_icon: Option<IconId>,
     pub trailing_icon: Option<IconId>,
     pub disabled: bool,
@@ -65,11 +92,35 @@ impl SelectItem {
         Self {
             value: value.into(),
             label: label.into(),
+            supporting_text: None,
+            trailing_supporting_text: None,
+            display_text: None,
+            typeahead_text: None,
             leading_icon: None,
             trailing_icon: None,
             disabled: false,
             test_id: None,
         }
+    }
+
+    pub fn supporting_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.supporting_text = Some(text.into());
+        self
+    }
+
+    pub fn trailing_supporting_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.trailing_supporting_text = Some(text.into());
+        self
+    }
+
+    pub fn display_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.display_text = Some(text.into());
+        self
+    }
+
+    pub fn typeahead_text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.typeahead_text = Some(text.into());
+        self
     }
 
     pub fn leading_icon(mut self, icon: IconId) -> Self {
@@ -185,6 +236,10 @@ pub struct Select {
     model: Model<Option<Arc<str>>>,
     items: Arc<[SelectItem]>,
     variant: SelectVariant,
+    menu_align: SelectMenuAlign,
+    match_anchor_width: bool,
+    menu_width_floor: Px,
+    typeahead_delay_ms: u32,
     disabled: bool,
     leading_icon: Option<IconId>,
     label: Option<Arc<str>>,
@@ -208,6 +263,10 @@ impl Select {
             model,
             items: Arc::from([]),
             variant: SelectVariant::default(),
+            menu_align: SelectMenuAlign::default(),
+            match_anchor_width: true,
+            menu_width_floor: Px(210.0),
+            typeahead_delay_ms: 200,
             disabled: false,
             leading_icon: None,
             label: None,
@@ -227,6 +286,34 @@ impl Select {
 
     pub fn variant(mut self, variant: SelectVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub fn menu_align(mut self, align: SelectMenuAlign) -> Self {
+        self.menu_align = align;
+        self
+    }
+
+    pub fn match_anchor_width(mut self, match_anchor_width: bool) -> Self {
+        self.match_anchor_width = match_anchor_width;
+        self
+    }
+
+    /// Minimum menu width floor applied when `match_anchor_width(false)` is used.
+    ///
+    /// Material Web defaults the select host to `min-width: 210px` and sets the menu min-width to
+    /// the select width, so anchored menus tend to avoid being too narrow. We mirror that as a
+    /// stable default while still allowing callers to opt out (e.g. set `Px(0.0)`).
+    pub fn menu_width_floor(mut self, floor: Px) -> Self {
+        self.menu_width_floor = floor;
+        self
+    }
+
+    /// Typeahead buffer timeout for listbox roving focus.
+    ///
+    /// Material Web exposes this as `typeaheadDelay` and defaults to 200ms.
+    pub fn typeahead_delay_ms(mut self, ms: u32) -> Self {
+        self.typeahead_delay_ms = ms;
         self
     }
 
@@ -284,6 +371,7 @@ impl Select {
 struct SelectRuntimeModels {
     open: Model<bool>,
     scroll_handle: fret_ui::scroll::ScrollHandle,
+    listbox_element_id: Rc<Cell<Option<GlobalElementId>>>,
 }
 
 fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRuntimeModels {
@@ -300,6 +388,7 @@ fn select_runtime_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> SelectRun
     let models = SelectRuntimeModels {
         open: cx.app.models_mut().insert(false),
         scroll_handle: fret_ui::scroll::ScrollHandle::default(),
+        listbox_element_id: Rc::new(Cell::new(None)),
     };
 
     cx.with_state(State::default, |st| st.models = Some(models.clone()));
@@ -325,20 +414,18 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             opening
         });
 
-        let open_ticks = ms_to_frames(dropdown_menu_tokens::open_duration_ms(&theme));
-        let close_ticks = ms_to_frames(dropdown_menu_tokens::close_duration_ms(&theme));
-        let easing = dropdown_menu_tokens::easing(&theme);
-        let motion = OverlayController::transition_with_durations_and_cubic_bezier(
-            cx,
-            is_open,
-            open_ticks,
-            close_ticks,
-            easing,
-        );
+        let close_grace_frames = Some(ms_to_frames(dropdown_menu_tokens::close_duration_ms(
+            &theme,
+        )));
+        let motion = drive_overlay_open_close_motion(cx, &theme, is_open, close_grace_frames);
         let overlay_presence = OverlayPresence {
             present: motion.present,
             interactive: is_open,
         };
+
+        if !overlay_presence.present {
+            runtime.listbox_element_id.set(None);
+        }
 
         let selected = cx
             .get_model_cloned(&select.model, Invalidation::Layout)
@@ -373,7 +460,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
         });
 
         let value_text = selected_label
-            .map(|it| it.label.clone())
+            .map(select_item_display_text)
             .or_else(|| selected.clone())
             .unwrap_or_else(|| Arc::<str>::from(""));
 
@@ -384,6 +471,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
             select.disabled,
             select.error,
             overlay_presence.interactive,
+            runtime.listbox_element_id.get().map(|id| id.0),
             value_text,
             populated,
             select.leading_icon.clone(),
@@ -408,20 +496,34 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
             let item_height = select_tokens::menu_list_item_height(&theme, select.variant);
             let menu_vertical_padding = Px(8.0);
-            let desired_width = anchor.size.width;
+            let select_width = anchor.size.width;
+            let desired_width = if select.match_anchor_width {
+                select_width
+            } else {
+                let estimate =
+                    estimate_select_menu_content_width(&theme, select.variant, &select.items);
+                resolve_select_menu_width(select_width, estimate, select.menu_width_floor)
+            };
             let desired_height = Px((item_height.0 * (select.items.len().max(1) as f32))
                 + menu_vertical_padding.0 * 2.0);
             let desired = Size::new(desired_width, desired_height);
 
             let direction = direction_prim::use_direction_in_scope(cx, None);
-            let placement =
-                popper::PopperContentPlacement::new(direction, Side::Bottom, Align::Start, Px(4.0))
-                    .with_collision_padding(Edges {
-                        left: Px(8.0),
-                        right: Px(8.0),
-                        top: Px(48.0),
-                        bottom: Px(48.0),
-                    });
+            let placement = popper::PopperContentPlacement::new(
+                direction,
+                Side::Bottom,
+                match select.menu_align {
+                    SelectMenuAlign::Start => Align::Start,
+                    SelectMenuAlign::End => Align::End,
+                },
+                Px(4.0),
+            )
+            .with_collision_padding(Edges {
+                left: Px(8.0),
+                right: Px(8.0),
+                top: Px(48.0),
+                bottom: Px(48.0),
+            });
 
             let layout = popper::popper_content_layout_sized(outer, anchor, desired, placement);
 
@@ -430,6 +532,7 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
 
             let open_model = runtime.open.clone();
             let open_model_for_panel = open_model.clone();
+            let listbox_element_id_out = runtime.listbox_element_id.clone();
             let overlay_root = popper_content::popper_wrapper_panel_at(
                 cx,
                 layout.rect,
@@ -445,15 +548,18 @@ fn select_into_element<H: UiHost>(cx: &mut ElementContext<'_, H>, select: Select
                         selected.clone(),
                         select.a11y_label.clone(),
                         select.test_id.clone(),
+                        Some(anchor_id.0),
                         initial_focus_id_for_list,
+                        listbox_element_id_out,
                         runtime.scroll_handle.clone(),
+                        select.typeahead_delay_ms,
                         select.style.clone(),
                     )]
                 },
             );
 
-            let opacity = motion.progress;
-            let scale = 0.95 + 0.05 * motion.progress;
+            let opacity = motion.alpha;
+            let scale = motion.scale;
             let origin = popper::popper_content_transform_origin(&layout, anchor, None);
             let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
             let transform = fret_core::Transform2D::translation(origin)
@@ -500,6 +606,7 @@ fn select_trigger_element<H: UiHost>(
     disabled: bool,
     error: bool,
     open: bool,
+    controls_element: Option<u64>,
     value_text: Arc<str>,
     populated: bool,
     leading_icon: Option<IconId>,
@@ -661,6 +768,7 @@ fn select_trigger_element<H: UiHost>(
             label: a11y_label.clone(),
             test_id: test_id.clone(),
             expanded: Some(open),
+            controls_element,
             ..Default::default()
         };
 
@@ -925,7 +1033,7 @@ fn select_trigger_element<H: UiHost>(
                             cx,
                             theme,
                             variant,
-                            states,
+                            states_for_style,
                             &style_override,
                             label.clone(),
                             float_progress,
@@ -1231,6 +1339,172 @@ fn with_opacity(mut color: Color, opacity: f32) -> Color {
     color
 }
 
+fn select_item_display_text(item: &SelectItem) -> Arc<str> {
+    item.display_text
+        .clone()
+        .or_else(|| item.typeahead_text.clone())
+        .unwrap_or_else(|| item.label.clone())
+}
+
+fn select_item_typeahead_text(item: &SelectItem) -> Arc<str> {
+    item.typeahead_text
+        .clone()
+        .or_else(|| item.display_text.clone())
+        .unwrap_or_else(|| item.label.clone())
+}
+
+fn resolve_select_menu_width(select_width: Px, estimate: Px, floor: Px) -> Px {
+    // Match Material Web behavior:
+    // - Menu min-width tracks the select width.
+    // - If unclamped, allow the menu to grow to fit content.
+    // We additionally apply a small floor for ergonomics (configurable by the caller).
+    Px(select_width.0.max(estimate.0).max(floor.0))
+}
+
+fn estimate_select_menu_content_width(
+    theme: &Theme,
+    variant: SelectVariant,
+    items: &[SelectItem],
+) -> Px {
+    let padding_left = Px(12.0);
+    let padding_right = Px(12.0);
+    let gap = Px(8.0);
+
+    let label_style = select_tokens::menu_list_item_label_text_style(theme, variant)
+        .unwrap_or_else(|| fret_core::TextStyle {
+            size: Px(14.0),
+            ..Default::default()
+        });
+    // Heuristic: average glyph width in a proportional UI font is ~0.5-0.6em.
+    let avg_char_w = label_style.size.0 * 0.55;
+
+    let supporting_style = theme
+        .text_style_by_key("md.sys.typescale.body-small")
+        .unwrap_or_else(|| fret_core::TextStyle {
+            size: Px(12.0),
+            ..Default::default()
+        });
+    let supporting_avg_char_w = supporting_style.size.0 * 0.55;
+
+    let has_leading_icon = items.iter().any(|it| it.leading_icon.is_some());
+    let has_trailing_icon = items.iter().any(|it| it.trailing_icon.is_some());
+    let leading_icon_w = if has_leading_icon {
+        select_tokens::menu_list_item_leading_icon_size(theme, variant).0 + gap.0
+    } else {
+        0.0
+    };
+    let trailing_icon_w = if has_trailing_icon {
+        select_tokens::menu_list_item_trailing_icon_size(theme, variant).0 + gap.0
+    } else {
+        0.0
+    };
+
+    let max_main_chars = items
+        .iter()
+        .flat_map(|it| [Some(it.label.as_ref()), it.supporting_text.as_deref()])
+        .flatten()
+        .map(|text| text.chars().count())
+        .max()
+        .unwrap_or(0) as f32;
+    let max_trailing_chars = items
+        .iter()
+        .filter_map(|it| it.trailing_supporting_text.as_deref())
+        .map(|text| text.chars().count())
+        .max()
+        .unwrap_or(0) as f32;
+
+    // Extra slack for ellipsis / punctuation so we don't undershoot too aggressively.
+    let main_w = max_main_chars * avg_char_w;
+    let trailing_w = max_trailing_chars * supporting_avg_char_w;
+    let combined_w = if max_trailing_chars > 0.0 {
+        main_w + gap.0 + trailing_w
+    } else {
+        main_w
+    };
+    let text_w = Px(combined_w + 16.0);
+
+    let w = padding_left.0 + padding_right.0 + leading_icon_w + trailing_icon_w + text_w.0;
+    Px(w.max(0.0))
+}
+
+#[cfg(test)]
+mod item_text_tests {
+    use super::*;
+
+    #[test]
+    fn select_item_display_text_prefers_display_text_then_typeahead_then_label() {
+        let base = SelectItem::new("a", "Label");
+        assert_eq!(super::select_item_display_text(&base).as_ref(), "Label");
+        assert_eq!(
+            super::select_item_display_text(&base.clone().typeahead_text("Typeahead")).as_ref(),
+            "Typeahead"
+        );
+        assert_eq!(
+            super::select_item_display_text(&base.clone().display_text("Display")).as_ref(),
+            "Display"
+        );
+        assert_eq!(
+            super::select_item_display_text(
+                &base
+                    .clone()
+                    .typeahead_text("Typeahead")
+                    .display_text("Display"),
+            )
+            .as_ref(),
+            "Display"
+        );
+    }
+
+    #[test]
+    fn select_item_typeahead_text_prefers_typeahead_then_display_then_label() {
+        let base = SelectItem::new("a", "Label");
+        assert_eq!(super::select_item_typeahead_text(&base).as_ref(), "Label");
+        assert_eq!(
+            super::select_item_typeahead_text(&base.clone().display_text("Display")).as_ref(),
+            "Display"
+        );
+        assert_eq!(
+            super::select_item_typeahead_text(&base.clone().typeahead_text("Typeahead")).as_ref(),
+            "Typeahead"
+        );
+        assert_eq!(
+            super::select_item_typeahead_text(
+                &base
+                    .clone()
+                    .display_text("Display")
+                    .typeahead_text("Typeahead"),
+            )
+            .as_ref(),
+            "Typeahead"
+        );
+    }
+
+    #[test]
+    fn select_menu_width_floor_only_applies_when_unclamped() {
+        let floor = Px(210.0);
+        let select_width = Px(120.0);
+        let estimate = Px(160.0);
+        assert_eq!(
+            super::resolve_select_menu_width(select_width, estimate, floor).0,
+            210.0
+        );
+
+        let select_width = Px(320.0);
+        let estimate = Px(240.0);
+        assert_eq!(
+            super::resolve_select_menu_width(select_width, estimate, floor).0,
+            320.0
+        );
+
+        let select_width = Px(320.0);
+        let estimate = Px(480.0);
+        assert_eq!(
+            super::resolve_select_menu_width(select_width, estimate, floor).0,
+            480.0
+        );
+    }
+}
+
 fn select_listbox_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     variant: SelectVariant,
@@ -1240,8 +1514,11 @@ fn select_listbox_panel<H: UiHost>(
     selected: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    labelled_by_element: Option<u64>,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
+    listbox_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
     scroll_handle: fret_ui::scroll::ScrollHandle,
+    typeahead_delay_ms: u32,
     style: SelectStyle,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
@@ -1255,6 +1532,7 @@ fn select_listbox_panel<H: UiHost>(
         role: SemanticsRole::ListBox,
         label: a11y_label.clone(),
         test_id: listbox_test_id.or_else(|| Some(Arc::<str>::from("material3-select-listbox"))),
+        labelled_by_element,
         ..Default::default()
     };
 
@@ -1298,7 +1576,8 @@ fn select_listbox_panel<H: UiHost>(
         || selected_bg_token,
     );
 
-    cx.semantics(sem, move |cx| {
+    cx.semantics_with_id(sem, move |cx, listbox_id| {
+        listbox_element_id_out.set(Some(listbox_id));
         vec![cx.container(
             ContainerProps {
                 background: Some(surface.background),
@@ -1408,13 +1687,17 @@ fn select_listbox_panel<H: UiHost>(
                                         Arc::from(
                                             items
                                                 .iter()
-                                                .map(|it| it.label.clone())
+                                                .map(select_item_typeahead_text)
                                                 .collect::<Vec<_>>(),
                                         ),
-                                        30,
+                                        crate::motion::ms_to_frames(typeahead_delay_ms),
                                     );
 
                                     let mut out: Vec<AnyElement> = Vec::with_capacity(count);
+                                    let two_line = items.iter().any(|it| {
+                                        it.supporting_text.is_some()
+                                            || it.trailing_supporting_text.is_some()
+                                    });
                                     for (idx, item) in items.iter().cloned().enumerate() {
                                         let tab_stop = idx == tab_stop_idx;
                                         out.push(select_list_item(
@@ -1422,6 +1705,7 @@ fn select_listbox_panel<H: UiHost>(
                                             &theme,
                                             variant,
                                             item,
+                                            two_line,
                                             model.clone(),
                                             open.clone(),
                                             selected.clone(),
@@ -1448,6 +1732,7 @@ fn select_list_item<H: UiHost>(
     theme: &Theme,
     variant: SelectVariant,
     item: SelectItem,
+    two_line: bool,
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     selected: Option<Arc<str>>,
@@ -1457,7 +1742,11 @@ fn select_list_item<H: UiHost>(
     set_size: usize,
     initial_focus_id_out: Rc<Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
-    let height = select_tokens::menu_list_item_height(theme, variant);
+    let height = if two_line {
+        list_tokens::two_line_container_height(theme)
+    } else {
+        select_tokens::menu_list_item_height(theme, variant)
+    };
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;
@@ -1561,6 +1850,11 @@ fn select_list_item<H: UiHost>(
                 let label_color = select_tokens::menu_list_item_label_text_color(theme, variant);
                 let label_style = select_tokens::menu_list_item_label_text_style(theme, variant);
 
+                let supporting_text = item.supporting_text.clone();
+                let trailing_supporting_text = item.trailing_supporting_text.clone();
+                let has_secondary_text =
+                    supporting_text.is_some() || trailing_supporting_text.is_some();
+
                 let leading_icon = item.leading_icon.clone();
                 let trailing_icon = item.trailing_icon.clone();
 
@@ -1577,39 +1871,135 @@ fn select_list_item<H: UiHost>(
                 row.layout.overflow = Overflow::Clip;
                 row.direction = Axis::Horizontal;
                 row.justify = MainAlign::Start;
-                row.align = CrossAlign::Center;
+                row.align = if has_secondary_text {
+                    CrossAlign::Start
+                } else {
+                    CrossAlign::Center
+                };
                 row.gap = Px(8.0);
                 row.padding = Edges {
                     left: Px(12.0),
                     right: Px(12.0),
-                    top: Px(0.0),
-                    bottom: Px(0.0),
+                    top: if has_secondary_text {
+                        list_tokens::item_top_space(theme)
+                    } else {
+                        Px(0.0)
+                    },
+                    bottom: if has_secondary_text {
+                        list_tokens::item_bottom_space(theme)
+                    } else {
+                        Px(0.0)
+                    },
                 };
 
                 vec![cx.container(chrome, move |cx| {
                     vec![cx.flex(row, move |cx| {
-                        let label_el = {
-                            let mut props = TextProps::new(item.label.clone());
-                            props.style = label_style;
-                            props.color = Some(label_color);
-                            props.wrap = TextWrap::None;
-                            props.overflow = TextOverflow::Clip;
-                            cx.text_props(props)
-                        };
+                        let body_slot = if has_secondary_text {
+                            let supporting_color =
+                                list_tokens::supporting_text_color(theme, enabled, is_selected);
+                            let supporting_style =
+                                list_tokens::supporting_text_style(theme, is_selected);
+                            let trailing_supporting_color =
+                                list_tokens::trailing_supporting_text_color(
+                                    theme,
+                                    enabled,
+                                    is_selected,
+                                );
+                            let trailing_supporting_style =
+                                list_tokens::trailing_supporting_text_style(theme, is_selected);
 
-                        let label_slot = cx.container(
-                            ContainerProps {
-                                layout: {
-                                    let mut l = fret_ui::element::LayoutStyle::default();
-                                    l.size.width = Length::Fill;
-                                    l.flex.grow = 1.0;
-                                    l.overflow = Overflow::Clip;
-                                    l
+                            let headline_el = {
+                                let mut props = TextProps::new(item.label.clone());
+                                props.style = label_style;
+                                props.color = Some(label_color);
+                                props.wrap = TextWrap::None;
+                                props.overflow = TextOverflow::Clip;
+                                cx.text_props(props)
+                            };
+
+                            let supporting_el = supporting_text.as_ref().map(|text| {
+                                let mut props = TextProps::new(text.clone());
+                                props.style = supporting_style;
+                                props.color = Some(supporting_color);
+                                props.wrap = TextWrap::None;
+                                props.overflow = TextOverflow::Clip;
+                                cx.text_props(props)
+                            });
+
+                            let trailing_supporting_el =
+                                trailing_supporting_text.as_ref().map(|text| {
+                                    let mut props = TextProps::new(text.clone());
+                                    props.style = trailing_supporting_style;
+                                    props.color = Some(trailing_supporting_color);
+                                    props.wrap = TextWrap::None;
+                                    props.overflow = TextOverflow::Clip;
+                                    cx.text_props(props)
+                                });
+
+                            let mut column = FlexProps::default();
+                            column.direction = Axis::Vertical;
+                            column.justify = MainAlign::Start;
+                            column.align = CrossAlign::Stretch;
+                            column.gap = Px(2.0);
+                            column.layout.size.width = Length::Fill;
+                            column.layout.overflow = Overflow::Clip;
+                            column.layout.flex.grow = 1.0;
+
+                            cx.flex(column, move |cx| {
+                                let mut out = Vec::new();
+                                out.push(headline_el);
+
+                                let mut second_row = FlexProps::default();
+                                second_row.direction = Axis::Horizontal;
+                                second_row.justify = MainAlign::Start;
+                                second_row.align = CrossAlign::Center;
+                                second_row.gap = Px(8.0);
+                                second_row.layout.size.width = Length::Fill;
+                                second_row.layout.overflow = Overflow::Clip;
+
+                                out.push(cx.flex(second_row, move |cx| {
+                                    let mut flex_spacer = fret_ui::element::SpacerProps::default();
+                                    flex_spacer.layout.size.width = Length::Fill;
+                                    flex_spacer.layout.size.height = Length::Px(Px(0.0));
+                                    flex_spacer.layout.flex.grow = 1.0;
+                                    let flex_spacer = cx.spacer(flex_spacer);
+
+                                    let mut children = Vec::new();
+                                    if let Some(el) = supporting_el {
+                                        children.push(el);
+                                    }
+                                    children.push(flex_spacer);
+                                    if let Some(el) = trailing_supporting_el {
+                                        children.push(el);
+                                    }
+                                    children
+                                }));
+                                out
+                            })
+                        } else {
+                            let label_el = {
+                                let mut props = TextProps::new(item.label.clone());
+                                props.style = label_style;
+                                props.color = Some(label_color);
+                                props.wrap = TextWrap::None;
+                                props.overflow = TextOverflow::Clip;
+                                cx.text_props(props)
+                            };
+
+                            cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut l = fret_ui::element::LayoutStyle::default();
+                                        l.size.width = Length::Fill;
+                                        l.flex.grow = 1.0;
+                                        l.overflow = Overflow::Clip;
+                                        l
+                                    },
+                                    ..Default::default()
                                 },
-                                ..Default::default()
-                            },
-                            move |_cx| vec![label_el],
-                        );
+                                move |_cx| vec![label_el],
+                            )
+                        };
 
                         let leading_icon_el = leading_icon.as_ref().map(|icon| {
                             select_menu_item_icon(
@@ -1634,7 +2024,7 @@ fn select_list_item<H: UiHost>(
                         if let Some(icon) = leading_icon_el {
                             children.push(icon);
                         }
-                        children.push(label_slot);
+                        children.push(body_slot);
                         if let Some(icon) = trailing_icon_el {
                             children.push(icon);
                         }

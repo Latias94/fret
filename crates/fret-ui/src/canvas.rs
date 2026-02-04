@@ -205,6 +205,14 @@ impl<'a> CanvasPainter<'a> {
         self.host.scene()
     }
 
+    /// Access the underlying UI services and scene for advanced canvas paint handlers.
+    ///
+    /// This is primarily intended for diagnostics/profiling overlays and experimental paint
+    /// surfaces that need text geometry queries (selection rects, hit-testing, etc.).
+    pub fn services_and_scene(&mut self) -> (&mut dyn fret_core::UiServices, &mut Scene) {
+        self.host.services_and_scene()
+    }
+
     pub fn with_clip_rect<R>(&mut self, rect: Rect, f: impl FnOnce(&mut Self) -> R) -> R {
         {
             let scene = self.host.scene();
@@ -350,6 +358,40 @@ impl<'a> CanvasPainter<'a> {
         )
     }
 
+    /// Draw a cached text blob prepared at `raster_scale_factor` and return its `TextBlobId`.
+    ///
+    /// This is intended for advanced paint handlers that need to query text geometry (caret stops,
+    /// selection rects, hit-testing, etc.) using the returned blob.
+    pub fn text_with_blob(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        text: impl Into<Arc<str>>,
+        style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let text = text.into();
+        let font_stack_key = self.host.text_font_stack_key();
+        let (services, scene) = self.host.services_and_scene();
+        let draw = self.cache.text_draw(
+            services,
+            key,
+            order,
+            origin,
+            HostedTextContent::Plain(text),
+            style,
+            color,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+            scene,
+        );
+        (draw.blob, draw.metrics)
+    }
+
     pub fn rich_text(
         &mut self,
         key: u64,
@@ -376,6 +418,39 @@ impl<'a> CanvasPainter<'a> {
             font_stack_key,
             scene,
         )
+    }
+
+    /// Draw a cached rich text blob prepared at `raster_scale_factor` and return its `TextBlobId`.
+    ///
+    /// This is intended for advanced paint handlers that need to query text geometry (caret stops,
+    /// selection rects, hit-testing, etc.) using the returned blob.
+    pub fn rich_text_with_blob(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        rich: AttributedText,
+        base_style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        let font_stack_key = self.host.text_font_stack_key();
+        let (services, scene) = self.host.services_and_scene();
+        let draw = self.cache.text_draw(
+            services,
+            key,
+            order,
+            origin,
+            HostedTextContent::Rich(rich),
+            base_style,
+            color,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+            scene,
+        );
+        (draw.blob, draw.metrics)
     }
 
     /// Draw a cached tessellated path prepared at `raster_scale_factor`.
@@ -732,6 +807,37 @@ impl CanvasCache {
         font_stack_key: u64,
         scene: &mut Scene,
     ) -> TextMetrics {
+        self.text_draw(
+            services,
+            key,
+            order,
+            origin,
+            content,
+            style,
+            color,
+            constraints,
+            raster_scale_factor,
+            font_stack_key,
+            scene,
+        )
+        .metrics
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn text_draw(
+        &mut self,
+        services: &mut dyn fret_core::UiServices,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        content: HostedTextContent,
+        style: TextStyle,
+        color: Color,
+        constraints: CanvasTextConstraints,
+        raster_scale_factor: f32,
+        font_stack_key: u64,
+        scene: &mut Scene,
+    ) -> TextDraw {
         let raster_scale_factor = normalize_scale_factor(raster_scale_factor);
         let scale_bits = raster_scale_factor.to_bits();
 
@@ -754,7 +860,10 @@ impl CanvasCache {
                     text: entry.blob,
                     color,
                 });
-                return entry.metrics;
+                return TextDraw {
+                    blob: entry.blob,
+                    metrics: entry.metrics,
+                };
             }
 
             let text_constraints = TextConstraints {
@@ -783,7 +892,7 @@ impl CanvasCache {
                 text: blob,
                 color,
             });
-            return metrics;
+            return TextDraw { blob, metrics };
         }
 
         let cache_key = CanvasTextCacheKey { key, scale_bits };
@@ -829,9 +938,12 @@ impl CanvasCache {
         }
 
         let Some(blob) = entry.blob else {
-            return TextMetrics {
-                size: fret_core::Size::new(Px(0.0), Px(0.0)),
-                baseline: Px(0.0),
+            return TextDraw {
+                blob: fret_core::TextBlobId::default(),
+                metrics: TextMetrics {
+                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
             };
         };
         let metrics = entry.metrics.unwrap_or(TextMetrics {
@@ -845,7 +957,7 @@ impl CanvasCache {
             text: blob,
             color,
         });
-        metrics
+        TextDraw { blob, metrics }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1013,6 +1125,12 @@ struct SharedTextEntry {
     blob: fret_core::TextBlobId,
     metrics: TextMetrics,
     last_used_frame: u64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct TextDraw {
+    blob: fret_core::TextBlobId,
+    metrics: TextMetrics,
 }
 
 #[derive(Debug, Clone, PartialEq)]

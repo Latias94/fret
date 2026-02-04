@@ -1,9 +1,10 @@
-use fret_core::{Event, KeyCode, SemanticsRole, Size, TextStyle};
+use fret_core::{Event, KeyCode, Point, Rect, SemanticsRole, Size, TextStyle};
 use fret_runtime::{CommandId, Model};
 
 use super::TextInput;
 use crate::widget::{
-    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx, Widget,
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
+    PlatformTextInputCx, Widget,
 };
 use crate::{Invalidation, TextInputStyle, UiHost};
 
@@ -13,6 +14,8 @@ pub struct BoundTextInput {
     dirty_since_sync: bool,
     submit_command: Option<CommandId>,
     cancel_command: Option<CommandId>,
+    enabled: bool,
+    focusable: bool,
     input: TextInput,
 }
 
@@ -24,6 +27,8 @@ impl BoundTextInput {
             dirty_since_sync: false,
             submit_command: None,
             cancel_command: None,
+            enabled: true,
+            focusable: true,
             input: TextInput::new(),
         }
     }
@@ -82,6 +87,16 @@ impl BoundTextInput {
         self.input.set_a11y_role(role);
     }
 
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        self.input.set_enabled(enabled);
+    }
+
+    pub fn set_focusable(&mut self, focusable: bool) {
+        self.focusable = focusable;
+        self.input.set_focusable(focusable);
+    }
+
     pub fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.input.queue_release_all_text_blobs();
         self.input.flush_pending_releases(services);
@@ -128,14 +143,103 @@ impl BoundTextInput {
 
 impl<H: UiHost> Widget<H> for BoundTextInput {
     fn is_focusable(&self) -> bool {
-        true
+        self.enabled && self.focusable
     }
 
     fn is_text_input(&self) -> bool {
         true
     }
 
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        <TextInput as Widget<H>>::platform_text_input_snapshot(&self.input)
+    }
+
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        <TextInput as Widget<H>>::platform_text_input_selected_range_utf16(&self.input)
+    }
+
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        <TextInput as Widget<H>>::platform_text_input_marked_range_utf16(&self.input)
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        <TextInput as Widget<H>>::platform_text_input_text_for_range_utf16(&self.input, range)
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        <TextInput as Widget<H>>::platform_text_input_bounds_for_range_utf16(
+            &mut self.input,
+            cx,
+            range,
+        )
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        point: Point,
+    ) -> Option<u32> {
+        <TextInput as Widget<H>>::platform_text_input_character_index_for_point_utf16(
+            &mut self.input,
+            cx,
+            point,
+        )
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+    ) -> bool {
+        let before = self.input.text().to_string();
+        let changed = <TextInput as Widget<H>>::platform_text_input_replace_text_in_range_utf16(
+            &mut self.input,
+            cx,
+            range,
+            text,
+        );
+        if changed && self.input.text() != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+        }
+        changed
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+        marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        let before = self.input.text().to_string();
+        let changed =
+            <TextInput as Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(
+                &mut self.input,
+                cx,
+                range,
+                text,
+                marked,
+            );
+        if changed && self.input.text() != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+        }
+        changed
+    }
+
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
+        if !self.enabled {
+            return false;
+        }
         let before = self.input.text().to_string();
         let handled = <TextInput as Widget<H>>::command(&mut self.input, cx, command);
         if handled && self.input.text() != before {
@@ -153,6 +257,9 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         cx: &mut CommandAvailabilityCx<'_, H>,
         command: &CommandId,
     ) -> CommandAvailability {
+        if !self.enabled {
+            return CommandAvailability::NotHandled;
+        }
         if cx.focus != Some(cx.node) {
             return CommandAvailability::NotHandled;
         }
@@ -194,6 +301,10 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         if cx.focus != Some(cx.node) {
             self.sync_from_model(cx.app, false);
+        }
+
+        if !self.enabled {
+            return;
         }
 
         if cx.focus == Some(cx.node)

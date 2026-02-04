@@ -38,6 +38,90 @@ pub(crate) mod utf8 {
 
     use fret_runtime::TextBoundaryMode;
 
+    pub(crate) fn clamp_selection_to_grapheme_boundaries(
+        text: &str,
+        selection_anchor: &mut usize,
+        caret: &mut usize,
+    ) {
+        let max = text.len();
+        *selection_anchor = clamp_to_grapheme_boundary(text, (*selection_anchor).min(max));
+        *caret = clamp_to_grapheme_boundary(text, (*caret).min(max));
+    }
+
+    pub(crate) fn is_grapheme_boundary(text: &str, idx: usize) -> bool {
+        let idx = idx.min(text.len());
+        if idx == 0 || idx == text.len() {
+            return true;
+        }
+        text.grapheme_indices(true).any(|(start, _)| start == idx)
+    }
+
+    pub(crate) fn prev_grapheme_boundary(text: &str, idx: usize) -> usize {
+        let idx = idx.min(text.len());
+        if idx == 0 {
+            return 0;
+        }
+
+        let mut prev = 0usize;
+        for (start, _) in text.grapheme_indices(true) {
+            if start >= idx {
+                break;
+            }
+            prev = start;
+        }
+        prev
+    }
+
+    pub(crate) fn next_grapheme_boundary(text: &str, idx: usize) -> usize {
+        let idx = idx.min(text.len());
+        if idx >= text.len() {
+            return text.len();
+        }
+
+        for (start, g) in text.grapheme_indices(true) {
+            let end = start + g.len();
+            if idx < end {
+                return end;
+            }
+        }
+        text.len()
+    }
+
+    pub(crate) fn clamp_to_grapheme_boundary(text: &str, idx: usize) -> usize {
+        let idx = idx.min(text.len());
+        if is_grapheme_boundary(text, idx) {
+            return idx;
+        }
+
+        // Prefer the closest grapheme boundary; ties clamp down.
+        for (start, g) in text.grapheme_indices(true) {
+            let end = start + g.len();
+            if idx < end {
+                return if idx - start <= end - idx { start } else { end };
+            }
+        }
+
+        text.len()
+    }
+
+    pub(crate) fn clamp_to_grapheme_boundary_down(text: &str, idx: usize) -> usize {
+        let idx = idx.min(text.len());
+        if is_grapheme_boundary(text, idx) {
+            idx
+        } else {
+            prev_grapheme_boundary(text, idx)
+        }
+    }
+
+    pub(crate) fn clamp_to_grapheme_boundary_up(text: &str, idx: usize) -> usize {
+        let idx = idx.min(text.len());
+        if is_grapheme_boundary(text, idx) {
+            idx
+        } else {
+            next_grapheme_boundary(text, idx)
+        }
+    }
+
     pub(crate) fn clamp_to_char_boundary(text: &str, idx: usize) -> usize {
         if idx >= text.len() {
             return text.len();
@@ -134,14 +218,14 @@ pub(crate) mod utf8 {
             return (0, 0);
         }
 
-        let mut idx = clamp_to_char_boundary(text, idx).min(text.len());
+        let mut idx = clamp_to_grapheme_boundary(text, idx).min(text.len());
         if idx >= text.len() {
-            idx = prev_char_boundary(text, idx);
+            idx = prev_grapheme_boundary(text, idx);
         }
 
         // Prefer selecting the previous word when clicking just after it.
         if char_at(text, idx).is_some_and(|c| c.is_whitespace()) && idx > 0 {
-            let prev = prev_char_boundary(text, idx);
+            let prev = prev_grapheme_boundary(text, idx);
             let prev_is_word = match mode {
                 TextBoundaryMode::UnicodeWord => is_unicode_word_char(text, prev),
                 TextBoundaryMode::Identifier => char_at(text, prev).is_some_and(is_identifier_char),
@@ -158,32 +242,39 @@ pub(crate) mod utf8 {
         if ch.is_whitespace() {
             let mut start = idx;
             while start > 0 {
-                let prev = prev_char_boundary(text, start);
+                let prev = prev_grapheme_boundary(text, start);
                 if char_at(text, prev).is_some_and(|c| c.is_whitespace()) {
                     start = prev;
                 } else {
                     break;
                 }
             }
-            let mut end = next_char_boundary(text, idx);
+            let mut end = next_grapheme_boundary(text, idx);
             while end < text.len() {
                 if char_at(text, end).is_some_and(|c| c.is_whitespace()) {
-                    end = next_char_boundary(text, end);
+                    end = next_grapheme_boundary(text, end);
                 } else {
                     break;
                 }
             }
-            return (start, end);
+            return (
+                clamp_to_grapheme_boundary_down(text, start),
+                clamp_to_grapheme_boundary_up(text, end),
+            );
         }
 
-        match mode {
-            TextBoundaryMode::UnicodeWord => {
-                unicode_word_range_at(text, idx).unwrap_or((idx, next_char_boundary(text, idx)))
-            }
-            TextBoundaryMode::Identifier => {
-                identifier_range_at(text, idx).unwrap_or((idx, next_char_boundary(text, idx)))
-            }
-        }
+        let (start, end) =
+            match mode {
+                TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, idx)
+                    .unwrap_or((idx, next_grapheme_boundary(text, idx))),
+                TextBoundaryMode::Identifier => identifier_range_at(text, idx)
+                    .unwrap_or((idx, next_grapheme_boundary(text, idx))),
+            };
+
+        (
+            clamp_to_grapheme_boundary_down(text, start),
+            clamp_to_grapheme_boundary_up(text, end),
+        )
     }
 
     pub(crate) fn select_line_range(text: &str, idx: usize) -> (usize, usize) {
@@ -191,22 +282,25 @@ pub(crate) mod utf8 {
             return (0, 0);
         }
 
-        let idx = clamp_to_char_boundary(text, idx).min(text.len());
+        let idx = clamp_to_grapheme_boundary(text, idx).min(text.len());
         let start = text[..idx]
             .rfind('\n')
             .map(|i| (i + 1).min(text.len()))
             .unwrap_or(0);
         let end = text[idx..]
             .find('\n')
-            .map(|i| (idx + i).min(text.len()))
+            .map(|i| (idx + i + 1).min(text.len()))
             .unwrap_or(text.len());
-        (start, end)
+        (
+            clamp_to_grapheme_boundary_down(text, start),
+            clamp_to_grapheme_boundary_up(text, end),
+        )
     }
 
     pub(crate) fn move_word_left(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
-        let mut i = prev_char_boundary(text, idx);
+        let mut i = prev_grapheme_boundary(text, idx);
         while i > 0 {
-            let prev = prev_char_boundary(text, i);
+            let prev = prev_grapheme_boundary(text, i);
             let ch = text[prev..i].chars().next().unwrap_or(' ');
             if !ch.is_whitespace() {
                 break;
@@ -218,20 +312,21 @@ pub(crate) mod utf8 {
             return 0;
         }
 
-        match mode {
+        let next = match mode {
             TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
                 .map(|(start, _)| start)
                 .unwrap_or(i),
             TextBoundaryMode::Identifier => identifier_range_at(text, i)
                 .map(|(start, _)| start)
                 .unwrap_or(i),
-        }
+        };
+        clamp_to_grapheme_boundary(text, next)
     }
 
     pub(crate) fn move_word_right(text: &str, idx: usize, mode: TextBoundaryMode) -> usize {
-        let mut i = next_char_boundary(text, idx);
+        let mut i = next_grapheme_boundary(text, idx);
         while i < text.len() {
-            let next = next_char_boundary(text, i);
+            let next = next_grapheme_boundary(text, i);
             let ch = text[i..next].chars().next().unwrap_or(' ');
             if !ch.is_whitespace() {
                 break;
@@ -243,14 +338,15 @@ pub(crate) mod utf8 {
             return text.len();
         }
 
-        match mode {
+        let next = match mode {
             TextBoundaryMode::UnicodeWord => unicode_word_range_at(text, i)
                 .map(|(_, end)| end)
                 .unwrap_or(i),
             TextBoundaryMode::Identifier => identifier_range_at(text, i)
                 .map(|(_, end)| end)
                 .unwrap_or(i),
-        }
+        };
+        clamp_to_grapheme_boundary(text, next)
     }
 }
 
@@ -338,12 +434,12 @@ pub(crate) mod state {
         }
 
         fn clamp_indexes(&mut self) {
-            *self.caret = utf8::clamp_to_char_boundary(self.text, *self.caret);
+            *self.caret = utf8::clamp_to_grapheme_boundary(self.text, *self.caret);
             *self.selection_anchor =
-                utf8::clamp_to_char_boundary(self.text, *self.selection_anchor);
+                utf8::clamp_to_grapheme_boundary(self.text, *self.selection_anchor);
         }
 
-        pub(crate) fn clamp_caret_and_anchor_to_char_boundary(&mut self) {
+        pub(crate) fn clamp_caret_and_anchor_to_grapheme_boundary(&mut self) {
             self.clamp_indexes();
         }
 
@@ -373,7 +469,11 @@ pub(crate) mod state {
             true
         }
 
-        pub(crate) fn set_selection_char_clamped(&mut self, selection_anchor: usize, caret: usize) {
+        pub(crate) fn set_selection_grapheme_clamped(
+            &mut self,
+            selection_anchor: usize,
+            caret: usize,
+        ) {
             *self.selection_anchor = selection_anchor;
             *self.caret = caret;
             self.clamp_indexes();
@@ -391,13 +491,13 @@ pub(crate) mod state {
 
         pub(crate) fn move_left(&mut self, extend_selection: bool) -> bool {
             self.clamp_indexes();
-            let next = utf8::prev_char_boundary(self.text, *self.caret);
+            let next = utf8::prev_grapheme_boundary(self.text, *self.caret);
             self.move_caret_to(next, extend_selection)
         }
 
         pub(crate) fn move_right(&mut self, extend_selection: bool) -> bool {
             self.clamp_indexes();
-            let next = utf8::next_char_boundary(self.text, *self.caret);
+            let next = utf8::next_grapheme_boundary(self.text, *self.caret);
             self.move_caret_to(next, extend_selection)
         }
 
@@ -469,7 +569,7 @@ pub(crate) mod state {
             if *self.caret == 0 {
                 return false;
             }
-            let prev = utf8::prev_char_boundary(self.text, *self.caret);
+            let prev = utf8::prev_grapheme_boundary(self.text, *self.caret);
             self.text.replace_range(prev..*self.caret, "");
             *self.caret = prev;
             *self.selection_anchor = *self.caret;
@@ -486,7 +586,7 @@ pub(crate) mod state {
             if *self.caret >= self.text.len() {
                 return false;
             }
-            let next = utf8::next_char_boundary(self.text, *self.caret);
+            let next = utf8::next_grapheme_boundary(self.text, *self.caret);
             self.text.replace_range(*self.caret..next, "");
             *self.selection_anchor = *self.caret;
             self.clear_ime_composition();
@@ -715,6 +815,10 @@ pub(crate) mod commands {
         command: &str,
         window_available: bool,
     ) -> ClipboardOutcome {
+        // Defensive: selection indices are stored as UTF-8 byte offsets but must always be clamped
+        // to valid boundaries before any slicing/clipboard extraction.
+        edit.clamp_caret_and_anchor_to_grapheme_boundary();
+
         match command {
             "text.copy" => ClipboardOutcome {
                 outcome: Outcome::noop_handled(),
@@ -744,6 +848,7 @@ pub(crate) mod commands {
 pub(crate) mod ime {
     use super::buffer;
     use super::{ImeEvent, TickId};
+    use fret_core::utf::{UtfIndexClamp, utf8_byte_offset_to_utf16_offset};
 
     #[derive(Debug, Default, Clone)]
     pub(crate) struct Deduper {
@@ -784,6 +889,7 @@ pub(crate) mod ime {
         PreeditUpdated { starting: bool },
         CommitApplied,
         CommitDuplicate,
+        DeleteSurroundingApplied,
     }
 
     pub(crate) fn is_composing(preedit: &str, preedit_cursor: Option<(usize, usize)>) -> bool {
@@ -854,6 +960,67 @@ pub(crate) mod ime {
         }
     }
 
+    pub(crate) fn composed_utf16_len(text: &str, preedit: &str) -> u32 {
+        let base = utf8_byte_offset_to_utf16_offset(text, text.len(), UtfIndexClamp::Down);
+        let pre = utf8_byte_offset_to_utf16_offset(preedit, preedit.len(), UtfIndexClamp::Down);
+        u32::try_from(base.saturating_add(pre)).unwrap_or(u32::MAX)
+    }
+
+    pub(crate) fn composed_utf16_offset_for_display_byte_offset(
+        text: &str,
+        caret: usize,
+        preedit: &str,
+        display_byte_offset: usize,
+        clamp: UtfIndexClamp,
+    ) -> u32 {
+        let caret = super::utf8::clamp_to_char_boundary(text, caret);
+        let preedit_len = preedit.len();
+        let display_byte_offset = display_byte_offset.min(text.len().saturating_add(preedit_len));
+
+        let preedit_utf16_len =
+            utf8_byte_offset_to_utf16_offset(preedit, preedit_len, UtfIndexClamp::Down);
+
+        let utf16 = if display_byte_offset <= caret {
+            utf8_byte_offset_to_utf16_offset(text, display_byte_offset, clamp)
+        } else if display_byte_offset <= caret.saturating_add(preedit_len) {
+            let base_prefix = utf8_byte_offset_to_utf16_offset(text, caret, UtfIndexClamp::Down);
+            let within = display_byte_offset.saturating_sub(caret);
+            base_prefix.saturating_add(utf8_byte_offset_to_utf16_offset(preedit, within, clamp))
+        } else {
+            // Offsets after the inserted preedit are shifted by the preedit length in both UTF-8
+            // bytes and UTF-16 code units.
+            let base_byte_offset = display_byte_offset.saturating_sub(preedit_len);
+            utf8_byte_offset_to_utf16_offset(text, base_byte_offset, clamp)
+                .saturating_add(preedit_utf16_len)
+        };
+
+        u32::try_from(utf16).unwrap_or(u32::MAX)
+    }
+
+    pub(crate) fn composed_utf16_range_for_display_byte_range(
+        text: &str,
+        caret: usize,
+        preedit: &str,
+        start_display: usize,
+        end_display: usize,
+    ) -> (u32, u32) {
+        let start = composed_utf16_offset_for_display_byte_offset(
+            text,
+            caret,
+            preedit,
+            start_display,
+            UtfIndexClamp::Down,
+        );
+        let end = composed_utf16_offset_for_display_byte_offset(
+            text,
+            caret,
+            preedit,
+            end_display,
+            UtfIndexClamp::Up,
+        );
+        (start.min(end), end.max(start))
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn apply_event(
         ime: &ImeEvent,
@@ -921,6 +1088,50 @@ pub(crate) mod ime {
                 *preedit_cursor = *cursor;
                 ApplyResult::PreeditUpdated { starting }
             }
+            ImeEvent::DeleteSurrounding {
+                before_bytes,
+                after_bytes,
+            } => {
+                if *before_bytes == 0 && *after_bytes == 0 {
+                    return ApplyResult::Noop;
+                }
+
+                let (a, b) = buffer::selection_range(*selection_anchor, *caret);
+
+                let mut start_before = a.saturating_sub(*before_bytes);
+                while start_before > 0 && !text.is_char_boundary(start_before) {
+                    start_before = start_before.saturating_sub(1);
+                }
+
+                let mut end_after = b.saturating_add(*after_bytes).min(text.len());
+                while end_after < text.len() && !text.is_char_boundary(end_after) {
+                    end_after = end_after.saturating_add(1);
+                }
+
+                if start_before == a && end_after == b {
+                    return ApplyResult::Noop;
+                }
+
+                // The deletion is relative to the current selection, but does not remove the
+                // selection itself (winit contract).
+                if end_after > b {
+                    text.replace_range(b..end_after, "");
+                }
+                if start_before < a {
+                    text.replace_range(start_before..a, "");
+                }
+
+                let deleted_before = a.saturating_sub(start_before);
+                if deleted_before > 0 {
+                    *selection_anchor = (*selection_anchor).saturating_sub(deleted_before);
+                    *caret = (*caret).saturating_sub(deleted_before);
+                }
+
+                *selection_anchor = super::utf8::clamp_to_char_boundary(text, *selection_anchor);
+                *caret = super::utf8::clamp_to_char_boundary(text, *caret);
+
+                ApplyResult::DeleteSurroundingApplied
+            }
         }
     }
 }
@@ -929,6 +1140,7 @@ pub(crate) mod ime {
 mod word_boundary_tests {
     use super::utf8;
     use fret_runtime::TextBoundaryMode;
+    use unicode_segmentation::UnicodeSegmentation;
 
     #[test]
     fn unicode_word_and_identifier_boundaries_differ_on_apostrophes() {
@@ -1015,5 +1227,356 @@ mod word_boundary_tests {
             utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
             (0, text.len())
         );
+    }
+
+    #[test]
+    fn unicode_word_selects_the_uax29_word_for_mixed_latin_cjk_runs() {
+        let text = "a 你好 world";
+        let idx = text.find('你').expect("expected cjk char");
+
+        let expected = text
+            .unicode_word_indices()
+            .find(|(start, word)| (*start..(*start + word.len())).contains(&idx))
+            .map(|(start, word)| (start, start + word.len()))
+            .expect("expected unicode word for cjk char");
+
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::UnicodeWord),
+            expected
+        );
+    }
+
+    #[test]
+    fn unicode_word_falls_back_to_grapheme_for_emoji_inside_mixed_script() {
+        let emoji = "👩‍💻";
+        let text = format!("中文{emoji}代码");
+        let idx = text.find(emoji).expect("expected emoji to be present") + 1;
+        let (a, b) = utf8::select_word_range(&text, idx, TextBoundaryMode::UnicodeWord);
+        assert_eq!(&text[a..b], emoji);
+    }
+
+    #[test]
+    fn identifier_stops_at_dot_and_colons() {
+        let text = "foo.bar::baz qux";
+
+        let idx = text.find('o').expect("expected identifier char");
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            (0, "foo".len())
+        );
+
+        let idx = text.find("bar").expect("expected bar") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo.".len(), "foo.bar".len())
+        );
+
+        let idx = text.find("baz").expect("expected baz") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo.bar::".len(), "foo.bar::baz".len())
+        );
+    }
+
+    #[test]
+    fn identifier_stops_at_hyphens_but_includes_digits() {
+        let text = "foo-1 bar-99 baz";
+
+        let idx = text.find('f').expect("expected foo");
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            (0, "foo".len())
+        );
+
+        let idx = text.find("bar").expect("expected bar") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo-1 ".len(), "foo-1 bar".len())
+        );
+
+        let idx = text.find("99").expect("expected digits") + 1;
+        assert_eq!(
+            utf8::select_word_range(text, idx, TextBoundaryMode::Identifier),
+            ("foo-1 bar-".len(), "foo-1 bar-99".len())
+        );
+    }
+}
+
+#[cfg(test)]
+mod grapheme_boundary_tests {
+    use super::state::TextEditState;
+    use super::utf8;
+    use fret_runtime::TextBoundaryMode;
+
+    #[test]
+    fn zwj_emoji_is_a_single_grapheme_cluster_for_navigation() {
+        let emoji = "👨‍👩‍👧‍👦";
+        let text = format!("a{emoji}b");
+        let start = 1;
+        let end = start + emoji.len();
+
+        assert_eq!(utf8::next_grapheme_boundary(&text, start), end);
+        assert_eq!(utf8::prev_grapheme_boundary(&text, end), start);
+
+        // Even if the index is inside the cluster, navigation clamps to the cluster.
+        assert_eq!(utf8::next_grapheme_boundary(&text, start + 1), end);
+        assert_eq!(utf8::prev_grapheme_boundary(&text, start + 1), start);
+    }
+
+    #[test]
+    fn flags_and_keycaps_are_not_split_by_select_word() {
+        for emoji in ["🇺🇸", "1️⃣"] {
+            let text = format!("a {emoji} b");
+            let start = text.find(emoji).expect("expected emoji to be present");
+            let (a, b) = utf8::select_word_range(&text, start + 1, TextBoundaryMode::UnicodeWord);
+            assert_eq!(&text[a..b], emoji);
+        }
+    }
+
+    #[test]
+    fn text_edit_moves_and_deletes_by_grapheme_cluster() {
+        let emoji = "👨‍👩‍👧‍👦";
+        let mut text = format!("a{emoji}b");
+        let emoji_end = 1 + emoji.len();
+        let mut caret = text.len();
+        let mut anchor = caret;
+        let mut preedit = String::new();
+        let mut preedit_cursor = None;
+        let mut ime_replace_range = None;
+
+        // Move left over 'b'.
+        {
+            let mut edit = TextEditState::new(
+                &mut text,
+                &mut caret,
+                &mut anchor,
+                &mut preedit,
+                &mut preedit_cursor,
+                &mut ime_replace_range,
+            );
+            assert!(edit.move_left(false));
+        }
+        assert_eq!(caret, text.len() - 1);
+
+        // Move left over the emoji cluster in one step.
+        {
+            let mut edit = TextEditState::new(
+                &mut text,
+                &mut caret,
+                &mut anchor,
+                &mut preedit,
+                &mut preedit_cursor,
+                &mut ime_replace_range,
+            );
+            assert!(edit.move_left(false));
+        }
+        assert_eq!(caret, 1);
+
+        // Moving right lands at the end of the emoji cluster (start of 'b').
+        {
+            let mut edit = TextEditState::new(
+                &mut text,
+                &mut caret,
+                &mut anchor,
+                &mut preedit,
+                &mut preedit_cursor,
+                &mut ime_replace_range,
+            );
+            assert!(edit.move_right(false));
+        }
+        assert_eq!(caret, emoji_end);
+
+        // Backspace deletes the entire grapheme cluster.
+        {
+            let mut edit = TextEditState::new(
+                &mut text,
+                &mut caret,
+                &mut anchor,
+                &mut preedit,
+                &mut preedit_cursor,
+                &mut ime_replace_range,
+            );
+            assert!(edit.delete_backward_char());
+        }
+        assert_eq!(text, "ab");
+        assert_eq!(caret, 1);
+    }
+}
+
+#[cfg(test)]
+mod ime_tests {
+    use super::ime;
+    use fret_core::ImeEvent;
+    use fret_core::utf::UtfIndexClamp;
+    use fret_runtime::TickId;
+
+    #[test]
+    fn composed_utf16_len_counts_preedit_and_surrogates() {
+        let text = "a😀b";
+        let preedit = "😀";
+        assert_eq!(ime::composed_utf16_len(text, preedit), 6);
+    }
+
+    #[test]
+    fn composed_utf16_offset_clamps_inside_preedit_and_after_insertion() {
+        let text = "a😀b";
+        let caret = 1; // After 'a'
+        let preedit = "😀";
+
+        // Before the caret, composed offsets match the base text.
+        assert_eq!(
+            ime::composed_utf16_offset_for_display_byte_offset(
+                text,
+                caret,
+                preedit,
+                0,
+                UtfIndexClamp::Down
+            ),
+            0
+        );
+        assert_eq!(
+            ime::composed_utf16_offset_for_display_byte_offset(
+                text,
+                caret,
+                preedit,
+                caret,
+                UtfIndexClamp::Down
+            ),
+            1
+        );
+
+        // Pick a byte inside the preedit emoji; clamp down stays at the caret, clamp up moves to
+        // the end of the surrogate pair (2 UTF-16 code units).
+        assert_eq!(
+            ime::composed_utf16_offset_for_display_byte_offset(
+                text,
+                caret,
+                preedit,
+                caret + 1,
+                UtfIndexClamp::Down
+            ),
+            1
+        );
+        assert_eq!(
+            ime::composed_utf16_offset_for_display_byte_offset(
+                text,
+                caret,
+                preedit,
+                caret + 1,
+                UtfIndexClamp::Up
+            ),
+            3
+        );
+
+        // After the inserted preedit, offsets are shifted by the preedit UTF-16 length (2).
+        // Pick a byte inside the base emoji in the suffix.
+        let display_inside_base_emoji = caret + preedit.len() + 1;
+        assert_eq!(
+            ime::composed_utf16_offset_for_display_byte_offset(
+                text,
+                caret,
+                preedit,
+                display_inside_base_emoji,
+                UtfIndexClamp::Down
+            ),
+            3
+        );
+        assert_eq!(
+            ime::composed_utf16_offset_for_display_byte_offset(
+                text,
+                caret,
+                preedit,
+                display_inside_base_emoji,
+                UtfIndexClamp::Up
+            ),
+            5
+        );
+    }
+
+    #[test]
+    fn composed_utf16_ranges_clamp_to_valid_boundaries() {
+        let text = "a😀b";
+        let caret = 1;
+        let preedit = "😀";
+
+        // Start inside the preedit emoji, end inside the base emoji in the suffix.
+        let start_display = caret + 1;
+        let end_display = caret + preedit.len() + 1;
+        assert_eq!(
+            ime::composed_utf16_range_for_display_byte_range(
+                text,
+                caret,
+                preedit,
+                start_display,
+                end_display
+            ),
+            (1, 5)
+        );
+    }
+
+    #[test]
+    fn delete_surrounding_removes_bytes_without_clearing_preedit() {
+        let mut deduper = ime::Deduper::default();
+        let mut text = "hello".to_string();
+        let mut caret = 2; // between 'e' and 'l'
+        let mut anchor = 2;
+        let mut preedit = "X".to_string();
+        let mut preedit_cursor = Some((0, 1));
+        let mut ime_replace_range = None;
+
+        let result = ime::apply_event(
+            &ImeEvent::DeleteSurrounding {
+                before_bytes: 1,
+                after_bytes: 2,
+            },
+            TickId(1),
+            false,
+            &mut deduper,
+            &mut text,
+            &mut caret,
+            &mut anchor,
+            &mut preedit,
+            &mut preedit_cursor,
+            &mut ime_replace_range,
+        );
+
+        assert_eq!(result, ime::ApplyResult::DeleteSurroundingApplied);
+        assert_eq!(text, "ho");
+        assert_eq!(caret, 1);
+        assert_eq!(anchor, 1);
+        assert_eq!(preedit, "X");
+        assert_eq!(preedit_cursor, Some((0, 1)));
+        assert_eq!(ime_replace_range, None);
+    }
+
+    #[test]
+    fn delete_surrounding_preserves_selected_text() {
+        let mut deduper = ime::Deduper::default();
+        let mut text = "abcdef".to_string();
+        let mut caret = 4; // selects "cd"
+        let mut anchor = 2;
+        let mut preedit = String::new();
+        let mut preedit_cursor = None;
+        let mut ime_replace_range = None;
+
+        let result = ime::apply_event(
+            &ImeEvent::DeleteSurrounding {
+                before_bytes: 1,
+                after_bytes: 1,
+            },
+            TickId(1),
+            false,
+            &mut deduper,
+            &mut text,
+            &mut caret,
+            &mut anchor,
+            &mut preedit,
+            &mut preedit_cursor,
+            &mut ime_replace_range,
+        );
+
+        assert_eq!(result, ime::ApplyResult::DeleteSurroundingApplied);
+        assert_eq!(text, "acdf");
+        assert_eq!((anchor.min(caret), anchor.max(caret)), (1, 3));
     }
 }

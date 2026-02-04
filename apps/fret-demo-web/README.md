@@ -19,7 +19,8 @@ Then open the URL printed by Trunk (usually `http://127.0.0.1:8080`).
 By default, the web runner starts the components gallery. To launch a specific demo, use a URL
 hash or query string:
 
-- `?demo=ui_gallery` (or `#ui_gallery`)
+- `?demo=ui_gallery` (or `#ui_gallery`) — full UI Gallery app (pages use `?page=...`)
+- `?demo=components_gallery` (or `#components_gallery`) — lightweight examples gallery
 - `?demo=emoji_conformance_demo` (or `#emoji_conformance_demo`)
 - `?demo=cjk_conformance_demo` (or `#cjk_conformance_demo`)
 - `?demo=chart_demo` (or `#chart_demo`)
@@ -48,8 +49,13 @@ hash or query string:
 
 For Web/WASM, system fonts are not available. You can opt into extra bundled fonts:
 
+- `cjk-lite-fonts` (default): includes a small subset of `Noto Sans CJK SC` (see `fret-fonts` docs).
 - `emoji-fonts`: includes `Noto Color Emoji` (large).
-- `cjk-lite-fonts`: includes a small subset of `Noto Sans CJK SC` (see `fret-fonts` docs).
+
+Examples:
+
+- Minimal build (no bundled fonts): `trunk serve --no-default-features`
+- Add emoji fonts: `trunk serve --features emoji-fonts`
 
 ## Debug teardown
 

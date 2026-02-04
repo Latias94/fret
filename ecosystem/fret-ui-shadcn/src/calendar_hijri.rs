@@ -17,6 +17,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 use time::{Date, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 fn persian_digit(c: char) -> char {
     match c {
@@ -310,18 +311,38 @@ fn hijri_day_cell<H: UiHost>(
         let chrome_props = decl_style::container_props(theme, chrome, LayoutRefinement::default());
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            let mut props = TextProps::new(Arc::clone(&day_text));
-            props.style = Some(TextStyle {
-                font: Default::default(),
-                size: text_sm_px,
-                weight: FontWeight::NORMAL,
-                line_height: Some(text_sm_line_height),
-                ..Default::default()
-            });
-            props.color = Some(fg);
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
-            vec![cx.text_props(props)]
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: fret_ui::element::Length::Fill,
+                            height: fret_ui::element::Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: fret_ui::element::MainAlign::Center,
+                    align: fret_ui::element::CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    let mut props = TextProps::new(Arc::clone(&day_text));
+                    props.style = Some(TextStyle {
+                        font: Default::default(),
+                        size: text_sm_px,
+                        weight: FontWeight::NORMAL,
+                        line_height: Some(text_sm_line_height),
+                        ..Default::default()
+                    });
+                    props.color = Some(fg);
+                    props.wrap = TextWrap::None;
+                    props.overflow = TextOverflow::Clip;
+                    vec![cx.text_props(props)]
+                },
+            )]
         };
 
         (pressable, chrome_props, children)
@@ -425,8 +446,18 @@ impl CalendarHijri {
             let day_grid_width = Px(day_size.0 * 7.0);
             let month_width = day_grid_width;
 
-            let chrome = ChromeRefinement::default().p(Space::N3).merge(self.chrome);
-            let root = LayoutRefinement::default().w_full().merge(self.layout);
+            let bg = theme.color_required("background");
+            let mut chrome = ChromeRefinement::default()
+                .bg(ColorRef::Color(bg))
+                .p(Space::N3);
+            if matches!(
+                surface_slot_in_scope(cx),
+                Some(ShadcnSurfaceSlot::PopoverContent | ShadcnSurfaceSlot::CardContent)
+            ) {
+                chrome = chrome.bg(ColorRef::Color(Color::TRANSPARENT));
+            }
+            let chrome = chrome.merge(self.chrome);
+            let root = LayoutRefinement::default().merge(self.layout);
             let container_props = decl_style::container_props(&theme, chrome, root);
 
             cx.container(container_props, move |cx| {
@@ -624,7 +655,8 @@ fn calendar_hidden_cell<H: UiHost>(
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
-        chrome_props.layout = layout;
+        // Keep margins on the pressable node so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,

@@ -1,8 +1,9 @@
-use fret_core::{Event, Px, Size, TextStyle};
+use fret_core::{Event, Point, Px, Rect, Size, TextStyle};
 use fret_runtime::Model;
 
 use crate::widget::{
-    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx, Widget,
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
+    PlatformTextInputCx, Widget,
 };
 use crate::{Invalidation, UiHost};
 
@@ -12,6 +13,8 @@ pub struct BoundTextArea {
     model: Model<String>,
     last_revision: Option<u64>,
     dirty_since_sync: bool,
+    enabled: bool,
+    focusable: bool,
     area: TextArea,
 }
 
@@ -21,6 +24,8 @@ impl BoundTextArea {
             model,
             last_revision: None,
             dirty_since_sync: false,
+            enabled: true,
+            focusable: true,
             area: TextArea::default(),
         }
     }
@@ -69,6 +74,16 @@ impl BoundTextArea {
         self.area.last_theme_revision = None;
     }
 
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        self.area.set_enabled(enabled);
+    }
+
+    pub fn set_focusable(&mut self, focusable: bool) {
+        self.focusable = focusable;
+        self.area.set_focusable(focusable);
+    }
+
     pub fn model_id(&self) -> fret_runtime::ModelId {
         self.model.id()
     }
@@ -114,14 +129,103 @@ impl BoundTextArea {
 
 impl<H: UiHost> Widget<H> for BoundTextArea {
     fn is_focusable(&self) -> bool {
-        true
+        self.enabled && self.focusable
     }
 
     fn is_text_input(&self) -> bool {
         true
     }
 
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        <TextArea as Widget<H>>::platform_text_input_snapshot(&self.area)
+    }
+
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        <TextArea as Widget<H>>::platform_text_input_selected_range_utf16(&self.area)
+    }
+
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        <TextArea as Widget<H>>::platform_text_input_marked_range_utf16(&self.area)
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        <TextArea as Widget<H>>::platform_text_input_text_for_range_utf16(&self.area, range)
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        <TextArea as Widget<H>>::platform_text_input_bounds_for_range_utf16(
+            &mut self.area,
+            cx,
+            range,
+        )
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        point: Point,
+    ) -> Option<u32> {
+        <TextArea as Widget<H>>::platform_text_input_character_index_for_point_utf16(
+            &mut self.area,
+            cx,
+            point,
+        )
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+    ) -> bool {
+        let before = self.area.text.clone();
+        let changed = <TextArea as Widget<H>>::platform_text_input_replace_text_in_range_utf16(
+            &mut self.area,
+            cx,
+            range,
+            text,
+        );
+        if changed && self.area.text != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+        }
+        changed
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+        marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        let before = self.area.text.clone();
+        let changed =
+            <TextArea as Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(
+                &mut self.area,
+                cx,
+                range,
+                text,
+                marked,
+            );
+        if changed && self.area.text != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+        }
+        changed
+    }
+
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_runtime::CommandId) -> bool {
+        if !self.enabled {
+            return false;
+        }
         let before = self.area.text.clone();
         let handled = <TextArea as Widget<H>>::command(&mut self.area, cx, command);
         if handled && self.area.text != before {
@@ -139,6 +243,9 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         cx: &mut CommandAvailabilityCx<'_, H>,
         command: &fret_runtime::CommandId,
     ) -> CommandAvailability {
+        if !self.enabled {
+            return CommandAvailability::NotHandled;
+        }
         if cx.focus != Some(cx.node) {
             return CommandAvailability::NotHandled;
         }
@@ -190,6 +297,10 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         if cx.focus != Some(cx.node) {
             self.sync_from_model(cx.app, false);
+        }
+
+        if !self.enabled {
+            return;
         }
 
         let before = self.area.text.clone();

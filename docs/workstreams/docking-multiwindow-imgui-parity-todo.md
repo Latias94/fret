@@ -144,6 +144,32 @@ Each TODO is labeled:
     - Attempt to tear off a tab: no new OS window should be created; the panel should float inside the same OS window.
     - Optional: with `FRET_DOCK_TEAROFF_LOG=1`, the log should not contain `[effect-window-create]` lines for DockFloating.
 
+## P1 — Discoverability and recovery (editor UX)
+
+- [x] DW-P1-ux-001 Make in-window floating discoverable via a visible float-zone affordance.
+  - Goal: users can discover “float within the window” without knowing hidden gestures.
+  - Constraints:
+    - Must not change `DockOp` persistence or introduce new core surface area.
+    - Float-zone should never request a new OS window; OS tear-off remains a tab drag outcome gated by capabilities.
+  - Evidence anchors:
+    - Float-zone geometry: `ecosystem/fret-docking/src/dock/layout.rs` (`float_zone`)
+    - Dock host rendering + click: `ecosystem/fret-docking/src/dock/space.rs` (`paint_float_zone_hint`, `float_zone_click_op`)
+  - Acceptance:
+    - A small affordance is visible inside the dock host.
+    - Clicking it floats the active tab stack in-window.
+
+- [x] DW-P1-ux-002 Recovery: provide a “recenter floatings” helper for off-screen/overlapped floatings.
+  - Evidence anchors:
+    - Helper: `ecosystem/fret-docking/src/runtime.rs` (`recenter_in_window_floatings`)
+  - Acceptance:
+    - If floatings are off-screen or stacked, calling the helper brings them back into view.
+
+- [x] DW-P1-ux-003 Demo wiring: expose quick recovery actions and capability diagnostics.
+  - Evidence anchors:
+    - Demo actions: `apps/fret-examples/src/imui_editor_proof_demo.rs` (“Reset layout”, “Center floatings”, caps line)
+  - Acceptance:
+    - Demo shows the current capability gate values and offers one-click recovery.
+
 ## P2 — Style/parenting and future-proofing (ADR 0154 dependent)
 
 - [~] DW-P2-style-001 DockFloating window style requests (taskbar visibility, focus on appearing, tool window).

@@ -139,6 +139,40 @@ pub fn request_dock_invalidation<H: UiHost>(
     invalidate_windows(app, windows);
 }
 
+/// Recenter in-window floating containers back into the visible bounds of a window.
+///
+/// This is intended as a "recovery" affordance for editor-grade layouts where floatings can end up
+/// fully off-screen (or stacked) due to persisted state, DPI changes, or window resizes.
+pub fn recenter_in_window_floatings<H: UiHost>(app: &mut H, window: AppWindowId) {
+    let bounds = app
+        .global::<fret_core::WindowMetricsService>()
+        .and_then(|svc| svc.inner_bounds(window))
+        .unwrap_or_else(|| {
+            fret_core::Rect::new(
+                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                fret_core::Size::new(fret_core::Px(960.0), fret_core::Px(720.0)),
+            )
+        });
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let floatings = dock.graph.floating_windows_mut(window);
+        for (ix, floating) in floatings.iter_mut().enumerate() {
+            let size = floating.rect.size;
+            let dx = (ix as f32) * 16.0;
+            let dy = (ix as f32) * 16.0;
+            let origin = fret_core::Point::new(
+                fret_core::Px(bounds.origin.x.0 + (bounds.size.width.0 - size.width.0) * 0.5 + dx),
+                fret_core::Px(
+                    bounds.origin.y.0 + (bounds.size.height.0 - size.height.0) * 0.5 + dy,
+                ),
+            );
+            floating.rect = clamp_rect_to_bounds(fret_core::Rect::new(origin, size), bounds);
+        }
+    });
+
+    request_dock_invalidation(app, [window]);
+}
+
 fn clamp_rect_to_bounds(rect: fret_core::Rect, bounds: fret_core::Rect) -> fret_core::Rect {
     let mut out = rect;
     if bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0 {
@@ -381,6 +415,13 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 && should_auto_close
                 && let Some(window) = maybe_close_window
             {
+                if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+                    tracing::info!(
+                        window = ?window,
+                        op = ?op,
+                        "dock tear-off: auto-close empty DockFloating window"
+                    );
+                }
                 app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
                     reg.remove(window);
                 });
@@ -405,6 +446,13 @@ pub fn handle_dock_window_created<H: UiHost>(
         machine.complete_for_create_request(request, now)
     });
     if matches!(completion, DockTearOffCompletion::CancelAndCloseWindow) {
+        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+            tracing::info!(
+                new_window = ?new_window,
+                request_kind = ?request.kind,
+                "dock tear-off: cancel and close newly created window"
+            );
+        }
         app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
         return true;
     }
@@ -418,6 +466,13 @@ pub fn handle_dock_window_created<H: UiHost>(
     };
 
     if app.global::<DockManager>().is_none() {
+        if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+            tracing::info!(
+                new_window = ?new_window,
+                request_kind = ?request.kind,
+                "dock tear-off: missing DockManager; closing newly created window"
+            );
+        }
         app.push_effect(Effect::Window(WindowRequest::Close(new_window)));
         return true;
     }

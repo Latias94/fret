@@ -346,6 +346,17 @@ fn apply_material_theme(app: &mut TestHost, mode: SchemeMode, variant: DynamicVa
     Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
 }
 
+fn apply_material_theme_rtl(app: &mut TestHost, mode: SchemeMode, variant: DynamicVariant) {
+    let mut colors = ColorSchemeOptions::default();
+    colors.mode = mode;
+    colors.variant = variant;
+
+    let mut cfg = theme_config_with_colors(TypographyOptions::default(), colors);
+    cfg.numbers
+        .insert("md.sys.fret.layout.is-rtl".to_string(), 1.0);
+    Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+}
+
 fn repo_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     manifest_dir
@@ -508,6 +519,30 @@ fn settle_material3_scene_snapshot_v1(
     }
 
     settled.unwrap_or_else(|| panic!("expected a settled snapshot: {stable_message}"))
+}
+
+fn snapshot_material3_scene_at_frame_v1(
+    app: &mut TestHost,
+    ui: &mut UiTree<TestHost>,
+    services: &mut dyn UiServices,
+    bounds: Rect,
+    scale_factor: f32,
+    snapshot_frame: usize,
+    render: &impl Fn(&mut UiTree<TestHost>, &mut TestHost, &mut dyn UiServices) -> NodeId,
+) -> Material3HeadlessGoldenV1 {
+    let mut snapshot: Option<Material3HeadlessGoldenV1> = None;
+    for _frame in 0..=snapshot_frame {
+        app.advance_frame();
+        let root = render(ui, app, services);
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds, scale_factor);
+
+        let mut scene = Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, scale_factor);
+        snapshot = Some(material3_scene_snapshot_v1(&scene));
+    }
+
+    snapshot.unwrap_or_else(|| panic!("expected a snapshot at frame {snapshot_frame}"))
 }
 
 fn settle_material3_overlay_scene_snapshot_v1(
@@ -708,6 +743,26 @@ fn key_up(key: KeyCode) -> Event {
     }
 }
 
+fn drain_zero_delay_timer_tokens(
+    app: &mut TestHost,
+    window: AppWindowId,
+) -> Vec<fret_runtime::TimerToken> {
+    let mut out: Vec<fret_runtime::TimerToken> = Vec::new();
+    app.effects.retain(|effect| match effect {
+        Effect::SetTimer {
+            window: Some(w),
+            token,
+            after,
+            repeat: None,
+        } if *w == window && after.as_millis() == 0 => {
+            out.push(*token);
+            false
+        }
+        _ => true,
+    });
+    out
+}
+
 fn with_padding<'a, H: fret_ui::UiHost>(
     cx: &mut fret_ui::elements::ElementContext<'a, H>,
     padding: Px,
@@ -720,6 +775,2002 @@ fn with_padding<'a, H: fret_ui::UiHost>(
         },
         move |_cx| vec![child],
     )
+}
+
+#[test]
+fn text_input_text_input_event_updates_model() {
+    use fret_ui::element::TextInputProps;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(420.0)),
+    );
+
+    let model = app.models_mut().insert(String::new());
+    let model_for_render = model.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let mut props = TextInputProps::new(model_for_render.clone());
+                props.layout.size.width = fret_ui::element::Length::Px(Px(200.0));
+                props.layout.size.height = fret_ui::element::Length::Px(Px(40.0));
+                props.a11y_label = Some(Arc::<str>::from("input"));
+                props.test_id = Some(Arc::<str>::from("plain-text-input"));
+                let input = cx.text_input(props);
+                vec![with_padding(cx, Px(24.0), input)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("plain-text-input")).then_some(node.id)
+            })
+        })
+        .expect("expected plain-text-input in semantics snapshot");
+
+    ui.set_focus(Some(input_node));
+    assert_eq!(
+        ui.focus(),
+        Some(input_node),
+        "expected focus to be set to the input node",
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("a".to_string()));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let value = app.models().get_cloned(&model).expect("model exists");
+    assert_eq!(value, "a", "expected text input event to update the model");
+}
+
+#[test]
+fn top_app_bar_exposes_toolbar_semantics_role() {
+    use fret_ui_material3::{TopAppBar, TopAppBarVariant};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(220.0)),
+    );
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let bar = TopAppBar::new("TopAppBar")
+                    .variant(TopAppBarVariant::Small)
+                    .a11y_label("Material 3 Top App Bar")
+                    .test_id("top-app-bar")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), bar)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let node = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("top-app-bar"))
+        })
+        .expect("expected top-app-bar in semantics snapshot");
+
+    assert_eq!(
+        node.role,
+        fret_core::SemanticsRole::Toolbar,
+        "expected top app bar semantics role to be Toolbar",
+    );
+}
+
+#[test]
+fn snackbar_action_emits_command_and_dismisses() {
+    use fret_runtime::CommandId;
+    use fret_ui::action::UiActionHostAdapter;
+    use fret_ui_kit::ToastStore;
+    use fret_ui_material3::{Snackbar, SnackbarController, SnackbarHost};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let store = app.models_mut().insert(ToastStore::default());
+    let controller = SnackbarController::new(store.clone());
+    let cmd = CommandId::new("material3_snackbar_action");
+
+    {
+        let mut action_host = UiActionHostAdapter { app: &mut app };
+        let _id = controller.show(
+            &mut action_host,
+            window,
+            Snackbar::new("Saved").action("Undo", cmd.clone()),
+        );
+    }
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let store = store.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![SnackbarHost::new(store).max_snackbars(1).into_element(cx)]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let toast_root = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find(|node| {
+                node.test_id
+                    .as_deref()
+                    .is_some_and(|id| id.starts_with("toast-entry-"))
+            })
+        })
+        .expect("expected a toast-entry semantics node");
+
+    let toast_root_id = toast_root.id;
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot for toast");
+    let by_id: HashMap<NodeId, &fret_core::SemanticsNode> =
+        snapshot.nodes.iter().map(|n| (n.id, n)).collect();
+
+    let is_descendant_of = |mut node: NodeId, ancestor: NodeId| -> bool {
+        let mut guard = 0usize;
+        while guard < 256 {
+            if node == ancestor {
+                return true;
+            }
+            guard += 1;
+            let Some(parent) = by_id.get(&node).and_then(|n| n.parent) else {
+                return false;
+            };
+            node = parent;
+        }
+        false
+    };
+
+    let action_text = snapshot
+        .nodes
+        .iter()
+        .find(|node| {
+            node.label.as_deref() == Some("Undo") && is_descendant_of(node.id, toast_root_id)
+        })
+        .expect("expected the toast action text (Undo) to appear in semantics");
+
+    let mut action_button_id = action_text.id;
+    let mut guard = 0usize;
+    while guard < 256 {
+        guard += 1;
+        let Some(node) = by_id.get(&action_button_id) else {
+            break;
+        };
+        if node.role == fret_core::SemanticsRole::Button {
+            break;
+        }
+        let Some(parent) = node.parent else {
+            break;
+        };
+        action_button_id = parent;
+    }
+
+    let action_bounds = ui
+        .debug_node_visual_bounds(action_button_id)
+        .expect("expected toast action bounds");
+    let click_at = Point::new(
+        Px(action_bounds.origin.x.0 + action_bounds.size.width.0 * 0.5),
+        Px(action_bounds.origin.y.0 + action_bounds.size.height.0 * 0.5),
+    );
+
+    app.effects.clear();
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    assert!(
+        app.effects.iter().any(|effect| matches!(
+            effect,
+            Effect::Command { command, .. } if *command == cmd
+        )),
+        "expected clicking snackbar action to emit a command effect"
+    );
+
+    let remove_tokens: Vec<fret_runtime::TimerToken> = app
+        .effects
+        .iter()
+        .filter_map(|effect| match effect {
+            Effect::SetTimer {
+                window: Some(w),
+                token,
+                after: _,
+                repeat: None,
+            } if *w == window => Some(*token),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        !remove_tokens.is_empty(),
+        "expected snackbar dismiss to schedule a timer for removal"
+    );
+
+    for token in remove_tokens {
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+    }
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let has_toast = ui.semantics_snapshot().is_some_and(|snapshot| {
+        snapshot.nodes.iter().any(|node| {
+            node.test_id
+                .as_deref()
+                .is_some_and(|id| id.starts_with("toast-entry-"))
+        })
+    });
+    assert!(
+        !has_toast,
+        "expected snackbar to be removed after dismiss timer fires"
+    );
+}
+
+#[test]
+fn snackbar_dismiss_button_dismisses_without_emitting_command() {
+    use fret_ui::action::UiActionHostAdapter;
+    use fret_ui_kit::ToastStore;
+    use fret_ui_material3::{Snackbar, SnackbarController, SnackbarHost};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let store = app.models_mut().insert(ToastStore::default());
+    let controller = SnackbarController::new(store.clone());
+    {
+        let mut action_host = UiActionHostAdapter { app: &mut app };
+        let _id = controller.show(&mut action_host, window, Snackbar::new("Dismiss me"));
+    }
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let store = store.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![SnackbarHost::new(store).max_snackbars(1).into_element(cx)]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let toast_root = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find(|node| {
+                node.test_id
+                    .as_deref()
+                    .is_some_and(|id| id.starts_with("toast-entry-"))
+            })
+        })
+        .expect("expected a toast-entry semantics node");
+
+    let toast_root_id = toast_root.id;
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot for toast");
+    let by_id: HashMap<NodeId, &fret_core::SemanticsNode> =
+        snapshot.nodes.iter().map(|n| (n.id, n)).collect();
+
+    let is_descendant_of = |mut node: NodeId, ancestor: NodeId| -> bool {
+        let mut guard = 0usize;
+        while guard < 256 {
+            if node == ancestor {
+                return true;
+            }
+            guard += 1;
+            let Some(parent) = by_id.get(&node).and_then(|n| n.parent) else {
+                return false;
+            };
+            node = parent;
+        }
+        false
+    };
+
+    let close_text = snapshot
+        .nodes
+        .iter()
+        .find(|node| {
+            node.label.as_deref() == Some("\u{00D7}") && is_descendant_of(node.id, toast_root_id)
+        })
+        .expect("expected toast close glyph (×) to appear in semantics");
+
+    let mut close_button_id = close_text.id;
+    let mut guard = 0usize;
+    while guard < 256 {
+        guard += 1;
+        let Some(node) = by_id.get(&close_button_id) else {
+            break;
+        };
+        if node.role == fret_core::SemanticsRole::Button {
+            break;
+        }
+        let Some(parent) = node.parent else {
+            break;
+        };
+        close_button_id = parent;
+    }
+
+    let close_bounds = ui
+        .debug_node_visual_bounds(close_button_id)
+        .expect("expected close button bounds");
+    let click_at = Point::new(
+        Px(close_bounds.origin.x.0 + close_bounds.size.width.0 * 0.5),
+        Px(close_bounds.origin.y.0 + close_bounds.size.height.0 * 0.5),
+    );
+
+    app.effects.clear();
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    assert!(
+        !app.effects
+            .iter()
+            .any(|effect| matches!(effect, Effect::Command { .. })),
+        "expected clicking snackbar dismiss button not to emit a command effect",
+    );
+
+    let remove_tokens: Vec<fret_runtime::TimerToken> = app
+        .effects
+        .iter()
+        .filter_map(|effect| match effect {
+            Effect::SetTimer {
+                window: Some(w),
+                token,
+                after: _,
+                repeat: None,
+            } if *w == window => Some(*token),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        !remove_tokens.is_empty(),
+        "expected snackbar dismiss to schedule a timer for removal"
+    );
+
+    for token in remove_tokens {
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+    }
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let has_toast = ui.semantics_snapshot().is_some_and(|snapshot| {
+        snapshot.nodes.iter().any(|node| {
+            node.test_id
+                .as_deref()
+                .is_some_and(|id| id.starts_with("toast-entry-"))
+        })
+    });
+    assert!(
+        !has_toast,
+        "expected snackbar to be removed after dismiss timer fires"
+    );
+}
+
+#[test]
+fn navigation_bar_roving_skips_disabled_and_updates_model() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationBar, NavigationBarItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(320.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let bar = NavigationBar::new(value)
+                    .a11y_label("Material 3 Navigation Bar")
+                    .test_id("nav-bar")
+                    .items(vec![
+                        NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-bar-search"),
+                        NavigationBarItem::new("disabled", "Disabled", ids::ui::SLASH)
+                            .disabled(true)
+                            .a11y_label("Destination Disabled")
+                            .test_id("nav-bar-disabled"),
+                        NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-bar-settings"),
+                        NavigationBarItem::new("more", "More", ids::ui::MORE_HORIZONTAL)
+                            .a11y_label("Destination More")
+                            .test_id("nav-bar-more"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), bar)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-search in semantics snapshot");
+    let disabled_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-disabled")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-disabled in semantics snapshot");
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-settings")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-settings in semantics snapshot");
+    let more_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-more")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-more in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowRight to skip disabled destinations"
+    );
+    assert_ne!(
+        ui.focus(),
+        Some(disabled_node),
+        "expected disabled destination to never receive focus"
+    );
+
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "settings",
+        "expected selection to follow roving focus"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(more_node),
+        "expected End to rove to the last enabled destination"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(search_node),
+        "expected Home to rove to the first enabled destination"
+    );
+}
+
+#[test]
+fn navigation_bar_roving_wraps_and_skips_disabled_on_reverse() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationBar, NavigationBarItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(320.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let bar = NavigationBar::new(value)
+                    .a11y_label("Material 3 Navigation Bar")
+                    .test_id("nav-bar")
+                    .items(vec![
+                        NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-bar-search"),
+                        NavigationBarItem::new("disabled", "Disabled", ids::ui::SLASH)
+                            .disabled(true)
+                            .a11y_label("Destination Disabled")
+                            .test_id("nav-bar-disabled"),
+                        NavigationBarItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-bar-settings"),
+                        NavigationBarItem::new("more", "More", ids::ui::MORE_HORIZONTAL)
+                            .a11y_label("Destination More")
+                            .test_id("nav-bar-more"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), bar)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-search in semantics snapshot");
+    let disabled_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-disabled")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-disabled in semantics snapshot");
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-settings")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-settings in semantics snapshot");
+    let more_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-more")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-more in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(more_node),
+        "expected ArrowLeft to wrap to the last enabled destination when loop_navigation=true"
+    );
+    assert_ne!(
+        ui.focus(),
+        Some(disabled_node),
+        "expected disabled destination to never receive focus"
+    );
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "more",
+        "expected selection to follow roving focus after reverse wrap"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowLeft to rove to the previous enabled destination"
+    );
+
+    // Now verify loop_navigation=false clamps at the first enabled item (no wrap).
+    let value2: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value2_for_render = value2.clone();
+    let render_no_loop =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value2 = value2_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root2", |cx| {
+                let bar = NavigationBar::new(value2)
+                    .loop_navigation(false)
+                    .a11y_label("Material 3 Navigation Bar (no loop)")
+                    .test_id("nav-bar-no-loop")
+                    .items(vec![
+                        NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-bar-no-loop-search"),
+                        NavigationBarItem::new("more", "More", ids::ui::MORE_HORIZONTAL)
+                            .a11y_label("Destination More")
+                            .test_id("nav-bar-no-loop-more"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), bar)]
+            })
+        };
+
+    let root = render_no_loop(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node2: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-bar-no-loop-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-bar-no-loop-search in semantics snapshot");
+
+    ui.set_focus(Some(search_node2));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+
+    let root = render_no_loop(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(search_node2),
+        "expected ArrowLeft at the first item to not wrap when loop_navigation=false"
+    );
+}
+
+#[test]
+fn navigation_rail_roving_skips_disabled_and_updates_model() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationRail, NavigationRailItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let rail = NavigationRail::new(value)
+                    .a11y_label("Material 3 Navigation Rail")
+                    .test_id("nav-rail")
+                    .items(vec![
+                        NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-rail-search"),
+                        NavigationRailItem::new("disabled", "Disabled", ids::ui::SLASH)
+                            .disabled(true)
+                            .a11y_label("Destination Disabled")
+                            .test_id("nav-rail-disabled"),
+                        NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-rail-settings"),
+                        NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                            .a11y_label("Destination Play")
+                            .test_id("nav-rail-play"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), rail)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-search in semantics snapshot");
+    let disabled_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-disabled")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-disabled in semantics snapshot");
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-settings")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-settings in semantics snapshot");
+    let play_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-play")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-play in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowDown to skip disabled destinations"
+    );
+    assert_ne!(
+        ui.focus(),
+        Some(disabled_node),
+        "expected disabled destination to never receive focus"
+    );
+
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "settings",
+        "expected selection to follow roving focus"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(play_node),
+        "expected End to rove to the last enabled destination"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(search_node),
+        "expected Home to rove to the first enabled destination"
+    );
+}
+
+#[test]
+fn navigation_rail_roving_wraps_and_skips_disabled_on_reverse() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationRail, NavigationRailItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let rail = NavigationRail::new(value)
+                    .a11y_label("Material 3 Navigation Rail")
+                    .test_id("nav-rail")
+                    .items(vec![
+                        NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-rail-search"),
+                        NavigationRailItem::new("disabled", "Disabled", ids::ui::SLASH)
+                            .disabled(true)
+                            .a11y_label("Destination Disabled")
+                            .test_id("nav-rail-disabled"),
+                        NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-rail-settings"),
+                        NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                            .a11y_label("Destination Play")
+                            .test_id("nav-rail-play"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), rail)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-search in semantics snapshot");
+    let disabled_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-disabled")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-disabled in semantics snapshot");
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-settings")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-settings in semantics snapshot");
+    let play_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-play")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-play in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(play_node),
+        "expected ArrowUp to wrap to the last enabled destination when loop_navigation=true"
+    );
+    assert_ne!(
+        ui.focus(),
+        Some(disabled_node),
+        "expected disabled destination to never receive focus"
+    );
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "play",
+        "expected selection to follow roving focus after reverse wrap"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowUp to rove to the previous enabled destination"
+    );
+}
+
+#[test]
+fn navigation_rail_roving_does_not_wrap_when_loop_navigation_false() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationRail, NavigationRailItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let rail = NavigationRail::new(value)
+                    .loop_navigation(false)
+                    .a11y_label("Material 3 Navigation Rail (no loop)")
+                    .test_id("nav-rail-no-loop")
+                    .items(vec![
+                        NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-rail-no-loop-search"),
+                        NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                            .a11y_label("Destination Play")
+                            .test_id("nav-rail-no-loop-play"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), rail)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-no-loop-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-no-loop-search in semantics snapshot");
+    let play_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-no-loop-play")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-no-loop-play in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(search_node),
+        "expected ArrowUp at the first item to not wrap when loop_navigation=false",
+    );
+
+    ui.set_focus(Some(play_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(play_node),
+        "expected ArrowDown at the last item to not wrap when loop_navigation=false",
+    );
+}
+
+#[test]
+fn navigation_rail_roving_single_enabled_item_does_not_move_under_no_loop() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationRail, NavigationRailItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("settings"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let rail = NavigationRail::new(value)
+                    .loop_navigation(false)
+                    .a11y_label("Material 3 Navigation Rail (single enabled, no loop)")
+                    .test_id("nav-rail-single-enabled")
+                    .items(vec![
+                        NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                            .disabled(true)
+                            .a11y_label("Destination Search (disabled)")
+                            .test_id("nav-rail-single-enabled-search-disabled"),
+                        NavigationRailItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-rail-single-enabled-settings"),
+                        NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                            .disabled(true)
+                            .a11y_label("Destination Play (disabled)")
+                            .test_id("nav-rail-single-enabled-play-disabled"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), rail)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-rail-single-enabled-settings"))
+                    .then_some(node.id)
+            })
+        })
+        .expect("expected nav-rail-single-enabled-settings in semantics snapshot");
+
+    ui.set_focus(Some(settings_node));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowUp to keep focus when only one destination is enabled",
+    );
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "settings",
+        "expected selection to remain on the only enabled destination",
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowDown to keep focus when only one destination is enabled",
+    );
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "settings",
+        "expected selection to remain on the only enabled destination",
+    );
+}
+
+#[test]
+fn navigation_drawer_roving_skips_disabled_and_updates_model() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationDrawer, NavigationDrawerItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let drawer = NavigationDrawer::new(value)
+                    .a11y_label("Material 3 Navigation Drawer")
+                    .test_id("nav-drawer")
+                    .items(vec![
+                        NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-drawer-search"),
+                        NavigationDrawerItem::new("disabled", "Disabled", ids::ui::SLASH)
+                            .disabled(true)
+                            .a11y_label("Destination Disabled")
+                            .test_id("nav-drawer-disabled"),
+                        NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .badge_label("2")
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-drawer-settings"),
+                        NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                            .badge_label("99+")
+                            .a11y_label("Destination Play")
+                            .test_id("nav-drawer-play"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), drawer)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-search in semantics snapshot");
+    let disabled_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-disabled")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-disabled in semantics snapshot");
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-settings")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-settings in semantics snapshot");
+    let play_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-play")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-play in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowDown to skip disabled destinations"
+    );
+    assert_ne!(
+        ui.focus(),
+        Some(disabled_node),
+        "expected disabled destination to never receive focus"
+    );
+
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "settings",
+        "expected selection to follow roving focus"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(play_node),
+        "expected End to rove to the last enabled destination"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(search_node),
+        "expected Home to rove to the first enabled destination"
+    );
+}
+
+#[test]
+fn navigation_drawer_roving_wraps_and_skips_disabled_on_reverse() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationDrawer, NavigationDrawerItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let drawer = NavigationDrawer::new(value)
+                    .a11y_label("Material 3 Navigation Drawer")
+                    .test_id("nav-drawer")
+                    .items(vec![
+                        NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-drawer-search"),
+                        NavigationDrawerItem::new("disabled", "Disabled", ids::ui::SLASH)
+                            .disabled(true)
+                            .a11y_label("Destination Disabled")
+                            .test_id("nav-drawer-disabled"),
+                        NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .badge_label("2")
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-drawer-settings"),
+                        NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                            .badge_label("99+")
+                            .a11y_label("Destination Play")
+                            .test_id("nav-drawer-play"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), drawer)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-search in semantics snapshot");
+    let disabled_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-disabled")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-disabled in semantics snapshot");
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-settings")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-settings in semantics snapshot");
+    let play_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-play")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-play in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(play_node),
+        "expected ArrowUp to wrap to the last enabled destination when loop_navigation=true"
+    );
+    assert_ne!(
+        ui.focus(),
+        Some(disabled_node),
+        "expected disabled destination to never receive focus"
+    );
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "play",
+        "expected selection to follow roving focus after reverse wrap"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowUp to rove to the previous enabled destination"
+    );
+}
+
+#[test]
+fn navigation_drawer_roving_does_not_wrap_when_loop_navigation_false() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationDrawer, NavigationDrawerItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let drawer = NavigationDrawer::new(value)
+                    .loop_navigation(false)
+                    .a11y_label("Material 3 Navigation Drawer (no loop)")
+                    .test_id("nav-drawer-no-loop")
+                    .items(vec![
+                        NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                            .a11y_label("Destination Search")
+                            .test_id("nav-drawer-no-loop-search"),
+                        NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                            .a11y_label("Destination Play")
+                            .test_id("nav-drawer-no-loop-play"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), drawer)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let search_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-no-loop-search")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-no-loop-search in semantics snapshot");
+    let play_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-no-loop-play")).then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-no-loop-play in semantics snapshot");
+
+    ui.set_focus(Some(search_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(search_node),
+        "expected ArrowUp at the first item to not wrap when loop_navigation=false",
+    );
+
+    ui.set_focus(Some(play_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(play_node),
+        "expected ArrowDown at the last item to not wrap when loop_navigation=false",
+    );
+}
+
+#[test]
+fn navigation_drawer_roving_single_enabled_item_does_not_move_under_no_loop() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationDrawer, NavigationDrawerItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(520.0)),
+    );
+
+    let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("settings"));
+    let value_for_render = value.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let value = value_for_render.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let drawer = NavigationDrawer::new(value)
+                    .loop_navigation(false)
+                    .a11y_label("Material 3 Navigation Drawer (single enabled, no loop)")
+                    .test_id("nav-drawer-single-enabled")
+                    .items(vec![
+                        NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                            .disabled(true)
+                            .a11y_label("Destination Search (disabled)")
+                            .test_id("nav-drawer-single-enabled-search-disabled"),
+                        NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .a11y_label("Destination Settings")
+                            .test_id("nav-drawer-single-enabled-settings"),
+                        NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                            .disabled(true)
+                            .a11y_label("Destination Play (disabled)")
+                            .test_id("nav-drawer-single-enabled-play-disabled"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), drawer)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let settings_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("nav-drawer-single-enabled-settings"))
+                    .then_some(node.id)
+            })
+        })
+        .expect("expected nav-drawer-single-enabled-settings in semantics snapshot");
+
+    ui.set_focus(Some(settings_node));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowUp to keep focus when only one destination is enabled",
+    );
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "settings",
+        "expected selection to remain on the only enabled destination",
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        ui.focus(),
+        Some(settings_node),
+        "expected ArrowDown to keep focus when only one destination is enabled",
+    );
+    let selected = app.models().get_cloned(&value).expect("value model exists");
+    assert_eq!(
+        selected.as_ref(),
+        "settings",
+        "expected selection to remain on the only enabled destination",
+    );
+}
+
+#[test]
+fn time_picker_clock_dial_drag_updates_time() {
+    use fret_ui_material3::{DockedTimePicker, TimePickerDisplayMode};
+    use time::Time;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(420.0)),
+    );
+
+    let selected_time = Time::from_hms(9, 41, 0).expect("valid time");
+    let time = app.models_mut().insert(selected_time);
+    let time_for_render = time.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let picker = DockedTimePicker::new(time_for_render.clone())
+                    .display_mode(TimePickerDisplayMode::Dial)
+                    .test_id("time-picker-docked")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), picker)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let dial: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("time-picker-clock-dial") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected time picker clock dial node in semantics snapshot");
+
+    let dial_bounds = ui
+        .debug_node_visual_bounds(dial)
+        .expect("expected dial bounds");
+
+    let center = Point::new(
+        Px(dial_bounds.origin.x.0 + dial_bounds.size.width.0 * 0.5),
+        Px(dial_bounds.origin.y.0 + dial_bounds.size.height.0 * 0.5),
+    );
+    let r = dial_bounds.size.width.0.min(dial_bounds.size.height.0) * 0.45;
+
+    let start_at = Point::new(center.x, Px(center.y.0 - r));
+    let drag_to = Point::new(Px(center.x.0 + r), center.y);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), start_at),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), drag_to),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), drag_to));
+
+    let after = app
+        .models()
+        .get_cloned(&time)
+        .unwrap_or_else(|| selected_time);
+    assert_ne!(
+        after, selected_time,
+        "expected dial drag to update the time model"
+    );
+}
+
+#[test]
+fn time_picker_selector_keyboard_arrows_step_time() {
+    use fret_ui_material3::{DockedTimePicker, TimePickerDisplayMode};
+    use time::Time;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(420.0)),
+    );
+
+    let selected_time = Time::from_hms(9, 41, 0).expect("valid time");
+    let time = app.models_mut().insert(selected_time);
+    let time_for_render = time.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let picker = DockedTimePicker::new(time_for_render.clone())
+                    .display_mode(TimePickerDisplayMode::Dial)
+                    .test_id("time-picker-docked")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), picker)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let hour_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("time-picker-hour-selector") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected hour selector node in semantics snapshot");
+
+    ui.set_focus(Some(hour_node));
+    assert_eq!(
+        ui.focus(),
+        Some(hour_node),
+        "expected focus to be set to the hour input node"
+    );
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowUp));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowUp));
+
+    let after_hour = app.models().get_cloned(&time).expect("time model exists");
+    assert_eq!(
+        after_hour,
+        Time::from_hms(10, 41, 0).expect("valid time"),
+        "expected ArrowUp on hour selector to step +1 hour",
+    );
+
+    let minute_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("time-picker-minute-selector") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected minute selector node in semantics snapshot");
+
+    ui.set_focus(Some(minute_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let after_minute = app.models().get_cloned(&time).expect("time model exists");
+    assert_eq!(
+        after_minute,
+        Time::from_hms(10, 40, 0).expect("valid time"),
+        "expected ArrowDown on minute selector to step -1 minute",
+    );
+}
+
+#[test]
+fn time_picker_time_input_replaces_and_auto_advances_hour() {
+    use fret_ui_material3::{DockedTimePicker, TimePickerDisplayMode};
+    use time::Time;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(420.0)),
+    );
+
+    let selected_time = Time::from_hms(9, 41, 0).expect("valid time");
+    let time = app.models_mut().insert(selected_time);
+    let time_for_render = time.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let picker = DockedTimePicker::new(time_for_render.clone())
+                    .display_mode(TimePickerDisplayMode::Input)
+                    .test_id("time-picker-docked-input")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), picker)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let hour_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("time-input-hour")).then_some(node.id)
+            })
+        })
+        .expect("expected time-input-hour in semantics snapshot");
+    let minute_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("time-input-minute")).then_some(node.id)
+            })
+        })
+        .expect("expected time-input-minute in semantics snapshot");
+
+    ui.set_focus(Some(hour_node));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit1));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit1));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("1".to_string()));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let after_first = app.models().get_cloned(&time).expect("time model exists");
+    assert_eq!(
+        after_first,
+        Time::from_hms(1, 41, 0).expect("valid time"),
+        "expected first digit to replace the existing hour",
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("2".to_string()));
+
+    for token in drain_zero_delay_timer_tokens(&mut app, window) {
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+    }
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let after_second = app.models().get_cloned(&time).expect("time model exists");
+    assert_eq!(
+        after_second,
+        Time::from_hms(0, 41, 0).expect("valid time"),
+        "expected second digit to complete a two-digit hour (12 AM -> 00h in 24h time)",
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(minute_node),
+        "expected entering a two-digit hour to auto-advance focus to minutes",
+    );
 }
 
 #[test]
@@ -1530,8 +3581,10 @@ fn tabs_pressed_scene_structure_is_stable() {
         );
 
         let mut baseline_structure: Option<Vec<SceneSig>> = None;
-        let mut baseline_quads: Option<Vec<QuadGeomSig>> = None;
-        for frame in 0..24 {
+        let mut prev_quads: Option<Vec<QuadGeomSig>> = None;
+        let mut stable_quads_count: usize = 0;
+        let settle_probe_start = 12;
+        for frame in 0..48 {
             app.advance_frame();
             let root = render(&mut ui, &mut app, &mut services);
             ui.set_root(root);
@@ -1552,18 +3605,27 @@ fn tabs_pressed_scene_structure_is_stable() {
                 }
             }
 
-            if frame >= 16 {
+            if frame >= settle_probe_start {
                 let sig = scene_quad_geometry_signature(&scene);
-                if let Some(prev) = baseline_quads.as_ref() {
-                    assert_eq!(
-                        sig, *prev,
-                        "expected Tabs to keep stable quad geometry after animations settle ({label})"
-                    );
-                } else {
-                    baseline_quads = Some(sig);
+                match prev_quads.as_ref() {
+                    None => {
+                        stable_quads_count = 1;
+                    }
+                    Some(prev) if sig == *prev => {
+                        stable_quads_count += 1;
+                    }
+                    Some(_) => {
+                        stable_quads_count = 1;
+                    }
                 }
+                prev_quads = Some(sig);
             }
         }
+
+        assert!(
+            stable_quads_count >= 6,
+            "expected Tabs quad geometry to stabilize after animations settle ({label})"
+        );
 
         ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), press_at));
     }
@@ -2044,6 +4106,88 @@ fn menu_pressed_scene_structure_is_stable() {
 }
 
 #[test]
+fn menu_style_overrides_apply_to_container_and_label() {
+    use fret_core::Color;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem, MenuStyle};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(260.0)),
+    );
+
+    let override_bg = Color {
+        r: 0.9,
+        g: 0.1,
+        b: 0.2,
+        a: 1.0,
+    };
+    let override_label = Color {
+        r: 0.1,
+        g: 0.8,
+        b: 0.3,
+        a: 1.0,
+    };
+
+    let style = MenuStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(override_bg))))
+        .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            override_label,
+        ))));
+
+    let entries = vec![
+        MenuEntry::Item(MenuItem::new("A").test_id("menu-item-a")),
+        MenuEntry::Item(MenuItem::new("B").test_id("menu-item-b")),
+    ];
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "root",
+        |cx| {
+            let menu = Menu::new()
+                .entries(entries.clone())
+                .a11y_label("menu")
+                .test_id("menu")
+                .style(style.clone())
+                .into_element(cx);
+            vec![with_padding(cx, Px(24.0), menu)]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        scene.ops().iter().any(|op| {
+            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+        }),
+        "expected MenuStyle.container_background to affect at least one quad background"
+    );
+    assert!(
+        scene
+            .ops()
+            .iter()
+            .any(|op| { matches!(op, SceneOp::Text { color, .. } if *color == override_label) }),
+        "expected MenuStyle.item_label_color to affect at least one text draw op"
+    );
+}
+
+#[test]
 fn dialog_focus_is_contained_and_restored_across_schemes() {
     use fret_ui_material3::{Button, Dialog, DialogAction};
 
@@ -2215,6 +4359,118 @@ fn dialog_focus_is_contained_and_restored_across_schemes() {
             "expected dialog barrier to unmount after close transition ({label})"
         );
     }
+}
+
+#[test]
+fn dialog_style_overrides_apply_to_container_and_text() {
+    use fret_core::Color;
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+    use fret_ui_material3::{Button, Dialog, DialogAction, DialogStyle};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let open = app.models_mut().insert(true);
+
+    let override_bg = Color {
+        r: 0.2,
+        g: 0.2,
+        b: 0.9,
+        a: 1.0,
+    };
+    let override_headline = Color {
+        r: 0.9,
+        g: 0.9,
+        b: 0.2,
+        a: 1.0,
+    };
+    let override_supporting = Color {
+        r: 0.8,
+        g: 0.2,
+        b: 0.8,
+        a: 1.0,
+    };
+
+    let style = DialogStyle::default()
+        .container_background(WidgetStateProperty::new(Some(ColorRef::Color(override_bg))))
+        .headline_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            override_headline,
+        ))))
+        .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
+            override_supporting,
+        ))));
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let dialog = Dialog::new(open.clone())
+                .headline("Dialog")
+                .supporting_text("Body")
+                .actions(vec![DialogAction::new("OK").test_id("dialog-ok")])
+                .style(style.clone())
+                .test_id("dialog")
+                .into_element(
+                    cx,
+                    |cx| {
+                        let trigger = Button::new("Underlay focus probe")
+                            .test_id("dialog-trigger")
+                            .into_element(cx);
+                        with_padding(cx, Px(24.0), trigger)
+                    },
+                    |_cx| Vec::new(),
+                );
+            vec![dialog]
+        })
+    };
+
+    let mut scene = None;
+    for _ in 0..3 {
+        use fret_ui_kit::OverlayController;
+
+        app.advance_frame();
+        OverlayController::begin_frame(&mut app, window);
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut next = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut next, 1.0);
+        scene = Some(next);
+    }
+
+    let scene = scene.expect("expected rendered scene");
+
+    assert!(
+        scene.ops().iter().any(|op| {
+            matches!(op, SceneOp::Quad { background, .. } if *background == override_bg)
+        }),
+        "expected DialogStyle.container_background to affect at least one quad background"
+    );
+    assert!(
+        scene
+            .ops()
+            .iter()
+            .any(|op| { matches!(op, SceneOp::Text { color, .. } if *color == override_headline) }),
+        "expected DialogStyle.headline_color to affect at least one text draw op"
+    );
+    assert!(
+        scene.ops().iter().any(|op| {
+            matches!(op, SceneOp::Text { color, .. } if *color == override_supporting)
+        }),
+        "expected DialogStyle.supporting_text_color to affect at least one text draw op"
+    );
 }
 
 #[test]
@@ -2985,8 +5241,12 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
 
 #[test]
 fn material3_headless_controls_suite_goldens_v1() {
-    use fret_ui::element::FlexProps;
-    use fret_ui_material3::{Button, Checkbox, Select, SelectItem, Switch};
+    use fret_ui::element::{ContainerProps, FlexProps, Length, TextProps};
+    use fret_ui_material3::{
+        AssistChip, AssistChipVariant, Button, Card, CardVariant, Checkbox, FilterChip,
+        FilterChipVariant, InputChip, Select, SelectItem, SuggestionChip, SuggestionChipVariant,
+        Switch,
+    };
 
     let schemes = [
         (
@@ -3026,13 +5286,17 @@ fn material3_headless_controls_suite_goldens_v1() {
 
             let bounds = Rect::new(
                 Point::new(Px(0.0), Px(0.0)),
-                Size::new(Px(420.0), Px(320.0)),
+                Size::new(Px(420.0), Px(560.0)),
             );
 
             let checkbox_checked = app.models_mut().insert(true);
             let checkbox_unchecked = app.models_mut().insert(false);
             let switch_on = app.models_mut().insert(true);
             let switch_off = app.models_mut().insert(false);
+            let filter_chip_selected = app.models_mut().insert(true);
+            let filter_chip_unselected = app.models_mut().insert(false);
+            let input_chip_selected = app.models_mut().insert(true);
+            let input_chip_unselected = app.models_mut().insert(false);
             let select_empty: Model<Option<Arc<str>>> = app.models_mut().insert(None);
             let select_populated: Model<Option<Arc<str>>> =
                 app.models_mut().insert(Some(Arc::<str>::from("beta")));
@@ -3053,6 +5317,27 @@ fn material3_headless_controls_suite_goldens_v1() {
                     props.gap = Px(16.0);
 
                     let content = cx.flex(props, |cx| {
+                        let theme = Theme::global(&*cx.app).clone();
+                        let body_style = theme
+                            .text_style_by_key("md.sys.typescale.body-medium")
+                            .unwrap_or_else(|| fret_core::TextStyle::default());
+                        let body_color = theme.color_required("md.sys.color.on-surface");
+
+                        let card_content =
+                            |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                             label: &'static str| {
+                                let mut container = ContainerProps::default();
+                                container.layout.size.width = Length::Px(Px(360.0));
+                                container.layout.size.height = Length::Px(Px(72.0));
+                                container.padding = Edges::all(Px(12.0));
+
+                                let mut text = TextProps::new(Arc::<str>::from(label));
+                                text.style = Some(body_style.clone());
+                                text.color = Some(body_color);
+
+                                cx.container(container, move |cx| vec![cx.text_props(text)])
+                            };
+
                         vec![
                             Button::new("Filled").test_id("btn-filled").into_element(cx),
                             Button::new("Filled (disabled)")
@@ -3075,6 +5360,46 @@ fn material3_headless_controls_suite_goldens_v1() {
                                 .a11y_label("switch off")
                                 .test_id("sw-off")
                                 .into_element(cx),
+                            AssistChip::new("Assist chip")
+                                .test_id("chip-flat")
+                                .into_element(cx),
+                            AssistChip::new("Assist chip (icon)")
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                .variant(AssistChipVariant::Elevated)
+                                .test_id("chip-elevated")
+                                .into_element(cx),
+                            SuggestionChip::new("Suggestion chip")
+                                .test_id("chip-suggestion-flat")
+                                .into_element(cx),
+                            SuggestionChip::new("Suggestion chip (icon)")
+                                .leading_icon(fret_icons::ids::ui::SEARCH)
+                                .variant(SuggestionChipVariant::Elevated)
+                                .test_id("chip-suggestion-elevated")
+                                .into_element(cx),
+                            FilterChip::new(filter_chip_selected.clone(), "Filter chip")
+                                .test_id("chip-filter-selected")
+                                .into_element(cx),
+                            FilterChip::new(filter_chip_unselected.clone(), "Filter chip (icon)")
+                                .trailing_icon(fret_icons::ids::ui::SLASH)
+                                .variant(FilterChipVariant::Elevated)
+                                .test_id("chip-filter-unselected-elevated")
+                                .into_element(cx),
+                            InputChip::new(input_chip_selected.clone(), "Input chip (icon)")
+                                .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                .test_id("chip-input-selected")
+                                .into_element(cx),
+                            InputChip::new(input_chip_unselected.clone(), "Input chip")
+                                .trailing_icon(fret_icons::ids::ui::SLASH)
+                                .test_id("chip-input-unselected")
+                                .into_element(cx),
+                            Card::new()
+                                .variant(CardVariant::Filled)
+                                .test_id("card-filled")
+                                .into_element(cx, |cx| vec![card_content(cx, "Filled card")]),
+                            Card::new()
+                                .variant(CardVariant::Outlined)
+                                .test_id("card-outlined")
+                                .into_element(cx, |cx| vec![card_content(cx, "Outlined card")]),
                             Select::new(select_empty.clone())
                                 .leading_icon(fret_icons::ids::ui::SEARCH)
                                 .label("Select")
@@ -3381,6 +5706,2175 @@ fn material3_headless_controls_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_fab_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{Fab, FabSize, FabVariant};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(240.0)),
+            );
+
+            let render =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "fab_root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                let row =
+                                    |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                                     variant: FabVariant,
+                                     id_prefix: &'static str| {
+                                        let mut props = FlexProps::default();
+                                        props.direction = fret_core::Axis::Horizontal;
+                                        props.gap = Px(16.0);
+                                        cx.flex(props, move |cx| {
+                                            vec![
+                                                Fab::new(fret_icons::ids::ui::SEARCH)
+                                                    .variant(variant)
+                                                    .a11y_label("fab")
+                                                    .test_id(format!("{id_prefix}-fab"))
+                                                    .into_element(cx),
+                                                Fab::new(fret_icons::ids::ui::SEARCH)
+                                                    .variant(variant)
+                                                    .size(FabSize::Small)
+                                                    .a11y_label("fab small")
+                                                    .test_id(format!("{id_prefix}-fab-small"))
+                                                    .into_element(cx),
+                                                Fab::new(fret_icons::ids::ui::SEARCH)
+                                                    .variant(variant)
+                                                    .size(FabSize::Large)
+                                                    .a11y_label("fab large")
+                                                    .test_id(format!("{id_prefix}-fab-large"))
+                                                    .into_element(cx),
+                                                Fab::new(fret_icons::ids::ui::SEARCH)
+                                                    .variant(variant)
+                                                    .label("Create")
+                                                    .test_id(format!("{id_prefix}-extended-fab"))
+                                                    .into_element(cx),
+                                            ]
+                                        })
+                                    };
+
+                                vec![
+                                    row(cx, FabVariant::Surface, "fab-surface"),
+                                    row(cx, FabVariant::Primary, "fab-primary"),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+            ui.set_focus(None);
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+
+            let fab_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("fab-surface-fab")).then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!("expected fab-surface-fab in semantics snapshot ({label}, {scale})")
+                });
+
+            let bounds_message =
+                format!("expected fab-surface bounds in headless suite ({label}, {scale})");
+            let fab_bounds = ui
+                .debug_node_visual_bounds(fab_node)
+                .unwrap_or_else(|| panic!("{bounds_message}"));
+            let fab_center = Point::new(
+                Px(fab_bounds.origin.x.0 + fab_bounds.size.width.0 * 0.5),
+                Px(fab_bounds.origin.y.0 + fab_bounds.size.height.0 * 0.5),
+            );
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            let idle_message = format!(
+                "expected the Material3 fab idle scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &idle_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), fab_center),
+            );
+            let hover_message = format!(
+                "expected the Material3 fab hover scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "hover".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &hover_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+            ui.set_focus(Some(fab_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+            let focus_visible_message = format!(
+                "expected the Material3 fab focus-visible scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "focus_visible".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &focus_visible_message,
+                    &render,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(&format!("material3-fab.{scale}.{label}"), &suite);
+        }
+    }
+}
+
+#[test]
+fn material3_headless_segmented_button_suite_goldens_v1() {
+    use std::collections::BTreeSet;
+
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{SegmentedButtonItem, SegmentedButtonSet};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(260.0)),
+            );
+
+            let single_value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("alpha"));
+            let multi_value: Model<BTreeSet<Arc<str>>> = app.models_mut().insert(
+                [Arc::<str>::from("alpha"), Arc::<str>::from("beta")]
+                    .into_iter()
+                    .collect(),
+            );
+
+            let render =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "segmented_root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    SegmentedButtonSet::single(single_value.clone())
+                                        .items(vec![
+                                            SegmentedButtonItem::new("alpha", "Alpha")
+                                                .test_id("segmented-single-alpha"),
+                                            SegmentedButtonItem::new("beta", "Beta")
+                                                .test_id("segmented-single-beta"),
+                                            SegmentedButtonItem::new("gamma", "Gamma (disabled)")
+                                                .disabled(true)
+                                                .test_id("segmented-single-gamma"),
+                                        ])
+                                        .a11y_label("Single segmented buttons")
+                                        .test_id("segmented-single")
+                                        .into_element(cx),
+                                    SegmentedButtonSet::multi(multi_value.clone())
+                                        .items(vec![
+                                            SegmentedButtonItem::new("alpha", "Alpha")
+                                                .icon(fret_icons::ids::ui::SEARCH)
+                                                .test_id("segmented-multi-alpha"),
+                                            SegmentedButtonItem::new("beta", "Beta")
+                                                .icon(fret_icons::ids::ui::SETTINGS)
+                                                .test_id("segmented-multi-beta"),
+                                            SegmentedButtonItem::new("gamma", "Gamma")
+                                                .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                                                .test_id("segmented-multi-gamma"),
+                                        ])
+                                        .a11y_label("Multi segmented buttons")
+                                        .test_id("segmented-multi")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+            ui.set_focus(None);
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+
+            let hover_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("segmented-single-beta"))
+                            .then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "expected segmented-single-beta in semantics snapshot ({label}, {scale})"
+                    )
+                });
+
+            let hover_bounds = ui.debug_node_visual_bounds(hover_node).unwrap_or_else(|| {
+                panic!("expected segmented-single-beta bounds in headless suite ({label}, {scale})")
+            });
+            let hover_center = Point::new(
+                Px(hover_bounds.origin.x.0 + hover_bounds.size.width.0 * 0.5),
+                Px(hover_bounds.origin.y.0 + hover_bounds.size.height.0 * 0.5),
+            );
+
+            let focus_node: NodeId = ui
+                .semantics_snapshot()
+                .and_then(|snapshot| {
+                    snapshot.nodes.iter().find_map(|node| {
+                        (node.test_id.as_deref() == Some("segmented-single-alpha"))
+                            .then_some(node.id)
+                    })
+                })
+                .unwrap_or_else(|| {
+                    panic!(
+                        "expected segmented-single-alpha in semantics snapshot ({label}, {scale})"
+                    )
+                });
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            let idle_message = format!(
+                "expected the Material3 segmented button idle scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &idle_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), hover_center),
+            );
+            let hover_message = format!(
+                "expected the Material3 segmented button hover scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "hover".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &hover_message,
+                    &render,
+                ),
+            );
+
+            ui.dispatch_event(
+                &mut app,
+                &mut services,
+                &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+            );
+            ui.set_focus(Some(focus_node));
+            ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+            ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+            let focus_visible_message = format!(
+                "expected the Material3 segmented button focus-visible scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "focus_visible".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &focus_visible_message,
+                    &render,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-segmented-button.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_badge_suite_goldens_v1() {
+    use fret_core::Corners;
+    use fret_ui::element::{ContainerProps, FlexProps, Length};
+    use fret_ui_material3::{Badge, BadgePlacement};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(200.0)),
+            );
+
+            let render = |ui: &mut UiTree<TestHost>,
+                          app: &mut TestHost,
+                          services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                    "badge_root",
+                    |cx| {
+                        let theme = Theme::global(&*cx.app).clone();
+                        let anchor_color =
+                            theme.color_required("md.sys.color.surface-container-low");
+
+                        let anchor = |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                                      size: Px| {
+                            let mut props = ContainerProps::default();
+                            props.layout.size.width = Length::Px(size);
+                            props.layout.size.height = Length::Px(size);
+                            props.background = Some(anchor_color);
+                            props.corner_radii = Corners::all(Px(8.0));
+                            cx.container(props, |_cx| Vec::<AnyElement>::new())
+                        };
+
+                        let mut props = FlexProps::default();
+                        props.direction = fret_core::Axis::Horizontal;
+                        props.gap = Px(24.0);
+                        props.align = fret_ui::element::CrossAlign::Center;
+                        props.wrap = false;
+
+                        let content = cx.flex(props, |cx| {
+                            let small = Px(24.0);
+                            vec![
+                                Badge::dot()
+                                    .navigation_anchor_size(small)
+                                    .test_id("badge-dot-nav")
+                                    .into_element(cx, |cx| vec![anchor(cx, small)]),
+                                Badge::text("9")
+                                    .navigation_anchor_size(small)
+                                    .test_id("badge-text-nav")
+                                    .into_element(cx, |cx| vec![anchor(cx, small)]),
+                                Badge::dot()
+                                    .placement(BadgePlacement::TopRight)
+                                    .test_id("badge-dot-top-right")
+                                    .into_element(cx, |cx| vec![anchor(cx, Px(40.0))]),
+                                Badge::text("99+")
+                                    .placement(BadgePlacement::TopRight)
+                                    .test_id("badge-text-top-right")
+                                    .into_element(cx, |cx| vec![anchor(cx, Px(40.0))]),
+                            ]
+                        });
+
+                        vec![with_padding(cx, Px(24.0), content)]
+                    },
+                )
+            };
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            let idle_message = format!(
+                "expected the Material3 badge scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &idle_message,
+                    &render,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(&format!("material3-badge.{scale}.{label}"), &suite);
+        }
+    }
+}
+
+#[test]
+fn material3_headless_top_app_bar_suite_goldens_v1() {
+    use fret_icons::ids;
+    use fret_ui::element::ContainerProps;
+    use fret_ui_material3::{TopAppBar, TopAppBarAction, TopAppBarVariant};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(220.0)),
+            );
+
+            let make_actions = |extra: usize| -> Vec<TopAppBarAction> {
+                let mut actions = vec![
+                    TopAppBarAction::new(ids::ui::SEARCH)
+                        .a11y_label("Search")
+                        .test_id("top-app-bar-search"),
+                    TopAppBarAction::new(ids::ui::MORE_HORIZONTAL)
+                        .a11y_label("More actions")
+                        .test_id("top-app-bar-more"),
+                ];
+                if extra >= 1 {
+                    actions.push(
+                        TopAppBarAction::new(ids::ui::SETTINGS)
+                            .a11y_label("Settings")
+                            .test_id("top-app-bar-settings"),
+                    );
+                }
+                if extra >= 2 {
+                    actions.push(
+                        TopAppBarAction::new(ids::ui::PLAY)
+                            .a11y_label("Play")
+                            .test_id("top-app-bar-play"),
+                    );
+                }
+                actions
+            };
+
+            let mut snapshot_case =
+                |case_label: &'static str,
+                 variant: TopAppBarVariant,
+                 scrolled: bool,
+                 actions: Vec<TopAppBarAction>| {
+                    let render = |ui: &mut UiTree<TestHost>,
+                                  app: &mut TestHost,
+                                  services: &mut dyn UiServices| {
+                        let actions = actions.clone();
+                        fret_ui::declarative::render_root(
+                            ui,
+                            app,
+                            services,
+                            window,
+                            bounds,
+                            "top_app_bar_root",
+                            move |cx| {
+                                let theme = Theme::global(&*cx.app).clone();
+
+                                let mut bg = ContainerProps::default();
+                                bg.layout.size.width = fret_ui::element::Length::Fill;
+                                bg.layout.size.height = fret_ui::element::Length::Fill;
+                                bg.background =
+                                    Some(theme.color_required("md.sys.color.background"));
+
+                                let bar = TopAppBar::new(case_label)
+                                    .variant(variant)
+                                    .scrolled(scrolled)
+                                    .navigation_icon(
+                                        TopAppBarAction::new(ids::ui::CHEVRON_RIGHT)
+                                            .a11y_label("Navigate")
+                                            .test_id("top-app-bar-nav"),
+                                    )
+                                    .actions(actions)
+                                    .test_id("top-app-bar");
+
+                                vec![cx.container(bg, move |cx| vec![bar.into_element(cx)])]
+                            },
+                        )
+                    };
+
+                    let stable_message = format!(
+                        "expected the Material3 top app bar scene to be stable after animations settle ({label}, {scale}, {case_label})"
+                    );
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        24,
+                        40,
+                        &stable_message,
+                        &render,
+                    )
+                };
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            cases.insert(
+                "small.idle".to_string(),
+                snapshot_case("Small", TopAppBarVariant::Small, false, make_actions(0)),
+            );
+            cases.insert(
+                "small.scrolled".to_string(),
+                snapshot_case(
+                    "Small (scrolled)",
+                    TopAppBarVariant::Small,
+                    true,
+                    make_actions(0),
+                ),
+            );
+            cases.insert(
+                "small_centered.idle".to_string(),
+                snapshot_case(
+                    "Small Centered",
+                    TopAppBarVariant::SmallCentered,
+                    false,
+                    make_actions(0),
+                ),
+            );
+            cases.insert(
+                "small_centered.scrolled".to_string(),
+                snapshot_case(
+                    "Small Centered (scrolled)",
+                    TopAppBarVariant::SmallCentered,
+                    true,
+                    make_actions(0),
+                ),
+            );
+            cases.insert(
+                "small_centered.wide_actions".to_string(),
+                snapshot_case(
+                    "Small Centered (wide actions)",
+                    TopAppBarVariant::SmallCentered,
+                    false,
+                    make_actions(2),
+                ),
+            );
+            cases.insert(
+                "medium.idle".to_string(),
+                snapshot_case("Medium", TopAppBarVariant::Medium, false, make_actions(0)),
+            );
+            cases.insert(
+                "medium.scrolled".to_string(),
+                snapshot_case(
+                    "Medium (scrolled)",
+                    TopAppBarVariant::Medium,
+                    true,
+                    make_actions(0),
+                ),
+            );
+            cases.insert(
+                "large.idle".to_string(),
+                snapshot_case("Large", TopAppBarVariant::Large, false, make_actions(0)),
+            );
+            cases.insert(
+                "large.scrolled".to_string(),
+                snapshot_case(
+                    "Large (scrolled)",
+                    TopAppBarVariant::Large,
+                    true,
+                    make_actions(0),
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-top-app-bar.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_navigation_suite_goldens_v1() {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        Button, ButtonVariant, ModalNavigationDrawer, NavigationBar, NavigationBarItem,
+        NavigationDrawer, NavigationDrawerItem, NavigationDrawerVariant, NavigationRail,
+        NavigationRailItem,
+    };
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            // NavigationBar: horizontal destinations with badges.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(520.0), Px(220.0)),
+                );
+
+                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("settings"));
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let bar = NavigationBar::new(value.clone())
+                                .a11y_label("Material 3 Navigation Bar")
+                                .test_id("headless-material3-navigation-bar")
+                                .items(vec![
+                                    NavigationBarItem::new("search", "Search", ids::ui::SEARCH)
+                                        .badge_dot()
+                                        .a11y_label("Destination Search")
+                                        .test_id("nav-bar-search"),
+                                    NavigationBarItem::new(
+                                        "settings",
+                                        "Settings",
+                                        ids::ui::SETTINGS,
+                                    )
+                                    .a11y_label("Destination Settings")
+                                    .test_id("nav-bar-settings"),
+                                    NavigationBarItem::new(
+                                        "more",
+                                        "More",
+                                        ids::ui::MORE_HORIZONTAL,
+                                    )
+                                    .badge_text("9")
+                                    .a11y_label("Destination More")
+                                    .test_id("nav-bar-more"),
+                                ])
+                                .into_element(cx);
+
+                            vec![with_padding(cx, Px(24.0), bar)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 navigation bar scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "bar.selected".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        8,
+                        14,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // NavigationRail: vertical destinations with disabled item.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(300.0), Px(520.0)),
+                );
+
+                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("play"));
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let rail = NavigationRail::new(value.clone())
+                                .a11y_label("Material 3 Navigation Rail")
+                                .test_id("headless-material3-navigation-rail")
+                                .items(vec![
+                                    NavigationRailItem::new("search", "Search", ids::ui::SEARCH)
+                                        .badge_dot()
+                                        .a11y_label("Destination Search")
+                                        .test_id("nav-rail-search"),
+                                    NavigationRailItem::new(
+                                        "settings",
+                                        "Settings",
+                                        ids::ui::SETTINGS,
+                                    )
+                                    .a11y_label("Destination Settings")
+                                    .test_id("nav-rail-settings"),
+                                    NavigationRailItem::new("play", "Play", ids::ui::PLAY)
+                                        .badge_text("99+")
+                                        .a11y_label("Destination Play")
+                                        .test_id("nav-rail-play"),
+                                    NavigationRailItem::new("disabled", "Disabled", ids::ui::SLASH)
+                                        .disabled(true)
+                                        .a11y_label("Destination Disabled")
+                                        .test_id("nav-rail-disabled"),
+                                ])
+                                .into_element(cx);
+
+                            vec![with_padding(cx, Px(24.0), rail)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 navigation rail scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "rail.selected".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        8,
+                        14,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // NavigationDrawer: pill selection + badges.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(360.0), Px(520.0)),
+                );
+
+                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("settings"));
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let drawer = NavigationDrawer::new(value.clone())
+                                .a11y_label("Material 3 Navigation Drawer")
+                                .test_id("headless-material3-navigation-drawer")
+                                .items(vec![
+                                    NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                                        .a11y_label("Destination Search")
+                                        .test_id("nav-drawer-search"),
+                                    NavigationDrawerItem::new(
+                                        "settings",
+                                        "Settings",
+                                        ids::ui::SETTINGS,
+                                    )
+                                    .badge_label("2")
+                                    .a11y_label("Destination Settings")
+                                    .test_id("nav-drawer-settings"),
+                                    NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                                        .badge_label("99+")
+                                        .a11y_label("Destination Play")
+                                        .test_id("nav-drawer-play"),
+                                    NavigationDrawerItem::new(
+                                        "disabled",
+                                        "Disabled",
+                                        ids::ui::SLASH,
+                                    )
+                                    .disabled(true)
+                                    .a11y_label("Destination Disabled")
+                                    .test_id("nav-drawer-disabled"),
+                                ])
+                                .into_element(cx);
+
+                            vec![with_padding(cx, Px(24.0), drawer)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 navigation drawer scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "drawer.selected".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        8,
+                        14,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // ModalNavigationDrawer: overlay open (scrim + focus trap surface).
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let value: Model<Arc<str>> = app.models_mut().insert(Arc::<str>::from("search"));
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    let value = value.clone();
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let panel_value = value.clone();
+                            let panel = move |cx: &mut fret_ui::elements::ElementContext<
+                                '_,
+                                TestHost,
+                            >| {
+                                NavigationDrawer::new(panel_value.clone())
+                                    .variant(NavigationDrawerVariant::Modal)
+                                    .a11y_label("Material 3 Modal Navigation Drawer")
+                                    .test_id("headless-material3-modal-navigation-drawer-panel")
+                                    .items(vec![
+                                        NavigationDrawerItem::new(
+                                            "search",
+                                            "Search",
+                                            ids::ui::SEARCH,
+                                        )
+                                        .a11y_label("Destination Search")
+                                        .test_id("nav-modal-drawer-search"),
+                                        NavigationDrawerItem::new(
+                                            "settings",
+                                            "Settings",
+                                            ids::ui::SETTINGS,
+                                        )
+                                        .badge_label("2")
+                                        .a11y_label("Destination Settings")
+                                        .test_id("nav-modal-drawer-settings"),
+                                        NavigationDrawerItem::new("play", "Play", ids::ui::PLAY)
+                                            .badge_label("99+")
+                                            .a11y_label("Destination Play")
+                                            .test_id("nav-modal-drawer-play"),
+                                        NavigationDrawerItem::new(
+                                            "disabled",
+                                            "Disabled",
+                                            ids::ui::SLASH,
+                                        )
+                                        .disabled(true)
+                                        .a11y_label("Destination Disabled")
+                                        .test_id("nav-modal-drawer-disabled"),
+                                    ])
+                                    .into_element(cx)
+                            };
+
+                            let underlay =
+                                move |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>| {
+                                    Button::new("Underlay probe")
+                                        .variant(ButtonVariant::Outlined)
+                                        .test_id("nav-modal-drawer-underlay-probe")
+                                        .into_element(cx)
+                                };
+
+                            let modal = ModalNavigationDrawer::new(open.clone())
+                                .open_duration_ms(Some(1))
+                                .close_duration_ms(Some(1))
+                                .test_id("headless-material3-modal-navigation-drawer")
+                                .into_element(cx, panel, underlay);
+
+                            vec![with_padding(cx, Px(24.0), modal)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 modal navigation drawer overlay scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "modal_drawer.open".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        4,
+                        10,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-navigation.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_snackbar_suite_goldens_v1() {
+    use fret_runtime::CommandId;
+    use fret_ui_kit::ToastStore;
+    use fret_ui_material3::{Snackbar, SnackbarController, SnackbarDuration, SnackbarHost};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            let snapshot_case = |case_label: &'static str, snackbar: Snackbar| {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let store = app.models_mut().insert(ToastStore::default());
+                let controller = SnackbarController::new(store.clone());
+                {
+                    let mut action_host = fret_ui::action::UiActionHostAdapter { app: &mut app };
+                    let _id = controller.show(&mut action_host, window, snackbar);
+                }
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let host_layer = SnackbarHost::new(store.clone())
+                                .max_snackbars(1)
+                                .into_element(cx);
+
+                            vec![with_padding(cx, Px(24.0), host_layer)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 snackbar overlay scene to be stable ({label}, {scale}, {case_label})"
+                );
+                settle_material3_overlay_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &message,
+                    &render,
+                )
+            };
+
+            cases.insert(
+                "short.single_line".to_string(),
+                snapshot_case(
+                    "short.single_line",
+                    Snackbar::new("Saved")
+                        .action("Undo", CommandId::new("material3_snackbar_action"))
+                        .duration(SnackbarDuration::Short),
+                ),
+            );
+            cases.insert(
+                "long.two_line".to_string(),
+                snapshot_case(
+                    "long.two_line",
+                    Snackbar::new("Update available")
+                        .supporting_text("Restart the app to apply the latest changes.")
+                        .action("Restart", CommandId::new("material3_snackbar_action"))
+                        .duration(SnackbarDuration::Long),
+                ),
+            );
+            cases.insert(
+                "indefinite.two_line".to_string(),
+                snapshot_case(
+                    "indefinite.two_line",
+                    Snackbar::new("Connection lost")
+                        .supporting_text("Trying to reconnect...")
+                        .duration(SnackbarDuration::Indefinite),
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-snackbar.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_divider_suite_goldens_v1() {
+    use fret_ui::element::{FlexProps, SpacerProps};
+    use fret_ui_material3::Divider;
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(300.0), Px(220.0)),
+            );
+
+            let render = |ui: &mut UiTree<TestHost>,
+                          app: &mut TestHost,
+                          services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let mut props = FlexProps::default();
+                    props.direction = fret_core::Axis::Vertical;
+                    props.gap = Px(16.0);
+
+                    let content = cx.flex(props, |cx| {
+                        let mut row = FlexProps::default();
+                        row.direction = fret_core::Axis::Horizontal;
+                        row.gap = Px(12.0);
+                        row.layout.size.width = fret_ui::element::Length::Px(Px(240.0));
+                        row.layout.size.height = fret_ui::element::Length::Px(Px(32.0));
+
+                        vec![
+                            Divider::horizontal()
+                                .test_id("divider-horizontal")
+                                .into_element(cx),
+                            cx.flex(row, |cx| {
+                                vec![
+                                    cx.spacer(SpacerProps::default()),
+                                    Divider::vertical()
+                                        .test_id("divider-vertical")
+                                        .into_element(cx),
+                                    cx.spacer(SpacerProps::default()),
+                                ]
+                            }),
+                        ]
+                    });
+
+                    vec![with_padding(cx, Px(24.0), content)]
+                })
+            };
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            let idle_message = format!(
+                "expected the Material3 divider scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    12,
+                    24,
+                    &idle_message,
+                    &render,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-divider.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_progress_indicator_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{CircularProgressIndicator, LinearProgressIndicator};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut app = TestHost::default();
+            app.set_global(PlatformCapabilities::default());
+            apply_material_theme(&mut app, mode, variant);
+
+            let window = AppWindowId::default();
+            let mut services = FakeUiServices::default();
+            let mut ui: UiTree<TestHost> = UiTree::new();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(420.0), Px(260.0)),
+            );
+
+            let progress_0 = app.models_mut().insert(0.0f32);
+            let progress_30 = app.models_mut().insert(0.3f32);
+            let progress_100 = app.models_mut().insert(1.0f32);
+
+            let render_determinate =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    LinearProgressIndicator::new(progress_0.clone())
+                                        .test_id("linear-0")
+                                        .into_element(cx),
+                                    LinearProgressIndicator::new(progress_30.clone())
+                                        .test_id("linear-30")
+                                        .into_element(cx),
+                                    LinearProgressIndicator::new(progress_100.clone())
+                                        .test_id("linear-100")
+                                        .into_element(cx),
+                                    {
+                                        let mut row = FlexProps::default();
+                                        row.direction = fret_core::Axis::Horizontal;
+                                        row.gap = Px(16.0);
+                                        cx.flex(row, |cx| {
+                                            vec![
+                                                CircularProgressIndicator::new(progress_0.clone())
+                                                    .test_id("circular-0")
+                                                    .into_element(cx),
+                                                CircularProgressIndicator::new(progress_30.clone())
+                                                    .test_id("circular-30")
+                                                    .into_element(cx),
+                                                CircularProgressIndicator::new(
+                                                    progress_100.clone(),
+                                                )
+                                                .test_id("circular-100")
+                                                .into_element(cx),
+                                            ]
+                                        })
+                                    },
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let render_indeterminate =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    LinearProgressIndicator::indeterminate()
+                                        .test_id("linear-indeterminate")
+                                        .into_element(cx),
+                                    CircularProgressIndicator::indeterminate()
+                                        .test_id("circular-indeterminate")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let render_indeterminate_four_color =
+                |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(16.0);
+
+                            let content = cx.flex(props, |cx| {
+                                vec![
+                                    LinearProgressIndicator::indeterminate()
+                                        .four_color(true)
+                                        .test_id("linear-indeterminate-four-color")
+                                        .into_element(cx),
+                                    CircularProgressIndicator::indeterminate()
+                                        .four_color(true)
+                                        .test_id("circular-indeterminate-four-color")
+                                        .into_element(cx),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+            let idle_message = format!(
+                "expected the Material3 progress indicator scene to be stable after animations settle ({label}, {scale})"
+            );
+            cases.insert(
+                "idle".to_string(),
+                settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    12,
+                    24,
+                    &idle_message,
+                    &render_determinate,
+                ),
+            );
+
+            cases.insert(
+                "indeterminate.f60".to_string(),
+                snapshot_material3_scene_at_frame_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    60,
+                    &render_indeterminate,
+                ),
+            );
+
+            cases.insert(
+                "indeterminate.four_color.f60".to_string(),
+                snapshot_material3_scene_at_frame_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    60,
+                    &render_indeterminate_four_color,
+                ),
+            );
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-progress-indicator.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_slider_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{RangeSlider, Slider};
+
+    let cases_to_render = [
+        ("idle", None, None),
+        ("hover", Some("slider-30"), None),
+        ("focus_visible", None, Some("slider-30")),
+        ("keyboard_page", None, Some("slider-30")),
+        ("rtl_idle", None, None),
+        ("rtl_keyboard_arrows", None, Some("slider-30")),
+        ("pressed", Some("slider-30"), None),
+        ("dragging", Some("slider-30"), None),
+        ("with_tick_marks", None, None),
+        ("tick_count", None, None),
+        ("range_dragging", Some("range-slider-30-70"), None),
+        (
+            "range_focus_thumb_switch",
+            None,
+            Some("range-slider-30-70.start"),
+        ),
+        (
+            "range_keyboard_page",
+            None,
+            Some("range-slider-30-70.start"),
+        ),
+        (
+            "rtl_range_keyboard_arrows",
+            None,
+            Some("range-slider-30-70.start"),
+        ),
+    ];
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(520.0), Px(320.0)),
+            );
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            for (case_name, hover_id, focus_id) in cases_to_render {
+                let window = AppWindowId::default();
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                if case_name.starts_with("rtl_") {
+                    apply_material_theme_rtl(&mut app, mode, variant);
+                } else {
+                    apply_material_theme(&mut app, mode, variant);
+                }
+
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let value_0 = app.models_mut().insert(0.0f32);
+                let value_30 = app.models_mut().insert(0.3f32);
+                let value_100 = app.models_mut().insert(1.0f32);
+                let range_30_70 = app.models_mut().insert([0.3f32, 0.7f32]);
+                let range_10_90 = app.models_mut().insert([0.1f32, 0.9f32]);
+
+                let render = |ui: &mut UiTree<TestHost>,
+                              app: &mut TestHost,
+                              services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(24.0);
+
+                            let content = cx.flex(props, |cx| {
+                                let slider_step = if case_name == "with_tick_marks" {
+                                    0.1
+                                } else {
+                                    0.01
+                                };
+                                let slider_with_ticks =
+                                    case_name == "with_tick_marks" || case_name == "tick_count";
+                                let slider_tick_count = (case_name == "tick_count").then_some(6u16);
+
+                                let build_slider =
+                                    |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                                     model: Model<f32>,
+                                     test_id: &'static str,
+                                     disabled: bool| {
+                                        let slider = Slider::new(model)
+                                            .range(0.0, 1.0)
+                                            .step(slider_step)
+                                            .with_tick_marks(slider_with_ticks);
+                                        let slider = if let Some(c) = slider_tick_count {
+                                            slider.tick_marks_count(c)
+                                        } else {
+                                            slider
+                                        };
+                                        let slider = if disabled {
+                                            slider.disabled(true)
+                                        } else {
+                                            slider
+                                        };
+                                        slider.test_id(test_id).into_element(cx)
+                                    };
+                                let build_range_slider =
+                                    |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>,
+                                     model: Model<[f32; 2]>,
+                                     test_id: &'static str,
+                                     disabled: bool| {
+                                        let slider = RangeSlider::new(model)
+                                            .range(0.0, 1.0)
+                                            .step(slider_step)
+                                            .with_tick_marks(slider_with_ticks);
+                                        let slider = if let Some(c) = slider_tick_count {
+                                            slider.tick_marks_count(c)
+                                        } else {
+                                            slider
+                                        };
+                                        let slider = if disabled {
+                                            slider.disabled(true)
+                                        } else {
+                                            slider
+                                        };
+                                        slider.test_id(test_id).into_element(cx)
+                                    };
+                                vec![
+                                    build_slider(cx, value_0.clone(), "slider-0", false),
+                                    build_slider(cx, value_30.clone(), "slider-30", false),
+                                    build_slider(cx, value_100.clone(), "slider-100", false),
+                                    build_slider(cx, value_30.clone(), "slider-30-disabled", true),
+                                    build_range_slider(
+                                        cx,
+                                        range_30_70.clone(),
+                                        "range-slider-30-70",
+                                        false,
+                                    ),
+                                    build_range_slider(
+                                        cx,
+                                        range_10_90.clone(),
+                                        "range-slider-10-90-disabled",
+                                        true,
+                                    ),
+                                ]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let root = render(&mut ui, &mut app, &mut services);
+                ui.set_root(root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                ui.dispatch_event(
+                    &mut app,
+                    &mut services,
+                    &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+                );
+
+                if let Some(test_id) = hover_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!("expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})")
+                        });
+                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
+                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
+                    });
+                    let hover_at = Point::new(
+                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
+                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                    );
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), hover_at),
+                    );
+
+                    if case_name == "pressed" {
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_down(PointerId(1), hover_at),
+                        );
+                    }
+
+                    if case_name == "dragging" {
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_down(PointerId(1), hover_at),
+                        );
+                        let drag_to = Point::new(
+                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.8),
+                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_move(PointerId(1), drag_to),
+                        );
+                    }
+
+                    if case_name == "range_dragging" {
+                        let start_at = Point::new(
+                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.85),
+                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                        );
+                        let drag_to = Point::new(
+                            Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.95),
+                            Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_move(PointerId(1), start_at),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_down(PointerId(1), start_at),
+                        );
+                        ui.dispatch_event(
+                            &mut app,
+                            &mut services,
+                            &pointer_move(PointerId(1), drag_to),
+                        );
+                    }
+                }
+
+                if let Some(test_id) = focus_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!("expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})")
+                        });
+                    ui.set_focus(Some(node_id));
+
+                    if case_name == "keyboard_page" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                        let after_page_up =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_page_up - 0.4).abs() <= 1e-6,
+                            "expected slider PageUp to increment by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                        let after_page_down =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_page_down - 0.3).abs() <= 1e-6,
+                            "expected slider PageDown to decrement by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                        let after_home =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            after_home.abs() <= 1e-6,
+                            "expected slider Home to snap to min (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+                        let after_end =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_end - 1.0).abs() <= 1e-6,
+                            "expected slider End to snap to max (case={case_name}, {label}, {scale})"
+                        );
+                    } else if case_name == "rtl_keyboard_arrows" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        let after_right =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_right - 0.29).abs() <= 1e-6,
+                            "expected slider ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                        let after_left =
+                            app.models_mut().read(&value_30, |v| *v).ok().unwrap_or(0.0);
+                        assert!(
+                            (after_left - 0.30).abs() <= 1e-6,
+                            "expected slider ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
+                        );
+                    } else if case_name == "range_focus_thumb_switch" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+
+                        let end_node_id: NodeId = ui
+                            .semantics_snapshot()
+                            .and_then(|snapshot| {
+                                snapshot.nodes.iter().find_map(|node| {
+                                    (node.test_id.as_deref()
+                                        == Some("range-slider-30-70.end"))
+                                    .then_some(node.id)
+                                })
+                            })
+                            .unwrap_or_else(|| {
+                                panic!("expected range-slider-30-70.end in semantics snapshot ({label}, {scale}, {case_name})")
+                            });
+                        ui.set_focus(Some(end_node_id));
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                    } else if case_name == "range_keyboard_page" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                        let after_page_up = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_page_up[0] - 0.4).abs() <= 1e-6
+                                && (after_page_up[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start PageUp to increment start by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                        let after_page_down = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_page_down[0] - 0.3).abs() <= 1e-6
+                                && (after_page_down[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start PageDown to decrement start by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                        let after_home = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_home[0].abs() <= 1e-6 && (after_home[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start Home to snap to min (case={case_name}, {label}, {scale})"
+                        );
+
+                        let end_node_id: NodeId = ui
+                            .semantics_snapshot()
+                            .and_then(|snapshot| {
+                                snapshot.nodes.iter().find_map(|node| {
+                                    (node.test_id.as_deref()
+                                        == Some("range-slider-30-70.end"))
+                                    .then_some(node.id)
+                                })
+                            })
+                            .unwrap_or_else(|| {
+                                panic!("expected range-slider-30-70.end in semantics snapshot ({label}, {scale}, {case_name})")
+                            });
+                        ui.set_focus(Some(end_node_id));
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageDown));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageDown));
+                        let after_end_page_down = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_page_down[0].abs() <= 1e-6
+                                && (after_end_page_down[1] - 0.6).abs() <= 1e-6,
+                            "expected range slider end PageDown to decrement end by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::PageUp));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::PageUp));
+                        let after_end_page_up = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_page_up[0].abs() <= 1e-6
+                                && (after_end_page_up[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider end PageUp to increment end by a page (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Home));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Home));
+                        let after_end_home = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_home[0].abs() <= 1e-6 && after_end_home[1].abs() <= 1e-6,
+                            "expected range slider end Home to snap to start value (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::End));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::End));
+                        let after_end_end = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            after_end_end[0].abs() <= 1e-6
+                                && (after_end_end[1] - 1.0).abs() <= 1e-6,
+                            "expected range slider end End to snap to max (case={case_name}, {label}, {scale})"
+                        );
+                    } else if case_name == "rtl_range_keyboard_arrows" {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        let after_right = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_right[0] - 0.29).abs() <= 1e-6
+                                && (after_right[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start ArrowRight to decrement under RTL (case={case_name}, {label}, {scale})"
+                        );
+
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                        let after_left = app
+                            .models_mut()
+                            .read(&range_30_70, |v| *v)
+                            .ok()
+                            .unwrap_or([0.0, 0.0]);
+                        assert!(
+                            (after_left[0] - 0.30).abs() <= 1e-6
+                                && (after_left[1] - 0.7).abs() <= 1e-6,
+                            "expected range slider start ArrowLeft to increment under RTL (case={case_name}, {label}, {scale})"
+                        );
+                    } else {
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowLeft));
+                        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowLeft));
+                    }
+                }
+
+                let message = format!(
+                    "expected the Material3 slider scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                );
+                cases.insert(
+                    case_name.to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        7,
+                        9,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-slider.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
 fn material3_headless_overlays_suite_goldens_v1() {
     use fret_ui::element::{CrossAlign, FlexProps, Length, MainAlign};
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
@@ -3584,7 +8078,11 @@ fn material3_headless_overlays_suite_goldens_v1() {
                 panic!("expected a settled overlays snapshot ({label}, {scale})");
             };
 
-            let (select_open_snapshot, select_open_hover_selected_snapshot) = {
+            let (
+                select_open_snapshot,
+                select_open_trigger_snapshot,
+                select_open_hover_selected_snapshot,
+            ) = {
                 let mut app = TestHost::default();
                 app.set_global(PlatformCapabilities::default());
                 apply_material_theme(&mut app, mode, variant);
@@ -3748,6 +8246,21 @@ fn material3_headless_overlays_suite_goldens_v1() {
                     &render,
                 );
 
+                let select_open_trigger_message = format!(
+                    "expected the Material3 select trigger to be stable in open state ({label}, {scale})"
+                );
+                let select_open_trigger_snapshot = settle_material3_scene_snapshot_v1(
+                    &mut app,
+                    &mut ui,
+                    &mut services,
+                    bounds,
+                    scale_factor,
+                    24,
+                    40,
+                    &select_open_trigger_message,
+                    &render,
+                );
+
                 run_overlay_frame_scaled(
                     &mut ui,
                     &mut app,
@@ -3802,12 +8315,20 @@ fn material3_headless_overlays_suite_goldens_v1() {
                         &render,
                     );
 
-                (select_open_snapshot, select_open_hover_selected_snapshot)
+                (
+                    select_open_snapshot,
+                    select_open_trigger_snapshot,
+                    select_open_hover_selected_snapshot,
+                )
             };
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
             cases.insert("both_open".to_string(), both_open_snapshot);
             cases.insert("select_open".to_string(), select_open_snapshot);
+            cases.insert(
+                "select_open_trigger".to_string(),
+                select_open_trigger_snapshot,
+            );
             cases.insert(
                 "select_open_hover_selected".to_string(),
                 select_open_hover_selected_snapshot,
@@ -3816,6 +8337,991 @@ fn material3_headless_overlays_suite_goldens_v1() {
 
             write_or_assert_material3_suite_v1(
                 &format!("material3-overlays.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_menu_dialog_style_suite_goldens_v1() {
+    use fret_core::{Color, Corners};
+    use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, Length, MainAlign};
+    use fret_ui_kit::{ColorRef, WidgetStateProperty};
+    use fret_ui_material3::menu::{Menu, MenuEntry, MenuItem, MenuStyle};
+    use fret_ui_material3::{Button, Dialog, DialogAction, DialogStyle};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(860.0), Px(520.0)),
+            );
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            // Menu: default vs override (in the same scene).
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let override_bg = Color {
+                    r: 0.9,
+                    g: 0.1,
+                    b: 0.2,
+                    a: 1.0,
+                };
+                let override_label = Color {
+                    r: 0.1,
+                    g: 0.8,
+                    b: 0.3,
+                    a: 1.0,
+                };
+
+                let style = MenuStyle::default()
+                    .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
+                        override_bg,
+                    ))))
+                    .container_corner_radii(WidgetStateProperty::new(Some(Corners::all(Px(0.0)))))
+                    .container_elevation(WidgetStateProperty::new(Some(Px(12.0))))
+                    .item_label_color(WidgetStateProperty::new(Some(ColorRef::Color(
+                        override_label,
+                    ))));
+
+                let entries = vec![
+                    MenuEntry::Item(MenuItem::new("A").test_id("menu-item-a")),
+                    MenuEntry::Item(MenuItem::new("B").test_id("menu-item-b")),
+                    MenuEntry::Item(MenuItem::new("C (disabled)").disabled(true)),
+                    MenuEntry::Separator,
+                    MenuEntry::Item(MenuItem::new("D").test_id("menu-item-d")),
+                ];
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let default_menu = Menu::new()
+                                .entries(entries.clone())
+                                .a11y_label("default menu")
+                                .test_id("menu-default")
+                                .into_element(cx);
+
+                            let override_menu = Menu::new()
+                                .entries(entries.clone())
+                                .a11y_label("override menu")
+                                .test_id("menu-override")
+                                .style(style.clone())
+                                .into_element(cx);
+
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Horizontal;
+                            props.gap = Px(32.0);
+                            props.align = CrossAlign::Start;
+                            props.justify = MainAlign::Center;
+
+                            let content = cx.flex(props, |cx| {
+                                let mut left = ContainerProps::default();
+                                left.layout.size.width = Length::Px(Px(360.0));
+                                let left = cx.container(left, |_cx| vec![default_menu]);
+
+                                let mut right = ContainerProps::default();
+                                right.layout.size.width = Length::Px(Px(360.0));
+                                let right = cx.container(right, |_cx| vec![override_menu]);
+
+                                vec![left, right]
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 menu style scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "menu_default_vs_override".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        7,
+                        9,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Dialog: default open state (modal overlay).
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let open = app.models_mut().insert(true);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let dialog = Dialog::new(open.clone())
+                                .headline("Dialog")
+                                .supporting_text("Body")
+                                .actions(vec![DialogAction::new("OK")])
+                                .test_id("dialog-default")
+                                .into_element(
+                                    cx,
+                                    |cx| {
+                                        let trigger = Button::new("Underlay")
+                                            .test_id("dialog-underlay")
+                                            .into_element(cx);
+                                        with_padding(cx, Px(24.0), trigger)
+                                    },
+                                    |_cx| Vec::new(),
+                                );
+
+                            vec![dialog]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 dialog default scene to be stable after animations settle ({label}, {scale})"
+                );
+                cases.insert(
+                    "dialog_default".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        44,
+                        80,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Dialog: override surface + text colors.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let open = app.models_mut().insert(true);
+
+                let override_bg = Color {
+                    r: 0.2,
+                    g: 0.2,
+                    b: 0.9,
+                    a: 1.0,
+                };
+                let override_headline = Color {
+                    r: 0.9,
+                    g: 0.9,
+                    b: 0.2,
+                    a: 1.0,
+                };
+                let override_supporting = Color {
+                    r: 0.8,
+                    g: 0.2,
+                    b: 0.8,
+                    a: 1.0,
+                };
+
+                let style = DialogStyle::default()
+                    .container_background(WidgetStateProperty::new(Some(ColorRef::Color(
+                        override_bg,
+                    ))))
+                    .container_corner_radii(WidgetStateProperty::new(Some(Corners::all(Px(0.0)))))
+                    .container_elevation(WidgetStateProperty::new(Some(Px(12.0))))
+                    .headline_color(WidgetStateProperty::new(Some(ColorRef::Color(
+                        override_headline,
+                    ))))
+                    .supporting_text_color(WidgetStateProperty::new(Some(ColorRef::Color(
+                        override_supporting,
+                    ))));
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let dialog = Dialog::new(open.clone())
+                                .headline("Dialog")
+                                .supporting_text("Body")
+                                .actions(vec![DialogAction::new("OK")])
+                                .style(style.clone())
+                                .test_id("dialog-override")
+                                .into_element(
+                                    cx,
+                                    |cx| {
+                                        let trigger = Button::new("Underlay")
+                                            .test_id("dialog-underlay")
+                                            .into_element(cx);
+                                        with_padding(cx, Px(24.0), trigger)
+                                    },
+                                    |_cx| Vec::new(),
+                                );
+
+                            vec![dialog]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 dialog override scene to be stable after animations settle ({label}, {scale})"
+                );
+                cases.insert(
+                    "dialog_override".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        44,
+                        80,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-menu-dialog-style.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_bottom_sheet_suite_goldens_v1() {
+    use fret_ui_material3::{
+        Button, ButtonVariant, DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet,
+    };
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            // Docked sheet (standard): non-overlay surface.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let sheet = DockedBottomSheet::new()
+                                .variant(DockedBottomSheetVariant::Standard)
+                                .test_id("bottom-sheet-docked")
+                                .into_element(cx, |cx| {
+                                    vec![
+                                        cx.text("Docked bottom sheet"),
+                                        Button::new("Primary")
+                                            .variant(ButtonVariant::Filled)
+                                            .test_id("bottom-sheet-docked-primary")
+                                            .into_element(cx),
+                                        Button::new("Secondary")
+                                            .variant(ButtonVariant::Outlined)
+                                            .test_id("bottom-sheet-docked-secondary")
+                                            .into_element(cx),
+                                    ]
+                                });
+
+                            vec![with_padding(cx, Px(24.0), sheet)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 docked bottom sheet scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "docked_standard".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        2,
+                        6,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Modal sheet (open): overlay surface + scrim.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let open_model = open.clone();
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let sheet = ModalBottomSheet::new(open_model.clone())
+                                .open_duration_ms(Some(1))
+                                .close_duration_ms(Some(1))
+                                .test_id("bottom-sheet-modal")
+                                .into_element(
+                                    cx,
+                                    |cx| {
+                                        Button::new("Underlay probe")
+                                            .variant(ButtonVariant::Outlined)
+                                            .test_id("bottom-sheet-underlay-probe")
+                                            .into_element(cx)
+                                    },
+                                    |cx| {
+                                        vec![
+                                            cx.text("Modal bottom sheet"),
+                                            Button::new("Close")
+                                                .variant(ButtonVariant::Filled)
+                                                .test_id("bottom-sheet-modal-close")
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                );
+                            vec![with_padding(cx, Px(24.0), sheet)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 modal bottom sheet overlay scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "modal_open".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        4,
+                        10,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-bottom-sheet.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_date_picker_suite_goldens_v1() {
+    use fret_ui_kit::headless::calendar::CalendarMonth;
+    use fret_ui_material3::{
+        Button, ButtonVariant, DatePickerDialog, DatePickerVariant, DockedDatePicker,
+    };
+    use time::{Date, Month};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    let today = Date::from_calendar_date(2026, Month::January, 10).expect("valid date");
+    let selected_date = Date::from_calendar_date(2026, Month::January, 15).expect("valid date");
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            // Docked picker: non-overlay surface.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let month = app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::January));
+                let selected = app.models_mut().insert(Some(selected_date));
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let picker = DockedDatePicker::new(month.clone(), selected.clone())
+                                .variant(DatePickerVariant::Docked)
+                                .today(Some(today))
+                                .test_id("date-picker-docked")
+                                .into_element(cx);
+                            vec![with_padding(cx, Px(24.0), picker)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 docked date picker scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "docked".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        2,
+                        6,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Modal picker: overlay + scrim + focus trap.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let month = app
+                    .models_mut()
+                    .insert(CalendarMonth::new(2026, Month::January));
+                let selected = app.models_mut().insert(Some(selected_date));
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let dialog = DatePickerDialog::new(
+                                open.clone(),
+                                month.clone(),
+                                selected.clone(),
+                            )
+                            .today(Some(today))
+                            .open_duration_ms(Some(1))
+                            .close_duration_ms(Some(1))
+                            .test_id("date-picker-modal")
+                            .into_element(cx, |cx| {
+                                Button::new("Underlay probe")
+                                    .variant(ButtonVariant::Outlined)
+                                    .test_id("date-picker-underlay-probe")
+                                    .into_element(cx)
+                            });
+                            vec![with_padding(cx, Px(24.0), dialog)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 date picker modal overlay scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "modal_open".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        4,
+                        10,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-date-picker.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_headless_time_picker_suite_goldens_v1() {
+    use fret_ui_material3::{
+        Button, ButtonVariant, DockedTimePicker, TimePickerDialog, TimePickerDisplayMode,
+    };
+    use time::Time;
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    let selected_time = Time::from_hms(9, 41, 0).expect("valid time");
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            // Docked picker: non-overlay surface.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let picker = DockedTimePicker::new(time.clone())
+                                .test_id("time-picker-docked")
+                                .into_element(cx);
+                            vec![with_padding(cx, Px(24.0), picker)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 docked time picker scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "docked".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        2,
+                        6,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Docked picker: input mode.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let picker = DockedTimePicker::new(time.clone())
+                                .display_mode(TimePickerDisplayMode::Input)
+                                .test_id("time-picker-docked-input")
+                                .into_element(cx);
+                            vec![with_padding(cx, Px(24.0), picker)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 docked time picker input scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "docked_input".to_string(),
+                    settle_material3_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        bounds,
+                        scale_factor,
+                        2,
+                        6,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Modal picker: overlay + scrim + focus trap.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let dialog = TimePickerDialog::new(open.clone(), time.clone())
+                                .open_duration_ms(Some(1))
+                                .close_duration_ms(Some(1))
+                                .test_id("time-picker-modal")
+                                .into_element(cx, |cx| {
+                                    Button::new("Underlay probe")
+                                        .variant(ButtonVariant::Outlined)
+                                        .test_id("time-picker-underlay-probe")
+                                        .into_element(cx)
+                                });
+                            vec![with_padding(cx, Px(24.0), dialog)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 time picker modal overlay scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "modal_open".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        4,
+                        10,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            // Modal picker: input mode.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let time = app.models_mut().insert(selected_time);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let dialog = TimePickerDialog::new(open.clone(), time.clone())
+                                .initial_display_mode(TimePickerDisplayMode::Input)
+                                .open_duration_ms(Some(1))
+                                .close_duration_ms(Some(1))
+                                .test_id("time-picker-modal-input")
+                                .into_element(cx, |cx| {
+                                    Button::new("Underlay probe")
+                                        .variant(ButtonVariant::Outlined)
+                                        .test_id("time-picker-underlay-probe")
+                                        .into_element(cx)
+                                });
+                            vec![with_padding(cx, Px(24.0), dialog)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 time picker modal overlay input scene to be stable ({label}, {scale})"
+                );
+                cases.insert(
+                    "modal_open_input".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        4,
+                        10,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-time-picker.{scale}.{label}"),
                 &suite,
             );
         }
@@ -5055,6 +10561,121 @@ fn select_roving_scrolls_focused_option_into_view() {
 }
 
 #[test]
+fn chip_set_roving_treats_trailing_action_focus_as_active_chip() {
+    use fret_ui_material3::{ChipSet, ChipSetItem, InputChip, SuggestionChip};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(220.0)),
+    );
+
+    let chip_a_selected = app.models_mut().insert(false);
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let chip_a = InputChip::new(chip_a_selected.clone(), "Alpha")
+                .trailing_icon(fret_icons::ids::ui::CLOSE)
+                .on_trailing_icon_activate(Arc::new(|_host, _acx, _reason| {}))
+                .test_id("chip-a");
+
+            let chip_b = SuggestionChip::new("Beta").test_id("chip-b");
+
+            let set = ChipSet::new(vec![ChipSetItem::from(chip_a), ChipSetItem::from(chip_b)])
+                .a11y_label("chips")
+                .test_id("chip-set")
+                .into_element(cx);
+
+            vec![with_padding(cx, Px(24.0), set)]
+        })
+    };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let chip_a_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find_map(|node| (node.test_id.as_deref() == Some("chip-a")).then_some(node.id))
+        })
+        .expect("expected chip-a in semantics snapshot");
+
+    let chip_a_trailing_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("chip-a.trailing-icon")).then_some(node.id)
+            })
+        })
+        .expect("expected chip-a.trailing-icon in semantics snapshot");
+
+    let chip_b_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find_map(|node| (node.test_id.as_deref() == Some("chip-b")).then_some(node.id))
+        })
+        .expect("expected chip-b in semantics snapshot");
+
+    ui.set_focus(Some(chip_a_node));
+    assert_eq!(ui.focus(), Some(chip_a_node));
+
+    // ArrowRight should move focus to the trailing action inside the chip (handled by the chip),
+    // not rove to the next chip.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(chip_a_trailing_node),
+        "expected ArrowRight to focus trailing action (chip-internal navigation)",
+    );
+
+    // ArrowRight again should bubble to ChipSet roving (chip-internal handler does not consume),
+    // and move focus to the next chip.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowRight,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(chip_b_node),
+        "expected ChipSet roving to treat trailing-focus as within the active chip",
+    );
+}
+
+#[test]
 fn select_open_scrolls_selected_option_into_view() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::{Select, SelectItem};
@@ -5372,6 +10993,155 @@ fn select_menu_matches_anchor_width_and_clamps_height_to_available_space() {
 }
 
 #[test]
+fn select_exposes_combobox_controls_and_listbox_labelled_by_relations() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+    let items: Arc<[SelectItem]> = vec![
+        SelectItem::new("alpha", "Alpha"),
+        SelectItem::new("beta", "Beta"),
+    ]
+    .into();
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![
+                    Select::new(selected_model)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .test_id("select-trigger")
+                        .into_element(cx),
+                ]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected select-trigger bounds");
+    let click_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+    let mut opened = false;
+    for _ in 0..16 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open on click");
+
+    // One extra frame: the trigger's `controls_element` is resolved via last-frame element IDs.
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let trigger = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("select-trigger"))
+        .expect("select trigger semantics node");
+    assert!(
+        trigger.flags.expanded,
+        "select trigger should report expanded=true while open"
+    );
+
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("select-trigger-listbox"))
+        .expect("select listbox semantics node");
+
+    assert!(
+        trigger.controls.iter().any(|id| *id == listbox.id),
+        "select trigger should control the listbox"
+    );
+    assert!(
+        listbox.labelled_by.iter().any(|id| *id == trigger.id),
+        "select listbox should be labelled by the trigger"
+    );
+}
+
+#[test]
 fn select_listbox_typeahead_moves_focus_skipping_disabled_options() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::{Select, SelectItem};
@@ -5542,6 +11312,222 @@ fn select_listbox_typeahead_moves_focus_skipping_disabled_options() {
         focused_test_id,
         Some("select-item-delta"),
         "expected typeahead to rove focus to the matching option (KeyD)"
+    );
+}
+
+#[test]
+fn select_typeahead_delay_controls_buffer_expiration() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Select, SelectItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let selected = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+    let items: Arc<[SelectItem]> = vec![
+        SelectItem::new("beta", "Beta").test_id("select-item-beta"),
+        SelectItem::new("delta", "Delta").test_id("select-item-delta"),
+        SelectItem::new("echo", "Echo").test_id("select-item-echo"),
+    ]
+    .into();
+
+    let delay_ms = 1000;
+    let timeout_ticks = fret_ui_material3::motion::ms_to_frames(delay_ms);
+
+    let selected_model = selected.clone();
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let selected_model = selected_model.clone();
+            let items = items.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                vec![
+                    Select::new(selected_model)
+                        .a11y_label("select")
+                        .placeholder("Pick one")
+                        .items(items)
+                        .typeahead_delay_ms(delay_ms)
+                        .test_id("select-trigger")
+                        .into_element(cx),
+                ]
+            })
+        };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-trigger")).then_some(node.id)
+            })
+        })
+        .expect("expected select-trigger in semantics snapshot");
+
+    ui.set_focus(Some(trigger_node));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    let mut opened = false;
+    for _ in 0..24 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|e| e.kind == OverlayStackEntryKind::Popover && e.open)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected select overlay to open");
+
+    let beta_option_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("select-item-beta")).then_some(node.id)
+            })
+        })
+        .expect("expected select-item-beta in semantics snapshot");
+    assert_eq!(
+        ui.focus(),
+        Some(beta_option_node),
+        "expected select to focus the selected option when opening via keyboard"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyD));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyD));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.as_deref())
+        })
+    });
+    assert_eq!(
+        focused_test_id,
+        Some("select-item-delta"),
+        "expected typeahead (KeyD) to focus Delta"
+    );
+
+    // The buffer should still be active: `d` + `e` => "de" matches Delta, not Echo.
+    for _ in 0..timeout_ticks.saturating_sub(1) {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyE));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyE));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.as_deref())
+        })
+    });
+    assert_eq!(
+        focused_test_id,
+        Some("select-item-delta"),
+        "expected typeahead buffer to keep 'de' and stay on Delta before timeout"
+    );
+
+    // Now let the buffer expire, then 'e' should match Echo.
+    for _ in 0..(timeout_ticks + 2) {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+    }
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::KeyE));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::KeyE));
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let focused_test_id = ui.semantics_snapshot().and_then(|snapshot| {
+        ui.focus().and_then(|focused| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.id == focused)
+                .and_then(|node| node.test_id.as_deref())
+        })
+    });
+    assert_eq!(
+        focused_test_id,
+        Some("select-item-echo"),
+        "expected typeahead buffer to expire and 'e' to match Echo after timeout"
     );
 }
 

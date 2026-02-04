@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use super::{ColumnDef, ColumnFilter, GlobalFilterState, SortCmpFn, SortSpec};
+use serde_json::Value;
 
 use super::memo::Memo;
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct FlatRowOrderDeps {
     pub items_revision: u64,
     pub data_len: usize,
@@ -60,7 +61,7 @@ pub fn compute_flat_row_order<TData>(
         })
         .collect();
 
-    let resolved_column_filters: Vec<(super::FilterFn<TData>, Arc<str>)> = column_filters
+    let resolved_column_filters: Vec<(super::FilterFn<TData>, Value)> = column_filters
         .iter()
         .filter_map(|filter| {
             let filter_fn = columns
@@ -83,16 +84,16 @@ pub fn compute_flat_row_order<TData>(
             let row = &data[i];
 
             for (filter_fn, value) in &resolved_column_filters {
-                if !filter_fn(row, value.as_ref()) {
+                if !filter_fn(row, value) {
                     return false;
                 }
             }
 
-            let Some(global) = global_filter.as_ref() else {
+            let Some(global_value) = global_filter.as_ref() else {
                 return true;
             };
             for filter_fn in &global_filter_fns {
-                if filter_fn(row, global.as_ref()) {
+                if filter_fn(row, &global_value) {
                     return true;
                 }
             }
@@ -290,7 +291,7 @@ mod tests {
             }],
             &[crate::table::ColumnFilter {
                 column: "kind".into(),
-                value: "keep".into(),
+                value: serde_json::Value::from("keep"),
             }],
             None,
         );

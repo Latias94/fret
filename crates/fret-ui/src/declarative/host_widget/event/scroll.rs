@@ -117,8 +117,10 @@ pub(super) fn handle_virtual_list<H: UiHost>(
                                     this.element,
                                 );
                             if retained {
-                                window_state
-                                    .mark_retained_virtual_list_needs_reconcile(this.element);
+                                window_state.mark_retained_virtual_list_needs_reconcile(
+                                    this.element,
+                                    crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
+                                );
                             }
                             retained
                         },

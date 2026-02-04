@@ -27,10 +27,12 @@ type OpenStep =
   | { action: "attr"; selector: string; name: string; value: string }
   | { action: "mouseDown"; selector: string }
   | { action: "mouseUp"; selector: string }
+  | { action: "hoverNoWait"; selector: string }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
   | { action: "type"; selector: string; text: string }
   | { action: "scroll"; selector: string; dx: number; dy: number }
+  | { action: "scrollTo"; selector: string; left: number; top: number }
 
 type GoldenOptions = {
   baseUrl: string
@@ -45,6 +47,7 @@ type GoldenOptions = {
   viewportW: number
   viewportH: number
   deviceScaleFactor: number
+  freezeDate?: string
   openSelector?: string
   openAction?: OpenAction
   openKeys?: KeyChord
@@ -502,6 +505,39 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "scrollTo") {
+      const at = valueRaw.indexOf("@")
+      if (at === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const selector = valueRaw.slice(0, at).trim()
+      const posRaw = valueRaw.slice(at + 1).trim()
+      if (!selector || !posRaw) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const comma = posRaw.indexOf(",")
+      if (comma === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const leftRaw = posRaw.slice(0, comma).trim()
+      const topRaw = posRaw.slice(comma + 1).trim()
+      const left = Number(leftRaw)
+      const top = Number(topRaw)
+      if (!Number.isFinite(left) || !Number.isFinite(top)) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected finite left,top numbers)`
+        )
+      }
+      out.push({ action: "scrollTo", selector, left, top })
+      continue
+    }
+
     if (actionRaw === "type") {
       const at = valueRaw.indexOf("@")
       if (at === -1) {
@@ -567,13 +603,21 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "hoverNoWait") {
+      if (!valueRaw) {
+        throw new Error(`invalid --openSteps entry "${part}" (empty selector for hoverNoWait)`)
+      }
+      out.push({ action: "hoverNoWait", selector: valueRaw })
+      continue
+    }
+
     if (
       actionRaw !== "click" &&
       actionRaw !== "hover" &&
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|attr|mouseDown|mouseUp|wait|waitFor|move)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|hoverNoWait|contextmenu|keys|type|scroll|scrollTo|attr|mouseDown|mouseUp|wait|waitFor|move)`
       )
     }
 
@@ -633,6 +677,9 @@ async function extractOne(page: puppeteer.Page) {
       "aria-label",
       "aria-labelledby",
       "aria-describedby",
+      "aria-live",
+      "aria-relevant",
+      "aria-atomic",
       "aria-invalid",
       "aria-checked",
       "aria-selected",
@@ -658,6 +705,12 @@ async function extractOne(page: puppeteer.Page) {
       "data-radix-scroll-area-corner",
       // Useful for overlay wrapper alignment.
       "data-radix-popper-content-wrapper",
+      // Sonner (toast) attributes.
+      "data-sonner-toaster",
+      "data-sonner-toast",
+      "data-x-position",
+      "data-y-position",
+      "data-type",
     ];
 
     const styleKeys = [
@@ -743,8 +796,68 @@ async function extractOne(page: puppeteer.Page) {
       return txt;
     };
 
+    function areaOfRect(r) {
+      if (!r) return 0;
+      const w = typeof r.w === "number" ? r.w : typeof r.width === "number" ? r.width : 0;
+      const h = typeof r.h === "number" ? r.h : typeof r.height === "number" ? r.height : 0;
+      if (!isFinite(w) || !isFinite(h)) return 0;
+      return Math.max(0, w) * Math.max(0, h);
+    }
+
+    function rectFromSvgBBox(el) {
+      try {
+        if (!(el instanceof SVGGraphicsElement)) return null;
+
+        // Only apply SVG bbox transforms to Recharts nodes: this avoids churn for unrelated SVG
+        // usage (icons, etc) while fixing getBoundingClientRect() returning near-zero boxes for
+        // <g> layers in Radar/Radial charts.
+        const cls = el.getAttribute("class") || "";
+        if (!cls.includes("recharts-")) return null;
+
+        const bbox = el.getBBox();
+        const ctm = el.getScreenCTM();
+        if (!ctm) return null;
+
+        // Transform bbox corners into screen space; bbox is in local SVG units.
+        const p1 = new DOMPoint(bbox.x, bbox.y).matrixTransform(ctm);
+        const p2 = new DOMPoint(bbox.x + bbox.width, bbox.y).matrixTransform(ctm);
+        const p3 = new DOMPoint(bbox.x, bbox.y + bbox.height).matrixTransform(ctm);
+        const p4 = new DOMPoint(bbox.x + bbox.width, bbox.y + bbox.height).matrixTransform(ctm);
+
+        const xs = [p1.x, p2.x, p3.x, p4.x];
+        const ys = [p1.y, p2.y, p3.y, p4.y];
+
+        const minX = Math.min(...xs);
+        const maxX = Math.max(...xs);
+        const minY = Math.min(...ys);
+        const maxY = Math.max(...ys);
+
+        const w = maxX - minX;
+        const h = maxY - minY;
+        if (!isFinite(w) || !isFinite(h) || w < 0 || h < 0) return null;
+
+        return {
+          x: minX - rootRect.x,
+          y: minY - rootRect.y,
+          w,
+          h,
+        };
+      } catch {
+        return null;
+      }
+    }
+
     function traverse(el, pathStr) {
       const rect = el.getBoundingClientRect();
+      const bboxRect = rectFromSvgBBox(el);
+      const rectArea = rect.width * rect.height;
+      const bboxArea = areaOfRect(bboxRect);
+      const useBbox =
+        bboxRect &&
+        // getBoundingClientRect() can report near-zero boxes for SVG <g> layers; prefer bbox when it
+        // is meaningfully larger.
+        (rectArea < 1 || bboxArea > rectArea * 4);
+      const finalRect = useBbox ? bboxRect : null;
       const attrs = collectAttrs(el);
       const cls = el.getAttribute("class") || null;
       const id = el.getAttribute("id") || null;
@@ -756,10 +869,10 @@ async function extractOne(page: puppeteer.Page) {
         className: cls || undefined,
         attrs,
         rect: {
-          x: rect.x - rootRect.x,
-          y: rect.y - rootRect.y,
-          w: rect.width,
-          h: rect.height,
+          x: finalRect ? finalRect.x : rect.x - rootRect.x,
+          y: finalRect ? finalRect.y : rect.y - rootRect.y,
+          w: finalRect ? finalRect.w : rect.width,
+          h: finalRect ? finalRect.h : rect.height,
         },
         computedStyle: collectStyle(el),
         text: collectText(el) || undefined,
@@ -772,9 +885,20 @@ async function extractOne(page: puppeteer.Page) {
       // them separate from rect (getBoundingClientRect() can be fractional) so non-web runtimes
       // can gate scroll range behavior 1:1.
       const slot = attrs["data-slot"];
+      const role = attrs["role"];
+      const isSelectViewport =
+        el.hasAttribute("data-radix-select-viewport") || slot === "select-viewport";
+      const isListbox =
+        role === "listbox" &&
+        (out.computedStyle.overflowX === "auto" ||
+          out.computedStyle.overflowX === "scroll" ||
+          out.computedStyle.overflowY === "auto" ||
+          out.computedStyle.overflowY === "scroll");
       const isScrollViewport =
         el.hasAttribute("data-radix-scroll-area-viewport") ||
         slot === "scroll-area-viewport" ||
+        isSelectViewport ||
+        isListbox ||
         out.computedStyle.overflowX === "scroll" ||
         out.computedStyle.overflowY === "scroll";
       if (isScrollViewport) {
@@ -798,11 +922,18 @@ async function extractOne(page: puppeteer.Page) {
       return out;
     }
 
-    const portalCandidates = Array.from(
-      document.querySelectorAll(
-        "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
-      )
-    ).filter((el) => !root.contains(el));
+    const portalCandidates = [
+      ...Array.from(
+        document.querySelectorAll(
+          "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
+        )
+      ),
+      // Sonner does not use Radix-style data-state="open". Treat the toaster container as a
+      // portal-ish surface only when it actually contains at least one toast.
+      ...Array.from(document.querySelectorAll("[data-sonner-toaster]")).filter((el) =>
+        el.querySelector("[data-sonner-toast]")
+      ),
+    ].filter((el) => !root.contains(el));
 
     // Prefer the most specific (leaf-most) open-state nodes so we capture the actual Radix content
     // element rather than wrappers/portals.
@@ -955,7 +1086,7 @@ async function openOverlay(
   const waitExpr = `(() => {
     const root = document.querySelector("${rootSel}") || document.body;
     ${
-      name === "navigation-menu-demo"
+      name.startsWith("navigation-menu-demo")
         ? `
     // NavigationMenu does not portal its viewport by default, so "open" state stays within the
     // golden root. Treat an open viewport/content as success for open-mode extraction.
@@ -972,6 +1103,7 @@ async function openOverlay(
     if (outside("[role='menu']").length > 0) return true;
     if (outside("[role='listbox']").length > 0) return true;
     if (outside("[role='dialog']").length > 0) return true;
+    if (outside("[data-sonner-toast]").length > 0) return true;
     return false;
   })()`
 
@@ -1074,7 +1206,13 @@ async function openOverlay(
 async function openOverlayOutsideCounts(
   page: puppeteer.Page,
   rootSel: string
-): Promise<{ popperWrapper: number; roleMenu: number; roleDialog: number; dataStateOpen: number }> {
+): Promise<{
+  popperWrapper: number
+  roleMenu: number
+  roleDialog: number
+  dataStateOpen: number
+  dataSonnerToast: number
+}> {
   const expr = `(() => {
     const root = document.querySelector(${JSON.stringify(rootSel)}) || document.body;
     const outsideCount = (sel) =>
@@ -1085,6 +1223,7 @@ async function openOverlayOutsideCounts(
       roleMenu: outsideCount("[role='menu']"),
       roleDialog: outsideCount("[role='dialog']"),
       dataStateOpen: outsideCount("[data-state='open']"),
+      dataSonnerToast: outsideCount("[data-sonner-toast]"),
     };
   })()`
   return (await page.evaluate(expr)) as {
@@ -1092,6 +1231,7 @@ async function openOverlayOutsideCounts(
     roleMenu: number
     roleDialog: number
     dataStateOpen: number
+    dataSonnerToast: number
   }
 }
 
@@ -1154,18 +1294,184 @@ async function applySteps(
       continue
     }
     if (step.action === "scroll") {
-      const expr = `(() => {
-        const sel = ${JSON.stringify(step.selector)};
-        const dx = ${JSON.stringify(step.dx)};
-        const dy = ${JSON.stringify(step.dy)};
-        const el = document.querySelector(sel);
-        if (!el || !(el instanceof Element)) return false;
-        if (typeof (el).scrollBy !== "function") return false;
-        (el).scrollBy(dx, dy);
-        return true;
-      })()`
+      const ok = await page.evaluate(
+        async ({ selector, dx, dy }) => {
+          const raf2 = () =>
+            new Promise<void>((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r()))
+            )
 
-      const ok = (await page.evaluate(expr)) as boolean
+          const els = Array.from(document.querySelectorAll(selector)).filter(
+            (e): e is Element => e instanceof Element
+          )
+          if (els.length === 0) return false
+
+          const scrollables = els.filter((e) => typeof (e as any).scrollBy === "function")
+          if (scrollables.length === 0) return false
+
+          const clamp = (v: number, min: number, max: number) =>
+            Math.max(min, Math.min(max, v))
+
+          // Prefer the most "meaningfully scrollable" match (helps when a selector matches both
+          // the intended viewport and a wrapper that doesn't actually scroll).
+          let best: Element = scrollables[0]
+          let bestScore = -1
+          for (const el of scrollables) {
+            const anyEl = el as any
+            const scrollableX = Math.max(0, (anyEl.scrollWidth ?? 0) - (anyEl.clientWidth ?? 0))
+            const scrollableY = Math.max(0, (anyEl.scrollHeight ?? 0) - (anyEl.clientHeight ?? 0))
+            const score = scrollableX + scrollableY
+            if (score > bestScore) {
+              bestScore = score
+              best = el
+            }
+          }
+
+          const el = best as any
+
+          // Radix Select (and a few other portals) can update the scroll range after open via
+          // layout effects. Wait for the scroll range to stabilize before applying deltas so the
+          // desired scroll doesn't get clamped to an early, smaller maxTop/maxLeft.
+          let lastMaxLeft = -1
+          let lastMaxTop = -1
+          let stableFrames = 0
+          for (let i = 0; i < 24; i++) {
+            const maxLeft = Math.max(
+              0,
+              (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+            )
+            const maxTop = Math.max(
+              0,
+              (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+            )
+            if (maxLeft === lastMaxLeft && maxTop === lastMaxTop) {
+              stableFrames++
+              if (stableFrames >= 2) break
+            } else {
+              stableFrames = 0
+              lastMaxLeft = maxLeft
+              lastMaxTop = maxTop
+            }
+            await raf2()
+          }
+
+          const beforeLeft = Number(el.scrollLeft ?? 0) || 0
+          const beforeTop = Number(el.scrollTop ?? 0) || 0
+          const maxLeft = Math.max(
+            0,
+            (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+          )
+          const maxTop = Math.max(
+            0,
+            (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+          )
+          const desiredLeft = clamp(beforeLeft + dx, 0, maxLeft)
+          const desiredTop = clamp(beforeTop + dy, 0, maxTop)
+
+          el.scrollBy(dx, dy)
+
+          // Let any post-scroll effects run, then re-assert the desired scroll position to avoid
+          // capturing an intermediate state (Radix Select can re-sync scroll on open).
+          await raf2()
+
+          if (dx !== 0 && Math.abs(Number(el.scrollLeft ?? 0) - desiredLeft) > 1) {
+            el.scrollLeft = desiredLeft
+          }
+          if (dy !== 0 && Math.abs(Number(el.scrollTop ?? 0) - desiredTop) > 1) {
+            el.scrollTop = desiredTop
+          }
+
+          await raf2()
+          return true
+        },
+        { selector: step.selector, dx: step.dx, dy: step.dy }
+      )
+      if (!ok) {
+        throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "scrollTo") {
+      const ok = await page.evaluate(
+        async ({ selector, left, top }) => {
+          const raf2 = () =>
+            new Promise<void>((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r()))
+            )
+
+          const els = Array.from(document.querySelectorAll(selector)).filter(
+            (e): e is Element => e instanceof Element
+          )
+          if (els.length === 0) return false
+
+          const scrollables = els.filter((e) => typeof (e as any).scrollTo === "function")
+          if (scrollables.length === 0) return false
+
+          const clamp = (v: number, min: number, max: number) =>
+            Math.max(min, Math.min(max, v))
+
+          let best: Element = scrollables[0]
+          let bestScore = -1
+          for (const el of scrollables) {
+            const anyEl = el as any
+            const scrollableX = Math.max(0, (anyEl.scrollWidth ?? 0) - (anyEl.clientWidth ?? 0))
+            const scrollableY = Math.max(0, (anyEl.scrollHeight ?? 0) - (anyEl.clientHeight ?? 0))
+            const score = scrollableX + scrollableY
+            if (score > bestScore) {
+              bestScore = score
+              best = el
+            }
+          }
+
+          const el = best as any
+
+          // Wait for the scroll range to reach (or stabilize below) the requested position.
+          let lastMaxTop = -1
+          let stableFrames = 0
+          for (let i = 0; i < 32; i++) {
+            const maxTop = Math.max(
+              0,
+              (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+            )
+            if (maxTop >= top) break
+            if (maxTop === lastMaxTop) {
+              stableFrames++
+              if (stableFrames >= 2) break
+            } else {
+              stableFrames = 0
+              lastMaxTop = maxTop
+            }
+            await raf2()
+          }
+
+          const maxLeft = Math.max(
+            0,
+            (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+          )
+          const maxTop = Math.max(
+            0,
+            (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+          )
+          const desiredLeft = clamp(left, 0, maxLeft)
+          const desiredTop = clamp(top, 0, maxTop)
+
+          el.scrollTo(desiredLeft, desiredTop)
+          await raf2()
+
+          if (Math.abs(Number(el.scrollLeft ?? 0) - desiredLeft) > 1) {
+            el.scrollLeft = desiredLeft
+          }
+          if (Math.abs(Number(el.scrollTop ?? 0) - desiredTop) > 1) {
+            el.scrollTop = desiredTop
+          }
+
+          await raf2()
+          return true
+        },
+        { selector: step.selector, left: step.left, top: step.top }
+      )
       if (!ok) {
         throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
       }
@@ -1399,6 +1705,39 @@ async function applyOpenSteps(
       continue
     }
 
+    if (step.action === "hoverNoWait") {
+      if (debug) {
+        console.log(`- openSteps: ${name} step[${idx}] hoverNoWait ${step.selector}`)
+      }
+
+      const point = await (async () => {
+        const expr = `(() => {
+          const rootSel = ${JSON.stringify(rootSel)};
+          const sel = ${JSON.stringify(step.selector)};
+
+          const root = document.querySelector(rootSel) || document.body;
+          const el = document.querySelector(sel);
+          if (!el || !(el instanceof Element)) return null;
+
+          el.scrollIntoView({ block: "center", inline: "center" });
+          const r = el.getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        })()`
+        return (await page.evaluate(expr)) as { x: number; y: number } | null
+      })()
+
+      if (!point) {
+        throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+      }
+
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+
+      // Hover styles may not create a new portal surface; yield a couple RAFs for style/layout to settle.
+      await page.evaluate(`new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))`)
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
     const baseline = await openOverlayOutsideCounts(page, rootSel)
 
     if (debug) {
@@ -1462,12 +1801,14 @@ async function applyOpenSteps(
       const roleMenu = outsideCount("[role='menu']");
       const roleDialog = outsideCount("[role='dialog']");
       const dataStateOpen = outsideCount("[data-state='open']");
+      const dataSonnerToast = outsideCount("[data-sonner-toast]");
 
       return (
         popperWrapper > ${baseline.popperWrapper} ||
         roleMenu > ${baseline.roleMenu} ||
         roleDialog > ${baseline.roleDialog} ||
-        dataStateOpen > ${baseline.dataStateOpen}
+        dataStateOpen > ${baseline.dataStateOpen} ||
+        dataSonnerToast > ${baseline.dataSonnerToast}
       );
     })()`
 
@@ -1646,10 +1987,218 @@ async function waitForShadcnStyles(page: puppeteer.Page, timeoutMs: number) {
   await waitForExpr(page, expr, timeoutMs)
 }
 
+async function settleRaf(page: puppeteer.Page, frames = 2) {
+  const n = Math.max(1, Math.min(8, Math.floor(frames)))
+  const expr = `(() => new Promise((resolve) => {
+    let left = ${n};
+    const tick = () => {
+      left -= 1;
+      if (left <= 0) return resolve(true);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }))()`
+  await page.evaluate(expr)
+}
+
+async function waitForRechartsSeriesIfPresent(
+  page: puppeteer.Page,
+  timeoutMs: number
+) {
+  const debug = process.env.DEBUG_GOLDENS === "1"
+  if (debug) {
+    console.log(`- waitForRechartsSeriesIfPresent: enter (timeoutMs=${timeoutMs})`)
+  }
+
+  const expr = `(() => {
+    const root = document.querySelector("[data-fret-golden-target]") || document.body;
+    if (!root) return false;
+
+    const wrapper =
+      root.querySelector(".recharts-wrapper") ||
+      root.querySelector("svg.recharts-surface");
+    const hasRecharts = !!wrapper;
+    if (!hasRecharts) return true;
+
+    const wrapperRect =
+      wrapper && wrapper instanceof Element ? wrapper.getBoundingClientRect() : null;
+    const minDim =
+      wrapperRect && wrapperRect.width > 0 && wrapperRect.height > 0
+        ? Math.min(wrapperRect.width, wrapperRect.height)
+        : 0;
+    const minSeriesDim = minDim > 0 ? Math.max(10, minDim * 0.2) : 10;
+
+    const bestRect = (nodes) => {
+      let best = null;
+      let bestArea = 0;
+      for (const el of Array.from(nodes)) {
+        if (!(el instanceof Element)) continue;
+        const r = el.getBoundingClientRect();
+        const area = r.width * r.height;
+        if (area > bestArea) {
+          bestArea = area;
+          best = { x: r.x, y: r.y, w: r.width, h: r.height };
+        }
+      }
+      return best;
+    };
+
+    const stableRect = (rect) => {
+      const w = rect.w || 0;
+      const h = rect.h || 0;
+      if (w <= 0 || h <= 0) return false;
+      if (w < minSeriesDim && h < minSeriesDim) return false;
+
+      const now = performance.now();
+      const key = "__fretRechartsStable";
+      // eslint-disable-next-line no-undef
+      const state = (window[key] ||= {
+        x: rect.x,
+        y: rect.y,
+        w,
+        h,
+        since: now,
+      });
+
+      const eps = 0.5;
+      const changed =
+        Math.abs(state.x - rect.x) > eps ||
+        Math.abs(state.y - rect.y) > eps ||
+        Math.abs(state.w - w) > eps ||
+        Math.abs(state.h - h) > eps;
+
+      if (changed) {
+        state.x = rect.x;
+        state.y = rect.y;
+        state.w = w;
+        state.h = h;
+        state.since = now;
+        return false;
+      }
+
+      return now - state.since >= 200;
+    };
+
+    // Prefer per-chart-type series layers to avoid picking up axis/grid shapes.
+    const radarLayer = root.querySelector("g.recharts-layer.recharts-radar");
+    if (radarLayer) {
+      const rect = bestRect(radarLayer.querySelectorAll("path,polygon,rect,circle"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const radialLayer = root.querySelector("g.recharts-layer.recharts-radial-bar");
+    if (radialLayer) {
+      const rect = bestRect(radialLayer.querySelectorAll("path,polygon,rect,circle"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const pieLayer = root.querySelector("g.recharts-layer.recharts-pie");
+    if (pieLayer) {
+      const rect = bestRect(pieLayer.querySelectorAll("path,polygon,rect,circle"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const barLayer = root.querySelector("g.recharts-layer.recharts-bar-rectangles");
+    if (barLayer) {
+      const rect = bestRect(barLayer.querySelectorAll("path,rect"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const areaLayer = root.querySelector("g.recharts-layer.recharts-area");
+    if (areaLayer) {
+      const rect = bestRect(areaLayer.querySelectorAll("path"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    const lineLayer = root.querySelector("g.recharts-layer.recharts-line");
+    if (lineLayer) {
+      const rect = bestRect(lineLayer.querySelectorAll("path"));
+      return rect ? stableRect(rect) : false;
+    }
+
+    // Fallback: any known series-ish node with non-trivial bounds.
+    const candidates = root.querySelectorAll(
+      ".recharts-curve,.recharts-rectangle,.recharts-sector,.recharts-radial-bar-sector"
+    );
+    const rect = bestRect(candidates);
+    return rect ? stableRect(rect) : false;
+  })()`
+
+  await waitForExpr(page, expr, timeoutMs, 25)
+}
+
 async function setThemeBeforeLoad(page: puppeteer.Page, theme: Theme) {
   await page.evaluateOnNewDocument((theme) => {
     localStorage.setItem("theme", theme)
   }, theme)
+}
+
+function parseFreezeDate(iso: string): { year: number; month: number; day: number } {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim())
+  if (!m) {
+    throw new Error(
+      `invalid --freezeDate=${iso} (expected YYYY-MM-DD)`
+    )
+  }
+
+  const year = Number(m[1])
+  const month = Number(m[2])
+  const day = Number(m[3])
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    throw new Error(
+      `invalid --freezeDate=${iso} (expected YYYY-MM-DD)`
+    )
+  }
+
+  return { year, month, day }
+}
+
+async function freezeDateBeforeLoad(page: puppeteer.Page, freezeDate: string) {
+  const { year, month, day } = parseFreezeDate(freezeDate)
+
+  // Keep date/time formatting deterministic across machines.
+  // Puppeteer throws if the timezone ID is unknown, so keep it best-effort.
+  try {
+    await (page as any).emulateTimezone?.("UTC")
+  } catch {
+    // ignore
+  }
+
+  // Use noon UTC to avoid DST / midnight edge cases.
+  const ts = Date.UTC(year, month - 1, day, 12, 0, 0)
+
+  await page.evaluateOnNewDocument((ts) => {
+    const OriginalDate = Date
+    class FrozenDate extends OriginalDate {
+      constructor(...args: any[]) {
+        if (args.length === 0) {
+          super(ts)
+          return
+        }
+        // @ts-ignore - Date constructor overloads are not represented precisely.
+        super(...args)
+      }
+      static now() {
+        return ts
+      }
+    }
+
+    // Preserve static helpers.
+    ;(FrozenDate as any).UTC = (OriginalDate as any).UTC
+    ;(FrozenDate as any).parse = (OriginalDate as any).parse
+    ;(FrozenDate as any).prototype = (OriginalDate as any).prototype
+
+    // @ts-ignore - we intentionally override the global Date constructor.
+    globalThis.Date = FrozenDate
+  }, ts)
 }
 
 function repoRootFromScript(): string {
@@ -1880,6 +2429,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
+      if (options.freezeDate) {
+        await freezeDateBeforeLoad(page, options.freezeDate)
+      }
       await setThemeBeforeLoad(page, options.themes[0] ?? "light")
       const url = `${options.baseUrl}/view/${options.style}/button-default`
       await page.goto(url, { waitUntil: "networkidle2", timeout: options.timeoutMs })
@@ -1912,6 +2464,9 @@ async function run(options: GoldenOptions): Promise<string[]> {
       await page.emulateMediaFeatures([
         { name: "prefers-reduced-motion", value: "reduce" },
       ])
+      if (options.freezeDate) {
+        await freezeDateBeforeLoad(page, options.freezeDate)
+      }
       await setThemeBeforeLoad(page, theme)
       pagesByTheme[theme] = page
     }
@@ -2035,6 +2590,16 @@ async function run(options: GoldenOptions): Promise<string[]> {
                   "[data-fret-golden-target]"
                 )
               }
+
+              // Some pages (notably Recharts-backed `chart-*` examples) render key SVG nodes
+              // asynchronously (ResizeObserver + RAF + JS-driven animation). Wait for those
+              // nodes to exist with non-trivial bounds to keep goldens stable across themes.
+              await settleRaf(page, 2)
+              await waitForRechartsSeriesIfPresent(
+                page,
+                Math.min(8000, options.timeoutMs)
+              )
+              await settleRaf(page, 2)
 
               if (debug) console.log(`- extractOne: ${name}${suffix} (${theme})`)
               const extracted = await extractOne(page)
@@ -2236,6 +2801,11 @@ const stepsRaw =
 
 const steps = stepsRaw ? parseOpenSteps(stepsRaw, openKeys) : undefined
 
+const freezeDate =
+  (typeof flags.freezeDate === "string" ? flags.freezeDate : undefined) ??
+  process.env.FREEZE_DATE ??
+  undefined
+
 const defaultNames = ["button-default", "tabs-demo"]
 const all = flags.all === true || process.env.ALL_GOLDENS === "1"
 
@@ -2282,9 +2852,15 @@ function printHelp() {
   console.log("  --style=new-york-v4")
   console.log("  --themes=light,dark")
   console.log("  --modes=closed,open  (or --open)")
+  console.log("  --freezeDate=YYYY-MM-DD  (optional; makes time-dependent examples deterministic)")
   console.log("  --outDir=...")
   console.log("  --update")
   console.log("  --all")
+  console.log("")
+  console.log("Notes:")
+  console.log("  - Positional arguments are *route names* (e.g. \"chart-line-interactive\").")
+  console.log("  - Do not pass output-key suffixes like \".hover-mid\" or \".open\" as part of the name.")
+  console.log("  - Use --variants=... and/or --modes=... instead.")
   console.log("")
   console.log("Viewport flags:")
   console.log("  --viewportW=1440 --viewportH=900 --deviceScaleFactor=2")
@@ -2327,9 +2903,21 @@ try {
   console.log(`- openKeys: ${openKeys ? `${openKeys.modifiers.join("+")}+${openKeys.key}` : ""}`)
   console.log(`- steps: ${steps?.length ?? 0}`)
   console.log(`- openSteps: ${openSteps?.length ?? 0}`)
+  console.log(`- freezeDate: ${freezeDate ?? ""}`)
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
+
+  const invalidNames = finalNames.filter((name) => name.includes("."))
+  if (invalidNames.length > 0) {
+    throw new Error(
+      `invalid route names (must not contain '.', got: ${invalidNames.join(", ")}). ` +
+        `If you meant to update an output key like "chart-line-interactive.hover-mid", ` +
+        `pass the base route name and use --variants=hover-mid. ` +
+        `Example: node goldens/shadcn-web/scripts/extract-golden.mts --startServer ` +
+        `--baseUrl=http://localhost:4020 --variants=hover-mid chart-line-interactive --update`
+    )
+  }
 
   if (startServer) {
     startedServer = await startNextServer(nextDir, baseUrl)
@@ -2352,6 +2940,7 @@ try {
     viewportW,
     viewportH,
     deviceScaleFactor,
+    freezeDate,
     openSelector,
     openAction,
     openKeys,
