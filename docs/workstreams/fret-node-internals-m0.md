@@ -80,6 +80,7 @@ Evidence:
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
 - Drag preview cache guardrail: `ecosystem/fret-node/src/ui/canvas/widget/tests/drag_preview_conformance.rs`
 - Node resize preview cache guardrail: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`
+- Group preview cache guardrail: `ecosystem/fret-node/src/ui/canvas/widget/tests/group_preview_conformance.rs`
 
 ### 2) Invalidation discipline (no over/under invalidation)
 

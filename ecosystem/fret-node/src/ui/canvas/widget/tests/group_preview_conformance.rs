@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fret_core::{Modifiers, Point, Px, Rect, Size};
 
 use crate::core::{
@@ -269,6 +271,235 @@ fn group_drag_drives_canvas_derived_preview_and_edge_index() {
     let mut hits_base = Vec::new();
     base_index.query_edges_in_rect(base_aabb, &mut hits_base);
     assert!(hits_base.contains(&edge_id));
+}
+
+#[test]
+fn group_drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, a, _a_in, _a_out, b, _b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(500.0);
+
+    let group_id = crate::core::GroupId::new();
+    let group_rect = CanvasRect {
+        origin: CanvasPoint { x: 0.0, y: 0.0 },
+        size: CanvasSize {
+            width: 800.0,
+            height: 400.0,
+        },
+    };
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: group_rect,
+            color: None,
+        },
+    );
+    graph_value
+        .nodes
+        .get_mut(&a)
+        .expect("node a")
+        .parent
+        .replace(group_id);
+    graph_value
+        .nodes
+        .get_mut(&b)
+        .expect("node b")
+        .parent
+        .replace(group_id);
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+
+    let snapshot0 = canvas.sync_view_state(&mut host);
+    let _ = canvas.canvas_derived(&host, &snapshot0);
+
+    let delta0 = CanvasPoint { x: 40.0, y: 25.0 };
+    let start_a = graph
+        .read_ref(&host, |g| g.nodes.get(&a).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    let start_b = graph
+        .read_ref(&host, |g| g.nodes.get(&b).map(|n| n.pos))
+        .unwrap()
+        .unwrap();
+    let pos0_a = CanvasPoint {
+        x: start_a.x + delta0.x,
+        y: start_a.y + delta0.y,
+    };
+    let pos0_b = CanvasPoint {
+        x: start_b.x + delta0.x,
+        y: start_b.y + delta0.y,
+    };
+
+    let rect0 = CanvasRect {
+        origin: CanvasPoint {
+            x: group_rect.origin.x + delta0.x,
+            y: group_rect.origin.y + delta0.y,
+        },
+        size: group_rect.size,
+    };
+    canvas.interaction.group_drag = Some(GroupDrag {
+        group: group_id,
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+        start_rect: group_rect,
+        nodes: vec![(a, start_a), (b, start_b)],
+        current_rect: rect0,
+        current_nodes: vec![(a, pos0_a), (b, pos0_b)],
+        preview_rev: 1,
+    });
+
+    let (geom0, index0) = canvas.canvas_derived(&host, &snapshot0);
+    let geom0_ptr = Arc::as_ptr(&geom0) as usize;
+    let index0_ptr = Arc::as_ptr(&index0) as usize;
+    drop(geom0);
+    drop(index0);
+
+    // Bumping preview_rev without moving nodes should reuse cached preview geometry/index.
+    {
+        let drag = canvas.interaction.group_drag.as_mut().expect("group drag");
+        drag.preview_rev = 2;
+    }
+    let (geom1, index1) = canvas.canvas_derived(&host, &snapshot0);
+    let geom1_ptr = Arc::as_ptr(&geom1) as usize;
+    let index1_ptr = Arc::as_ptr(&index1) as usize;
+    assert_eq!(
+        geom0_ptr, geom1_ptr,
+        "expected group drag preview_rev bump to reuse cached preview geometry"
+    );
+    assert_eq!(
+        index0_ptr, index1_ptr,
+        "expected group drag preview_rev bump to reuse cached preview spatial index"
+    );
+    drop(geom1);
+    drop(index1);
+
+    // Moving nodes should update the preview in-place (still no full rebuild).
+    let delta1 = CanvasPoint { x: 120.0, y: 90.0 };
+    let pos1_a = CanvasPoint {
+        x: start_a.x + delta1.x,
+        y: start_a.y + delta1.y,
+    };
+    let pos1_b = CanvasPoint {
+        x: start_b.x + delta1.x,
+        y: start_b.y + delta1.y,
+    };
+    let rect1 = CanvasRect {
+        origin: CanvasPoint {
+            x: group_rect.origin.x + delta1.x,
+            y: group_rect.origin.y + delta1.y,
+        },
+        size: group_rect.size,
+    };
+    {
+        let drag = canvas.interaction.group_drag.as_mut().expect("group drag");
+        drag.current_rect = rect1;
+        drag.current_nodes = vec![(a, pos1_a), (b, pos1_b)];
+        drag.preview_rev = 3;
+    }
+    let (geom2, index2) = canvas.canvas_derived(&host, &snapshot0);
+    let geom2_ptr = Arc::as_ptr(&geom2) as usize;
+    let index2_ptr = Arc::as_ptr(&index2) as usize;
+    assert_eq!(
+        geom1_ptr, geom2_ptr,
+        "expected group drag preview movement to update cached preview geometry in-place"
+    );
+    assert_eq!(
+        index1_ptr, index2_ptr,
+        "expected group drag preview movement to update cached preview spatial index in-place"
+    );
+    drop(geom2);
+    drop(index2);
+
+    // If the base spatial index key changes, the preview cache must be invalidated and rebuilt.
+    let _ = view.update(&mut host, |s, _cx| {
+        s.interaction.spatial_index.edge_aabb_pad_screen_px = 200.0;
+    });
+    let snapshot1 = canvas.sync_view_state(&mut host);
+    let _ = canvas.canvas_derived(&host, &snapshot1);
+
+    let (geom3, index3) = canvas.canvas_derived(&host, &snapshot1);
+    let geom3_ptr = Arc::as_ptr(&geom3) as usize;
+    let index3_ptr = Arc::as_ptr(&index3) as usize;
+    assert_ne!(
+        geom2_ptr, geom3_ptr,
+        "expected base index key change to invalidate and rebuild preview geometry"
+    );
+    assert_ne!(
+        index2_ptr, index3_ptr,
+        "expected base index key change to invalidate and rebuild preview spatial index"
+    );
+}
+
+#[test]
+fn group_resize_does_not_rebuild_canvas_derived_geometry() {
+    let mut host = TestUiHostImpl::default();
+    let mut graph_value = Graph::new(GraphId::new());
+
+    let group_id = crate::core::GroupId::new();
+    let base = CanvasRect {
+        origin: CanvasPoint { x: 0.0, y: 0.0 },
+        size: CanvasSize {
+            width: 100.0,
+            height: 100.0,
+        },
+    };
+    graph_value.groups.insert(
+        group_id,
+        crate::core::Group {
+            title: "G".to_string(),
+            rect: base,
+            color: None,
+        },
+    );
+
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    let snapshot = canvas.sync_view_state(&mut host);
+
+    canvas.interaction.group_resize = Some(GroupResize {
+        group: group_id,
+        start_pos: Point::new(Px(0.0), Px(0.0)),
+        start_rect: base,
+        current_rect: base,
+        preview_rev: 1,
+    });
+
+    let (geom0, index0) = canvas.canvas_derived(&host, &snapshot);
+    let geom0_ptr = Arc::as_ptr(&geom0) as usize;
+    let index0_ptr = Arc::as_ptr(&index0) as usize;
+    drop(geom0);
+    drop(index0);
+
+    // Even if the group resize preview rect changes, derived node/port geometry should stay cached.
+    {
+        let resize = canvas
+            .interaction
+            .group_resize
+            .as_mut()
+            .expect("group resize");
+        resize.preview_rev = 2;
+        resize.current_rect = CanvasRect {
+            origin: CanvasPoint { x: 10.0, y: 20.0 },
+            size: CanvasSize {
+                width: 200.0,
+                height: 180.0,
+            },
+        };
+    }
+    let (geom1, index1) = canvas.canvas_derived(&host, &snapshot);
+    let geom1_ptr = Arc::as_ptr(&geom1) as usize;
+    let index1_ptr = Arc::as_ptr(&index1) as usize;
+    assert_eq!(
+        geom0_ptr, geom1_ptr,
+        "expected group resize preview to not rebuild derived node geometry"
+    );
+    assert_eq!(
+        index0_ptr, index1_ptr,
+        "expected group resize preview to not rebuild derived spatial index"
+    );
 }
 
 #[test]
