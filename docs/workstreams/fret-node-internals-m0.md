@@ -238,6 +238,8 @@ After M0A gates are green:
 - [x] Split commit pipelines into small modules to reduce drift (apply vs commit vs history; legacy mirrored).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/commit/`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/commit_legacy/`
+- [x] Split align/distribute move-op pipeline into small modules to reduce drift (label vs planning vs glue).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/`
 - [x] Ensure refactors preserve the public query surfaces of `NodeGraphInternalsStore` and
   `MeasuredGeometryStore`.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
