@@ -22,6 +22,8 @@ pub(super) enum BundleStatsSort {
     RendererTextAtlasEvictedPages,
     RendererSvgUploadBytes,
     RendererImageUploadBytes,
+    RendererSvgRasterCacheMisses,
+    RendererSvgRasterBudgetEvictions,
     RendererIntermediatePeakInUseBytes,
     RendererIntermediatePoolEvictions,
 }
@@ -52,6 +54,12 @@ impl BundleStatsSort {
             "image_upload_bytes" | "renderer_image_upload_bytes" => {
                 Ok(Self::RendererImageUploadBytes)
             }
+            "svg_cache_misses" | "svg_raster_cache_misses" | "renderer_svg_raster_cache_misses" => {
+                Ok(Self::RendererSvgRasterCacheMisses)
+            }
+            "svg_evictions"
+            | "svg_raster_budget_evictions"
+            | "renderer_svg_raster_budget_evictions" => Ok(Self::RendererSvgRasterBudgetEvictions),
             "intermediate_peak_bytes"
             | "intermediate_peak"
             | "renderer_intermediate_peak_in_use_bytes" => {
@@ -61,7 +69,7 @@ impl BundleStatsSort {
             | "intermediate_pool_evictions"
             | "renderer_intermediate_pool_evictions" => Ok(Self::RendererIntermediatePoolEvictions),
             other => Err(format!(
-                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|intermediate_peak_bytes|pool_evictions)"
+                "invalid --sort value: {other} (expected: invalidation|time|dispatch|hit_test|encode_scene|prepare_text|draw_calls|pipeline_switches|bind_group_switches|atlas_upload_bytes|atlas_evicted_pages|svg_upload_bytes|image_upload_bytes|svg_cache_misses|svg_evictions|intermediate_peak_bytes|pool_evictions)"
             )),
         }
     }
@@ -81,6 +89,8 @@ impl BundleStatsSort {
             Self::RendererTextAtlasEvictedPages => "atlas_evicted_pages",
             Self::RendererSvgUploadBytes => "svg_upload_bytes",
             Self::RendererImageUploadBytes => "image_upload_bytes",
+            Self::RendererSvgRasterCacheMisses => "svg_cache_misses",
+            Self::RendererSvgRasterBudgetEvictions => "svg_evictions",
             Self::RendererIntermediatePeakInUseBytes => "intermediate_peak_bytes",
             Self::RendererIntermediatePoolEvictions => "pool_evictions",
         }
@@ -160,6 +170,18 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_prepare_svg_us: u64,
     pub(super) renderer_svg_upload_bytes: u64,
     pub(super) renderer_image_upload_bytes: u64,
+    pub(super) renderer_svg_raster_budget_bytes: u64,
+    pub(super) renderer_svg_rasters_live: u64,
+    pub(super) renderer_svg_standalone_bytes_live: u64,
+    pub(super) renderer_svg_mask_atlas_pages_live: u64,
+    pub(super) renderer_svg_mask_atlas_bytes_live: u64,
+    pub(super) renderer_svg_mask_atlas_used_px: u64,
+    pub(super) renderer_svg_mask_atlas_capacity_px: u64,
+    pub(super) renderer_svg_raster_cache_hits: u64,
+    pub(super) renderer_svg_raster_cache_misses: u64,
+    pub(super) renderer_svg_raster_budget_evictions: u64,
+    pub(super) renderer_svg_mask_atlas_page_evictions: u64,
+    pub(super) renderer_svg_mask_atlas_entries_evicted: u64,
     pub(super) renderer_text_atlas_upload_bytes: u64,
     pub(super) renderer_text_atlas_evicted_pages: u64,
     pub(super) renderer_intermediate_peak_in_use_bytes: u64,
@@ -4003,6 +4025,54 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_image_upload_bytes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_svg_raster_budget_bytes = stats
+                .and_then(|m| m.get("renderer_svg_raster_budget_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_rasters_live = stats
+                .and_then(|m| m.get("renderer_svg_rasters_live"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_standalone_bytes_live = stats
+                .and_then(|m| m.get("renderer_svg_standalone_bytes_live"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_mask_atlas_pages_live = stats
+                .and_then(|m| m.get("renderer_svg_mask_atlas_pages_live"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_mask_atlas_bytes_live = stats
+                .and_then(|m| m.get("renderer_svg_mask_atlas_bytes_live"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_mask_atlas_used_px = stats
+                .and_then(|m| m.get("renderer_svg_mask_atlas_used_px"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_mask_atlas_capacity_px = stats
+                .and_then(|m| m.get("renderer_svg_mask_atlas_capacity_px"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_raster_cache_hits = stats
+                .and_then(|m| m.get("renderer_svg_raster_cache_hits"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_raster_cache_misses = stats
+                .and_then(|m| m.get("renderer_svg_raster_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_raster_budget_evictions = stats
+                .and_then(|m| m.get("renderer_svg_raster_budget_evictions"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_mask_atlas_page_evictions = stats
+                .and_then(|m| m.get("renderer_svg_mask_atlas_page_evictions"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_svg_mask_atlas_entries_evicted = stats
+                .and_then(|m| m.get("renderer_svg_mask_atlas_entries_evicted"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_text_atlas_upload_bytes = stats
                 .and_then(|m| m.get("renderer_text_atlas_upload_bytes"))
                 .and_then(|v| v.as_u64())
@@ -4363,6 +4433,18 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_prepare_svg_us,
                 renderer_svg_upload_bytes,
                 renderer_image_upload_bytes,
+                renderer_svg_raster_budget_bytes,
+                renderer_svg_rasters_live,
+                renderer_svg_standalone_bytes_live,
+                renderer_svg_mask_atlas_pages_live,
+                renderer_svg_mask_atlas_bytes_live,
+                renderer_svg_mask_atlas_used_px,
+                renderer_svg_mask_atlas_capacity_px,
+                renderer_svg_raster_cache_hits,
+                renderer_svg_raster_cache_misses,
+                renderer_svg_raster_budget_evictions,
+                renderer_svg_mask_atlas_page_evictions,
+                renderer_svg_mask_atlas_entries_evicted,
                 renderer_text_atlas_upload_bytes,
                 renderer_text_atlas_evicted_pages,
                 renderer_intermediate_peak_in_use_bytes,
@@ -4571,6 +4653,30 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows.sort_by(|a, b| {
                 b.renderer_image_upload_bytes
                     .cmp(&a.renderer_image_upload_bytes)
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererSvgRasterCacheMisses => {
+            rows.sort_by(|a, b| {
+                b.renderer_svg_raster_cache_misses
+                    .cmp(&a.renderer_svg_raster_cache_misses)
+                    .then_with(|| {
+                        b.renderer_svg_upload_bytes
+                            .cmp(&a.renderer_svg_upload_bytes)
+                    })
+                    .then_with(|| b.renderer_prepare_svg_us.cmp(&a.renderer_prepare_svg_us))
+                    .then_with(|| b.total_time_us.cmp(&a.total_time_us))
+            });
+        }
+        BundleStatsSort::RendererSvgRasterBudgetEvictions => {
+            rows.sort_by(|a, b| {
+                b.renderer_svg_raster_budget_evictions
+                    .cmp(&a.renderer_svg_raster_budget_evictions)
+                    .then_with(|| {
+                        b.renderer_svg_upload_bytes
+                            .cmp(&a.renderer_svg_upload_bytes)
+                    })
+                    .then_with(|| b.renderer_prepare_svg_us.cmp(&a.renderer_prepare_svg_us))
                     .then_with(|| b.total_time_us.cmp(&a.total_time_us))
             });
         }

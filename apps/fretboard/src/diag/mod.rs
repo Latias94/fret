@@ -2838,6 +2838,18 @@ See: `docs/tracy.md`.\n";
                             top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
                         let top_renderer_image_upload_bytes =
                             top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
+                        let top_renderer_svg_raster_cache_misses =
+                            top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
+                        let top_renderer_svg_raster_budget_evictions = top
+                            .map(|r| r.renderer_svg_raster_budget_evictions)
+                            .unwrap_or(0);
+                        let top_renderer_svg_rasters_live =
+                            top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
+                        let top_renderer_svg_mask_atlas_pages_live = top
+                            .map(|r| r.renderer_svg_mask_atlas_pages_live)
+                            .unwrap_or(0);
+                        let top_renderer_svg_mask_atlas_used_px =
+                            top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
                         let top_renderer_intermediate_peak_in_use_bytes = top
                             .map(|r| r.renderer_intermediate_peak_in_use_bytes)
                             .unwrap_or(0);
@@ -2896,6 +2908,11 @@ See: `docs/tracy.md`.\n";
                                 "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
                                 "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
                                 "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
+                                "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
+                                "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
+                                "top_renderer_svg_rasters_live": top_renderer_svg_rasters_live,
+                                "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
+                                "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
                                 "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
                                 "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
                                 "bundle": bundle_path.display().to_string(),
@@ -3239,6 +3256,18 @@ See: `docs/tracy.md`.\n";
                         top.map(|r| r.renderer_svg_upload_bytes).unwrap_or(0);
                     let top_renderer_image_upload_bytes =
                         top.map(|r| r.renderer_image_upload_bytes).unwrap_or(0);
+                    let top_renderer_svg_raster_cache_misses =
+                        top.map(|r| r.renderer_svg_raster_cache_misses).unwrap_or(0);
+                    let top_renderer_svg_raster_budget_evictions = top
+                        .map(|r| r.renderer_svg_raster_budget_evictions)
+                        .unwrap_or(0);
+                    let top_renderer_svg_rasters_live =
+                        top.map(|r| r.renderer_svg_rasters_live).unwrap_or(0);
+                    let top_renderer_svg_mask_atlas_pages_live = top
+                        .map(|r| r.renderer_svg_mask_atlas_pages_live)
+                        .unwrap_or(0);
+                    let top_renderer_svg_mask_atlas_used_px =
+                        top.map(|r| r.renderer_svg_mask_atlas_used_px).unwrap_or(0);
                     let top_renderer_intermediate_peak_in_use_bytes = top
                         .map(|r| r.renderer_intermediate_peak_in_use_bytes)
                         .unwrap_or(0);
@@ -3302,6 +3331,11 @@ See: `docs/tracy.md`.\n";
                         "top_renderer_text_atlas_evicted_pages": top_renderer_text_atlas_evicted_pages,
                         "top_renderer_svg_upload_bytes": top_renderer_svg_upload_bytes,
                         "top_renderer_image_upload_bytes": top_renderer_image_upload_bytes,
+                        "top_renderer_svg_raster_cache_misses": top_renderer_svg_raster_cache_misses,
+                        "top_renderer_svg_raster_budget_evictions": top_renderer_svg_raster_budget_evictions,
+                        "top_renderer_svg_rasters_live": top_renderer_svg_rasters_live,
+                        "top_renderer_svg_mask_atlas_pages_live": top_renderer_svg_mask_atlas_pages_live,
+                        "top_renderer_svg_mask_atlas_used_px": top_renderer_svg_mask_atlas_used_px,
                         "top_renderer_intermediate_peak_in_use_bytes": top_renderer_intermediate_peak_in_use_bytes,
                         "top_renderer_intermediate_pool_evictions": top_renderer_intermediate_pool_evictions,
                         "bundle": bundle_path.display().to_string(),
@@ -3369,6 +3403,16 @@ See: `docs/tracy.md`.\n";
                         let mut top_renderer_svg_upload_bytes: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_renderer_image_upload_bytes: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_raster_cache_misses: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_raster_budget_evictions: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_rasters_live: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_mask_atlas_pages_live: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_renderer_svg_mask_atlas_used_px: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_renderer_intermediate_peak_in_use_bytes: Vec<u64> =
                             Vec::with_capacity(repeat);
@@ -3505,6 +3549,31 @@ See: `docs/tracy.md`.\n";
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
                             );
+                            top_renderer_svg_raster_cache_misses.push(
+                                run.get("top_renderer_svg_raster_cache_misses")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_raster_budget_evictions.push(
+                                run.get("top_renderer_svg_raster_budget_evictions")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_rasters_live.push(
+                                run.get("top_renderer_svg_rasters_live")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_mask_atlas_pages_live.push(
+                                run.get("top_renderer_svg_mask_atlas_pages_live")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_renderer_svg_mask_atlas_used_px.push(
+                                run.get("top_renderer_svg_mask_atlas_used_px")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
                             top_renderer_intermediate_peak_in_use_bytes.push(
                                 run.get("top_renderer_intermediate_peak_in_use_bytes")
                                     .and_then(|v| v.as_u64())
@@ -3555,6 +3624,11 @@ See: `docs/tracy.md`.\n";
 	                                "top_renderer_text_atlas_evicted_pages": summarize_times_us(&top_renderer_text_atlas_evicted_pages),
 	                                "top_renderer_svg_upload_bytes": summarize_times_us(&top_renderer_svg_upload_bytes),
 	                                "top_renderer_image_upload_bytes": summarize_times_us(&top_renderer_image_upload_bytes),
+	                                "top_renderer_svg_raster_cache_misses": summarize_times_us(&top_renderer_svg_raster_cache_misses),
+	                                "top_renderer_svg_raster_budget_evictions": summarize_times_us(&top_renderer_svg_raster_budget_evictions),
+	                                "top_renderer_svg_rasters_live": summarize_times_us(&top_renderer_svg_rasters_live),
+	                                "top_renderer_svg_mask_atlas_pages_live": summarize_times_us(&top_renderer_svg_mask_atlas_pages_live),
+	                                "top_renderer_svg_mask_atlas_used_px": summarize_times_us(&top_renderer_svg_mask_atlas_used_px),
 	                                "top_renderer_intermediate_peak_in_use_bytes": summarize_times_us(&top_renderer_intermediate_peak_in_use_bytes),
 	                                "top_renderer_intermediate_pool_evictions": summarize_times_us(&top_renderer_intermediate_pool_evictions),
 	                            },
