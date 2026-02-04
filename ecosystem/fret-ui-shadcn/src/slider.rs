@@ -888,8 +888,23 @@ pub fn slider<H: UiHost>(
                                     align: CrossAlign::Stretch,
                                 },
                                 |cx| {
-                                    let range_el = cx.container(range, |_| Vec::new());
                                     let range_el = if let Some(test_id) = test_id_prefix.as_ref() {
+                                        // `Semantics` wrappers use a 1x1 grid container by default
+                                        // (see `crates/fret-ui/src/layout_engine/flow.rs`). That
+                                        // means children are not stretched unless they explicitly
+                                        // request `Fill` sizing. The range segment relies on flex
+                                        // sizing in the track row/column, so we move the flex
+                                        // sizing onto the semantics wrapper and paint with a
+                                        // `Fill` child.
+                                        let mut range_paint_layout = LayoutStyle::default();
+                                        range_paint_layout.size.width = Length::Fill;
+                                        range_paint_layout.size.height = Length::Fill;
+                                        let range_paint = ContainerProps {
+                                            layout: range_paint_layout,
+                                            background: Some(range_bg),
+                                            corner_radii: Corners::all(Px(0.0)),
+                                            ..Default::default()
+                                        };
                                         cx.semantics(
                                             SemanticsProps {
                                                 layout: range.layout,
@@ -898,10 +913,12 @@ pub fn slider<H: UiHost>(
                                                 ))),
                                                 ..Default::default()
                                             },
-                                            move |_cx| vec![range_el],
+                                            move |cx| {
+                                                vec![cx.container(range_paint, |_| Vec::new())]
+                                            },
                                         )
                                     } else {
-                                        range_el
+                                        cx.container(range, |_| Vec::new())
                                     };
 
                                     vec![
@@ -928,8 +945,16 @@ pub fn slider<H: UiHost>(
                                     align: CrossAlign::Stretch,
                                 },
                                 |cx| {
-                                    let range_el = cx.container(range, |_| Vec::new());
                                     let range_el = if let Some(test_id) = test_id_prefix.as_ref() {
+                                        let mut range_paint_layout = LayoutStyle::default();
+                                        range_paint_layout.size.width = Length::Fill;
+                                        range_paint_layout.size.height = Length::Fill;
+                                        let range_paint = ContainerProps {
+                                            layout: range_paint_layout,
+                                            background: Some(range_bg),
+                                            corner_radii: Corners::all(Px(0.0)),
+                                            ..Default::default()
+                                        };
                                         cx.semantics(
                                             SemanticsProps {
                                                 layout: range.layout,
@@ -938,10 +963,12 @@ pub fn slider<H: UiHost>(
                                                 ))),
                                                 ..Default::default()
                                             },
-                                            move |_cx| vec![range_el],
+                                            move |cx| {
+                                                vec![cx.container(range_paint, |_| Vec::new())]
+                                            },
                                         )
                                     } else {
-                                        range_el
+                                        cx.container(range, |_| Vec::new())
                                     };
 
                                     vec![
