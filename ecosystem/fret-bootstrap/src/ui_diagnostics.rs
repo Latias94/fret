@@ -228,6 +228,47 @@ impl UiDiagnosticsService {
         self.cfg.enabled
     }
 
+    /// Returns `true` if the current diagnostics state would benefit from (or requires) a fresh
+    /// semantics snapshot for `window` on this frame.
+    ///
+    /// This is a performance knob: semantics snapshots are expensive, and many scripted steps only
+    /// need semantics for *initial target resolution*. Once a step has cached its target geometry
+    /// (via `v2_step_state`), we can often skip requesting semantics until a selector-based step is
+    /// about to run again.
+    pub fn wants_semantics_snapshot(&mut self, window: AppWindowId) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+        self.poll_script_trigger();
+
+        if self.cfg.capture_semantics {
+            return true;
+        }
+
+        if self.pick_armed_run_id.is_some()
+            || self
+                .pending_pick
+                .as_ref()
+                .is_some_and(|p| p.window == window)
+            || self.inspect_enabled
+            || self.inspect_locked_windows.contains(&window)
+            || self.inspect_toast.contains_key(&window)
+        {
+            return true;
+        }
+
+        if self.pending_script.is_some() {
+            return true;
+        }
+
+        self.active_scripts
+            .get(&window)
+            .is_some_and(active_script_needs_semantics_snapshot)
+    }
+
     pub fn poll_exit_trigger(&mut self) -> bool {
         if !self.is_enabled() {
             return false;
@@ -2816,6 +2857,43 @@ impl UiDiagnosticsService {
 
         self.write_pick_result(result);
         self.pending_pick = None;
+    }
+}
+
+fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
+    if active.wait_until.is_some() {
+        return true;
+    }
+
+    if active.v2_step_state.is_some() {
+        return false;
+    }
+
+    let Some(step) = active.steps.get(active.next_step) else {
+        return false;
+    };
+
+    match step {
+        UiActionStepV2::Click { .. }
+        | UiActionStepV2::MovePointer { .. }
+        | UiActionStepV2::DragPointer { .. }
+        | UiActionStepV2::MovePointerSweep { .. }
+        | UiActionStepV2::Wheel { .. }
+        | UiActionStepV2::WaitUntil { .. }
+        | UiActionStepV2::Assert { .. }
+        | UiActionStepV2::EnsureVisible { .. }
+        | UiActionStepV2::ScrollIntoView { .. }
+        | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::MenuSelect { .. }
+        | UiActionStepV2::DragTo { .. }
+        | UiActionStepV2::SetSliderValue { .. } => true,
+        UiActionStepV2::ResetDiagnostics
+        | UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::TypeText { .. }
+        | UiActionStepV2::WaitFrames { .. }
+        | UiActionStepV2::CaptureBundle { .. }
+        | UiActionStepV2::CaptureScreenshot { .. }
+        | UiActionStepV2::SetWindowInnerSize { .. } => false,
     }
 }
 

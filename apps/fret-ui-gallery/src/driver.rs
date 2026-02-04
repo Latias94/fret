@@ -2956,17 +2956,23 @@ impl WinitAppDriver for UiGalleryDriver {
         } = context;
 
         Self::render_ui(app, services, window, state, bounds);
-        state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let (inspection_active, diag_enabled) = app
+            let (inspection_active, diag_enabled, wants_semantics_snapshot) = app
                 .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    (svc.wants_inspection_active(window), svc.is_enabled())
+                    (
+                        svc.wants_inspection_active(window),
+                        svc.is_enabled(),
+                        svc.wants_semantics_snapshot(window),
+                    )
                 });
             state.ui.set_inspection_active(inspection_active);
             state.ui.set_debug_enabled(diag_enabled);
+            if wants_semantics_snapshot {
+                state.ui.request_semantics_snapshot();
+            }
         }
 
         scene.clear();
@@ -3050,7 +3056,13 @@ impl WinitAppDriver for UiGalleryDriver {
                     app.push_effect(effect);
                 }
 
-                state.ui.request_semantics_snapshot();
+                let wants_semantics_snapshot = app
+                    .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                        svc.wants_semantics_snapshot(window)
+                    });
+                if wants_semantics_snapshot {
+                    state.ui.request_semantics_snapshot();
+                }
                 let mut frame = fret_ui::UiFrameCx::new(
                     &mut state.ui,
                     app,
