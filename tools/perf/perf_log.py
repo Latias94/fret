@@ -146,6 +146,7 @@ def _format_entry_markdown(
     change: str,
     suite: str,
     command: str,
+    stdout: str,
     worst_overall: Optional[Dict[str, Any]],
     rows: List[Dict[str, Any]],
     repo_root: Path,
@@ -172,6 +173,11 @@ def _format_entry_markdown(
         lines.append("```powershell")
         lines.append(command.rstrip())
         lines.append("```")
+        lines.append("")
+
+    if stdout:
+        lines.append("Stdout:")
+        lines.append(f"- `{stdout}`")
         lines.append("")
 
     lines.append("Results (us):")
@@ -321,6 +327,7 @@ def append_cmd(args: argparse.Namespace) -> int:
         change=change,
         suite=suite,
         command=command,
+        stdout=_rel_script_path(str(stdout_path), repo_root),
         worst_overall=worst_overall if isinstance(worst_overall, dict) else None,
         rows=rows,
         repo_root=repo_root,
