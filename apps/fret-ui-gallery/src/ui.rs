@@ -53,6 +53,7 @@ pub(crate) fn harness_only_view(
         PAGE_HIT_TEST_TORTURE => preview_hit_test_torture_surface_only(cx),
         PAGE_EFFECTS_BLUR_TORTURE => preview_effects_blur_torture_surface_only(cx),
         PAGE_SVG_UPLOAD_TORTURE => preview_svg_upload_torture_surface_only(cx),
+        PAGE_SVG_SCROLL_TORTURE => preview_svg_scroll_torture_surface_only(cx),
         other => vec![
             shadcn::Card::new(vec![
                 shadcn::CardHeader::new(vec![
@@ -65,6 +66,52 @@ pub(crate) fn harness_only_view(
             .into_element(cx),
         ],
     }
+}
+
+#[derive(Default)]
+struct UiGallerySvgIconIds {
+    ids: Option<Arc<Vec<fret_core::SvgId>>>,
+}
+
+fn ui_gallery_svg_icon_ids(cx: &mut ElementContext<'_, App>) -> Arc<Vec<fret_core::SvgId>> {
+    use fret_icons::IconRegistry;
+    use fret_ui_kit::declarative::icon::IconSvgRegistry;
+
+    let mut svg_ids = cx
+        .app
+        .global::<UiGallerySvgIconIds>()
+        .and_then(|cache| cache.ids.clone())
+        .filter(|ids| !ids.is_empty());
+
+    if svg_ids.is_none() {
+        let icon_ids: Vec<fret_icons::IconId> = cx
+            .app
+            .with_global_mut(IconRegistry::default, |icons, _app| {
+                icons.iter().map(|(id, _)| id.clone()).take(2048).collect()
+            });
+
+        let resolved: Vec<fret_core::SvgId> = cx
+            .app
+            .global::<IconSvgRegistry>()
+            .map(|registry| {
+                icon_ids
+                    .into_iter()
+                    .filter_map(|icon| registry.resolve(&icon))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let resolved = Arc::new(resolved);
+        if !resolved.is_empty() {
+            cx.app
+                .with_global_mut(UiGallerySvgIconIds::default, |cache, _app| {
+                    cache.ids = Some(resolved.clone());
+                });
+            svg_ids = Some(resolved);
+        }
+    }
+
+    svg_ids.unwrap_or_else(|| Arc::new(Vec::new()))
 }
 
 fn ui_gallery_hit_test_torture_stripes() -> usize {
@@ -1578,10 +1625,8 @@ fn preview_effects_blur_torture_surface_only(cx: &mut ElementContext<'_, App>) -
 }
 
 fn preview_svg_upload_torture_surface_only(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    use fret_icons::IconRegistry;
     use fret_ui::SvgSource;
     use fret_ui::element::{CanvasCachePolicy, LayoutStyle, Length, SemanticsProps};
-    use fret_ui_kit::declarative::icon::IconSvgRegistry;
 
     let frame = cx.with_state(
         || 0u64,
@@ -1610,44 +1655,7 @@ fn preview_svg_upload_torture_surface_only(cx: &mut ElementContext<'_, App>) -> 
         );
     }
 
-    #[derive(Default)]
-    struct UiGallerySvgUploadTortureSvgIds {
-        ids: Option<Arc<Vec<fret_core::SvgId>>>,
-    }
-
-    let mut svg_ids = cx
-        .app
-        .global::<UiGallerySvgUploadTortureSvgIds>()
-        .and_then(|cache| cache.ids.clone())
-        .filter(|ids| !ids.is_empty());
-    if svg_ids.is_none() {
-        let icon_ids: Vec<fret_icons::IconId> = cx
-            .app
-            .with_global_mut(IconRegistry::default, |icons, _app| {
-                icons.iter().map(|(id, _)| id.clone()).take(2048).collect()
-            });
-
-        let resolved: Vec<fret_core::SvgId> = cx
-            .app
-            .global::<IconSvgRegistry>()
-            .map(|registry| {
-                icon_ids
-                    .into_iter()
-                    .filter_map(|icon| registry.resolve(&icon))
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        let resolved = Arc::new(resolved);
-        if !resolved.is_empty() {
-            cx.app
-                .with_global_mut(UiGallerySvgUploadTortureSvgIds::default, |cache, _app| {
-                    cache.ids = Some(resolved.clone());
-                });
-            svg_ids = Some(resolved);
-        }
-    }
-    let svg_ids = svg_ids.unwrap_or_else(|| Arc::new(Vec::new()));
+    let svg_ids = ui_gallery_svg_icon_ids(cx);
 
     let mut root_layout = LayoutStyle::default();
     root_layout.size.width = Length::Fill;
@@ -1706,6 +1714,99 @@ fn preview_svg_upload_torture_surface_only(cx: &mut ElementContext<'_, App>) -> 
             ..Default::default()
         },
         move |_cx| [root],
+    )]
+}
+
+fn preview_svg_scroll_torture_surface_only(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_ui::SvgSource;
+    use fret_ui::element::{CanvasCachePolicy, LayoutStyle, Length, SemanticsProps};
+
+    let svg_ids = ui_gallery_svg_icon_ids(cx);
+
+    // This harness intentionally avoids the "frame-keyed subtree" approach used by
+    // `svg_upload_torture`. Instead, it forces new Canvas rows to mount/paint by continuously
+    // shifting the VirtualList window via real wheel input (invalidation-driven behavior).
+    //
+    // Note: we do NOT drive scroll offset from render-local state, because the UI paint cache is
+    // allowed to replay clean subtrees without re-running render closures.
+    let scroll = cx.with_state(VirtualListScrollHandle::new, |handle| handle.clone());
+
+    let len: usize = 50_000;
+    let row_h_px = 128.0;
+
+    let mut root_layout = LayoutStyle::default();
+    root_layout.size.width = Length::Fill;
+    root_layout.size.height = Length::Fill;
+    root_layout.overflow = fret_ui::element::Overflow::Clip;
+
+    let mut list_layout = LayoutStyle::default();
+    list_layout.size.width = Length::Fill;
+    // Keep the viewport height stable so "visible row count" stays predictable across machines.
+    // This also makes the SVG churn signature easier to interpret.
+    list_layout.size.height = Length::Px(Px(640.0));
+    list_layout.overflow = fret_ui::element::Overflow::Clip;
+
+    let row_h = Px(row_h_px);
+    // Use minimal overscan so wheel-driven scrolling triggers frequent visible-range rebuilds.
+    let options = fret_ui::element::VirtualListOptions::known(row_h, 0, move |_index| row_h);
+    let svg_ids_for_rows = svg_ids.clone();
+
+    let list = cx.virtual_list_keyed_with_layout(
+        list_layout,
+        len,
+        options,
+        &scroll,
+        |i| i as fret_ui::ItemKey,
+        move |cx, index| {
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Px(Px(row_h_px));
+            layout.overflow = fret_ui::element::Overflow::Clip;
+
+            let mut canvas = CanvasProps::default();
+            canvas.layout = layout;
+            canvas.cache_policy = CanvasCachePolicy::smooth_default();
+
+            let svg_ids = svg_ids_for_rows.clone();
+            cx.canvas(canvas, move |p| {
+                let ids = svg_ids.as_ref();
+                if ids.is_empty() {
+                    return;
+                }
+
+                // Keep the per-frame "SVG working set" smaller than the total icon pool, so the
+                // active subset shifts as we scroll and we observe cache miss/eviction churn.
+                let cols = 8usize;
+                let tile_px = 96.0;
+                let base = (index as usize).wrapping_mul(cols);
+                for col in 0..cols {
+                    let svg = ids[(base + col) % ids.len()];
+                    let x = (col as f32) * tile_px;
+                    let rect = Rect::new(
+                        Point::new(Px(x), Px(0.0)),
+                        Size::new(Px(tile_px), Px(tile_px)),
+                    );
+                    p.svg_image(
+                        ((index as u64) << 16) | (col as u64),
+                        DrawOrder(col as u32),
+                        rect,
+                        &SvgSource::Id(svg),
+                        fret_core::SvgFit::Contain,
+                        1.0,
+                    );
+                }
+            })
+        },
+    );
+
+    vec![cx.semantics(
+        SemanticsProps {
+            layout: root_layout,
+            label: Some(Arc::from("Debug:ui-gallery:svg-scroll-torture:root")),
+            test_id: Some(Arc::from("ui-gallery-svg-scroll-root")),
+            ..Default::default()
+        },
+        move |_cx| [list],
     )]
 }
 
