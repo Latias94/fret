@@ -938,6 +938,8 @@ impl<H: UiHost> UiTree<H> {
             .as_deref()
             .unwrap_or(active_layers.as_slice());
 
+        let mut pointer_hit: Option<NodeId> = None;
+
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
             .iter()
@@ -1306,6 +1308,7 @@ impl<H: UiHost> UiTree<H> {
                 self.hit_test_path_cache = None;
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
+            pointer_hit = hit;
             if let Some(started) = hit_test_started {
                 self.debug_stats.hit_test_time += started.elapsed();
                 self.debug_stats.hit_test_queries =
@@ -1481,14 +1484,15 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let mut pointer_hit: Option<NodeId> = None;
         let target = if let Some(captured) = captured {
             Some(captured)
         } else if let Some(target) = internal_drag_target {
             Some(target)
         } else if let Some(pos) = event_position(event) {
-            // See the cached hit-test reuse note above.
-            let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+            let hit = if pointer_hit.is_some() {
+                pointer_hit
+            } else if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                // See the cached hit-test reuse note above.
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
