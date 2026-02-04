@@ -36,7 +36,7 @@ fn hit_port_slow(geom: &CanvasGeometry, pos: Point) -> Option<PortId> {
 fn hit_edge_slow(
     canvas: &NodeGraphCanvas,
     graph: &Graph,
-    snapshot: &super::super::super::state::ViewSnapshot,
+    snapshot: &crate::ui::canvas::state::ViewSnapshot,
     geom: &CanvasGeometry,
     pos: Point,
     zoom: f32,
@@ -101,7 +101,7 @@ fn hit_edge_slow(
 fn hit_edge_focus_anchor_slow(
     canvas: &NodeGraphCanvas,
     graph: &Graph,
-    snapshot: &super::super::super::state::ViewSnapshot,
+    snapshot: &crate::ui::canvas::state::ViewSnapshot,
     geom: &CanvasGeometry,
     pos: Point,
     zoom: f32,

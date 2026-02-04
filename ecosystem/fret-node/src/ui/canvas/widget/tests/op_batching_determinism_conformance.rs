@@ -11,9 +11,9 @@ use crate::ui::{
     NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx,
 };
 
-use super::super::super::state::NodeDrag;
 use super::super::{NodeGraphCanvas, node_drag, pointer_up};
 use super::{NullServices, TestUiHostImpl, event_cx};
+use crate::ui::canvas::state::NodeDrag;
 
 #[derive(Debug, Default)]
 struct CaptureGroupRectCommitOrder {

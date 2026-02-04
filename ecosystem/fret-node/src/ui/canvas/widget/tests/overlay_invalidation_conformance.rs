@@ -4,9 +4,9 @@ use crate::core::CanvasPoint;
 use crate::io::NodeGraphViewState;
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
-use super::super::super::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 use super::super::NodeGraphCanvas;
 use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
+use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 
 #[test]
 fn overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index() {

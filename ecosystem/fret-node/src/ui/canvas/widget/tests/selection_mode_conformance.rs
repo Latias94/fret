@@ -3,9 +3,9 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 use crate::core::CanvasPoint;
 use crate::io::{NodeGraphSelectionMode, NodeGraphViewState};
 
-use super::super::super::state::ViewSnapshot;
 use super::super::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_size};
+use crate::ui::canvas::state::ViewSnapshot;
 
 #[test]
 fn marquee_partial_selects_intersecting_nodes() {

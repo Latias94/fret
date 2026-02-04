@@ -13,7 +13,7 @@ use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
 fn pick_target_port_at(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
-    snapshot: &super::super::super::state::ViewSnapshot,
+    snapshot: &crate::ui::canvas::state::ViewSnapshot,
     from: crate::core::PortId,
     pos: Point,
 ) -> Option<crate::core::PortId> {
@@ -33,7 +33,7 @@ fn pick_target_port_at(
 fn hit_edge_at(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
-    snapshot: &super::super::super::state::ViewSnapshot,
+    snapshot: &crate::ui::canvas::state::ViewSnapshot,
     pos: Point,
 ) -> Option<crate::core::EdgeId> {
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);
@@ -52,7 +52,7 @@ fn hit_edge_at(
 fn hit_edge_focus_anchor_at(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
-    snapshot: &super::super::super::state::ViewSnapshot,
+    snapshot: &crate::ui::canvas::state::ViewSnapshot,
     pos: Point,
 ) -> Option<(crate::core::EdgeId, EdgeEndpoint, crate::core::PortId)> {
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);

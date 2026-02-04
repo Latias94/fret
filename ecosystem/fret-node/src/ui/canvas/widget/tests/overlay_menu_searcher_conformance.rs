@@ -9,11 +9,11 @@ use crate::ui::presenter::{
 };
 use crate::ui::style::NodeGraphStyle;
 
-use super::super::super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
-use super::super::super::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 use super::super::NodeGraphCanvas;
 use super::super::overlay_hit;
 use super::TestUiHostImpl;
+use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
+use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 
 fn bounds() -> Rect {
     Rect::new(

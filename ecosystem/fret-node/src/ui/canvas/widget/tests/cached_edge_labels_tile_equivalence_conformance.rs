@@ -218,7 +218,7 @@ fn capture_edge_label_for_bounds(bounds: Rect) -> (Rect, Point, usize) {
 
     let base_mid = Point::new(Px(0.5 * (from.x.0 + to.x.0)), Px(0.5 * (from.y.0 + to.y.0)));
     let d = Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0));
-    let normal = super::super::super::route_math::normal_from_tangent(d);
+    let normal = crate::ui::canvas::route_math::normal_from_tangent(d);
     let base_anchor = Point::new(
         Px(base_mid.x.0 + normal.x.0 * 10.0),
         Px(base_mid.y.0 + normal.y.0 * 10.0),

@@ -5,10 +5,10 @@ use serde_json::Value;
 
 use crate::ui::presenter::InsertNodeCandidate;
 
-use super::super::super::state::PendingInsertNodeDrag;
 use super::super::NodeGraphCanvas;
 use super::super::insert_node_drag::InsertNodeDragPayload;
 use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes};
+use crate::ui::canvas::state::PendingInsertNodeDrag;
 
 #[test]
 fn insert_node_drag_does_not_start_until_threshold() {

@@ -3,13 +3,13 @@ use fret_core::{Point, Px, Rect, Size};
 use crate::interaction::NodeGraphConnectionMode;
 use crate::io::NodeGraphViewState;
 
-use super::super::super::state::{WireDrag, WireDragKind};
 use super::super::NodeGraphCanvas;
 use super::super::wire_drag::handle_wire_left_up_with_forced_target;
 use super::super::{HitTestCtx, HitTestScratch};
 use super::{
     NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
 };
+use crate::ui::canvas::state::{ViewSnapshot, WireDrag, WireDragKind};
 use crate::ui::presenter::NodeGraphPresenter;
 use std::sync::Arc;
 
@@ -29,7 +29,7 @@ impl NodeGraphPresenter for SimplePresenter {
 fn pick_target_port_at(
     canvas: &mut NodeGraphCanvas,
     host: &mut TestUiHostImpl,
-    snapshot: &super::super::super::state::ViewSnapshot,
+    snapshot: &ViewSnapshot,
     from: crate::core::PortId,
     pos: Point,
 ) -> Option<crate::core::PortId> {

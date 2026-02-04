@@ -9,13 +9,13 @@ use crate::io::NodeGraphViewState;
 use crate::rules::EdgeEndpoint;
 use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 
-use super::super::super::state::{EdgeDrag, WireDragKind};
-use super::super::super::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
 use super::super::{
     NodeGraphCanvas, edge_drag, group_resize, left_click, marquee, node_drag, node_resize,
     pending_drag, pointer_up,
 };
 use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_size};
+use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
+use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
 use fret_ui::retained_bridge::Widget as _;
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
@@ -2505,7 +2505,7 @@ fn connectable_false_prevents_connecting_to_target_port() {
         bounds,
         &mut prevented_default_actions,
     );
-    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::New {
             from: out,
             bundle: vec![out],
@@ -2893,7 +2893,7 @@ fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
-    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
             endpoint: EdgeEndpoint::From,
@@ -2934,7 +2934,7 @@ fn window_focus_lost_cancels_wire_drag() {
     let view = host.models.insert(NodeGraphViewState::default());
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
-    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
             endpoint: EdgeEndpoint::From,
@@ -2978,7 +2978,7 @@ fn pointer_left_cancels_wire_drag() {
     let view = host.models.insert(NodeGraphViewState::default());
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
-    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
             endpoint: EdgeEndpoint::From,
@@ -3055,7 +3055,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
         bounds,
         &mut prevented_default_actions,
     );
-    canvas.interaction.node_drag = Some(super::super::super::state::NodeDrag {
+    canvas.interaction.node_drag = Some(crate::ui::canvas::state::NodeDrag {
         primary: a,
         node_ids: vec![a],
         nodes: vec![(a, CanvasPoint { x: 0.0, y: 0.0 })],
@@ -3107,7 +3107,7 @@ fn right_click_cancels_wire_drag_and_opens_context_menu() {
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
-    canvas.interaction.wire_drag = Some(super::super::super::state::WireDrag {
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
         kind: WireDragKind::Reconnect {
             edge,
             endpoint: EdgeEndpoint::From,
