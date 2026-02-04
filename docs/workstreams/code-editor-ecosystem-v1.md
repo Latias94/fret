@@ -7,6 +7,7 @@ Recent changes (2026-02-04):
 
 - Editor paint: anchor caret Y to the actual row text blob baseline (fixes caret drifting above glyphs in mixed-font / rich-span lines).
 - Editor selection: clamp windowed row hit-testing during drags, and add timer-driven edge autoscroll while drag-selecting (continues even when the pointer is stationary at the viewport edge).
+- Editor caret: when the text backend doesn't provide `caret_rect`, fall back to the blob box for caret top/height so the caret doesn't render from the row top.
 
 Recent changes (2026-02-02):
 

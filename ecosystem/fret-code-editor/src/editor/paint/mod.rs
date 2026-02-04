@@ -191,13 +191,17 @@ pub(super) fn paint_row(
         let caret_rect = services
             .text()
             .caret_rect(blob, 0, CaretAffinity::Downstream);
+        // `caret_rect` is relative to the text box top (y=0 at the top of the blob box).
+        // Convert it into row-local coordinates by anchoring the box using the blob baseline.
+        let text_box_top_in_row = Px(origin.y.0 - blob_metrics.baseline.0 - rect.origin.y.0);
         if caret_rect.size.height.0 > 0.0 {
-            // `caret_rect` is relative to the text box top (y=0 at the top of the blob box).
-            // Convert it into row-local coordinates by anchoring the box using the *actual* blob
-            // baseline, not the placeholder measurement baseline.
-            let text_box_top_in_row = Px(origin.y.0 - blob_metrics.baseline.0 - rect.origin.y.0);
             caret_rect_top = Some(Px(text_box_top_in_row.0 + caret_rect.origin.y.0));
             caret_rect_height = Some(caret_rect.size.height);
+        } else if blob_metrics.size.height.0 > 0.0 {
+            // Some backends may not provide a caret rect yet. Fall back to the blob's box so
+            // the caret doesn't appear "floating" at the row top.
+            caret_rect_top = Some(text_box_top_in_row);
+            caret_rect_height = Some(blob_metrics.size.height);
         }
     }
 
