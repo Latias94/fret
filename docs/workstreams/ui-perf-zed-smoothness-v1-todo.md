@@ -94,6 +94,9 @@ Primary targets (highest leverage):
   - `crates/fret-ui/src/tree/mod.rs` invalidation propagation caches.
   - Implemented by `perf(fret-ui): generation-stamp invalidation propagation` (commit `a540829e`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries for commit `a540829e`.
+- [x] Avoid per-dispatch `HashMap<NodeId, u8>` churn when deduplicating invalidations during input dispatch.
+  - Use the existing generation-stamped `InvalidationDedupTable` for dispatch-time invalidation dedup.
+  - Implemented by `perf(fret-ui): reuse invalidation dedup in dispatch` (commit `bcb329e6`).
 - [ ] Ensure deterministic ordering is preserved where diagnostics rely on it (bundle stability).
 
 Perf acceptance:
