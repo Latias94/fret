@@ -42,9 +42,7 @@ Each TODO is labeled:
 ## Near-term Focus (keep tight)
 
 - **MVP5-eco-004 / eco-005**: promote the existing canvas/chart harnesses into first “real migration targets” (one each), with deterministic scripts + gates.
-- **MVP3-virt-003**: consume measured-mode `scroll_to_item` earlier than final layout (keep it explainable + gated).
-- **MVP4-demo-002**: migrate 1–2 UI Gallery hotspots to the new paint-only / retained-windowed patterns (not just add harness pages).
-- **MVP3-rec-003**: expand interaction replay/reuse beyond pointer-move for one additional high-frequency pointer path (correctness + perf evidence).
+- **MVP5-eco-010**: AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome (scripts + gates).
 
 ## Near-term Plan (2026-02; make progress measurable)
 
@@ -54,12 +52,8 @@ Each TODO is labeled:
   - Deliverable: pick one concrete surface (prefer `ecosystem/fret-node`), add deterministic pan/zoom script, and gate that small pans stay paint/prepaint-only while culling changes remain explainable.
 - **P3 — MVP5-eco-005 chart/plot sampling: first migration target**
   - Deliverable: define a stable sampling-window key + explainability output (prepaint action + output key), and gate that small pans do not force cache-root rerenders under view-cache + shell.
-- **P4 — MVP3-virt-003 measured-mode `scroll_to_item`**
-  - Deliverable: consume in the common case before the final layout pass, and add/update a regression gate to keep the behavior explainable in bundles.
-- **P5 — MVP4-demo-002 UI Gallery hotspot migration**
-  - Deliverable: migrate 1–2 hotspots and lock them with scripts + gates (hover chrome, scrollbars, code views as candidates).
-- **P6 — MVP3-rec-003 interaction replay expansion**
-  - Deliverable: expand interaction replay/reuse beyond pointer-move (at least one additional pointer event path), with a correctness regression and a perf harness.
+- **P4 — MVP5-eco-010 AI transcript surfaces: first windowed migration target**
+  - Deliverable: migrate the transcript harness to prepaint-windowed rows + paint-only hover/selection chrome, with deterministic scripts + gates under view-cache + shell.
 
 ## Baseline (Verified Existing Building Blocks)
 
@@ -503,8 +497,14 @@ Goal: make the new contracts “default obvious” by migrating a small set of r
 - [x] GPUI-MVP4-eco-001 Add an ecosystem-facing “cached subtree” helper API (policy-free).
   - Touches: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`, `CachedSubtreeProps`)
-- [~] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
-  - Touches: `apps/fret-ui-gallery/src/*`, selected `ecosystem/*` components
+- [x] GPUI-MVP4-demo-002 Migrate `fret-ui-gallery` hotspots to the new patterns (hover chrome, scrollbars, code views).
+  - Motivation: ensure hover-driven chrome is structurally stable under view-cache reuse (ADR 0181).
+  - Touches: `apps/fret-ui-gallery/src/*`, `ecosystem/fret-code-view/src/code_block.rs`, `tools/diag-scripts/*`
+  - Progress: `CodeBlock` hover scrollbars no longer toggle the element tree or the max-height wrapper; hover only updates paint-only opacity.
+  - Evidence:
+    - Test: `ecosystem/fret-code-view/tests/hover_is_paint_only.rs`
+    - Script: `tools/diag-scripts/ui-gallery-code-view-hover-chrome.json`
+    - Perf capture (2026-02-04; view-cache + shell): `target/fret-diag/1770221009810-script-step-0011-move_pointer/bundle.json`
 - [x] GPUI-MVP4-demo-003 VirtualList: make scroll-driven window updates correct and explainable under view-cache reuse (no implicit `Pressable` notify).
   - Motivation: reduce cache-root rerenders and layout invalidations during scroll/hover by keeping the element tree more structurally stable.
   - Reference: `repo-ref/gpui-component/crates/ui/src/virtual_list.rs` (prepaint-driven range + reuse)
