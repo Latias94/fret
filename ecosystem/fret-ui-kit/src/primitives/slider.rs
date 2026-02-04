@@ -9,20 +9,141 @@
 
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
+use fret_core::{Axis, KeyCode, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{ElementContext, UiHost};
 
+use crate::primitives::direction::LayoutDirection;
+
 pub use crate::declarative::slider::{
-    start_slider_drag_from_pointer_x, update_single_slider_model_from_pointer_x,
-    update_slider_model_from_pointer_x,
+    start_slider_drag_from_pointer_axis, start_slider_drag_from_pointer_x,
+    update_single_slider_model_from_pointer_axis, update_single_slider_model_from_pointer_x,
+    update_slider_model_from_pointer_axis, update_slider_model_from_pointer_x,
 };
 pub use crate::headless::slider::{
     SliderValuesUpdate, closest_value_index, format_semantics_value, has_min_steps_between_values,
     next_sorted_values, normalize_value, snap_value, steps_between_values,
     update_multi_thumb_values,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SliderOrientation {
+    #[default]
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SliderSlideDirection {
+    FromLeft,
+    FromRight,
+    FromBottom,
+    FromTop,
+}
+
+pub fn slider_axis(orientation: SliderOrientation) -> Axis {
+    match orientation {
+        SliderOrientation::Horizontal => Axis::Horizontal,
+        SliderOrientation::Vertical => Axis::Vertical,
+    }
+}
+
+pub fn slider_slide_direction(
+    orientation: SliderOrientation,
+    dir: LayoutDirection,
+    inverted: bool,
+) -> SliderSlideDirection {
+    match orientation {
+        SliderOrientation::Horizontal => {
+            let is_direction_ltr = dir == LayoutDirection::Ltr;
+            let is_sliding_from_left =
+                (is_direction_ltr && !inverted) || (!is_direction_ltr && inverted);
+            if is_sliding_from_left {
+                SliderSlideDirection::FromLeft
+            } else {
+                SliderSlideDirection::FromRight
+            }
+        }
+        SliderOrientation::Vertical => {
+            let is_sliding_from_bottom = !inverted;
+            if is_sliding_from_bottom {
+                SliderSlideDirection::FromBottom
+            } else {
+                SliderSlideDirection::FromTop
+            }
+        }
+    }
+}
+
+pub fn slider_min_at_axis_start(
+    orientation: SliderOrientation,
+    dir: LayoutDirection,
+    inverted: bool,
+) -> bool {
+    match slider_slide_direction(orientation, dir, inverted) {
+        SliderSlideDirection::FromLeft | SliderSlideDirection::FromTop => true,
+        SliderSlideDirection::FromRight | SliderSlideDirection::FromBottom => false,
+    }
+}
+
+/// Convert a value-normalized percent `t` into a position percent measured from the axis start
+/// (left/top), matching Radix `startEdge` outcomes.
+pub fn slider_position_t(
+    orientation: SliderOrientation,
+    dir: LayoutDirection,
+    inverted: bool,
+    value_t: f32,
+) -> f32 {
+    let pos_t = if slider_min_at_axis_start(orientation, dir, inverted) {
+        value_t
+    } else {
+        1.0 - value_t
+    };
+    pos_t.clamp(0.0, 1.0)
+}
+
+pub fn slider_is_back_key(slide_direction: SliderSlideDirection, key: KeyCode) -> bool {
+    // Radix reference:
+    // `repo-ref/primitives/packages/react/slider/src/slider.tsx` (`BACK_KEYS`).
+    match slide_direction {
+        SliderSlideDirection::FromLeft => matches!(
+            key,
+            KeyCode::Home | KeyCode::PageDown | KeyCode::ArrowDown | KeyCode::ArrowLeft
+        ),
+        SliderSlideDirection::FromRight => matches!(
+            key,
+            KeyCode::Home | KeyCode::PageDown | KeyCode::ArrowDown | KeyCode::ArrowRight
+        ),
+        SliderSlideDirection::FromBottom => matches!(
+            key,
+            KeyCode::Home | KeyCode::PageDown | KeyCode::ArrowDown | KeyCode::ArrowLeft
+        ),
+        SliderSlideDirection::FromTop => matches!(
+            key,
+            KeyCode::Home | KeyCode::PageDown | KeyCode::ArrowUp | KeyCode::ArrowLeft
+        ),
+    }
+}
+
+pub fn slider_step_direction_for_key(
+    slide_direction: SliderSlideDirection,
+    key: KeyCode,
+) -> Option<f32> {
+    match key {
+        KeyCode::PageUp
+        | KeyCode::PageDown
+        | KeyCode::ArrowUp
+        | KeyCode::ArrowDown
+        | KeyCode::ArrowLeft
+        | KeyCode::ArrowRight => Some(if slider_is_back_key(slide_direction, key) {
+            -1.0
+        } else {
+            1.0
+        }),
+        _ => None,
+    }
+}
 
 /// Returns a values model that behaves like Radix `useControllableState` (`value` / `defaultValue`).
 pub fn slider_use_values_model<H: UiHost>(
@@ -110,5 +231,66 @@ mod tests {
         });
 
         assert_eq!(called.get(), 0);
+    }
+
+    #[test]
+    fn slider_slide_direction_matches_radix_rules() {
+        assert_eq!(
+            slider_slide_direction(SliderOrientation::Horizontal, LayoutDirection::Ltr, false),
+            SliderSlideDirection::FromLeft
+        );
+        assert_eq!(
+            slider_slide_direction(SliderOrientation::Horizontal, LayoutDirection::Rtl, false),
+            SliderSlideDirection::FromRight
+        );
+        assert_eq!(
+            slider_slide_direction(SliderOrientation::Horizontal, LayoutDirection::Ltr, true),
+            SliderSlideDirection::FromRight
+        );
+        assert_eq!(
+            slider_slide_direction(SliderOrientation::Horizontal, LayoutDirection::Rtl, true),
+            SliderSlideDirection::FromLeft
+        );
+
+        assert_eq!(
+            slider_slide_direction(SliderOrientation::Vertical, LayoutDirection::Ltr, false),
+            SliderSlideDirection::FromBottom
+        );
+        assert_eq!(
+            slider_slide_direction(SliderOrientation::Vertical, LayoutDirection::Rtl, false),
+            SliderSlideDirection::FromBottom
+        );
+        assert_eq!(
+            slider_slide_direction(SliderOrientation::Vertical, LayoutDirection::Ltr, true),
+            SliderSlideDirection::FromTop
+        );
+    }
+
+    #[test]
+    fn slider_step_direction_for_key_uses_back_key_table() {
+        assert_eq!(
+            slider_step_direction_for_key(SliderSlideDirection::FromLeft, KeyCode::ArrowLeft),
+            Some(-1.0)
+        );
+        assert_eq!(
+            slider_step_direction_for_key(SliderSlideDirection::FromLeft, KeyCode::ArrowRight),
+            Some(1.0)
+        );
+        assert_eq!(
+            slider_step_direction_for_key(SliderSlideDirection::FromRight, KeyCode::ArrowLeft),
+            Some(1.0)
+        );
+        assert_eq!(
+            slider_step_direction_for_key(SliderSlideDirection::FromRight, KeyCode::ArrowRight),
+            Some(-1.0)
+        );
+        assert_eq!(
+            slider_step_direction_for_key(SliderSlideDirection::FromTop, KeyCode::ArrowUp),
+            Some(-1.0)
+        );
+        assert_eq!(
+            slider_step_direction_for_key(SliderSlideDirection::FromBottom, KeyCode::ArrowDown),
+            Some(-1.0)
+        );
     }
 }
