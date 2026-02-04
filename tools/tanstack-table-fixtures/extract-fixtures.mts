@@ -10,6 +10,7 @@ type CaseId =
   | "filtering_fns"
   | "headers_cells"
   | "visibility_ordering"
+  | "pinning"
   | "column_sizing"
   | "column_resizing_group_headers"
   | "state_shapes"
@@ -103,6 +104,12 @@ type SnapshotId =
   | "expanding_paginate_expanded_rows_false_expands_within_page"
   | "expanding_action_toggle_row"
   | "expanding_action_toggle_all"
+  | "pinning_keep_true_page_0"
+  | "pinning_keep_false_page_0"
+  | "pinning_keep_true_filter_excludes_pinned"
+  | "pinning_keep_false_filter_excludes_pinned"
+  | "pinning_action_pin_top_bottom"
+  | "pinning_action_unpin_top"
 
 type DemoProcessRow = {
   id: number
@@ -167,6 +174,7 @@ type TanStackOptions = {
   enableSubRowSelection?: boolean
   enableColumnResizing?: boolean
   enableHiding?: boolean
+  enableRowPinning?: boolean
   columnResizeMode?: "onChange" | "onEnd"
   columnResizeDirection?: "ltr" | "rtl"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
@@ -320,6 +328,14 @@ type FixtureSnapshot = {
       center: Record<string, number | null>
       right: Record<string, number | null>
     }
+    row_pinning?: {
+      top: string[]
+      center: string[]
+      bottom: string[]
+      is_some_rows_pinned: boolean
+      is_some_top_rows_pinned: boolean
+      is_some_bottom_rows_pinned: boolean
+    }
     next_state?: TanStackState
   }
 }
@@ -370,6 +386,13 @@ type FixtureAction =
   | {
       type: "setColumnOrder"
       order: string[]
+    }
+  | {
+      type: "pinRow"
+      row_id: string
+      position: "top" | "bottom" | null
+      include_leaf_rows?: boolean
+      include_parent_rows?: boolean
     }
   | {
       type: "toggleRowSelected"
@@ -427,6 +450,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "filtering_fns" &&
         v !== "headers_cells" &&
         v !== "visibility_ordering" &&
+        v !== "pinning" &&
         v !== "column_sizing" &&
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
@@ -442,7 +466,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding]",
     )
   }
   return { out, case_id }
@@ -625,7 +649,12 @@ async function main(): Promise<void> {
   let columns: any[]
   let columns_meta: unknown | undefined
 
-  if (case_id === "demo_process" || case_id === "state_shapes" || case_id === "selection") {
+  if (
+    case_id === "demo_process" ||
+    case_id === "state_shapes" ||
+    case_id === "selection" ||
+    case_id === "pinning"
+  ) {
     const demo: DemoProcessRow[] = [
       { id: 1, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
       { id: 2, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
@@ -1098,6 +1127,7 @@ async function main(): Promise<void> {
       enableSubRowSelection: options.enableSubRowSelection ?? true,
       enableColumnResizing: options.enableColumnResizing ?? true,
       enableHiding: options.enableHiding ?? true,
+      enableRowPinning: options.enableRowPinning,
       columnResizeMode: options.columnResizeMode,
       columnResizeDirection: options.columnResizeDirection,
       ...(options.globalFilterFn !== undefined
@@ -1159,6 +1189,11 @@ async function main(): Promise<void> {
         const next =
           typeof updater === "function" ? updater(currentState.columnOrder) : updater
         currentState.columnOrder = next ?? []
+      },
+      onRowPinningChange: (updater: any) => {
+        const next =
+          typeof updater === "function" ? updater(currentState.rowPinning) : updater
+        currentState.rowPinning = next ?? { top: [], bottom: [] }
       },
       onRowSelectionChange: (updater: any) => {
         const next =
@@ -1369,6 +1404,29 @@ function snapshotColumnSizing(table: any): {
   }
 }
 
+function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["row_pinning"]> {
+  if (
+    typeof table.getTopRows !== "function" ||
+    typeof table.getCenterRows !== "function" ||
+    typeof table.getBottomRows !== "function"
+  ) {
+    throw new Error("Row pinning APIs are not available on this table instance")
+  }
+
+  const top = (table.getTopRows?.() ?? []).map((r: any) => String(r.id))
+  const center = (table.getCenterRows?.() ?? []).map((r: any) => String(r.id))
+  const bottom = (table.getBottomRows?.() ?? []).map((r: any) => String(r.id))
+
+  return {
+    top,
+    center,
+    bottom,
+    is_some_rows_pinned: Boolean(table.getIsSomeRowsPinned?.()),
+    is_some_top_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("top")),
+    is_some_bottom_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("bottom")),
+  }
+}
+
   function snapshotForActions(
     options: TanStackOptions,
     state: TanStackState,
@@ -1425,6 +1483,18 @@ function snapshotColumnSizing(table: any): {
       }
       if (action.type === "setColumnOrder") {
         table.setColumnOrder(action.order)
+        continue
+      }
+      if (action.type === "pinRow") {
+        const row = table.getRow(action.row_id, true)
+        if (!row) {
+          throw new Error(`Unknown row in action: ${action.row_id}`)
+        }
+        row.pin(
+          action.position === null ? false : action.position,
+          action.include_leaf_rows ?? false,
+          action.include_parent_rows ?? false,
+        )
         continue
       }
       if (action.type === "toggleRowSelected") {
@@ -2284,6 +2354,109 @@ function snapshotColumnSizing(table: any): {
         { enableHiding: false },
         {},
         [{ type: "toggleColumnVisibility", column_id: "a", value: false }],
+      ),
+    ]
+  } else if (case_id === "pinning") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          row_pinning: snapshotRowPinning(table),
+        },
+      }
+    }
+
+    const baseState: TanStackState = {
+      pagination: { pageIndex: 0, pageSize: 2 },
+      rowPinning: { top: ["4"], bottom: ["5"] },
+    }
+
+    snapshots = [
+      mk(
+        "pinning_keep_true_page_0",
+        { enableRowPinning: true, keepPinnedRows: true },
+        baseState,
+      ),
+      mk(
+        "pinning_keep_false_page_0",
+        { enableRowPinning: true, keepPinnedRows: false },
+        baseState,
+      ),
+      mk(
+        "pinning_keep_true_filter_excludes_pinned",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          ...baseState,
+          globalFilter: "Renderer",
+        },
+      ),
+      mk(
+        "pinning_keep_false_filter_excludes_pinned",
+        { enableRowPinning: true, keepPinnedRows: false },
+        {
+          ...baseState,
+          globalFilter: "Renderer",
+        },
+      ),
+      mkActions(
+        "pinning_action_pin_top_bottom",
+        { enableRowPinning: true, keepPinnedRows: true },
+        { pagination: { pageIndex: 0, pageSize: 2 } },
+        [
+          {
+            type: "pinRow",
+            row_id: "4",
+            position: "top",
+          },
+          {
+            type: "pinRow",
+            row_id: "5",
+            position: "bottom",
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_action_unpin_top",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          pagination: { pageIndex: 0, pageSize: 2 },
+          rowPinning: { top: ["4"], bottom: [] },
+        },
+        [
+          {
+            type: "pinRow",
+            row_id: "4",
+            position: null,
+          },
+        ],
       ),
     ]
   } else if (case_id === "sort_undefined") {
