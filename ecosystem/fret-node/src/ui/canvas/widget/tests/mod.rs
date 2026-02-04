@@ -30,6 +30,7 @@ mod connection_mode_conformance;
 mod custom_edge_path_conformance;
 mod derived_geometry_invalidation_conformance;
 mod draw_order_invalidation_conformance;
+mod edge_drag_conformance;
 mod edge_hit_width_conformance;
 mod edge_insert_conformance;
 mod edge_marker_tangent_fallback_conformance;

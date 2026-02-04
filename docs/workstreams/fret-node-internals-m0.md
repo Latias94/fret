@@ -244,6 +244,9 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert/`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
+- [x] Split edge-drag reconnect-start pipeline into small modules to reduce drift (threshold vs endpoint pick).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_drag_conformance.rs`
 - [x] Split align/distribute move-op pipeline into small modules to reduce drift (label vs planning vs glue).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/`
 - [x] Ensure refactors preserve the public query surfaces of `NodeGraphInternalsStore` and

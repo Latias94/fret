@@ -1,13 +1,8 @@
-use fret_core::Point;
-use fret_ui::UiHost;
-
-use super::super::state::{ViewSnapshot, WireDrag, WireDragKind};
-use super::threshold::exceeds_drag_threshold;
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::prelude::*;
 
 pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut EventCx<'_, H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
@@ -55,7 +50,7 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if !endpoint_allowed {
         canvas.interaction.edge_drag = None;
         cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+        cx.invalidate_self(Invalidation::Paint);
         return true;
     }
 
@@ -73,20 +68,6 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas.emit_connect_start(snapshot, &kind);
 
     cx.request_redraw();
-    cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
+    cx.invalidate_self(Invalidation::Paint);
     true
-}
-
-pub(super) fn handle_edge_left_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
-) -> bool {
-    if canvas.interaction.edge_drag.take().is_some() {
-        cx.release_pointer_capture();
-        cx.request_redraw();
-        cx.invalidate_self(fret_ui::retained_bridge::Invalidation::Paint);
-        return true;
-    }
-
-    false
 }
