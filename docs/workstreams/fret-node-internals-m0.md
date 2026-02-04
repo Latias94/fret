@@ -261,6 +261,22 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/origin.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/layout.rs`
+- [x] Lock `edges_for_port` determinism and self-loop behavior in spatial index helpers.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/spatial.rs`
+- [x] Lock derived-geometry preview update semantics (ports pinned to sides; edge rect updates dedup).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/updates.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_updates_conformance.rs`
+- [x] Lock drag-preview derived geometry updates (node rect / port translation / edge index updates).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/preview/drag.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/drag_preview_conformance.rs`
+- [x] Lock node-resize preview derived geometry updates (node rect sizing; port pinning; edge index updates).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/preview/node_resize.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`
+- [x] Lock group preview derived geometry updates (group drag / resize precedence; child clamp; edge index updates).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry.rs` (`group_rect_with_preview`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/group_preview_conformance.rs`
 - [x] Split align/distribute move-op pipeline into small modules to reduce drift (label vs planning vs glue).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/move_ops/align_distribute/`
 - [x] Ensure refactors preserve the public query surfaces of `NodeGraphInternalsStore` and

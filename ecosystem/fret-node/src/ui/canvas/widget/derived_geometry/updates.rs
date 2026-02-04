@@ -109,22 +109,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         resolve_edges: impl FnOnce(&[EdgeId]) -> Vec<(EdgeId, PortId, PortId)>,
     ) {
         let mut edge_ids: Vec<EdgeId> = Vec::new();
-        for port in ports {
-            if let Some(edges) = index.edges_for_port(*port) {
-                edge_ids.extend(edges.iter().copied());
-            }
-        }
+        let edge_ids = Self::collect_edges_for_ports_sorted_dedup(index, ports, &mut edge_ids);
         if edge_ids.is_empty() {
             return;
         }
 
-        edge_ids.sort_unstable();
-        edge_ids.dedup();
-        if edge_ids.is_empty() {
-            return;
-        }
-
-        let endpoints = resolve_edges(&edge_ids);
+        let endpoints = resolve_edges(edge_ids);
         for (edge_id, from, to) in endpoints {
             let Some(p0) = geom.port_center(from) else {
                 continue;
@@ -135,5 +125,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let rect = index.edge_aabb(p0, p1, zoom);
             index.update_edge_rect(edge_id, rect);
         }
+    }
+
+    fn collect_edges_for_ports_sorted_dedup<'a>(
+        index: &CanvasSpatialIndex,
+        ports: &[PortId],
+        out: &'a mut Vec<EdgeId>,
+    ) -> &'a [EdgeId] {
+        out.clear();
+        for port in ports {
+            if let Some(edges) = index.edges_for_port(*port) {
+                out.extend(edges.iter().copied());
+            }
+        }
+
+        out.sort_unstable();
+        out.dedup();
+        out.as_slice()
     }
 }

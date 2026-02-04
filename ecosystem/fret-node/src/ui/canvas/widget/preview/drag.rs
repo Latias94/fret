@@ -93,46 +93,33 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
             }
 
-            let mut affected_edges: Vec<EdgeId> = Vec::new();
+            let mut affected_ports: Vec<PortId> = Vec::new();
             for (id, _pos) in nodes {
-                let Some(ports) = node_ports.get(id) else {
-                    continue;
-                };
-                for port in ports {
-                    if let Some(edges) = index.edges_for_port(*port) {
-                        affected_edges.extend(edges.iter().copied());
-                    }
+                if let Some(ports) = node_ports.get(id) {
+                    affected_ports.extend(ports.iter().copied());
                 }
             }
-            affected_edges.sort_unstable();
-            affected_edges.dedup();
 
-            let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = if affected_edges.is_empty() {
-                Vec::new()
-            } else {
-                self.graph
-                    .read_ref(host, |g| {
-                        affected_edges
-                            .iter()
-                            .filter_map(|edge_id| {
-                                g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
-                            })
-                            .collect::<Vec<_>>()
-                    })
-                    .ok()
-                    .unwrap_or_default()
-            };
-
-            for (edge_id, from, to) in edge_endpoints {
-                let Some(p0) = geom.port_center(from) else {
-                    continue;
-                };
-                let Some(p1) = geom.port_center(to) else {
-                    continue;
-                };
-                let rect = index.edge_aabb(p0, p1, snapshot.zoom);
-                index.update_edge_rect(edge_id, rect);
-            }
+            let graph_model = self.graph.clone();
+            Self::update_edges_for_ports(
+                &mut geom,
+                &mut index,
+                snapshot.zoom,
+                &affected_ports,
+                |edge_ids| {
+                    graph_model
+                        .read_ref(host, |g| {
+                            edge_ids
+                                .iter()
+                                .filter_map(|edge_id| {
+                                    g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                })
+                                .collect::<Vec<_>>()
+                        })
+                        .ok()
+                        .unwrap_or_default()
+                },
+            );
 
             self.geometry.drag_preview = Some(DragPreviewCache {
                 kind,
@@ -211,44 +198,33 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
                 }
 
-                let mut affected_edges: Vec<EdgeId> = Vec::new();
+                let mut affected_ports: Vec<PortId> = Vec::new();
                 for (id, _prev, _next) in &moved_nodes {
-                    let Some(ports) = cache.node_ports.get(id) else {
-                        continue;
-                    };
-                    for port in ports {
-                        if let Some(edges) = index_mut.edges_for_port(*port) {
-                            affected_edges.extend(edges.iter().copied());
-                        }
+                    if let Some(ports) = cache.node_ports.get(id) {
+                        affected_ports.extend(ports.iter().copied());
                     }
                 }
-                affected_edges.sort_unstable();
-                affected_edges.dedup();
 
-                if !affected_edges.is_empty() {
-                    let edge_endpoints: Vec<(EdgeId, PortId, PortId)> = self
-                        .graph
-                        .read_ref(host, |g| {
-                            affected_edges
-                                .iter()
-                                .filter_map(|edge_id| {
-                                    g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
-                                })
-                                .collect::<Vec<_>>()
-                        })
-                        .ok()
-                        .unwrap_or_default();
-                    for (edge_id, from, to) in edge_endpoints {
-                        let Some(p0) = geom_mut.port_center(from) else {
-                            continue;
-                        };
-                        let Some(p1) = geom_mut.port_center(to) else {
-                            continue;
-                        };
-                        let rect = index_mut.edge_aabb(p0, p1, snapshot.zoom);
-                        index_mut.update_edge_rect(edge_id, rect);
-                    }
-                }
+                let graph_model = self.graph.clone();
+                Self::update_edges_for_ports(
+                    geom_mut,
+                    index_mut,
+                    snapshot.zoom,
+                    &affected_ports,
+                    |edge_ids| {
+                        graph_model
+                            .read_ref(host, |g| {
+                                edge_ids
+                                    .iter()
+                                    .filter_map(|edge_id| {
+                                        g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                    })
+                                    .collect::<Vec<_>>()
+                            })
+                            .ok()
+                            .unwrap_or_default()
+                    },
+                );
 
                 cache.node_positions = next_positions;
             }
