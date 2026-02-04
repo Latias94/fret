@@ -567,7 +567,9 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_deferred_cleanup_time += deferred_cleanup_started.elapsed();
             }
             if let Some(started) = started {
-                self.debug_stats.layout_time = started.elapsed();
+                self.debug_stats.layout_time = started
+                    .elapsed()
+                    .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
             }
             return;
         }
@@ -744,7 +746,9 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if let Some(started) = started {
-            self.debug_stats.layout_time = started.elapsed();
+            self.debug_stats.layout_time = started
+                .elapsed()
+                .saturating_sub(self.debug_stats.layout_prepaint_after_layout_time);
         }
 
         if pass_kind == LayoutPassKind::Final {
