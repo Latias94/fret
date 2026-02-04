@@ -1839,3 +1839,31 @@ Worst bundle:
 
 Notes:
 - A/B deltas are within expected noise for this script.
+
+## 2026-02-04 12:16:14 (commit `f4ac7a12ef9e94d686df39c6367c8ae7955893c1`)
+
+Change:
+- measure churn: effects blur thrash (budget=20MB)
+
+Suite:
+- `ui-gallery`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --repeat 3 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --env FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture --env FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json | 440 | 443 | 443 | 168 | 24 | 5 | 289 |
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json | 0 | 0 | 0 | 0 | 16233360 | 16233360 | 1 | 1 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json`
+- top_total_time_us: `443`
+- bundle: `target/fret-diag/1770178521003-script-step-0008-press_key/bundle.json`

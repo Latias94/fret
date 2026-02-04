@@ -28,6 +28,15 @@ Recent editor-class win (evidence lives in the perf log):
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.
 
+Recent “make GPU churn measurable” win (so we can explain tail hitches, not just average frame time):
+
+- Diagnostics bundles now export best-effort text atlas + intermediate pool churn signals, and `fretboard` can sort by them.
+  - Evidence: commits `d10cac5a` + `c9a8b168` + perf log entries in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+- A deterministic blur/effects workload exists to make intermediate pool counters non-zero:
+  - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
+  - Scripts: `tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json`,
+    `tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json`
+
 ---
 
 ## 1) What GPUI does that matters for smoothness
@@ -242,8 +251,10 @@ Next:
 - Extend the exported telemetry with additional “GPU churn” and “occupancy” signals:
   - glyph atlas occupancy / live page count (to distinguish “one-time warmup” vs “thrash”),
   - texture upload bytes for non-text assets (images, SVG masks, path intermediates),
-  - a dedicated workload that actually exercises the intermediate pool (blur/effects) so the counters become actionable,
   - (optional) GPU timestamp queries for render passes + present/submit time when supported.
+- Promote churn into a first-class perf log surface:
+  - require `diag perf --json` output to include churn vectors for the top frames,
+  - record churn p95/max alongside the CPU breakdown for each perf run (so regressions are explainable).
 
 Acceptance:
 

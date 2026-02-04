@@ -336,6 +336,7 @@ Candidate changes:
   - wrap width / constraints,
   - shaping options.
 - ensure text atlas behavior has clear budgets and eviction is visible in perf snapshots.
+  - Status: implemented in diagnostics bundles + `fretboard` sort modes; see `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
 
 ---
 

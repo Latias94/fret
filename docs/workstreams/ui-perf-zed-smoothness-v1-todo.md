@@ -46,6 +46,9 @@ Conventions:
   - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`
 - [x] Add a helper to append suite results to the log:
   - `tools/perf/perf_log.py`
+- [x] Extend `tools/perf/perf_log.py` to include churn signals (top frame p95/max) alongside CPU breakdown.
+  - Signals: text atlas uploads/evictions, intermediate pool peak bytes, intermediate pool evictions.
+  - Implemented by `feat(perf): include churn signals in perf_log` (commit `76d2dfd6`).
 - [x] Record an initial suite run in the log (repeat=7).
 - [x] Add a steady-state suite and reuse-launched-process support:
   - `fretboard diag perf ui-gallery-steady --reuse-launch --launch -- cargo run -p fret-ui-gallery --release`
@@ -215,6 +218,11 @@ TODO:
   - Script: `tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json`
   - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (entry for `effects_blur_torture`).
+- [x] Add an eviction stress variant to force intermediate pool churn for correlation work.
+  - Script: `tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json`
+  - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
+  - Budget override: `FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520` (20MB)
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (pool evictions > 0).
 - [ ] Add additional churn accounting beyond text atlas:
   - image uploads (bytes + count),
   - SVG mask atlas churn (page alloc/evict, upload bytes),

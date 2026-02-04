@@ -52,6 +52,9 @@ Output includes:
 - CPU: `encode_scene_us`, `prepare_text_us`, `prepare_svg_us`
 - Complexity proxies: `draw_calls`, per-primitive draw calls, pipeline switches, bind group switches, uniform/instance/vertex bytes
 - Scene encoding cache hit/miss counts
+- Resource churn proxies (best-effort):
+  - Text atlas: `renderer_text_atlas_upload_bytes`, `renderer_text_atlas_evicted_pages`, `renderer_text_atlas_resets`
+  - Intermediate pool: `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_pool_evictions`
 
 This is the fastest “primitive-level” sanity check before deeper tracing.
 
@@ -73,6 +76,8 @@ Useful `diag` sort modes:
 - `--sort encode_scene` (CPU scene encoding)
 - `--sort prepare_text` (CPU text preparation)
 - `--sort draw_calls` / `--sort pipeline_switches` / `--sort bind_group_switches` (submission complexity proxies)
+- `--sort atlas_upload_bytes` / `--sort atlas_evicted_pages` (text atlas churn)
+- `--sort intermediate_peak_bytes` / `--sort pool_evictions` (effects intermediate churn)
 
 Tip: You can disable it explicitly by passing `--env FRET_DIAG_RENDERER_PERF=0`.
 
@@ -149,6 +154,6 @@ cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-t
 
 ## 4) Next “make it actionable” upgrades (follow-ups)
 
-- Export renderer perf snapshot into diagnostics bundles (so perf logs can include it next to `paint_time_us`).
 - Add GPU timestamp queries (where supported) and export `gpu_render_us` for the “CPU looks fine but it hitches” class of bugs.
-- Add explicit text atlas / eviction / upload counters (bytes + events) to correlate with spikes.
+- Export additional non-text churn signals (images, SVG mask atlases, path intermediates) so “paint-dominant” pages become explainable.
+- Add an automated correlation view in the perf log (slow frames ↔ churn signature), beyond “top frame” p95/max tables.
