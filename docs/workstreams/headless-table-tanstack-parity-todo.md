@@ -276,11 +276,26 @@ ColumnDef keys referenced by upstream feature implementations:
   - Done (parity-gated): expanded state transitions and row model outputs under `paginateExpandedRows` true/false.
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs`.
-- [ ] HTP-expand-020 Align option gates and hooks:
+- [x] HTP-expand-020 Align option gates and hooks:
   - `enableExpanding`, `manualExpanding`, `onExpandedChange`, `getExpandedRowModel` override.
-- [ ] HTP-expand-030 Align `autoResetExpanded` / `autoResetAll` behaviors.
-- [ ] HTP-expand-040 Align row capability hooks:
+  - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/options.rs` (`enable_expanding`)
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`expanded_row_model`, `reset_expanded`)
+  - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (fixture-only markers)
+- [x] HTP-expand-030 Align `autoResetExpanded` / `autoResetAll` behaviors.
+  - Parity-gated (state transition outcomes): `grouping_autoreset_expanded_*` snapshots in
+    `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json`,
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/options.rs` (`auto_reset_all`, `auto_reset_expanded`)
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::should_auto_reset_expanded`)
+- [x] HTP-expand-040 Align row capability hooks:
   - `getRowCanExpand`, `getIsRowExpanded` default behavior + overrides.
+  - Parity-gated: `expanding_hook_*` snapshots in
+    `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`,
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_can_expand_for_row`, `row_is_expanded_for_row`)
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_expanding.rs` (`expand_row_model`)
 - [ ] HTP-page-010 Align pagination option gates and hooks:
   - `manualPagination`, `pageCount`, `rowCount`, `onPaginationChange`, `getPaginationRowModel` override.
 - [ ] HTP-page-020 Align `autoResetPageIndex` / `autoResetAll` behaviors.
