@@ -52,6 +52,7 @@ type SnapshotId =
   | "colsize_resize_on_end_move_no_sizing"
   | "colsize_resize_on_end_end_writes"
   | "colsize_resize_rtl_move_flips"
+  | "colsize_enable_column_resizing_false_noops"
   | "group_resize_on_change_move_updates"
   | "group_resize_on_change_end_resets"
   | "group_resize_on_end_end_writes"
@@ -3621,6 +3622,35 @@ function snapshotColumnPinning(
         options: baseOptions,
         state: clampedState,
         expect: expectClamped,
+      },
+      {
+        id: "colsize_enable_column_resizing_false_noops",
+        options: {
+          ...baseOptions,
+          enableColumnResizing: false,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        state: pinnedOrderedState,
+        actions: [
+          { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+        expect: snapshotForActions(
+          {
+            ...baseOptions,
+            enableColumnResizing: false,
+            columnResizeMode: "onChange",
+            columnResizeDirection: "ltr",
+          },
+          pinnedOrderedState,
+          [
+            { type: "columnResizeBegin", column_id: "c", client_x: 10 },
+            { type: "columnResizeMove", client_x: 35 },
+            { type: "columnResizeEnd", client_x: 35 },
+          ],
+        ),
       },
       {
         id: "colsize_resize_on_change_move_updates",

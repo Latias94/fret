@@ -319,6 +319,201 @@
       }
     },
     {
+      "id": "colsize_enable_column_resizing_false_noops",
+      "options": {
+        "enableColumnResizing": false,
+        "columnResizeMode": "onChange",
+        "columnResizeDirection": "ltr"
+      },
+      "state": {
+        "columnOrder": [
+          "b",
+          "c",
+          "a"
+        ],
+        "columnPinning": {
+          "left": [
+            "b"
+          ],
+          "right": [
+            "a"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "columnResizeBegin",
+          "column_id": "c",
+          "client_x": 10
+        },
+        {
+          "type": "columnResizeMove",
+          "client_x": 35
+        },
+        {
+          "type": "columnResizeEnd",
+          "client_x": 35
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 175,
+          "left_total_size": 50,
+          "center_total_size": 25,
+          "right_total_size": 100
+        },
+        "column_start": {
+          "all": {
+            "b": 0,
+            "c": 50,
+            "a": 75
+          },
+          "left": {
+            "b": 0,
+            "c": null,
+            "a": null
+          },
+          "center": {
+            "b": null,
+            "c": 0,
+            "a": null
+          },
+          "right": {
+            "b": null,
+            "c": null,
+            "a": 0
+          }
+        },
+        "column_after": {
+          "all": {
+            "b": 125,
+            "c": 100,
+            "a": 0
+          },
+          "left": {
+            "b": 0,
+            "c": null,
+            "a": null
+          },
+          "center": {
+            "b": null,
+            "c": 0,
+            "a": null
+          },
+          "right": {
+            "b": null,
+            "c": null,
+            "a": 0
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [
+              "b"
+            ],
+            "right": [
+              "a"
+            ]
+          },
+          "columnOrder": [
+            "b",
+            "c",
+            "a"
+          ]
+        }
+      }
+    },
+    {
       "id": "colsize_resize_on_change_move_updates",
       "options": {
         "enableColumnResizing": true,

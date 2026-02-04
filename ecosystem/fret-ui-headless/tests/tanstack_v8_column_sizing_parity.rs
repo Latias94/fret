@@ -4,8 +4,7 @@ use std::sync::Arc;
 
 use fret_ui_headless::table::{
     ColumnDef, ColumnId, ColumnSizingRegion, RowKey, Table, TableState, TanStackTableOptions,
-    TanStackTableState, begin_column_resize, drag_column_resize, end_column_resize,
-    resolved_column_size,
+    TanStackTableState,
 };
 use serde::Deserialize;
 
@@ -223,26 +222,29 @@ fn tanstack_v8_column_sizing_parity_totals_and_starts() {
         }
 
         if !snap.actions.is_empty() {
+            // TanStack: resize interactions are gated by `column.getCanResize()` computed at the
+            // start of the interaction via `header.getResizeHandler()`. When resizing is disabled,
+            // the handler is still callable but it becomes a no-op and does not attach listeners.
             let mut active_resize: Option<ColumnId> = None;
 
             for action in &snap.actions {
+                let table = Table::builder(&data)
+                    .columns(columns.clone())
+                    .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                    .state(state.clone())
+                    .options(options)
+                    .build();
+
                 match action {
                     FixtureAction::ColumnResizeBegin {
                         column_id,
                         client_x,
                     } => {
-                        let col = columns
-                            .iter()
-                            .find(|c| c.id.as_ref() == column_id.as_str())
+                        let next_info = table
+                            .started_column_resize(column_id.as_str(), *client_x)
                             .expect("resize column exists");
-                        let start = resolved_column_size(&state.column_sizing, col);
-                        begin_column_resize(
-                            &mut state.column_sizing_info,
-                            col.id.clone(),
-                            *client_x,
-                            vec![(col.id.clone(), start)],
-                        );
-                        active_resize = Some(col.id.clone());
+                        state.column_sizing_info = next_info;
+                        active_resize = Some(Arc::<str>::from(column_id.as_str()));
                     }
                     FixtureAction::ColumnResizeMove { client_x } => {
                         assert!(
@@ -250,13 +252,9 @@ fn tanstack_v8_column_sizing_parity_totals_and_starts() {
                             "snapshot {} columnResizeMove without begin",
                             snap.id
                         );
-                        drag_column_resize(
-                            options.column_resize_mode,
-                            options.column_resize_direction,
-                            &mut state.column_sizing,
-                            &mut state.column_sizing_info,
-                            *client_x,
-                        );
+                        let (next_sizing, next_info) = table.dragged_column_resize(*client_x);
+                        state.column_sizing = next_sizing;
+                        state.column_sizing_info = next_info;
                     }
                     FixtureAction::ColumnResizeEnd { client_x } => {
                         assert!(
@@ -264,13 +262,9 @@ fn tanstack_v8_column_sizing_parity_totals_and_starts() {
                             "snapshot {} columnResizeEnd without begin",
                             snap.id
                         );
-                        end_column_resize(
-                            options.column_resize_mode,
-                            options.column_resize_direction,
-                            &mut state.column_sizing,
-                            &mut state.column_sizing_info,
-                            Some(*client_x),
-                        );
+                        let (next_sizing, next_info) = table.ended_column_resize(Some(*client_x));
+                        state.column_sizing = next_sizing;
+                        state.column_sizing_info = next_info;
                         active_resize = None;
                     }
                 }
