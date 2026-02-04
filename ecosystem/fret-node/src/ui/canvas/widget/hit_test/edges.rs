@@ -17,7 +17,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let candidates = ctx
             .index
             .query_edges_sorted_dedup(pos, hit_w, ctx.scratch.edges_mut());
-        let mut best = score::BestByDistance::<EdgeId, EdgeId>::new(zoom);
+        let mut best = score::BestEdgeByDistance::new(zoom);
 
         for &edge_id in candidates {
             let Some(edge) = graph.edges.get(&edge_id) else {
@@ -43,13 +43,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
             };
             if d2 <= threshold2 {
-                // Deterministic tie-break: prefer the closest edge; if distances match (within a
-                // zoom-scaled epsilon), prefer the lowest edge id. This keeps hover/selection
-                // stable across refactors and avoids relying on map iteration order.
-                best.consider(edge_id, edge_id, d2);
+                best.consider(edge_id, d2);
             }
         }
 
-        best.into_value()
+        best.into_edge_id()
     }
 }

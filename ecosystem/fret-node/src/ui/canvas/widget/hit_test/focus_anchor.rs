@@ -16,10 +16,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let candidates = ctx
             .index
             .query_edges_sorted_dedup(pos, query_r, ctx.scratch.edges_mut());
-        let mut best =
-            score::BestByDistance::<(EdgeId, u8, PortId), (EdgeId, EdgeEndpoint, PortId)>::with_eps(
-                zoom_eps(z),
-            );
+        let mut best = score::BestEdgeFocusAnchorByDistance::new(zoom);
 
         for &edge_id in candidates {
             let Some(edge) = graph.edges.get(&edge_id) else {
@@ -60,19 +57,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     let dx = pos.x.0 - center.x.0;
                     let dy = pos.y.0 - center.y.0;
                     let d2 = dx * dx + dy * dy;
-                    let endpoint_order = match endpoint {
-                        EdgeEndpoint::From => 0u8,
-                        EdgeEndpoint::To => 1u8,
-                    };
-
-                    // Deterministic tie-break: prefer the closest anchor; if distances match (within a
-                    // zoom-scaled epsilon), prefer the lowest edge id, then endpoint order, then the
-                    // fixed endpoint port id.
-                    best.consider(
-                        (edge_id, endpoint_order, fixed),
-                        (edge_id, endpoint, fixed),
-                        d2,
-                    );
+                    best.consider(edge_id, endpoint, fixed, d2);
                 };
 
             if allow_source {
