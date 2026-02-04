@@ -85,6 +85,7 @@ type SnapshotId =
   | "visord_toggle_all_off_keeps_non_hideable"
   | "visord_toggle_all_on_clears_state"
   | "visord_set_column_order_reorders"
+  | "visord_set_column_order_with_duplicates"
   | "visord_set_order_then_hide"
   | "visord_toggle_noop_when_enable_hiding_false"
   | "state_shapes_baseline"
@@ -2430,6 +2431,9 @@ function snapshotColumnPinning(
       ),
       mkActions("visord_set_column_order_reorders", base, {}, [
         { type: "setColumnOrder", order: ["c", "a", "b"] },
+      ]),
+      mkActions("visord_set_column_order_with_duplicates", base, {}, [
+        { type: "setColumnOrder", order: ["c", "a", "c", "b"] },
       ]),
       mkActions("visord_set_order_then_hide", base, {}, [
         { type: "setColumnOrder", order: ["c", "a", "b"] },
