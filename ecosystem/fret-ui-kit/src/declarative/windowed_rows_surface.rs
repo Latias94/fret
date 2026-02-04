@@ -131,6 +131,9 @@ impl Default for WindowedRowsSurfaceProps {
         scroll.axis = ScrollAxis::Y;
         scroll.layout.size.width = Length::Fill;
         scroll.layout.size.height = Length::Fill;
+        // This surface's paint output depends on the scroll offset (visible window changes), so
+        // scroll-handle updates must be allowed to invalidate view-cache reuse.
+        scroll.windowed_paint = true;
 
         let mut canvas = CanvasProps::default();
         canvas.layout.size.width = Length::Fill;
@@ -486,6 +489,9 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
 
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
+    // This surface's paint output depends on the scroll offset (visible window changes), so
+    // scroll-handle updates must be allowed to invalidate view-cache reuse.
+    scroll.windowed_paint = true;
 
     canvas.layout.size.width = Length::Fill;
     canvas.layout.size.height = Length::Px(content_h);
@@ -610,4 +616,16 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
             }
         })]
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_props_enable_windowed_paint() {
+        let props = WindowedRowsSurfaceProps::default();
+        assert_eq!(props.scroll.axis, ScrollAxis::Y);
+        assert!(props.scroll.windowed_paint);
+    }
 }
