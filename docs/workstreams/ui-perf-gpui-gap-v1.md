@@ -230,13 +230,19 @@ Proposal:
   - `fretboard diag stats` and `fretboard diag perf --json` can now sort/report by these renderer metrics.
   - Commits: `0e4928fe` + `cf8975ca`. Evidence runs are logged in
     `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+  - Renderer churn signals are now exported (best-effort) for tail-hitch correlation:
+    - Text atlas: `renderer_text_atlas_revision`, `renderer_text_atlas_upload_bytes`,
+      `renderer_text_atlas_evicted_pages`, `renderer_text_atlas_resets` (and related counters).
+    - Intermediate pool: `renderer_intermediate_peak_in_use_bytes`,
+      `renderer_intermediate_pool_evictions` (and related counters).
+    - Commits: `d10cac5a` + `c9a8b168`.
 
 Next:
 
-- Extend the exported telemetry with “churn” signals that correlate with tail hitches:
-  - glyph atlas upload bytes / evictions / page count,
-  - texture upload bytes (images/SVG masks/path intermediates),
-  - intermediate pool pressure (alloc/free bytes, spill events),
+- Extend the exported telemetry with additional “GPU churn” and “occupancy” signals:
+  - glyph atlas occupancy / live page count (to distinguish “one-time warmup” vs “thrash”),
+  - texture upload bytes for non-text assets (images, SVG masks, path intermediates),
+  - a dedicated workload that actually exercises the intermediate pool (blur/effects) so the counters become actionable,
   - (optional) GPU timestamp queries for render passes + present/submit time when supported.
 
 Acceptance:

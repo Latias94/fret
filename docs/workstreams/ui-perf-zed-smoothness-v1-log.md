@@ -1357,6 +1357,64 @@ Worst bundle:
 Notes:
 - A/B deltas are within expected noise for this script.
 
+### Renderer churn signals: export text atlas + intermediate pool counters
+
+Commits:
+- `feat(render): add text atlas + intermediate churn perf stats` (`d10cac5a`)
+- `feat(fretboard): add renderer churn sort modes` (`c9a8b168`)
+
+Goal:
+- Make tail hitches explainable by correlating “slow frames” with renderer churn:
+  - text atlas uploads / evictions / resets
+  - intermediate pool pressure / evictions (blur/effects)
+
+#### Quick validation: text atlas uploads appear in bundles
+
+Command (dev; steady script; renderer perf enabled):
+```powershell
+FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json --dir target/fret-diag-churn-verify2 --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+```
+
+Evidence bundle:
+- `target/fret-diag-churn-verify2/1770175418448-ui-gallery-context-action-steady/bundle.json`
+
+Observed churn (sum/max over snapshots in that bundle):
+- `renderer_text_atlas_upload_bytes`: sum `2560`, max `2560`
+- `renderer_text_atlas_evicted_pages`: sum `0`, max `0`
+
+#### Churn signature example: “cold-ish” UI step triggers a large atlas upload
+
+Command (dev; screenshots enabled because the script requests them):
+```powershell
+FRET_DIAG_RENDERER_PERF=1 FRET_DIAG_SCREENSHOTS=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-overlay-modals-visible.json --dir target/fret-diag-churn-verify5b --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+```
+
+Evidence bundle:
+- `target/fret-diag-churn-verify5b/1770175626589-script-step-0078-click/bundle.json`
+
+Top atlas upload frame (computed from `layout+prepaint+paint+dispatch+hit_test`):
+- `renderer_text_atlas_upload_bytes`: `835328` bytes
+- `renderer_prepare_text_us`: `2067`
+- `total_us`: `5546` (`layout/prepaint/paint = 5072/71/403`)
+
+Note:
+- This is the intended shape of the new metrics: large atlas uploads show up alongside elevated `prepare_text_us`.
+
+#### Suite check: `ui-gallery-steady` stays “churn-free” after warmup
+
+Command (release; steady; `--reuse-launch`; repeat=3; warmup=5):
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --dir target/fret-diag-perf-churn2 --reuse-launch --repeat 3 --warmup-frames 5 --sort time --json --env FRET_DIAG_RENDERER_PERF=1 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Summary (repeat=3; `--sort time`; p95 total):
+- Worst script: `ui-gallery-window-resize-stress-steady.json` p95 total `19713us`
+- In this steady-state suite run, `top_renderer_text_atlas_upload_bytes` stays `0` on the sampled top frames
+  (i.e. no per-frame glyph churn after warmup).
+
+Worst bundle (from `worst_overall`):
+- `target/fret-diag-perf-churn2/1770175928782-ui-gallery-window-resize-stress-steady/bundle.json`
+
 ---
 
 ### Renderer perf exported into diagnostics bundles (primitive-level correlation)

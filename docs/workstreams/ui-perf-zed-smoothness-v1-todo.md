@@ -193,6 +193,15 @@ Perf acceptance:
 - [x] Export renderer perf snapshots into diagnostics bundles for perf log correlation.
   - Data lands in `bundle.json` under `.windows[].snapshots[].debug.stats.renderer_*` (commit `0e4928fe`).
   - `fretboard diag stats/perf` supports sorting by renderer metrics (commit `cf8975ca`).
+- [x] Export renderer churn metrics (text atlas + intermediate pool) into bundles and wire them into `fretboard`.
+  - Commits: `feat(render): add text atlas + intermediate churn perf stats` (`d10cac5a`) +
+    `feat(fretboard): add renderer churn sort modes` (`c9a8b168`).
+  - Text atlas (per-frame signals): `renderer_text_atlas_revision`, `renderer_text_atlas_upload_bytes`,
+    `renderer_text_atlas_evicted_pages`, `renderer_text_atlas_resets` (and related counters).
+  - Intermediate pool (per-frame signals): `renderer_intermediate_peak_in_use_bytes`,
+    `renderer_intermediate_pool_evictions` (and related counters).
+  - New sort modes:
+    - `atlas_upload_bytes`, `atlas_evicted_pages`, `intermediate_peak_bytes`, `pool_evictions`
 
 ### M4: Windowed surfaces (prepaint-driven visible windows)
 
