@@ -203,6 +203,10 @@ Correctness acceptance:
     - `prepaint_time_us` remains ~9–10ms and `hit_test_time_us` stays measurable; next isolate remaining ~20ms inside `layout_all_with_pass_kind`.
     - `470708b2` reduces the same probe's top frame max total from ~56ms → ~39ms by gating semantics snapshot refresh
       to only the frames that actually need selector resolution (3/201 frames in the inspected bundle).
+    - `ba3fd15d` fixes a diagnostics accounting bug (layout time no longer double-counts prepaint).
+    - `6cca2cf1` removes prepaint rebuild work on layout-stable frames by reusing hit-test bounds trees:
+      - `top_prepaint_time_us` drops to ~0 for the probe's worst frames.
+      - Pointer-move frames become paint-only with `layout_time_us ~ 0` and `prepaint_time_us ~ 0` (see perf log entry).
   - Deliverable: a new/updated script + a log entry demonstrating low `layout_time_us` while `hit_test_time_us` remains measurable.
 
 Perf acceptance:

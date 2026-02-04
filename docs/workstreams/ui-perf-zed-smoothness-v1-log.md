@@ -2282,3 +2282,52 @@ After (commit `470708b2`):
 Notes:
 - This makes the “hit-test torture” probe far more representative: long multi-frame pointer sweeps are no longer
   dominated by per-frame semantics refresh.
+
+## 2026-02-04 22:15:07 (perf commit `ba3fd15d`)
+
+Change:
+- Fix a diagnostics accounting bug: `layout_time_us` no longer includes (and thus double-counts) the time spent in
+  `prepaint_after_layout`.
+
+Notes:
+- From this commit onward, `top_total_time_us = layout_time_us + prepaint_time_us + paint_time_us` is no longer
+  inflated by `prepaint` being counted twice.
+- Perf numbers recorded **before** `ba3fd15d` are not directly comparable to later runs without adjusting for this.
+
+## 2026-02-04 22:15:07 (perf commit `6cca2cf1`)
+
+Change:
+- On layout stable frames (where `layout_all_with_pass_kind` takes the “skip layout-engine rebuild” fast path),
+  avoid rebuilding interaction/prepaint state and instead reuse the existing hit-test bounds trees.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+- Harness-only: `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
+- Env: `FRET_DIAG_SCRIPT_AUTO_DUMP=0`, `FRET_DIAG_SEMANTICS=0`, `FRET_DIAG_MAX_SNAPSHOTS=240`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json `
+  --dir target/fret-diag-perf/stripes-sweep-prepaintreuse.6cca2cf1 `
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json `
+  --timeout-ms 300000 --poll-ms 200 `
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture `
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (top frame; p50/p95/max across 7 runs; us):
+- `top_total_time_us`: `19917 / 20086 / 20086`
+- `top_layout_time_us`: `19500 / 19674 / 19674` (dominated by one-time semantics refresh frames)
+- `top_prepaint_time_us`: `0 / 0 / 0`
+- `top_paint_time_us`: `405 / 417 / 417`
+
+Pointer-move frames (within the captured bundle; filtered to frames where `dispatch_events > 0`):
+- Worst-per-run total (layout+prepaint+paint) p50/p95/max (us): `464 / 693 / 693`
+- Worst-per-run hit-test (subset of dispatch) in the worst pointer frame (us): `669`
+- Worst-per-run dispatch in the worst pointer frame (us): `3912`
+
+Notes:
+- The “worst overall” frame in this probe is now typically a **selector resolution** frame (no dispatched events),
+  which is expected for scripted tooling. The pointer-move steady-state frames are now effectively **paint-only**
+  with `layout_time_us ~ 0` and `prepaint_time_us ~ 0`.
