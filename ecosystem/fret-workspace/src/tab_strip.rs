@@ -250,6 +250,8 @@ pub struct WorkspaceTabStrip {
     height: Px,
     pane_id: Option<Arc<str>>,
     tab_drag: Option<Model<WorkspaceTabDragState>>,
+    root_test_id: Option<Arc<str>>,
+    tab_test_id_prefix: Option<Arc<str>>,
 }
 
 #[derive(Default)]
@@ -288,6 +290,8 @@ impl WorkspaceTabStrip {
             height: Px(28.0),
             pane_id: None,
             tab_drag: None,
+            root_test_id: None,
+            tab_test_id_prefix: None,
         }
     }
 
@@ -298,6 +302,8 @@ impl WorkspaceTabStrip {
             height: Px(28.0),
             pane_id: None,
             tab_drag: None,
+            root_test_id: None,
+            tab_test_id_prefix: None,
         }
     }
 
@@ -318,6 +324,20 @@ impl WorkspaceTabStrip {
 
     pub fn tab_drag_model(mut self, model: Model<WorkspaceTabDragState>) -> Self {
         self.tab_drag = Some(model);
+        self
+    }
+
+    /// Attach a deterministic test id for the tab strip root semantics node.
+    pub fn test_id_root(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.root_test_id = Some(id.into());
+        self
+    }
+
+    /// Attach deterministic test ids for individual tabs.
+    ///
+    /// Shape: `{prefix}-{tab_id}`.
+    pub fn tab_test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.tab_test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -358,6 +378,8 @@ impl WorkspaceTabStrip {
             .as_deref()
             .and_then(crate::commands::pane_activate_command);
         let tab_drag_model = self.tab_drag;
+        let root_test_id = self.root_test_id;
+        let tab_test_id_prefix = self.tab_test_id_prefix;
 
         let drag_model = get_drag_model(cx);
         cx.observe_model(&drag_model, Invalidation::Paint);
@@ -444,6 +466,7 @@ impl WorkspaceTabStrip {
             SemanticsProps {
                 layout: tab_list_semantics_layout(),
                 role: SemanticsRole::TabList,
+                test_id: root_test_id.clone(),
                 ..Default::default()
             },
             |cx| {
@@ -529,6 +552,7 @@ impl WorkspaceTabStrip {
                                             let pane_activate_cmd_for_drag = pane_activate_cmd.clone();
                                             let tab_close_command = tab.close_command.clone();
                                             let tab_dirty = tab.dirty;
+                                            let tab_test_id_prefix_for_tab = tab_test_id_prefix.clone();
                                             #[cfg(feature = "shadcn-context-menu")]
                                             let has_left = index > 0;
                                             #[cfg(feature = "shadcn-context-menu")]
@@ -554,6 +578,14 @@ impl WorkspaceTabStrip {
                                                         a11y: PressableA11y {
                                                             role: Some(SemanticsRole::Tab),
                                                             label: Some(tab_title.clone()),
+                                                            test_id: tab_test_id_prefix_for_tab
+                                                                .as_ref()
+                                                                .map(|prefix| {
+                                                                    Arc::<str>::from(format!(
+                                                                        "{prefix}-{}",
+                                                                        tab_id.as_ref()
+                                                                    ))
+                                                                }),
                                                             selected: is_active,
                                                             pos_in_set: Some(pos_in_set),
                                                             set_size: Some(set_size),

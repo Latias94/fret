@@ -2615,13 +2615,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 if state.has_final_viewport && viewport.0 > 0.0 && len > 0 {
                     let visible = state.metrics.visible_range(preview_offset, viewport, 0);
                     if let (Some(prev), Some(visible)) = (range, visible) {
+                        let prev_visible_len = prev
+                            .end_index
+                            .saturating_sub(prev.start_index)
+                            .saturating_add(1);
+                        let visible_len = visible
+                            .end_index
+                            .saturating_sub(visible.start_index)
+                            .saturating_add(1);
+
                         let win_start = prev.start_index.saturating_sub(prev.overscan);
                         let win_end =
                             (prev.end_index + prev.overscan).min(prev.count.saturating_sub(1));
                         let out_of_window =
                             visible.start_index < win_start || visible.end_index > win_end;
 
-                        if out_of_window {
+                        // If the viewport grows (e.g. after intrinsic probes settle), the stored
+                        // render-derived window may under-estimate the visible span while still
+                        // appearing "within overscan". Force a one-shot recompute so we don't get
+                        // stuck in a too-small window forever under view-cache reuse.
+                        if visible_len > prev_visible_len || out_of_window {
                             range = state.metrics.visible_range(
                                 preview_offset,
                                 viewport,
@@ -2688,6 +2701,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     measure_mode: options.measure_mode,
                     key_cache,
                     overscan: options.overscan,
+                    keep_alive: options.keep_alive,
                     scroll_margin: options.scroll_margin,
                     gap: options.gap,
                     scroll_handle,
@@ -2792,6 +2806,28 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     }
 
     #[track_caller]
+    pub fn virtual_list_keyed_retained_fn(
+        &mut self,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        self.virtual_list_keyed_retained_with_layout_fn(
+            LayoutStyle::default(),
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            row,
+        )
+    }
+
+    #[track_caller]
     pub fn virtual_list_keyed_retained_with_layout(
         &mut self,
         layout: LayoutStyle,
@@ -2811,6 +2847,31 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             scroll_handle,
             key_at,
             crate::virtual_list::default_range_extractor,
+            row,
+        )
+    }
+
+    #[track_caller]
+    pub fn virtual_list_keyed_retained_with_layout_fn(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn = Arc::new(key_at);
+        let row: crate::windowed_surface_host::RetainedVirtualListRowFn<H> = Arc::new(row);
+        self.virtual_list_keyed_retained_with_layout(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
             row,
         )
     }
@@ -2843,6 +2904,13 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     crate::windowed_surface_host::RetainedVirtualListHostMarker::default,
                     |_| {},
                 );
+                // Keep the retained keep-alive bucket's element-local state alive across frames
+                // (including view-cache hits) so window shifts can actually reuse previously
+                // mounted item subtrees. The actual budget is controlled by `VirtualListProps`.
+                cx.with_state(
+                    crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
+                    |_| {},
+                );
                 cx.with_state(
                     || crate::windowed_surface_host::RetainedVirtualListHostCallbacks::<H> {
                         key_at: Arc::clone(&key_at),
@@ -2864,6 +2932,34 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     })
                     .collect::<Vec<_>>()
             },
+        )
+    }
+
+    #[track_caller]
+    #[allow(clippy::too_many_arguments)]
+    pub fn virtual_list_keyed_retained_with_layout_ex_fn(
+        &mut self,
+        layout: LayoutStyle,
+        len: usize,
+        options: VirtualListOptions,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+        key_at: impl Fn(usize) -> crate::ItemKey + 'static,
+        range_extractor: crate::windowed_surface_host::RetainedVirtualListRangeExtractor,
+        row: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> AnyElement + 'static,
+    ) -> AnyElement
+    where
+        H: 'static,
+    {
+        let key_at: crate::windowed_surface_host::RetainedVirtualListKeyAtFn = Arc::new(key_at);
+        let row: crate::windowed_surface_host::RetainedVirtualListRowFn<H> = Arc::new(row);
+        self.virtual_list_keyed_retained_with_layout_ex(
+            layout,
+            len,
+            options,
+            scroll_handle,
+            key_at,
+            range_extractor,
+            row,
         )
     }
 

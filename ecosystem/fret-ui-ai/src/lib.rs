@@ -4,4 +4,6 @@
 
 pub mod elements;
 
-pub use elements::{Conversation, Message, MessageRole};
+pub use elements::{
+    Conversation, ConversationMessage, ConversationTranscript, Message, MessageRole,
+};

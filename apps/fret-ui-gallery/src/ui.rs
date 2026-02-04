@@ -11,6 +11,7 @@ use fret_ui::Theme;
 use fret_ui::element::{CanvasProps, StackProps};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 use fret_ui_kit::ui;
 use fret_ui_material3 as material3;
@@ -29,18 +30,35 @@ fn matches_query(query: &str, item: &PageSpec) -> bool {
     }
 
     let q_lower = q.to_ascii_lowercase();
-    if item.id.to_ascii_lowercase().contains(&q_lower) {
+    let q_norm: String = q_lower
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .collect();
+
+    let matches_norm = |haystack: &str| {
+        if q_norm.is_empty() {
+            return false;
+        }
+        let norm: String = haystack
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .map(|c| c.to_ascii_lowercase())
+            .collect();
+        norm.contains(&q_norm)
+    };
+
+    if item.id.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.id) {
         return true;
     }
-    if item.label.to_ascii_lowercase().contains(&q_lower) {
+    if item.label.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.label) {
         return true;
     }
-    if item.origin.to_ascii_lowercase().contains(&q_lower) {
+    if item.origin.to_ascii_lowercase().contains(&q_lower) || matches_norm(item.origin) {
         return true;
     }
     item.tags
         .iter()
-        .any(|t| t.to_ascii_lowercase().contains(&q_lower))
+        .any(|t| t.to_ascii_lowercase().contains(&q_lower) || matches_norm(t))
 }
 
 pub(crate) fn sidebar_view(
@@ -649,6 +667,7 @@ fn page_preview(
             virtual_list_torture_edit_text,
             virtual_list_torture_scroll,
         ),
+        PAGE_UI_KIT_LIST_TORTURE => preview_ui_kit_list_torture(cx, theme),
         PAGE_CODE_VIEW_TORTURE => preview_code_view_torture(cx, theme),
         PAGE_CODE_EDITOR_MVP => preview_code_editor_mvp(
             cx,
@@ -691,6 +710,10 @@ fn page_preview(
         }
         PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
+        PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
+        PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
+        PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
+        PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
         PAGE_CARD => preview_card(cx),
         PAGE_BADGE => preview_badge(cx),
@@ -1428,13 +1451,22 @@ fn preview_virtual_list_torture(
             None => false,
         };
 
+    let variable_height =
+        match std::env::var_os("FRET_UI_GALLERY_VLIST_VARIABLE_HEIGHT").filter(|v| !v.is_empty()) {
+            Some(v) => {
+                let v = v.to_string_lossy().trim().to_ascii_lowercase();
+                !(v == "0" || v == "false" || v == "no" || v == "off")
+            }
+            None => false,
+        };
+
     let retained_host =
         match std::env::var_os("FRET_UI_GALLERY_VLIST_RETAINED").filter(|v| !v.is_empty()) {
             Some(v) => {
                 let v = v.to_string_lossy().trim().to_ascii_lowercase();
                 !(v == "0" || v == "false" || v == "no" || v == "off")
             }
-            None => false,
+            None => true,
         };
 
     let row_cache =
@@ -1445,6 +1477,11 @@ fn preview_virtual_list_torture(
             }
             None => false,
         };
+
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_VLIST_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(0);
 
     let header_editing_row = (!minimal_harness)
         .then(|| {
@@ -1570,6 +1607,11 @@ fn preview_virtual_list_torture(
                 } else {
                     "Mode: measured row heights (baseline)."
                 }),
+                cx.text(if keep_alive > 0 {
+                    format!("Mode: keep-alive enabled (budget={keep_alive}).")
+                } else {
+                    "Mode: keep-alive disabled (budget=0).".to_string()
+                }),
             ];
 
             if minimal_harness {
@@ -1605,6 +1647,12 @@ fn preview_virtual_list_torture(
         fret_ui::element::VirtualListOptions::new(Px(28.0), 10)
     };
 
+    let options = if retained_host && keep_alive > 0 {
+        options.keep_alive(keep_alive)
+    } else {
+        options
+    };
+
     let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
         let list = if minimal_harness {
             if retained_host {
@@ -1620,20 +1668,35 @@ fn preview_virtual_list_torture(
 
                     let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                     let row_label = cx.text(format!("Row {index}"));
+                    let extra_line = cx.text(format!(
+                        "Details: index={index} seed={} repeat={}",
+                        index.wrapping_mul(2654435761),
+                        (index % 7) + 1
+                    ));
 
                     let mut container_props = decl_style::container_props(
                         &theme,
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(background))
                             .p(Space::N2),
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_px(MetricRef::Px(height_hint)),
+                        {
+                            let mut layout = LayoutRefinement::default().w_full();
+                            if !variable_height {
+                                layout = layout.h_px(MetricRef::Px(height_hint));
+                            }
+                            layout
+                        },
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                     let row_layout = container_props.layout;
-                    let container = cx.container(container_props, |_cx| vec![row_label]);
+                    let container = cx.container(container_props, |_cx| {
+                        if variable_height && index % 15 == 0 {
+                            vec![row_label, extra_line]
+                        } else {
+                            vec![row_label]
+                        }
+                    });
                     let mut semantics = fret_ui::element::SemanticsProps::default();
                     semantics.layout = row_layout;
                     semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
@@ -1667,20 +1730,35 @@ fn preview_virtual_list_torture(
 
                         let height_hint = if index % 15 == 0 { Px(44.0) } else { Px(28.0) };
                         let row_label = cx.text(format!("Row {index}"));
+                        let extra_line = cx.text(format!(
+                            "Details: index={index} seed={} repeat={}",
+                            index.wrapping_mul(2654435761),
+                            (index % 7) + 1
+                        ));
 
                         let mut container_props = decl_style::container_props(
                             theme,
                             ChromeRefinement::default()
                                 .bg(ColorRef::Color(background))
                                 .p(Space::N2),
-                            LayoutRefinement::default()
-                                .w_full()
-                                .h_px(MetricRef::Px(height_hint)),
+                            {
+                                let mut layout = LayoutRefinement::default().w_full();
+                                if !variable_height {
+                                    layout = layout.h_px(MetricRef::Px(height_hint));
+                                }
+                                layout
+                            },
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                         let row_layout = container_props.layout;
-                        let container = cx.container(container_props, |_cx| vec![row_label]);
+                        let container = cx.container(container_props, |_cx| {
+                            if variable_height && index % 15 == 0 {
+                                vec![row_label, extra_line]
+                            } else {
+                                vec![row_label]
+                            }
+                        });
                         let mut semantics = fret_ui::element::SemanticsProps::default();
                         semantics.layout = row_layout;
                         semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
@@ -1949,6 +2027,121 @@ fn preview_virtual_list_torture(
         fret_ui::element::SemanticsProps {
             role: fret_core::SemanticsRole::Group,
             test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-torture-root")),
+            ..Default::default()
+        },
+        |_cx| [root],
+    );
+
+    vec![root]
+}
+
+#[derive(Default)]
+struct UiKitListTortureModels {
+    selection: Option<Model<Option<usize>>>,
+}
+
+fn preview_ui_kit_list_torture(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    let selection = cx.with_state(UiKitListTortureModels::default, |st| st.selection.clone());
+    let selection = match selection {
+        Some(selection) => selection,
+        None => {
+            let selection = cx.app.models_mut().insert(Option::<usize>::None);
+            cx.with_state(UiKitListTortureModels::default, |st| {
+                st.selection = Some(selection.clone());
+            });
+            selection
+        }
+    };
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text(
+                    "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0192).",
+                ),
+                cx.text("Expect: scroll boundary shifts reconcile without scroll-window dirty views."),
+            ]
+        },
+    );
+
+    let len: usize = std::env::var("FRET_UI_GALLERY_UI_KIT_LIST_LEN")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(10_000)
+        .clamp(16, 200_000);
+    let overscan: usize = 6;
+
+    let list = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+        vec![
+            fret_ui_kit::declarative::list::list_virtualized_copyable_retained_v0(
+                cx,
+                selection,
+                fret_ui_kit::Size::Medium,
+                None,
+                len,
+                overscan,
+                &scroll_handle,
+                0,
+                |i| i as u64,
+                Arc::new(|_models, i| Some(format!("Item {i}"))),
+                |_i| None,
+                |cx, i| {
+                    let mut out = Vec::new();
+                    let label = cx.text(format!("Item {i}"));
+                    let label = if i == 0 {
+                        cx.semantics(
+                            fret_ui::element::SemanticsProps {
+                                test_id: Some(Arc::<str>::from(
+                                    "ui-gallery-ui-kit-list-row-0-label",
+                                )),
+                                ..Default::default()
+                            },
+                            |_cx| [label],
+                        )
+                    } else {
+                        label
+                    };
+                    out.push(label);
+                    out.push(cx.spacer(fret_ui::element::SpacerProps {
+                        min: Px(0.0),
+                        ..Default::default()
+                    }));
+                    out
+                },
+            ),
+        ]
+    });
+
+    let list = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::List,
+            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-root")),
+            ..Default::default()
+        },
+        |_cx| [list],
+    );
+
+    let root = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
+        |_cx| vec![header, list],
+    );
+
+    let root = cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: fret_core::SemanticsRole::Group,
+            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-torture-root")),
             ..Default::default()
         },
         |_cx| [root],
@@ -10027,6 +10220,14 @@ fn preview_data_table_torture(
 ) -> Vec<AnyElement> {
     use fret_ui_headless::table::{ColumnDef, RowKey};
 
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_DATA_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
     #[derive(Debug, Clone)]
     struct Row {
         id: u64,
@@ -10117,10 +10318,61 @@ fn preview_data_table_torture(
                     ..Default::default()
                 },
                 |cx| {
-                    vec![
-                        shadcn::DataTable::new()
-                            .overscan(10)
+                    let retained =
+                        std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
+                    vec![if retained {
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
                             .row_height(Px(28.0))
+                            .measure_rows(variable_height)
+                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                            .into_element_retained(
+                                cx,
+                                data.clone(),
+                                1,
+                                state,
+                                columns.clone(),
+                                |row, _index, _parent| RowKey(row.id),
+                                |col| Arc::<str>::from(col.id.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
+                                    "status" => cx.text(row.status.as_ref()),
+                                    "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                    _ => cx.text("?"),
+                                },
+                                Some(Arc::<str>::from("ui-gallery-data-table-header-")),
+                                Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                            )
+                    } else {
+                        let mut t = shadcn::DataTable::new();
+                        if keep_alive > 0 {
+                            t = t.keep_alive(keep_alive);
+                        }
+                        t.overscan(10)
+                            .row_height(Px(28.0))
+                            .measure_rows(variable_height)
                             .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
                             .into_element(
                                 cx,
@@ -10130,15 +10382,33 @@ fn preview_data_table_torture(
                                 columns.clone(),
                                 |row, _index, _parent| RowKey(row.id),
                                 |col| Arc::<str>::from(col.id.as_ref()),
-                                |cx, col, row| match col.id.as_ref() {
-                                    "name" => cx.text(row.name.as_ref()),
+                                move |cx, col, row| match col.id.as_ref() {
+                                    "name" => {
+                                        if variable_height && row.id % 15 == 0 {
+                                            stack::vstack(
+                                                cx,
+                                                stack::VStackProps::default().gap(Space::N0),
+                                                |cx| {
+                                                    vec![
+                                                        cx.text(row.name.as_ref()),
+                                                        cx.text(format!(
+                                                            "Details: id={} cpu={} mem={}",
+                                                            row.id, row.cpu, row.mem_mb
+                                                        )),
+                                                    ]
+                                                },
+                                            )
+                                        } else {
+                                            cx.text(row.name.as_ref())
+                                        }
+                                    }
                                     "status" => cx.text(row.status.as_ref()),
                                     "cpu%" => cx.text(format!("{}%", row.cpu)),
                                     "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
                                     _ => cx.text("?"),
                                 },
-                            ),
-                    ]
+                            )
+                    }]
                 },
             )]
         });
@@ -10146,7 +10416,7 @@ fn preview_data_table_torture(
     let mut container_props = decl_style::container_props(
         theme,
         ChromeRefinement::default(),
-        LayoutRefinement::default().w_full(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
     );
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
@@ -10158,6 +10428,10 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
 
     use fret_ui_kit::TreeItem;
     use fret_ui_kit::TreeState;
+
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TREE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
 
     #[derive(Default)]
     struct TreeTortureModels {
@@ -10192,10 +10466,16 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                             Vec::with_capacity(leaves_per_folder as usize);
                         for l in 0..leaves_per_folder {
                             let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
-                            leaves.push(
-                                TreeItem::new(leaf_id, format!("Leaf {r}/{f}/{l} (id={leaf_id})"))
-                                    .disabled(leaf_id % 97 == 0),
-                            );
+                            let label = if variable_height && leaf_id % 15 == 0 {
+                                format!(
+                                    "Leaf {r}/{f}/{l} (id={leaf_id})\nDetails: id={} seed={}",
+                                    leaf_id,
+                                    leaf_id.wrapping_mul(2654435761)
+                                )
+                            } else {
+                                format!("Leaf {r}/{f}/{l} (id={leaf_id})")
+                            };
+                            leaves.push(TreeItem::new(leaf_id, label).disabled(leaf_id % 97 == 0));
                         }
 
                         folders.push(
@@ -10246,12 +10526,39 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 ..Default::default()
             },
             |cx| {
-                vec![fret_ui_kit::declarative::tree::tree_view(
-                    cx,
-                    items,
-                    state,
-                    fret_ui_kit::Size::Medium,
-                )]
+                let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
+                    .filter(|v| !v.is_empty())
+                    .is_some();
+
+                if retained {
+                    if variable_height {
+                        vec![
+                            fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
+                                cx,
+                                items,
+                                state,
+                                fret_ui_kit::Size::Medium,
+                                fret_ui::element::VirtualListMeasureMode::Measured,
+                                Some(Arc::<str>::from("ui-gallery-tree-row")),
+                            ),
+                        ]
+                    } else {
+                        vec![fret_ui_kit::declarative::tree::tree_view_retained(
+                            cx,
+                            items,
+                            state,
+                            fret_ui_kit::Size::Medium,
+                            Some(Arc::<str>::from("ui-gallery-tree-row")),
+                        )]
+                    }
+                } else {
+                    vec![fret_ui_kit::declarative::tree::tree_view(
+                        cx,
+                        items,
+                        state,
+                        fret_ui_kit::Size::Medium,
+                    )]
+                }
             },
         )]
     });
@@ -10264,6 +10571,512 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
     vec![header, cx.container(container_props, |_cx| vec![tree])]
+}
+
+fn preview_ai_transcript_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let message_count = std::env::var("FRET_UI_GALLERY_AI_TRANSCRIPT_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(5_000);
+
+    #[derive(Default)]
+    struct TranscriptModels {
+        messages: Option<Arc<[ui_ai::ConversationMessage]>>,
+    }
+
+    let messages = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
+    let messages = match messages {
+        Some(messages) => messages,
+        None => {
+            let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
+            for i in 0..message_count as u64 {
+                let role = match i % 4 {
+                    0 => ui_ai::MessageRole::User,
+                    1 => ui_ai::MessageRole::Assistant,
+                    2 => ui_ai::MessageRole::Tool,
+                    _ => ui_ai::MessageRole::System,
+                };
+                let text = if variable_height && i % 7 == 0 {
+                    Arc::<str>::from(format!(
+                        "Message {i}\nDetails: seed={} tokens={} latency={}ms",
+                        (i * 31) % 97,
+                        16 + (i % 64),
+                        10 + (i % 120)
+                    ))
+                } else {
+                    Arc::<str>::from(format!("Message {i}: hello world"))
+                };
+                out.push(ui_ai::ConversationMessage::new(i, role, text));
+            }
+
+            let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
+            cx.with_state(TranscriptModels::default, |st| {
+                st.messages = Some(out.clone())
+            });
+            out
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
+                cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
+            ]
+        },
+    );
+
+    let transcript =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let revision = messages.len().min(u64::MAX as usize) as u64;
+
+            vec![
+                ui_ai::ConversationTranscript::from_arc(messages.clone())
+                    .content_revision(revision)
+                    .scroll_handle(scroll_handle)
+                    .stick_to_bottom(false)
+                    .show_scroll_to_bottom_button(false)
+                    .debug_root_test_id("ui-gallery-ai-transcript-root")
+                    .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
+                    .into_element(cx),
+            ]
+        });
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![
+        header,
+        cx.container(container_props, |_cx| vec![transcript]),
+    ]
+}
+
+fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let len: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_LEN")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(50_000)
+        .clamp(16, 200_000);
+    let row_height = Px(28.0);
+    let overscan = 12;
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(0)
+        .clamp(0, 4096);
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(460.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    let options =
+        fret_ui::element::VirtualListOptions::known(row_height, overscan, move |_index| row_height)
+            .keep_alive(keep_alive);
+
+    let theme = theme.clone();
+    let row = move |cx: &mut ElementContext<'_, App>, index: usize| {
+        let zebra = (index % 2) == 0;
+        let background = if zebra {
+            theme.color_required("muted")
+        } else {
+            theme.color_required("background")
+        };
+
+        let depth = (index % 8) as f32;
+        let indent_px = Px(depth * 12.0);
+
+        let name = cx.text(format!("prop_{index}"));
+        let value = cx.text(format!("value {index}"));
+
+        let spacer = cx.container(
+            fret_ui::element::ContainerProps {
+                layout: fret_ui::element::LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: fret_ui::element::Length::Px(indent_px),
+                        height: fret_ui::element::Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        );
+
+        let mut row_props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(background))
+                .p(Space::N2),
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::Px(row_height)),
+        );
+        row_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+        let row_layout = row_props.layout;
+        let row = cx.container(row_props, |cx| {
+            vec![stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .gap(Space::N2)
+                    .items_center(),
+                |_cx| vec![spacer, name, value],
+            )]
+        });
+
+        let mut semantics = fret_ui::element::SemanticsProps::default();
+        semantics.layout = row_layout;
+        semantics.test_id = Some(Arc::<str>::from(format!(
+            "ui-gallery-inspector-row-{index}-label"
+        )));
+        cx.semantics(semantics, |_cx| vec![row])
+    };
+
+    let list = cx.virtual_list_keyed_retained_with_layout_fn(
+        list_layout,
+        len,
+        options,
+        &scroll_handle,
+        |i| i as fret_ui::ItemKey,
+        row,
+    );
+
+    let mut semantics = fret_ui::element::SemanticsProps::default();
+    semantics.role = fret_core::SemanticsRole::List;
+    semantics.layout = list_layout;
+    semantics.test_id = Some(Arc::<str>::from("ui-gallery-inspector-root"));
+    let list = cx.semantics(semantics, |_cx| vec![list]);
+
+    vec![cx.cached_subtree_with(
+        CachedSubtreeProps::default().contained_layout(true),
+        |_cx| vec![list],
+    )]
+}
+
+fn preview_file_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    let _ = theme;
+    use std::collections::HashSet;
+
+    let row_height = Px(26.0);
+    let overscan = 12;
+
+    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+    let list_layout = fret_ui::element::LayoutStyle {
+        size: fret_ui::element::SizeStyle {
+            width: fret_ui::element::Length::Fill,
+            height: fret_ui::element::Length::Px(Px(460.0)),
+            ..Default::default()
+        },
+        overflow: fret_ui::element::Overflow::Clip,
+        ..Default::default()
+    };
+
+    use fret_ui_kit::{TreeItem, TreeItemId, TreeState};
+
+    #[derive(Default)]
+    struct FileTreeTortureModels {
+        items: Option<Model<Vec<TreeItem>>>,
+        state: Option<Model<TreeState>>,
+    }
+
+    let (items, state) = cx.with_state(FileTreeTortureModels::default, |st| {
+        (st.items.clone(), st.state.clone())
+    });
+    let (items, state) = match (items, state) {
+        (Some(items), Some(state)) => (items, state),
+        _ => {
+            let (items_value, state_value) = {
+                let root_count: u64 = std::env::var("FRET_UI_GALLERY_FILE_TREE_ROOTS")
+                    .ok()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(200);
+                let folders_per_root = 10u64;
+                let leaves_per_folder = 25u64;
+
+                let mut expanded: HashSet<TreeItemId> = HashSet::new();
+                let mut roots: Vec<TreeItem> = Vec::with_capacity(root_count as usize);
+
+                for r in 0..root_count {
+                    let root_id = r;
+                    expanded.insert(root_id);
+
+                    let mut folders: Vec<TreeItem> = Vec::with_capacity(folders_per_root as usize);
+                    for f in 0..folders_per_root {
+                        let folder_id = 1_000_000 + r * 100 + f;
+                        expanded.insert(folder_id);
+
+                        let mut leaves: Vec<TreeItem> =
+                            Vec::with_capacity(leaves_per_folder as usize);
+                        for l in 0..leaves_per_folder {
+                            let leaf_id = 2_000_000 + r * 10_000 + f * 100 + l;
+                            leaves.push(TreeItem::new(
+                                leaf_id,
+                                Arc::<str>::from(format!("file_{r}_{f}_{l}.rs")),
+                            ));
+                        }
+
+                        folders.push(
+                            TreeItem::new(folder_id, Arc::<str>::from(format!("dir_{r}_{f}")))
+                                .children(leaves),
+                        );
+                    }
+
+                    roots.push(
+                        TreeItem::new(root_id, Arc::<str>::from(format!("root_{r}")))
+                            .children(folders),
+                    );
+                }
+
+                (
+                    roots,
+                    TreeState {
+                        expanded,
+                        selected: None,
+                    },
+                )
+            };
+
+            let items = cx.app.models_mut().insert(items_value);
+            let state = cx.app.models_mut().insert(state_value);
+            cx.with_state(FileTreeTortureModels::default, |st| {
+                st.items = Some(items.clone());
+                st.state = Some(state.clone());
+            });
+            (items, state)
+        }
+    };
+
+    let mut props = fret_ui_kit::declarative::file_tree::FileTreeViewProps::default();
+    props.layout = list_layout;
+    props.row_height = row_height;
+    props.overscan = overscan;
+    props.debug_root_test_id = Some(Arc::<str>::from("ui-gallery-file-tree-root"));
+    props.debug_row_test_id_prefix = Some(Arc::<str>::from("ui-gallery-file-tree-node"));
+
+    vec![
+        fret_ui_kit::declarative::file_tree::file_tree_view_retained_v0(
+            cx,
+            items,
+            state,
+            &scroll_handle,
+            props,
+        ),
+    ]
+}
+
+fn preview_table_retained_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState};
+    let variable_height = std::env::var_os("FRET_UI_GALLERY_TABLE_VARIABLE_HEIGHT")
+        .filter(|v| !v.is_empty())
+        .is_some();
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_TABLE_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
+    #[derive(Clone)]
+    struct TableRow {
+        id: u64,
+        name: Arc<str>,
+        status: Arc<str>,
+        cpu: u32,
+        mem_mb: u32,
+    }
+
+    #[derive(Default)]
+    struct TableTortureModels {
+        data: Option<Arc<[TableRow]>>,
+        columns: Option<Arc<[ColumnDef<TableRow>]>>,
+        state: Option<Model<TableState>>,
+    }
+
+    let (data, columns, state) = cx.with_state(TableTortureModels::default, |st| {
+        (st.data.clone(), st.columns.clone(), st.state.clone())
+    });
+
+    let (data, columns, state) = match (data, columns, state) {
+        (Some(data), Some(columns), Some(state)) => (data, columns, state),
+        _ => {
+            let mut rows: Vec<TableRow> = Vec::with_capacity(50_000);
+            for i in 0..50_000u64 {
+                rows.push(TableRow {
+                    id: i,
+                    name: Arc::from(format!("Row {i}")),
+                    status: Arc::from(if i % 3 == 0 {
+                        "idle"
+                    } else if i % 3 == 1 {
+                        "busy"
+                    } else {
+                        "offline"
+                    }),
+                    cpu: ((i * 7) % 100) as u32,
+                    mem_mb: (128 + (i % 4096)) as u32,
+                });
+            }
+            let data: Arc<[TableRow]> = Arc::from(rows);
+
+            let cols: Vec<ColumnDef<TableRow>> = vec![
+                ColumnDef::new("name").sort_by(|a: &TableRow, b: &TableRow| a.name.cmp(&b.name)),
+                ColumnDef::new("status")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.status.cmp(&b.status)),
+                ColumnDef::new("cpu%").sort_by(|a: &TableRow, b: &TableRow| a.cpu.cmp(&b.cpu)),
+                ColumnDef::new("mem_mb")
+                    .sort_by(|a: &TableRow, b: &TableRow| a.mem_mb.cmp(&b.mem_mb)),
+            ];
+            let columns: Arc<[ColumnDef<TableRow>]> = Arc::from(cols);
+
+            let state = cx.app.models_mut().insert(TableState::default());
+
+            cx.with_state(TableTortureModels::default, |st| {
+                st.data = Some(data.clone());
+                st.columns = Some(columns.clone());
+                st.state = Some(state.clone());
+            });
+
+            (data, columns, state)
+        }
+    };
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text(
+                    "Goal: baseline harness for `fret-ui-kit::declarative::table` running on the virt-003 retained host path.",
+                ),
+                cx.text(
+                    "Use scripted sort/selection + scroll to validate reconcile deltas under view-cache reuse (no notify-based dirty views).",
+                ),
+            ]
+        },
+    );
+
+    let table =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            vec![cx.semantics(
+                fret_ui::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-table-retained-torture-root")),
+                    ..Default::default()
+                },
+                |cx| {
+                    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+                    let state_revision = cx.app.models().revision(&state).unwrap_or(0);
+                    let items_revision = 1 ^ state_revision.rotate_left(17);
+
+                    let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
+                    props.overscan = 10;
+                    props.row_height = Some(Px(28.0));
+                    if keep_alive > 0 {
+                        props.keep_alive = Some(keep_alive);
+                    }
+                    props.row_measure_mode = if variable_height {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Measured
+                    } else {
+                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed
+                    };
+                    props.enable_column_grouping = false;
+                    props.enable_column_resizing = false;
+
+                    let header_label =
+                        Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
+                    let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
+                    let cell_at = Arc::new(
+                        move |cx: &mut ElementContext<'_, App>,
+                              col: &ColumnDef<TableRow>,
+                              row: &TableRow| {
+                            match col.id.as_ref() {
+                                "name" => {
+                                    if variable_height && row.id % 15 == 0 {
+                                        stack::vstack(
+                                            cx,
+                                            stack::VStackProps::default().gap(Space::N0),
+                                            |cx| {
+                                                vec![
+                                                    cx.text(row.name.as_ref()),
+                                                    cx.text(format!(
+                                                        "Details: id={} cpu={} mem={}",
+                                                        row.id, row.cpu, row.mem_mb
+                                                    )),
+                                                ]
+                                            },
+                                        )
+                                    } else {
+                                        cx.text(row.name.as_ref())
+                                    }
+                                }
+                                "status" => cx.text(row.status.as_ref()),
+                                "cpu%" => cx.text(format!("{}%", row.cpu)),
+                                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                                _ => cx.text("?"),
+                            }
+                        },
+                    );
+
+                    vec![
+                        fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                            cx,
+                            data.clone(),
+                            columns.clone(),
+                            state.clone(),
+                            &scroll_handle,
+                            items_revision,
+                            row_key_at,
+                            Some(Arc::new(|row: &TableRow, _index: usize| {
+                                Arc::from(row.id.to_string())
+                            })),
+                            props,
+                            header_label,
+                            cell_at,
+                            Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
+                            Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+                        ),
+                    ]
+                },
+            )]
+        });
+
+    let mut container_props = decl_style::container_props(
+        theme,
+        ChromeRefinement::default(),
+        LayoutRefinement::default().w_full().h_px(Px(460.0)),
+    );
+    container_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+    vec![header, cx.container(container_props, |_cx| vec![table])]
 }
 
 fn preview_data_grid(

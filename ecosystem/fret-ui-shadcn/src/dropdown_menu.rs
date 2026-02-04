@@ -2876,10 +2876,7 @@ impl DropdownMenu {
                                                         let disabled = item.disabled
                                                             || crate::command_gating::command_is_disabled_by_gating(
                                                                 &*cx.app,
-                                                                &crate::command_gating::snapshot_for_window(
-                                                                    &*cx.app,
-                                                                    cx.window,
-                                                                ),
+                                                                &gating,
                                                                 command.as_ref(),
                                                             );
                                                         let leading = item.leading.clone();
@@ -2893,8 +2890,8 @@ impl DropdownMenu {
                                                         let text_style = text_style.clone();
 
                                                         rows.push(cx.keyed(value.clone(), |cx| {
-                                                                    cx.pressable_with_id_props(
-                                                                        |cx, st, item_id| {
+                                                                cx.pressable_with_id_props(
+                                                                    |cx, st, item_id| {
                                                                             menu::sub_content::wire_item(
                                                                                 cx,
                                                                                 item_id,

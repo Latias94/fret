@@ -2391,6 +2391,16 @@ pub(super) fn check_bundle_for_wheel_scroll(
     check_bundle_for_wheel_scroll_json(&bundle, bundle_path, test_id, warmup_frames)
 }
 
+pub(super) fn check_bundle_for_wheel_scroll_hit_changes(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_wheel_scroll_hit_changes_json(&bundle, bundle_path, test_id, warmup_frames)
+}
+
 pub(super) fn check_bundle_for_wheel_scroll_json(
     bundle: &serde_json::Value,
     bundle_path: &Path,
@@ -2509,6 +2519,1332 @@ pub(super) fn check_bundle_for_wheel_scroll_json(
         msg.push('\n');
     }
     Err(msg)
+}
+
+pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_wheel = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
+            continue;
+        };
+        any_wheel = true;
+
+        let after_frame = wheel_frame.max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        let mut before: Option<&serde_json::Value> = None;
+        let mut before_frame: u64 = 0;
+        let mut after: Option<&serde_json::Value> = None;
+        let mut after_frame_id: u64 = 0;
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                if frame_id >= before_frame && frame_id < after_frame {
+                    before = Some(s);
+                    before_frame = frame_id;
+                }
+                continue;
+            }
+            after = Some(s);
+            after_frame_id = frame_id;
+            break;
+        }
+
+        let (Some(before), Some(after)) = (before, after) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} error=missing_before_or_after_snapshot"
+            ));
+            continue;
+        };
+
+        let Some(target_before) = semantics_node_id_for_test_id(before, test_id) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=missing_test_id_before"
+            ));
+            continue;
+        };
+        let Some(target_after) = semantics_node_id_for_test_id(after, test_id) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=missing_test_id_after"
+            ));
+            continue;
+        };
+
+        let before_parents = semantics_parent_map(before);
+        let after_parents = semantics_parent_map(after);
+
+        let Some(hit_before) = hit_test_node_id(before) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} error=missing_hit_before"
+            ));
+            continue;
+        };
+        let Some(hit_after) = hit_test_node_id(after) else {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} error=missing_hit_after"
+            ));
+            continue;
+        };
+
+        if !is_descendant(hit_before, target_before, &before_parents) {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} test_id={test_id} error=hit_not_within_target_before hit={hit_before} target={target_before}"
+            ));
+            continue;
+        }
+        if !is_descendant(hit_after, target_after, &after_parents) {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_not_within_target_after hit={hit_after} target={target_after}"
+            ));
+            continue;
+        }
+
+        // Prefer a vlist-driven signal when available: for virtualized surfaces the hit-test node
+        // can remain stable (e.g. when hovering a static region), but the scroll offset must move.
+        let before_offset = before
+            .get("debug")
+            .and_then(|v| v.get("virtual_list_windows"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("offset"))
+            .and_then(|v| v.as_f64());
+        let after_offset = after
+            .get("debug")
+            .and_then(|v| v.get("virtual_list_windows"))
+            .and_then(|v| v.as_array())
+            .and_then(|v| v.first())
+            .and_then(|v| v.get("offset"))
+            .and_then(|v| v.as_f64());
+        if let (Some(a), Some(b)) = (before_offset, after_offset) {
+            if (a - b).abs() > 0.1 {
+                continue;
+            }
+        }
+
+        if hit_before == hit_after {
+            failures.push(format!(
+                "window={window_id} wheel_frame={wheel_frame} after_frame={after_frame_id} test_id={test_id} error=hit_did_not_change hit={hit_after}"
+            ));
+        }
+    }
+
+    if !any_wheel {
+        return Err(format!(
+            "wheel scroll hit-change check requires at least one pointer.wheel event in the bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str(
+        "wheel scroll hit-change check failed (expected wheel to affect the scrolled content)\n",
+    );
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_refreshes: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_visible_range_refreshes_max_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        max_total_refreshes,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_explainable(
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_explainable_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max(
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_non_retained_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_non_retained_max_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        max_total_non_retained_shifts,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_kind_max(
+    bundle_path: &Path,
+    out_dir: &Path,
+    kind: &str,
+    max_total_kind_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_kind_max_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        kind,
+        max_total_kind_shifts,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_vlist_policy_key_stable(
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_policy_key_stable_json(&bundle, bundle_path, out_dir, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_vlist_policy_key_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_signal = false;
+    let mut examined_snapshots: u64 = 0;
+    let mut by_surface: std::collections::BTreeMap<(u64, u64), std::collections::BTreeSet<u64>> =
+        std::collections::BTreeMap::new();
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let vlist_windows = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if vlist_windows.is_empty() {
+                continue;
+            }
+
+            any_signal = true;
+            for win in vlist_windows {
+                let node = win.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
+                let element = win.get("element").and_then(|v| v.as_u64()).unwrap_or(0);
+                let policy_key = win.get("policy_key").and_then(|v| v.as_u64()).unwrap_or(0);
+                by_surface
+                    .entry((node, element))
+                    .or_default()
+                    .insert(policy_key);
+            }
+        }
+    }
+
+    let offenders: Vec<serde_json::Value> = by_surface
+        .iter()
+        .filter(|(_, keys)| keys.len() > 1)
+        .take(64)
+        .map(|((node, element), keys)| {
+            serde_json::json!({
+                "node": node,
+                "element": element,
+                "policy_keys": keys.iter().copied().collect::<Vec<u64>>(),
+            })
+        })
+        .collect();
+
+    let out_path = out_dir.join("check.vlist_policy_key_stable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_policy_key_stable",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "surfaces_seen": by_surface.len(),
+        "offenders": offenders,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_signal {
+        return Err(format!(
+            "vlist policy-key stability gate requires debug.virtual_list_windows after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if offenders.is_empty() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "vlist policy-key stability gate failed (expected each vlist surface to keep a stable policy_key after warmup)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        out_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_total_refreshes: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_visible_range_refreshes_min_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        min_total_refreshes,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_layout_fast_path_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_layout_fast_path_min_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        min_frames,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_layout_fast_path_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_frames: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut fast_path_frames: u64 = 0;
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let taken = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("layout_fast_path_taken"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if taken {
+                fast_path_frames = fast_path_frames.saturating_add(1);
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.layout_fast_path_min.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "layout_fast_path_min",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_frames": min_frames,
+        "examined_snapshots": examined_snapshots,
+        "fast_path_frames": fast_path_frames,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if examined_snapshots == 0 {
+        return Err(format!(
+            "layout fast-path gate requires snapshots after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if fast_path_frames >= min_frames {
+        return Ok(());
+    }
+
+    Err(format!(
+        "layout fast-path gate failed (expected at least {min_frames} frames to take the fast-path after warmup, got {fast_path_frames}; examined_snapshots={examined_snapshots}, warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        out_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_vlist_visible_range_refreshes_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_total_refreshes: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_wheel = false;
+    let mut total_refreshes: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
+            continue;
+        };
+        any_wheel = true;
+
+        let after_frame = wheel_frame.max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let refreshes = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("virtual_list_visible_range_refreshes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if refreshes == 0 {
+                continue;
+            }
+            total_refreshes = total_refreshes.saturating_add(refreshes);
+            if samples.len() < 32 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "refreshes": refreshes,
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_visible_range_refreshes_min.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_visible_range_refreshes_min",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_total_refreshes": min_total_refreshes,
+        "any_wheel": any_wheel,
+        "total_refreshes": total_refreshes,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_wheel {
+        return Err(format!(
+            "vlist visible-range refresh gate requires wheel events, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if min_total_refreshes > 0 && total_refreshes < min_total_refreshes {
+        return Err(format!(
+            "expected virtual list visible-range refreshes to occur after wheel events, but total_refreshes={total_refreshes} was below min_total_refreshes={min_total_refreshes} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_explainable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_signal = false;
+    let mut total_shifts: u64 = 0;
+    let mut offenders: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let wheel_frame = first_wheel_frame_id_for_window(w);
+        let after_frame = wheel_frame.unwrap_or(warmup_frames).max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let list = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if list.is_empty() {
+                continue;
+            }
+            any_signal = true;
+
+            for win in list {
+                let mismatch = win
+                    .get("window_mismatch")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let kind = win
+                    .get("window_shift_kind")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(if mismatch { "escape" } else { "none" });
+                if kind == "none" {
+                    continue;
+                }
+                total_shifts = total_shifts.saturating_add(1);
+
+                let reason = win.get("window_shift_reason").and_then(|v| v.as_str());
+                let mode = win.get("window_shift_apply_mode").and_then(|v| v.as_str());
+                let invalidation_detail = win
+                    .get("window_shift_invalidation_detail")
+                    .and_then(|v| v.as_str());
+                if reason.is_some() && mode.is_some() {
+                    if mode == Some("non_retained_rerender") {
+                        let expected_detail = match reason {
+                            Some("scroll_to_item") => {
+                                Some("scroll_handle_scroll_to_item_window_update")
+                            }
+                            Some("viewport_resize") => {
+                                Some("scroll_handle_viewport_resize_window_update")
+                            }
+                            Some("items_revision") => {
+                                Some("scroll_handle_items_revision_window_update")
+                            }
+                            _ => match kind {
+                                "escape" => Some("scroll_handle_window_update"),
+                                "prefetch" => Some("scroll_handle_prefetch_window_update"),
+                                _ => None,
+                            },
+                        };
+                        if invalidation_detail.is_none() {
+                            offenders = offenders.saturating_add(1);
+                            failures.push(format!(
+                                "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_invalidation_detail kind={kind} apply_mode={mode:?}"
+                            ));
+                            if samples.len() < 64 {
+                                samples.push(serde_json::json!({
+                                    "window": window_id,
+                                    "tick_id": tick_id,
+                                    "frame_id": frame_id,
+                                    "kind": kind,
+                                    "reason": reason,
+                                    "apply_mode": mode,
+                                    "invalidation_detail": invalidation_detail,
+                                    "expected_invalidation_detail": expected_detail,
+                                    "node": win.get("node").and_then(|v| v.as_u64()),
+                                    "element": win.get("element").and_then(|v| v.as_u64()),
+                                    "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
+                                    "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
+                                }));
+                            }
+                        } else if expected_detail.is_some()
+                            && invalidation_detail != expected_detail
+                        {
+                            offenders = offenders.saturating_add(1);
+                            failures.push(format!(
+                                "window={window_id} tick_id={tick_id} frame_id={frame_id} error=unexpected_shift_invalidation_detail kind={kind} got={invalidation_detail:?} expected={expected_detail:?}"
+                            ));
+                            if samples.len() < 64 {
+                                samples.push(serde_json::json!({
+                                    "window": window_id,
+                                    "tick_id": tick_id,
+                                    "frame_id": frame_id,
+                                    "kind": kind,
+                                    "reason": reason,
+                                    "apply_mode": mode,
+                                    "invalidation_detail": invalidation_detail,
+                                    "expected_invalidation_detail": expected_detail,
+                                    "node": win.get("node").and_then(|v| v.as_u64()),
+                                    "element": win.get("element").and_then(|v| v.as_u64()),
+                                    "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
+                                    "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
+                                }));
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                offenders = offenders.saturating_add(1);
+                failures.push(format!(
+                    "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_shift_explainability kind={kind} reason={reason:?} apply_mode={mode:?} invalidation_detail={invalidation_detail:?}"
+                ));
+
+                if samples.len() < 64 {
+                    samples.push(serde_json::json!({
+                        "window": window_id,
+                        "tick_id": tick_id,
+                        "frame_id": frame_id,
+                        "kind": kind,
+                        "reason": reason,
+                        "apply_mode": mode,
+                        "invalidation_detail": invalidation_detail,
+                        "node": win.get("node").and_then(|v| v.as_u64()),
+                        "element": win.get("element").and_then(|v| v.as_u64()),
+                        "policy_key": win.get("policy_key").and_then(|v| v.as_u64()),
+                        "inputs_key": win.get("inputs_key").and_then(|v| v.as_u64()),
+                        "window_range": win.get("window_range"),
+                        "prev_window_range": win.get("prev_window_range"),
+                        "render_window_range": win.get("render_window_range"),
+                        "deferred_scroll_to_item": win.get("deferred_scroll_to_item").and_then(|v| v.as_bool()),
+                        "deferred_scroll_consumed": win.get("deferred_scroll_consumed").and_then(|v| v.as_bool()),
+                    }));
+                }
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_window_shifts_explainable.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_window_shifts_explainable",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "total_shifts": total_shifts,
+        "offenders": offenders,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_signal {
+        return Err(format!(
+            "vlist window-shift explainability gate requires debug.virtual_list_windows after warmup, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if offenders == 0 {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("vlist window-shift explainability gate failed (expected every window shift to have reason + apply_mode)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    msg.push_str(&format!("evidence: {}\n", out_path.display()));
+    for line in failures.into_iter().take(12) {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
+pub(super) fn check_bundle_for_prepaint_actions_min(
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_snapshots: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_prepaint_actions_min_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        min_snapshots,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_prepaint_actions_min_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    min_snapshots: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let after_frame = warmup_frames.saturating_add(1);
+    let mut snapshots_with_actions: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let actions = s
+                .get("debug")
+                .and_then(|v| v.get("prepaint_actions"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if actions.is_empty() {
+                continue;
+            }
+
+            snapshots_with_actions = snapshots_with_actions.saturating_add(1);
+            if samples.len() < 32 {
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "actions_len": actions.len(),
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.prepaint_actions_min.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "prepaint_actions_min",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "min_snapshots": min_snapshots,
+        "snapshots_with_actions": snapshots_with_actions,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if min_snapshots > 0 && snapshots_with_actions < min_snapshots {
+        return Err(format!(
+            "expected prepaint actions to be recorded in at least min_snapshots={min_snapshots}, but snapshots_with_actions={snapshots_with_actions} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_non_retained_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_non_retained_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut snapshots_examined: u64 = 0;
+    let mut total_non_retained_shifts: u64 = 0;
+    let mut total_shifts: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            snapshots_examined = snapshots_examined.saturating_add(1);
+
+            let debug_stats = s.get("debug").and_then(|v| v.get("stats"));
+            let window_shifts_total = debug_stats
+                .and_then(|v| v.get("virtual_list_window_shifts_total"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let window_shifts_non_retained = debug_stats
+                .and_then(|v| v.get("virtual_list_window_shifts_non_retained"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            total_shifts = total_shifts.saturating_add(window_shifts_total);
+            if window_shifts_non_retained == 0 {
+                continue;
+            }
+            total_non_retained_shifts =
+                total_non_retained_shifts.saturating_add(window_shifts_non_retained);
+
+            if samples.len() < 64 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let shift_samples = s
+                    .get("debug")
+                    .and_then(|v| v.get("virtual_list_window_shift_samples"))
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().take(8).cloned().collect::<Vec<_>>())
+                    .unwrap_or_default();
+
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "non_retained_shifts": window_shifts_non_retained,
+                    "window_shifts_total": window_shifts_total,
+                    "shift_samples": shift_samples,
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_window_shifts_non_retained_max.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_window_shifts_non_retained_max",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "max_total_non_retained_shifts": max_total_non_retained_shifts,
+        "snapshots_examined": snapshots_examined,
+        "total_window_shifts": total_shifts,
+        "total_non_retained_shifts": total_non_retained_shifts,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if total_non_retained_shifts > max_total_non_retained_shifts {
+        return Err(format!(
+            "vlist non-retained window-shift gate failed: total_non_retained_shifts={total_non_retained_shifts} exceeded max_total_non_retained_shifts={max_total_non_retained_shifts} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_kind_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    kind: &str,
+    max_total_kind_shifts: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let kind = match kind {
+        "prefetch" | "escape" => kind,
+        _ => {
+            return Err(format!(
+                "vlist window-shift kind must be one of: prefetch|escape (got: {kind})"
+            ));
+        }
+    };
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut snapshots_examined: u64 = 0;
+    let mut total_kind_shifts: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| "invalid bundle.json: missing snapshots".to_string())?;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            snapshots_examined = snapshots_examined.saturating_add(1);
+
+            let shift_entries = s
+                .get("debug")
+                .and_then(|v| v.get("virtual_list_windows"))
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter(|w| {
+                            w.get("source")
+                                .and_then(|v| v.as_str())
+                                .is_some_and(|s| s == "prepaint")
+                                && w.get("window_shift_kind")
+                                    .and_then(|v| v.as_str())
+                                    .is_some_and(|k| k == kind)
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+
+            if shift_entries.is_empty() {
+                continue;
+            }
+
+            let mut unique_entries: Vec<&serde_json::Value> = Vec::new();
+            let mut seen_keys: std::collections::HashSet<(
+                Option<u64>,
+                Option<u64>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<bool>,
+            )> = std::collections::HashSet::new();
+            for w in shift_entries {
+                let key = (
+                    w.get("node").and_then(|v| v.as_u64()),
+                    w.get("element").and_then(|v| v.as_u64()),
+                    w.get("source")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string()),
+                    w.get("window_shift_kind")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string()),
+                    w.get("window_shift_reason")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string()),
+                    w.get("window_shift_apply_mode")
+                        .and_then(|v| v.as_str())
+                        .map(|v| v.to_string()),
+                    w.get("window_mismatch").and_then(|v| v.as_bool()),
+                );
+                if seen_keys.insert(key) {
+                    unique_entries.push(w);
+                }
+            }
+            if unique_entries.is_empty() {
+                continue;
+            }
+
+            total_kind_shifts = total_kind_shifts.saturating_add(unique_entries.len() as u64);
+
+            if samples.len() < 64 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                let entries = unique_entries
+                    .iter()
+                    .take(4)
+                    .map(|w| {
+                        serde_json::json!({
+                            "node": w.get("node").cloned().unwrap_or(serde_json::Value::Null),
+                            "element": w.get("element").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_shift_kind": w.get("window_shift_kind").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_shift_reason": w.get("window_shift_reason").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_shift_apply_mode": w.get("window_shift_apply_mode").cloned().unwrap_or(serde_json::Value::Null),
+                            "window_mismatch": w.get("window_mismatch").cloned().unwrap_or(serde_json::Value::Null),
+                        })
+                    })
+                    .collect::<Vec<_>>();
+
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "kind": kind,
+                    "shifts_in_frame": unique_entries.len(),
+                    "entries": entries,
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join(format!("check.vlist_window_shifts_{kind}_max.json"));
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": format!("vlist_window_shifts_{kind}_max"),
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "max_total_kind_shifts": max_total_kind_shifts,
+        "snapshots_examined": snapshots_examined,
+        "total_kind_shifts": total_kind_shifts,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if total_kind_shifts > max_total_kind_shifts {
+        return Err(format!(
+            "vlist window-shift kind gate failed: total_{kind}_shifts={total_kind_shifts} exceeded max_total_kind_shifts={max_total_kind_shifts} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions(
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
+        &bundle,
+        bundle_path,
+        out_dir,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_vlist_window_shifts_have_prepaint_actions_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let after_frame = warmup_frames.saturating_add(1);
+    let mut offenders: u64 = 0;
+    let mut failures: Vec<String> = Vec::new();
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+
+            let debug = s.get("debug").unwrap_or(&serde_json::Value::Null);
+            let vlist = debug
+                .get("virtual_list_windows")
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if vlist.is_empty() {
+                continue;
+            }
+            let actions = debug
+                .get("prepaint_actions")
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            let shift_actions: Vec<&serde_json::Value> = actions
+                .iter()
+                .filter(|a| {
+                    a.get("kind").and_then(|v| v.as_str()) == Some("virtual_list_window_shift")
+                })
+                .collect();
+
+            for win in vlist {
+                let source = win.get("source").and_then(|v| v.as_str());
+                if source != Some("prepaint") {
+                    continue;
+                }
+                let shift_kind = win
+                    .get("window_shift_kind")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("none");
+                if shift_kind == "none" {
+                    continue;
+                }
+
+                let node = win.get("node").and_then(|v| v.as_u64());
+                let element = win.get("element").and_then(|v| v.as_u64());
+                let shift_reason = win.get("window_shift_reason").and_then(|v| v.as_str());
+
+                let found = shift_actions.iter().any(|a| {
+                    let a_node = a.get("node").and_then(|v| v.as_u64());
+                    let a_element = a.get("element").and_then(|v| v.as_u64());
+                    let a_kind = a
+                        .get("virtual_list_window_shift_kind")
+                        .and_then(|v| v.as_str());
+                    let a_reason = a
+                        .get("virtual_list_window_shift_reason")
+                        .and_then(|v| v.as_str());
+
+                    a_node == node
+                        && a_element == element
+                        && a_kind == Some(shift_kind)
+                        && (shift_reason.is_none() || a_reason == shift_reason)
+                });
+
+                if !found {
+                    offenders = offenders.saturating_add(1);
+                    failures.push(format!(
+                        "window={window_id} tick_id={tick_id} frame_id={frame_id} error=missing_vlist_window_shift_prepaint_action node={node:?} element={element:?} shift_kind={shift_kind} shift_reason={shift_reason:?}"
+                    ));
+                    if samples.len() < 64 {
+                        samples.push(serde_json::json!({
+                            "window": window_id,
+                            "tick_id": tick_id,
+                            "frame_id": frame_id,
+                            "node": node,
+                            "element": element,
+                            "shift_kind": shift_kind,
+                            "shift_reason": shift_reason,
+                            "available_shift_actions": shift_actions.iter().take(8).map(|a| serde_json::json!({
+                                "node": a.get("node").and_then(|v| v.as_u64()),
+                                "element": a.get("element").and_then(|v| v.as_u64()),
+                                "shift_kind": a.get("virtual_list_window_shift_kind").and_then(|v| v.as_str()),
+                                "shift_reason": a.get("virtual_list_window_shift_reason").and_then(|v| v.as_str()),
+                            })).collect::<Vec<_>>(),
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_window_shifts_have_prepaint_actions.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_window_shifts_have_prepaint_actions",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "offenders": offenders,
+        "failures": failures,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if offenders > 0 {
+        return Err(format!(
+            "vlist window-shift prepaint-action gate failed: offenders={offenders} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    out_dir: &Path,
+    max_total_refreshes: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_wheel = false;
+    let mut total_refreshes: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let Some(wheel_frame) = first_wheel_frame_id_for_window(w) else {
+            continue;
+        };
+        any_wheel = true;
+
+        let after_frame = wheel_frame.max(warmup_frames);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < after_frame {
+                continue;
+            }
+            let refreshes = s
+                .get("debug")
+                .and_then(|v| v.get("stats"))
+                .and_then(|v| v.get("virtual_list_visible_range_refreshes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if refreshes == 0 {
+                continue;
+            }
+            total_refreshes = total_refreshes.saturating_add(refreshes);
+            if samples.len() < 32 {
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                samples.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "refreshes": refreshes,
+                }));
+            }
+        }
+    }
+
+    let out_path = out_dir.join("check.vlist_visible_range_refreshes_max.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "vlist_visible_range_refreshes_max",
+        "bundle_json": bundle_path.display().to_string(),
+        "out_dir": out_dir.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "max_total_refreshes": max_total_refreshes,
+        "any_wheel": any_wheel,
+        "total_refreshes": total_refreshes,
+        "samples": samples,
+    });
+    write_json_value(&out_path, &payload)?;
+
+    if !any_wheel {
+        return Err(format!(
+            "vlist visible-range refresh gate requires wheel events, but none were observed (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    if max_total_refreshes > 0 && total_refreshes > max_total_refreshes {
+        return Err(format!(
+            "expected virtual list visible-range refreshes to stay under budget after wheel events, but total_refreshes={total_refreshes} exceeded max_total_refreshes={max_total_refreshes} (warmup_frames={warmup_frames})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            out_path.display()
+        ));
+    }
+
+    Ok(())
 }
 
 pub(super) fn check_bundle_for_drag_cache_root_paint_only(
@@ -2693,7 +4029,16 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
     }
 
     let mut offenders: Vec<String> = Vec::new();
+    let mut offender_samples: Vec<serde_json::Value> = Vec::new();
+    let mut offender_taxonomy_counts: std::collections::BTreeMap<String, u64> =
+        std::collections::BTreeMap::new();
     let mut examined_snapshots: u64 = 0;
+    let mut removed_subtrees_total: u64 = 0;
+    let mut removed_subtrees_offenders: u64 = 0;
+
+    let mut element_runtime_node_entry_root_overwrites_total: u64 = 0;
+    let mut element_runtime_view_cache_reuse_root_element_samples_total: u64 = 0;
+    let mut element_runtime_retained_keep_alive_roots_total: u64 = 0;
 
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
@@ -2709,6 +4054,42 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
+            let mut snapshot_node_entry_root_overwrites_len: u64 = 0;
+            let mut snapshot_view_cache_reuse_root_element_samples_len: u64 = 0;
+            let mut snapshot_retained_keep_alive_roots_len: u64 = 0;
+
+            let element_runtime = s
+                .get("debug")
+                .and_then(|v| v.get("element_runtime"))
+                .and_then(|v| v.as_object());
+            if let Some(element_runtime) = element_runtime {
+                snapshot_node_entry_root_overwrites_len = element_runtime
+                    .get("node_entry_root_overwrites")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.len() as u64)
+                    .unwrap_or(0);
+                snapshot_view_cache_reuse_root_element_samples_len = element_runtime
+                    .get("view_cache_reuse_root_element_samples")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.len() as u64)
+                    .unwrap_or(0);
+                snapshot_retained_keep_alive_roots_len = element_runtime
+                    .get("retained_keep_alive_roots")
+                    .and_then(|v| v.as_array())
+                    .map(|v| v.len() as u64)
+                    .unwrap_or(0);
+
+                element_runtime_node_entry_root_overwrites_total =
+                    element_runtime_node_entry_root_overwrites_total
+                        .saturating_add(snapshot_node_entry_root_overwrites_len);
+                element_runtime_view_cache_reuse_root_element_samples_total =
+                    element_runtime_view_cache_reuse_root_element_samples_total
+                        .saturating_add(snapshot_view_cache_reuse_root_element_samples_len);
+                element_runtime_retained_keep_alive_roots_total =
+                    element_runtime_retained_keep_alive_roots_total
+                        .saturating_add(snapshot_retained_keep_alive_roots_len);
+            }
+
             let Some(removed) = s
                 .get("debug")
                 .and_then(|v| v.get("removed_subtrees"))
@@ -2718,6 +4099,7 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
             };
 
             for r in removed {
+                removed_subtrees_total = removed_subtrees_total.saturating_add(1);
                 let unreachable = r
                     .get("unreachable_from_liveness_roots")
                     .and_then(|v| v.as_bool())
@@ -2730,12 +4112,84 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                     .get("reachable_from_view_cache_roots")
                     .and_then(|v| v.as_bool());
                 let root_layer_visible = r.get("root_layer_visible").and_then(|v| v.as_bool());
+                let reuse_roots_len = r
+                    .get("view_cache_reuse_roots_len")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                let under_reuse = reuse_roots_len > 0;
+                let reuse_root_nodes_len = r
+                    .get("view_cache_reuse_root_nodes_len")
+                    .and_then(|v| v.as_u64());
+                let trigger_in_keep_alive = r
+                    .get("trigger_element_in_view_cache_keep_alive")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let trigger_listed_under_reuse_root = r
+                    .get("trigger_element_listed_under_reuse_root")
+                    .and_then(|v| v.as_u64())
+                    .is_some();
 
-                if !unreachable
+                let taxonomy_flags: Vec<&'static str> = {
+                    let mut flags: Vec<&'static str> = Vec::new();
+                    if snapshot_node_entry_root_overwrites_len > 0 {
+                        flags.push("ownership_drift_suspected");
+                    }
+                    if under_reuse && snapshot_view_cache_reuse_root_element_samples_len == 0 {
+                        flags.push("missing_reuse_root_membership_samples");
+                    }
+                    if trigger_in_keep_alive {
+                        flags.push("trigger_in_keep_alive");
+                    }
+                    if under_reuse && trigger_listed_under_reuse_root {
+                        flags.push("trigger_listed_under_reuse_root");
+                    }
+                    if under_reuse && reachable_from_view_cache_roots.is_none() {
+                        flags.push("missing_view_cache_reachability_evidence");
+                    }
+                    if under_reuse && reuse_root_nodes_len == Some(0) {
+                        flags.push("reuse_roots_unmapped");
+                    }
+                    flags
+                };
+
+                let taxonomy = if !unreachable
                     || reachable_from_layer_roots
                     || reachable_from_view_cache_roots == Some(true)
                     || root_layer_visible == Some(true)
                 {
+                    Some("swept_while_reachable")
+                } else if under_reuse && reachable_from_view_cache_roots.is_none() {
+                    // Under reuse we expect reachability from reuse roots to be recorded; otherwise
+                    // the cache-005 harness won't be actionable from a single bundle.
+                    Some("missing_view_cache_reachability_evidence")
+                } else if under_reuse && reuse_root_nodes_len == Some(0) {
+                    // If we know reuse roots exist but cannot map any to nodes, the window's
+                    // identity bookkeeping is inconsistent, so "reachable from reuse roots" is
+                    // meaningless for that frame.
+                    Some("reuse_roots_unmapped")
+                } else if trigger_in_keep_alive {
+                    // Keep-alive roots are part of the liveness root set. If the record still
+                    // indicates a trigger element is in a keep-alive bucket while being swept as
+                    // unreachable, that's almost certainly bookkeeping drift.
+                    Some("keep_alive_liveness_mismatch")
+                } else if under_reuse && snapshot_view_cache_reuse_root_element_samples_len == 0 {
+                    // When reuse roots exist, we expect membership list samples to be exported so
+                    // cache-005 failures remain actionable from a single bundle.
+                    Some("missing_reuse_root_membership_samples")
+                } else if under_reuse && trigger_listed_under_reuse_root {
+                    // If the trigger element is recorded as being listed under some reuse root,
+                    // but the removal happens as unreachable from reuse roots, the membership/touch
+                    // logic is likely stale or incomplete.
+                    Some("reuse_membership_mismatch")
+                } else {
+                    None
+                };
+
+                if let Some(taxonomy) = taxonomy {
+                    removed_subtrees_offenders = removed_subtrees_offenders.saturating_add(1);
+                    *offender_taxonomy_counts
+                        .entry(taxonomy.to_string())
+                        .or_insert(0) += 1;
                     let root = r.get("root").and_then(|v| v.as_u64()).unwrap_or(0);
                     let root_element_path = r
                         .get("root_element_path")
@@ -2745,24 +4199,102 @@ pub(super) fn check_bundle_for_gc_sweep_liveness(
                         .get("trigger_element_path")
                         .and_then(|v| v.as_str())
                         .unwrap_or("<none>");
+                    let mut violations: Vec<&'static str> = Vec::new();
+                    if taxonomy == "swept_while_reachable" && !unreachable {
+                        violations.push("reachable_from_liveness_roots");
+                    }
+                    if taxonomy == "swept_while_reachable" && reachable_from_layer_roots {
+                        violations.push("reachable_from_layer_roots");
+                    }
+                    if taxonomy == "swept_while_reachable"
+                        && reachable_from_view_cache_roots == Some(true)
+                    {
+                        violations.push("reachable_from_view_cache_roots");
+                    }
+                    if taxonomy == "swept_while_reachable" && root_layer_visible == Some(true) {
+                        violations.push("root_layer_visible");
+                    }
                     offenders.push(format!(
-                        "window={window_id} frame_id={frame_id} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} root_element_path={root_element_path} trigger_element_path={trigger_path}"
+                        "window={window_id} frame_id={frame_id} taxonomy={taxonomy} root={root} unreachable_from_liveness_roots={unreachable} reachable_from_layer_roots={reachable_from_layer_roots} reachable_from_view_cache_roots={reachable_from_view_cache_roots:?} root_layer_visible={root_layer_visible:?} reuse_roots_len={reuse_roots_len} reuse_root_nodes_len={reuse_root_nodes_len:?} trigger_in_keep_alive={trigger_in_keep_alive} trigger_listed_under_reuse_root={trigger_listed_under_reuse_root} root_element_path={root_element_path} trigger_element_path={trigger_path}"
                     ));
+
+                    const MAX_SAMPLES: usize = 128;
+                    if offender_samples.len() < MAX_SAMPLES {
+                        offender_samples.push(serde_json::json!({
+                            "window": window_id,
+                            "frame_id": frame_id,
+                            "tick_id": s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                            "taxonomy": taxonomy,
+                            "taxonomy_flags": taxonomy_flags,
+                            "root": r.get("root").and_then(|v| v.as_u64()).unwrap_or(0),
+                            "root_root": r.get("root_root").and_then(|v| v.as_u64()),
+                            "root_layer": r.get("root_layer").and_then(|v| v.as_u64()),
+                            "root_layer_visible": root_layer_visible,
+                            "reachable_from_layer_roots": reachable_from_layer_roots,
+                            "reachable_from_view_cache_roots": reachable_from_view_cache_roots,
+                            "unreachable_from_liveness_roots": unreachable,
+                            "violations": violations,
+                            "reuse_roots_len": reuse_roots_len,
+                            "reuse_root_nodes_len": reuse_root_nodes_len,
+                            "trigger_in_keep_alive": trigger_in_keep_alive,
+                            "trigger_listed_under_reuse_root": trigger_listed_under_reuse_root,
+                            "liveness_layer_roots_len": r.get("liveness_layer_roots_len").and_then(|v| v.as_u64()),
+                            "view_cache_reuse_roots_len": r.get("view_cache_reuse_roots_len").and_then(|v| v.as_u64()),
+                            "view_cache_reuse_root_nodes_len": r.get("view_cache_reuse_root_nodes_len").and_then(|v| v.as_u64()),
+                            "snapshot_node_entry_root_overwrites_len": snapshot_node_entry_root_overwrites_len,
+                            "snapshot_view_cache_reuse_root_element_samples_len": snapshot_view_cache_reuse_root_element_samples_len,
+                            "snapshot_retained_keep_alive_roots_len": snapshot_retained_keep_alive_roots_len,
+                            "root_element": r.get("root_element").and_then(|v| v.as_u64()),
+                            "root_element_path": r.get("root_element_path").and_then(|v| v.as_str()),
+                            "trigger_element": r.get("trigger_element").and_then(|v| v.as_u64()),
+                            "trigger_element_path": r.get("trigger_element_path").and_then(|v| v.as_str()),
+                            "trigger_element_in_view_cache_keep_alive": r.get("trigger_element_in_view_cache_keep_alive").and_then(|v| v.as_bool()),
+                            "trigger_element_listed_under_reuse_root": r.get("trigger_element_listed_under_reuse_root").and_then(|v| v.as_u64()),
+                            "root_root_parent_sever_parent": r.get("root_root_parent_sever_parent").and_then(|v| v.as_u64()),
+                            "root_root_parent_sever_location": r.get("root_root_parent_sever_location").and_then(|v| v.as_str()),
+                            "root_root_parent_sever_frame_id": r.get("root_root_parent_sever_frame_id").and_then(|v| v.as_u64()),
+                        }));
+                    }
                 }
             }
         }
     }
+
+    // Always write evidence so debugging doesn't require re-running the harness.
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.gc_sweep_liveness.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "gc_sweep_liveness",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "removed_subtrees_total": removed_subtrees_total,
+        "removed_subtrees_offenders": removed_subtrees_offenders,
+        "offender_taxonomy_counts": offender_taxonomy_counts,
+        "offender_samples": offender_samples,
+        "debug_summary": {
+            "element_runtime_node_entry_root_overwrites_total": element_runtime_node_entry_root_overwrites_total,
+            "element_runtime_view_cache_reuse_root_element_samples_total": element_runtime_view_cache_reuse_root_element_samples_total,
+            "element_runtime_retained_keep_alive_roots_total": element_runtime_retained_keep_alive_roots_total,
+        },
+    });
+    write_json_value(&evidence_path, &payload)?;
 
     if offenders.is_empty() {
         return Ok(());
     }
 
     let mut msg = String::new();
-    msg.push_str("GC sweep liveness violation: removed_subtrees contains entries that appear live (reachable/visible)\n");
+    msg.push_str("GC sweep liveness violation: removed_subtrees contains entries that appear live or inconsistent with keep-alive/reuse bookkeeping\n");
     msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
     msg.push_str(&format!(
         "warmup_frames={warmup_frames} examined_snapshots={examined_snapshots}\n"
     ));
+    msg.push_str(&format!("evidence: {}\n", evidence_path.display()));
     for line in offenders.into_iter().take(10) {
         msg.push_str("  ");
         msg.push_str(&line);
@@ -5352,6 +6884,275 @@ pub(super) fn check_bundle_for_retained_vlist_keep_alive_reuse_min_json(
             msg.push('\n');
         }
         return Err(msg);
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget(
+    bundle_path: &Path,
+    min_max_pool_len_after: u64,
+    max_total_evicted_items: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_retained_vlist_keep_alive_budget_json(
+        &bundle,
+        bundle_path,
+        min_max_pool_len_after,
+        max_total_evicted_items,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_retained_vlist_keep_alive_budget_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    min_max_pool_len_after: u64,
+    max_total_evicted_items: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let evidence_dir = bundle_path
+        .parent()
+        .ok_or_else(|| "invalid bundle path: missing parent directory".to_string())?;
+    let evidence_path = evidence_dir.join("check.retained_vlist_keep_alive_budget.json");
+
+    let mut examined_snapshots: u64 = 0;
+    let mut reconcile_frames: u64 = 0;
+    let mut max_pool_len_after: u64 = 0;
+    let mut total_evicted_items: u64 = 0;
+    let mut samples: Vec<serde_json::Value> = Vec::new();
+
+    for w in windows {
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let reconciles = s
+                .get("debug")
+                .and_then(|v| v.get("retained_virtual_list_reconciles"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if reconciles.is_empty() {
+                continue;
+            }
+            reconcile_frames = reconcile_frames.saturating_add(1);
+
+            let mut frame_pool_after_max: u64 = 0;
+            let mut frame_evicted_sum: u64 = 0;
+            for r in reconciles {
+                let pool_after = r
+                    .get("keep_alive_pool_len_after")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                frame_pool_after_max = frame_pool_after_max.max(pool_after);
+
+                let evicted = r
+                    .get("evicted_keep_alive_items")
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+                frame_evicted_sum = frame_evicted_sum.saturating_add(evicted);
+            }
+
+            max_pool_len_after = max_pool_len_after.max(frame_pool_after_max);
+            total_evicted_items = total_evicted_items.saturating_add(frame_evicted_sum);
+
+            if samples.len() < 16 && (frame_pool_after_max > 0 || frame_evicted_sum > 0) {
+                samples.push(serde_json::json!({
+                    "frame_id": frame_id,
+                    "pool_len_after_max": frame_pool_after_max,
+                    "evicted_items": frame_evicted_sum,
+                }));
+            }
+        }
+    }
+
+    let evidence = serde_json::json!({
+        "schema_version": 1,
+        "kind": "retained_vlist_keep_alive_budget",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "generated_unix_ms": super::util::now_unix_ms(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "reconcile_frames": reconcile_frames,
+        "min_max_pool_len_after": min_max_pool_len_after,
+        "max_pool_len_after": max_pool_len_after,
+        "max_total_evicted_items": max_total_evicted_items,
+        "total_evicted_items": total_evicted_items,
+        "samples": samples,
+    });
+    let bytes = serde_json::to_vec_pretty(&evidence).map_err(|e| e.to_string())?;
+    std::fs::write(&evidence_path, bytes).map_err(|e| e.to_string())?;
+
+    if max_pool_len_after < min_max_pool_len_after || total_evicted_items > max_total_evicted_items
+    {
+        return Err(format!(
+            "retained virtual-list keep-alive budget violated\n  bundle: {}\n  evidence: {}\n  min_max_pool_len_after={} max_pool_len_after={}\n  max_total_evicted_items={} total_evicted_items={}",
+            bundle_path.display(),
+            evidence_path.display(),
+            min_max_pool_len_after,
+            max_pool_len_after,
+            max_total_evicted_items,
+            total_evicted_items,
+        ));
+    }
+
+    Ok(())
+}
+
+pub(super) fn check_bundle_for_notify_hotspot_file_max(
+    bundle_path: &Path,
+    file_filter: &str,
+    max_count: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_notify_hotspot_file_max_json(
+        &bundle,
+        bundle_path,
+        file_filter,
+        max_count,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_notify_hotspot_file_max_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    file_filter: &str,
+    max_count: u64,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    fn file_matches(actual: &str, filter: &str) -> bool {
+        if filter.is_empty() {
+            return false;
+        }
+        if actual == filter {
+            return true;
+        }
+        let actual_norm = actual.replace('\\', "/");
+        let filter_norm = filter.replace('\\', "/");
+        actual_norm.ends_with(&filter_norm) || actual_norm.contains(&filter_norm)
+    }
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut total_notify_requests: u64 = 0;
+    let mut matched_notify_requests: u64 = 0;
+    let mut matched_samples: Vec<serde_json::Value> = Vec::new();
+    let mut matched_hotspot_counts: std::collections::BTreeMap<String, u64> =
+        std::collections::BTreeMap::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let reqs = s
+                .get("debug")
+                .and_then(|v| v.get("notify_requests"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+
+            for req in reqs {
+                total_notify_requests = total_notify_requests.saturating_add(1);
+
+                let file = req.get("file").and_then(|v| v.as_str()).unwrap_or_default();
+                let line = req.get("line").and_then(|v| v.as_u64()).unwrap_or(0);
+                let column = req.get("column").and_then(|v| v.as_u64()).unwrap_or(0);
+
+                let key = format!("{file}:{line}:{column}");
+                *matched_hotspot_counts.entry(key).or_insert(0) += 1;
+
+                if file_matches(file, file_filter) {
+                    matched_notify_requests = matched_notify_requests.saturating_add(1);
+                    if matched_samples.len() < 20 {
+                        matched_samples.push(serde_json::json!({
+                            "window_id": window_id,
+                            "frame_id": frame_id,
+                            "caller_node": req.get("caller_node").and_then(|v| v.as_u64()),
+                            "target_view": req.get("target_view").and_then(|v| v.as_u64()),
+                            "file": file,
+                            "line": line,
+                            "column": column,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.notify_hotspots.json");
+
+    let mut top_hotspots: Vec<(String, u64)> = matched_hotspot_counts.into_iter().collect();
+    top_hotspots.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    let top_hotspots: Vec<serde_json::Value> = top_hotspots
+        .into_iter()
+        .take(30)
+        .map(|(key, count)| serde_json::json!({ "key": key, "count": count }))
+        .collect();
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "notify_hotspots",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "file_filter": file_filter,
+        "max_count": max_count,
+        "total_notify_requests": total_notify_requests,
+        "matched_notify_requests": matched_notify_requests,
+        "matched_samples": matched_samples,
+        "top_hotspots": top_hotspots,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_notify_requests > max_count {
+        return Err(format!(
+            "notify hotspot file budget exceeded: file_filter={file_filter} matched_notify_requests={matched_notify_requests} max_count={max_count}\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
     }
 
     Ok(())

@@ -1,6 +1,6 @@
 # ADR 0193: Ephemeral Prepaint Items (v1)
 
-Status: Proposed
+Status: Accepted (v1 contract; implementation in progress)
 
 ## Context
 
@@ -103,6 +103,28 @@ inputs that make reuse correct:
 
 If the key matches and the cache root is not dirty, prepaint outputs may be reused.
 
+### 2A) Virtual surfaces: "window plans" are prepaint outputs, not structural mutations (normative)
+
+For windowed virtual surfaces (ADR 0190), `prepaint` may produce a bounded **window plan** (e.g. visible/required/prefetch
+ranges + reason) as an ephemeral prepaint output.
+
+Rules:
+
+- A window plan MUST be treated as **frame-local intent + attribution**, not as permission to mutate the declarative node
+  graph during `prepaint`.
+- Applying a window plan requires one of:
+  - a retained-host reconcile boundary (ADR 0192) (`apply_mode=retained_reconcile`), or
+  - a dirty-view rerender that rebuilds the relevant subtree (`apply_mode=non_retained_rerender`).
+- A non-retained virtual surface MUST NOT attempt to "apply" a window plan by attaching/detaching children during prepaint.
+  If the plan implies different mounted children, it MUST schedule a dirty-view rerender for the next frame.
+
+Explainability note:
+
+- When a window plan is applied via `apply_mode=non_retained_rerender`, the runtime SHOULD export bounded samples that
+  connect the rerender to a specific `window_shift_kind`/reason and invalidation detail (see ADR 0190 diagnostics).
+- For surfaces that are expected to be retained-host windowed (ADR 0192), suites SHOULD gate on the absence of
+  non-retained rerender shifts (`--check-vlist-window-shifts-non-retained-max 0`).
+
 ### 3) Liveness/GC does not depend on ephemeral items
 
 - Ephemeral items are **not** part of the declarative liveness graph.
@@ -129,6 +151,9 @@ This enables tests and scripts to assert that a paint-only update stayed paint-o
 
 - `Widget::prepaint(PrepaintCx)` exists and is called for view-cache roots during the prepaint pass.
 - Bundles export `debug.prepaint_actions` as a bounded list of prepaint requests.
+- `PrepaintCx` can store and retrieve per-cache-root ephemeral outputs via a type-erased output store keyed by the cache
+  root's prepaint key. This provides a minimal substrate for window/chrome state that must update without structural
+  rerenders.
 - VirtualList window telemetry already exists in bundles, but window derivation is still render-driven (ADR 0190 gap).
 
 ## Rollout Plan
@@ -147,4 +172,3 @@ This enables tests and scripts to assert that a paint-only update stayed paint-o
   inexplicable; defer to ADR 0192 retained host boundaries instead.
 - **Global per-window ephemeral registry only**: too coarse; cache roots need local reuse keys and attribution for
   explainability.
-

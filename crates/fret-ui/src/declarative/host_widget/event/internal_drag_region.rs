@@ -31,6 +31,7 @@ pub(super) fn handle_internal_drag_region<H: UiHost>(
     struct InternalDragHookHost<'a, H: UiHost> {
         app: &'a mut H,
         notify_requested: &'a mut bool,
+        notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
 
     impl<H: UiHost> action::UiActionHost for InternalDragHookHost<'_, H> {
@@ -54,8 +55,17 @@ pub(super) fn handle_internal_drag_region<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
+            if self.notify_requested_location.is_none() {
+                let caller = std::panic::Location::caller();
+                *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+            }
         }
     }
 
@@ -121,6 +131,7 @@ pub(super) fn handle_internal_drag_region<H: UiHost>(
     let mut host = InternalDragHookHost {
         app: &mut *cx.app,
         notify_requested: &mut cx.notify_requested,
+        notify_requested_location: &mut cx.notify_requested_location,
     };
     let handled = h(
         &mut host,

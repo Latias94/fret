@@ -104,6 +104,29 @@ let list = cx.virtual_list_keyed(
 ```
 "#;
 
+pub(crate) const DOC_UI_KIT_LIST_TORTURE: &str = r#"
+## List (UI kit torture harness)
+
+This page is an ecosystem-level harness for `fret-ui-kit::declarative::list`.
+
+It intentionally uses the **retained-host** VirtualList path (ADR 0192) to validate that:
+
+- scroll can update membership under cache-hit reuse,
+- crossing window boundaries does not require dirtying the parent cache-root,
+- correctness remains stale-paint safe under view-cache + shell reuse.
+"#;
+
+pub(crate) const USAGE_UI_KIT_LIST_TORTURE: &str = r#"
+Run with view-cache enabled:
+
+- `FRET_UI_GALLERY_VIEW_CACHE=1`
+- `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+
+Script:
+
+- `tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json`
+"#;
+
 pub(crate) const DOC_CODE_VIEW_TORTURE: &str = r#"
 ## Code View (torture harness)
 
@@ -415,6 +438,91 @@ It exists to validate:
 pub(crate) const USAGE_TREE_TORTURE: &str = r#"
 ```rust
 use fret_ui_kit::declarative::tree::tree_view;
+```
+"#;
+
+pub(crate) const DOC_TABLE_RETAINED_TORTURE: &str = r#"
+## Table (retained torture harness)
+
+This page is a baseline for the **UI Kit table surface** running on the virt-003 retained host path (ADR 0192).
+
+It exists to validate:
+
+- overscan window boundary updates reconcile attach/detach deltas (without notify-based dirty views),
+- header sorting + row selection remain correct under cache-root reuse,
+- scripted regressions stay stable as we migrate more of the full table surface into retained hosts (GPUI-MVP5-eco-002).
+"#;
+
+pub(crate) const USAGE_TABLE_RETAINED_TORTURE: &str = r#"
+```rust
+use fret_ui_kit::declarative::table::table_virtualized_retained_v0;
+```
+"#;
+
+pub(crate) const DOC_AI_TRANSCRIPT_TORTURE: &str = r#"
+## AI transcript (torture harness)
+
+This page is a baseline for **long scrolling conversations** (chat transcripts).
+
+It exists to validate:
+
+- scroll stability under view-cache reuse (no stale paint),
+- virtualization correctness under composable message rows (virt-003 retained hosts; ADR 0192),
+- future migrations toward prepaint-windowed/ephemeral updates (ADR 0190/0193).
+"#;
+
+pub(crate) const USAGE_AI_TRANSCRIPT_TORTURE: &str = r#"
+```rust
+use fret_ui_ai::{ConversationMessage, ConversationTranscript, MessageRole};
+
+let transcript = ConversationTranscript::new(vec![
+    ConversationMessage::new(1, MessageRole::User, "Hello"),
+    ConversationMessage::new(2, MessageRole::Assistant, "Hi!"),
+]);
+```
+"#;
+
+pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
+## Inspector (torture harness)
+
+This page is a baseline for **inspector-style property lists**:
+
+- long, scroll-heavy surfaces,
+- small per-row interaction chrome (hover/selection),
+- stable identity requirements (editing/focus) under view-cache reuse.
+
+It exists to validate:
+
+- retained-host window boundary updates (attach/detach deltas, no notify-driven dirtiness),
+- stale-paint safety while scrolling under cache+shell,
+- readiness for migrating future editor inspector panels (GPUI-MVP5-eco-009).
+"#;
+
+pub(crate) const USAGE_INSPECTOR_TORTURE: &str = r#"
+```rust
+// This harness uses `virtual_list_keyed_retained_with_layout` directly.
+```
+"#;
+
+pub(crate) const DOC_FILE_TREE_TORTURE: &str = r#"
+## File tree (torture harness)
+
+This page is a baseline for **file-tree / outline surfaces**:
+
+- large scrolling lists with indentation (tree depth),
+- stable row identity under view-cache reuse,
+- hover/selection chrome that should not force rerenders.
+
+It exists to validate:
+
+- retained-host window boundary updates (attach/detach deltas, no notify-driven dirtiness),
+- stale-paint safety while scrolling under cache+shell,
+- readiness for migrating editor file trees and outlines (GPUI-MVP5-eco-009).
+"#;
+
+pub(crate) const USAGE_FILE_TREE_TORTURE: &str = r#"
+```rust
+// This harness uses `virtual_list_keyed_retained_with_layout_fn` directly.
 ```
 "#;
 

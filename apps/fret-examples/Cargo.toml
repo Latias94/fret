@@ -26,6 +26,7 @@ fret-docking = { path = "../../ecosystem/fret-docking", features = ["imui"] }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["imui"] }
 fret-imui = { path = "../../ecosystem/fret-imui" }
+fret-workspace = { path = "../../ecosystem/fret-workspace" }
 fret-plot = { path = "../../ecosystem/fret-plot" }
 fret-plot3d = { path = "../../ecosystem/fret-plot3d" }
 fret-chart = { path = "../../ecosystem/fret-chart", features = ["echarts"] }

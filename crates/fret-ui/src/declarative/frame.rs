@@ -170,6 +170,21 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     })
 }
 
+pub(crate) fn with_element_record_for_node<H: UiHost, R>(
+    app: &mut H,
+    window: AppWindowId,
+    node: NodeId,
+    f: impl FnOnce(&ElementRecord) -> R,
+) -> Option<R> {
+    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
+        frame
+            .windows
+            .get(&window)
+            .and_then(|w| w.instances.get(&node))
+            .map(f)
+    })
+}
+
 #[allow(dead_code)]
 pub(crate) fn with_window_frame_mut<H: UiHost, R>(
     app: &mut H,

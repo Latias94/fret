@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use fret_core::{
     AttributedText, Edges, FontId, FontWeight, Px, TextOverflow, TextPaintStyle, TextSpan,
@@ -17,7 +20,6 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
 };
-use std::collections::{HashMap, HashSet};
 
 use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button_overlay};
 use crate::prepare::CodeBlockPreparedState;
@@ -316,7 +318,7 @@ impl CodeBlock {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         code_block_with(
             cx,
             &self.code,
@@ -343,7 +345,7 @@ impl CodeBlock {
     }
 }
 
-pub fn code_block<H: UiHost>(
+pub fn code_block<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -399,7 +401,7 @@ impl Default for CodeBlockUiOptions {
     }
 }
 
-pub fn code_block_with<H: UiHost>(
+pub fn code_block_with<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -416,7 +418,7 @@ pub fn code_block_with<H: UiHost>(
     )
 }
 
-pub fn code_block_with_header_slots<H: UiHost>(
+pub fn code_block_with_header_slots<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     code: &str,
     language: Option<&str>,
@@ -619,7 +621,7 @@ fn render_code_block_header<H: UiHost>(
     })
 }
 
-fn render_code_block_body<H: UiHost>(
+fn render_code_block_body<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
@@ -945,7 +947,7 @@ fn render_code_block_line_row<H: UiHost>(
     )
 }
 
-fn render_code_block_windowed_lines<H: UiHost>(
+fn render_code_block_windowed_lines<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     prepared: Arc<crate::prepare::PreparedCodeBlock>,
@@ -979,7 +981,7 @@ fn render_code_block_windowed_lines<H: UiHost>(
         layout
     };
 
-    let list = cx.virtual_list_keyed_with_layout(
+    let list = cx.virtual_list_keyed_retained_with_layout_fn(
         list_layout,
         len,
         list_options,

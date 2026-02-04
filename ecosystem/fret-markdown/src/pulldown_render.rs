@@ -7,7 +7,7 @@ use fret_ui_kit::declarative::stack;
 
 use super::*;
 
-pub(super) fn render_pulldown_events_root<H: UiHost>(
+pub(super) fn render_pulldown_events_root<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -50,7 +50,7 @@ fn stop_matches(end: &pulldown_cmark::TagEnd, stop: PulldownStop) -> bool {
     }
 }
 
-fn render_pulldown_blocks<H: UiHost>(
+fn render_pulldown_blocks<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -447,7 +447,7 @@ fn render_pulldown_heading<H: UiHost>(
     render_heading_inline(cx, theme, markdown_theme, components, info, slice)
 }
 
-fn render_pulldown_code_block<H: UiHost>(
+fn render_pulldown_code_block<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     components: &MarkdownComponents<H>,
     events: &[pulldown_cmark::Event<'static>],
@@ -495,7 +495,7 @@ fn render_pulldown_code_block<H: UiHost>(
     }
 }
 
-fn render_pulldown_blockquote<H: UiHost>(
+fn render_pulldown_blockquote<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -546,7 +546,7 @@ fn render_blockquote_container<H: UiHost>(
     })
 }
 
-fn render_pulldown_list<H: UiHost>(
+fn render_pulldown_list<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,
@@ -693,7 +693,7 @@ fn render_task_list_marker<H: UiHost>(
     })
 }
 
-fn render_pulldown_footnote_definition<H: UiHost>(
+fn render_pulldown_footnote_definition<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
     markdown_theme: MarkdownTheme,

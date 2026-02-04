@@ -1,13 +1,12 @@
 use fret_core::{Color, Corners, CursorIcon, Edges, KeyCode, Px, SemanticsRole};
 use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
+use fret_ui::action::PressablePointerDownResult;
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, ScrollAxis, ScrollProps, SemanticsProps,
+    PressableProps, ScrollAxis, ScrollProps, SemanticsProps, VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
-use fret_ui::{
-    ElementContext, Theme, UiHost, action::PressablePointerDownResult, scroll::ScrollStrategy,
-};
+use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy};
 
 use fret_core::time::Instant;
 use std::cell::{Cell, RefCell};
@@ -143,6 +142,13 @@ pub struct TableViewProps {
     ///   measure visible rows and write sizes back into the virtualizer.
     pub row_measure_mode: TableRowMeasureMode,
     pub overscan: usize,
+    /// Optional retained-subtree budget for overscan window shifts (retained host path).
+    ///
+    /// When `None`, the default heuristic is `overscan * 2`.
+    ///
+    /// Larger values reduce remount/layout churn when the window oscillates across boundaries
+    /// (e.g. scroll “bounce” patterns), at the cost of retaining more offscreen subtrees.
+    pub keep_alive: Option<usize>,
     pub default_column_width: Px,
     pub min_column_width: Px,
     /// When `true`, clicking a sortable header updates `TableState.sorting`.
@@ -200,6 +206,7 @@ impl Default for TableViewProps {
             row_height: None,
             row_measure_mode: TableRowMeasureMode::Fixed,
             overscan: 2,
+            keep_alive: None,
             default_column_width: Px(160.0),
             min_column_width: Px(40.0),
             enable_sorting: true,
@@ -697,6 +704,628 @@ where
         render_header_cell,
         render_cell,
         output,
+    )
+}
+
+/// Retained-host virtualized table helper (virt-003 / ADR 0192).
+///
+/// This is an opt-in surface intended for perf/correctness harnesses. v0 is intentionally minimal:
+/// - fixed-height or measured body rows (controlled by `props.row_measure_mode`)
+/// - flat (non-grouped) tables only
+/// - single-column sorting only
+/// - focusable "List" semantics with keyboard navigation and typeahead (opt-in labels)
+///
+/// Typeahead labels:
+/// - When `typeahead_label_at` is `Some`, it is used to compute per-row labels for prefix
+///   typeahead navigation.
+/// - The `usize` argument is the row's `data_index` into `data`.
+///
+/// The key benefit is that overscan window boundary updates can attach/detach body row subtrees
+/// without forcing a parent cache-root rerender under view-cache reuse.
+#[allow(clippy::too_many_arguments)]
+pub fn table_virtualized_retained_v0<H: UiHost + 'static, TData>(
+    cx: &mut ElementContext<'_, H>,
+    data: Arc<[TData]>,
+    columns: Arc<[ColumnDef<TData>]>,
+    state: Model<TableState>,
+    vertical_scroll: &VirtualListScrollHandle,
+    items_revision: u64,
+    row_key_at: Arc<dyn Fn(&TData, usize) -> RowKey>,
+    typeahead_label_at: Option<Arc<dyn Fn(&TData, usize) -> Arc<str> + Send + Sync>>,
+    props: TableViewProps,
+    header_label: Arc<dyn Fn(&ColumnDef<TData>) -> Arc<str>>,
+    cell_at: Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement>,
+    debug_header_cell_test_id_prefix: Option<Arc<str>>,
+    debug_row_test_id_prefix: Option<Arc<str>>,
+) -> AnyElement
+where
+    TData: 'static,
+{
+    #[derive(Debug, Clone, Copy)]
+    struct RowEntry {
+        key: RowKey,
+        data_index: usize,
+    }
+
+    #[derive(Default)]
+    struct RetainedTableRowsState {
+        last_items_revision: Option<u64>,
+        entries: Arc<[RowEntry]>,
+    }
+
+    let theme = Theme::global(&*cx.app);
+    let (table_bg, border, header_bg, row_hover, row_active) = resolve_table_colors(theme);
+    let ring = theme
+        .color_by_key("ring")
+        .or_else(|| theme.color_by_key("focus.ring"))
+        .or_else(|| theme.color_by_key("primary"))
+        .unwrap_or(row_active);
+    let ring = emphasize_border(ring, 0.9);
+    let row_hover_bg = Color {
+        a: row_hover.a.min(0.12),
+        ..row_hover
+    };
+    let row_active_bg = Color {
+        a: row_active.a.min(0.18),
+        ..row_active
+    };
+    let radius = theme.metric_required("metric.radius.md");
+
+    let row_h = props
+        .row_height
+        .unwrap_or_else(|| resolve_row_height(theme, props.size));
+
+    let cell_px = resolve_cell_padding_x(theme);
+    let cell_py = resolve_cell_padding_y(theme);
+
+    let sorting = cx
+        .watch_model(&state)
+        .layout()
+        .read_ref(|s| s.sorting.clone())
+        .ok()
+        .unwrap_or_default();
+
+    let entries = cx.with_state(RetainedTableRowsState::default, |st| {
+        if st.last_items_revision != Some(items_revision) {
+            st.last_items_revision = Some(items_revision);
+
+            let mut entries: Vec<RowEntry> = (0..data.len())
+                .map(|i| RowEntry {
+                    key: (row_key_at)(&data[i], i),
+                    data_index: i,
+                })
+                .collect();
+
+            if let Some(spec) = sorting.first() {
+                if let Some(col) = columns
+                    .iter()
+                    .find(|c| c.id.as_ref() == spec.column.as_ref())
+                    && let Some(cmp) = col.sort_cmp.as_ref()
+                {
+                    entries.sort_by(|a, b| {
+                        let a_row = &data[a.data_index];
+                        let b_row = &data[b.data_index];
+                        let ord = (cmp)(a_row, b_row);
+                        let ord = if spec.desc { ord.reverse() } else { ord };
+                        if ord == std::cmp::Ordering::Equal {
+                            a.key.cmp(&b.key)
+                        } else {
+                            ord
+                        }
+                    });
+                }
+            }
+
+            st.entries = Arc::from(entries);
+        }
+
+        st.entries.clone()
+    });
+
+    let mut fill_layout = LayoutStyle::default();
+    fill_layout.size.width = Length::Fill;
+    fill_layout.size.height = Length::Fill;
+    fill_layout.flex.grow = 1.0;
+    fill_layout.flex.basis = Length::Px(Px(0.0));
+
+    let mut options = VirtualListOptions::new(row_h, props.overscan);
+    options.items_revision = items_revision;
+    options.keep_alive = props
+        .keep_alive
+        .unwrap_or_else(|| props.overscan.saturating_mul(2));
+    match props.row_measure_mode {
+        TableRowMeasureMode::Fixed => {
+            options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
+            options.key_cache = fret_ui::element::VirtualListKeyCacheMode::VisibleOnly;
+        }
+        TableRowMeasureMode::Measured => {
+            options.measure_mode = fret_ui::element::VirtualListMeasureMode::Measured;
+            options.key_cache = fret_ui::element::VirtualListKeyCacheMode::AllKeys;
+        }
+    }
+
+    let header = {
+        let state = state.clone();
+        let columns = columns.clone();
+        let header_label = Arc::clone(&header_label);
+        let debug_header_cell_test_id_prefix = debug_header_cell_test_id_prefix.clone();
+
+        cx.container(
+            ContainerProps {
+                background: Some(header_bg),
+                border: Edges {
+                    bottom: Px(1.0),
+                    ..Default::default()
+                },
+                border_color: Some(border),
+                corner_radii: Corners {
+                    top_left: radius,
+                    top_right: radius,
+                    ..Default::default()
+                },
+                padding: Edges::symmetric(cell_px, cell_py),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap_x(Space::N2)
+                        .justify(Justify::Start)
+                        .items(Items::Center),
+                    move |cx| {
+                        columns
+                            .iter()
+                            .map(|col| {
+                                let label = (header_label)(col);
+                                let sort_state = sort_for_column(&sorting, &col.id);
+                                let col_id = col.id.clone();
+                                let state = state.clone();
+                                let debug_test_id: Option<Arc<str>> =
+                                    debug_header_cell_test_id_prefix.as_ref().map(|prefix| {
+                                        Arc::<str>::from(format!(
+                                            "{prefix}{id}",
+                                            id = col_id.as_ref()
+                                        ))
+                                    });
+
+                                cx.pressable(
+                                    PressableProps {
+                                        enabled: true,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: Some(label.clone()),
+                                            test_id: debug_test_id.clone(),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |cx, _st| {
+                                        cx.pressable_update_model(&state, move |st| {
+                                            apply_single_sort_toggle(st, &col_id);
+                                            st.pagination.page_index = 0;
+                                        });
+
+                                        let indicator: Arc<str> = match sort_state {
+                                            None => Arc::from(""),
+                                            Some(false) => Arc::from(" ▲"),
+                                            Some(true) => Arc::from(" ▼"),
+                                        };
+                                        vec![cx.text(format!("{}{}", label, indicator))]
+                                    },
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    },
+                )]
+            },
+        )
+    };
+
+    let key_at: Arc<dyn Fn(usize) -> fret_ui::ItemKey> = {
+        let entries = entries.clone();
+        Arc::new(move |i| entries[i].key.0)
+    };
+
+    struct RetainedTableKeyboardNavState {
+        active_index: Rc<Cell<Option<usize>>>,
+        anchor_index: Rc<Cell<Option<usize>>>,
+        labels: Rc<RefCell<Arc<[Arc<str>]>>>,
+        disabled: Rc<RefCell<Arc<[bool]>>>,
+        last_labels_revision: Cell<Option<u64>>,
+        typeahead: Rc<RefCell<TypeaheadBuffer>>,
+        typeahead_timer: Rc<Cell<Option<TimerToken>>>,
+    }
+
+    impl Default for RetainedTableKeyboardNavState {
+        fn default() -> Self {
+            Self {
+                active_index: Rc::default(),
+                anchor_index: Rc::default(),
+                labels: Rc::new(RefCell::new(Arc::from([]))),
+                disabled: Rc::new(RefCell::new(Arc::from([]))),
+                last_labels_revision: Cell::new(None),
+                typeahead: Rc::new(RefCell::new(TypeaheadBuffer::new(0))),
+                typeahead_timer: Rc::default(),
+            }
+        }
+    }
+
+    let (
+        active_index,
+        anchor_index,
+        labels,
+        disabled,
+        _last_labels_revision,
+        typeahead,
+        typeahead_timer,
+    ) = cx.with_state(RetainedTableKeyboardNavState::default, |nav| {
+        if nav.last_labels_revision.get() != Some(items_revision) {
+            nav.last_labels_revision.set(Some(items_revision));
+
+            if let Some(typeahead_label_at) = &typeahead_label_at {
+                let mut next_labels: Vec<Arc<str>> = Vec::with_capacity(entries.len());
+                let mut next_disabled: Vec<bool> = Vec::with_capacity(entries.len());
+                for entry in entries.iter() {
+                    let i = entry.data_index;
+                    let label = (typeahead_label_at)(&data[i], i);
+                    let disabled = label.trim().is_empty();
+                    next_labels.push(label);
+                    next_disabled.push(disabled);
+                }
+                *nav.labels.borrow_mut() = Arc::from(next_labels);
+                *nav.disabled.borrow_mut() = Arc::from(next_disabled);
+            } else {
+                let mut next_labels: Vec<Arc<str>> = Vec::with_capacity(entries.len());
+                let mut next_disabled: Vec<bool> = Vec::with_capacity(entries.len());
+                for entry in entries.iter() {
+                    let label: Arc<str> = Arc::from(entry.key.0.to_string());
+                    next_labels.push(label);
+                    next_disabled.push(false);
+                }
+                *nav.labels.borrow_mut() = Arc::from(next_labels);
+                *nav.disabled.borrow_mut() = Arc::from(next_disabled);
+            }
+        }
+
+        (
+            nav.active_index.clone(),
+            nav.anchor_index.clone(),
+            nav.labels.clone(),
+            nav.disabled.clone(),
+            nav.last_labels_revision.clone(),
+            nav.typeahead.clone(),
+            nav.typeahead_timer.clone(),
+        )
+    });
+
+    let row_builder = {
+        let state = state.clone();
+        let entries = entries.clone();
+        let data = data.clone();
+        let columns = columns.clone();
+        let cell_at = Arc::clone(&cell_at);
+        let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
+
+        move |key_handler: fret_ui::action::OnKeyDown, focus_target: GlobalElementId| {
+            Arc::new(move |cx: &mut ElementContext<'_, H>, i: usize| {
+                let entry = entries[i];
+                let row_key = entry.key;
+                let data_index = entry.data_index;
+
+                let selected = cx
+                    .watch_model(&state)
+                    .paint()
+                    .read_ref(|s| s.row_selection.contains(&row_key))
+                    .ok()
+                    .unwrap_or(false);
+
+                let test_id = debug_row_test_id_prefix
+                    .as_ref()
+                    .map(|prefix| Arc::<str>::from(format!("{}{id}", prefix, id = row_key.0)));
+
+                let state_model = state.clone();
+                let data_for_row = Arc::clone(&data);
+                let columns_for_row = Arc::clone(&columns);
+                let cell_at_for_row = Arc::clone(&cell_at);
+                let key_handler_for_row = key_handler.clone();
+                let focus_target_for_row = focus_target;
+
+                cx.pressable(
+                    PressableProps {
+                        enabled: true,
+                        focusable: false,
+                        a11y: PressableA11y {
+                            role: Some(SemanticsRole::ListItem),
+                            test_id,
+                            selected,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    move |cx, st| {
+                        let focus_target = focus_target_for_row;
+                        cx.pressable_add_on_pointer_down(Arc::new(
+                            move |host, action_cx, _down| {
+                                host.request_focus(focus_target);
+                                host.request_redraw(action_cx.window);
+                                PressablePointerDownResult::Continue
+                            },
+                        ));
+
+                        // Mirror list keyboard behavior when focus is inside a row (e.g. programmatic focus).
+                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
+                        let state = state_model.clone();
+                        cx.pressable_update_model(&state, move |st| {
+                            if st.row_selection.contains(&row_key) {
+                                st.row_selection.remove(&row_key);
+                            } else {
+                                st.row_selection.insert(row_key);
+                            }
+                        });
+
+                        let bg = if selected || st.pressed {
+                            Some(row_active_bg)
+                        } else if st.hovered {
+                            Some(row_hover_bg)
+                        } else {
+                            None
+                        };
+
+                        let original = &data_for_row[data_index];
+                        let cells = columns_for_row
+                            .iter()
+                            .map(|col| (cell_at_for_row)(cx, col, original))
+                            .collect::<Vec<_>>();
+
+                        vec![cx.container(
+                            ContainerProps {
+                                background: bg,
+                                padding: Edges::symmetric(cell_px, cell_py),
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![stack::hstack(
+                                    cx,
+                                    stack::HStackProps::default()
+                                        .gap_x(Space::N2)
+                                        .justify(Justify::Start)
+                                        .items(Items::Center),
+                                    move |_cx| cells,
+                                )]
+                            },
+                        )]
+                    },
+                )
+            })
+        }
+    };
+
+    cx.semantics_with_id(
+        SemanticsProps {
+            role: SemanticsRole::List,
+            focusable: true,
+            ..Default::default()
+        },
+        move |cx, list_id| {
+            let state_for_keys = state.clone();
+            let vertical_scroll_for_keys = vertical_scroll.clone();
+            let entries_for_keys = entries.clone();
+            let entries_for_list = entries.clone();
+            let labels_for_keys = labels.clone();
+            let disabled_for_keys = disabled.clone();
+            let active_index_for_keys = active_index.clone();
+            let anchor_index_for_keys = anchor_index.clone();
+            let typeahead_for_keys = typeahead.clone();
+            let typeahead_timer_for_keys = typeahead_timer.clone();
+
+            let key_handler: fret_ui::action::OnKeyDown = Arc::new(move |host, action_cx, down| {
+                let Some(len) = entries_for_keys.len().checked_sub(1) else {
+                    return false;
+                };
+
+                let current = active_index_for_keys.get().unwrap_or(0).min(len);
+
+                let cancel_typeahead_timer =
+                    |host: &mut dyn fret_ui::action::UiActionHost,
+                     typeahead_timer: &Rc<Cell<Option<TimerToken>>>| {
+                        if let Some(token) = typeahead_timer.get() {
+                            host.push_effect(Effect::CancelTimer { token });
+                            typeahead_timer.set(None);
+                        }
+                    };
+
+                match down.key {
+                    KeyCode::ArrowDown => {
+                        let next = (current + 1).min(len);
+                        active_index_for_keys.set(Some(next));
+                        anchor_index_for_keys.set(Some(next));
+                        cancel_typeahead_timer(host, &typeahead_timer_for_keys);
+                        typeahead_for_keys.borrow_mut().clear();
+                        vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Nearest);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }
+                    KeyCode::ArrowUp => {
+                        let next = current.saturating_sub(1);
+                        active_index_for_keys.set(Some(next));
+                        anchor_index_for_keys.set(Some(next));
+                        cancel_typeahead_timer(host, &typeahead_timer_for_keys);
+                        typeahead_for_keys.borrow_mut().clear();
+                        vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Nearest);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }
+                    KeyCode::Home => {
+                        active_index_for_keys.set(Some(0));
+                        anchor_index_for_keys.set(Some(0));
+                        cancel_typeahead_timer(host, &typeahead_timer_for_keys);
+                        typeahead_for_keys.borrow_mut().clear();
+                        vertical_scroll_for_keys.scroll_to_item(0, ScrollStrategy::Nearest);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }
+                    KeyCode::End => {
+                        active_index_for_keys.set(Some(len));
+                        anchor_index_for_keys.set(Some(len));
+                        cancel_typeahead_timer(host, &typeahead_timer_for_keys);
+                        typeahead_for_keys.borrow_mut().clear();
+                        vertical_scroll_for_keys.scroll_to_item(len, ScrollStrategy::Nearest);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }
+                    KeyCode::Escape => {
+                        cancel_typeahead_timer(host, &typeahead_timer_for_keys);
+                        typeahead_for_keys.borrow_mut().clear();
+                        host.request_redraw(action_cx.window);
+                        true
+                    }
+                    KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
+                        if !props.enable_row_selection {
+                            return false;
+                        }
+                        let row_key = entries_for_keys[current].key;
+                        let _ = host.models_mut().update(&state_for_keys, move |st| {
+                            let selected = st.row_selection.contains(&row_key);
+                            if props.single_row_selection {
+                                st.row_selection.clear();
+                            }
+                            if selected {
+                                st.row_selection.remove(&row_key);
+                            } else {
+                                st.row_selection.insert(row_key);
+                            }
+                        });
+                        cancel_typeahead_timer(host, &typeahead_timer_for_keys);
+                        typeahead_for_keys.borrow_mut().clear();
+                        host.request_redraw(action_cx.window);
+                        true
+                    }
+                    _ => {
+                        if down.repeat {
+                            return false;
+                        }
+                        let Some(input) = fret_core::keycode_to_ascii_lowercase(down.key) else {
+                            return false;
+                        };
+
+                        typeahead_for_keys.borrow_mut().push_char(input, 0);
+                        let typeahead_buf = typeahead_for_keys.borrow();
+                        let Some(query) = typeahead_buf.query(0) else {
+                            return false;
+                        };
+
+                        let labels = labels_for_keys.borrow().clone();
+                        let disabled = disabled_for_keys.borrow().clone();
+                        let next =
+                            match_prefix_arc_str(&labels, &disabled, query, Some(current), true);
+                        if let Some(next) = next
+                            && next != current
+                        {
+                            active_index_for_keys.set(Some(next));
+                            anchor_index_for_keys.set(Some(next));
+                            // Typeahead should ensure the matched row becomes *visibly* in-view,
+                            // not just "present in overscan".
+                            vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Start);
+                        }
+
+                        cancel_typeahead_timer(host, &typeahead_timer_for_keys);
+                        let token = host.next_timer_token();
+                        typeahead_timer_for_keys.set(Some(token));
+                        host.push_effect(Effect::SetTimer {
+                            window: Some(action_cx.window),
+                            token,
+                            after: TABLE_TYPEAHEAD_TIMEOUT,
+                            repeat: None,
+                        });
+
+                        host.request_redraw(action_cx.window);
+                        true
+                    }
+                }
+            });
+
+            cx.key_on_key_down_for(list_id, key_handler.clone());
+            let row = row_builder(key_handler, list_id);
+
+            {
+                let typeahead = typeahead.clone();
+                let typeahead_timer = typeahead_timer.clone();
+                cx.timer_on_timer_for(
+                    list_id,
+                    Arc::new(move |host, action_cx, token| {
+                        if typeahead_timer.get() != Some(token) {
+                            return false;
+                        }
+                        typeahead_timer.set(None);
+                        typeahead.borrow_mut().clear();
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+            }
+
+            let is_focused = cx.is_focused_element(list_id);
+            let content =
+                cx.pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx| {
+                    let focus_id = list_id;
+                    cx.pointer_region_on_pointer_down(Arc::new(move |host, action_cx, _down| {
+                        host.request_focus(focus_id);
+                        host.request_redraw(action_cx.window);
+                        false
+                    }));
+
+                    vec![stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().h_full())
+                            .gap(Space::N0)
+                            .justify(Justify::Start)
+                            .items(Items::Stretch),
+                        move |cx| {
+                            vec![
+                                header,
+                                cx.virtual_list_keyed_retained_with_layout(
+                                    fill_layout,
+                                    entries_for_list.len(),
+                                    options,
+                                    vertical_scroll,
+                                    key_at,
+                                    row,
+                                ),
+                            ]
+                        },
+                    )]
+                });
+
+            if props.draw_frame || is_focused {
+                vec![cx.container(
+                    ContainerProps {
+                        layout: fill_layout,
+                        background: Some(table_bg),
+                        border: if is_focused {
+                            Edges::all(Px(2.0))
+                        } else if props.draw_frame {
+                            Edges::all(Px(1.0))
+                        } else {
+                            Edges::all(Px(0.0))
+                        },
+                        border_color: if is_focused {
+                            Some(ring)
+                        } else if props.draw_frame {
+                            Some(border)
+                        } else {
+                            None
+                        },
+                        corner_radii: Corners::all(radius),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![content],
+                )]
+            } else {
+                vec![content]
+            }
+        },
     )
 }
 
@@ -1217,6 +1846,9 @@ where
 
     let mut list_options = fret_ui::element::VirtualListOptions::new(row_h, props.overscan);
     list_options.items_revision = items_revision;
+    list_options.keep_alive = props
+        .keep_alive
+        .unwrap_or_else(|| props.overscan.saturating_mul(2));
     match props.row_measure_mode {
         TableRowMeasureMode::Fixed => {
             list_options.measure_mode = fret_ui::element::VirtualListMeasureMode::Fixed;
