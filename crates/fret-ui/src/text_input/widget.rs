@@ -1042,10 +1042,24 @@ impl<H: UiHost> Widget<H> for TextInput {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics =
+        // `TextSystem` returns zero-height metrics for empty strings (no shaped lines). Text inputs
+        // want stable line metrics even when the field is empty (caret/placeholder alignment),
+        // so measure a single space as a fallback.
+        let measure_text = if self.text.is_empty() {
+            " "
+        } else {
+            self.text.as_str()
+        };
+        let mut metrics =
             cx.services
                 .text()
-                .measure_str(self.text.as_str(), &self.style, base_constraints);
+                .measure_str(measure_text, &self.style, base_constraints);
+        if metrics.size.height.0 <= 0.01 {
+            metrics = cx
+                .services
+                .text()
+                .measure_str(" ", &self.style, base_constraints);
+        }
         self.text_metrics = Some(metrics);
 
         let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(0.0);

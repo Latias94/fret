@@ -31,6 +31,7 @@ use fret_ui::element::{
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::virtual_list::VirtualListMetrics;
 use fret_ui::{ElementContext, UiHost};
+use tracing::info;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WindowedRowsPaintFrame {
@@ -355,8 +356,38 @@ fn row_index_for_pointer(
         return None;
     }
 
-    let content_y = Px(offset_y.0 + local_y.0);
-    let idx = metrics.index_for_offset(content_y);
+    if std::env::var_os("FRET_WINDOWED_ROWS_POINTER_DEBUG")
+        .is_some_and(|v| !v.is_empty() && v != "0")
+    {
+        info!(
+            "windowed_rows_pointer bounds_y={} pos_y={} local_y={} offset_y={} viewport_h={}",
+            bounds.origin.y.0, position.y.0, local_y.0, offset_y.0, viewport_h.0
+        );
+    }
+
+    // Pointer event positions are mapped through the UI tree's transforms. Scroll containers apply
+    // their offset via `children_render_transform`, so descendants typically receive positions in
+    // stable "content space" already.
+    //
+    // For robustness (and to avoid double-counting the scroll offset), compute candidate indices
+    // for both:
+    // - viewport-space events: content_y = offset + local
+    // - content-space events:  content_y = local
+    let idx_viewport = metrics.index_for_offset(Px(offset_y.0 + local_y.0));
+    let idx_content = metrics.index_for_offset(local_y);
+
+    let idx = if let Some(visible) = metrics.visible_range(offset_y, viewport_h, 0) {
+        let in_visible = |idx: usize| idx >= visible.start_index && idx <= visible.end_index;
+        match (in_visible(idx_viewport), in_visible(idx_content)) {
+            (true, false) => idx_viewport,
+            (false, true) => idx_content,
+            // Prefer content-space indices by default (matches runtime event mapping).
+            _ => idx_content,
+        }
+    } else {
+        idx_content
+    };
+
     (idx < len).then_some(idx)
 }
 

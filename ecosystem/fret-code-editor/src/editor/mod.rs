@@ -12,9 +12,9 @@ use fret_code_editor_view::{
     select_word_range_in_buffer,
 };
 use fret_core::{
-    AttributedText, CaretAffinity, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId,
-    KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow, TextPaintStyle,
-    TextSpan, TextStyle, TextWrap, UnderlineStyle,
+    AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
+    Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow,
+    TextPaintStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
@@ -804,6 +804,7 @@ impl CodeEditor {
                             return false;
                         }
 
+                        host.set_cursor_icon(CursorIcon::Text);
                         host.request_focus(region_id);
                         host.capture_pointer();
 
@@ -884,9 +885,8 @@ impl CodeEditor {
                 let on_pointer_move_scroll = scroll_handle.clone();
                 let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
                     move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, mv| {
-                        let Some(row) = row else {
-                            return false;
-                        };
+                        // Show an I-beam cursor while hovering the editor surface, even when not dragging.
+                        host.set_cursor_icon(CursorIcon::Text);
                         if !mv.buttons.left {
                             return false;
                         }
@@ -899,11 +899,29 @@ impl CodeEditor {
                         let bounds = host.bounds();
                         st.last_bounds = Some(bounds);
 
+                        // When pointer capture is active, pointer moves can arrive while the cursor is
+                        // outside the windowed surface bounds. In that case `windowed_rows_surface`
+                        // hit-testing may return `None` for the row, which would make selection updates
+                        // feel sticky/jumpy while dragging. Clamp to the nearest representable row so
+                        // selection can continue to update smoothly.
+                        let row = row.unwrap_or_else(|| {
+                            let row_h = row_h.0.max(1.0);
+                            let offset = on_pointer_move_scroll.offset();
+                            let content_y =
+                                (mv.position.y.0 - bounds.origin.y.0).max(0.0) + offset.y.0;
+                            let approx_row = (content_y / row_h).floor().max(0.0) as usize;
+                            approx_row.min(st.display_map.row_count().saturating_sub(1))
+                        });
+
                         let cell_w = on_pointer_move_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
                         let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
-                        st.selection.focus = caret;
-                        st.caret_preferred_x = None;
+                        if caret != st.selection.focus {
+                            st.selection.focus = caret;
+                            st.caret_preferred_x = None;
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                        }
 
                         let caret_rect = caret_rect_for_selection(
                             &st,
@@ -919,8 +937,6 @@ impl CodeEditor {
                             });
                         }
 
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
                         true
                     },
                 );
