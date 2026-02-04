@@ -163,8 +163,16 @@ pub(super) struct BundleStatsReport {
     pub(super) pointer_move_frames_considered: u32,
     /// Max dispatch time (us) across the derived “pointer move” (or fallback) frame set.
     pub(super) pointer_move_max_dispatch_time_us: u64,
+    /// Snapshot identity for `pointer_move_max_dispatch_time_us`.
+    pub(super) pointer_move_max_dispatch_window: u64,
+    pub(super) pointer_move_max_dispatch_tick_id: u64,
+    pub(super) pointer_move_max_dispatch_frame_id: u64,
     /// Max hit-test time (us) across the derived “pointer move” (or fallback) frame set.
     pub(super) pointer_move_max_hit_test_time_us: u64,
+    /// Snapshot identity for `pointer_move_max_hit_test_time_us`.
+    pub(super) pointer_move_max_hit_test_window: u64,
+    pub(super) pointer_move_max_hit_test_tick_id: u64,
+    pub(super) pointer_move_max_hit_test_frame_id: u64,
     /// Number of snapshots within the derived “pointer move” (or fallback) frame set that had
     /// propagated global changes (`debug.stats.global_change_globals > 0`).
     pub(super) pointer_move_snapshots_with_global_changes: u32,
@@ -534,10 +542,16 @@ impl BundleStatsReport {
                 "dispatch_frames_fallback"
             };
             println!(
-                "derived({mode}) frames_considered={} max.us(dispatch/hit_test)={}/{} snapshots_with_global_changes={}",
+                "derived({mode}) frames_considered={} max.us(dispatch/hit_test)={}/{} dispatch_at=window:{}/tick:{}/frame:{} hit_test_at=window:{}/tick:{}/frame:{} snapshots_with_global_changes={}",
                 self.pointer_move_frames_considered,
                 self.pointer_move_max_dispatch_time_us,
                 self.pointer_move_max_hit_test_time_us,
+                self.pointer_move_max_dispatch_window,
+                self.pointer_move_max_dispatch_tick_id,
+                self.pointer_move_max_dispatch_frame_id,
+                self.pointer_move_max_hit_test_window,
+                self.pointer_move_max_hit_test_tick_id,
+                self.pointer_move_max_hit_test_frame_id,
                 self.pointer_move_snapshots_with_global_changes
             );
         }
@@ -948,7 +962,17 @@ impl BundleStatsReport {
                 "frames_present": self.pointer_move_frames_present,
                 "frames_considered": self.pointer_move_frames_considered,
                 "max_dispatch_time_us": self.pointer_move_max_dispatch_time_us,
+                "max_dispatch_at": {
+                    "window": self.pointer_move_max_dispatch_window,
+                    "tick_id": self.pointer_move_max_dispatch_tick_id,
+                    "frame_id": self.pointer_move_max_dispatch_frame_id,
+                },
                 "max_hit_test_time_us": self.pointer_move_max_hit_test_time_us,
+                "max_hit_test_at": {
+                    "window": self.pointer_move_max_hit_test_window,
+                    "tick_id": self.pointer_move_max_hit_test_tick_id,
+                    "frame_id": self.pointer_move_max_hit_test_frame_id,
+                },
                 "snapshots_with_global_changes": self.pointer_move_snapshots_with_global_changes,
             }),
         );
@@ -4462,10 +4486,20 @@ pub(super) fn bundle_stats_from_json_with_options(
             if consider_pointer_move_frame {
                 out.pointer_move_frames_considered =
                     out.pointer_move_frames_considered.saturating_add(1);
-                out.pointer_move_max_dispatch_time_us =
-                    out.pointer_move_max_dispatch_time_us.max(dispatch_time_us);
-                out.pointer_move_max_hit_test_time_us =
-                    out.pointer_move_max_hit_test_time_us.max(hit_test_time_us);
+                if dispatch_time_us > out.pointer_move_max_dispatch_time_us {
+                    out.pointer_move_max_dispatch_time_us = dispatch_time_us;
+                    out.pointer_move_max_dispatch_window = window_id;
+                    out.pointer_move_max_dispatch_tick_id =
+                        s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    out.pointer_move_max_dispatch_frame_id = frame_id;
+                }
+                if hit_test_time_us > out.pointer_move_max_hit_test_time_us {
+                    out.pointer_move_max_hit_test_time_us = hit_test_time_us;
+                    out.pointer_move_max_hit_test_window = window_id;
+                    out.pointer_move_max_hit_test_tick_id =
+                        s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                    out.pointer_move_max_hit_test_frame_id = frame_id;
+                }
                 if propagated_global_change_globals > 0 {
                     out.pointer_move_snapshots_with_global_changes = out
                         .pointer_move_snapshots_with_global_changes
