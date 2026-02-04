@@ -45,6 +45,7 @@ mod focus_auto_pan_conformance;
 mod hit_testing_conformance;
 mod hot_state_invalidation_conformance;
 mod insert_node_drag_conformance;
+mod insert_node_drag_drop_conformance;
 mod interaction_conformance;
 mod internals_conformance;
 mod invalidation_ordering_conformance;
