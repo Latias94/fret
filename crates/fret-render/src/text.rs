@@ -610,6 +610,26 @@ struct PendingUpload {
     data: Vec<u8>,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct GlyphAtlasPerfSnapshot {
+    uploads: u64,
+    upload_bytes: u64,
+    evicted_glyphs: u64,
+    evicted_pages: u64,
+    evicted_page_glyphs: u64,
+    resets: u64,
+}
+
+#[derive(Debug, Default)]
+struct GlyphAtlasPerfStats {
+    uploads: u64,
+    upload_bytes: u64,
+    evicted_glyphs: u64,
+    evicted_pages: u64,
+    evicted_page_glyphs: u64,
+    resets: u64,
+}
+
 struct GlyphAtlasPage {
     allocator: etagere::BucketedAtlasAllocator,
     pending: Vec<PendingUpload>,
@@ -632,6 +652,7 @@ struct GlyphAtlas {
     pages: Vec<GlyphAtlasPage>,
     glyphs: HashMap<GlyphKey, GlyphAtlasEntry>,
     revision: u64,
+    perf: GlyphAtlasPerfStats,
 }
 
 impl GlyphAtlas {
@@ -700,10 +721,25 @@ impl GlyphAtlas {
             pages,
             glyphs: HashMap::new(),
             revision: 0,
+            perf: GlyphAtlasPerfStats::default(),
         }
     }
 
+    fn take_perf_snapshot(&mut self) -> GlyphAtlasPerfSnapshot {
+        let snap = GlyphAtlasPerfSnapshot {
+            uploads: self.perf.uploads,
+            upload_bytes: self.perf.upload_bytes,
+            evicted_glyphs: self.perf.evicted_glyphs,
+            evicted_pages: self.perf.evicted_pages,
+            evicted_page_glyphs: self.perf.evicted_page_glyphs,
+            resets: self.perf.resets,
+        };
+        self.perf = GlyphAtlasPerfStats::default();
+        snap
+    }
+
     fn reset(&mut self) {
+        self.perf.resets = self.perf.resets.saturating_add(1);
         self.revision = self.revision.saturating_add(1);
         self.glyphs.clear();
         for page in &mut self.pages {
@@ -801,6 +837,7 @@ impl GlyphAtlas {
             .allocator
             .deallocate(victim_entry.alloc_id);
         self.glyphs.remove(&victim_key);
+        self.perf.evicted_glyphs = self.perf.evicted_glyphs.saturating_add(1);
         self.revision = self.revision.saturating_add(1);
         true
     }
@@ -838,6 +875,11 @@ impl GlyphAtlas {
             .iter()
             .filter_map(|(k, e)| (e.page == victim_page).then_some(*k))
             .collect();
+        self.perf.evicted_pages = self.perf.evicted_pages.saturating_add(1);
+        self.perf.evicted_page_glyphs = self
+            .perf
+            .evicted_page_glyphs
+            .saturating_add(keys_to_remove.len() as u64);
         for k in keys_to_remove {
             self.glyphs.remove(&k);
         }
@@ -886,6 +928,9 @@ impl GlyphAtlas {
                     }
                     &owned
                 };
+
+                self.perf.uploads = self.perf.uploads.saturating_add(1);
+                self.perf.upload_bytes = self.perf.upload_bytes.saturating_add(bytes.len() as u64);
 
                 queue.write_texture(
                     wgpu::TexelCopyTextureInfo {
@@ -1204,6 +1249,16 @@ pub struct TextSystem {
     text_pin_subpixel: Vec<Vec<GlyphKey>>,
     font_bytes_by_blob_id: HashMap<u64, Arc<[u8]>>,
     font_face_key_by_fontique: HashMap<(u64, u32), FontFaceKey>,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct TextAtlasPerfSnapshot {
+    pub(crate) uploads: u64,
+    pub(crate) upload_bytes: u64,
+    pub(crate) evicted_glyphs: u64,
+    pub(crate) evicted_pages: u64,
+    pub(crate) evicted_page_glyphs: u64,
+    pub(crate) resets: u64,
 }
 
 pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
@@ -1865,6 +1920,23 @@ impl TextSystem {
         self.mask_atlas.flush_uploads(queue);
         self.color_atlas.flush_uploads(queue);
         self.subpixel_atlas.flush_uploads(queue);
+    }
+
+    pub(crate) fn take_atlas_perf_snapshot(&mut self) -> TextAtlasPerfSnapshot {
+        let mask = self.mask_atlas.take_perf_snapshot();
+        let color = self.color_atlas.take_perf_snapshot();
+        let subpixel = self.subpixel_atlas.take_perf_snapshot();
+
+        TextAtlasPerfSnapshot {
+            uploads: mask.uploads + color.uploads + subpixel.uploads,
+            upload_bytes: mask.upload_bytes + color.upload_bytes + subpixel.upload_bytes,
+            evicted_glyphs: mask.evicted_glyphs + color.evicted_glyphs + subpixel.evicted_glyphs,
+            evicted_pages: mask.evicted_pages + color.evicted_pages + subpixel.evicted_pages,
+            evicted_page_glyphs: mask.evicted_page_glyphs
+                + color.evicted_page_glyphs
+                + subpixel.evicted_page_glyphs,
+            resets: mask.resets + color.resets + subpixel.resets,
+        }
     }
 
     pub(crate) fn atlas_revision(&self) -> u64 {

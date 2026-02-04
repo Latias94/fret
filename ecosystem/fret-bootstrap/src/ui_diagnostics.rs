@@ -6206,6 +6206,40 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_prepare_text_us: u64,
     #[serde(default)]
+    pub renderer_text_atlas_revision: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_uploads: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_glyphs: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_pages: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_page_glyphs: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_resets: u64,
+    #[serde(default)]
+    pub renderer_intermediate_budget_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_in_use_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_peak_in_use_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_release_targets: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_allocations: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_reuses: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_releases: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_evictions: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_free_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_free_textures: u64,
+    #[serde(default)]
     pub renderer_draw_calls: u64,
     #[serde(default)]
     pub renderer_text_draw_calls: u64,
@@ -6331,6 +6365,23 @@ impl UiFrameStatsV1 {
             renderer_encode_scene_us: 0,
             renderer_prepare_svg_us: 0,
             renderer_prepare_text_us: 0,
+            renderer_text_atlas_revision: 0,
+            renderer_text_atlas_uploads: 0,
+            renderer_text_atlas_upload_bytes: 0,
+            renderer_text_atlas_evicted_glyphs: 0,
+            renderer_text_atlas_evicted_pages: 0,
+            renderer_text_atlas_evicted_page_glyphs: 0,
+            renderer_text_atlas_resets: 0,
+            renderer_intermediate_budget_bytes: 0,
+            renderer_intermediate_in_use_bytes: 0,
+            renderer_intermediate_peak_in_use_bytes: 0,
+            renderer_intermediate_release_targets: 0,
+            renderer_intermediate_pool_allocations: 0,
+            renderer_intermediate_pool_reuses: 0,
+            renderer_intermediate_pool_releases: 0,
+            renderer_intermediate_pool_evictions: 0,
+            renderer_intermediate_pool_free_bytes: 0,
+            renderer_intermediate_pool_free_textures: 0,
             renderer_draw_calls: 0,
             renderer_text_draw_calls: 0,
             renderer_quad_draw_calls: 0,
@@ -6352,6 +6403,26 @@ impl UiFrameStatsV1 {
             out.renderer_encode_scene_us = sample.perf.encode_scene_us;
             out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
             out.renderer_prepare_text_us = sample.perf.prepare_text_us;
+            out.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
+            out.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
+            out.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;
+            out.renderer_text_atlas_evicted_glyphs = sample.perf.text_atlas_evicted_glyphs;
+            out.renderer_text_atlas_evicted_pages = sample.perf.text_atlas_evicted_pages;
+            out.renderer_text_atlas_evicted_page_glyphs =
+                sample.perf.text_atlas_evicted_page_glyphs;
+            out.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
+            out.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
+            out.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
+            out.renderer_intermediate_peak_in_use_bytes =
+                sample.perf.intermediate_peak_in_use_bytes;
+            out.renderer_intermediate_release_targets = sample.perf.intermediate_release_targets;
+            out.renderer_intermediate_pool_allocations = sample.perf.intermediate_pool_allocations;
+            out.renderer_intermediate_pool_reuses = sample.perf.intermediate_pool_reuses;
+            out.renderer_intermediate_pool_releases = sample.perf.intermediate_pool_releases;
+            out.renderer_intermediate_pool_evictions = sample.perf.intermediate_pool_evictions;
+            out.renderer_intermediate_pool_free_bytes = sample.perf.intermediate_pool_free_bytes;
+            out.renderer_intermediate_pool_free_textures =
+                sample.perf.intermediate_pool_free_textures;
             out.renderer_draw_calls = sample.perf.draw_calls;
             out.renderer_text_draw_calls = sample.perf.text_draw_calls;
             out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;

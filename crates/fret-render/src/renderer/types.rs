@@ -121,6 +121,28 @@ pub struct RenderPerfSnapshot {
     pub prepare_svg_us: u64,
     pub prepare_text_us: u64,
 
+    // Text atlas churn (best-effort). These numbers are per-frame signals and should be treated as
+    // diagnostic hints rather than strict correctness metrics.
+    pub text_atlas_revision: u64,
+    pub text_atlas_uploads: u64,
+    pub text_atlas_upload_bytes: u64,
+    pub text_atlas_evicted_glyphs: u64,
+    pub text_atlas_evicted_pages: u64,
+    pub text_atlas_evicted_page_glyphs: u64,
+    pub text_atlas_resets: u64,
+
+    // Intermediate pool churn (best-effort; used for blur/effect pipelines).
+    pub intermediate_budget_bytes: u64,
+    pub intermediate_in_use_bytes: u64,
+    pub intermediate_peak_in_use_bytes: u64,
+    pub intermediate_release_targets: u64,
+    pub intermediate_pool_allocations: u64,
+    pub intermediate_pool_reuses: u64,
+    pub intermediate_pool_releases: u64,
+    pub intermediate_pool_evictions: u64,
+    pub intermediate_pool_free_bytes: u64,
+    pub intermediate_pool_free_textures: u64,
+
     pub draw_calls: u64,
     pub quad_draw_calls: u64,
     pub viewport_draw_calls: u64,
@@ -163,6 +185,25 @@ pub(super) struct RenderPerfStats {
     pub(super) encode_scene: Duration,
     pub(super) prepare_svg: Duration,
     pub(super) prepare_text: Duration,
+
+    pub(super) text_atlas_revision: u64,
+    pub(super) text_atlas_uploads: u64,
+    pub(super) text_atlas_upload_bytes: u64,
+    pub(super) text_atlas_evicted_glyphs: u64,
+    pub(super) text_atlas_evicted_pages: u64,
+    pub(super) text_atlas_evicted_page_glyphs: u64,
+    pub(super) text_atlas_resets: u64,
+
+    pub(super) intermediate_budget_bytes: u64,
+    pub(super) intermediate_in_use_bytes: u64,
+    pub(super) intermediate_peak_in_use_bytes: u64,
+    pub(super) intermediate_release_targets: u64,
+    pub(super) intermediate_pool_allocations: u64,
+    pub(super) intermediate_pool_reuses: u64,
+    pub(super) intermediate_pool_releases: u64,
+    pub(super) intermediate_pool_evictions: u64,
+    pub(super) intermediate_pool_free_bytes: u64,
+    pub(super) intermediate_pool_free_textures: u64,
 
     pub(super) draw_calls: u64,
     pub(super) quad_draw_calls: u64,
