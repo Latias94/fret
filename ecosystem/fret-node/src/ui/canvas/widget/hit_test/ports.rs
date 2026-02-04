@@ -1,3 +1,4 @@
+use super::score::{BestLoosePort, BestPortByNodeRank};
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -16,7 +17,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .index
             .query_ports_sorted_dedup(pos, r, ctx.scratch.ports_mut());
 
-        let mut best: Option<(PortId, u32)> = None;
+        let mut best = BestPortByNodeRank::new();
         for &port_id in candidates {
             let Some(handle) = ctx.geom.ports.get(&port_id) else {
                 continue;
@@ -25,17 +26,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 continue;
             }
             let rank = ctx.geom.node_rank.get(&handle.node).copied().unwrap_or(0);
-            match best {
-                Some((best_id, best_rank)) => {
-                    if rank > best_rank || (rank == best_rank && port_id < best_id) {
-                        best = Some((port_id, rank));
-                    }
-                }
-                None => best = Some((port_id, rank)),
-            }
+            best.consider(port_id, rank);
         }
 
-        best.map(|(id, _)| id)
+        best.into_port_id()
     }
 
     fn pick_loose_port_in_radius(
@@ -56,9 +50,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let r = canvas_units_from_screen_px(radius_screen, zoom);
         let r2 = r * r;
-        let eps = zoom_eps(zoom);
 
-        let mut best: Option<(PortId, f32, bool, u32)> = None;
+        let mut best = BestLoosePort::new(zoom);
         let candidates = ctx
             .index
             .query_ports_sorted_dedup(pos, r, ctx.scratch.ports_mut());
@@ -78,29 +71,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             if d2 > r2 {
                 continue;
             }
-            let prefers_opposite = handle.dir == desired_dir;
+            let preferred = handle.dir == desired_dir;
             let rank = ctx.geom.node_rank.get(&handle.node).copied().unwrap_or(0);
-            match best {
-                Some((best_id, best_d2, best_prefers_opposite, best_rank)) => {
-                    if d2 + eps < best_d2 {
-                        best = Some((port_id, d2, prefers_opposite, rank));
-                    } else if (d2 - best_d2).abs() <= eps {
-                        if prefers_opposite != best_prefers_opposite {
-                            if prefers_opposite {
-                                best = Some((port_id, d2, prefers_opposite, rank));
-                            }
-                        } else if rank > best_rank {
-                            best = Some((port_id, d2, prefers_opposite, rank));
-                        } else if rank == best_rank && port_id < best_id {
-                            best = Some((port_id, d2, prefers_opposite, rank));
-                        }
-                    }
-                }
-                None => best = Some((port_id, d2, prefers_opposite, rank)),
-            }
+            best.consider(port_id, d2, preferred, rank);
         }
 
-        best.map(|(id, _, _, _)| id)
+        best.into_port_id()
     }
 
     pub(in super::super) fn pick_target_port(
