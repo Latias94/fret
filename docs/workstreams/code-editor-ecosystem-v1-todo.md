@@ -156,6 +156,7 @@ Evidence anchors:
 - [x] Add a “scroll stability / no stale paint” torture harness entry (ui-gallery style).
 - [x] Fix the “no stale lines” torture failure (scroll-driven window changes must not show stale row text).
   - Mechanism: `ScrollProps.windowed_paint` forces view-cache rerender on scroll offset changes for windowed paint surfaces.
+  - Surface glue: `windowed_rows_surface_with_pointer_region` also sets `scroll.windowed_paint = true` (the code editor uses the pointer-region variant).
   - Paint correctness: `windowed_rows_surface` now anchors row rects at the canvas bounds origin to avoid “left clipped / prefixes missing”.
 - [x] Clamp windowed row hit-testing during drags (keeps selection updates continuous when the pointer leaves bounds).
 - [x] Drag-to-select edge autoscroll (Zed-style scaling), including a timer-driven path so it continues while the pointer is stationary at the viewport edge.
