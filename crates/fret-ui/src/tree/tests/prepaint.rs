@@ -27,6 +27,11 @@ fn prepaint_interaction_cache_replays_for_clean_view_cache_root() {
     assert_eq!(ui.debug_stats().interaction_cache_hits, 0);
 
     app.advance_frame();
+    // Force a non-stable layout pass so the test exercises interaction-cache replay.
+    //
+    // The layout engine can legitimately skip work on a completely stable frame, which would
+    // bypass prepaint recording/replay and make `interaction_cache_hits` remain 0.
+    ui.invalidate(root, Invalidation::Layout);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let stats = ui.debug_stats();
     assert!(stats.interaction_cache_hits >= 1);
@@ -85,6 +90,9 @@ fn prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache() 
     assert_eq!(ui.debug_stats().interaction_cache_hits, 0);
 
     app.advance_frame();
+    // Force a non-stable layout pass so the test exercises interaction-cache replay (and ensures
+    // the view-cache root's prepaint hook still runs under reuse).
+    ui.invalidate(root, Invalidation::Layout);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     assert!(ui.debug_stats().interaction_cache_hits >= 1);
     assert_eq!(calls.load(Ordering::SeqCst), 2);
