@@ -247,6 +247,9 @@ TODO:
     - Commit: `52f555d5`
     - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `52f555d5`.
   - [ ] Path/MSAA per-pass churn (uploads/resolves/temporary targets) beyond the pooled intermediate counters.
+  - [x] Reduce intermediate pool housekeeping overhead by enforcing budget once per frame (instead of per release).
+    - Commit: `3b792646`
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `3b792646`.
 - [x] Replace keyed repaint forcing with a representative invalidation-driven workload.
   - The legacy `svg_upload_torture` harness keys the Canvas subtree by frame to bypass paint-cache replay.
   - Added an invalidation-driven scroll workload that uses wheel input to shift the VirtualList window:
