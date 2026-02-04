@@ -308,9 +308,10 @@ impl<H: UiHost> UiTree<H> {
             .flatten()
             .filter(|(_, occlusion)| *occlusion != PointerOcclusion::None)
             .map(|(layer, _)| layer);
-        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        self.rebuild_visible_layers_scratch();
         let mut hit_barrier = false;
-        for layer_id in layers.into_iter().rev() {
+        for i in (0..self.scratch_visible_layers.len()).rev() {
+            let layer_id = self.scratch_visible_layers[i];
             let Some((layer_root, visible, wants_pointer_move_events)) = self
                 .layers
                 .get(layer_id)
@@ -940,14 +941,14 @@ impl<H: UiHost> UiTree<H> {
 
         let mut pointer_hit: Option<NodeId> = None;
 
-        let to_remove: Vec<fret_core::PointerId> = self
-            .captured
-            .iter()
-            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, &active_layers)).then_some(*p))
-            .collect();
-        for p in to_remove {
-            self.captured.remove(&p);
-        }
+        let nodes = &self.nodes;
+        self.captured.retain(|_, n| {
+            let mut node = *n;
+            while let Some(parent) = nodes.get(node).and_then(|n| n.parent) {
+                node = parent;
+            }
+            nodes.contains_key(node) && active_layers.contains(&node)
+        });
         if self
             .focus
             .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
@@ -1145,8 +1146,9 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
 
-            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-            for layer_id in layers.into_iter().rev() {
+            self.rebuild_visible_layers_scratch();
+            for i in (0..self.scratch_visible_layers.len()).rev() {
+                let layer_id = self.scratch_visible_layers[i];
                 let Some(layer) = self.layers.get(layer_id) else {
                     continue;
                 };
