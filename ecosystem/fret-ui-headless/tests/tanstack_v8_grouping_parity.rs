@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_ui_headless::table::{
     Aggregation, ColumnDef, GroupedRowKind, GroupedRowModel, RowKey, Table, TanStackTableOptions,
-    TanStackTableState, sort_grouped_row_indices_in_place,
+    TanStackTableState, grouped_row_model_from_leaf, sort_grouped_row_indices_in_place,
 };
 use serde::Deserialize;
 
@@ -59,6 +59,23 @@ struct FixtureExpect {
     grouped_aggregations_u64: Option<Vec<GroupedAggregationU64Expect>>,
     #[serde(default)]
     sorted_grouped_row_model: Option<GroupedRowModelExpect>,
+    #[serde(default)]
+    next_state: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(tag = "type")]
+enum FixtureAction {
+    #[serde(rename = "toggleGrouping")]
+    ToggleGrouping {
+        column_id: String,
+        #[serde(default)]
+        value: Option<bool>,
+    },
+    #[serde(rename = "toggleGroupingHandler")]
+    ToggleGroupingHandler { column_id: String },
+    #[serde(rename = "setGrouping")]
+    SetGrouping { grouping: Vec<String> },
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -67,6 +84,8 @@ struct FixtureSnapshot {
     options: serde_json::Value,
     #[serde(default)]
     state: serde_json::Value,
+    #[serde(default)]
+    actions: Vec<FixtureAction>,
     expect: FixtureExpect,
 }
 
@@ -337,14 +356,76 @@ fn tanstack_v8_grouping_parity() {
         let options = tanstack_options.to_table_options();
 
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
-        let state = tanstack_state.to_table_state().expect("state conversion");
+        let mut state = tanstack_state.to_table_state().expect("state conversion");
 
-        let table = Table::builder(&data)
+        let grouped_override_pre_grouped = snap
+            .options
+            .get("__getGroupedRowModel")
+            .and_then(|v| v.as_str())
+            .is_some_and(|v| v == "pre_grouped");
+
+        for action in &snap.actions {
+            let mut builder = Table::builder(&data)
+                .columns(columns.clone())
+                .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .state(state.clone())
+                .options(options);
+
+            if grouped_override_pre_grouped {
+                builder = builder.get_grouped_row_model(|pre, _cols, _grouping| {
+                    grouped_row_model_from_leaf(pre)
+                });
+            }
+
+            let table = builder.build();
+
+            match action {
+                FixtureAction::ToggleGrouping { column_id, value } => {
+                    let updater = table
+                        .grouping_updater(column_id, *value)
+                        .unwrap_or_else(|| panic!("unknown grouping column: {column_id}"));
+                    state.grouping = updater.apply(&state.grouping);
+                }
+                FixtureAction::ToggleGroupingHandler { column_id } => {
+                    let updater = table
+                        .grouping_handler_updater(column_id)
+                        .unwrap_or_else(|| panic!("unknown grouping column: {column_id}"));
+                    state.grouping = updater.apply(&state.grouping);
+                }
+                FixtureAction::SetGrouping { grouping } => {
+                    state.grouping = grouping
+                        .iter()
+                        .map(|v| Arc::<str>::from(v.as_str()))
+                        .collect();
+                }
+            }
+        }
+
+        if let Some(expected_next) = snap.expect.next_state.as_ref() {
+            let tanstack_next =
+                TanStackTableState::from_json(expected_next).expect("tanstack next_state");
+            let expected_state = tanstack_next
+                .to_table_state()
+                .expect("next_state conversion");
+            assert_eq!(
+                state.grouping, expected_state.grouping,
+                "snapshot {} next_state.grouping mismatch",
+                snap.id
+            );
+        }
+
+        let mut builder = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
             .state(state)
-            .options(options)
-            .build();
+            .options(options);
+
+        if grouped_override_pre_grouped {
+            builder = builder
+                .get_grouped_row_model(|pre, _cols, _grouping| grouped_row_model_from_leaf(pre));
+        }
+
+        let table = builder.build();
 
         let actual_model = table.grouped_row_model();
         let actual_aggs = table.grouped_u64_aggregations();

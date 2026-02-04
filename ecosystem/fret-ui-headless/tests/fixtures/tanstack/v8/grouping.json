@@ -2132,6 +2132,2311 @@
       }
     },
     {
+      "id": "grouping_enable_grouping_false_state_noops",
+      "options": {
+        "enableGrouping": false
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5",
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5",
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": [
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              }
+            ],
+            "values": {
+              "team": 40,
+              "score": 8
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              }
+            ],
+            "values": {
+              "team": 30,
+              "score": 10
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "grouping_override_get_grouped_row_model_pre_grouped",
+      "options": {
+        "__getGroupedRowModel": "pre_grouped"
+      },
+      "state": {
+        "grouping": [
+          "role"
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "5"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "5"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": []
+      }
+    },
+    {
+      "id": "grouping_action_toggle_role_on",
+      "options": {},
+      "state": {},
+      "actions": [
+        {
+          "type": "toggleGrouping",
+          "column_id": "role"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5",
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5",
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "column_sizing": {
+          "total_size": 450,
+          "left_total_size": 0,
+          "center_total_size": 450,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "role"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": [
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              }
+            ],
+            "values": {
+              "team": 40,
+              "score": 8
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              }
+            ],
+            "values": {
+              "team": 30,
+              "score": 10
+            }
+          }
+        ],
+        "sorted_grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "grouping_action_toggle_role_off",
+      "options": {},
+      "state": {
+        "grouping": [
+          "role"
+        ]
+      },
+      "actions": [
+        {
+          "type": "toggleGrouping",
+          "column_id": "role"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 450,
+          "left_total_size": 0,
+          "center_total_size": 450,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "5"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "5"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": []
+      }
+    },
+    {
+      "id": "grouping_action_toggle_noop_when_enable_grouping_false",
+      "options": {
+        "enableGrouping": false
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "toggleGroupingHandler",
+          "column_id": "role"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 450,
+          "left_total_size": 0,
+          "center_total_size": 450,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "5"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 0,
+              "path": [],
+              "row_id": "5"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": []
+      }
+    },
+    {
+      "id": "grouping_action_toggle_ignores_enable_grouping_false",
+      "options": {
+        "enableGrouping": false
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "toggleGrouping",
+          "column_id": "role"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "4",
+            "2",
+            "4",
+            "role:1",
+            "role:2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5",
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "role:1",
+            "role:2"
+          ],
+          "flat": [
+            "role:1",
+            "1",
+            "3",
+            "5",
+            "role:2",
+            "2",
+            "4"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "column_sizing": {
+          "total_size": 450,
+          "left_total_size": 0,
+          "center_total_size": 450,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 0,
+            "team": 150,
+            "score": 300
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "left": {
+            "role": null,
+            "team": null,
+            "score": null
+          },
+          "center": {
+            "role": 300,
+            "team": 150,
+            "score": 0
+          },
+          "right": {
+            "role": null,
+            "team": null,
+            "score": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "role"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "grouped_row_model": {
+          "root": [
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            }
+          ],
+          "flat": [
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "1"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "3"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "row_id": "5"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "2"
+            },
+            {
+              "kind": "leaf",
+              "depth": 1,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "row_id": "4"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "1"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "1",
+              "leaf_row_count": 3,
+              "first_leaf_row_id": "1"
+            },
+            {
+              "kind": "group",
+              "depth": 0,
+              "path": [
+                {
+                  "column_id": "role",
+                  "value": "2"
+                }
+              ],
+              "grouping_column_id": "role",
+              "grouping_value": "2",
+              "leaf_row_count": 2,
+              "first_leaf_row_id": "2"
+            }
+          ]
+        },
+        "grouped_aggregations_u64": [
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "1"
+              }
+            ],
+            "values": {
+              "team": 40,
+              "score": 8
+            }
+          },
+          {
+            "path": [
+              {
+                "column_id": "role",
+                "value": "2"
+              }
+            ],
+            "values": {
+              "team": 30,
+              "score": 10
+            }
+          }
+        ]
+      }
+    },
+    {
       "id": "grouping_state_one_column_sort_role_desc",
       "options": {},
       "state": {

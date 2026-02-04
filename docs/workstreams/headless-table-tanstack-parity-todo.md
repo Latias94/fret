@@ -224,8 +224,14 @@ ColumnDef keys referenced by upstream feature implementations:
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
   - Evidence: `ecosystem/fret-ui-headless/src/table/grouped_sorting.rs`.
   - Remaining: multi-column sort precedence + non-u64 sort keys + fully integrating sorted grouped output into the main row model pipeline.
-- [ ] HTP-grp-040 Align option gates and hooks:
-  - `enableGrouping`, `manualGrouping`, `onGroupingChange`, `getGroupedRowModel` override.
+- [x] HTP-grp-040 Align option gates and hooks:
+  - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Covered surfaces:
+    - `enableGrouping` affects `getCanGroup`/`getToggleGroupingHandler` gating, but does not prevent `toggleGrouping()` (matches TanStack).
+    - `manualGrouping` bypasses grouped row model computation.
+    - `onGroupingChange(updater)` controlled-state semantics (fixtures assert `next_state.grouping`).
+    - `getGroupedRowModel` override (fixture-only marker `__getGroupedRowModel=pre_grouped`).
 - [ ] HTP-grp-050 Align `groupedColumnMode` behavior and column ordering interactions.
 - [ ] HTP-grp-060 Align `aggregationFns` registry and `renderFallbackValue` behavior.
 

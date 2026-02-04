@@ -134,6 +134,12 @@ type SnapshotId =
   | "grouping_state_one_column"
   | "grouping_state_two_columns"
   | "grouping_manual_grouping_true_noops"
+  | "grouping_enable_grouping_false_state_noops"
+  | "grouping_override_get_grouped_row_model_pre_grouped"
+  | "grouping_action_toggle_role_on"
+  | "grouping_action_toggle_role_off"
+  | "grouping_action_toggle_noop_when_enable_grouping_false"
+  | "grouping_action_toggle_ignores_enable_grouping_false"
   | "grouping_state_one_column_sort_role_desc"
   | "grouping_state_one_column_sort_score_desc"
   | "grouping_state_two_columns_sort_score_desc"
@@ -208,6 +214,8 @@ type TanStackOptions = {
   enablePinning?: boolean
   columnResizeMode?: "onChange" | "onEnd"
   columnResizeDirection?: "ltr" | "rtl"
+  // Fixture-only: override `getGroupedRowModel` with a deterministic implementation.
+  __getGroupedRowModel?: "pre_grouped"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
   sortingFnsMode?: "custom_text"
   // Fixture-only: when set, the generator injects a deterministic `options.filterFns` map.
@@ -512,6 +520,19 @@ type FixtureAction =
   | {
       type: "toggleAllRowsExpanded"
       value?: boolean
+    }
+  | {
+      type: "toggleGrouping"
+      column_id: string
+      value?: boolean
+    }
+  | {
+      type: "toggleGroupingHandler"
+      column_id: string
+    }
+  | {
+      type: "setGrouping"
+      grouping: string[]
     }
   | {
       type: "columnResizeBegin"
@@ -1269,7 +1290,14 @@ async function main(): Promise<void> {
       state: currentState,
       getCoreRowModel: tableCore.getCoreRowModel(),
       getFilteredRowModel: tableCore.getFilteredRowModel(),
-      ...(case_id === "grouping" ? { getGroupedRowModel: tableCore.getGroupedRowModel() } : {}),
+      ...(case_id === "grouping"
+        ? {
+            getGroupedRowModel:
+              options.__getGroupedRowModel === "pre_grouped"
+                ? (t: any) => () => t.getPreGroupedRowModel?.()
+                : tableCore.getGroupedRowModel(),
+          }
+        : {}),
       getSortedRowModel: tableCore.getSortedRowModel(),
       getPaginationRowModel: tableCore.getPaginationRowModel(),
       getExpandedRowModel: tableCore.getExpandedRowModel(),
@@ -1323,6 +1351,11 @@ async function main(): Promise<void> {
         const next =
           typeof updater === "function" ? updater(currentState.rowSelection) : updater
         currentState.rowSelection = next ?? {}
+      },
+      onGroupingChange: (updater: any) => {
+        const next =
+          typeof updater === "function" ? updater(currentState.grouping) : updater
+        currentState.grouping = next ?? []
       },
       onStateChange: () => {},
     })
@@ -1936,6 +1969,39 @@ function snapshotColumnPinning(
       }
       if (action.type === "toggleAllRowsExpanded") {
         table.toggleAllRowsExpanded(action.value)
+        continue
+      }
+      if (action.type === "toggleGrouping") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        if (typeof col.toggleGrouping !== "function") {
+          throw new Error(`Column has no toggleGrouping: ${action.column_id}`)
+        }
+        col.toggleGrouping(action.value)
+        continue
+      }
+      if (action.type === "toggleGroupingHandler") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        if (typeof col.getToggleGroupingHandler !== "function") {
+          throw new Error(`Column has no getToggleGroupingHandler: ${action.column_id}`)
+        }
+        const handler = col.getToggleGroupingHandler()
+        if (typeof handler !== "function") {
+          throw new Error(`Column returned no toggle handler: ${action.column_id}`)
+        }
+        handler()
+        continue
+      }
+      if (action.type === "setGrouping") {
+        if (typeof table.setGrouping !== "function") {
+          throw new Error("Table has no setGrouping")
+        }
+        table.setGrouping(action.grouping)
         continue
       }
       if (action.type === "columnResizeBegin") {
@@ -2776,10 +2842,12 @@ function snapshotColumnPinning(
     const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
       const base = snapshotForState(options, state)
       const { table } = buildTable(options, state)
+      const isGroupingApplied =
+        !options.manualGrouping &&
+        options.__getGroupedRowModel !== "pre_grouped" &&
+        (state.grouping?.length ?? 0) > 0
       const sorted_grouped_row_model =
-        !options.manualGrouping && (state.grouping?.length ?? 0) > 0
-          ? snapshotSortedGroupedRowModel(table)
-          : undefined
+        isGroupingApplied ? snapshotSortedGroupedRowModel(table) : undefined
       return {
         id,
         options,
@@ -2793,11 +2861,70 @@ function snapshotColumnPinning(
       }
     }
 
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      const isGroupingApplied =
+        !options.manualGrouping &&
+        options.__getGroupedRowModel !== "pre_grouped" &&
+        (expect.next_state.grouping?.length ?? 0) > 0
+      const sorted_grouped_row_model =
+        isGroupingApplied ? snapshotSortedGroupedRowModel(table) : undefined
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          grouped_row_model: snapshotGroupedRowModel(table),
+          grouped_aggregations_u64: snapshotGroupedAggregationsU64(table),
+          sorted_grouped_row_model,
+        },
+      }
+    }
+
     snapshots = [
       mk("grouping_baseline", {}, {}),
       mk("grouping_state_one_column", {}, { grouping: ["role"] }),
       mk("grouping_state_two_columns", {}, { grouping: ["role", "team"] }),
       mk("grouping_manual_grouping_true_noops", { manualGrouping: true }, { grouping: ["role"] }),
+      mk(
+        "grouping_enable_grouping_false_state_noops",
+        { enableGrouping: false },
+        { grouping: ["role"] },
+      ),
+      mk(
+        "grouping_override_get_grouped_row_model_pre_grouped",
+        { __getGroupedRowModel: "pre_grouped" },
+        { grouping: ["role"] },
+      ),
+      mkActions("grouping_action_toggle_role_on", {}, {}, [
+        { type: "toggleGrouping", column_id: "role" },
+      ]),
+      mkActions("grouping_action_toggle_role_off", {}, { grouping: ["role"] }, [
+        { type: "toggleGrouping", column_id: "role" },
+      ]),
+      mkActions(
+        "grouping_action_toggle_noop_when_enable_grouping_false",
+        { enableGrouping: false },
+        {},
+        [{ type: "toggleGroupingHandler", column_id: "role" }],
+      ),
+      mkActions(
+        "grouping_action_toggle_ignores_enable_grouping_false",
+        { enableGrouping: false },
+        {},
+        [{ type: "toggleGrouping", column_id: "role" }],
+      ),
       mk("grouping_state_one_column_sort_role_desc", {}, {
         grouping: ["role"],
         sorting: [{ id: "role", desc: true }],

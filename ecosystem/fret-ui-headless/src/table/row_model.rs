@@ -93,6 +93,14 @@ impl<'a, TData> RowModel<'a, TData> {
 
 type GetRowKeyFn<'a, TData> = Box<dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a>;
 type GetSubRowsFn<'a, TData> = Box<dyn for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]> + 'a>;
+type GetGroupedRowModelFn<'a, TData> = Arc<
+    dyn Fn(
+            &RowModel<'a, TData>,
+            &[super::ColumnDef<TData>],
+            &super::GroupingState,
+        ) -> super::GroupedRowModel
+        + 'a,
+>;
 
 pub struct TableBuilder<'a, TData> {
     data: &'a [TData],
@@ -103,6 +111,7 @@ pub struct TableBuilder<'a, TData> {
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
+    get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     state: super::TableState,
     options: super::TableOptions,
 }
@@ -118,6 +127,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_column_can_global_filter: None,
             get_row_key: None,
             get_sub_rows: None,
+            get_grouped_row_model: None,
             state: super::TableState::default(),
             options: super::TableOptions::default(),
         }
@@ -273,6 +283,20 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// Override the grouped row model generator (TanStack `getGroupedRowModel` equivalent).
+    pub fn get_grouped_row_model(
+        mut self,
+        f: impl Fn(
+            &RowModel<'a, TData>,
+            &[super::ColumnDef<TData>],
+            &super::GroupingState,
+        ) -> super::GroupedRowModel
+        + 'a,
+    ) -> Self {
+        self.get_grouped_row_model = Some(Arc::new(f));
+        self
+    }
+
     pub fn build(self) -> Table<'a, TData> {
         Table::new(self)
     }
@@ -288,6 +312,7 @@ pub struct Table<'a, TData> {
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     get_row_key: GetRowKeyFn<'a, TData>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
+    get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     state: super::TableState,
     options: super::TableOptions,
     core_row_model: OnceCell<RowModel<'a, TData>>,
@@ -370,6 +395,7 @@ impl<'a, TData> Table<'a, TData> {
             get_column_can_global_filter: builder.get_column_can_global_filter,
             get_row_key,
             get_sub_rows: builder.get_sub_rows,
+            get_grouped_row_model: builder.get_grouped_row_model,
             state: builder.state,
             options: builder.options,
             core_row_model: OnceCell::new(),
@@ -553,14 +579,38 @@ impl<'a, TData> Table<'a, TData> {
         grouped: Option<bool>,
     ) -> Option<super::GroupingState> {
         let col = self.column(column_id)?;
-        if !super::column_can_group(self.options, col) {
-            return Some(self.state.grouping.clone());
-        }
         Some(super::toggled_column_grouping_value(
             &self.state.grouping,
             &col.id,
             grouped,
         ))
+    }
+
+    /// TanStack-aligned: compute the `Updater` that a controlled `onGroupingChange` hook would
+    /// receive for a "toggle this column" interaction.
+    pub fn grouping_updater(
+        &self,
+        column_id: &str,
+        grouped: Option<bool>,
+    ) -> Option<super::Updater<super::GroupingState>> {
+        let col = self.column(column_id)?;
+        let id = col.id.clone();
+        Some(super::Updater::Func(Arc::new(move |old| {
+            super::toggled_column_grouping_value(old, &id, grouped)
+        })))
+    }
+
+    /// TanStack-aligned: compute the `Updater` that a controlled `onGroupingChange` hook would
+    /// receive for a `getToggleGroupingHandler()` interaction.
+    pub fn grouping_handler_updater(
+        &self,
+        column_id: &str,
+    ) -> Option<super::Updater<super::GroupingState>> {
+        let col = self.column(column_id)?;
+        if !super::column_can_group(self.options, col) {
+            return Some(super::Updater::Func(Arc::new(|old| old.clone())));
+        }
+        self.grouping_updater(column_id, None)
     }
 
     pub fn pre_grouped_row_model(&self) -> &RowModel<'a, TData> {
@@ -575,6 +625,14 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         self.grouped_row_model.get_or_init(|| {
+            if let Some(get_grouped_row_model) = self.get_grouped_row_model.as_ref() {
+                return get_grouped_row_model(
+                    self.pre_grouped_row_model(),
+                    &self.columns,
+                    &self.state.grouping,
+                );
+            }
+
             super::group_row_model(
                 self.pre_grouped_row_model(),
                 &self.columns,
