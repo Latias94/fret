@@ -203,6 +203,30 @@ Perf acceptance:
   - New sort modes:
     - `atlas_upload_bytes`, `atlas_evicted_pages`, `intermediate_peak_bytes`, `pool_evictions`
 
+### M7.1: Renderer churn correlation (tail latency)
+
+Goal:
+- Turn “jank” into a correlation between **slow frames** and a **churn signature** (GPU-side or resource-side),
+  and then close that churn.
+
+TODO:
+
+- [ ] Add a deterministic workload/script that actually exercises blur/effects so intermediate pool counters become non-zero.
+  - Deliverable: a `tools/diag-scripts/*-steady.json` script + a perf log entry that shows
+    `renderer_intermediate_peak_in_use_bytes > 0` and/or `renderer_intermediate_pool_* > 0`.
+  - Use with: `--sort intermediate_peak_bytes` and `--sort pool_evictions`.
+- [ ] Add additional churn accounting beyond text atlas:
+  - image uploads (bytes + count),
+  - SVG mask atlas churn (page alloc/evict, upload bytes),
+  - path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
+- [ ] Standardize “churn triage checklist” in the perf log template:
+  - `top_renderer_text_atlas_upload_bytes`, `top_renderer_text_atlas_evicted_pages`,
+    `top_renderer_intermediate_peak_in_use_bytes`, `top_renderer_intermediate_pool_evictions`,
+    and their relationship to `top_total_time_us`.
+- [x] Keep ADRs and audits in sync with the diagnostics bundle schema.
+  - Update ADR 0174 bundle/export notes when schema changes (renderer counters, script steps, screenshot wiring).
+  - Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` evidence and gaps when tooling contracts change.
+
 ### M4: Windowed surfaces (prepaint-driven visible windows)
 
 - [ ] Pick the first “editor-class” migration target:
