@@ -42,13 +42,13 @@ fn hit_edge_slow(
     zoom: f32,
 ) -> Option<EdgeId> {
     let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
-    let hit_w = super::super::canvas_units_from_screen_px(
+    let hit_w = super::super::hit_test::hit_test_canvas_units_from_screen_px(
         snapshot.interaction.edge_interaction_width,
         zoom,
     )
-    .max(canvas.style.wire_width / zoom.max(1.0e-6));
+    .max(canvas.style.wire_width / super::super::hit_test::zoom_z(zoom));
     let threshold2 = hit_w * hit_w;
-    let eps = (1.0e-3 / zoom.max(1.0e-6)).max(1.0e-6);
+    let eps = super::super::hit_test::zoom_eps(zoom);
 
     let mut edge_ids: Vec<EdgeId> = graph.edges.keys().copied().collect();
     edge_ids.sort_unstable();
@@ -106,8 +106,7 @@ fn hit_edge_focus_anchor_slow(
     pos: Point,
     zoom: f32,
 ) -> Option<(EdgeId, EdgeEndpoint, PortId)> {
-    let z = zoom.max(1.0e-6);
-    let eps = (1.0e-3 / z).max(1.0e-6);
+    let eps = super::super::hit_test::zoom_eps(zoom);
 
     let mut edge_ids: Vec<EdgeId> = graph.edges.keys().copied().collect();
     edge_ids.sort_unstable();
