@@ -132,6 +132,9 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] SGD-bug-040 Card preview text vertical alignment jitter when switching pages.
 - [x] SGD-bug-050 Calendar “blank space to the right”: confirmed calendar examples are narrow in web goldens (expected whitespace in wide viewports).
 - [x] SGD-bug-060 Switch thumb vertical centering: covered by `Switch` unit + web golden geometry tests (no repro in automated checks).
+- [x] SGD-bug-080 Pressable can get stuck in Active after `PointerCancel` (release outside window), leaving shadcn buttons “greyed”.
+  - Fix: clear `pressed_pressable` on `Event::PointerCancel` in `crates/fret-ui/src/tree/dispatch.rs`.
+  - Regression: `crates/fret-ui/src/declarative/tests/interactions.rs::pressable_clears_pressed_state_on_pointer_cancel`.
 - [!] SGD-bug-070 Menubar hover highlight background mismatches web goldens (fails in nextest).
   - Failing tests: `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark`, `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark_mobile_tiny_viewport`.
   - Hypothesis: hover visuals not applied (panel background quad selected instead of row highlight quad).
