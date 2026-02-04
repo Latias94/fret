@@ -2497,3 +2497,32 @@ Bundles:
 - run 0: `target/fret-diag-perf/2026-02-04-pointer-move-dispatch-top/1770223952625-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
 - run 1: `target/fret-diag-perf/2026-02-04-pointer-move-dispatch-top/1770224052396-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
 - run 2: `target/fret-diag-perf/2026-02-04-pointer-move-dispatch-top/1770224151980-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-04 17:18:40 (commit `eb6c6b2e`)
+
+Change:
+- perf(ui-gallery): avoid per-frame undo/redo model churn
+
+Why:
+- The gallery driver updated `settings_edit_can_undo/settings_edit_can_redo` via `ModelStore::update` every frame.
+  `update` marks the model dirty unconditionally, so this created `changed_models=2` even when values were unchanged,
+  showing up as changed-but-unobserved model churn in pointer-move probes.
+
+Suite:
+- `ui-gallery-hit-test-torture-stripes-move-sweep-steady` (sorted by `dispatch`)
+
+Command:
+```sh
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-04-pointer-move-model-churn-release-after --reuse-launch --warmup-frames 5 --repeat 3 --sort dispatch --top 15 --json --timeout-ms 300000 --poll-ms 200 --max-pointer-move-dispatch-us 2000 --max-pointer-move-hit-test-us 1500 --max-pointer-move-global-changes 0 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (pointer-move frames; derived; per-run **max** over frames where `dispatch_events > 0`; us):
+- `dispatch_time_us`: `1042 / 1189 / 1189` (p50 / p95 / max; repeat=3)
+- `hit_test_time_us`: `860 / 884 / 884` (p50 / p95 / max; repeat=3)
+- `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+- `changed_models` (top frame on the worst-dispatch bundle): `0`
+
+Bundles:
+- run 0: `target/fret-diag-perf/2026-02-04-pointer-move-model-churn-release-after/1770225617609-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- run 1: `target/fret-diag-perf/2026-02-04-pointer-move-model-churn-release-after/1770225715527-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- run 2: `target/fret-diag-perf/2026-02-04-pointer-move-model-churn-release-after/1770225814534-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`

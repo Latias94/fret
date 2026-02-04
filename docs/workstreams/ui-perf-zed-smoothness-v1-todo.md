@@ -169,9 +169,10 @@ Correctness acceptance:
     - `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`,
       `--max-pointer-move-global-changes` (fretboard `diag perf`)
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `6da92d3d`.
-- [ ] Eliminate changed-but-unobserved model churn on pointer-move frames.
+- [x] Eliminate changed-but-unobserved model churn on pointer-move frames.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dd1a22e8` shows pointer-move
     frames with `changed_models=2` and `propagated_model_change_unobserved_models=2` while remaining paint-only.
+  - Fixed in `perf(ui-gallery): avoid per-frame undo/redo model churn` (commit `eb6c6b2e`).
   - Goal: pointer-move frames should have `changed_models=0` unless the interaction explicitly updates observed state.
   - Candidate fix: move per-frame pointer-move bookkeeping out of `Model` updates into a window-scoped scratch store
     (or a “set-if-changed” model update discipline similar to the global churn fix).
