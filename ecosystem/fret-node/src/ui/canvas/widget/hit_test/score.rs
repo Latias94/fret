@@ -132,9 +132,8 @@ pub(super) struct BestEdgeFocusAnchorByDistance {
 
 impl BestEdgeFocusAnchorByDistance {
     pub fn new(zoom: f32) -> Self {
-        let z = zoom.max(1.0e-6);
         Self {
-            inner: BestByDistance::with_eps(super::zoom_eps(z)),
+            inner: BestByDistance::with_eps(super::zoom_eps(zoom)),
         }
     }
 
@@ -162,9 +161,8 @@ pub(super) struct BestEdgeEndpointByDistance {
 
 impl BestEdgeEndpointByDistance {
     pub fn new(zoom: f32) -> Self {
-        let z = zoom.max(1.0e-6);
         Self {
-            eps: super::zoom_eps(z),
+            eps: super::zoom_eps(zoom),
             best: None,
         }
     }

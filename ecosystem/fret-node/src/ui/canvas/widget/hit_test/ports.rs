@@ -8,7 +8,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         pos: Point,
     ) -> Option<PortId> {
         let zoom = ctx.zoom;
-        let r = self.style.pin_radius / zoom;
+        let z = zoom_z(zoom);
+        let r = self.style.pin_radius / z;
         if !r.is_finite() || r <= 0.0 {
             return None;
         }
@@ -48,7 +49,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return None;
         }
 
-        let r = canvas_units_from_screen_px(radius_screen, zoom);
+        let r = hit_test_canvas_units_from_screen_px(radius_screen, zoom);
         let r2 = r * r;
 
         let mut best = BestLoosePort::new(zoom);

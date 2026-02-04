@@ -9,14 +9,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         pos: Point,
     ) -> Option<(EdgeId, EdgeEndpoint, PortId)> {
         let zoom = ctx.zoom;
-        let z = zoom.max(1.0e-6);
+        let z = zoom_z(zoom);
         let half =
             (0.5 * Self::EDGE_FOCUS_ANCHOR_SIZE_SCREEN + Self::EDGE_FOCUS_ANCHOR_PAD_SCREEN) / z;
         let query_r = (half * 1.5).max(half);
         let candidates = ctx
             .index
             .query_edges_sorted_dedup(pos, query_r, ctx.scratch.edges_mut());
-        let mut best = score::BestEdgeFocusAnchorByDistance::new(zoom);
+        let mut best = score::BestEdgeFocusAnchorByDistance::new(z);
 
         for &edge_id in candidates {
             let Some(edge) = graph.edges.get(&edge_id) else {
@@ -35,19 +35,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             };
 
             let hint = self.edge_render_hint(graph, edge_id);
-            let (a0, a1) = if let Some(custom) =
-                self.edge_custom_path(graph, edge_id, &hint, from, to, zoom)
-            {
-                if let Some((t0, t1)) = path_start_end_tangents(&custom.commands) {
-                    Self::edge_focus_anchor_centers_from_tangents(from, to, zoom, t0, t1)
+            let (a0, a1) =
+                if let Some(custom) = self.edge_custom_path(graph, edge_id, &hint, from, to, z) {
+                    if let Some((t0, t1)) = path_start_end_tangents(&custom.commands) {
+                        Self::edge_focus_anchor_centers_from_tangents(from, to, z, t0, t1)
+                    } else {
+                        Self::edge_focus_anchor_centers(hint.route, from, to, z)
+                    }
                 } else {
-                    Self::edge_focus_anchor_centers(hint.route, from, to, zoom)
-                }
-            } else {
-                Self::edge_focus_anchor_centers(hint.route, from, to, zoom)
-            };
-            let r0 = Self::edge_focus_anchor_rect(a0, zoom);
-            let r1 = Self::edge_focus_anchor_rect(a1, zoom);
+                    Self::edge_focus_anchor_centers(hint.route, from, to, z)
+                };
+            let r0 = Self::edge_focus_anchor_rect(a0, z);
+            let r1 = Self::edge_focus_anchor_rect(a1, z);
 
             let mut consider =
                 |center: Point, rect: Rect, endpoint: EdgeEndpoint, fixed: PortId| {
@@ -102,7 +101,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         if reconnect_radius_screen.is_finite() && reconnect_radius_screen > 0.0 {
-            let r = canvas_units_from_screen_px(reconnect_radius_screen, zoom);
+            let r = hit_test_canvas_units_from_screen_px(reconnect_radius_screen, zoom);
             let r2 = r * r;
             let min_d2 = d2_from.min(d2_to);
             if min_d2 > r2 {
