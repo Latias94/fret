@@ -5548,14 +5548,134 @@ fn preview_breadcrumb(
                 shadcn::BreadcrumbItem::new("Home"),
                 shadcn::BreadcrumbItem::ellipsis(),
                 shadcn::BreadcrumbItem::new("Examples"),
-                shadcn::BreadcrumbItem::new("Data Fetching"),
+                shadcn::BreadcrumbItem::new("Data Fetching").truncate(true),
             ])
             .into_element(cx),
     ]
 }
 
 fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let group = shadcn::ButtonGroup::new([
+    #[derive(Default)]
+    struct ButtonGroupModels {
+        search_value: Option<Model<String>>,
+        message_value: Option<Model<String>>,
+        amount_value: Option<Model<String>>,
+        dropdown_open: Option<Model<bool>>,
+        select_open: Option<Model<bool>>,
+        select_value: Option<Model<Option<Arc<str>>>>,
+        popover_open: Option<Model<bool>>,
+        popover_text: Option<Model<String>>,
+    }
+
+    let search_value = cx.with_state(ButtonGroupModels::default, |st| st.search_value.clone());
+    let search_value = match search_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.search_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let message_value = cx.with_state(ButtonGroupModels::default, |st| st.message_value.clone());
+    let message_value = match message_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.message_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let amount_value = cx.with_state(ButtonGroupModels::default, |st| st.amount_value.clone());
+    let amount_value = match amount_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.amount_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let dropdown_open = cx.with_state(ButtonGroupModels::default, |st| st.dropdown_open.clone());
+    let dropdown_open = match dropdown_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.dropdown_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let select_open = cx.with_state(ButtonGroupModels::default, |st| st.select_open.clone());
+    let select_open = match select_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.select_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let select_value = cx.with_state(ButtonGroupModels::default, |st| st.select_value.clone());
+    let select_value = match select_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("$")));
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.select_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let popover_open = cx.with_state(ButtonGroupModels::default, |st| st.popover_open.clone());
+    let popover_open = match popover_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.popover_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let popover_text = cx.with_state(ButtonGroupModels::default, |st| st.popover_text.clone());
+    let popover_text = match popover_text {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(String::from("Describe your task in natural language."));
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.popover_text = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+    let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+    let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+
+    let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
+        shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))
+    };
+
+    // Mirrors the top-level `button-group-demo` preview slot.
+    let demo = shadcn::ButtonGroup::new([
         shadcn::Button::new("Left").into(),
         shadcn::Button::new("Middle").into(),
         shadcn::Button::new("Right").into(),
@@ -5563,7 +5683,374 @@ fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     .a11y_label("Button group")
     .into_element(cx);
 
-    vec![group]
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let orientation = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Increase")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+            shadcn::Button::new("Decrease")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.minus", outline_fg.clone())])
+                .into(),
+        ])
+        .orientation(shadcn::ButtonGroupOrientation::Vertical)
+        .a11y_label("Media controls")
+        .into_element(cx);
+        section(cx, "Orientation", body)
+    };
+
+    let size = {
+        let small = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Small")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+
+        let medium = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Default")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+
+        let large = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Large")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
+                .into(),
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
+                .into(),
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconLg)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+
+        let body = stack::vstack(cx, stack::VStackProps::default().gap(Space::N4), |_cx| {
+            vec![small, medium, large]
+        });
+        section(cx, "Size", body)
+    };
+
+    let nested = {
+        let digits = shadcn::ButtonGroup::new([
+            shadcn::Button::new("1")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("2")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("3")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("4")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("5")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+        ]);
+
+        let nav = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Previous")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
+                .children([icon(cx, "lucide.arrow-left", outline_fg.clone())])
+                .into(),
+            shadcn::Button::new("Next")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
+                .children([icon(cx, "lucide.arrow-right", outline_fg.clone())])
+                .into(),
+        ]);
+
+        let body = shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);
+        section(cx, "Nested", body)
+    };
+
+    let separator = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Copy")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Separator::new()
+                .orientation(shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            shadcn::Button::new("Paste")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+        ])
+        .into_element(cx);
+        section(cx, "Separator", body)
+    };
+
+    let split = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .into(),
+            shadcn::Separator::new()
+                .orientation(shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", secondary_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+        section(cx, "Split", body)
+    };
+
+    let input = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Input::new(search_value.clone())
+                .a11y_label("Search")
+                .placeholder("Search...")
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .into_element(cx)
+                .into(),
+            shadcn::Button::new("Search")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.search", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+        section(cx, "Input", body)
+    };
+
+    let input_group = {
+        let group = shadcn::InputGroup::new(message_value.clone())
+            .a11y_label("Message")
+            .leading([shadcn::InputGroupText::new("To").into_element(cx)])
+            .trailing([shadcn::InputGroupButton::new("Send").into_element(cx)]);
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+            group.into(),
+        ])
+        .into_element(cx);
+        section(cx, "Input Group", body)
+    };
+
+    let dropdown = {
+        let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(
+            cx,
+            |cx| {
+                shadcn::Button::new("More")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Icon)
+                    .children([icon(cx, "lucide.chevron-down", outline_fg.clone())])
+                    .toggle_model(dropdown_open.clone())
+                    .into_element(cx)
+            },
+            |cx| {
+                vec![
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mute Conversation").leading(icon(
+                            cx,
+                            "lucide.volume-x",
+                            outline_fg.clone(),
+                        )),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mark as Read").leading(icon(
+                            cx,
+                            "lucide.check",
+                            outline_fg.clone(),
+                        )),
+                    ),
+                    shadcn::DropdownMenuEntry::Separator,
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Delete Conversation")
+                            .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                            .leading(icon(cx, "lucide.trash", outline_fg.clone())),
+                    ),
+                ]
+            },
+        );
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Follow")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            dropdown.into(),
+        ])
+        .into_element(cx);
+        section(cx, "Dropdown Menu", body)
+    };
+
+    let select = {
+        let currency = shadcn::Select::new(select_value.clone(), select_open.clone())
+            .placeholder("$")
+            .refine_layout(LayoutRefinement::default().w_px(Px(96.0)))
+            .items([
+                shadcn::SelectItem::new("$", "US Dollar"),
+                shadcn::SelectItem::new("€", "Euro"),
+                shadcn::SelectItem::new("£", "British Pound"),
+            ])
+            .into_element(cx);
+
+        let amount = shadcn::Input::new(amount_value.clone())
+            .a11y_label("Amount")
+            .placeholder("10.00")
+            .refine_layout(LayoutRefinement::default().w_px(Px(140.0)))
+            .into_element(cx);
+
+        let send = shadcn::Button::new("Send")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .children([icon(cx, "lucide.arrow-right", outline_fg.clone())]);
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::ButtonGroup::new([currency.into(), amount.into()]).into(),
+            shadcn::ButtonGroup::new([send.into()]).into(),
+        ])
+        .into_element(cx);
+        section(cx, "Select", body)
+    };
+
+    let popover = {
+        let popover = shadcn::Popover::new(popover_open.clone())
+            .side(shadcn::PopoverSide::Bottom)
+            .align(shadcn::PopoverAlign::End)
+            .into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Open Popover")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Icon)
+                        .children([icon(cx, "lucide.chevron-down", outline_fg.clone())])
+                        .toggle_model(popover_open.clone())
+                        .into_element(cx)
+                },
+                |cx| {
+                    shadcn::PopoverContent::new(vec![
+                        shadcn::PopoverTitle::new("Agent Tasks").into_element(cx),
+                        shadcn::Separator::new().into_element(cx),
+                        shadcn::Textarea::new(popover_text.clone())
+                            .a11y_label("Task")
+                            .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+                            .into_element(cx),
+                    ])
+                    .into_element(cx)
+                },
+            );
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Copilot")
+                .variant(shadcn::ButtonVariant::Outline)
+                .children([icon(cx, "lucide.bot", outline_fg.clone())])
+                .into(),
+            popover.into(),
+        ])
+        .into_element(cx);
+        section(cx, "Popover", body)
+    };
+
+    let rtl = {
+        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                shadcn::ButtonGroup::new([
+                    shadcn::Button::new("التالي")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into(),
+                    shadcn::Button::new("السابق")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into(),
+                ])
+                .into_element(cx)
+            },
+        );
+        section(cx, "RTL", body)
+    };
+
+    let examples = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| {
+            vec![
+                orientation,
+                size,
+                nested,
+                separator,
+                split,
+                input,
+                input_group,
+                dropdown,
+                select,
+                popover,
+                rtl,
+            ]
+        },
+    );
+
+    vec![demo, examples]
 }
 
 fn preview_calendar(
@@ -5573,8 +6060,15 @@ fn preview_calendar(
 ) -> Vec<AnyElement> {
     let calendar = shadcn::Calendar::new(month, selected)
         .number_of_months(1)
+        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
-    vec![calendar]
+    vec![stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_center(),
+        move |_cx| [calendar],
+    )]
 }
 
 fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -10116,108 +10610,443 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 }
 
 fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let left = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Card").into_element(cx),
-            shadcn::CardDescription::new("A composed surface primitive.").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![
-            cx.text("Cards are used as building blocks for many gallery sections."),
-            stack::hstack(
+    #[derive(Default)]
+    struct CardModels {
+        email: Option<Model<String>>,
+        password: Option<Model<String>>,
+    }
+
+    let email = cx.with_state(CardModels::default, |st| st.email.clone());
+    let email = match email {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(CardModels::default, |st| st.email = Some(model.clone()));
+            model
+        }
+    };
+
+    let password = cx.with_state(CardModels::default, |st| st.password.clone());
+    let password = match password {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(CardModels::default, |st| st.password = Some(model.clone()));
+            model
+        }
+    };
+
+    let max_w_sm = LayoutRefinement::default()
+        .w_full()
+        .max_w(MetricRef::Px(Px(384.0)))
+        .min_w_0();
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
+
+    let demo = {
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Login to your account").into_element(cx),
+                shadcn::CardDescription::new("Enter your email below to login to your account")
+                    .into_element(cx),
+                shadcn::CardAction::new(vec![
+                    shadcn::Button::new("Sign Up")
+                        .variant(shadcn::ButtonVariant::Link)
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![stack::vstack(
                 cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
+                stack::VStackProps::default()
+                    .gap(Space::N6)
+                    .layout(LayoutRefinement::default().w_full()),
+                |cx| {
+                    let email =
+                        stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
+                            vec![
+                                shadcn::Label::new("Email").into_element(cx),
+                                shadcn::Input::new(email.clone())
+                                    .a11y_label("Email")
+                                    .placeholder("m@example.com")
+                                    .into_element(cx),
+                            ]
+                        });
+
+                    let password =
+                        stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
+                            vec![
+                                stack::hstack(
+                                    cx,
+                                    stack::HStackProps::default()
+                                        .layout(LayoutRefinement::default().w_full())
+                                        .justify_between()
+                                        .items_center(),
+                                    |cx| {
+                                        vec![
+                                            shadcn::Label::new("Password").into_element(cx),
+                                            shadcn::Button::new("Forgot your password?")
+                                                .variant(shadcn::ButtonVariant::Link)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                ),
+                                shadcn::Input::new(password.clone())
+                                    .a11y_label("Password")
+                                    .placeholder("••••••••")
+                                    .into_element(cx),
+                            ]
+                        });
+
+                    vec![email, password]
+                },
+            )])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full()),
                 |cx| {
                     vec![
-                        shadcn::Badge::new("layout").into_element(cx),
-                        shadcn::Badge::new("chrome")
-                            .variant(shadcn::BadgeVariant::Secondary)
+                        shadcn::Button::new("Login")
+                            .refine_layout(LayoutRefinement::default().w_full())
                             .into_element(cx),
-                        shadcn::Badge::new("token")
-                            .variant(shadcn::BadgeVariant::Outline)
+                        shadcn::Button::new("Login with Google")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .refine_layout(LayoutRefinement::default().w_full())
                             .into_element(cx),
                     ]
                 },
-            ),
+            )])
+            .into_element(cx),
         ])
-        .into_element(cx),
-        shadcn::CardFooter::new(vec![
-            shadcn::Button::new("Cancel")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .into_element(cx),
-            shadcn::Button::new("Continue").into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-    .into_element(cx);
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx);
 
-    let right = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Embedded Content").into_element(cx),
-            shadcn::CardDescription::new("Cards stretch their sections by default.")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![
-            shadcn::Button::new("Primary").into_element(cx),
-            shadcn::Button::new("Outline")
+        centered(cx, card)
+    };
+
+    let size = {
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Small Card").into_element(cx),
+                shadcn::CardDescription::new("This card uses the small size variant.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![cx.text(
+                "The card component supports a size prop that can be set to \"sm\" for a more compact appearance.",
+            )])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![shadcn::Button::new("Action")
                 .variant(shadcn::ButtonVariant::Outline)
-                .into_element(cx),
+                .size(shadcn::ButtonSize::Sm)
+                .refine_layout(LayoutRefinement::default().flex_1().w_full())
+                .into_element(cx)])
+            .into_element(cx),
         ])
-        .into_element(cx),
-    ])
-    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-    .into_element(cx);
+        .size(shadcn::CardSize::Sm)
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx);
 
-    vec![stack::hstack(
+        centered(cx, card)
+    };
+
+    let image = {
+        let theme = Theme::global(&*cx.app).clone();
+        let cover_bg = theme.color_required("muted");
+
+        let cover = shadcn::AspectRatio::new(
+            16.0 / 9.0,
+            cx.container(
+                fret_ui::element::ContainerProps {
+                    background: Some(cover_bg),
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("Event cover")],
+            ),
+        )
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx);
+
+        let card = shadcn::Card::new(vec![
+            cover,
+            shadcn::CardHeader::new(vec![
+                shadcn::CardAction::new(vec![
+                    shadcn::Badge::new("Featured")
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::CardTitle::new("Design systems meetup").into_element(cx),
+                shadcn::CardDescription::new(
+                    "A practical talk on component APIs, accessibility, and shipping faster.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![
+                shadcn::Button::new("View Event")
+                    .refine_layout(LayoutRefinement::default().flex_1().w_full())
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_style(ChromeRefinement::default().pt(Space::N0))
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx);
+
+        centered(cx, card)
+    };
+
+    vec![stack::vstack(
         cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4)
-            .items_stretch(),
-        |_cx| [left, right],
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                section(cx, "Demo", demo),
+                section(cx, "Size", size),
+                section(cx, "Image", image),
+            ]
+        },
     )]
 }
 
 fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            [
-                shadcn::Badge::new("Default").into_element(cx),
-                shadcn::Badge::new("Secondary")
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-                shadcn::Badge::new("Destructive")
-                    .variant(shadcn::BadgeVariant::Destructive)
-                    .into_element(cx),
-                shadcn::Badge::new("Outline")
-                    .variant(shadcn::BadgeVariant::Outline)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let theme = Theme::global(&*cx.app).clone();
 
-    vec![
-        row,
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
         stack::hstack(
             cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
+            stack::HStackProps::default()
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full()),
+            move |_cx| children,
+        )
+    };
+
+    let badge_icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
+        shadcn::icon::icon_with(
+            cx,
+            fret_icons::IconId::new_static(name),
+            Some(Px(12.0)),
+            Some(fg),
+        )
+    };
+
+    let variants = {
+        let children = vec![
+            shadcn::Badge::new("Default").into_element(cx),
+            shadcn::Badge::new("Secondary")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+            shadcn::Badge::new("Destructive")
+                .variant(shadcn::BadgeVariant::Destructive)
+                .into_element(cx),
+            shadcn::Badge::new("Outline")
+                .variant(shadcn::BadgeVariant::Outline)
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "Variants", body)
+    };
+
+    let with_icon = {
+        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+
+        let children = vec![
+            shadcn::Badge::new("Verified")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .children([badge_icon(cx, "lucide.badge-check", secondary_fg.clone())])
+                .into_element(cx),
+            shadcn::Badge::new("Bookmark")
+                .variant(shadcn::BadgeVariant::Outline)
+                .children([badge_icon(cx, "lucide.bookmark", outline_fg.clone())])
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "With Icon", body)
+    };
+
+    let with_spinner = {
+        let destructive_fg = ColorRef::Color(theme.color_required("destructive-foreground"));
+        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+
+        let children = vec![
+            shadcn::Badge::new("Deleting")
+                .variant(shadcn::BadgeVariant::Destructive)
+                .children([shadcn::Spinner::new()
+                    .color(destructive_fg.clone())
+                    .into_element(cx)])
+                .into_element(cx),
+            shadcn::Badge::new("Generating")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .children([shadcn::Spinner::new()
+                    .color(secondary_fg.clone())
+                    .into_element(cx)])
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "With Spinner", body)
+    };
+
+    let link = {
+        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+
+        let children = vec![
+            shadcn::Badge::new("Open Link")
+                .variant(shadcn::BadgeVariant::Outline)
+                .children([badge_icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "Link", body)
+    };
+
+    let custom_colors = {
+        let border_transparent =
+            ChromeRefinement::default().border_color(ColorRef::Color(CoreColor::TRANSPARENT));
+
+        let children = vec![
+            shadcn::Badge::new("Blue")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.90,
+                            g: 0.95,
+                            b: 1.00,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Green")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.91,
+                            g: 0.98,
+                            b: 0.91,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Sky")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.90,
+                            g: 0.97,
+                            b: 1.00,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Purple")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.95,
+                            g: 0.92,
+                            b: 1.00,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Red")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 1.00,
+                            g: 0.92,
+                            b: 0.92,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "Custom Colors", body)
+    };
+
+    let rtl = {
+        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+
+        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
-                vec![
-                    shadcn::Button::new("Filter")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .into_element(cx),
-                    shadcn::Badge::new("new")
+                let children = vec![
+                    shadcn::Badge::new("شارة").into_element(cx),
+                    shadcn::Badge::new("ثانوي")
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
-                    cx.text("Badges work well inline with buttons and text."),
-                ]
+                    shadcn::Badge::new("متحقق")
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .children([badge_icon(cx, "lucide.badge-check", secondary_fg.clone())])
+                        .into_element(cx),
+                ];
+                row(cx, children)
             },
-        ),
-    ]
+        );
+        section(cx, "RTL", body)
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| vec![variants, with_icon, with_spinner, link, custom_colors, rtl],
+    )]
 }
 
 fn preview_avatar(
@@ -11946,40 +12775,309 @@ fn preview_accordion(
     cx: &mut ElementContext<'_, App>,
     value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
-    let open = cx
-        .app
-        .models()
-        .get_cloned(&value)
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let _ = value;
 
-    let accordion = shadcn::Accordion::single(value)
-        .collapsible(true)
-        .refine_layout(LayoutRefinement::default().w_full())
-        .items([
-            shadcn::AccordionItem::new(
-                "item-1",
-                shadcn::AccordionTrigger::new(vec![cx.text("Item 1")]),
-                shadcn::AccordionContent::new(vec![cx.text("This section is collapsible.")]),
+    let theme = Theme::global(&*cx.app).clone();
+
+    let max_w_lg = LayoutRefinement::default()
+        .w_full()
+        .max_w(MetricRef::Px(Px(512.0)))
+        .min_w_0();
+    let max_w_sm = LayoutRefinement::default()
+        .w_full()
+        .max_w(MetricRef::Px(Px(384.0)))
+        .min_w_0();
+
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    // Mirrors the top-level `accordion-demo` preview slot.
+    let demo = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("shipping"))
+            .collapsible(true)
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "shipping",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What are your shipping options?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We offer standard (5-7 days), express (2-3 days), and overnight shipping. Free shipping on international orders.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "returns",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What is your return policy?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Returns accepted within 30 days. Items must be unused and in original packaging. Refunds processed within 5-7 business days.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "support",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How can I contact customer support?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Reach us via email, live chat, or phone. We respond within 24 hours during business days.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        centered(cx, accordion)
+    };
+
+    let basic = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("item-1"))
+            .collapsible(true)
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "item-1",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How do I reset my password?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Click on 'Forgot Password' on the login page, enter your email address, and we'll send you a link to reset your password. The link will expire in 24 hours.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "item-2",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Can I change my subscription plan?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Yes, you can upgrade or downgrade your plan at any time from your account settings. Changes will be reflected in your next billing cycle.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "item-3",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What payment methods do you accept?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We accept all major credit cards, PayPal, and bank transfers. All payments are processed securely through our payment partners.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        let body = centered(cx, accordion);
+        section(cx, "Basic", body)
+    };
+
+    let multiple = {
+        let accordion = shadcn::Accordion::multiple_uncontrolled(["notifications"])
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "notifications",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Notification Settings")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Manage how you receive notifications. You can enable email alerts for updates or push notifications for mobile devices.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "privacy",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Privacy & Security")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Control your privacy settings and security preferences. Enable two-factor authentication, manage connected devices, review active sessions, and configure data sharing preferences. You can also download your data or delete your account.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "billing",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Billing & Subscription")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "View your current plan, payment history, and upcoming invoices. Update your payment method, change your subscription tier, or cancel your subscription.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        let body = centered(cx, accordion);
+        section(cx, "Multiple", body)
+    };
+
+    let disabled = {
+        let accordion = shadcn::Accordion::single_uncontrolled(None::<Arc<str>>)
+            .collapsible(true)
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "item-1",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Can I access my account history?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Yes, you can view your complete account history including all transactions, plan changes, and support tickets in the Account History section of your dashboard.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "item-2",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Premium feature information")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "This section contains information about premium features. Upgrade your plan to access this content.",
+                    )]),
+                )
+                .disabled(true),
+                shadcn::AccordionItem::new(
+                    "item-3",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How do I update my email address?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "You can update your email address in your account settings. You'll receive a verification email at your new address to confirm the change.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        let body = centered(cx, accordion);
+        section(cx, "Disabled", body)
+    };
+
+    let borders = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("billing"))
+            .collapsible(true)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .items([
+                shadcn::AccordionItem::new(
+                    "billing",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We offer monthly and annual subscription plans. Billing is charged at the beginning of each cycle, and you can cancel anytime. All plans include automatic backups, 24/7 support, and unlimited team members.",
+                    )]),
+                )
+                .refine_style(ChromeRefinement::default().px(Space::N4)),
+                shadcn::AccordionItem::new(
+                    "security",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Is my data secure?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Yes. We use end-to-end encryption, SOC 2 Type II compliance, and regular third-party security audits. All data is encrypted at rest and in transit using industry-standard protocols.",
+                    )]),
+                )
+                .refine_style(ChromeRefinement::default().px(Space::N4)),
+                shadcn::AccordionItem::new(
+                    "integration",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What integrations do you support?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We integrate with 500+ popular tools including Slack, Zapier, Salesforce, HubSpot, and more. You can also build custom integrations using our REST API and webhooks.",
+                    )]),
+                )
+                .refine_style(ChromeRefinement::default().px(Space::N4)),
+            ])
+            .into_element(cx);
+
+        let wrapper = cx.container(
+            decl_style::container_props(
+                &theme,
+                ChromeRefinement::default().border_1().rounded(Radius::Lg),
+                max_w_lg.clone(),
             ),
-            shadcn::AccordionItem::new(
-                "item-2",
-                shadcn::AccordionTrigger::new(vec![cx.text("Item 2")]),
-                shadcn::AccordionContent::new(vec![
-                    cx.text("Keyboard navigation uses roving focus."),
-                ]),
-            ),
-            shadcn::AccordionItem::new(
-                "item-3",
-                shadcn::AccordionTrigger::new(vec![cx.text("Item 3")]),
-                shadcn::AccordionContent::new(vec![
-                    cx.text("Content lives in normal layout flow (no portal)."),
-                ]),
-            ),
+            move |_cx| vec![accordion],
+        );
+
+        let body = centered(cx, wrapper);
+        section(cx, "Borders", body)
+    };
+
+    let card = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("plans"))
+            .collapsible(true)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .items([
+                shadcn::AccordionItem::new(
+                    "plans",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What subscription plans do you offer?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We offer three subscription tiers: Starter ($9/month), Professional ($29/month), and Enterprise ($99/month). Each plan includes increasing storage limits, API access, priority support, and team collaboration features.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "billing",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Billing occurs automatically at the start of each billing cycle. We accept all major credit cards, PayPal, and ACH transfers for enterprise customers. You'll receive an invoice via email after each payment.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "cancel",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How do I cancel my subscription?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "You can cancel your subscription anytime from your account settings. There are no cancellation fees or penalties. Your access will continue until the end of your current billing period.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Subscription & Billing").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Common questions about your account, plans, payments and cancellations.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![accordion]).into_element(cx),
         ])
+        .refine_layout(max_w_sm.clone())
         .into_element(cx);
 
-    vec![accordion, cx.text(format!("Open item: {open}"))]
+        let body = centered(cx, card);
+        section(cx, "Card", body)
+    };
+
+    let rtl = {
+        let accordion = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                shadcn::Accordion::single_uncontrolled(Some("item-1"))
+                    .collapsible(true)
+                    .dir(Some(fret_ui_kit::primitives::direction::LayoutDirection::Rtl))
+                    .refine_layout(max_w_lg.clone())
+                    .items([
+                        shadcn::AccordionItem::new(
+                            "item-1",
+                            shadcn::AccordionTrigger::new(vec![cx.text("كيف يمكنني إعادة تعيين كلمة المرور؟")]),
+                            shadcn::AccordionContent::new(vec![cx.text(
+                                "انقر على 'نسيت كلمة المرور' في صفحة تسجيل الدخول، أدخل عنوان بريدك الإلكتروني، وسنرسل لك رابطًا لإعادة تعيين كلمة المرور. سينتهي صلاحية الرابط خلال 24 ساعة.",
+                            )]),
+                        ),
+                        shadcn::AccordionItem::new(
+                            "item-2",
+                            shadcn::AccordionTrigger::new(vec![cx.text("هل يمكنني تغيير خطة الاشتراك الخاصة بي؟")]),
+                            shadcn::AccordionContent::new(vec![cx.text(
+                                "نعم، يمكنك ترقية أو تخفيض خطتك في أي وقت من إعدادات حسابك. ستظهر التغييرات في دورة الفوترة التالية.",
+                            )]),
+                        ),
+                        shadcn::AccordionItem::new(
+                            "item-3",
+                            shadcn::AccordionTrigger::new(vec![cx.text("ما هي طرق الدفع التي تقبلونها؟")]),
+                            shadcn::AccordionContent::new(vec![cx.text(
+                                "نقبل جميع بطاقات الائتمان الرئيسية و PayPal والتحويلات المصرفية. تتم معالجة جميع المدفوعات بأمان من خلال شركاء الدفع لدينا.",
+                            )]),
+                        ),
+                    ])
+                    .into_element(cx)
+            },
+        );
+        let body = centered(cx, accordion);
+        section(cx, "RTL", body)
+    };
+
+    let examples = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| vec![basic, multiple, disabled, borders, card, rtl],
+    );
+
+    vec![demo, examples]
 }
 
 fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
