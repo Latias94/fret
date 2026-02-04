@@ -137,7 +137,8 @@ Perf acceptance:
 
 Correctness acceptance:
 
-- [ ] Existing `cargo nextest run -p fret-ui` remains green.
+- [x] Existing `cargo nextest run -p fret-ui` remains green.
+  - Evidence: passed locally after `perf(fret-ui): skip layout-engine rebuild on stable frames` (commit `1905de1e`).
 - [ ] `fretboard diag repro ui-gallery` smoke suite passes.
 
 ### M3: Hit testing (bounds tree / spatial index)
@@ -186,6 +187,9 @@ Correctness acceptance:
 - [ ] Investigate why the torture workload is still layout/prepaint-dominant on the sampled frames.
   - Goal: create (or tune) a variant where pointer moves are paint-only and hit-test cost is isolated.
   - Hypotheses: hover policy triggers layout; retained tree has a per-frame relayout; noise elements invalidate layout.
+  - Progress:
+    - `1905de1e` reduces this probe's `layout_time_us` max from ~74ms → ~31ms by skipping layout-engine rebuild on stable frames.
+    - `prepaint_time_us` remains ~9–10ms and `hit_test_time_us` stays measurable; next isolate remaining ~20ms inside `layout_all_with_pass_kind`.
   - Deliverable: a new/updated script + a log entry demonstrating low `layout_time_us` while `hit_test_time_us` remains measurable.
 
 Perf acceptance:

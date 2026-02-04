@@ -2221,3 +2221,24 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
 - top_total_time_us: `13844`
 - bundle: `target/fret-diag-perf/ui-gallery-steady.norenderperf.1770195597/1770195633326-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-04 19:06:00 (perf commit `1905de1e4e5bbda5ccab9e2f6d9c2dbd9f968ff0`)
+
+Change:
+- Skip layout-engine rebuild (`request_build_window_roots_if_final`) on frames where no visible roots need layout/bounds updates.
+- Still runs prepaint/focus repair/cleanup so hit-testing and interaction caches stay correct.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+- Harness-only: `FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture`
+- Env: `FRET_DIAG_SCRIPT_AUTO_DUMP=0`, `FRET_DIAG_SEMANTICS=0`, `FRET_DIAG_MAX_SNAPSHOTS=240`
+
+Baseline (commit `f90bbe181d8a4d821b64d0a17e4a4d2cd011a74e`):
+- bundle: `target/fret-diag-perf/stripes-sweep-perf-baseline.head/1770200313185-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- `diag perf` worst top_total_time_us: `83237`
+- max stats (us): layout=`74017`, prepaint=`9647`, dispatch=`3734`, hit_test=`909`, paint=`417`
+
+After (commit `1905de1e4e5bbda5ccab9e2f6d9c2dbd9f968ff0`):
+- bundle: `target/fret-diag-perf/stripes-sweep-perf-fastpath.v6/1770203253914-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- `diag perf` worst top_total_time_us: `40406`
+- max stats (us): layout=`30671`, prepaint=`9585`, dispatch=`3594`, hit_test=`664`, paint=`575`
