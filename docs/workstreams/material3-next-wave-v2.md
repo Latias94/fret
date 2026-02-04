@@ -266,6 +266,34 @@ Non-goals:
           - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
             (`material3-select-trigger-error`).
 
+- [ ] Autocomplete (outlined + filled) MVP surface.
+  - Goal: provide an editable trigger with a listbox overlay using Material Web autocomplete tokens,
+    aligned with Compose exposed dropdown menus at the outcome level.
+  - Subtasks:
+    - [x] Import `md.comp.{outlined,filled}-autocomplete.*` scalars/colors via `material3_token_import`.
+      - Evidence:
+        - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`
+        - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+        - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
+    - [x] Support `aria-controls` on `TextInput` (declarative element IDs), so combobox-style
+          relationships do not require extra wrapper semantics nodes.
+      - Evidence:
+        - `crates/fret-ui/src/element.rs`
+        - `crates/fret-ui/src/declarative/host_widget/semantics.rs`
+    - [ ] Implement `Autocomplete` component in `ecosystem/fret-ui-material3` (visual + interaction).
+      - Requirements (v1):
+        - Outlined + filled variants (token-driven defaults only; no non-Material fallbacks).
+        - Overlay sizing parity with `Select` (match-anchor-width + clamp height, collision padding).
+        - A11y: `ComboBox` trigger + `ListBox` overlay, with `controls_element` + `labelled_by_element`.
+        - Keyboard: ArrowDown/ArrowUp open, Escape dismiss + focus restore, roving in listbox.
+        - Headless suites + gallery page + at least one dialog-embedded probe (avoid clipping regressions).
+  - References:
+    - Material Web tokens:
+      `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-autocomplete.scss`,
+      `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-filled-autocomplete.scss`.
+    - Compose exposed dropdown menus:
+      `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/ExposedDropdownMenu.kt`.
+
 - [x] Badge (navigation bar/rail/drawer integration points).
   - Subtasks:
     - Import `md.comp.badge.*` scalars/colors via `material3_token_import`.
