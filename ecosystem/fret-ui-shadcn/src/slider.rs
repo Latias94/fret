@@ -431,14 +431,15 @@ pub fn slider<H: UiHost>(
             radix_slider::slider_min_at_axis_start(orientation, direction, inverted);
         let is_horizontal = axis == Axis::Horizontal;
 
-        let mut root_layout = match orientation {
+        let default_layout = match orientation {
             radix_slider::SliderOrientation::Horizontal => {
-                decl_style::layout_style(&theme, layout.relative().w_full())
+                LayoutRefinement::default().relative().w_full()
             }
             radix_slider::SliderOrientation::Vertical => {
-                decl_style::layout_style(&theme, layout.relative().h_full())
+                LayoutRefinement::default().relative().h_full()
             }
         };
+        let mut root_layout = decl_style::layout_style(&theme, default_layout.merge(layout));
         root_layout.overflow = fret_ui::element::Overflow::Visible;
 
         // Match shadcn/Radix DOM semantics: the layout height follows the track, while the thumb
@@ -563,7 +564,7 @@ pub fn slider<H: UiHost>(
                     // not when starting a drag from a thumb. This avoids a visible jump when thumbs
                     // are kept "in bounds" at the edges.
                     let mut hit_thumb_idx: Option<usize> = None;
-                    let mut hit_thumb_dx: f32 = f32::INFINITY;
+                    let mut hit_thumb_axis_dist: f32 = f32::INFINITY;
                     for (idx, t) in percentages_on_down.iter().copied().enumerate() {
                         let t = t.clamp(0.0, 1.0);
                         let pos_t = if min_at_axis_start_on_down {
@@ -589,8 +590,12 @@ pub fn slider<H: UiHost>(
                         let dx = (down.position.x.0 - thumb_center_x).abs();
                         let dy = (down.position.y.0 - thumb_center_y).abs();
                         if dx <= thumb_r_on_down.0 && dy <= thumb_r_on_down.0 {
-                            if dx < hit_thumb_dx {
-                                hit_thumb_dx = dx;
+                            let dist = match axis_on_down {
+                                Axis::Horizontal => dx,
+                                Axis::Vertical => dy,
+                            };
+                            if dist < hit_thumb_axis_dist {
+                                hit_thumb_axis_dist = dist;
                                 hit_thumb_idx = Some(idx);
                             }
                         }
@@ -1008,8 +1013,14 @@ pub fn slider<H: UiHost>(
                                 .get(thumb_index)
                                 .copied()
                                 .unwrap_or(active_value);
+                            let thumb_label = a11y_label.clone().or_else(|| {
+                                radix_slider::slider_thumb_default_label(
+                                    thumb_index,
+                                    values_sorted.len(),
+                                )
+                            });
                             let mut thumb_semantics = radix_slider::slider_thumb_semantics(
-                                a11y_label.clone(),
+                                thumb_label,
                                 thumb_value,
                                 disabled,
                             );
@@ -1881,6 +1892,223 @@ mod tests {
         let commits = commits.borrow();
         assert_eq!(commits.len(), 1);
         assert_eq!(commits[0], vec![1.0]);
+    }
+
+    #[test]
+    fn inverted_horizontal_slider_pointer_and_keys_follow_radix_direction_rules() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(60.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![0.0]);
+        let commits: Rc<RefCell<Vec<Vec<f32>>>> = Rc::new(RefCell::new(Vec::new()));
+
+        let commits_for_render = commits.clone();
+        let model_for_render = model.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-inverted-horizontal-mapping",
+            move |cx| {
+                let commits_for_cb = commits_for_render.clone();
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .inverted(true)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let position = Point::new(
+            Px(slider_bounds.origin.x.0 + 1.0),
+            Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let v = app
+            .models()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
+            .unwrap_or(f32::NAN);
+        assert!((v - 100.0).abs() < 0.01, "expected slider=100, got {v}");
+
+        let thumb_node = node_id_by_test_id(&ui, "slider-thumb-0");
+        ui.set_focus(Some(thumb_node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let v = app
+            .models()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
+            .unwrap_or(f32::NAN);
+        assert!((v - 99.0).abs() < 0.01, "expected slider=99, got {v}");
+
+        let commits = commits.borrow();
+        assert!(commits.len() >= 2, "expected pointer + key commits");
+        assert_eq!(commits[0], vec![100.0]);
+        assert_eq!(commits[1], vec![99.0]);
+    }
+
+    #[test]
+    fn inverted_vertical_slider_pointer_and_keys_follow_radix_direction_rules() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![100.0]);
+        let commits: Rc<RefCell<Vec<Vec<f32>>>> = Rc::new(RefCell::new(Vec::new()));
+
+        let commits_for_render = commits.clone();
+        let model_for_render = model.clone();
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-slider-inverted-vertical-mapping",
+            move |cx| {
+                let commits_for_cb = commits_for_render.clone();
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .inverted(true)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let position = Point::new(
+            Px(slider_bounds.origin.x.0 + slider_bounds.size.width.0 * 0.5),
+            Px(slider_bounds.origin.y.0 + 1.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let v = app
+            .models()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
+            .unwrap_or(f32::NAN);
+        assert!((v - 0.0).abs() < 0.01, "expected slider=0, got {v}");
+
+        let thumb_node = node_id_by_test_id(&ui, "slider-thumb-0");
+        ui.set_focus(Some(thumb_node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let v = app
+            .models()
+            .get_cloned(&model)
+            .and_then(|values| values.first().copied())
+            .unwrap_or(f32::NAN);
+        assert!((v - 1.0).abs() < 0.01, "expected slider=1, got {v}");
+
+        let commits = commits.borrow();
+        assert!(commits.len() >= 2, "expected pointer + key commits");
+        assert_eq!(commits[0], vec![0.0]);
+        assert_eq!(commits[1], vec![1.0]);
     }
 
     #[test]

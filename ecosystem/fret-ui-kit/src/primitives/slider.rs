@@ -7,7 +7,7 @@
 //! supports multi-thumb sliders; the headless helpers now cover Radix multi-thumb value updates,
 //! but the higher-level widget recipes may still use the single-thumb surface.
 
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use fret_core::{Axis, KeyCode, SemanticsRole};
 use fret_runtime::Model;
@@ -26,6 +26,9 @@ pub use crate::headless::slider::{
     next_sorted_values, normalize_value, snap_value, steps_between_values,
     update_multi_thumb_values,
 };
+
+static THUMB_LABEL_MINIMUM: LazyLock<Arc<str>> = LazyLock::new(|| Arc::<str>::from("Minimum"));
+static THUMB_LABEL_MAXIMUM: LazyLock<Arc<str>> = LazyLock::new(|| Arc::<str>::from("Maximum"));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SliderOrientation {
@@ -184,6 +187,30 @@ pub fn slider_thumb_semantics(
     }
 }
 
+/// Returns the default thumb label used by Radix Slider when there are multiple thumbs.
+///
+/// Reference:
+/// - `repo-ref/primitives/packages/react/slider/src/slider.tsx` (`getLabel`).
+pub fn slider_thumb_default_label(index: usize, total_values: usize) -> Option<Arc<str>> {
+    if index >= total_values {
+        return None;
+    }
+
+    match total_values {
+        0 | 1 => None,
+        2 => match index {
+            0 => Some(THUMB_LABEL_MINIMUM.clone()),
+            1 => Some(THUMB_LABEL_MAXIMUM.clone()),
+            _ => None,
+        },
+        _ => Some(Arc::<str>::from(format!(
+            "Value {} of {}",
+            index.saturating_add(1),
+            total_values
+        ))),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -292,5 +319,21 @@ mod tests {
             slider_step_direction_for_key(SliderSlideDirection::FromBottom, KeyCode::ArrowDown),
             Some(-1.0)
         );
+    }
+
+    #[test]
+    fn slider_thumb_default_label_matches_radix_get_label() {
+        assert_eq!(slider_thumb_default_label(0, 1), None);
+        assert_eq!(slider_thumb_default_label(0, 2).as_deref(), Some("Minimum"));
+        assert_eq!(slider_thumb_default_label(1, 2).as_deref(), Some("Maximum"));
+        assert_eq!(
+            slider_thumb_default_label(0, 3).as_deref(),
+            Some("Value 1 of 3")
+        );
+        assert_eq!(
+            slider_thumb_default_label(2, 3).as_deref(),
+            Some("Value 3 of 3")
+        );
+        assert_eq!(slider_thumb_default_label(3, 3), None);
     }
 }
