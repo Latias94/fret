@@ -1,6 +1,7 @@
 //! Painting, caching, and text shaping helpers for the code editor surface.
 
 use super::*;
+use fret_core::TextMetrics;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn paint_row(
@@ -29,7 +30,35 @@ pub(super) fn paint_row(
         corner_radii: Corners::all(Px(0.0)),
     });
 
-    let origin = fret_core::Point::new(rect.origin.x, rect.origin.y);
+    // Align the text baseline within the row rect.
+    //
+    // `SceneOp::Text` expects a baseline origin. However, our editor rows are expressed as
+    // top-left anchored rects (`rect.origin.y` is the row top), and `row_h` can exceed the
+    // font's actual line height. Measure a representative line to compute a stable baseline and
+    // vertically center the glyph box within the row.
+    let scale_factor = painter.scale_factor();
+    let (services, _) = painter.services_and_scene();
+    let measure_constraints = fret_core::TextConstraints {
+        max_width: Some(rect.size.width),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        scale_factor,
+    };
+    let metrics = services
+        .text()
+        .measure_str(" ", text_style, measure_constraints);
+    let measured_h = if metrics.size.height.0 > 0.01 {
+        metrics.size.height
+    } else {
+        // Defensive fallback: keep a stable non-zero box even if the text backend returns an
+        // empty metrics set (should be rare for a single space).
+        Px(row_h.0.max(16.0))
+    };
+    let text_y_pad = Px(((row_h.0 - measured_h.0).max(0.0)) / 2.0);
+    let origin = fret_core::Point::new(
+        rect.origin.x,
+        Px(rect.origin.y.0 + text_y_pad.0 + metrics.baseline.0),
+    );
     let scope = painter.key_scope(&"fret-code-editor-row-text");
     let key: u64 = painter.child_key(scope, &(row, 0u8)).into();
     let constraints = CanvasTextConstraints {
@@ -40,6 +69,7 @@ pub(super) fn paint_row(
     let mut drew_rich = false;
     let mut row_preedit = None::<RowPreeditMapping>;
     let mut row_blob = None::<fret_core::TextBlobId>;
+    let mut row_blob_metrics = None::<TextMetrics>;
 
     if let Some(preedit) = &st.preedit {
         let caret = st.selection.caret().min(st.buffer.len_bytes());
@@ -57,7 +87,7 @@ pub(super) fn paint_row(
                 selection_bg,
             );
             let key: u64 = painter.child_key(scope, &(row, 2u8)).into();
-            let (blob, _) = painter.rich_text_with_blob(
+            let (blob, metrics) = painter.rich_text_with_blob(
                 key,
                 DrawOrder(2),
                 origin,
@@ -65,13 +95,14 @@ pub(super) fn paint_row(
                 text_style.clone(),
                 fg,
                 constraints,
-                painter.scale_factor(),
+                scale_factor,
             );
             row_preedit = Some(RowPreeditMapping {
                 insert_at: caret_in_line,
                 preedit_len: preedit.text.len(),
             });
             row_blob = Some(blob);
+            row_blob_metrics = Some(metrics);
             drew_rich = true;
         }
     }
@@ -117,7 +148,7 @@ pub(super) fn paint_row(
                     let theme = painter.theme().clone();
                     let rich =
                         materialize_row_rich_text(&theme, Arc::clone(&line), merged.as_ref());
-                    let (blob, _) = painter.rich_text_with_blob(
+                    let (blob, metrics) = painter.rich_text_with_blob(
                         key,
                         DrawOrder(2),
                         origin,
@@ -125,9 +156,10 @@ pub(super) fn paint_row(
                         text_style.clone(),
                         fg,
                         constraints,
-                        painter.scale_factor(),
+                        scale_factor,
                     );
                     row_blob = Some(blob);
+                    row_blob_metrics = Some(metrics);
                     drew_rich = true;
                 }
             }
@@ -135,7 +167,7 @@ pub(super) fn paint_row(
     }
 
     if !drew_rich {
-        let (blob, _) = painter.text_with_blob(
+        let (blob, metrics) = painter.text_with_blob(
             key,
             DrawOrder(2),
             origin,
@@ -143,15 +175,16 @@ pub(super) fn paint_row(
             text_style.clone(),
             fg,
             constraints,
-            painter.scale_factor(),
+            scale_factor,
         );
         row_blob = Some(blob);
+        row_blob_metrics = Some(metrics);
     }
 
     let mut caret_stops: Vec<(usize, Px)> = Vec::new();
     let mut caret_rect_top = None::<Px>;
     let mut caret_rect_height = None::<Px>;
-    if let Some(blob) = row_blob {
+    if let (Some(blob), Some(blob_metrics)) = (row_blob, row_blob_metrics.as_ref()) {
         let (services, _) = painter.services_and_scene();
         services.text().caret_stops(blob, &mut caret_stops);
 
@@ -159,7 +192,11 @@ pub(super) fn paint_row(
             .text()
             .caret_rect(blob, 0, CaretAffinity::Downstream);
         if caret_rect.size.height.0 > 0.0 {
-            caret_rect_top = Some(caret_rect.origin.y);
+            // `caret_rect` is relative to the text box top (y=0 at the top of the blob box).
+            // Convert it into row-local coordinates by anchoring the box using the *actual* blob
+            // baseline, not the placeholder measurement baseline.
+            let text_box_top_in_row = Px(origin.y.0 - blob_metrics.baseline.0 - rect.origin.y.0);
+            caret_rect_top = Some(Px(text_box_top_in_row.0 + caret_rect.origin.y.0));
             caret_rect_height = Some(caret_rect.size.height);
         }
     }

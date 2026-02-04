@@ -12,9 +12,9 @@ use fret_code_editor_view::{
     select_word_range_in_buffer,
 };
 use fret_core::{
-    AttributedText, CaretAffinity, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId,
-    KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow, TextPaintStyle,
-    TextSpan, TextStyle, TextWrap, UnderlineStyle,
+    AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
+    Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow,
+    TextPaintStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
@@ -804,6 +804,7 @@ impl CodeEditor {
                             return false;
                         }
 
+                        host.set_cursor_icon(CursorIcon::Text);
                         host.request_focus(region_id);
                         host.capture_pointer();
 
@@ -884,9 +885,8 @@ impl CodeEditor {
                 let on_pointer_move_scroll = scroll_handle.clone();
                 let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
                     move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, mv| {
-                        let Some(row) = row else {
-                            return false;
-                        };
+                        // Show an I-beam cursor while hovering the editor surface, even when not dragging.
+                        host.set_cursor_icon(CursorIcon::Text);
                         if !mv.buttons.left {
                             return false;
                         }
@@ -899,11 +899,52 @@ impl CodeEditor {
                         let bounds = host.bounds();
                         st.last_bounds = Some(bounds);
 
+                        let Some(row) = row else {
+                            return false;
+                        };
+
+                        // Drag-to-select autoscroll: when the pointer is near/over the viewport edges,
+                        // scroll so selection can extend beyond the visible window (Zed-style).
+                        //
+                        // Pointer positions are mapped through transforms; within scroll containers this
+                        // typically means "content space". Use the scroll offset + viewport size to
+                        // compute edge proximity in the same space.
+                        let mut changed = false;
+                        let viewport_h = Px(on_pointer_move_scroll.viewport_size().height.0.max(0.0));
+                        if viewport_h.0 > 0.0 {
+                            let offset = on_pointer_move_scroll.offset();
+                            let vertical_margin = Px(row_h.0.min(viewport_h.0 / 3.0));
+                            let top = Px(offset.y.0 + vertical_margin.0);
+                            let bottom = Px(offset.y.0 + viewport_h.0 - vertical_margin.0);
+
+                            let scale_vertical_delta = |delta_px: f32| -> f32 {
+                                (delta_px.max(0.0).powf(1.2) / 100.0).min(3.0)
+                            };
+
+                            let mut scroll_delta_y = 0.0f32;
+                            if mv.position.y.0 < top.0 {
+                                scroll_delta_y = -scale_vertical_delta(top.0 - mv.position.y.0);
+                            } else if mv.position.y.0 > bottom.0 {
+                                scroll_delta_y = scale_vertical_delta(mv.position.y.0 - bottom.0);
+                            }
+
+                            if scroll_delta_y.abs() > 0.0 {
+                                on_pointer_move_scroll.set_offset(fret_core::Point::new(
+                                    offset.x,
+                                    Px(offset.y.0 + scroll_delta_y),
+                                ));
+                                changed = true;
+                            }
+                        }
+
                         let cell_w = on_pointer_move_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
                         let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
-                        st.selection.focus = caret;
-                        st.caret_preferred_x = None;
+                        if caret != st.selection.focus {
+                            st.selection.focus = caret;
+                            st.caret_preferred_x = None;
+                            changed = true;
+                        }
 
                         let caret_rect = caret_rect_for_selection(
                             &st,
@@ -919,8 +960,11 @@ impl CodeEditor {
                             });
                         }
 
-                        host.notify(action_cx);
-                        host.request_redraw(action_cx.window);
+                        if changed {
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                        }
+
                         true
                     },
                 );

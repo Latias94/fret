@@ -525,6 +525,11 @@ impl TableCell {
         let child = self.child;
         cx.container(props, move |cx| {
             let layout = decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+            let wrapper_props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default(),
+                LayoutRefinement::default().flex_1().min_w_0(),
+            );
             vec![cx.flex(
                 FlexProps {
                     layout,
@@ -535,7 +540,7 @@ impl TableCell {
                     align: CrossAlign::Center,
                     wrap: false,
                 },
-                move |_cx| vec![child.clone()],
+                move |cx| vec![cx.container(wrapper_props, move |_cx| vec![child.clone()])],
             )]
         })
     }

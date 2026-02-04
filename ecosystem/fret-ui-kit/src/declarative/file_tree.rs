@@ -278,7 +278,17 @@ where
                             .layout(LayoutRefinement::default().w_full().h_full())
                             .gap(Space::N2)
                             .items_center(),
-                        |cx| vec![cx.text(icon), cx.text(entry.label.as_ref())],
+                        |cx| {
+                            let icon = crate::ui::text(cx, icon)
+                                .flex_shrink_0()
+                                .into_element(cx);
+                            let label = crate::ui::text(cx, entry.label.as_ref())
+                                .flex_1()
+                                .min_w_0()
+                                .truncate()
+                                .into_element(cx);
+                            vec![icon, label]
+                        },
                     )]
                 })]
             },
