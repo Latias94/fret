@@ -5,13 +5,11 @@ use crate::core::{Edge, EdgeId, EdgeKind, Graph, PortId};
 use crate::io::NodeGraphViewState;
 use crate::ui::canvas::geometry::CanvasGeometry;
 
-use super::super::EdgeEndpoint;
-use super::super::NodeGraphCanvas;
-use super::super::{HitTestCtx, HitTestScratch};
 use super::super::{
     dist2_point_to_segment, path_start_end_tangents, step_wire_distance2, wire_distance2,
     wire_distance2_path,
 };
+use super::prelude::*;
 use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn hit_port_slow(geom: &CanvasGeometry, pos: Point) -> Option<PortId> {
@@ -42,13 +40,11 @@ fn hit_edge_slow(
     zoom: f32,
 ) -> Option<EdgeId> {
     let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
-    let hit_w = super::super::hit_test::hit_test_canvas_units_from_screen_px(
-        snapshot.interaction.edge_interaction_width,
-        zoom,
-    )
-    .max(canvas.style.wire_width / super::super::hit_test::zoom_z(zoom));
+    let hit_w =
+        hit_test_canvas_units_from_screen_px(snapshot.interaction.edge_interaction_width, zoom)
+            .max(canvas.style.wire_width / zoom_z(zoom));
     let threshold2 = hit_w * hit_w;
-    let eps = super::super::hit_test::zoom_eps(zoom);
+    let eps = zoom_eps(zoom);
 
     let mut edge_ids: Vec<EdgeId> = graph.edges.keys().copied().collect();
     edge_ids.sort_unstable();
@@ -106,7 +102,7 @@ fn hit_edge_focus_anchor_slow(
     pos: Point,
     zoom: f32,
 ) -> Option<(EdgeId, EdgeEndpoint, PortId)> {
-    let eps = super::super::hit_test::zoom_eps(zoom);
+    let eps = zoom_eps(zoom);
 
     let mut edge_ids: Vec<EdgeId> = graph.edges.keys().copied().collect();
     edge_ids.sort_unstable();

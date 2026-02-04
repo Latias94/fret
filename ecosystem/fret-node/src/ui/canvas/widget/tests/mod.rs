@@ -72,6 +72,7 @@ mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
 mod portal_pointer_passthrough_conformance;
+mod prelude;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod spatial_index_equivalence_conformance;

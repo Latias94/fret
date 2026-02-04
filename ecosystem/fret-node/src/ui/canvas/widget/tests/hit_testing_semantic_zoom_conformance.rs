@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::core::{Edge, EdgeId, EdgeKind};
 use crate::io::NodeGraphViewState;
 
-use super::super::{HitTestCtx, HitTestScratch, NodeGraphCanvas};
+use super::prelude::*;
 use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn pan_for_canvas_point_at_window_point(
