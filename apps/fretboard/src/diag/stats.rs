@@ -156,6 +156,18 @@ pub(super) struct BundleStatsReport {
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
     pub(super) snapshots_with_hover_layout_invalidations: u32,
+    /// Whether the bundle includes `pointer.move` events (so the derived “pointer move” frame set
+    /// can be identified from the event log rather than inferred from dispatch-only frames).
+    pub(super) pointer_move_frames_present: bool,
+    /// Count of snapshots in the derived “pointer move” (or fallback) frame set.
+    pub(super) pointer_move_frames_considered: u32,
+    /// Max dispatch time (us) across the derived “pointer move” (or fallback) frame set.
+    pub(super) pointer_move_max_dispatch_time_us: u64,
+    /// Max hit-test time (us) across the derived “pointer move” (or fallback) frame set.
+    pub(super) pointer_move_max_hit_test_time_us: u64,
+    /// Number of snapshots within the derived “pointer move” (or fallback) frame set that had
+    /// propagated global changes (`debug.stats.global_change_globals > 0`).
+    pub(super) pointer_move_snapshots_with_global_changes: u32,
     sum_layout_time_us: u64,
     sum_prepaint_time_us: u64,
     sum_paint_time_us: u64,
@@ -513,6 +525,21 @@ impl BundleStatsReport {
                 .map(|h| format!("{}={}", h.source, h.count))
                 .collect();
             println!("changed_models_top: {}", items.join(" | "));
+        }
+
+        if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
+            let mode = if self.pointer_move_frames_present {
+                "pointer_move"
+            } else {
+                "dispatch_frames_fallback"
+            };
+            println!(
+                "derived({mode}) frames_considered={} max.us(dispatch/hit_test)={}/{} snapshots_with_global_changes={}",
+                self.pointer_move_frames_considered,
+                self.pointer_move_max_dispatch_time_us,
+                self.pointer_move_max_hit_test_time_us,
+                self.pointer_move_snapshots_with_global_changes
+            );
         }
 
         if self.top.is_empty() {
@@ -913,6 +940,17 @@ impl BundleStatsReport {
         root.insert(
             "snapshots_with_hover_layout_invalidations".to_string(),
             Value::from(self.snapshots_with_hover_layout_invalidations),
+        );
+
+        root.insert(
+            "pointer_move".to_string(),
+            serde_json::json!({
+                "frames_present": self.pointer_move_frames_present,
+                "frames_considered": self.pointer_move_frames_considered,
+                "max_dispatch_time_us": self.pointer_move_max_dispatch_time_us,
+                "max_hit_test_time_us": self.pointer_move_max_hit_test_time_us,
+                "snapshots_with_global_changes": self.pointer_move_snapshots_with_global_changes,
+            }),
         );
 
         let mut sum = Map::new();
@@ -3914,6 +3952,8 @@ pub(super) fn bundle_stats_from_json_with_options(
     sort: BundleStatsSort,
     opts: BundleStatsOptions,
 ) -> Result<BundleStatsReport, String> {
+    use std::collections::HashSet;
+
     let windows = bundle
         .get("windows")
         .and_then(|v| v.as_array())
@@ -3931,6 +3971,24 @@ pub(super) fn bundle_stats_from_json_with_options(
         std::collections::HashMap::new();
     for w in windows {
         let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let pointer_move_frame_ids: HashSet<u64> = w
+            .get("events")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|e| {
+                        let kind = e.get("kind").and_then(|v| v.as_str())?;
+                        if kind != "pointer.move" {
+                            return None;
+                        }
+                        e.get("frame_id").and_then(|v| v.as_u64())
+                    })
+                    .collect::<HashSet<_>>()
+            })
+            .unwrap_or_default();
+        if !pointer_move_frame_ids.is_empty() {
+            out.pointer_move_frames_present = true;
+        }
         let snaps = w
             .get("snapshots")
             .and_then(|v| v.as_array())
@@ -4393,6 +4451,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 out.snapshots_with_propagated_global_changes = out
                     .snapshots_with_propagated_global_changes
                     .saturating_add(1);
+            }
+
+            let consider_pointer_move_frame = if pointer_move_frame_ids.is_empty() {
+                // Fallback when the bundle does not include event logs.
+                dispatch_events > 0
+            } else {
+                pointer_move_frame_ids.contains(&frame_id) && dispatch_events > 0
+            };
+            if consider_pointer_move_frame {
+                out.pointer_move_frames_considered =
+                    out.pointer_move_frames_considered.saturating_add(1);
+                out.pointer_move_max_dispatch_time_us =
+                    out.pointer_move_max_dispatch_time_us.max(dispatch_time_us);
+                out.pointer_move_max_hit_test_time_us =
+                    out.pointer_move_max_hit_test_time_us.max(hit_test_time_us);
+                if propagated_global_change_globals > 0 {
+                    out.pointer_move_snapshots_with_global_changes = out
+                        .pointer_move_snapshots_with_global_changes
+                        .saturating_add(1);
+                }
             }
 
             let invalidation_walk_calls = stats
