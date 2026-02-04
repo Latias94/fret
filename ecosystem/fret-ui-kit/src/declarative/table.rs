@@ -124,7 +124,7 @@ fn resolve_column_width<TData>(
     state: &TableState,
     props: &TableViewProps,
 ) -> Px {
-    let base = column_size(&state.column_sizing, &col.id).unwrap_or(props.default_column_width.0);
+    let base = column_size(&state.column_sizing, &col.id).unwrap_or(col.size);
     let base = clamp_column_width(col, props, base);
 
     base
@@ -240,7 +240,7 @@ mod tests {
         TextMetrics, TextService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{Point, Px, Rect};
+    use fret_core::{Point, Px, Rect, TextWrap};
     use fret_ui::ThemeConfig;
     use fret_ui::{Theme, UiTree, VirtualListScrollHandle};
 
@@ -455,6 +455,138 @@ mod tests {
             "expected edit.copy to emit ClipboardSetText for the selected row"
         );
     }
+
+    #[test]
+    fn table_virtualized_clamps_cell_width_for_wide_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 1;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32];
+        let mut col = ColumnDef::new("col");
+        col.size = 80.0;
+        let columns = vec![col];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let header = cx.semantics(
+                    SemanticsProps {
+                        test_id: Some(Arc::<str>::from("table-test-header")),
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    overflow: Overflow::Clip,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |cx| vec![crate::ui::text(cx, "Header").into_element(cx)],
+                        )]
+                    },
+                );
+
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    TableViewProps::default(),
+                    |_row| None,
+                    move |_cx, _col, _sort| [header.clone()],
+                    |cx, row, _col| {
+                        let long = format!("Row{}-{}", row.index, "x".repeat(4096));
+                        let cell = crate::ui::text(cx, long).wrap(TextWrap::Grapheme);
+                        let cell = cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: Length::Fill,
+                                        height: Length::Fill,
+                                        ..Default::default()
+                                    },
+                                    overflow: Overflow::Clip,
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            },
+                            |cx| vec![cell.into_element(cx)],
+                        );
+
+                        [cx.semantics(
+                            SemanticsProps {
+                                test_id: Some(Arc::<str>::from("table-test-cell")),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![cell],
+                        )]
+                    },
+                    None,
+                )]
+            })
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+
+        let cell_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-test-cell"))
+            .map(|n| n.bounds)
+            .expect("expected to find table-test-cell");
+
+        assert!(
+            cell_bounds.size.width.0 <= 80.0,
+            "expected the cell subtree to be clamped to the column width (got {:.2}px)",
+            cell_bounds.size.width.0
+        );
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -482,7 +614,7 @@ impl DisplayRow {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 struct GroupedBaseDeps {
     items_revision: u64,
     data_len: usize,
@@ -492,7 +624,7 @@ struct GroupedBaseDeps {
     global_filter: crate::headless::table::GlobalFilterState,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 struct GroupedDisplayDeps {
     base: GroupedBaseDeps,
     sorting: crate::headless::table::SortingState,
@@ -2340,6 +2472,7 @@ where
                                             border_color: Some(border),
                                             layout: LayoutStyle {
                                                 size: fret_ui::element::SizeStyle {
+                                                    width: Length::Fill,
                                                     height: Length::Px(row_h),
                                                     ..Default::default()
                                                 },
@@ -2388,6 +2521,8 @@ where
                                                                         layout: LayoutStyle {
                                                                             size: fret_ui::element::SizeStyle {
                                                                                 width: Length::Px(col_w),
+                                                                                min_width: Some(col_w),
+                                                                                max_width: Some(col_w),
                                                                                 ..Default::default()
                                                                             },
                                                                             flex: fret_ui::element::FlexItemStyle {
@@ -2483,7 +2618,7 @@ where
                                                                                 {
                                                                                     let col_id = col.id.clone();
                                                                                     let state_model = state.clone();
-                                                                                    let default_w = props.default_column_width;
+                                                                                    let default_w = Px(col.size);
                                                                                     let min_w = col.min_size.max(props.min_column_width.0).max(0.0);
                                                                                     let max_w = col.max_size.max(min_w);
                                                                                     let resize_mode = props.column_resize_mode;
@@ -2957,14 +3092,15 @@ where
                                                                         } else {
                                                                             None
                                                                         },
-                                                                        layout: LayoutStyle {
-                                                                            size:
-                                                                                fret_ui::element::SizeStyle {
-                                                                                    height: body_row_height,
-                                                                                    ..Default::default()
-                                                                                },
-                                                                            ..Default::default()
-                                                                        },
+                                                                    layout: LayoutStyle {
+                                                                        size:
+                                                                            fret_ui::element::SizeStyle {
+                                                                                width: Length::Fill,
+                                                                                height: body_row_height,
+                                                                                ..Default::default()
+                                                                            },
+                                                                        ..Default::default()
+                                                                    },
                                                                         ..Default::default()
                                                                     },
                                                                     |cx| {
@@ -3034,6 +3170,8 @@ where
                                                                                                                         layout: LayoutStyle {
                                                                                                                             size: fret_ui::element::SizeStyle {
                                                                                                                                 width: Length::Px(col_w),
+                                                                                                                                min_width: Some(col_w),
+                                                                                                                                max_width: Some(col_w),
                                                                                                                                 height: Length::Fill,
                                                                                                                                 ..Default::default()
                                                                                                                             },
@@ -3114,6 +3252,8 @@ where
                                                                                                                             layout: LayoutStyle {
                                                                                                                                 size: fret_ui::element::SizeStyle {
                                                                                                                                     width: Length::Px(col_w),
+                                                                                                                                    min_width: Some(col_w),
+                                                                                                                                    max_width: Some(col_w),
                                                                                                                                     height: Length::Fill,
                                                                                                                                     ..Default::default()
                                                                                                                                 },
@@ -3216,6 +3356,8 @@ where
                                                                                                             layout: LayoutStyle {
                                                                                                                 size: fret_ui::element::SizeStyle {
                                                                                                                     width: Length::Px(col_w),
+                                                                                                                    min_width: Some(col_w),
+                                                                                                                    max_width: Some(col_w),
                                                                                                                     ..Default::default()
                                                                                                                 },
                                                                                                                 flex: fret_ui::element::FlexItemStyle {
@@ -3548,6 +3690,8 @@ where
                                                                                                         layout: LayoutStyle {
                                                                                                             size: fret_ui::element::SizeStyle {
                                                                                                                 width: Length::Px(col_w),
+                                                                                                                min_width: Some(col_w),
+                                                                                                                max_width: Some(col_w),
                                                                                                                 height: Length::Fill,
                                                                                                                 ..Default::default()
                                                                                                             },
@@ -3606,6 +3750,8 @@ where
                                                                                                                 layout: LayoutStyle {
                                                                                                                     size: fret_ui::element::SizeStyle {
                                                                                                                         width: Length::Px(col_w),
+                                                                                                                        min_width: Some(col_w),
+                                                                                                                        max_width: Some(col_w),
                                                                                                                         height: Length::Fill,
                                                                                                                         ..Default::default()
                                                                                                                     },
@@ -3667,6 +3813,8 @@ where
                                                                                                     layout: LayoutStyle {
                                                                                                         size: fret_ui::element::SizeStyle {
                                                                                                             width: Length::Px(col_w),
+                                                                                                            min_width: Some(col_w),
+                                                                                                            max_width: Some(col_w),
                                                                                                             ..Default::default()
                                                                                                         },
                                                                                                     flex: fret_ui::element::FlexItemStyle {
