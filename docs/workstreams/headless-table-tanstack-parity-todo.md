@@ -193,11 +193,13 @@ ColumnDef keys referenced by upstream feature implementations:
   - Done (parity-gated): header-group `header.getSize()` and `header.getStart()` semantics (including placeholder headers).
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json`
-- [~] HTP-size-030 Ensure size clamp semantics match TanStack (size/min/max + reset behaviors).
+- [x] HTP-size-030 Ensure size clamp semantics match TanStack (size/min/max + reset behaviors).
   - Done (parity-gated): `columnSizing` overrides + `minSize/maxSize` clamp on totals/offsets.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
-  - Remaining: reset behaviors parity (`resetSize` / table-level resets).
+  - Done (parity-gated): reset behaviors (`column.resetSize()`, `table.resetColumnSizing()`, `table.resetHeaderSizeInfo()`).
+    - Snapshots: `colsize_reset_column_size_removes_override`, `colsize_reset_column_sizing_default_true_clears`,
+      `colsize_reset_column_sizing_restores_initial`, `colsize_reset_header_size_info_default_true_clears`.
 - [~] HTP-size-040 Align `columnSizingInfo` fields (isResizing, deltaOffset, etc.) and transitions.
   - Done (parity-gated): basic resize lifecycle + `onChange` vs `onEnd` write timing (LTR).
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
