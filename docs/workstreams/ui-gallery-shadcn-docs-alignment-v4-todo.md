@@ -52,17 +52,17 @@ For each page:
 
 Component checklist (canonical order from `radix/meta.json`):
 
-- [ ] accordion
+- [~] accordion — examples mirrored; parity still under audit (`apps/fret-ui-gallery/src/ui.rs::preview_accordion`)
 - [ ] alert
 - [ ] alert-dialog
 - [ ] aspect-ratio
 - [ ] avatar
-- [ ] badge
+- [~] badge — examples mirrored; missing upstream variants (`apps/fret-ui-gallery/src/ui.rs::preview_badge`)
 - [ ] breadcrumb
 - [~] button (page examples re-ordered + expanded; still validating interactions)
-- [ ] button-group
-- [ ] calendar
-- [ ] card
+- [x] button-group — examples mirrored (`apps/fret-ui-gallery/src/ui.rs::preview_button_group`)
+- [~] calendar — chrome/layout audited; example order TBD (`apps/fret-ui-gallery/src/ui.rs::preview_calendar`)
+- [x] card — examples mirrored + size/action slots (`apps/fret-ui-gallery/src/ui.rs::preview_card`, `ecosystem/fret-ui-shadcn/src/card.rs`)
 - [ ] carousel
 - [ ] chart
 - [ ] checkbox
@@ -131,6 +131,10 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] SGD-bug-040 Card preview text vertical alignment jitter when switching pages.
 - [x] SGD-bug-050 Calendar “blank space to the right”: confirmed calendar examples are narrow in web goldens (expected whitespace in wide viewports).
 - [x] SGD-bug-060 Switch thumb vertical centering: covered by `Switch` unit + web golden geometry tests (no repro in automated checks).
+- [!] SGD-bug-070 Menubar hover highlight background mismatches web goldens (fails in nextest).
+  - Failing tests: `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark`, `web_vs_fret_menubar_demo_highlighted_item_chrome_matches_web_dark_mobile_tiny_viewport`.
+  - Hypothesis: hover visuals not applied (panel background quad selected instead of row highlight quad).
+  - Next: verify capture/backdrop layering and confirm `PressableState.hovered` transitions for menu rows.
 
 ---
 
