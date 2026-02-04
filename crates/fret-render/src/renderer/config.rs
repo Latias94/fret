@@ -53,6 +53,13 @@ impl Renderer {
         Some(snap)
     }
 
+    pub fn take_last_frame_perf_snapshot(&mut self) -> Option<RenderPerfSnapshot> {
+        if !self.perf_enabled {
+            return None;
+        }
+        self.last_frame_perf.take()
+    }
+
     pub fn set_svg_perf_enabled(&mut self, enabled: bool) {
         self.svg_perf_enabled = enabled;
         self.svg_perf = SvgPerfStats::default();

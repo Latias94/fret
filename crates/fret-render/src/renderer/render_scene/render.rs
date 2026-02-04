@@ -2590,6 +2590,43 @@ impl Renderer {
                 .perf
                 .scene_encoding_cache_misses
                 .saturating_add(frame_perf.scene_encoding_cache_misses);
+
+            self.last_frame_perf = Some(RenderPerfSnapshot {
+                frames: frame_perf.frames,
+                encode_scene_us: frame_perf.encode_scene.as_micros() as u64,
+                prepare_svg_us: frame_perf.prepare_svg.as_micros() as u64,
+                prepare_text_us: frame_perf.prepare_text.as_micros() as u64,
+                draw_calls: frame_perf.draw_calls,
+                quad_draw_calls: frame_perf.quad_draw_calls,
+                viewport_draw_calls: frame_perf.viewport_draw_calls,
+                image_draw_calls: frame_perf.image_draw_calls,
+                text_draw_calls: frame_perf.text_draw_calls,
+                path_draw_calls: frame_perf.path_draw_calls,
+                mask_draw_calls: frame_perf.mask_draw_calls,
+                fullscreen_draw_calls: frame_perf.fullscreen_draw_calls,
+                clip_mask_draw_calls: frame_perf.clip_mask_draw_calls,
+                pipeline_switches: frame_perf.pipeline_switches,
+                pipeline_switches_quad: frame_perf.pipeline_switches_quad,
+                pipeline_switches_viewport: frame_perf.pipeline_switches_viewport,
+                pipeline_switches_mask: frame_perf.pipeline_switches_mask,
+                pipeline_switches_text_mask: frame_perf.pipeline_switches_text_mask,
+                pipeline_switches_text_color: frame_perf.pipeline_switches_text_color,
+                pipeline_switches_text_subpixel: frame_perf.pipeline_switches_text_subpixel,
+                pipeline_switches_path: frame_perf.pipeline_switches_path,
+                pipeline_switches_path_msaa: frame_perf.pipeline_switches_path_msaa,
+                pipeline_switches_composite: frame_perf.pipeline_switches_composite,
+                pipeline_switches_fullscreen: frame_perf.pipeline_switches_fullscreen,
+                pipeline_switches_clip_mask: frame_perf.pipeline_switches_clip_mask,
+                bind_group_switches: frame_perf.bind_group_switches,
+                uniform_bind_group_switches: frame_perf.uniform_bind_group_switches,
+                texture_bind_group_switches: frame_perf.texture_bind_group_switches,
+                scissor_sets: frame_perf.scissor_sets,
+                uniform_bytes: frame_perf.uniform_bytes,
+                instance_bytes: frame_perf.instance_bytes,
+                vertex_bytes: frame_perf.vertex_bytes,
+                scene_encoding_cache_hits: frame_perf.scene_encoding_cache_hits,
+                scene_encoding_cache_misses: frame_perf.scene_encoding_cache_misses,
+            });
         }
 
         let cmd = encoder.finish();

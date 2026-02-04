@@ -316,6 +316,7 @@ impl Renderer {
             svg_perf: SvgPerfStats::default(),
             perf_enabled: false,
             perf: RenderPerfStats::default(),
+            last_frame_perf: None,
             render_scene_frame_index: 0,
             path_msaa_samples: 4,
             debug_offscreen_blit_enabled: false,

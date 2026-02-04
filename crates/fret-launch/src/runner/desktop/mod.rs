@@ -278,6 +278,11 @@ impl<D: WinitAppDriver> WinitAppDriver for HookedDriver<D> {
     }
 
     fn gpu_ready(&mut self, app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
+        let diag_renderer_perf =
+            std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
+        if diag_renderer_perf {
+            renderer.set_perf_enabled(true);
+        }
         if let Some(hook) = self.on_gpu_ready.take() {
             hook(app, context, renderer);
         }

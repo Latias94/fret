@@ -177,6 +177,7 @@ pub struct Renderer {
 
     perf_enabled: bool,
     perf: RenderPerfStats,
+    last_frame_perf: Option<RenderPerfSnapshot>,
     render_scene_frame_index: u64,
 
     path_msaa_samples: u32,

@@ -2436,10 +2436,15 @@ impl UiDiagnosticsService {
             })
         };
 
+        let renderer_perf = app
+            .global::<fret_render::RendererPerfFrameStore>()
+            .and_then(|store| store.latest_for_window(window));
+
         let mut debug = UiTreeDebugSnapshotV1::from_tree(
             app,
             window,
             ui,
+            renderer_perf,
             element_runtime,
             hit_test,
             element_diag,
@@ -4053,6 +4058,7 @@ impl UiTreeDebugSnapshotV1 {
         app: &App,
         window: AppWindowId,
         ui: &UiTree<App>,
+        renderer_perf: Option<fret_render::RendererPerfFrameSample>,
         element_runtime_state: Option<&ElementRuntime>,
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
@@ -4065,7 +4071,7 @@ impl UiTreeDebugSnapshotV1 {
             .copied()
             .collect();
         Self {
-            stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
+            stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
                 .debug_invalidation_walks()
                 .iter()
@@ -6185,11 +6191,52 @@ pub struct UiFrameStatsV1 {
     pub retained_virtual_list_detached_items: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
+
+    // Renderer (wgpu) perf sample (best-effort; may be absent or lag a frame).
+    #[serde(default)]
+    pub renderer_tick_id: u64,
+    #[serde(default)]
+    pub renderer_frame_id: u64,
+    #[serde(default)]
+    pub renderer_frames: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_svg_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_us: u64,
+    #[serde(default)]
+    pub renderer_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_text_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_quad_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_mask_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_pipeline_switches: u64,
+    #[serde(default)]
+    pub renderer_bind_group_switches: u64,
+    #[serde(default)]
+    pub renderer_scissor_sets: u64,
+    #[serde(default)]
+    pub renderer_uniform_bytes: u64,
+    #[serde(default)]
+    pub renderer_instance_bytes: u64,
+    #[serde(default)]
+    pub renderer_vertex_bytes: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_misses: u64,
 }
 
 impl UiFrameStatsV1 {
-    fn from_stats(stats: UiDebugFrameStats) -> Self {
-        Self {
+    fn from_stats(
+        stats: UiDebugFrameStats,
+        renderer_perf: Option<fret_render::RendererPerfFrameSample>,
+    ) -> Self {
+        let mut out = Self {
             frame_arena_capacity_estimate_bytes: stats.frame_arena_capacity_estimate_bytes,
             frame_arena_grow_events: stats.frame_arena_grow_events,
             element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
@@ -6278,7 +6325,48 @@ impl UiFrameStatsV1 {
             retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
+            renderer_tick_id: 0,
+            renderer_frame_id: 0,
+            renderer_frames: 0,
+            renderer_encode_scene_us: 0,
+            renderer_prepare_svg_us: 0,
+            renderer_prepare_text_us: 0,
+            renderer_draw_calls: 0,
+            renderer_text_draw_calls: 0,
+            renderer_quad_draw_calls: 0,
+            renderer_mask_draw_calls: 0,
+            renderer_pipeline_switches: 0,
+            renderer_bind_group_switches: 0,
+            renderer_scissor_sets: 0,
+            renderer_uniform_bytes: 0,
+            renderer_instance_bytes: 0,
+            renderer_vertex_bytes: 0,
+            renderer_scene_encoding_cache_hits: 0,
+            renderer_scene_encoding_cache_misses: 0,
+        };
+
+        if let Some(sample) = renderer_perf {
+            out.renderer_tick_id = sample.tick_id;
+            out.renderer_frame_id = sample.frame_id;
+            out.renderer_frames = sample.perf.frames;
+            out.renderer_encode_scene_us = sample.perf.encode_scene_us;
+            out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
+            out.renderer_prepare_text_us = sample.perf.prepare_text_us;
+            out.renderer_draw_calls = sample.perf.draw_calls;
+            out.renderer_text_draw_calls = sample.perf.text_draw_calls;
+            out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
+            out.renderer_mask_draw_calls = sample.perf.mask_draw_calls;
+            out.renderer_pipeline_switches = sample.perf.pipeline_switches;
+            out.renderer_bind_group_switches = sample.perf.bind_group_switches;
+            out.renderer_scissor_sets = sample.perf.scissor_sets;
+            out.renderer_uniform_bytes = sample.perf.uniform_bytes;
+            out.renderer_instance_bytes = sample.perf.instance_bytes;
+            out.renderer_vertex_bytes = sample.perf.vertex_bytes;
+            out.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
+            out.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
         }
+
+        out
     }
 }
 
