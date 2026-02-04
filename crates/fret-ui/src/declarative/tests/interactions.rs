@@ -4128,6 +4128,93 @@ fn pressable_clears_pressed_and_releases_capture_on_move_without_buttons() {
 }
 
 #[test]
+fn pressable_clears_pressed_state_when_element_is_removed() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let pressable_element_id_cell: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let pressable_element_id_cell_for_render = pressable_element_id_cell.clone();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clear-pressed-on-unmount",
+        move |cx| {
+            let pressable_element_id_cell = pressable_element_id_cell_for_render.clone();
+            vec![cx.pressable_with_id(
+                crate::element::PressableProps::default(),
+                move |cx, _state, id| {
+                    pressable_element_id_cell.set(Some(id));
+                    vec![cx.text("pressable")]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pressable_node = ui.children(root)[0];
+    let pressable_element_id = pressable_element_id_cell
+        .get()
+        .expect("missing pressable element id");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let inside = Point::new(
+        Px(pressable_bounds.origin.x.0 + 1.0),
+        Px(pressable_bounds.origin.y.0 + 1.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        crate::elements::is_pressed_pressable(&mut app, window, pressable_element_id),
+        "expected pressable to be pressed after pointer down"
+    );
+
+    // Drop the pressable element without sending pointer up/cancel events (e.g. overlay closes).
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clear-pressed-on-unmount",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(
+        !crate::elements::is_pressed_pressable(&mut app, window, pressable_element_id),
+        "expected pressed state to clear when the element is removed"
+    );
+}
+
+#[test]
 fn pressable_on_hover_change_hook_runs_on_pointer_move() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

@@ -544,7 +544,7 @@ impl WinitAppDriver for TableStressDriver {
                         .unwrap_or("<none>");
                     let global_filter = global_filter
                         .as_ref()
-                        .map(|v| v.as_str().unwrap_or("<non-string>"))
+                        .and_then(|v| v.as_str())
                         .unwrap_or("<none>");
 
                     let header: Arc<str> = Arc::from(format!(

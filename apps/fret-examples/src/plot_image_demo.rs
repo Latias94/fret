@@ -178,7 +178,6 @@ impl WinitAppDriver for PlotImageDemoDriver {
         );
         if image != state.image {
             state.image = image;
-            let image = state.image;
             let _ = app.models_mut().update(&state.plot_state, |s| {
                 s.overlays.images.clear();
                 if let Some(image) = image {
