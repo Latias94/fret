@@ -214,11 +214,11 @@ Perf acceptance:
 
 - [ ] Pointer-move heavy cases should stay paint-only (no layout) unless explicitly required.
 - [ ] Hit-test CPU time should be bounded as node count scales.
-- [ ] Ensure the perf log captures pointer-move dispatch/hit-test costs (not just “top frame” totals).
+- [x] Ensure the perf log captures pointer-move dispatch/hit-test costs (not just “top frame” totals).
   - Today, `perf_log.py` reports “top frame” metrics for each run, which can show `dispatch=0` for probes
     where the worst total frame is a non-dispatch settle/selector frame.
-  - Proposed: extend `perf_log.py` (or add a sibling helper) to compute per-run max `dispatch_time_us` and
-    per-run max `hit_test_time_us` from bundle frames where `dispatch_events > 0`.
+  - `tools/perf/perf_log.py` now emits a derived “Pointer-move frames” section by scanning the run bundles and
+    summarizing per-run maxima over frames where `dispatch_events > 0`.
 - [x] Eliminate changed-but-unobserved global churn in hover-only pointer-move probes.
   - Current hotspots reported by `fretboard diag stats`: `WindowInputContextService`,
     `WindowCommandActionAvailabilityService` (often changed but unobserved).

@@ -67,6 +67,13 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
     for row in rows:
         script = _rel_script_path(str(row.get("script", "")), repo_root)
         stats = row.get("stats", {}) or {}
+        runs = row.get("runs", []) or []
+        bundles: List[str] = []
+        for run in runs:
+            if isinstance(run, dict):
+                bundle = run.get("bundle")
+                if bundle:
+                    bundles.append(str(bundle))
 
         def get_stats(name: str) -> Dict[str, int]:
             raw = stats.get(name, {}) or {}
@@ -135,11 +142,108 @@ def _summarize_rows(perf: Dict[str, Any], repo_root: Path) -> List[Dict[str, Any
                 "churn": churn,
                 "worst_us": int(worst_us or 0),
                 "worst_bundle": str(worst_bundle or ""),
+                "bundles": bundles,
             }
         )
 
     out.sort(key=lambda r: r["script"])
     return out
+
+
+def _p50_p95_max(values: List[int]) -> Tuple[int, int, int]:
+    if not values:
+        return (0, 0, 0)
+    s = sorted(values)
+    n = len(s)
+
+    def pick(q: float) -> int:
+        idx = int(round((n - 1) * q))
+        idx = max(0, min(n - 1, idx))
+        return int(s[idx])
+
+    return (pick(0.5), pick(0.95), int(s[-1]))
+
+
+def _extract_pointer_move_frame_ids(bundle: Dict[str, Any]) -> List[int]:
+    frame_ids: List[int] = []
+    for w in bundle.get("windows", []) or []:
+        if not isinstance(w, dict):
+            continue
+        for e in w.get("events", []) or []:
+            if not isinstance(e, dict):
+                continue
+            if e.get("kind") == "pointer.move" and isinstance(e.get("frame_id"), int):
+                frame_ids.append(int(e["frame_id"]))
+    return frame_ids
+
+
+def _derive_pointer_move_metrics_from_bundle(
+    *,
+    bundle_path: Path,
+    repo_root: Path,
+) -> Optional[Dict[str, Any]]:
+    try:
+        bundle = json.loads(bundle_path.read_text(encoding="utf-8", errors="replace"))
+    except Exception:
+        return None
+
+    pointer_move_frame_ids = set(_extract_pointer_move_frame_ids(bundle))
+
+    max_dispatch_us = 0
+    max_hit_test_us = 0
+    snapshots_with_global_changes = 0
+
+    for w in bundle.get("windows", []) or []:
+        if not isinstance(w, dict):
+            continue
+
+        for s in w.get("snapshots", []) or []:
+            if not isinstance(s, dict):
+                continue
+            frame_id = s.get("frame_id")
+            if not isinstance(frame_id, int):
+                continue
+
+            debug = s.get("debug")
+            if not isinstance(debug, dict):
+                continue
+            stats = debug.get("stats")
+            if not isinstance(stats, dict):
+                continue
+
+            dispatch_events = stats.get("dispatch_events")
+            if not isinstance(dispatch_events, int):
+                dispatch_events = 0
+
+            if pointer_move_frame_ids:
+                # Real pointer-move frames. Keep the filter consistent with existing manual analysis:
+                # only consider frames that actually dispatched events.
+                if frame_id not in pointer_move_frame_ids or dispatch_events <= 0:
+                    continue
+            else:
+                # Fallback when the event log is missing: treat “dispatch frames” as the target set.
+                if dispatch_events <= 0:
+                    continue
+
+            dispatch_us = stats.get("dispatch_time_us")
+            if isinstance(dispatch_us, int):
+                max_dispatch_us = max(max_dispatch_us, dispatch_us)
+
+            hit_test_us = stats.get("hit_test_time_us")
+            if isinstance(hit_test_us, int):
+                max_hit_test_us = max(max_hit_test_us, hit_test_us)
+
+            global_change_globals = stats.get("global_change_globals")
+            if isinstance(global_change_globals, int) and global_change_globals > 0:
+                snapshots_with_global_changes += 1
+
+    return {
+        "pointer_move_frames_present": bool(pointer_move_frame_ids),
+        "max_dispatch_time_us": int(max_dispatch_us),
+        "max_hit_test_time_us": int(max_hit_test_us),
+        "snapshots_with_global_changes": int(snapshots_with_global_changes),
+        "bundle": _rel_script_path(str(bundle_path), repo_root),
+    }
 
 
 def _format_entry_markdown(
@@ -205,6 +309,59 @@ def _format_entry_markdown(
             )
         )
     lines.append("")
+
+    # Derived “pointer move” (or “dispatch frame”) costs. This avoids the common distortion where the
+    # worst top frame is a non-dispatch settle/selector frame, making p95 dispatch/hit_test appear as 0.
+    for r in rows:
+        bundles = r.get("bundles") or []
+        if not bundles:
+            continue
+
+        derived: List[Dict[str, Any]] = []
+        for b in bundles:
+            try:
+                bp = Path(b)
+                if not bp.is_absolute():
+                    bp = repo_root / bp
+            except Exception:
+                continue
+            m = _derive_pointer_move_metrics_from_bundle(bundle_path=bp, repo_root=repo_root)
+            if m:
+                derived.append(m)
+
+        if not derived:
+            continue
+
+        dispatch_maxes = [int(x.get("max_dispatch_time_us", 0) or 0) for x in derived]
+        hit_test_maxes = [int(x.get("max_hit_test_time_us", 0) or 0) for x in derived]
+        global_change_counts = [int(x.get("snapshots_with_global_changes", 0) or 0) for x in derived]
+
+        p50_d, p95_d, max_d = _p50_p95_max(dispatch_maxes)
+        p50_h, p95_h, max_h = _p50_p95_max(hit_test_maxes)
+        p50_gc, p95_gc, max_gc = _p50_p95_max(global_change_counts)
+
+        worst_dispatch = max(derived, key=lambda x: int(x.get("max_dispatch_time_us", 0) or 0))
+        worst_hit_test = max(derived, key=lambda x: int(x.get("max_hit_test_time_us", 0) or 0))
+
+        mode = (
+            "Pointer-move frames"
+            if any(x.get("pointer_move_frames_present") for x in derived)
+            else "Dispatch frames"
+        )
+
+        lines.append("Notes:")
+        lines.append(
+            f"- {mode} (derived from bundle snapshots; per-run **max** over frames where `dispatch_events > 0`; us):"
+        )
+        lines.append(f"  - `dispatch_time_us`: `{p50_d} / {p95_d} / {max_d}` (p50 / p95 / max)")
+        lines.append(f"  - `hit_test_time_us`: `{p50_h} / {p95_h} / {max_h}` (p50 / p95 / max)")
+        lines.append(
+            f"  - `snapshots_with_global_changes` (within that frame set): `{p50_gc} / {p95_gc} / {max_gc}` (p50 / p95 / max)"
+        )
+        lines.append(f"  - Worst dispatch bundle: `{worst_dispatch.get('bundle','')}`")
+        lines.append(f"  - Worst hit-test bundle: `{worst_hit_test.get('bundle','')}`")
+        lines.append("")
+        break
 
     lines.append("Churn signals (top frame; p95/max):")
     lines.append(
