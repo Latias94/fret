@@ -172,6 +172,10 @@ Correctness acceptance:
     - `--max-pointer-move-dispatch-us`, `--max-pointer-move-hit-test-us`,
       `--max-pointer-move-global-changes` (fretboard `diag perf`)
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `6da92d3d`.
+  - TODO: Investigate occasional flakiness when running this gate with `--reuse-launch --repeat 7`
+    (observed: a run gets stuck early in the script, e.g. `set_window_inner_size`).
+    Short-term workaround: use `--repeat 3` for local iteration and keep a stable Tier B gate at repeat=7 once the
+    harness is robust.
 - [x] Eliminate changed-but-unobserved model churn on pointer-move frames.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dd1a22e8` shows pointer-move
     frames with `changed_models=2` and `propagated_model_change_unobserved_models=2` while remaining paint-only.

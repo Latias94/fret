@@ -147,6 +147,7 @@ Run a pointer-move gate (dispatch / hit-test; “Zed feel” hot path):
 ```powershell
 cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json ^
   --dir target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate ^
+  --timeout-ms 300000 --poll-ms 100 ^
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json ^
   --max-pointer-move-dispatch-us 2000 ^
   --max-pointer-move-hit-test-us 1500 ^
@@ -155,6 +156,14 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-tortu
   --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 ^
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+Notes:
+
+- `fretboard diag perf` defaults `--timeout-ms 30000`. If `--launch -- cargo run ... --release` triggers a rebuild,
+  compilation alone can exceed 30s, so the suite can time out before the app even starts. Prefer passing an
+  explicit `--timeout-ms` (e.g. 300000).
+- If `--reuse-launch --repeat 7` is flaky on your machine, start with `--repeat 3` and record the results in the perf
+  log. Keep the “Tier B” gate at repeat=7 once the harness is stable.
 
 Extract root cause from the worst bundle:
 

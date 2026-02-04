@@ -63,6 +63,27 @@ What is less transferable 1:1:
 For effect/renderer architecture, it is often more productive to cross-check against render-graph style engines
 (and existing large-scale UIs like Flutter/Skia) while using GPUI as the interaction + caching reference model.
 
+## 0.2 Profiling playbook (bottom-up, editor-class)
+
+To close the gap responsibly, treat perf as a contract and work from the “lowest primitives” upward:
+
+1) **Pick a single hot-path probe** (pointer move, wheel, resize, scroll) and gate it.
+   - Pointer move gate: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+   - Gate flags: `fretboard diag perf --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us/--max-pointer-move-global-changes`
+   - Extract derived pointer-move stats from a captured bundle via:
+     `fretboard diag triage <bundle.json> --json` (`stats.pointer_move.*`)
+2) **Explain tail latency** with bundles, not averages.
+   - Use `fretboard diag stats <bundle.json> --sort time --top 30` to find the heaviest frame and why it was heavy.
+3) **Separate CPU vs GPU** early.
+   - Use `fretboard diag repro ... --with tracy` / `--with renderdoc` (best-effort) to confirm whether a hitch is CPU
+     dispatch/layout/prepaint vs GPU encoding/upload/pipeline churn.
+4) **Focus on allocation discipline** as a first-order knob.
+   - If pointer move is not “paint-only”, treat it as a bug: eliminate model/global churn and per-event allocations
+     before attempting deeper algorithmic changes.
+
+This playbook is intentionally compatible with “fearless refactors”: each change should produce a measurable delta and
+an entry in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commit-addressable) so regressions are reversible.
+
 ## 1) What GPUI does that matters for smoothness
 
 The following are “load-bearing” for Zed feel. Each entry links to the GPUI reference location.
