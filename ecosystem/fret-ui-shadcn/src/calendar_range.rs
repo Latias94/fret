@@ -13,12 +13,15 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{ButtonSize, ButtonVariant};
-use crate::calendar::CalendarLocale;
+use crate::calendar::{
+    CalendarLocale, calendar_day_grid_row_edge_target_for_key, calendar_day_grid_step_for_key,
+};
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 use fret_ui_headless::calendar::{
@@ -502,6 +505,7 @@ impl CalendarRange {
                     };
 
                     let days_grid = cx.roving_flex(roving_props, move |cx| {
+                        let direction = direction_prim::use_direction_in_scope(cx, None);
                         let month_model = month_model_days.clone();
                         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
                             use fret_core::KeyCode;
@@ -511,13 +515,7 @@ impl CalendarRange {
                                 return RovingNavigateResult::NotHandled;
                             };
 
-                            let step = match it.key {
-                                KeyCode::ArrowLeft => Some(-1),
-                                KeyCode::ArrowRight => Some(1),
-                                KeyCode::ArrowUp => Some(-7),
-                                KeyCode::ArrowDown => Some(7),
-                                _ => None,
-                            };
+                            let step = calendar_day_grid_step_for_key(direction, it.key);
 
                             if let Some(step) = step {
                                 let next = (current as i32 + step)
@@ -526,20 +524,15 @@ impl CalendarRange {
                                 return RovingNavigateResult::Handled { target: Some(next) };
                             }
 
+                            if let Some(target) = calendar_day_grid_row_edge_target_for_key(
+                                direction, it.key, current, it.len,
+                            ) {
+                                return RovingNavigateResult::Handled {
+                                    target: Some(target),
+                                };
+                            }
+
                             match it.key {
-                                KeyCode::Home => {
-                                    let row_start = (current / 7) * 7;
-                                    RovingNavigateResult::Handled {
-                                        target: Some(row_start),
-                                    }
-                                }
-                                KeyCode::End => {
-                                    let row_start = (current / 7) * 7;
-                                    let row_end = (row_start + 6).min(it.len.saturating_sub(1));
-                                    RovingNavigateResult::Handled {
-                                        target: Some(row_end),
-                                    }
-                                }
                                 KeyCode::PageUp => {
                                     let _ = host.models_mut().update(&month_model, |m| {
                                         *m = m.prev_month();
@@ -1083,6 +1076,7 @@ fn calendar_range_month_view<H: UiHost>(
     };
 
     let days_grid = cx.roving_flex(roving_props, move |cx| {
+        let direction = direction_prim::use_direction_in_scope(cx, None);
         let month_model = month_model.clone();
         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
             use fret_core::KeyCode;
@@ -1092,13 +1086,7 @@ fn calendar_range_month_view<H: UiHost>(
                 return RovingNavigateResult::NotHandled;
             };
 
-            let step = match it.key {
-                KeyCode::ArrowLeft => Some(-1),
-                KeyCode::ArrowRight => Some(1),
-                KeyCode::ArrowUp => Some(-7),
-                KeyCode::ArrowDown => Some(7),
-                _ => None,
-            };
+            let step = calendar_day_grid_step_for_key(direction, it.key);
 
             if let Some(step) = step {
                 let next =
@@ -1106,20 +1094,15 @@ fn calendar_range_month_view<H: UiHost>(
                 return RovingNavigateResult::Handled { target: Some(next) };
             }
 
+            if let Some(target) =
+                calendar_day_grid_row_edge_target_for_key(direction, it.key, current, it.len)
+            {
+                return RovingNavigateResult::Handled {
+                    target: Some(target),
+                };
+            }
+
             match it.key {
-                KeyCode::Home => {
-                    let row_start = (current / 7) * 7;
-                    RovingNavigateResult::Handled {
-                        target: Some(row_start),
-                    }
-                }
-                KeyCode::End => {
-                    let row_start = (current / 7) * 7;
-                    let row_end = (row_start + 6).min(it.len.saturating_sub(1));
-                    RovingNavigateResult::Handled {
-                        target: Some(row_end),
-                    }
-                }
                 KeyCode::PageUp => {
                     let _ = host.models_mut().update(&month_model, |m| {
                         *m = m.prev_month();

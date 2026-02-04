@@ -115,24 +115,11 @@ pub(crate) fn sidebar_view(
                 }
 
                 let is_selected = selected == item.id;
-                let variant = if is_selected {
-                    shadcn::ButtonVariant::Secondary
-                } else {
-                    shadcn::ButtonVariant::Ghost
-                };
 
                 group_items.push(cx.keyed(item.id, |cx| {
                     let selected_page_for_activate = selected_page.clone();
                     let workspace_tabs_for_activate = workspace_tabs.clone();
                     let page_id_for_activate: Arc<str> = Arc::from(item.id);
-
-                    let mut button = shadcn::Button::new(item.label)
-                        .variant(variant)
-                        .on_click(item.command)
-                        .refine_layout(LayoutRefinement::default().w_full());
-
-                    button =
-                        button.test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")));
 
                     let on_activate: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
@@ -155,9 +142,13 @@ pub(crate) fn sidebar_view(
                                 action_cx.window,
                             ));
                         });
-                    button = button.on_activate(on_activate);
-
-                    button.into_element(cx)
+                    shadcn::SidebarMenuButton::new(item.label)
+                        .active(is_selected)
+                        .collapsed(false)
+                        .on_click(item.command)
+                        .on_activate(on_activate)
+                        .test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")))
+                        .into_element(cx)
                 }));
             }
 
@@ -10245,13 +10236,47 @@ fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
 fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     cx.keyed("ui_gallery.slider_page", |cx| {
+        #[derive(Default)]
+        struct SliderPageState {
+            last_commit: Option<Model<Vec<f32>>>,
+        }
+
+        let last_commit = cx.with_state(SliderPageState::default, |st| st.last_commit.clone());
+        let last_commit = match last_commit {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(Vec::<f32>::new());
+                cx.with_state(SliderPageState::default, |st| {
+                    st.last_commit = Some(model.clone());
+                });
+                model
+            }
+        };
+
         let single = cx.keyed("ui_gallery.slider.single", |cx| {
+            let last_commit_for_cb = last_commit.clone();
             shadcn::Slider::new_controllable(cx, None, || vec![35.0])
                 .range(0.0, 100.0)
                 .test_id("ui-gallery-slider-single")
                 .a11y_label("Single value slider")
+                .on_value_commit(move |host, _cx, values| {
+                    let _ = host.models_mut().update(&last_commit_for_cb, |v| {
+                        *v = values;
+                    });
+                })
                 .into_element(cx)
         });
+
+        let last_commit_values = cx
+            .watch_model(&last_commit)
+            .layout()
+            .cloned()
+            .unwrap_or_default();
+        let last_commit_text = if last_commit_values.is_empty() {
+            "<none>".to_string()
+        } else {
+            format!("{last_commit_values:?}")
+        };
 
         let range = cx.keyed("ui_gallery.slider.range", |cx| {
             shadcn::Slider::new_controllable(cx, None, || vec![20.0, 80.0])
@@ -10270,13 +10295,48 @@ fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 .into_element(cx)
         });
 
+        let inverted = cx.keyed("ui_gallery.slider.inverted", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+                .range(0.0, 100.0)
+                .inverted(true)
+                .test_id("ui-gallery-slider-inverted")
+                .a11y_label("Inverted slider")
+                .into_element(cx)
+        });
+
+        let rtl = cx.keyed("ui_gallery.slider.rtl", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+                .range(0.0, 100.0)
+                .dir(fret_ui_kit::primitives::direction::LayoutDirection::Rtl)
+                .test_id("ui-gallery-slider-rtl")
+                .a11y_label("RTL slider")
+                .into_element(cx)
+        });
+
+        let vertical = cx.keyed("ui_gallery.slider.vertical", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![60.0])
+                .range(0.0, 100.0)
+                .orientation(fret_ui_kit::primitives::slider::SliderOrientation::Vertical)
+                .refine_layout(LayoutRefinement::default().h_px(Px(176.0)))
+                .test_id("ui-gallery-slider-vertical")
+                .a11y_label("Vertical slider")
+                .into_element(cx)
+        });
+
         let items: Vec<AnyElement> = vec![
             cx.text("Single value"),
             single,
+            cx.text(format!("Last commit: {last_commit_text}")),
             cx.text("Range (two thumbs)"),
             range,
             cx.text("Disabled"),
             disabled,
+            cx.text("Inverted"),
+            inverted,
+            cx.text("RTL"),
+            rtl,
+            cx.text("Vertical"),
+            vertical,
         ];
 
         vec![

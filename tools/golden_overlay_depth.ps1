@@ -4,8 +4,10 @@ param(
   [switch]$TrackedOnly,
   [bool]$NormalizeOpenSuffix = $true,
   [string]$GateKind = "menu-height",
+  [ValidateSet("menu-list", "all-overlays")]
+  [string]$OverlayFamily = "menu-list",
   [string]$ConstrainedViewportToken = "vp375x240",
-  [string]$FilterKeyRegex = "(menu|dropdown|select|combobox|command)",
+  [string]$FilterKeyRegex,
   [string]$ExcludeKeyRegex = "(focus-first|highlight-first|then-hover)",
   [string]$DumpKey,
   [int]$TopMissing = 50,
@@ -16,6 +18,19 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+if (-not $FilterKeyRegex -or $FilterKeyRegex.Trim().Length -eq 0) {
+  switch ($OverlayFamily) {
+    "menu-list" {
+      $FilterKeyRegex = "(menu|dropdown|select|combobox|command)"
+      break
+    }
+    "all-overlays" {
+      $FilterKeyRegex = "(menu|dropdown|select|combobox|command|popover|tooltip|hover-card|dialog|alert-dialog|sheet|drawer|calendar|date-picker)"
+      break
+    }
+  }
+}
 
 function Resolve-RepoRoot([string]$startDir) {
   $dir = (Resolve-Path $startDir).Path
@@ -91,6 +106,8 @@ function Detect-GateKinds([string]$testName, [string]$gateKind) {
   switch ($gateKind) {
     "menu-height" {
       if ($testName -match "panel_size") { $kinds += "panel-size" }
+      if ($testName -match "panel_height") { $kinds += "panel-height" }
+      if ($testName -match "panel_rect") { $kinds += "panel-rect" }
       if ($testName -match "menu_item_height") { $kinds += "menu-item-height" }
       if ($testName -match "listbox_height") { $kinds += "listbox-height" }
       if ($testName -match "option_height") { $kinds += "listbox-option-height" }
@@ -170,6 +187,8 @@ function Has-MenuHeightGate([string]$key) {
   $kinds = $gateKindsByKey[$key]
   return $kinds.Contains("wheel-scroll") -or
     $kinds.Contains("panel-size") -or
+    $kinds.Contains("panel-height") -or
+    $kinds.Contains("panel-rect") -or
     $kinds.Contains("viewport-height") -or
     $kinds.Contains("menu-item-height") -or
     $kinds.Contains("listbox-height") -or
