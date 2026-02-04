@@ -73,6 +73,8 @@ Both overlays must contribute a stable semantics surface:
 
 - each overlay emits a semantics node with a stable `test_id`,
 - each overlay provides a human-readable label (at least “Controls” / “MiniMap”).
+- each overlay is focusable and reachable via focus traversal (e.g. Tab -> `focus.next`), and
+  Escape returns focus to the canvas node.
 
 Per-button semantics for the controls overlay is intentionally out of scope for this baseline and
 may be added later via a dedicated composite widget.

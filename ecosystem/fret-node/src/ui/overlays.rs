@@ -1071,6 +1071,10 @@ impl NodeGraphControlsOverlay {
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
     fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
         let (w, h) = self.panel_size_px();
         Size::new(Px(w), Px(h))
@@ -1515,6 +1519,10 @@ impl NodeGraphMiniMapOverlay {
 }
 
 impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
+    fn is_focusable(&self) -> bool {
+        true
+    }
+
     fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
         let w = self.style.minimap_width.max(0.0);
         let h = self.style.minimap_height.max(0.0);

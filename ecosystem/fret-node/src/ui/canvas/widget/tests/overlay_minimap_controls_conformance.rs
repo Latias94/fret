@@ -5,7 +5,11 @@ use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px,
     Rect, Size,
 };
-use fret_runtime::{CommandId, Effect};
+use fret_runtime::ui_host::GlobalsHost as _;
+use fret_runtime::{
+    BindingV1, CommandId, Effect, KeySpecV1, Keymap, KeymapFileV1, KeymapService,
+    PlatformCapabilities,
+};
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
@@ -97,6 +101,25 @@ fn controls_panel_rect(bounds: Rect, style: &NodeGraphStyle) -> Rect {
         Point::new(Px(x), Px(y)),
         Size::new(Px(panel_w), Px(panel_h)),
     )
+}
+
+fn install_tab_focus_next_keymap(host: &mut TestUiHostImpl) {
+    host.set_global(PlatformCapabilities::default());
+    host.set_global(KeymapService {
+        keymap: Keymap::from_v1(KeymapFileV1 {
+            keymap_version: 1,
+            bindings: vec![BindingV1 {
+                command: Some("focus.next".into()),
+                platform: None,
+                when: None,
+                keys: KeySpecV1 {
+                    mods: vec![],
+                    key: "Tab".into(),
+                },
+            }],
+        })
+        .expect("valid keymap"),
+    });
 }
 
 #[test]
@@ -336,6 +359,113 @@ fn controls_overlay_escape_returns_focus_to_canvas_without_dispatching_command()
         "expected Escape to only change focus, not dispatch commands"
     );
     assert_eq!(ui.focus(), Some(underlay));
+}
+
+#[test]
+fn tab_focus_traversal_reaches_controls_then_minimap_and_escape_returns_to_canvas() {
+    #[derive(Default)]
+    struct FocusableUnderlay;
+
+    impl<H: fret_ui::UiHost> fret_ui::retained_bridge::Widget<H> for FocusableUnderlay {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn layout(&mut self, cx: &mut fret_ui::retained_bridge::LayoutCx<'_, H>) -> Size {
+            cx.bounds.size
+        }
+    }
+
+    let mut host = TestUiHostImpl::default();
+    install_tab_focus_next_keymap(&mut host);
+
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let underlay = ui.create_node_retained(FocusableUnderlay::default());
+
+    let view = host.models.insert(NodeGraphViewState::default());
+    let controls = NodeGraphControlsOverlay::new(underlay, view.clone(), test_style());
+    let controls_node = ui.create_node_retained(controls);
+
+    let style = test_style();
+    let graph_value = Graph::new(GraphId::new());
+    let graph = host.models.insert(graph_value.clone());
+
+    let internals = Arc::new(NodeGraphInternalsStore::new());
+    let mut snap = NodeGraphInternalsSnapshot::default();
+    snap.transform.bounds_size = bounds().size;
+    internals.update(snap);
+
+    let minimap = NodeGraphMiniMapOverlay::new(underlay, graph, view, internals, style);
+    let minimap_node = ui.create_node_retained(minimap);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, controls_node, minimap_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(underlay));
+    assert_eq!(ui.focus(), Some(underlay));
+
+    // Tab should emit focus.next via the keymap, then the command should move focus.
+    host.effects.clear();
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Tab,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert!(
+        host.effects.iter().any(|e| matches!(
+            e,
+            Effect::Command { command, .. } if *command == CommandId::from("focus.next")
+        )),
+        "expected Tab to emit focus.next"
+    );
+    let _ = ui.dispatch_command(&mut host, &mut services, &CommandId::from("focus.next"));
+    assert_eq!(ui.focus(), Some(controls_node));
+
+    host.effects.clear();
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Tab,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    let _ = ui.dispatch_command(&mut host, &mut services, &CommandId::from("focus.next"));
+    assert_eq!(
+        ui.focus(),
+        Some(minimap_node),
+        "expected traversal order to reach minimap after controls"
+    );
+
+    // Escape should be handled by the minimap overlay and restore focus to the canvas node.
+    host.effects.clear();
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    assert_eq!(ui.focus(), Some(underlay));
+    assert!(
+        !host
+            .effects
+            .iter()
+            .any(|e| matches!(e, Effect::Command { .. })),
+        "expected Escape to only change focus, not dispatch commands"
+    );
 }
 
 #[test]
