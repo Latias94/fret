@@ -6117,7 +6117,10 @@ fn check_out_dir_for_pixels_changed(
         let bounds =
             match find_semantics_bounds_for_test_id(&bundle, window, tick_id, frame_id, test_id) {
                 Some(r) => r,
-                None => continue,
+                None => match find_semantics_bounds_for_test_id_latest(&bundle, window, test_id) {
+                    Some(r) => r,
+                    None => continue,
+                },
             };
 
         let img = image::ImageReader::open(&screenshot_path)
@@ -6244,6 +6247,42 @@ fn find_semantics_bounds_for_test_id(
     let snap = snaps.iter().find(|s| {
         s.get("tick_id").and_then(|v| v.as_u64()) == Some(tick_id)
             && s.get("frame_id").and_then(|v| v.as_u64()) == Some(frame_id)
+    })?;
+
+    let nodes = snap
+        .get("debug")
+        .and_then(|v| v.get("semantics"))
+        .and_then(|v| v.get("nodes"))
+        .and_then(|v| v.as_array())?;
+
+    let node = nodes
+        .iter()
+        .find(|n| n.get("test_id").and_then(|v| v.as_str()) == Some(test_id))?;
+
+    let bounds = node.get("bounds")?;
+    Some(RectF {
+        x: bounds.get("x").and_then(|v| v.as_f64()).unwrap_or(0.0),
+        y: bounds.get("y").and_then(|v| v.as_f64()).unwrap_or(0.0),
+        w: bounds.get("w").and_then(|v| v.as_f64()).unwrap_or(0.0),
+        h: bounds.get("h").and_then(|v| v.as_f64()).unwrap_or(0.0),
+    })
+}
+
+fn find_semantics_bounds_for_test_id_latest(
+    bundle: &serde_json::Value,
+    window: u64,
+    test_id: &str,
+) -> Option<RectF> {
+    let windows = bundle.get("windows").and_then(|v| v.as_array())?;
+    let w = windows
+        .iter()
+        .find(|w| w.get("window").and_then(|v| v.as_u64()) == Some(window))?;
+    let snaps = w.get("snapshots").and_then(|v| v.as_array())?;
+
+    let snap = snaps.iter().max_by_key(|s| {
+        s.get("timestamp_unix_ms")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0)
     })?;
 
     let nodes = snap

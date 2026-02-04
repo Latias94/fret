@@ -6,7 +6,6 @@ use fret_kit::interop::embedded_viewport as embedded;
 use fret_kit::prelude::*;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};
-use fret_ui::element::AnyElementIterExt as _;
 
 const CMD_ADD: &str = "todo-interop-kit.add";
 const CMD_CLEAR_DONE: &str = "todo-interop-kit.clear_done";

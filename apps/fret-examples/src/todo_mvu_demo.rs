@@ -490,7 +490,7 @@ fn todo_row(
         .on_click(remove_cmd)
         .children([icon::icon_with(
             cx,
-            IconId::new("lucide.trash-2"),
+            IconId::new("lucide.trash"),
             Some(Px(16.0)),
             Some(ColorRef::Color(theme.color_required("muted-foreground"))),
         )])
