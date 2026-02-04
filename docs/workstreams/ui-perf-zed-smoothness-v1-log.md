@@ -2381,3 +2381,52 @@ Worst overall:
 - script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
 - top_total_time_us: `20954`
 - bundle: `target/fret-diag-perf/2026-02-04-hit-test-stripes-move-sweep-1a9c1238-r1/1770217083405-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-04 23:31:02 (commit `d4adf37f`)
+
+Change:
+- perf(fret-ui): avoid global churn on hover moves
+
+Suite:
+- `ui-gallery-hit-test-torture-stripes-move-sweep-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json --dir target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-global-churn-gate --warmup-frames 5 --repeat 7 --sort time --top 15 --json --timeout-ms 300000 --poll-ms 200 --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Stdout:
+- `target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-global-churn-gate/stdout.txt`
+
+Results (us):
+| script | p50 total | p95 total | max total | p95 layout | p95 solve | p95 prepaint | p95 paint | p95 dispatch | p95 hit_test |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json | 19727 | 20720 | 20720 | 20363 | 0 | 0 | 417 | 0 | 0 |
+
+Notes:
+- This change targets “changed-but-unobserved global churn” on hover-only pointer moves:
+  - avoid publishing `WindowInputContextService` snapshots when unchanged,
+  - avoid publishing `WindowCommandActionAvailabilityService` snapshots on hover-only moves.
+- As with prior entries, the “top frame” totals are dominated by a non-dispatch settle/mount frame, so `p95 dispatch`
+  / `p95 hit_test` can appear as `0` in the table above.
+
+Pointer-move frames (dispatch-focused; per-run **max** across 7 bundles; us):
+- `dispatch_time_us`: `1090 / 1176 / 1176` (p50 / p95 / max)
+- `hit_test_time_us`: `851 / 905 / 905` (p50 / p95 / max)
+- `snapshots_with_global_changes`: `0` (for all 7 bundles)
+- Worst dispatch/hit-test bundle: `target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-global-churn-gate/1770218744032-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+Churn signals (top frame; p95/max):
+| script | p95 atlas_upload_bytes | max atlas_upload_bytes | p95 atlas_evicted_pages | max atlas_evicted_pages | p95 svg_upload_bytes | max svg_upload_bytes | p95 image_upload_bytes | max image_upload_bytes | p95 svg_cache_misses | max svg_cache_misses | p95 svg_evictions | max svg_evictions | p95 intermediate_peak_bytes | max intermediate_peak_bytes | p95 pool_evictions | max pool_evictions |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Intermediate pool signals (top frame; p95/max):
+| script | p95 budget_bytes | max budget_bytes | p95 in_use_bytes | max in_use_bytes | p95 peak_in_use_bytes | max peak_in_use_bytes | p95 release_targets | max release_targets | p95 allocations | max allocations | p95 reuses | max reuses | p95 releases | max releases | p95 evictions | max evictions | p95 free_bytes | max free_bytes | p95 free_textures | max free_textures |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json | 268435456 | 268435456 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+- top_total_time_us: `20720`
+- bundle: `target/fret-diag-perf/2026-02-05-hit-test-stripes-move-sweep-global-churn-gate/1770218867587-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`

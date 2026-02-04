@@ -390,6 +390,12 @@ Proposal:
   - for the hit-test torture sweep, record per-run max `dispatch_time_us` for frames where `dispatch_events > 0`
     and treat outliers as regressions.
 
+Progress:
+
+- Implemented a first cut that avoids publishing these globals on hover-only pointer moves (commit `d4adf37f`),
+  collapsing `snapshots_with_global_changes` to 0 and reducing pointer-move dispatch tails in the stripes sweep
+  (see the perf log entry for `d4adf37f`).
+
 Acceptance:
 
 - In hit-test torture sweep probes, `snapshots_with_global_changes` drops materially (or `unobs.globals` becomes rare),

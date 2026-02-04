@@ -219,11 +219,14 @@ Perf acceptance:
     where the worst total frame is a non-dispatch settle/selector frame.
   - Proposed: extend `perf_log.py` (or add a sibling helper) to compute per-run max `dispatch_time_us` and
     per-run max `hit_test_time_us` from bundle frames where `dispatch_events > 0`.
-- [ ] Eliminate changed-but-unobserved global churn in pointer-move heavy probes.
+- [x] Eliminate changed-but-unobserved global churn in hover-only pointer-move probes.
   - Current hotspots reported by `fretboard diag stats`: `WindowInputContextService`,
     `WindowCommandActionAvailabilityService` (often changed but unobserved).
   - Goal: reduce pointer-move dispatch tails by making these globals “notify only on actual value change”
     (or avoid publishing them every frame unless explicitly needed).
+  - Implemented by `perf(fret-ui): avoid global churn on hover moves` (commit `d4adf37f`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for `d4adf37f`
+    (`dispatch_time_us` run-max p95 drops from ~4.1ms → ~1.2ms; `snapshots_with_global_changes` becomes 0).
 
 ### M7: Renderer primitive profiling (bottom-up)
 
