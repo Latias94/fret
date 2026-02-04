@@ -19,6 +19,8 @@ type CaseId =
   | "selection"
   | "expanding"
   | "grouping"
+  | "grouping_aggregation_fns"
+  | "render_fallback"
 
 type SnapshotId =
   | "baseline"
@@ -147,6 +149,9 @@ type SnapshotId =
   | "grouping_state_one_column_sort_role_desc"
   | "grouping_state_one_column_sort_score_desc"
   | "grouping_state_two_columns_sort_score_desc"
+  | "grouping_aggregation_fns_builtin_mix"
+  | "grouping_aggregation_fns_custom_registry"
+  | "render_fallback_baseline"
 
 type DemoProcessRow = {
   id: number
@@ -219,6 +224,9 @@ type TanStackOptions = {
   groupedColumnMode?: "reorder" | "remove" | false
   columnResizeMode?: "onChange" | "onEnd"
   columnResizeDirection?: "ltr" | "rtl"
+  renderFallbackValue?: unknown
+  // Fixture-only: when set, the generator injects a deterministic `options.aggregationFns` map.
+  aggregationFnsMode?: "custom_plus_one"
   // Fixture-only: override `getGroupedRowModel` with a deterministic implementation.
   __getGroupedRowModel?: "pre_grouped"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
@@ -430,6 +438,16 @@ type FixtureSnapshot = {
       path: { column_id: string; value: unknown }[]
       values: Record<string, number | null>
     }[]
+    grouped_aggregations_any?: {
+      path: { column_id: string; value: unknown }[]
+      values: Record<string, unknown>
+    }[]
+    render_fallback?: {
+      row_id: string
+      column_id: string
+      value: unknown
+      render_value: unknown
+    }[]
     column_pinning?: {
       left: string[]
       center: string[]
@@ -580,7 +598,9 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "state_shapes" &&
         v !== "selection" &&
         v !== "expanding" &&
-        v !== "grouping"
+        v !== "grouping" &&
+        v !== "grouping_aggregation_fns" &&
+        v !== "render_fallback"
       ) {
         throw new Error(`unknown --case ${v}`)
       }
@@ -591,10 +611,22 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding|grouping]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding|grouping|grouping_aggregation_fns|render_fallback]",
     )
   }
   return { out, case_id }
+}
+
+const JSON_UNDEFINED = { __fret: "undefined" }
+
+function jsonSafe(value: any): any {
+  if (value === undefined) {
+    return JSON_UNDEFINED
+  }
+  if (Array.isArray(value)) {
+    return value.map(jsonSafe)
+  }
+  return value
 }
 
 function fileExists(p: string): boolean {
@@ -852,6 +884,43 @@ async function main(): Promise<void> {
       { id: "team", accessorFn: (row: any) => row.team },
       { id: "score", accessorFn: (row: any) => row.score },
     ]
+  } else if (case_id === "grouping_aggregation_fns") {
+    const rows: any[] = [
+      { id: 1, role: 1, team: "x", score: 5, tag: "alpha" },
+      { id: 2, role: 2, team: "y", score: 7, tag: "beta" },
+      { id: 3, role: 1, team: "y", score: 1, tag: "alpha" },
+      { id: 4, role: 2, team: "x", score: 3, tag: null },
+      { id: 5, role: 1, team: "x", score: 2 },
+    ]
+    data = rows
+    columns = [
+      { id: "role", accessorFn: (row: any) => row.role },
+      { id: "team", accessorFn: (row: any) => row.team },
+      { id: "score_sum", accessorFn: (row: any) => row.score, aggregationFn: "sum" },
+      { id: "score_min", accessorFn: (row: any) => row.score, aggregationFn: "min" },
+      { id: "score_max", accessorFn: (row: any) => row.score, aggregationFn: "max" },
+      { id: "score_extent", accessorFn: (row: any) => row.score, aggregationFn: "extent" },
+      { id: "score_mean", accessorFn: (row: any) => row.score, aggregationFn: "mean" },
+      { id: "score_median", accessorFn: (row: any) => row.score, aggregationFn: "median" },
+      { id: "tag_unique", accessorFn: (row: any) => row.tag, aggregationFn: "unique" },
+      { id: "tag_unique_count", accessorFn: (row: any) => row.tag, aggregationFn: "uniqueCount" },
+      { id: "tag_count", accessorFn: (row: any) => row.tag, aggregationFn: "count" },
+      {
+        id: "score_custom",
+        accessorFn: (row: any) => row.score,
+        aggregationFn: "custom_plus_one",
+      },
+    ]
+  } else if (case_id === "render_fallback") {
+    const rows: any[] = [
+      { id: 1 },
+      { id: 2, value: null },
+      { id: 3, value: 0 },
+      { id: 4, value: "" },
+      { id: 5, value: false },
+    ]
+    data = rows
+    columns = [{ id: "value", accessorFn: (row: any) => row.value }]
   } else if (case_id === "expanding" || case_id === "pinning_tree") {
     const tree: DemoProcessRow[] = [
       {
@@ -1275,6 +1344,7 @@ async function main(): Promise<void> {
       groupedColumnMode: options.groupedColumnMode,
       columnResizeMode: options.columnResizeMode,
       columnResizeDirection: options.columnResizeDirection,
+      renderFallbackValue: options.renderFallbackValue,
       ...(options.globalFilterFn !== undefined
         ? { globalFilterFn: options.globalFilterFn }
         : {}),
@@ -1290,13 +1360,26 @@ async function main(): Promise<void> {
               custom_text: filterContainsAsciiCS,
             }
           : undefined,
+      aggregationFns:
+        options.aggregationFnsMode === "custom_plus_one"
+          ? {
+              custom_plus_one: (columnId: string, leafRows: any[]) => {
+                let sum = 0
+                for (const row of leafRows) {
+                  const v = row.getValue?.(columnId)
+                  sum += typeof v === "number" ? v : 0
+                }
+                return sum + 1
+              },
+            }
+          : undefined,
       isMultiSortEvent: (e: unknown) => {
         return !!(e as any)?.multi
       },
       state: currentState,
       getCoreRowModel: tableCore.getCoreRowModel(),
       getFilteredRowModel: tableCore.getFilteredRowModel(),
-      ...(case_id === "grouping"
+      ...(case_id === "grouping" || case_id === "grouping_aggregation_fns"
         ? {
             getGroupedRowModel:
               options.__getGroupedRowModel === "pre_grouped"
@@ -1567,6 +1650,29 @@ function snapshotColumnSizing(table: any): {
   }
 }
 
+function snapshotRenderFallback(table: any): NonNullable<FixtureSnapshot["expect"]["render_fallback"]> {
+  const model = table.getRowModel?.()
+  const flat = model?.flatRows ?? []
+  const out: NonNullable<FixtureSnapshot["expect"]["render_fallback"]> = []
+
+  for (const row of flat) {
+    const cells = row.getAllCells?.() ?? []
+    for (const cell of cells) {
+      const columnId = String(cell?.column?.id)
+      const value = jsonSafe(cell.getValue?.())
+      const render_value = jsonSafe(cell.renderValue?.())
+      out.push({
+        row_id: String(row.id),
+        column_id: columnId,
+        value,
+        render_value,
+      })
+    }
+  }
+
+  return out
+}
+
 function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["row_pinning"]> {
   if (
     typeof table.getTopRows !== "function" ||
@@ -1735,6 +1841,57 @@ function snapshotGroupedAggregationsU64(
         const v = row.getValue?.(colId)
         values[colId] =
           typeof v === "number" ? v : v == null ? null : Number(v)
+      }
+
+      out.push({ path: nextPath, values })
+      walk(row.subRows ?? [], nextPath)
+    }
+  }
+
+  walk(rootRows, [])
+  return out
+}
+
+function snapshotGroupedAggregationsAny(
+  table: any,
+): NonNullable<FixtureSnapshot["expect"]["grouped_aggregations_any"]> {
+  if (typeof table.getGroupedRowModel !== "function") {
+    throw new Error("Grouped row model APIs are not available on this table instance")
+  }
+
+  const grouped = table.getGroupedRowModel()
+  const rootRows = grouped?.rows ?? []
+
+  const grouping = (table.getState?.().grouping ?? []) as string[]
+  const groupedColumnIds = new Set(grouping.map((v) => String(v)))
+
+  const leaf = (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id))
+  const aggCols = leaf.filter((id) => !groupedColumnIds.has(id))
+
+  if (!aggCols.length) {
+    return []
+  }
+
+  const out: NonNullable<FixtureSnapshot["expect"]["grouped_aggregations_any"]> = []
+
+  const walk = (rows: any[], path: { column_id: string; value: unknown }[]) => {
+    for (const row of rows) {
+      const isGroup = !!row.groupingColumnId
+      if (!isGroup) {
+        continue
+      }
+
+      const nextPath = [
+        ...path,
+        {
+          column_id: String(row.groupingColumnId),
+          value: String(row.groupingValue),
+        },
+      ]
+
+      const values: Record<string, unknown> = {}
+      for (const colId of aggCols) {
+        values[colId] = jsonSafe(row.getValue?.(colId))
       }
 
       out.push({ path: nextPath, values })
@@ -2966,6 +3123,46 @@ function snapshotColumnPinning(
         sorting: [{ id: "score", desc: true }],
       }),
     ]
+  } else if (case_id === "grouping_aggregation_fns") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          grouped_row_model: snapshotGroupedRowModel(table),
+          grouped_aggregations_any: snapshotGroupedAggregationsAny(table),
+        },
+      }
+    }
+
+    snapshots = [
+      mk("grouping_aggregation_fns_builtin_mix", {}, { grouping: ["role"] }),
+      mk(
+        "grouping_aggregation_fns_custom_registry",
+        { aggregationFnsMode: "custom_plus_one" },
+        { grouping: ["role"] },
+      ),
+    ]
+  } else if (case_id === "render_fallback") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          render_fallback: snapshotRenderFallback(table),
+        },
+      }
+    }
+
+    snapshots = [mk("render_fallback_baseline", { renderFallbackValue: "N/A" }, {})]
   } else if (case_id === "pinning") {
     const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
       const base = snapshotForState(options, state)

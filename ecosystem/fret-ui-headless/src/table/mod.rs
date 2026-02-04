@@ -3,6 +3,7 @@
 //! This module is always available (no long-lived feature gate).
 
 mod aggregation;
+mod aggregation_fns;
 mod cells;
 mod column;
 mod column_ordering;
@@ -32,6 +33,10 @@ mod tanstack_state;
 mod updater;
 
 pub use aggregation::{Aggregation, aggregate_u64};
+pub use aggregation_fns::{
+    AggregationFn, AggregationFnSpec, BuiltInAggregationFn, apply_builtin_aggregation,
+    resolve_auto_aggregation,
+};
 pub use cells::{CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
 pub use column::{
     BuiltInFilterFn, BuiltInSortingFn, ColumnDef, ColumnHelper, ColumnId, FilterFn,

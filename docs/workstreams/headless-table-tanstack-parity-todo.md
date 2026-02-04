@@ -238,7 +238,14 @@ ColumnDef keys referenced by upstream feature implementations:
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json`
     - Snapshots: `headers_cells_grouped_column_mode_*`
-- [ ] HTP-grp-060 Align `aggregationFns` registry and `renderFallbackValue` behavior.
+- [x] HTP-grp-060 Align `aggregationFns` registry and `renderFallbackValue` behavior.
+  - Parity-gated:
+    - `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_aggregation_fns.json` +
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_aggregation_fns_parity.rs`
+    - `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/render_fallback.json` +
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_render_fallback_parity.rs`
+  - Evidence: `ecosystem/fret-ui-headless/src/table/aggregation_fns.rs`
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::grouped_aggregations_any`, `Table::cell_render_value`)
 
 ---
 

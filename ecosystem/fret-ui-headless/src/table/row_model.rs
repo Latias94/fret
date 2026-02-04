@@ -1,5 +1,5 @@
 use std::cell::OnceCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 /// Stable identity for a row in the table.
@@ -107,6 +107,7 @@ pub struct TableBuilder<'a, TData> {
     columns: Vec<super::ColumnDef<TData>>,
     sorting_fns: HashMap<Arc<str>, super::SortingFnDef<TData>>,
     filter_fns: HashMap<Arc<str>, super::FilterFnDef>,
+    aggregation_fns: HashMap<Arc<str>, super::AggregationFn>,
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
@@ -114,6 +115,7 @@ pub struct TableBuilder<'a, TData> {
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     state: super::TableState,
     options: super::TableOptions,
+    render_fallback_value: super::TanStackValue,
 }
 
 impl<'a, TData> TableBuilder<'a, TData> {
@@ -123,6 +125,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             columns: Vec::new(),
             sorting_fns: HashMap::new(),
             filter_fns: HashMap::new(),
+            aggregation_fns: HashMap::new(),
             global_filter_fn: super::FilteringFnSpec::Auto,
             get_column_can_global_filter: None,
             get_row_key: None,
@@ -130,6 +133,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_grouped_row_model: None,
             state: super::TableState::default(),
             options: super::TableOptions::default(),
+            render_fallback_value: super::TanStackValue::Null,
         }
     }
 
@@ -297,6 +301,22 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// Register a named aggregation function (TanStack `options.aggregationFns` equivalent).
+    pub fn aggregation_fn(
+        mut self,
+        key: impl Into<Arc<str>>,
+        aggregation_fn: super::AggregationFn,
+    ) -> Self {
+        self.aggregation_fns.insert(key.into(), aggregation_fn);
+        self
+    }
+
+    /// TanStack-aligned: set `renderFallbackValue` used by `cell.renderValue()`.
+    pub fn render_fallback_value(mut self, value: super::TanStackValue) -> Self {
+        self.render_fallback_value = value;
+        self
+    }
+
     pub fn build(self) -> Table<'a, TData> {
         Table::new(self)
     }
@@ -308,6 +328,7 @@ pub struct Table<'a, TData> {
     columns: Vec<super::ColumnDef<TData>>,
     sorting_fns: HashMap<Arc<str>, super::SortingFnDef<TData>>,
     filter_fns: HashMap<Arc<str>, super::FilterFnDef>,
+    aggregation_fns: HashMap<Arc<str>, super::AggregationFn>,
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     get_row_key: GetRowKeyFn<'a, TData>,
@@ -315,10 +336,13 @@ pub struct Table<'a, TData> {
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     state: super::TableState,
     options: super::TableOptions,
+    render_fallback_value: super::TanStackValue,
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
     grouped_row_model: OnceCell<super::GroupedRowModel>,
     grouped_u64_aggregations: OnceCell<HashMap<RowKey, Arc<[(super::ColumnId, u64)]>>>,
+    grouped_any_aggregations:
+        OnceCell<HashMap<RowKey, Arc<[(super::ColumnId, super::TanStackValue)]>>>,
     sorted_row_model: OnceCell<RowModel<'a, TData>>,
     expanded_row_model: OnceCell<RowModel<'a, TData>>,
     paginated_row_model: OnceCell<RowModel<'a, TData>>,
@@ -391,6 +415,7 @@ impl<'a, TData> Table<'a, TData> {
             columns,
             sorting_fns: builder.sorting_fns,
             filter_fns: builder.filter_fns,
+            aggregation_fns: builder.aggregation_fns,
             global_filter_fn: builder.global_filter_fn,
             get_column_can_global_filter: builder.get_column_can_global_filter,
             get_row_key,
@@ -398,10 +423,12 @@ impl<'a, TData> Table<'a, TData> {
             get_grouped_row_model: builder.get_grouped_row_model,
             state: builder.state,
             options: builder.options,
+            render_fallback_value: builder.render_fallback_value,
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
             grouped_row_model: OnceCell::new(),
             grouped_u64_aggregations: OnceCell::new(),
+            grouped_any_aggregations: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
             expanded_row_model: OnceCell::new(),
             paginated_row_model: OnceCell::new(),
@@ -425,12 +452,64 @@ impl<'a, TData> Table<'a, TData> {
         &self.columns
     }
 
+    /// TanStack-aligned: `options.renderFallbackValue` used by `cell.renderValue()`.
+    pub fn render_fallback_value(&self) -> &super::TanStackValue {
+        &self.render_fallback_value
+    }
+
     pub fn column_tree(&self) -> &[super::ColumnDef<TData>] {
         &self.column_tree
     }
 
     pub fn column(&self, id: &str) -> Option<&super::ColumnDef<TData>> {
         self.columns.iter().find(|c| c.id.as_ref() == id)
+    }
+
+    fn tanstack_value_for_item(
+        &self,
+        col: &super::ColumnDef<TData>,
+        item: &TData,
+    ) -> super::TanStackValue {
+        if let Some(get) = col.sort_value.as_ref() {
+            return get(item);
+        }
+        if let Some(get) = col.value_u64_fn.as_ref() {
+            return super::TanStackValue::Number(get(item) as f64);
+        }
+        if let Some(get) = col.facet_key_fn.as_ref() {
+            return super::TanStackValue::Number(get(item) as f64);
+        }
+        if let Some(get) = col.facet_str_fn.as_ref() {
+            return super::TanStackValue::String(Arc::<str>::from(get(item)));
+        }
+        super::TanStackValue::Undefined
+    }
+
+    /// TanStack-aligned: `cell.getValue()` equivalent for the current row model.
+    ///
+    /// This returns a [`TanStackValue`] representation and currently uses the column's
+    /// `sort_value` accessor when available.
+    pub fn cell_value(&self, row_key: RowKey, column_id: &str) -> Option<super::TanStackValue> {
+        let col = self.column(column_id)?;
+        let core = self.core_row_model();
+        let index = core.row_by_key(row_key)?;
+        let row = core.row(index)?;
+        Some(self.tanstack_value_for_item(col, row.original))
+    }
+
+    /// TanStack-aligned: `cell.renderValue()` equivalent: `getValue() ?? renderFallbackValue`.
+    pub fn cell_render_value(
+        &self,
+        row_key: RowKey,
+        column_id: &str,
+    ) -> Option<super::TanStackValue> {
+        let value = self.cell_value(row_key, column_id)?;
+        match value {
+            super::TanStackValue::Undefined | super::TanStackValue::Null => {
+                Some(self.render_fallback_value.clone())
+            }
+            other => Some(other),
+        }
     }
 
     fn column_index(&self, id: &str) -> Option<usize> {
@@ -679,6 +758,114 @@ impl<'a, TData> Table<'a, TData> {
                 self.core_row_model(),
                 agg_refs.as_slice(),
             )
+        })
+    }
+
+    pub fn grouped_aggregations_any(
+        &self,
+    ) -> &HashMap<RowKey, Arc<[(super::ColumnId, super::TanStackValue)]>> {
+        self.grouped_any_aggregations.get_or_init(|| {
+            if self.options.manual_grouping || self.state.grouping.is_empty() {
+                return Default::default();
+            }
+
+            let grouped = self.grouped_row_model();
+            if grouped.flat_rows().is_empty() {
+                return Default::default();
+            }
+
+            let grouped_columns: HashSet<&str> =
+                self.state.grouping.iter().map(|c| c.as_ref()).collect();
+
+            let agg_columns: Vec<&super::ColumnDef<TData>> = self
+                .columns
+                .iter()
+                .filter(|c| !grouped_columns.contains(c.id.as_ref()))
+                .collect();
+
+            if agg_columns.is_empty() {
+                return Default::default();
+            }
+
+            fn leaf_row_keys(model: &super::GroupedRowModel, node: usize, out: &mut Vec<RowKey>) {
+                let Some(row) = model.row(node) else {
+                    return;
+                };
+                match &row.kind {
+                    super::GroupedRowKind::Leaf { row_key } => out.push(*row_key),
+                    super::GroupedRowKind::Group { .. } => {
+                        for &child in &row.sub_rows {
+                            leaf_row_keys(model, child, out);
+                        }
+                    }
+                }
+            }
+
+            let core = self.core_row_model();
+            let mut visited: HashSet<RowKey> = Default::default();
+            let mut out: HashMap<RowKey, Arc<[(super::ColumnId, super::TanStackValue)]>> =
+                Default::default();
+
+            for &node in grouped.flat_rows() {
+                let Some(row) = grouped.row(node) else {
+                    continue;
+                };
+                if !matches!(row.kind, super::GroupedRowKind::Group { .. }) {
+                    continue;
+                }
+                if !visited.insert(row.key) {
+                    continue;
+                }
+
+                let mut leaf_keys: Vec<RowKey> = Vec::new();
+                leaf_row_keys(grouped, node, &mut leaf_keys);
+
+                let mut values: Vec<(super::ColumnId, super::TanStackValue)> = Vec::new();
+
+                for col in &agg_columns {
+                    let mut leaf_values: Vec<super::TanStackValue> = Vec::new();
+                    for key in &leaf_keys {
+                        let Some(core_index) = core.row_by_key(*key) else {
+                            continue;
+                        };
+                        let Some(item) = core.row(core_index).map(|r| r.original) else {
+                            continue;
+                        };
+                        leaf_values.push(self.tanstack_value_for_item(col, item));
+                    }
+
+                    let v = match &col.aggregation_fn {
+                        super::AggregationFnSpec::None => super::TanStackValue::Undefined,
+                        super::AggregationFnSpec::Auto => {
+                            if let Some(builtin) = super::resolve_auto_aggregation(&leaf_values) {
+                                super::apply_builtin_aggregation(builtin, &leaf_values)
+                            } else {
+                                super::TanStackValue::Undefined
+                            }
+                        }
+                        super::AggregationFnSpec::BuiltIn(builtin) => {
+                            super::apply_builtin_aggregation(*builtin, &leaf_values)
+                        }
+                        super::AggregationFnSpec::Named(key) => {
+                            if let Some(custom) = self.aggregation_fns.get(key) {
+                                custom(col.id.as_ref(), &leaf_values)
+                            } else if let Some(builtin) =
+                                super::BuiltInAggregationFn::from_tanstack_key(key.as_ref())
+                            {
+                                super::apply_builtin_aggregation(builtin, &leaf_values)
+                            } else {
+                                super::TanStackValue::Undefined
+                            }
+                        }
+                    };
+
+                    values.push((col.id.clone(), v));
+                }
+
+                out.insert(row.key, Arc::from(values.into_boxed_slice()));
+            }
+
+            out
         })
     }
 
