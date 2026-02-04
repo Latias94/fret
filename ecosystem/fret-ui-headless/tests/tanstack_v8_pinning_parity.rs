@@ -27,6 +27,8 @@ struct RowPinningExpect {
     can_pin: BTreeMap<String, bool>,
     #[serde(default)]
     pin_position: BTreeMap<String, Option<String>>,
+    #[serde(default)]
+    pinned_index: BTreeMap<String, i32>,
     is_some_rows_pinned: bool,
     is_some_top_rows_pinned: bool,
     is_some_bottom_rows_pinned: bool,
@@ -252,6 +254,22 @@ fn tanstack_v8_pinning_parity() {
                     "snapshot {} pin_position[{}] mismatch",
                     snap.id,
                     row_id
+                );
+            }
+
+            for (row_id, expected_index) in &expected.pinned_index {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                let index = table
+                    .row_pinned_index(row_key)
+                    .unwrap_or_else(|| panic!("unknown row: {row_id}"));
+                assert_eq!(
+                    index, *expected_index,
+                    "snapshot {} pinned_index[{}] mismatch",
+                    snap.id, row_id
                 );
             }
 

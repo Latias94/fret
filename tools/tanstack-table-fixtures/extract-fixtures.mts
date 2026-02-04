@@ -386,6 +386,7 @@ type FixtureSnapshot = {
       bottom: string[]
       can_pin: Record<string, boolean>
       pin_position: Record<string, "top" | "bottom" | null>
+      pinned_index: Record<string, number>
       is_some_rows_pinned: boolean
       is_some_top_rows_pinned: boolean
       is_some_bottom_rows_pinned: boolean
@@ -454,6 +455,7 @@ type FixtureSnapshot = {
       right: string[]
       can_pin: Record<string, boolean>
       pin_position: Record<string, "left" | "right" | null>
+      pinned_index: Record<string, number>
       is_some_columns_pinned: boolean
       is_some_left_columns_pinned: boolean
       is_some_right_columns_pinned: boolean
@@ -1689,6 +1691,7 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
   const coreRows = table.getCoreRowModel?.()?.flatRows ?? []
   const can_pin: Record<string, boolean> = {}
   const pin_position: Record<string, "top" | "bottom" | null> = {}
+  const pinned_index: Record<string, number> = {}
   for (const row of coreRows) {
     const id = String(row.id)
     const r = table.getRow?.(id, true)
@@ -1698,6 +1701,7 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
     can_pin[id] = Boolean(r.getCanPin?.())
     const pos = r.getIsPinned?.()
     pin_position[id] = pos === "top" ? "top" : pos === "bottom" ? "bottom" : null
+    pinned_index[id] = Number(r.getPinnedIndex?.() ?? -1)
   }
 
   return {
@@ -1706,6 +1710,7 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
     bottom,
     can_pin,
     pin_position,
+    pinned_index,
     is_some_rows_pinned: Boolean(table.getIsSomeRowsPinned?.()),
     is_some_top_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("top")),
     is_some_bottom_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("bottom")),
@@ -2002,6 +2007,7 @@ function snapshotColumnPinning(
   const leaf = (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id))
   const can_pin: Record<string, boolean> = {}
   const pin_position: Record<string, "left" | "right" | null> = {}
+  const pinned_index: Record<string, number> = {}
   for (const id of leaf) {
     const col = table.getColumn?.(id)
     if (!col) {
@@ -2010,6 +2016,7 @@ function snapshotColumnPinning(
     can_pin[id] = Boolean(col.getCanPin?.())
     const pos = col.getIsPinned?.()
     pin_position[id] = pos === "left" ? "left" : pos === "right" ? "right" : null
+    pinned_index[id] = Number(col.getPinnedIndex?.() ?? 0)
   }
 
   const left = (table.getLeftLeafColumns?.() ?? []).map((c: any) => String(c.id))
@@ -2022,6 +2029,7 @@ function snapshotColumnPinning(
     right,
     can_pin,
     pin_position,
+    pinned_index,
     is_some_columns_pinned: Boolean(table.getIsSomeColumnsPinned?.()),
     is_some_left_columns_pinned: Boolean(table.getIsSomeColumnsPinned?.("left")),
     is_some_right_columns_pinned: Boolean(table.getIsSomeColumnsPinned?.("right")),

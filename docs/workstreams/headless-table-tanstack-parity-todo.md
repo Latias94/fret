@@ -254,6 +254,7 @@ ColumnDef keys referenced by upstream feature implementations:
 - [x] HTP-rowpin-010 Align `keepPinnedRows` behavior and its interactions with filtering/sorting/pagination.
   - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`.
+  - Covered: `row.getPinnedIndex()`-equivalent visible ordering (`row_pinning.pinned_index` in fixture snapshots).
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
@@ -289,6 +290,7 @@ ColumnDef keys referenced by upstream feature implementations:
   - `enablePinning`, `enableColumnPinning`, `onColumnPinningChange`.
   - Parity-gated (option gates + state transition outcomes): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`.
+  - Covered: `column.getPinnedIndex()`-equivalent (`column_pinning.pinned_index` in fixture snapshots).
 - [~] HTP-colvis-010 Align column visibility option gates and hooks:
   - `enableHiding`, `onColumnVisibilityChange`.
   - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +

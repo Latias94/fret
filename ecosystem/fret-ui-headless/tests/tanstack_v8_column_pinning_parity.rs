@@ -22,6 +22,8 @@ struct ColumnPinningExpect {
     right: Vec<String>,
     can_pin: BTreeMap<String, bool>,
     pin_position: BTreeMap<String, Option<String>>,
+    #[serde(default)]
+    pinned_index: BTreeMap<String, i32>,
     is_some_columns_pinned: bool,
     is_some_left_columns_pinned: bool,
     is_some_right_columns_pinned: bool,
@@ -203,6 +205,17 @@ fn tanstack_v8_column_pinning_parity() {
                 assert_eq!(
                     pos, expected_pos,
                     "snapshot {} pin_position[{}] mismatch",
+                    snap.id, col_id
+                );
+            }
+
+            for (col_id, expected_index) in &expected.pinned_index {
+                let index = table
+                    .column_pinned_index(col_id)
+                    .unwrap_or_else(|| panic!("unknown column: {col_id}"));
+                assert_eq!(
+                    index, *expected_index,
+                    "snapshot {} pinned_index[{}] mismatch",
                     snap.id, col_id
                 );
             }

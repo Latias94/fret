@@ -123,6 +123,11 @@
             "b": null,
             "c": null
           },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0
+          },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": false
@@ -221,6 +226,11 @@
             "b": null,
             "c": null
           },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0
+          },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": false
@@ -318,6 +328,11 @@
             "a": null,
             "b": null,
             "c": null
+          },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0
           },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
@@ -515,6 +530,11 @@
             "b": null,
             "c": "right"
           },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0
+          },
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": true
@@ -703,6 +723,11 @@
             "b": null,
             "c": null
           },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0
+          },
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
           "is_some_right_columns_pinned": false
@@ -890,6 +915,11 @@
             "a": "left",
             "b": null,
             "c": null
+          },
+          "pinned_index": {
+            "a": 0,
+            "b": 0,
+            "c": 0
           },
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,

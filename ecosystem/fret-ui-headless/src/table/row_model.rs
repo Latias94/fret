@@ -922,6 +922,32 @@ impl<'a, TData> Table<'a, TData> {
         super::is_row_pinned(row_key, &self.state.row_pinning)
     }
 
+    /// TanStack-aligned: `row.getPinnedIndex()`.
+    ///
+    /// Returns `-1` when the row is not currently visible in its pinned region. Returns `None`
+    /// when the row key does not exist.
+    pub fn row_pinned_index(&self, row_key: RowKey) -> Option<i32> {
+        let core = self.core_row_model();
+        if core.row_by_key(row_key).is_none() {
+            return None;
+        }
+
+        let Some(position) = self.row_is_pinned(row_key) else {
+            return Some(-1);
+        };
+
+        let keys = match position {
+            super::RowPinPosition::Top => self.top_row_keys(),
+            super::RowPinPosition::Bottom => self.bottom_row_keys(),
+        };
+        Some(
+            keys.iter()
+                .position(|k| *k == row_key)
+                .map(|i| i as i32)
+                .unwrap_or(-1),
+        )
+    }
+
     pub fn row_can_pin(&self, row_key: RowKey) -> Option<bool> {
         let core = self.core_row_model();
         if core.row_by_key(row_key).is_none() {
@@ -1081,6 +1107,29 @@ impl<'a, TData> Table<'a, TData> {
             return Some(super::ColumnPinPosition::Right);
         }
         None
+    }
+
+    /// TanStack-aligned: `column.getPinnedIndex()`.
+    ///
+    /// Returns `0` for unpinned columns (matching TanStack). Returns `-1` when the column is pinned
+    /// via a group column but the group id is not present in the leaf-pinning state arrays.
+    pub fn column_pinned_index(&self, column_id: &str) -> Option<i32> {
+        self.find_column_in_tree(column_id)?;
+
+        let Some(position) = self.column_pin_position(column_id) else {
+            return Some(0);
+        };
+
+        let ids = match position {
+            super::ColumnPinPosition::Left => self.state.column_pinning.left.as_slice(),
+            super::ColumnPinPosition::Right => self.state.column_pinning.right.as_slice(),
+        };
+        Some(
+            ids.iter()
+                .position(|id| id.as_ref() == column_id)
+                .map(|i| i as i32)
+                .unwrap_or(-1),
+        )
     }
 
     pub fn column_pinning_updater(

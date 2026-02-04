@@ -243,6 +243,16 @@
             "31": null,
             "121": null
           },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "11": -1,
+            "12": -1,
+            "31": -1,
+            "121": -1
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -438,6 +448,16 @@
             "31": null,
             "121": null
           },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "11": 0,
+            "12": -1,
+            "31": -1,
+            "121": -1
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -632,6 +652,16 @@
             "12": null,
             "31": null,
             "121": null
+          },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "11": 0,
+            "12": -1,
+            "31": -1,
+            "121": -1
           },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
@@ -905,6 +935,16 @@
             "31": null,
             "121": "top"
           },
+          "pinned_index": {
+            "1": 0,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "11": -1,
+            "12": -1,
+            "31": -1,
+            "121": -1
+          },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": true,
           "is_some_bottom_rows_pinned": false
@@ -1175,6 +1215,16 @@
             "12": "bottom",
             "31": null,
             "121": "bottom"
+          },
+          "pinned_index": {
+            "1": 0,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "11": -1,
+            "12": -1,
+            "31": -1,
+            "121": -1
           },
           "is_some_rows_pinned": true,
           "is_some_top_rows_pinned": false,
