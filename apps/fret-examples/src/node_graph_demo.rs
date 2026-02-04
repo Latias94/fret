@@ -86,6 +86,10 @@ const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
 const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
 const CMD_SPAWN_STRESS_10K: &str = "node_graph_demo.spawn_stress_10k";
 const CMD_UPGRADE_GRAPH: &str = "node_graph_demo.upgrade_graph";
+const CMD_TOGGLE_HELP_OVERLAY: &str = "node_graph_demo.toggle_help_overlay";
+const CMD_TOGGLE_TOOLBARS: &str = "node_graph_demo.toggle_toolbars";
+const CMD_TOGGLE_CONTROLS_PLACEMENT: &str = "node_graph_demo.toggle_controls_placement";
+const CMD_TOGGLE_MINIMAP_PLACEMENT: &str = "node_graph_demo.toggle_minimap_placement";
 const WEIRD_KIND: &str = "demo.weird_layout";
 
 #[derive(Debug)]
@@ -118,6 +122,60 @@ impl NodeGraphDemoStyleState {
             2 => NodeGraphBackgroundPattern::Cross,
             _ => NodeGraphBackgroundPattern::Lines,
         }
+    }
+}
+
+#[derive(Debug)]
+struct NodeGraphDemoOverlayToggles {
+    show_help: AtomicBool,
+    show_toolbars: AtomicBool,
+    controls_in_panel: AtomicBool,
+    minimap_in_panel: AtomicBool,
+}
+
+impl NodeGraphDemoOverlayToggles {
+    fn new() -> Self {
+        Self {
+            show_help: AtomicBool::new(true),
+            show_toolbars: AtomicBool::new(true),
+            controls_in_panel: AtomicBool::new(true),
+            minimap_in_panel: AtomicBool::new(true),
+        }
+    }
+
+    fn show_help(&self) -> bool {
+        self.show_help.load(Ordering::Relaxed)
+    }
+
+    fn show_toolbars(&self) -> bool {
+        self.show_toolbars.load(Ordering::Relaxed)
+    }
+
+    fn controls_in_panel(&self) -> bool {
+        self.controls_in_panel.load(Ordering::Relaxed)
+    }
+
+    fn minimap_in_panel(&self) -> bool {
+        self.minimap_in_panel.load(Ordering::Relaxed)
+    }
+
+    fn toggle_show_help(&self) {
+        self.show_help.store(!self.show_help(), Ordering::Relaxed);
+    }
+
+    fn toggle_show_toolbars(&self) {
+        self.show_toolbars
+            .store(!self.show_toolbars(), Ordering::Relaxed);
+    }
+
+    fn toggle_controls_placement(&self) {
+        self.controls_in_panel
+            .store(!self.controls_in_panel(), Ordering::Relaxed);
+    }
+
+    fn toggle_minimap_placement(&self) {
+        self.minimap_in_panel
+            .store(!self.minimap_in_panel(), Ordering::Relaxed);
     }
 }
 
@@ -1417,15 +1475,27 @@ impl NodeGraphDemoDriver {
         ));
         let portal_node = ui.create_node_retained(portal);
 
-        let controls_overlay =
-            NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
-                .in_panel_bounds();
-        let controls_overlay_node = ui.create_node_retained(controls_overlay);
+        let toggles = app
+            .global::<Arc<NodeGraphDemoOverlayToggles>>()
+            .cloned()
+            .unwrap_or_else(|| Arc::new(NodeGraphDemoOverlayToggles::new()));
 
-        let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
-            .with_margin_px(style.controls_margin);
-        let controls_node = ui.create_node_retained(controls_panel);
-        ui.set_children(controls_node, vec![controls_overlay_node]);
+        let controls_node = if toggles.controls_in_panel() {
+            let controls_overlay =
+                NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone())
+                    .in_panel_bounds();
+            let controls_overlay_node = ui.create_node_retained(controls_overlay);
+
+            let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
+                .with_margin_px(style.controls_margin);
+            let controls_node = ui.create_node_retained(controls_panel);
+            ui.set_children(controls_node, vec![controls_overlay_node]);
+            Some(controls_node)
+        } else {
+            let controls_overlay =
+                NodeGraphControlsOverlay::new(canvas_node, models.view.clone(), style.clone());
+            Some(ui.create_node_retained(controls_overlay))
+        };
 
         let tuning = NodeGraphTuningOverlay::new(canvas_node, models.view.clone(), style.clone())
             .with_store(store.clone())
@@ -1437,68 +1507,94 @@ impl NodeGraphDemoDriver {
             });
         let tuning_node = ui.create_node_retained(tuning);
 
-        let help_overlay = DemoHelpOverlay::new(style.clone());
-        let help_node = ui.create_node_retained(help_overlay);
+        let help_node = if toggles.show_help() {
+            Some(ui.create_node_retained(DemoHelpOverlay::new(style.clone(), toggles.clone())))
+        } else {
+            None
+        };
 
-        let minimap_overlay = NodeGraphMiniMapOverlay::new(
-            canvas_node,
-            models.graph.clone(),
-            models.view.clone(),
-            internals_overlay.clone(),
-            style.clone(),
-        )
-        .with_store(store)
-        .in_panel_bounds();
-        let minimap_overlay_node = ui.create_node_retained(minimap_overlay);
+        let minimap_node = if toggles.minimap_in_panel() {
+            let minimap_overlay = NodeGraphMiniMapOverlay::new(
+                canvas_node,
+                models.graph.clone(),
+                models.view.clone(),
+                internals_overlay.clone(),
+                style.clone(),
+            )
+            .with_store(store)
+            .in_panel_bounds();
+            let minimap_overlay_node = ui.create_node_retained(minimap_overlay);
 
-        let minimap_panel = NodeGraphPanel::new(NodeGraphPanelPosition::BottomRight)
-            .with_margin_px(style.minimap_margin);
-        let minimap_node = ui.create_node_retained(minimap_panel);
-        ui.set_children(minimap_node, vec![minimap_overlay_node]);
+            let minimap_panel = NodeGraphPanel::new(NodeGraphPanelPosition::BottomRight)
+                .with_margin_px(style.minimap_margin);
+            let minimap_node = ui.create_node_retained(minimap_panel);
+            ui.set_children(minimap_node, vec![minimap_overlay_node]);
+            Some(minimap_node)
+        } else {
+            let minimap_overlay = NodeGraphMiniMapOverlay::new(
+                canvas_node,
+                models.graph.clone(),
+                models.view.clone(),
+                internals_overlay.clone(),
+                style.clone(),
+            )
+            .with_store(store);
+            Some(ui.create_node_retained(minimap_overlay))
+        };
 
-        let node_toolbar = NodeGraphNodeToolbar::new(
-            canvas_node,
-            models.graph.clone(),
-            models.view.clone(),
-            internals_overlay.clone(),
-        )
-        .with_position(NodeGraphToolbarPosition::Top)
-        .with_align(NodeGraphToolbarAlign::Center)
-        .with_gap_px(10.0);
-        let node_toolbar_node = ui.create_node_retained(node_toolbar);
-        let node_toolbar_content =
-            ui.create_node_retained(DemoToolbarStrip::node_toolbar(canvas_node, style.clone()));
-        ui.set_children(node_toolbar_node, vec![node_toolbar_content]);
+        let (node_toolbar_node, edge_toolbar_node) = if toggles.show_toolbars() {
+            let node_toolbar = NodeGraphNodeToolbar::new(
+                canvas_node,
+                models.graph.clone(),
+                models.view.clone(),
+                internals_overlay.clone(),
+            )
+            .with_position(NodeGraphToolbarPosition::Top)
+            .with_align(NodeGraphToolbarAlign::Center)
+            .with_gap_px(10.0);
+            let node_toolbar_node = ui.create_node_retained(node_toolbar);
+            let node_toolbar_content =
+                ui.create_node_retained(DemoToolbarStrip::node_toolbar(canvas_node, style.clone()));
+            ui.set_children(node_toolbar_node, vec![node_toolbar_content]);
 
-        let edge_toolbar = NodeGraphEdgeToolbar::new(
-            canvas_node,
-            models.graph.clone(),
-            models.view.clone(),
-            internals_overlay.clone(),
-        )
-        .with_align_x(NodeGraphToolbarAlign::Center)
-        .with_align_y(NodeGraphToolbarAlign::End)
-        .with_offset_px(0.0, -10.0);
-        let edge_toolbar_node = ui.create_node_retained(edge_toolbar);
-        let edge_toolbar_content =
-            ui.create_node_retained(DemoToolbarStrip::edge_toolbar(canvas_node, style.clone()));
-        ui.set_children(edge_toolbar_node, vec![edge_toolbar_content]);
+            let edge_toolbar = NodeGraphEdgeToolbar::new(
+                canvas_node,
+                models.graph.clone(),
+                models.view.clone(),
+                internals_overlay.clone(),
+            )
+            .with_align_x(NodeGraphToolbarAlign::Center)
+            .with_align_y(NodeGraphToolbarAlign::End)
+            .with_offset_px(0.0, -10.0);
+            let edge_toolbar_node = ui.create_node_retained(edge_toolbar);
+            let edge_toolbar_content =
+                ui.create_node_retained(DemoToolbarStrip::edge_toolbar(canvas_node, style.clone()));
+            ui.set_children(edge_toolbar_node, vec![edge_toolbar_content]);
+
+            (Some(node_toolbar_node), Some(edge_toolbar_node))
+        } else {
+            (None, None)
+        };
 
         let root = ui.create_node_retained(NodeGraphEditor::new());
-        ui.set_children(
-            root,
-            vec![
-                canvas_node,
-                portal_node,
-                controls_node,
-                tuning_node,
-                help_node,
-                minimap_node,
-                node_toolbar_node,
-                edge_toolbar_node,
-                overlay_node,
-            ],
-        );
+        let mut children: Vec<fret_core::NodeId> =
+            vec![canvas_node, portal_node, tuning_node, overlay_node];
+        if let Some(n) = controls_node {
+            children.push(n);
+        }
+        if let Some(n) = minimap_node {
+            children.push(n);
+        }
+        if let Some(n) = node_toolbar_node {
+            children.push(n);
+        }
+        if let Some(n) = edge_toolbar_node {
+            children.push(n);
+        }
+        if let Some(n) = help_node {
+            children.push(n);
+        }
+        ui.set_children(root, children);
         ui.set_root(root);
 
         NodeGraphDemoWindowState { ui, root }
@@ -1720,6 +1816,46 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let pattern = style_state.cycle_background_pattern();
             tracing::info!(?pattern, "node graph demo background pattern changed");
 
+            *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_HELP_OVERLAY {
+            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+                return;
+            };
+            toggles.toggle_show_help();
+            *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_TOOLBARS {
+            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+                return;
+            };
+            toggles.toggle_show_toolbars();
+            *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_CONTROLS_PLACEMENT {
+            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+                return;
+            };
+            toggles.toggle_controls_placement();
+            *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_MINIMAP_PLACEMENT {
+            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+                return;
+            };
+            toggles.toggle_minimap_placement();
             *state = Self::build_ui(app, window);
             app.request_redraw(window);
             return;
@@ -1980,6 +2116,7 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(Arc::new(NodeGraphInternalsStore::new()));
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
     app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
+    app.set_global(Arc::new(NodeGraphDemoOverlayToggles::new()));
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
@@ -2112,6 +2249,130 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl(KeyCode::KeyB),
                 linux_ctrl(KeyCode::KeyB),
                 web_ctrl(KeyCode::KeyB),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_HELP_OVERLAY),
+        CommandMeta::new("Toggle Demo Help Overlay")
+            .with_category("Demo")
+            .with_keywords(["help", "overlay", "shortcuts"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::KeyH),
+                win_ctrl(KeyCode::KeyH),
+                linux_ctrl(KeyCode::KeyH),
+                web_ctrl(KeyCode::KeyH),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_TOOLBARS),
+        CommandMeta::new("Toggle Node/Edge Toolbars")
+            .with_category("Demo")
+            .with_keywords(["toolbar", "overlay", "node", "edge"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd(KeyCode::KeyT),
+                win_ctrl(KeyCode::KeyT),
+                linux_ctrl(KeyCode::KeyT),
+                web_ctrl(KeyCode::KeyT),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_CONTROLS_PLACEMENT),
+        CommandMeta::new("Toggle Controls Placement (Panel vs Floating)")
+            .with_category("Demo")
+            .with_keywords(["controls", "panel", "overlay", "placement"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                kb(
+                    PlatformFilter::Macos,
+                    KeyCode::KeyC,
+                    Modifiers {
+                        meta: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Windows,
+                    KeyCode::KeyC,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Linux,
+                    KeyCode::KeyC,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Web,
+                    KeyCode::KeyC,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_MINIMAP_PLACEMENT),
+        CommandMeta::new("Toggle MiniMap Placement (Panel vs Floating)")
+            .with_category("Demo")
+            .with_keywords(["minimap", "panel", "overlay", "placement"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                kb(
+                    PlatformFilter::Macos,
+                    KeyCode::KeyM,
+                    Modifiers {
+                        meta: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Windows,
+                    KeyCode::KeyM,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Linux,
+                    KeyCode::KeyM,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Web,
+                    KeyCode::KeyM,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
             ]),
     );
 
@@ -2285,17 +2546,19 @@ impl DemoToolbarStrip {
 
 struct DemoHelpOverlay {
     style: NodeGraphStyle,
+    toggles: Arc<NodeGraphDemoOverlayToggles>,
     text_blobs: Vec<TextBlobId>,
 }
 
 impl DemoHelpOverlay {
     const PAD_PX: f32 = 10.0;
     const WIDTH_PX: f32 = 360.0;
-    const HEIGHT_PX: f32 = 132.0;
+    const HEIGHT_PX: f32 = 176.0;
 
-    fn new(style: NodeGraphStyle) -> Self {
+    fn new(style: NodeGraphStyle, toggles: Arc<NodeGraphDemoOverlayToggles>) -> Self {
         Self {
             style,
+            toggles,
             text_blobs: Vec::new(),
         }
     }
@@ -2345,16 +2608,38 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
             scale_factor: cx.scale_factor,
         };
 
-        let lines = [
-            "NodeGraph demo (built-ins):",
-            "• Controls + MiniMap overlays (panel composition)",
-            "• NodeToolbar + EdgeToolbar overlays (selection-driven)",
-            "• Background patterns: Cmd/Ctrl+B",
-            "• Log internals: Cmd/Ctrl+I; measured stores: Cmd/Ctrl+M",
+        let controls = if self.toggles.controls_in_panel() {
+            "Panel"
+        } else {
+            "Floating"
+        };
+        let minimap = if self.toggles.minimap_in_panel() {
+            "Panel"
+        } else {
+            "Floating"
+        };
+        let toolbars = if self.toggles.show_toolbars() {
+            "On"
+        } else {
+            "Off"
+        };
+
+        let mut lines: Vec<String> = vec![
+            "NodeGraph demo (built-ins):".to_string(),
+            "• Controls + MiniMap overlays (panel or floating)".to_string(),
+            "• NodeToolbar + EdgeToolbar overlays (selection-driven)".to_string(),
+            "• Background patterns: Cmd/Ctrl+B".to_string(),
+            "• Toggle help: Cmd/Ctrl+H; toolbars: Cmd/Ctrl+T".to_string(),
+            "• Toggle placement: Cmd/Ctrl+Shift+C (controls), Cmd/Ctrl+Shift+M (minimap)"
+                .to_string(),
+            "• Log internals: Cmd/Ctrl+I; measured stores: Cmd/Ctrl+M".to_string(),
         ];
+        lines.push(format!(
+            "• Current: controls={controls}, minimap={minimap}, toolbars={toolbars}"
+        ));
 
         let mut cy = rect.origin.y.0 + Self::PAD_PX;
-        for line in lines {
+        for line in &lines {
             let (id, metrics) = cx
                 .services
                 .text()

@@ -47,6 +47,9 @@ Run it (desktop only):
 cargo run -p fret-demo --features node-graph-demos --bin node_graph_demo
 ```
 
+The demo includes a non-interactive help overlay (toggle: Cmd/Ctrl+H) and showcase toggles for
+panel-vs-floating placement of MiniMap/Controls.
+
 ## Advanced (controlled mode) integration
 
 Use this when an app already owns graph state (e.g. collaborative CRDTs, external persistence, or a
@@ -92,4 +95,3 @@ Use `NodeGraphEdgeTypes` to register custom edge path builders and keep hit-test
 Stable contract:
 
 - `docs/node-graph-addons-minimap-controls.md`
-
