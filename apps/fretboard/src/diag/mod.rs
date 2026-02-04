@@ -2211,14 +2211,16 @@ See: `docs/tracy.md`.\n";
                 rest.len() == 1 && rest[0] == "ui-gallery-table-retained";
             let is_ui_gallery_table_retained_measured_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-table-retained-measured";
-            let is_ui_gallery_retained_measured_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-retained-measured";
-            let is_ui_gallery_ai_transcript_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
-            let is_ui_gallery_vlist_window_boundary_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
-            let is_ui_gallery_vlist_window_boundary_retained_suite =
-                rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary-retained";
+             let is_ui_gallery_retained_measured_suite =
+                 rest.len() == 1 && rest[0] == "ui-gallery-retained-measured";
+             let is_ui_gallery_ai_transcript_retained_suite =
+                 rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
+            let is_ui_gallery_canvas_cull_suite = rest.len() == 1 && rest[0] == "ui-gallery-canvas-cull";
+            let is_ui_gallery_chart_torture_suite = rest.len() == 1 && rest[0] == "ui-gallery-chart-torture";
+             let is_ui_gallery_vlist_window_boundary_suite =
+                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
+             let is_ui_gallery_vlist_window_boundary_retained_suite =
+                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary-retained";
             let is_ui_gallery_ui_kit_list_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
             let is_ui_gallery_inspector_torture_suite =
@@ -2407,13 +2409,39 @@ See: `docs/tracy.md`.\n";
                         ],
                         Some(BuiltinSuite::UiGallery),
                     )
-                } else if is_ui_gallery_ai_transcript_retained_suite {
+                 } else if is_ui_gallery_ai_transcript_retained_suite {
+                     (
+                         vec![resolve_path(
+                             &workspace_root,
+                             PathBuf::from(
+                                 "tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json",
+                             ),
+                         )],
+                         Some(BuiltinSuite::UiGallery),
+                     )
+                } else if is_ui_gallery_canvas_cull_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
                     (
                         vec![resolve_path(
                             &workspace_root,
                             PathBuf::from(
-                                "tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json",
+                                "tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json",
                             ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_chart_torture_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from("tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json"),
                         )],
                         Some(BuiltinSuite::UiGallery),
                     )
@@ -2826,13 +2854,15 @@ See: `docs/tracy.md`.\n";
                             || n == "ui-gallery-sidebar-scroll-refresh.json"
                     });
 
-                let wants_post_run_checks_for_script = wants_post_run_checks_for_script
-                    || builtin_suite == Some(BuiltinSuite::DockingArbitration)
-                    || is_ui_gallery_vlist_window_boundary_suite
-                    || is_ui_gallery_vlist_window_boundary_retained_suite
-                    || is_components_gallery_file_tree_suite
-                    || is_components_gallery_table_suite
-                    || is_components_gallery_table_keep_alive_suite
+                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
+                     || builtin_suite == Some(BuiltinSuite::DockingArbitration)
+                    || is_ui_gallery_canvas_cull_suite
+                    || is_ui_gallery_chart_torture_suite
+                     || is_ui_gallery_vlist_window_boundary_suite
+                     || is_ui_gallery_vlist_window_boundary_retained_suite
+                     || is_components_gallery_file_tree_suite
+                     || is_components_gallery_table_suite
+                     || is_components_gallery_table_keep_alive_suite
                     || (builtin_suite == Some(BuiltinSuite::UiGallery) && is_gc_liveness_script);
 
                 if result.stage.as_deref() == Some("passed") && wants_post_run_checks_for_script {
@@ -2859,9 +2889,11 @@ See: `docs/tracy.md`.\n";
                         || is_ui_gallery_vlist_window_boundary_retained_suite;
                     let vlist_window_boundary_retained_suite =
                         is_ui_gallery_vlist_window_boundary_retained_suite;
-                    let components_gallery_suite = is_components_gallery_file_tree_suite
-                        || is_components_gallery_table_suite
-                        || is_components_gallery_table_keep_alive_suite;
+                     let components_gallery_suite = is_components_gallery_file_tree_suite
+                         || is_components_gallery_table_suite
+                         || is_components_gallery_table_keep_alive_suite;
+                    let pan_zoom_suite =
+                        is_ui_gallery_canvas_cull_suite || is_ui_gallery_chart_torture_suite;
                     let suite_components_gallery_stale_paint_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -2889,9 +2921,15 @@ See: `docs/tracy.md`.\n";
                     let suite_stale_paint_test_id = vlist_window_boundary_suite
                         .then_some("ui-gallery-virtual-list-root")
                         .filter(|_| check_stale_paint_test_id.is_none());
-                    let suite_view_cache_reuse_min = vlist_window_boundary_suite
+                    let suite_view_cache_reuse_min = (vlist_window_boundary_suite || pan_zoom_suite)
                         .then_some(1u64)
                         .filter(|_| check_view_cache_reuse_min.is_none());
+                    let suite_pixels_changed_test_id = is_ui_gallery_canvas_cull_suite
+                        .then_some("ui-gallery-canvas-cull-root")
+                        .or_else(|| {
+                            is_ui_gallery_chart_torture_suite.then_some("ui-gallery-chart-torture-root")
+                        })
+                        .filter(|_| check_pixels_changed_test_id.is_none());
                     let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
@@ -2995,14 +3033,16 @@ See: `docs/tracy.md`.\n";
                             .as_deref()
                             .or(suite_stale_paint_test_id)
                             .or(suite_components_gallery_stale_paint_test_id),
-                        check_stale_paint_eps,
-                        check_stale_scene_test_id.as_deref(),
-                        check_stale_scene_eps,
-                        check_pixels_changed_test_id.as_deref(),
-                        check_semantics_changed_repainted,
-                        dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id.as_deref(),
-                        check_wheel_scroll_hit_changes_test_id
+                         check_stale_paint_eps,
+                         check_stale_scene_test_id.as_deref(),
+                         check_stale_scene_eps,
+                        check_pixels_changed_test_id
+                            .as_deref()
+                            .or(suite_pixels_changed_test_id),
+                         check_semantics_changed_repainted,
+                         dump_semantics_changed_repainted_json,
+                         check_wheel_scroll_test_id.as_deref(),
+                         check_wheel_scroll_hit_changes_test_id
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),

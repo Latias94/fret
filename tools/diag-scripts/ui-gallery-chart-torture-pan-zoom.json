@@ -22,6 +22,15 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-chart-torture-pan-zoom-before"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-chart-torture-pan-zoom-before"
+    },
     {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-chart-torture-root" }
@@ -47,6 +56,14 @@
       "steps": 18
     },
     { "type": "wait_frames", "n": 5 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-chart-torture-pan-zoom-after"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-chart-torture-pan-zoom-after"
+    },
     { "type": "capture_bundle", "label": "ui-gallery-chart-torture-pan-zoom" }
   ]
 }
