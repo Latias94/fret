@@ -1,7 +1,11 @@
-# Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
+# Code Editor Ecosystem v1 - Refactor Plan & TODO Tracker
 
 Status: Active (workstream document; normative contracts live in ADRs)
-Last updated: 2026-02-03
+Last updated: 2026-02-04
+
+Recent changes (2026-02-04):
+
+- Editor paint: anchor caret Y to the actual row text blob baseline (fixes caret drifting above glyphs in mixed-font / rich-span lines).
 
 Recent changes (2026-02-02):
 
@@ -39,6 +43,15 @@ Next up (priority order):
 4. Web IME (wasm): **deferred**
    - Known issue: IME enable/focus can still be flaky on some browsers/dev setups (activation-window timing).
    - Keep `?demo=ui_gallery&page=web_ime_harness` as the repro surface and revisit after core editor correctness/stability is locked.
+
+Verification quickstart:
+
+- Web (UI Gallery): `cargo run -p fretboard -- dev web --demo ui_gallery`
+  - `http://127.0.0.1:8080/?demo=ui_gallery&page=code_editor_mvp`
+  - `http://127.0.0.1:8080/?demo=ui_gallery&page=code_editor_torture`
+  - `http://127.0.0.1:8080/?demo=ui_gallery&page=web_ime_harness` (deferred; use for repro only)
+- Native (optional): `cargo run -p fretboard -- dev native --bin components_gallery`
+- Debug logs: set `FRET_WINDOWED_ROWS_POINTER_DEBUG=1` to print pointer/row mapping for windowed row surfaces.
 
 Recent changes (2026-02-01):
 

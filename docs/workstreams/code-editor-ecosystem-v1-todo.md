@@ -1,7 +1,7 @@
-# Code Editor Ecosystem v1 — TODO Tracker
+# Code Editor Ecosystem v1 - TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-03
+Last updated: 2026-02-04
 
 This is the checkbox tracker companion to:
 
@@ -143,6 +143,7 @@ Evidence anchors:
 - [x] Inline preedit rendering (best-effort; underline + optional range highlight for v1).
 - [x] Caret rect reporting for `ImeSetCursorArea` (native; best-effort).
 - [x] Use renderer text caret rect metrics (caret y/height) when computing `ImeSetCursorArea` for editor-grade surfaces (fallback to row height when unavailable).
+- [x] Align editor caret Y to the row text blob baseline (prevents caret drifting above glyphs on mixed-font / rich-span lines).
 - [x] Provide a mechanism-only text input region for custom surfaces (no internal buffer).
 - [x] Web/WASM: bind focus/key/command/pointer hooks to the `TextInputRegion` element id scope (not the outer keyed scope) so input routing attaches to the focused region.
 - [x] Web/WASM: emit `ImeAllow` during pointer-down focus for editor-grade `TextInputRegion` surfaces (user-activation friendly textarea focusing).
