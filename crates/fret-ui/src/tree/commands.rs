@@ -305,12 +305,18 @@ impl<H: UiHost> UiTree<H> {
             let window_arbitration = self.window_input_arbitration_snapshot();
             input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx.clone());
+                    },
+                );
+            }
         }
         let is_focus_traversal_command =
             matches!(command.as_str(), "focus.next" | "focus.previous");
@@ -449,12 +455,18 @@ impl<H: UiHost> UiTree<H> {
             let window_arbitration = self.window_input_arbitration_snapshot();
             input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx.clone());
+                    },
+                );
+            }
 
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
         }

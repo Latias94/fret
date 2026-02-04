@@ -996,12 +996,18 @@ impl<H: UiHost> UiTree<H> {
             let window_arbitration = self.window_input_arbitration_snapshot();
             input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx.clone());
+                    },
+                );
+            }
         }
 
         let mut invalidation_visited = HashMap::<NodeId, u8>::new();
@@ -2673,14 +2679,39 @@ impl<H: UiHost> UiTree<H> {
             let window_arbitration = self.window_input_arbitration_snapshot();
             input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx.clone());
+                    },
+                );
+            }
 
-            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+            // Command action availability snapshots are intended for integration surfaces (menus,
+            // command palettes) and are not expected to change on hover-only pointer moves.
+            // Avoid publishing on move-only frames to keep pointer sweeps representative.
+            let should_publish_action_availability = match event {
+                Event::Pointer(PointerEvent::Move {
+                    buttons,
+                    pointer_id,
+                    ..
+                }) => {
+                    buttons.left
+                        || buttons.right
+                        || buttons.middle
+                        || self.captured_for(*pointer_id).is_some()
+                }
+                Event::Timer { .. } => false,
+                _ => true,
+            };
+            if should_publish_action_availability {
+                self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+            }
         }
     }
 
