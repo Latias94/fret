@@ -12,9 +12,9 @@ use fret_code_editor_view::{
     select_word_range_in_buffer,
 };
 use fret_core::{
-    AttributedText, CaretAffinity, Color, Corners, DecorationLineStyle, DrawOrder, Edges, FontId,
-    KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow, TextPaintStyle,
-    TextSpan, TextStyle, TextWrap, UnderlineStyle,
+    AttributedText, CaretAffinity, Color, Corners, CursorIcon, DecorationLineStyle, DrawOrder,
+    Edges, FontId, KeyCode, Modifiers, MouseButton, Px, Rect, SceneOp, Size, TextOverflow,
+    TextPaintStyle, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{ClipboardToken, Effect, TextBoundaryMode};
 use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiPointerActionHost};
@@ -804,6 +804,7 @@ impl CodeEditor {
                             return false;
                         }
 
+                        host.set_cursor_icon(CursorIcon::Text);
                         host.request_focus(region_id);
                         host.capture_pointer();
 
@@ -884,6 +885,8 @@ impl CodeEditor {
                 let on_pointer_move_scroll = scroll_handle.clone();
                 let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
                     move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, mv| {
+                        // Show an I-beam cursor while hovering the editor surface, even when not dragging.
+                        host.set_cursor_icon(CursorIcon::Text);
                         let Some(row) = row else {
                             return false;
                         };
