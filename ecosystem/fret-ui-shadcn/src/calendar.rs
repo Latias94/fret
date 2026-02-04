@@ -463,7 +463,28 @@ impl Calendar {
         let chrome = chrome.merge(self.chrome);
         let root = LayoutRefinement::default().merge(self.layout);
 
-        let container_props = decl_style::container_props(&theme, chrome, root);
+        let mut container_props = decl_style::container_props(&theme, chrome, root);
+
+        // Align with shadcn-web: the calendar root is `w-fit` so it doesn't stretch to the full
+        // width of its parent (e.g. gallery preview columns).
+        if matches!(container_props.layout.size.width, Length::Auto) {
+            let content_w = if number_of_months > 1 {
+                // Use the same breakpoint rule as our multi-month layout (`md:flex-row`).
+                let is_row = cx.bounds.size.width.0 >= 768.0;
+                let gap_px = decl_style::space(&theme, Space::N4);
+                if is_row {
+                    Px(month_width.0 * (number_of_months as f32)
+                        + gap_px.0 * ((number_of_months - 1) as f32))
+                } else {
+                    month_width
+                }
+            } else {
+                month_width
+            };
+            let w =
+                Px(content_w.0 + container_props.padding.left.0 + container_props.padding.right.0);
+            container_props.layout.size.width = Length::Px(w);
+        }
         cx.container(container_props, move |cx| {
             if number_of_months > 1 {
                 return calendar_multi_month_view(
