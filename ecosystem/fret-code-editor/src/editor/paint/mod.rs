@@ -593,35 +593,69 @@ pub(super) fn invalidate_syntax_row_cache_for_delta(
         return;
     }
 
-    let start = delta.lines.start.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
-    let line_count = st.buffer.line_count();
-    let before_len = st.syntax_row_cache.len();
+    let line_count = st.buffer.line_count().max(1);
+    let max_line = line_count.saturating_sub(1);
 
-    if delta.lines.old_count != delta.lines.new_count {
-        // Line count changed: row indices at/after the edit point may have shifted.
-        // Keep only entries that are strictly before the invalidation start.
-        st.syntax_row_cache.retain(|row, _| *row < start);
-    } else {
-        let affected_end = delta
-            .lines
-            .start
-            .saturating_add(delta.lines.new_count.saturating_sub(1));
-        let end = affected_end
-            .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
-            .min(line_count.saturating_sub(1));
-        st.syntax_row_cache
-            .retain(|row, _| *row < start || *row > end);
+    let old_edit_start = delta.lines.start;
+    let new_edit_start = delta.lines.start.min(max_line);
+    let old_count = delta.lines.old_count.max(1);
+    let new_count = delta.lines.new_count.max(1);
+    let old_end_excl = old_edit_start.saturating_add(old_count);
+
+    let invalidation_start = new_edit_start.saturating_sub(SYNTAX_CACHE_LOOKBACK_ROWS);
+    let new_span_end = new_edit_start
+        .saturating_add(new_count.saturating_sub(1))
+        .min(max_line);
+    let invalidation_end = new_span_end
+        .saturating_add(SYNTAX_CACHE_LOOKAHEAD_ROWS)
+        .min(max_line);
+
+    let shift: isize = new_count as isize - old_count as isize;
+    let shift_row = |row: usize| -> usize {
+        if shift >= 0 {
+            row.saturating_add(shift as usize)
+        } else {
+            row.saturating_sub(shift.unsigned_abs())
+        }
+    };
+
+    let before_len = st.syntax_row_cache.len();
+    let prev = std::mem::take(&mut st.syntax_row_cache);
+    let mut next = HashMap::with_capacity(prev.len());
+
+    for (row, (spans, tick)) in prev {
+        // Always invalidate the edited line span in the old coordinate space.
+        if row >= old_edit_start && row < old_end_excl {
+            continue;
+        }
+
+        let mapped = if row >= old_end_excl {
+            shift_row(row)
+        } else {
+            row
+        };
+        if mapped >= line_count {
+            continue;
+        }
+
+        // Invalidate a bounded lookback/lookahead window in the new coordinate space.
+        if mapped >= invalidation_start && mapped <= invalidation_end {
+            continue;
+        }
+
+        next.insert(mapped, (spans, tick));
     }
 
+    st.syntax_row_cache = next;
     let after_len = st.syntax_row_cache.len();
-    if after_len != before_len {
-        let removed = before_len.saturating_sub(after_len);
+    let removed = before_len.saturating_sub(after_len);
+    if removed > 0 {
         st.cache_stats.syntax_evictions = st
             .cache_stats
             .syntax_evictions
             .saturating_add(removed as u64);
-        rebuild_syntax_row_cache_queue(st);
     }
+    rebuild_syntax_row_cache_queue(st);
 }
 
 #[cfg(feature = "syntax")]
