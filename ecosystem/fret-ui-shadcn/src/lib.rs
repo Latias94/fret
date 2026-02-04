@@ -117,7 +117,9 @@ pub use calendar::Calendar;
 pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
-pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
+pub use card::{
+    Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
+};
 pub use carousel::{Carousel, CarouselOrientation};
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,

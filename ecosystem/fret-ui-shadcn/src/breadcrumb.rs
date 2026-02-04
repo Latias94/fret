@@ -167,6 +167,7 @@ pub struct BreadcrumbItem {
     label: Arc<str>,
     command: Option<CommandId>,
     disabled: bool,
+    truncate: bool,
 }
 
 impl BreadcrumbItem {
@@ -176,6 +177,7 @@ impl BreadcrumbItem {
             label: label.into(),
             command: None,
             disabled: false,
+            truncate: false,
         }
     }
 
@@ -185,6 +187,7 @@ impl BreadcrumbItem {
             label: Arc::from("…"),
             command: None,
             disabled: true,
+            truncate: false,
         }
     }
 
@@ -198,6 +201,12 @@ impl BreadcrumbItem {
         self
     }
 
+    /// Enables shadcn-aligned `truncate` behavior (single-line + ellipsis overflow).
+    pub fn truncate(mut self, truncate: bool) -> Self {
+        self.truncate = truncate;
+        self
+    }
+
     fn render<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -206,9 +215,10 @@ impl BreadcrumbItem {
         muted: Color,
         fg: Color,
     ) -> AnyElement {
+        let truncate = self.truncate;
         match self.kind {
             BreadcrumbItemKind::Ellipsis => breadcrumb_ellipsis(cx, muted),
-            BreadcrumbItemKind::Page => breadcrumb_text(cx, self.label, base_style, fg),
+            BreadcrumbItemKind::Page => breadcrumb_text(cx, self.label, base_style, fg, truncate),
             BreadcrumbItemKind::Link => {
                 let disabled = self.disabled
                     || crate::command_gating::command_is_disabled_by_gating(
@@ -218,18 +228,27 @@ impl BreadcrumbItem {
                     );
 
                 if disabled {
-                    return breadcrumb_text(cx, self.label, base_style, muted);
+                    return breadcrumb_text(cx, self.label, base_style, muted, truncate);
                 }
 
                 let Some(command) = self.command else {
                     // Non-clickable link-like text (shadcn allows `<a>` without a URL).
-                    return breadcrumb_link_text(cx, self.label, base_style, muted, fg, false);
+                    return breadcrumb_link_text(
+                        cx, self.label, base_style, muted, fg, false, truncate,
+                    );
                 };
 
+                let label = self.label.clone();
                 cx.pressable(PressableProps::default(), move |cx, st| {
                     cx.pressable_dispatch_command_if_enabled(command.clone());
                     vec![breadcrumb_link_text(
-                        cx, self.label, base_style, muted, fg, st.hovered,
+                        cx,
+                        label.clone(),
+                        base_style,
+                        muted,
+                        fg,
+                        st.hovered,
+                        truncate,
                     )]
                 })
             }
@@ -242,13 +261,19 @@ fn breadcrumb_text<H: UiHost>(
     text: Arc<str>,
     base_style: &TextStyle,
     color: Color,
+    truncate: bool,
 ) -> AnyElement {
+    let (wrap, overflow) = if truncate {
+        (TextWrap::None, TextOverflow::Ellipsis)
+    } else {
+        (TextWrap::Word, TextOverflow::Clip)
+    };
     let mut el = ui::text(cx, text)
         .text_size_px(base_style.size)
         .font_weight(base_style.weight)
         .text_color(ColorRef::Color(color))
-        .wrap(TextWrap::Word)
-        .overflow(TextOverflow::Clip);
+        .wrap(wrap)
+        .overflow(overflow);
 
     if let Some(line_height) = base_style.line_height {
         el = el.line_height_px(line_height);
@@ -268,9 +293,10 @@ fn breadcrumb_link_text<H: UiHost>(
     muted: Color,
     fg: Color,
     hovered: bool,
+    truncate: bool,
 ) -> AnyElement {
     let color = if hovered { fg } else { muted };
-    breadcrumb_text(cx, text, base_style, color)
+    breadcrumb_text(cx, text, base_style, color, truncate)
 }
 
 fn breadcrumb_separator<H: UiHost>(
@@ -295,7 +321,9 @@ fn breadcrumb_separator<H: UiHost>(
             Some(*size),
             Some(fret_ui_kit::ColorRef::Color(muted)),
         ),
-        BreadcrumbSeparator::Text(text) => breadcrumb_text(cx, text.clone(), base_style, muted),
+        BreadcrumbSeparator::Text(text) => {
+            breadcrumb_text(cx, text.clone(), base_style, muted, false)
+        }
     }
 }
 
