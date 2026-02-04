@@ -239,8 +239,11 @@ TODO:
   - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (entry for `effects_blur_thrash`).
 - [ ] Extend churn accounting beyond uploads:
-  - SVG raster cache occupancy + eviction counts (to distinguish warmup vs thrash),
-  - path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
+  - [x] SVG raster cache occupancy + eviction counts (to distinguish warmup vs thrash).
+    - Commits: `6bd82329` + `5f7e4fd0` + `3d1510a7`
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `3d1510a7`
+      (see `svg_cache_misses` / `svg_evictions` columns).
+  - [ ] path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
 - [ ] Replace keyed repaint forcing with a representative invalidation-driven workload.
   - Current `svg_upload_torture` harness keys the Canvas subtree by frame to bypass paint-cache replay.
   - Follow-up: design a scroll/pan/zoom driven invalidation path that still yields a stable upload-churn signature.

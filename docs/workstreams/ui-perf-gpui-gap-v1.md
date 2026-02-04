@@ -250,12 +250,22 @@ Proposal:
     `renderer_image_upload_bytes`, `renderer_image_uploads`.
     - Commits: `d01d3190` + `4bade395` (export) + `dfbc02d3` (deterministic workload + script).
     - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dfbc02d3`.
+  - SVG raster cache occupancy + churn counters are now exported (best-effort):
+    - occupancy: `renderer_svg_raster_budget_bytes`, `renderer_svg_rasters_live`,
+      `renderer_svg_mask_atlas_pages_live`, `renderer_svg_mask_atlas_bytes_live`,
+      `renderer_svg_mask_atlas_used_px`, `renderer_svg_mask_atlas_capacity_px`
+    - churn: `renderer_svg_raster_cache_hits`, `renderer_svg_raster_cache_misses`,
+      `renderer_svg_raster_budget_evictions`, `renderer_svg_mask_atlas_page_evictions`,
+      `renderer_svg_mask_atlas_entries_evicted`
+    - Commits: `6bd82329` + `5f7e4fd0` + `3d1510a7`
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `3d1510a7`.
 
 Next:
 
 - Extend the exported telemetry with additional “GPU churn” and “occupancy” signals:
   - glyph atlas occupancy / live page count (to distinguish “one-time warmup” vs “thrash”),
-  - texture upload bytes for non-text assets (done for bytes/count; still missing occupancy + eviction counters),
+  - image/texture lifecycle signals beyond upload-bytes (live bytes, evictions, cache hit/miss) for non-text assets
+    other than SVG,
   - (optional) GPU timestamp queries for render passes + present/submit time when supported.
 - Promote churn into a first-class perf log surface:
   - require `diag perf --json` output to include churn vectors for the top frames,

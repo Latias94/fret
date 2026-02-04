@@ -55,6 +55,13 @@ Output includes:
 - Resource churn proxies (best-effort):
   - Text atlas: `renderer_text_atlas_upload_bytes`, `renderer_text_atlas_evicted_pages`, `renderer_text_atlas_resets`
   - Intermediate pool: `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_pool_evictions`
+  - SVG raster cache occupancy + churn:
+    - occupancy: `renderer_svg_raster_budget_bytes`, `renderer_svg_rasters_live`,
+      `renderer_svg_mask_atlas_pages_live`, `renderer_svg_mask_atlas_bytes_live`,
+      `renderer_svg_mask_atlas_used_px`, `renderer_svg_mask_atlas_capacity_px`
+    - churn: `renderer_svg_upload_bytes`, `renderer_svg_raster_cache_hits`, `renderer_svg_raster_cache_misses`,
+      `renderer_svg_raster_budget_evictions`, `renderer_svg_mask_atlas_page_evictions`,
+      `renderer_svg_mask_atlas_entries_evicted`
 
 This is the fastest “primitive-level” sanity check before deeper tracing.
 
@@ -121,6 +128,22 @@ What to look for:
 - High `text_draw_calls` + high pipeline switches: batching/material fragmentation problem.
 - `scene_encoding_cache_misses` unexpectedly high on steady scripts: cache key instability.
 
+### 3.4 Making non-text upload churn deterministic (SVG raster cache stress)
+
+If a workload appears paint-dominant but text churn is not explanatory, it is useful to make a *known* non-text cache
+thrash signature:
+
+- Harness: `FRET_UI_GALLERY_HARNESS_ONLY=svg_upload_torture`
+- Script: `tools/diag-scripts/ui-gallery-svg-upload-thrash-steady.json`
+- Budget override: `FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES=262144` (256KB)
+
+Notes:
+
+- The current harness forces per-frame paint execution by keying the Canvas subtree by frame, specifically to avoid
+  paint-cache replay hiding the raster/upload path.
+- This is a *measurement* harness, not a recommended production strategy; follow up by designing an invalidation-driven
+  script (scroll/pan/zoom) that still yields a stable churn signature.
+
 ### 3.2 Same workload, but with Tracy capture
 
 ```bash
@@ -155,5 +178,5 @@ cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-t
 ## 4) Next “make it actionable” upgrades (follow-ups)
 
 - Add GPU timestamp queries (where supported) and export `gpu_render_us` for the “CPU looks fine but it hitches” class of bugs.
-- Export additional non-text churn signals (images, SVG mask atlases, path intermediates) so “paint-dominant” pages become explainable.
+- Export additional non-text churn signals (images, path intermediates) so “paint-dominant” pages become explainable.
 - Add an automated correlation view in the perf log (slow frames ↔ churn signature), beyond “top frame” p95/max tables.
