@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::super::paint_render_data::EdgeRender;
-use super::*;
+use super::super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn collect_custom_edge_paths<H: UiHost>(

@@ -1,4 +1,4 @@
-use super::*;
+use super::super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn push_edge_wire_and_markers_budgeted(
