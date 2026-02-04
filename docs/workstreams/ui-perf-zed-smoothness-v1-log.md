@@ -1439,6 +1439,25 @@ Observed intermediate pool signals (sum/max across snapshots in this bundle):
 - `renderer_intermediate_pool_releases`: sum `4860`, max `20`
 - `renderer_intermediate_pool_evictions`: sum `0`, max `0`
 
+#### Eviction stress: force pool evictions with a reduced intermediate budget (1080p)
+
+Purpose:
+- Generate a “high churn” signature (`renderer_intermediate_pool_evictions > 0`) for tail-hitch correlation work.
+
+Command (dev; harness-only; 1080p; reduced pool budget; renderer perf enabled):
+```powershell
+FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520 FRET_DIAG_RENDERER_PERF=1 cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json --dir target/fret-diag-effects-blur-thrash-b20 --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery
+```
+
+Evidence bundle:
+- `target/fret-diag-effects-blur-thrash-b20/1770177939950-ui-gallery-effects-blur-thrash-steady/bundle.json`
+
+Observed intermediate pool churn (sum/max across snapshots in this bundle):
+- `renderer_intermediate_budget_bytes`: max `20971520`
+- `renderer_intermediate_peak_in_use_bytes`: sum `3944706480`, max `16233360`
+- `renderer_intermediate_pool_allocations`: sum `243`, max `1`
+- `renderer_intermediate_pool_evictions`: sum `243`, max `1`
+
 ---
 
 ### Renderer perf exported into diagnostics bundles (primitive-level correlation)

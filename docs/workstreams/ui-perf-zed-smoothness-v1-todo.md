@@ -219,6 +219,11 @@ TODO:
   - image uploads (bytes + count),
   - SVG mask atlas churn (page alloc/evict, upload bytes),
   - path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
+- [x] Add an eviction stress protocol for intermediate pool churn correlation.
+  - Env: `FRET_UI_GALLERY_RENDERER_INTERMEDIATE_BUDGET_BYTES=20971520` (20MB) to force pool evictions.
+  - Script: `tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json`
+  - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (entry for `effects_blur_thrash`).
 - [ ] Standardize “churn triage checklist” in the perf log template:
   - `top_renderer_text_atlas_upload_bytes`, `top_renderer_text_atlas_evicted_pages`,
     `top_renderer_intermediate_peak_in_use_bytes`, `top_renderer_intermediate_pool_evictions`,
