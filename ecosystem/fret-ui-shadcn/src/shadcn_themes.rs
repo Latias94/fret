@@ -284,6 +284,22 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         .entry("component.label.line_height".to_string())
         .or_insert(14.0);
 
+    // new-york-v4 `AlertDialog` defaults:
+    // - Title uses `text-lg` (18px) and Tailwind default leading (28px).
+    // - Description uses `text-sm` (14px) and Tailwind default leading (20px).
+    metrics
+        .entry("component.alert_dialog.title_px".to_string())
+        .or_insert(18.0);
+    metrics
+        .entry("component.alert_dialog.title_line_height".to_string())
+        .or_insert(28.0);
+    metrics
+        .entry("component.alert_dialog.description_px".to_string())
+        .or_insert(14.0);
+    metrics
+        .entry("component.alert_dialog.description_line_height".to_string())
+        .or_insert(20.0);
+
     // new-york-v4 `Empty` defaults:
     // - Title uses `text-lg` (18px) and Tailwind default leading (28px).
     // - Description uses `text-sm/relaxed` (14px, 22.75px line-height).
