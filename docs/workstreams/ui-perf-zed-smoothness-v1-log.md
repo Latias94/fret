@@ -2587,3 +2587,40 @@ Bundles:
 - run 0: `target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate-scratch-r3/1770230769311-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
 - run 1: `target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate-scratch-r3/1770230866422-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
 - run 2: `target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate-scratch-r3/1770230960458-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 03:08:26 (commit `b83ae7a5`)
+
+Change:
+- perf(fret-ui): avoid visible-layer Vec allocs in routing
+
+Why:
+- Pointer move/wheel routing calls `active_input_layers` / `active_focus_layers` / `topmost_pointer_occlusion_layer`
+  frequently. These helpers previously collected `visible_layers_in_paint_order()` into a temporary `Vec` to support
+  reverse traversal and barrier discovery. This commit replaces those allocations with direct scans of `layer_order`.
+
+Suite:
+- `ui-gallery-hit-test-torture-stripes-move-sweep-steady` (sorted by `time`)
+
+Command:
+```sh
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc \
+  --timeout-ms 300000 --poll-ms 100 \
+  --reuse-launch --warmup-frames 5 --repeat 3 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 2000 \
+  --max-pointer-move-hit-test-us 1500 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (pointer-move frames; derived; per-run **max** over frames; us):
+- `dispatch_time_us`: `1075 / 1082 / 1082` (p50 / p95 / max; repeat=3)
+- `hit_test_time_us`: `839 / 886 / 886` (p50 / p95 / max; repeat=3)
+- `snapshots_with_global_changes` (within that frame set): `0 / 0 / 0` (p50 / p95 / max)
+
+Bundles:
+- run 0: `target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc/1770231841210-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- run 1: `target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc/1770231941595-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- run 2: `target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc/1770232040946-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
