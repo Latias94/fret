@@ -145,7 +145,15 @@ Implementation note (non-normative):
   - timings: `renderer_encode_scene_us`, `renderer_prepare_text_us`, `renderer_prepare_svg_us`
   - batching: `renderer_draw_calls`, `renderer_pipeline_switches`, `renderer_bind_group_switches`, `renderer_scissor_sets`
   - churn (best-effort per-frame): `renderer_text_atlas_upload_bytes`, `renderer_text_atlas_evicted_pages`,
-    `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_pool_evictions`
+    `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_pool_evictions`,
+    non-text upload bytes/counters (`renderer_svg_upload_bytes`, `renderer_svg_uploads`,
+    `renderer_image_upload_bytes`, `renderer_image_uploads`),
+    and SVG raster cache occupancy/churn (`renderer_svg_raster_budget_bytes`, `renderer_svg_rasters_live`,
+    `renderer_svg_mask_atlas_pages_live`, `renderer_svg_mask_atlas_bytes_live`,
+    `renderer_svg_mask_atlas_used_px`, `renderer_svg_mask_atlas_capacity_px`,
+    `renderer_svg_raster_cache_hits`, `renderer_svg_raster_cache_misses`,
+    `renderer_svg_raster_budget_evictions`, `renderer_svg_mask_atlas_page_evictions`,
+    `renderer_svg_mask_atlas_entries_evicted`)
   - cache: `renderer_scene_encoding_cache_misses`
 
 ### 2) Provide per-window ring buffers and a “diagnostics bundle” export
