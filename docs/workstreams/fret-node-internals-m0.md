@@ -231,6 +231,8 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/`
 - [x] Split edge paint pipeline into small modules to reduce drift (main vs overlays vs cached-budgeted).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/`
+- [x] Split view-state pipeline into small modules to reduce drift (sync vs queues vs viewport vs frame).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/view_state/`
 - [x] Ensure refactors preserve the public query surfaces of `NodeGraphInternalsStore` and
   `MeasuredGeometryStore`.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
