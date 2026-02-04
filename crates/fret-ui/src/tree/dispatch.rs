@@ -1321,9 +1321,10 @@ impl<H: UiHost> UiTree<H> {
             // correct across discrete interactions like clicks where the pointer position can jump
             // substantially between events.
             //
-            // For now, only allow cached hit-test reuse for pointer-move events; other pointer
-            // events clear the cache and rebuild it from a full hit-test pass.
-            let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+            // For now, allow cached hit-test reuse only for high-frequency, cursor-driven event
+            // streams. Discrete interactions (e.g. clicks) still rebuild the cache from a full
+            // hit-test pass.
+            let hit = if event_allows_hit_test_path_cache_reuse(event) {
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
@@ -1506,7 +1507,7 @@ impl<H: UiHost> UiTree<H> {
             Some(target)
         } else if let Some(pos) = event_position(event) {
             // See the cached hit-test reuse note above.
-            let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+            let hit = if event_allows_hit_test_path_cache_reuse(event) {
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
@@ -2623,8 +2624,12 @@ impl<H: UiHost> UiTree<H> {
                 false,
             );
 
-            self.hit_test_path_cache = None;
-            let hit = self.hit_test_layers_cached(hit_test_layer_roots, *position);
+            let hit = if event_allows_hit_test_path_cache_reuse(event) {
+                self.hit_test_layers_cached(hit_test_layer_roots, *position)
+            } else {
+                self.hit_test_path_cache = None;
+                self.hit_test_layers_cached(hit_test_layer_roots, *position)
+            };
 
             let mut hit_for_hover = hit;
             if let Some((occlusion_layer, occlusion)) =

@@ -6182,6 +6182,17 @@ fn event_position(event: &Event) -> Option<Point> {
     }
 }
 
+fn event_allows_hit_test_path_cache_reuse(event: &Event) -> bool {
+    matches!(
+        event,
+        Event::Pointer(PointerEvent::Move { .. })
+            | Event::Pointer(PointerEvent::Wheel { .. })
+            | Event::Pointer(PointerEvent::PinchGesture { .. })
+            | Event::ExternalDrag(_)
+            | Event::InternalDrag(_)
+    )
+}
+
 fn pointer_type_supports_hover(pointer_type: fret_core::PointerType) -> bool {
     // Hover is a cursor-driven affordance (Mouse/Pen). Touch pointers must not perturb hover state,
     // otherwise multi-pointer input can cause spurious hover exits while a mouse cursor remains in
