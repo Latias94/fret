@@ -332,6 +332,30 @@ Acceptance:
 
 - Hover/pointer-move torture probes show `p95 layout_time_us ~ 0` (or near-zero) for paint-only hover changes.
 
+### Gap F: Diagnostics harness semantics coupling (measurement distortion)
+
+GPUI:
+
+- Zed/GPUI inspection and testing flows do not require rebuilding a full accessibility semantics snapshot every frame
+  to drive pointer-move stress probes.
+
+Fret:
+
+- The UI gallery driver requested a semantics snapshot every frame, even when diagnostics were configured to not
+  capture semantics (`FRET_DIAG_SEMANTICS=0`).
+- This made “hit-test torture” style scripts unrepresentative: pointer sweeps were dominated by per-frame semantics
+  refresh cost, even though the scripted step had already cached its target geometry.
+
+Impact:
+
+- Perf probes intended to isolate hit-test/dispatch cost can end up measuring a heavy unrelated subsystem.
+
+Proposal:
+
+- Gate semantics snapshot refresh to the frames that actually require selector resolution.
+  - Implemented by `perf(diag): gate semantics snapshot requests` (commit `470708b2`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (entry for commit `470708b2`).
+
 ---
 
 ## 4) Proposed milestone mapping (additive to the Zed smoothness workstream)
