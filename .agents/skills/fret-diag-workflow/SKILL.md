@@ -1,6 +1,6 @@
 ---
 name: fret-diag-workflow
-description: Reproduce and debug Fret UI issues with `fretboard diag`: scripted UI automation, diagnostics bundles, screenshots, triage/compare, and turning bugs into stable repro gates. Use when authoring or running `tools/diag-scripts/*.json`, packaging bundles for sharing, or analyzing invalidation/perf regressions.
+description: "Reproduce and debug Fret UI issues with `fretboard diag`: scripted UI automation, diagnostics bundles, screenshots, triage/compare, and turning bugs into stable repro gates. Use when authoring or running `tools/diag-scripts/*.json`, packaging bundles for sharing, or analyzing invalidation/perf regressions."
 ---
 
 # Fret diag workflow
