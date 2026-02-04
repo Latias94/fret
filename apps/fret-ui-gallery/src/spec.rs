@@ -97,6 +97,7 @@ pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
 pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
+pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
 pub(crate) const PAGE_VIRTUAL_LIST_TORTURE: &str = "virtual_list_torture";
 pub(crate) const PAGE_CODE_VIEW_TORTURE: &str = "code_view_torture";
 pub(crate) const PAGE_CODE_EDITOR_MVP: &str = "code_editor_mvp";

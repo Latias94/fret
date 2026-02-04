@@ -52,6 +52,7 @@ pub(crate) fn harness_only_view(
     match harness.trim() {
         PAGE_HIT_TEST_TORTURE => preview_hit_test_torture_surface_only(cx),
         PAGE_EFFECTS_BLUR_TORTURE => preview_effects_blur_torture_surface_only(cx),
+        PAGE_SVG_UPLOAD_TORTURE => preview_svg_upload_torture_surface_only(cx),
         other => vec![
             shadcn::Card::new(vec![
                 shadcn::CardHeader::new(vec![
@@ -1570,6 +1571,138 @@ fn preview_effects_blur_torture_surface_only(cx: &mut ElementContext<'_, App>) -
     vec![cx.semantics(
         SemanticsProps {
             test_id: Some(Arc::<str>::from("ui-gallery-effects-blur-root")),
+            ..Default::default()
+        },
+        move |_cx| [root],
+    )]
+}
+
+fn preview_svg_upload_torture_surface_only(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    use fret_icons::IconRegistry;
+    use fret_ui::SvgSource;
+    use fret_ui::element::{CanvasCachePolicy, LayoutStyle, Length, SemanticsProps};
+    use fret_ui_kit::declarative::icon::IconSvgRegistry;
+
+    let frame = cx.with_state(
+        || 0u64,
+        |v| {
+            *v = v.wrapping_add(1);
+            *v
+        },
+    );
+
+    let mut needs_lease = false;
+    cx.with_state(
+        || None::<ContinuousFrames>,
+        |lease| {
+            if lease.is_none() {
+                needs_lease = true;
+            }
+        },
+    );
+    if needs_lease {
+        let lease = cx.begin_continuous_frames();
+        cx.with_state(
+            || None::<ContinuousFrames>,
+            |slot| {
+                *slot = Some(lease);
+            },
+        );
+    }
+
+    #[derive(Default)]
+    struct UiGallerySvgUploadTortureSvgIds {
+        ids: Option<Arc<Vec<fret_core::SvgId>>>,
+    }
+
+    let mut svg_ids = cx
+        .app
+        .global::<UiGallerySvgUploadTortureSvgIds>()
+        .and_then(|cache| cache.ids.clone())
+        .filter(|ids| !ids.is_empty());
+    if svg_ids.is_none() {
+        let icon_ids: Vec<fret_icons::IconId> = cx
+            .app
+            .with_global_mut(IconRegistry::default, |icons, _app| {
+                icons.iter().map(|(id, _)| id.clone()).take(2048).collect()
+            });
+
+        let resolved: Vec<fret_core::SvgId> = cx
+            .app
+            .global::<IconSvgRegistry>()
+            .map(|registry| {
+                icon_ids
+                    .into_iter()
+                    .filter_map(|icon| registry.resolve(&icon))
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let resolved = Arc::new(resolved);
+        if !resolved.is_empty() {
+            cx.app
+                .with_global_mut(UiGallerySvgUploadTortureSvgIds::default, |cache, _app| {
+                    cache.ids = Some(resolved.clone());
+                });
+            svg_ids = Some(resolved);
+        }
+    }
+    let svg_ids = svg_ids.unwrap_or_else(|| Arc::new(Vec::new()));
+
+    let mut root_layout = LayoutStyle::default();
+    root_layout.size.width = Length::Fill;
+    root_layout.size.height = Length::Fill;
+    root_layout.overflow = fret_ui::element::Overflow::Clip;
+
+    let mut canvas = CanvasProps::default();
+    canvas.layout = root_layout;
+    canvas.cache_policy = CanvasCachePolicy::smooth_default();
+
+    let svg_ids_for_paint = svg_ids.clone();
+    let frame_for_paint = frame;
+    // NOTE: The UI paint cache can legitimately replay Canvas output when it is clean. For this
+    // harness we intentionally force per-frame repaint by keying the Canvas subtree, so we can
+    // measure SVG raster upload churn deterministically.
+    let root = cx.keyed(("ui-gallery.svg-upload-torture.canvas", frame), |cx| {
+        cx.canvas(canvas, move |p| {
+            let ids = svg_ids_for_paint.as_ref();
+            if ids.is_empty() {
+                return;
+            }
+
+            // Render enough distinct RGBA SVG rasters to exceed a small svg_raster_budget_bytes,
+            // then cycle the window each frame. This yields a stable "upload churn" signature.
+            let frame = frame_for_paint;
+            let tile_px = 96.0;
+            let cols = 12usize;
+            let rows = 6usize;
+            let count = cols.saturating_mul(rows);
+            let base = (frame as usize).wrapping_mul(17);
+            for i in 0..count {
+                let svg = ids[(base + i) % ids.len()];
+                let x = (i % cols) as f32 * tile_px;
+                let y = (i / cols) as f32 * tile_px;
+                let rect = Rect::new(
+                    Point::new(Px(x), Px(y)),
+                    Size::new(Px(tile_px), Px(tile_px)),
+                );
+                let svg = SvgSource::Id(svg);
+                p.svg_image(
+                    i as u64,
+                    DrawOrder(i as u32),
+                    rect,
+                    &svg,
+                    fret_core::SvgFit::Contain,
+                    1.0,
+                );
+            }
+        })
+    });
+
+    vec![cx.semantics(
+        SemanticsProps {
+            label: Some(Arc::from("Debug:ui-gallery:svg-upload-torture:root")),
+            test_id: Some(Arc::from("ui-gallery-svg-upload-root")),
             ..Default::default()
         },
         move |_cx| [root],

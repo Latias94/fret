@@ -2186,6 +2186,19 @@ pub fn build_runner_config() -> WinitRunnerConfig {
         }
     }
 
+    if let Ok(raw) = std::env::var("FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES") {
+        let raw = raw.trim();
+        if !raw.is_empty() {
+            if let Ok(bytes) = raw.parse::<u64>() {
+                config.svg_raster_budget_bytes = bytes.max(1024);
+                tracing::info!(
+                    bytes = config.svg_raster_budget_bytes,
+                    "ui-gallery overriding svg_raster_budget_bytes via FRET_UI_GALLERY_SVG_RASTER_BUDGET_BYTES"
+                );
+            }
+        }
+    }
+
     config
 }
 
