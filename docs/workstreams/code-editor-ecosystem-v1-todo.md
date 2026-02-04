@@ -194,7 +194,7 @@ Evidence anchors:
 ## M5 — Syntax Highlighting (incremental + visible-window materialization)
 
 - [x] Define semantic token schema (highlight ids independent of theme colors).
-- [~] Incremental update strategy (best-effort; visible window prioritized) (partial: line-based cache invalidation via `BufferDelta`).
+- [~] Incremental update strategy (best-effort; visible window prioritized) (implemented: bounded line-window invalidation via `BufferDelta`, and far-row cache key shifting when line count changes; see `invalidate_syntax_row_cache_for_delta` + `syntax_cache_invalidation_*` tests under `syntax-rust`).
 - [x] Materialize spans only for visible rows.
 - [x] Expose a UI Gallery toggle for manual validation.
 - [x] Theme changes update paint-only styles without reshaping.
