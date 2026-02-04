@@ -524,7 +524,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -533,7 +532,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -542,7 +540,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "SceneDrawRange cannot target mask targets");
@@ -1203,7 +1200,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -1212,7 +1208,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -1221,7 +1216,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "PathMsaaBatch cannot target mask targets");
@@ -1455,7 +1449,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "ScaleNearest dst cannot be mask targets");
@@ -1696,7 +1689,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "Blur dst cannot be mask targets");
@@ -1971,7 +1963,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "FullscreenBlit dst cannot be mask targets");
@@ -2035,7 +2026,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "ColorAdjust dst cannot be mask targets");
@@ -2271,7 +2261,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "CompositePremul dst cannot be mask targets");
@@ -2436,7 +2425,6 @@ impl Renderer {
                         pass.dst_size,
                         wgpu::TextureFormat::R8Unorm,
                         usage,
-                        self.intermediate_budget_bytes,
                     );
 
                     let pipeline = self
@@ -2500,11 +2488,7 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::ReleaseTarget(target) => {
-                    frame_targets.release_target(
-                        &mut self.intermediate_pool,
-                        *target,
-                        self.intermediate_budget_bytes,
-                    );
+                    frame_targets.release_target(&mut self.intermediate_pool, *target);
                 }
             }
         }
