@@ -952,6 +952,7 @@ impl SelectTriggerPointerState {
             PointerType::Mouse | PointerType::Unknown => {
                 let _ = host.models_mut().update(open, |v| *v = true);
                 host.request_redraw(action_cx.window);
+                host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                 true
             }
             PointerType::Touch | PointerType::Pen => {
@@ -1571,6 +1572,7 @@ mod tests {
     struct PointerHost<'a> {
         app: &'a mut App,
         bounds: Rect,
+        prevented_focus_on_pointer_down: bool,
     }
 
     impl fret_ui::action::UiActionHost for PointerHost<'_> {
@@ -1641,7 +1643,11 @@ mod tests {
 
         fn release_pointer_capture(&mut self) {}
 
-        fn prevent_default(&mut self, _action: fret_runtime::DefaultAction) {}
+        fn prevent_default(&mut self, action: fret_runtime::DefaultAction) {
+            if action == fret_runtime::DefaultAction::FocusOnPointerDown {
+                self.prevented_focus_on_pointer_down = true;
+            }
+        }
 
         fn set_cursor_icon(&mut self, _icon: fret_core::CursorIcon) {}
     }
@@ -2126,6 +2132,7 @@ mod tests {
         let mut host = PointerHost {
             app: &mut app,
             bounds: bounds(),
+            prevented_focus_on_pointer_down: false,
         };
 
         assert!(state.handle_pointer_down(
@@ -2148,6 +2155,7 @@ mod tests {
             true,
         ));
         assert!(host.models_mut().get_copied(&open).unwrap_or(false));
+        assert!(host.prevented_focus_on_pointer_down);
     }
 
     #[test]
@@ -2160,6 +2168,7 @@ mod tests {
         let mut host = PointerHost {
             app: &mut app,
             bounds: bounds(),
+            prevented_focus_on_pointer_down: false,
         };
 
         assert!(state.handle_pointer_down(
@@ -2216,6 +2225,7 @@ mod tests {
         let mut host = PointerHost {
             app: &mut app,
             bounds: bounds(),
+            prevented_focus_on_pointer_down: false,
         };
 
         assert!(state.handle_pointer_down(

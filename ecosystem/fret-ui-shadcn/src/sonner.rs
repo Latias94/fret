@@ -27,11 +27,17 @@ struct ToasterConfigState {
 impl Default for Toaster {
     fn default() -> Self {
         Self {
-            position: ToastPosition::BottomRight,
-            margin: None,
-            gap: None,
-            toast_min_width: None,
-            toast_max_width: None,
+            // shadcn/ui v4 app layout mounts Sonner's `<Toaster position="top-center" />`.
+            // Keep the default aligned with that "golden" baseline.
+            position: ToastPosition::TopCenter,
+            // Sonner defaults (sonner@2.x):
+            // - offset: 24px (non-mobile)
+            // - gap: 14px
+            // - width: 356px
+            margin: Some(Px(24.0)),
+            gap: Some(Px(14.0)),
+            toast_min_width: Some(Px(356.0)),
+            toast_max_width: Some(Px(356.0)),
             max_toasts: Some(fret_ui_kit::DEFAULT_MAX_TOASTS),
         }
     }
@@ -94,7 +100,14 @@ impl Toaster {
                 });
             }
 
-            let mut request = OverlayRequest::toast_layer(id, store).toast_position(self.position);
+            let mut style = fret_ui_kit::ToastLayerStyle::default();
+            // Sonner's close button is opt-in (`closeButton` prop) and shadcn/ui does not enable it
+            // in the v4 app layout baseline.
+            style.show_close_button = false;
+
+            let mut request = OverlayRequest::toast_layer(id, store)
+                .toast_position(self.position)
+                .toast_style(style);
             if let Some(margin) = self.margin {
                 request = request.toast_margin(margin);
             }

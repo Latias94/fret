@@ -7,6 +7,7 @@ pub enum SemanticsRole {
     Window,
     Panel,
     Group,
+    Toolbar,
     Dialog,
     AlertDialog,
     Alert,

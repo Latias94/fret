@@ -17,7 +17,7 @@ use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps,
-    SvgIconProps, TextProps,
+    SpacerProps, SvgIconProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
@@ -36,6 +36,7 @@ pub struct NavigationDrawerItem {
     value: Arc<str>,
     label: Arc<str>,
     icon: IconId,
+    badge_label: Option<Arc<str>>,
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
@@ -47,10 +48,16 @@ impl NavigationDrawerItem {
             value: value.into(),
             label: label.into(),
             icon,
+            badge_label: None,
             disabled: false,
             a11y_label: None,
             test_id: None,
         }
+    }
+
+    pub fn badge_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.badge_label = Some(label.into());
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -329,6 +336,7 @@ fn navigation_drawer_item<H: UiHost>(
     let value = item.value.clone();
     let label = item.label.clone();
     let icon = item.icon.clone();
+    let badge_label = item.badge_label.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
 
@@ -429,6 +437,20 @@ fn navigation_drawer_item<H: UiHost>(
 
                 let icon_el = drawer_icon(cx, theme, &icon, icon_color);
                 let label_el = drawer_label(cx, theme, &label, label_color, selected);
+                let badge_el = badge_label
+                    .as_ref()
+                    .map(|text| drawer_badge_label(cx, theme, text));
+                let mut spacer = SpacerProps::default();
+                spacer.layout.flex.grow = 1.0;
+                let spacer = cx.spacer(spacer);
+
+                let content_children = {
+                    let mut children: Vec<AnyElement> = vec![icon_el, label_el, spacer];
+                    if let Some(badge_el) = badge_el {
+                        children.push(badge_el);
+                    }
+                    children
+                };
 
                 let content = cx.flex(
                     FlexProps {
@@ -450,7 +472,7 @@ fn navigation_drawer_item<H: UiHost>(
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |_cx| vec![icon_el, label_el],
+                    move |_cx| content_children,
                 );
 
                 vec![cx.container(
@@ -505,6 +527,36 @@ fn drawer_label<H: UiHost>(
         .unwrap_or_else(TextStyle::default);
 
     style.weight = drawer_tokens::label_weight(theme, active);
+
+    let mut props = TextProps::new(text.clone());
+    props.style = Some(style);
+    props.color = Some(color);
+    props.wrap = TextWrap::None;
+    props.overflow = TextOverflow::Clip;
+    cx.text_props(props)
+}
+
+fn drawer_badge_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    text: &Arc<str>,
+) -> AnyElement {
+    let mut style = theme
+        .text_style_by_key("md.sys.typescale.label-small")
+        .unwrap_or_else(TextStyle::default);
+
+    let weight = theme
+        .number_by_key("md.comp.navigation-drawer.large-badge-label.weight")
+        .unwrap_or(500.0);
+    style.weight = fret_core::FontWeight(weight.round().clamp(1.0, 1000.0) as u16);
+
+    let color = theme
+        .color_by_key("md.comp.navigation-drawer.large-badge-label.color")
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| {
+            crate::foundation::token_resolver::MaterialTokenResolver::new(theme)
+                .color_sys("md.sys.color.on-surface-variant")
+        });
 
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);

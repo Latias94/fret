@@ -2,12 +2,11 @@ use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
-use fret_ui::Invalidation;
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollProps,
-    SemanticsProps, StackProps,
+    Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollAxis,
+    ScrollProps, SemanticsProps, StackProps, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -240,20 +239,19 @@ where
 
                 // In the DOM, wheel events scroll the nearest scrollable ancestor even if the
                 // pointer is over non-scrollable affordances (like Radix's scroll buttons).
-                // Our buttons are siblings of the scroll viewport, so explicitly forward wheel
-                // scrolling to the same handle to avoid "stuck" scrolling when the pointer lands
-                // over the button strip.
-                let pressable = cx.pointer_region(PointerRegionProps::default(), move |cx| {
-                    cx.pointer_region_on_wheel(Arc::new(move |host, action_cx, wheel| {
-                        let prev = handle_for_wheel.offset();
-                        let next = Point::new(prev.x, Px(prev.y.0 - wheel.delta.y.0));
-                        handle_for_wheel.set_offset(next);
-                        host.invalidate(Invalidation::HitTestOnly);
-                        host.request_redraw(action_cx.window);
-                        true
-                    }));
-                    vec![pressable]
-                });
+                //
+                // Our buttons are siblings of the scroll viewport, so wrap them in a wheel region
+                // bound to the same scroll handle to avoid "stuck" scrolling when the pointer lands
+                // over the button strip. `WheelRegion` also ensures scroll-handle bindings get the
+                // correct invalidation (hit-test + paint) under view-cache reuse.
+                let pressable = cx.wheel_region(
+                    WheelRegionProps {
+                        axis: ScrollAxis::Y,
+                        scroll_handle: handle_for_wheel.clone(),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![pressable],
+                );
 
                 let gated = cx.interactivity_gate(true, visible, |_cx| vec![pressable]);
                 cx.opacity(if visible { 1.0 } else { 0.0 }, |_cx| vec![gated])
@@ -323,6 +321,47 @@ where
                     );
 
                     if let Some(active_element) = active_element_ref.get() {
+                        let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
+                            let (Some(viewport), Some(child)) = (
+                                cx.last_bounds_for_element(scroll.id),
+                                cx.last_bounds_for_element(active_element),
+                            ) else {
+                                return false;
+                            };
+
+                            // Compute positions in scroll-content coordinates (stable even when we don't
+                            // have paint-space bounds for scrolled children).
+                            let child_top = Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
+                            let child_h = Px(child.size.height.0.max(0.0));
+                            let child_bottom = Px(child_top.0 + child_h.0);
+                            let viewport_h = Px(viewport.size.height.0.max(0.0));
+                            if viewport_h.0 <= 0.01 {
+                                return false;
+                            }
+
+                            let prev = handle_for_stack.offset();
+                            let view_top = prev.y;
+                            let view_bottom = Px(prev.y.0 + viewport_h.0);
+
+                            // If the active row is taller than the viewport, we can't make it fully visible;
+                            // match "nearest" semantics by aligning the top edge.
+                            let target_y = if child_h.0 >= viewport_h.0 - 0.01 {
+                                child_top
+                            } else if child_top.0 < view_top.0 {
+                                child_top
+                            } else if child_bottom.0 > view_bottom.0 {
+                                Px(child_bottom.0 - viewport_h.0)
+                            } else {
+                                view_top
+                            };
+
+                            if (target_y.0 - prev.y.0).abs() <= 0.01 {
+                                return false;
+                            }
+                            handle_for_stack.set_offset(Point::new(prev.x, target_y));
+                            true
+                        };
+
                         if has_scroll && !did_initial_scroll && should_align_active_to_top() {
                             let did = active_desc::scroll_active_element_align_top_y(
                                 cx,
@@ -343,32 +382,7 @@ where
                             }
 
                         } else if has_scroll && !did_initial_scroll && should_focus_selected_item() {
-                            // Match Radix `focusSelectedItem`'s `scrollIntoView({ block: 'nearest' })`
-                            // behavior using scroll-content coordinates (stable even when we don't
-                            // have paint-space bounds for scrolled children).
-                            if let (Some(viewport), Some(child)) = (
-                                cx.last_bounds_for_element(scroll.id),
-                                cx.last_bounds_for_element(active_element),
-                            ) {
-                                let child_top =
-                                    Px((child.origin.y.0 - viewport.origin.y.0).max(0.0));
-                                let child_h = Px(child.size.height.0.max(0.0));
-                                let child_bottom = Px(child_top.0 + child_h.0);
-                                let viewport_h = Px(viewport.size.height.0.max(0.0));
-
-                                let prev = handle_for_stack.offset();
-                                let view_top = prev.y;
-                                let view_bottom = Px(prev.y.0 + viewport_h.0);
-
-                                let target_y = if child_top.0 < view_top.0 {
-                                    child_top
-                                } else if child_bottom.0 > view_bottom.0 {
-                                    Px(child_bottom.0 - viewport_h.0)
-                                } else {
-                                    view_top
-                                };
-                                handle_for_stack.set_offset(Point::new(prev.x, target_y));
-                            }
+                            let _ = scroll_active_nearest(cx);
                             on_focused_selected_item();
                         } else {
                             // Match Radix Select: only keep the active option in view when the
@@ -1011,6 +1025,7 @@ fn select_impl<H: UiHost>(
             1.0,
             overlay_motion::shadcn_ease,
         );
+        let overlay_present = motion.present;
         let overlay_presence = OverlayPresence {
             present: motion.present,
             interactive: is_open,
@@ -1057,6 +1072,9 @@ fn select_impl<H: UiHost>(
         let min_width = theme
             .metric_by_key("component.select.min_width")
             .unwrap_or(Px(128.0));
+        // shadcn/ui new-york-v4 SelectContent includes `min-w-[8rem]`.
+        // Treat that as the semantic minimum regardless of theme overrides.
+        let min_width = Px(min_width.0.max(128.0));
 
         let trigger_layout = decl_style::layout_style(
             &theme,
@@ -1204,6 +1222,19 @@ fn select_impl<H: UiHost>(
                 || radix_select::select_mouse_open_guard(),
                 |g| g.clone(),
             );
+
+            if !overlay_present {
+                let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                state.pending_item_aligned_scroll_to_y = None;
+                state.last_item_aligned_scroll_to_y = None;
+                state.item_aligned_user_scrolled = false;
+                state.did_item_aligned_scroll_initial = false;
+                state.did_item_aligned_scroll_reposition = false;
+                state.did_item_aligned_focus_scroll = false;
+                state.item_aligned_scroll_up_visible = false;
+                state.pending_active_align_top_scroll = false;
+                state.pending_active_scroll_into_view = false;
+            }
 
             let state_for_timer = trigger_state.clone();
             cx.timer_on_timer_for(
@@ -1427,22 +1458,34 @@ fn select_impl<H: UiHost>(
                     let window_margin = theme
                         .metric_by_key("component.select.window_margin")
                         .unwrap_or(Px(0.0));
+                    let item_h = theme
+                        .metric_by_key("component.select.item_height")
+                        .unwrap_or(Px(32.0));
+                    let scroll_button_h = theme
+                        .metric_by_key("component.select.scroll_button_height")
+                        .unwrap_or(Px(24.0));
+                    let min_list_h = Px(scroll_button_h.0 * 2.0 + item_h.0 * 5.0);
+
                     let outer_with_margin =
                         overlay::outer_bounds_with_window_margin(cx.bounds, window_margin);
-                    // Radix Select uses `collisionPadding` (10px) on the popper substrate, but the
-                    // listbox can still overflow when it is larger than the available space.
-                    //
-                    // Model this by using full window bounds for popper placement while keeping
-                    // the window-margin inset available as a sizing hint.
+                    // When the viewport is extremely short, applying the full window margin would
+                    // reduce the listbox to an unusable height. Prefer allowing overflow so we can
+                    // keep a reasonable minimum number of rows visible (Radix behavior under tight
+                    // constraints).
+                    let force_no_margin = cx.bounds.size.height.0 <= 180.0;
                     let outer = if position == SelectPosition::Popper {
+                        // Radix Select uses `collisionPadding` (10px) on the popper substrate, but
+                        // the listbox can still overflow when it is larger than the available
+                        // space.
+                        //
+                        // Model this by using full window bounds for popper placement while keeping
+                        // the window-margin inset available as a sizing hint.
+                        cx.bounds
+                    } else if force_no_margin || outer_with_margin.size.height.0 < min_list_h.0 {
                         cx.bounds
                     } else {
                         outer_with_margin
                     };
-
-                    let item_h = theme
-                        .metric_by_key("component.select.item_height")
-                        .unwrap_or(Px(32.0));
 
                     let border_width = resolved.border_width;
                     let direction = direction_prim::use_direction_in_scope(cx, None);
@@ -1638,26 +1681,21 @@ fn select_impl<H: UiHost>(
                         );
                     }
 
-                    // new-york-v4 uses Radix's `--radix-select-content-available-height` which adapts
-                    // to the current window + trigger placement. Prefer that behavior by computing
-                    // the available height from our popper substrate, while still allowing an
-                    // explicit theme override for apps that want a fixed cap.
+                    // new-york-v4 Select uses:
+                    // - `max-h-[var(--radix-select-content-available-height)]`
+                    // - where `--radix-select-content-available-height` is derived from Radix
+                    //   Popper's `size()` middleware (Floating UI) for `position="popper"`.
+                    //
+                    // Model that behavior by computing the available main-axis height for the
+                    // current placement.
                     let available_h = (position == SelectPosition::Popper)
                         .then(|| {
-                            let probe_desired = fret_core::Size::new(desired_w, outer.size.height);
-                            let layout = popper::popper_content_layout_sized(
+                            radix_select::select_popper_available_height(
                                 outer,
                                 anchor,
-                                probe_desired,
+                                min_width,
                                 popper_placement,
-                            );
-                            popper::popper_available_metrics(
-                                outer,
-                                anchor,
-                                &layout,
-                                popper_placement.direction,
                             )
-                            .available_height
                         })
                         .unwrap_or(outer.size.height);
                     let max_h = theme
@@ -1747,6 +1785,18 @@ fn select_impl<H: UiHost>(
                     let transform_origin = placement.transform_origin;
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
+                    if std::env::var("FRET_DEBUG_SELECT_PLACED")
+                        .ok()
+                        .is_some_and(|v| v == "1")
+                    {
+                        eprintln!(
+                            "select placed rect: origin=({}, {}) size=({}, {})",
+                            placed.origin.x.0,
+                            placed.origin.y.0,
+                            placed.size.width.0,
+                            placed.size.height.0
+                        );
+                    }
 
                     let opacity = motion.opacity;
                     let scale = motion.scale;
@@ -2028,6 +2078,8 @@ fn select_impl<H: UiHost>(
                                             trigger_state_for_overlay_in_content.clone();
                                         let state_for_focused_selected_item =
                                             trigger_state_for_overlay_in_content.clone();
+                                        let allow_align_active_to_top =
+                                            position == SelectPosition::ItemAligned;
                                         let state_for_consume_active_scroll_into_view =
                                             trigger_state_for_overlay_in_content.clone();
 
@@ -2058,7 +2110,8 @@ fn select_impl<H: UiHost>(
                                                 let state = state_for_align_check
                                                     .lock()
                                                     .unwrap_or_else(|e| e.into_inner());
-                                                state.pending_active_align_top_scroll
+                                                allow_align_active_to_top
+                                                    && state.pending_active_align_top_scroll
                                                     && !state.did_item_aligned_scroll_initial
                                                     && !state.did_item_aligned_scroll_reposition
                                             },
@@ -2651,25 +2704,25 @@ fn select_impl<H: UiHost>(
                                                     layout.position = PositionStyle::Absolute;
                                                     layout.inset = InsetStyle {
                                                         left: Some(Px(0.0)),
-                                                        right: Some(Px(0.0)),
-                                                        top: Some(Px(0.0)),
-                                                        bottom: Some(Px(0.0)),
-                                                    };
-                                                    layout.overflow = Overflow::Clip;
-                                                    layout
-                                                },
-                                                padding: Edges::all(Px(0.0)),
-                                                background: Some(
-                                                    theme_for_overlay.colors.panel_background,
-                                                ),
-                                                shadow: Some(shadow),
-                                                border: Edges::all(border_width),
-                                                border_color: Some(overlay_border),
-                                                corner_radii: Corners::all(radius),
-                                                ..Default::default()
+                                                    right: Some(Px(0.0)),
+                                                    top: Some(Px(0.0)),
+                                                    bottom: Some(Px(0.0)),
+                                                };
+                                                layout.overflow = Overflow::Clip;
+                                                layout
                                             },
-                                            move |_cx| vec![scroll],
-                                        );
+                                            padding: Edges::all(Px(0.0)),
+                                            background: Some(
+                                                theme_for_overlay.colors.panel_background,
+                                            ),
+                                            shadow: Some(shadow),
+                                            border: Edges::all(border_width),
+                                            border_color: Some(overlay_border),
+                                            corner_radii: Corners::all(radius),
+                                            ..Default::default()
+                                        },
+                                        move |_cx| vec![scroll],
+                                    );
 
                                         (
                                             PressableProps {
@@ -2712,21 +2765,14 @@ fn select_impl<H: UiHost>(
                             state.listbox = listbox_id_out.get();
                             state.content_panel = content_panel_id_out.get();
                             state.width_probe = width_probe_id_out.get();
-                            state.selected_item = selected_item_id_out.get();
-                            state.selected_item_text = selected_item_text_id_out.get();
-                            state.alignment_item_pos = alignment_item_pos_out.get();
-                            state.alignment_item_has_leading_non_item =
-                                alignment_item_has_leading_non_item_out
-                                    .get()
-                                    .unwrap_or(false);
-                            if !is_open {
-                                state.did_item_aligned_scroll_initial = false;
-                                state.did_item_aligned_scroll_reposition = false;
-                                state.did_item_aligned_focus_scroll = false;
-                                state.item_aligned_scroll_up_visible = false;
-                                state.last_item_aligned_scroll_to_y = None;
-                                state.item_aligned_user_scrolled = false;
-                                state.pending_active_scroll_into_view = false;
+                            if is_open {
+                                state.selected_item = selected_item_id_out.get();
+                                state.selected_item_text = selected_item_text_id_out.get();
+                                state.alignment_item_pos = alignment_item_pos_out.get();
+                                state.alignment_item_has_leading_non_item =
+                                    alignment_item_has_leading_non_item_out
+                                        .get()
+                                        .unwrap_or(false);
                             }
                         }
 
@@ -4561,6 +4607,174 @@ mod tests {
     }
 
     #[test]
+    fn select_item_aligned_close_does_not_jump_when_committing_value() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("apple")));
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items = vec![
+            SelectItem::new("apple", "Apple"),
+            SelectItem::new("banana", "Banana"),
+            SelectItem::new("gamma", "Gamma"),
+        ];
+
+        // Frame 1: closed.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ComboBox)
+            .expect("select trigger node");
+        let trigger_center = Point::new(
+            Px(trigger.bounds.origin.x.0 + trigger.bounds.size.width.0 * 0.5),
+            Px(trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: trigger_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Render a couple frames to settle the item-aligned overlay.
+        for _ in 0..2 {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                items.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node");
+        let listbox_before = ui
+            .debug_node_bounds(listbox.id)
+            .unwrap_or_else(|| listbox.bounds);
+
+        let banana = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Banana")
+            })
+            .expect("banana option node");
+        let banana_center = Point::new(
+            Px(banana.bounds.origin.x.0 + banana.bounds.size.width.0 * 0.5),
+            Px(banana.bounds.origin.y.0 + banana.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: banana_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("banana"));
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        // Frame after commit: still present (exit transition), but layout should not re-align to the
+        // newly selected item.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            items,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let listbox = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("listbox node during exit transition");
+        let listbox_after = ui
+            .debug_node_bounds(listbox.id)
+            .unwrap_or_else(|| listbox.bounds);
+
+        let dy = (listbox_after.origin.y.0 - listbox_before.origin.y.0).abs();
+        assert!(
+            dy < 0.01,
+            "expected item-aligned listbox to keep its layout bounds while closing; before={listbox_before:?} after={listbox_after:?}"
+        );
+    }
+
+    #[test]
     fn select_open_pointer_down_does_not_immediately_close_on_pointer_up() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -5263,6 +5477,154 @@ mod tests {
         assert!(
             up_is_hit_testable,
             "expected scroll up to become hit-testable after scrolling down; bounds={up_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn select_scroll_buttons_wheel_scroll_without_dismissing() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let items: Vec<SelectItem> = (0..50)
+            .map(|i| SelectItem::new(format!("v{i}"), format!("Item {i}")))
+            .collect();
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        // Third frame: allow the scroll handle to observe content overflow.
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            items.clone(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_down = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-down-button"))
+            .expect("scroll down node");
+        let down_bounds = ui
+            .debug_node_bounds(scroll_down.id)
+            .expect("scroll down bounds");
+        let wheel_pos = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(down_bounds.origin.x.0 + down_bounds.size.width.0 * fx),
+                    Px(down_bounds.origin.y.0 + down_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_down.id)
+                {
+                    return p;
+                }
+            }
+            panic!("expected scroll down bounds to be hit-testable; bounds={down_bounds:?}");
+        })();
+
+        // Wheel over the scroll button should scroll the list (DOM/Radix behavior).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId(0),
+                position: wheel_pos,
+                delta: fret_core::Point::new(Px(0.0), Px(-80.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open.clone(),
+            items,
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let scroll_up = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("select-scroll-up-button"))
+            .expect("scroll up node");
+        let up_bounds = ui
+            .debug_node_bounds(scroll_up.id)
+            .expect("scroll up bounds");
+        let up_is_hit_testable = (|| {
+            let candidates = [
+                (0.5, 0.5),
+                (0.25, 0.5),
+                (0.75, 0.5),
+                (0.5, 0.25),
+                (0.5, 0.75),
+            ];
+            for (fx, fy) in candidates {
+                let p = Point::new(
+                    Px(up_bounds.origin.x.0 + up_bounds.size.width.0 * fx),
+                    Px(up_bounds.origin.y.0 + up_bounds.size.height.0 * fy),
+                );
+                if let Some(hit) = ui.debug_hit_test(p).hit
+                    && ui.debug_node_path(hit).contains(&scroll_up.id)
+                {
+                    return true;
+                }
+            }
+            false
+        })();
+        assert!(
+            up_is_hit_testable,
+            "expected scroll up to become hit-testable after wheel scrolling down; bounds={up_bounds:?}"
         );
     }
 

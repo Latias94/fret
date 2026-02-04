@@ -1,6 +1,6 @@
 # Material 3 (and Expressive) Refactor Plan
 
-Status: In progress (foundation landed; migration ongoing)
+Status: Complete (foundation landed; migration complete; follow-ups tracked in `docs/workstreams/material3-next-wave-v2.md`)
 
 This document is the **execution plan** for a “fearless refactor” of Material 3 alignment in Fret.
 It complements `docs/workstreams/material3-todo.md`, which remains the broader tracking checklist.
@@ -308,7 +308,11 @@ These are *candidates*, not guaranteed core work:
 
 - [x] Define “no shadcn fallbacks” rule for Material3 components (regression test).
 - [x] Define strict token namespaces and the canonical fallback chain (`md.comp.*` → `md.sys.*`).
-- [ ] Decide the public surface for hoisted interaction sources (if any).
+- [x] Decide the public surface for hoisted interaction sources (if any).
+  - Decision: defer hoisted interaction sources for now; rely on `PressableState` + Material
+    foundation runtime state, and revisit once a concrete preview/authoring need appears.
+  - Evidence: `docs/workstreams/material3-todo.md` (Material Foundation Backlog decision),
+    `ecosystem/fret-ui-material3/src/foundation/context.rs` (no public hoistable surface).
 
 ### M1 — Introduce foundation modules
 

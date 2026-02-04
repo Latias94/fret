@@ -195,8 +195,7 @@ pub mod composable {
                                     LayoutRefinement::default()
                                         .w_px(Px(16.0))
                                         .h_px(Px(16.0))
-                                        .flex_shrink_0()
-                                        .mt(Space::N0p5),
+                                        .flex_shrink_0(),
                                 );
                                 let mut chevron_center = Point::new(Px(8.0), Px(8.0));
                                 if let (
@@ -207,10 +206,14 @@ pub mod composable {
                                     chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
                                 }
                                 let chevron_rotation = if is_open { 180.0 } else { 0.0 };
-                                let chevron_transform = Transform2D::rotation_about_degrees(
-                                    chevron_rotation,
-                                    chevron_center,
-                                );
+                                let chevron_offset_y =
+                                    MetricRef::space(Space::N0p5).resolve(&theme);
+                                let chevron_transform =
+                                    Transform2D::translation(Point::new(Px(0.0), chevron_offset_y))
+                                        * Transform2D::rotation_about_degrees(
+                                            chevron_rotation,
+                                            chevron_center,
+                                        );
                                 let chevron = cx.visual_transform_props(
                                     VisualTransformProps {
                                         layout: chevron_layout,
@@ -335,7 +338,7 @@ pub mod composable {
                 vec![cx.column(
                     ColumnProps {
                         layout: LayoutStyle::default(),
-                        gap: Px(0.0),
+                        gap: MetricRef::space(Space::N4).resolve(&theme),
                         padding: Edges::all(Px(0.0)),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
@@ -897,8 +900,7 @@ impl AccordionTrigger {
                                 LayoutRefinement::default()
                                     .w_px(Px(16.0))
                                     .h_px(Px(16.0))
-                                    .flex_shrink_0()
-                                    .mt(Space::N0p5),
+                                    .flex_shrink_0(),
                             );
                             let mut chevron_center = Point::new(Px(8.0), Px(8.0));
                             if let (
@@ -909,10 +911,13 @@ impl AccordionTrigger {
                                 chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
                             }
                             let chevron_rotation = if is_open { 180.0 } else { 0.0 };
-                            let chevron_transform = Transform2D::rotation_about_degrees(
-                                chevron_rotation,
-                                chevron_center,
-                            );
+                            let chevron_offset_y = MetricRef::space(Space::N0p5).resolve(&theme);
+                            let chevron_transform =
+                                Transform2D::translation(Point::new(Px(0.0), chevron_offset_y))
+                                    * Transform2D::rotation_about_degrees(
+                                        chevron_rotation,
+                                        chevron_center,
+                                    );
                             let chevron = cx.visual_transform_props(
                                 VisualTransformProps {
                                     layout: chevron_layout,

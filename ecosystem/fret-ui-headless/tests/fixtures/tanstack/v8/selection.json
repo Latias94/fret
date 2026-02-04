@@ -1,0 +1,1175 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "selection",
+  "data": [
+    {
+      "id": 1,
+      "name": "Renderer",
+      "status": "Running",
+      "cpu": 12,
+      "mem_mb": 420
+    },
+    {
+      "id": 2,
+      "name": "Asset Cache",
+      "status": "Idle",
+      "cpu": 0,
+      "mem_mb": 128
+    },
+    {
+      "id": 3,
+      "name": "Indexer",
+      "status": "Running",
+      "cpu": 38,
+      "mem_mb": 860
+    },
+    {
+      "id": 4,
+      "name": "Spellcheck",
+      "status": "Disabled",
+      "cpu": 0,
+      "mem_mb": 0
+    },
+    {
+      "id": 5,
+      "name": "Language Server",
+      "status": "Running",
+      "cpu": 7,
+      "mem_mb": 512
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "selection_baseline",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {},
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false
+      }
+    },
+    {
+      "id": "selection_state_two_rows",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "rowSelection": {
+          "1": true,
+          "3": true
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [
+            "1",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "3"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "1",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "3"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "1",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "3"
+          ]
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": true,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": true
+      }
+    },
+    {
+      "id": "selection_filtered_selected_intersects",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "rowSelection": {
+          "1": true,
+          "2": true
+        },
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Running"
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "3",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": true,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": true
+      }
+    },
+    {
+      "id": "selection_toggle_row_multi_disabled_keeps_latest",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "enableMultiRowSelection": false
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "toggleRowSelected",
+          "row_id": "1"
+        },
+        {
+          "type": "toggleRowSelected",
+          "row_id": "3"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [
+            "3"
+          ],
+          "flat": [
+            "3"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "3"
+          ],
+          "flat": [
+            "3"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "3"
+          ],
+          "flat": [
+            "3"
+          ]
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": true,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": true,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "3": true
+          },
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "selection_toggle_all_rows_disabled_noop",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "enableRowSelection": false
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "toggleAllRowsSelected"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "selection_toggle_all_page_rows_respects_pagination",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        }
+      },
+      "actions": [
+        {
+          "type": "toggleAllPageRowsSelected"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "selected": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": true,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 2
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "1": true,
+            "2": true
+          },
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    }
+  ]
+}

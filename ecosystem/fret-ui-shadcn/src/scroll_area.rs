@@ -327,24 +327,22 @@ impl ScrollAreaRoot {
                         probe_unbounded: viewport_probe_unbounded,
                         intrinsic_measure_mode,
                     },
-                    move |cx| match viewport_test_id {
-                        Some(test_id) => {
-                            let wrapped = cx.semantics(
-                                SemanticsProps {
-                                    role: fret_core::SemanticsRole::Group,
-                                    test_id: Some(test_id),
-                                    ..Default::default()
-                                },
-                                move |_cx| viewport_children,
-                            );
-                            vec![wrapped]
-                        }
-                        None => viewport_children,
-                    },
+                    move |_cx| viewport_children,
                 );
 
                 let scroll_id = scroll.id;
-                let mut children = vec![scroll];
+                let viewport = match viewport_test_id {
+                    Some(test_id) => cx.semantics(
+                        SemanticsProps {
+                            role: fret_core::SemanticsRole::Group,
+                            test_id: Some(test_id),
+                            ..Default::default()
+                        },
+                        move |_cx| vec![scroll],
+                    ),
+                    None => scroll,
+                };
+                let mut children = vec![viewport];
 
                 let thumb = shadcn_scrollbar_thumb(&theme);
                 let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);

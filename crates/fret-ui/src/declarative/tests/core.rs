@@ -833,6 +833,133 @@ fn stale_nodes_are_swept_after_gc_lag_under_view_cache_reuse() {
 }
 
 #[test]
+fn view_cache_subtree_membership_includes_nested_cache_roots() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(500.0), Px(500.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    #[derive(Default)]
+    struct CapturedIds {
+        outer: Option<crate::elements::GlobalElementId>,
+        inner: Option<crate::elements::GlobalElementId>,
+        leaf: Option<crate::elements::GlobalElementId>,
+    }
+
+    let ids = Arc::new(std::sync::Mutex::new(CapturedIds::default()));
+    let outer_runs = Arc::new(AtomicUsize::new(0));
+    let inner_runs = Arc::new(AtomicUsize::new(0));
+
+    let mut root: Option<NodeId> = None;
+    for frame in 0..2 {
+        let ids = ids.clone();
+        let outer_runs = outer_runs.clone();
+        let inner_runs = inner_runs.clone();
+        let root_node = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "nested-view-cache-membership",
+            move |cx| {
+                let mut outer_props = crate::element::ViewCacheProps::default();
+                outer_props.cache_key = 1;
+
+                let ids_for_outer = ids.clone();
+                let outer = cx.view_cache(outer_props, move |cx| {
+                    outer_runs.fetch_add(1, Ordering::Relaxed);
+
+                    let mut inner_props = crate::element::ViewCacheProps::default();
+                    inner_props.cache_key = 1;
+
+                    let ids_for_inner = ids_for_outer.clone();
+                    let inner_runs = inner_runs.clone();
+                    let inner = cx.view_cache(inner_props, move |cx| {
+                        inner_runs.fetch_add(1, Ordering::Relaxed);
+                        let leaf = cx.named("leaf", |cx| cx.text("leaf"));
+                        ids_for_inner.lock().unwrap().leaf = Some(leaf.id);
+                        vec![leaf]
+                    });
+
+                    ids_for_outer.lock().unwrap().inner = Some(inner.id);
+                    vec![inner]
+                });
+
+                ids.lock().unwrap().outer = Some(outer.id);
+                vec![outer]
+            },
+        );
+
+        root.get_or_insert(root_node);
+        if frame == 0 {
+            ui.set_root(root_node);
+        }
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
+
+        if frame == 0 {
+            app.advance_frame();
+        }
+    }
+
+    assert_eq!(
+        outer_runs.load(Ordering::Relaxed),
+        1,
+        "expected the outer view-cache subtree closure to be skipped on cache hit"
+    );
+    assert_eq!(
+        inner_runs.load(Ordering::Relaxed),
+        1,
+        "expected the inner view-cache subtree closure to be skipped on cache hit (by virtue of the outer root being reused)"
+    );
+
+    let (outer, inner, leaf) = {
+        let ids = ids.lock().unwrap();
+        (ids.outer, ids.inner, ids.leaf)
+    };
+    let outer = outer.expect("outer view-cache id");
+    let inner = inner.expect("inner view-cache id");
+    let leaf = leaf.expect("leaf element id");
+
+    app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _app| {
+        let window_state = runtime.for_window_mut(window);
+        let outer_list = window_state
+            .view_cache_elements_for_root(outer)
+            .expect("expected outer membership list to be recorded")
+            .to_vec();
+        let inner_list = window_state
+            .view_cache_elements_for_root(inner)
+            .expect("expected inner membership list to be recorded")
+            .to_vec();
+
+        assert!(
+            outer_list.contains(&inner),
+            "expected outer membership list to include the nested cache root"
+        );
+        assert!(
+            outer_list.contains(&leaf),
+            "expected outer membership list to include nested descendants (even across cache-root boundaries)"
+        );
+        assert!(
+            inner_list.contains(&leaf),
+            "expected inner membership list to include its descendants"
+        );
+    });
+}
+
+#[test]
 fn dismissible_root_recreates_nodes_after_layer_removal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

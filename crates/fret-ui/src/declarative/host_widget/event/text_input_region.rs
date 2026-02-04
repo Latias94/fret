@@ -15,6 +15,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
     struct TextInputRegionHookHost<'a, H: UiHost> {
         app: &'a mut H,
         notify_requested: &'a mut bool,
+        notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
     }
 
     impl<H: UiHost> action::UiActionHost for TextInputRegionHookHost<'_, H> {
@@ -38,8 +39,17 @@ pub(super) fn handle_text_input_region<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
+            if self.notify_requested_location.is_none() {
+                let caller = std::panic::Location::caller();
+                *self.notify_requested_location = Some(crate::widget::UiSourceLocation {
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                });
+            }
         }
     }
 
@@ -74,6 +84,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
             let mut host = TextInputRegionHookHost {
                 app: &mut *cx.app,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             if hook(&mut host, action_cx, text.as_str()) {
                 cx.stop_propagation();
@@ -93,6 +104,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
             let mut host = TextInputRegionHookHost {
                 app: &mut *cx.app,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             if hook(&mut host, action_cx, ime) {
                 cx.stop_propagation();
@@ -112,6 +124,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
             let mut host = TextInputRegionHookHost {
                 app: &mut *cx.app,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             if hook(&mut host, action_cx, *token, text.as_str()) {
                 cx.stop_propagation();
@@ -131,6 +144,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
             let mut host = TextInputRegionHookHost {
                 app: &mut *cx.app,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             if hook(&mut host, action_cx, *token) {
                 cx.stop_propagation();
@@ -150,6 +164,7 @@ pub(super) fn handle_text_input_region<H: UiHost>(
             let mut host = TextInputRegionHookHost {
                 app: &mut *cx.app,
                 notify_requested: &mut cx.notify_requested,
+                notify_requested_location: &mut cx.notify_requested_location,
             };
             if hook(&mut host, action_cx, *anchor, *focus) {
                 cx.stop_propagation();

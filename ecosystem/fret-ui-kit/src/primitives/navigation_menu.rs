@@ -508,6 +508,10 @@ pub struct NavigationMenuViewportOverlayRequestArgs {
     pub placement_anchor_override: Option<GlobalElementId>,
     pub content_size: Size,
     pub indicator_size: Px,
+    /// When `true`, the viewport panel width matches the computed placement anchor width.
+    ///
+    /// This matches the upstream shadcn/ui mobile behavior (`w-full` on the viewport panel).
+    pub width_tracks_anchor: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -548,8 +552,8 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         };
         let trigger_anchor_id = navigation_menu_trigger_id(cx, root_id, value);
         let trigger_anchor = trigger_anchor_id.and_then(|id| {
-            cx.last_bounds_for_element(id)
-                .or_else(|| cx.last_visual_bounds_for_element(id))
+            cx.last_visual_bounds_for_element(id)
+                .or_else(|| cx.last_bounds_for_element(id))
         });
         let Some(trigger_anchor) = trigger_anchor else {
             return Vec::new();
@@ -558,8 +562,8 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
         let placement_anchor = args
             .placement_anchor_override
             .and_then(|id| {
-                cx.last_bounds_for_element(id)
-                    .or_else(|| cx.last_visual_bounds_for_element(id))
+                cx.last_visual_bounds_for_element(id)
+                    .or_else(|| cx.last_bounds_for_element(id))
             })
             .map(|override_anchor| match args.placement.side {
                 Side::Top | Side::Bottom => Rect::new(
@@ -573,13 +577,40 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
             })
             .unwrap_or(trigger_anchor);
 
+        let content_size = if args.width_tracks_anchor {
+            Size::new(placement_anchor.size.width, args.content_size.height)
+        } else {
+            args.content_size
+        };
+
+        if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
+            eprintln!(
+                "nav-menu overlay root={:?} selected={:?} trigger_anchor={:?} override={:?} placement_anchor={:?} content_size={:?} width_tracks_anchor={}",
+                root_id,
+                selected_value,
+                trigger_anchor,
+                args.placement_anchor_override.and_then(|id| cx.last_bounds_for_element(id)),
+                placement_anchor,
+                content_size,
+                args.width_tracks_anchor
+            );
+        }
+
+        let outer = overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin);
         let popper_layout = popper::popper_content_layout_unclamped(
-            overlay::outer_bounds_with_window_margin(cx.bounds, args.window_margin),
+            outer,
             placement_anchor,
-            args.content_size,
+            content_size,
             args.placement,
         );
         let placed = popper_layout.rect;
+
+        if std::env::var("FRET_DEBUG_NAV_MENU_OVERLAY").ok().as_deref() == Some("1") {
+            eprintln!(
+                "nav-menu overlay outer={:?} window_margin={:?} placed={:?}",
+                outer, args.window_margin, placed
+            );
+        }
 
         let transform_origin =
             popper::popper_content_transform_origin(&popper_layout, placement_anchor, None);

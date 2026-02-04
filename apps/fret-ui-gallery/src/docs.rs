@@ -104,6 +104,29 @@ let list = cx.virtual_list_keyed(
 ```
 "#;
 
+pub(crate) const DOC_UI_KIT_LIST_TORTURE: &str = r#"
+## List (UI kit torture harness)
+
+This page is an ecosystem-level harness for `fret-ui-kit::declarative::list`.
+
+It intentionally uses the **retained-host** VirtualList path (ADR 0192) to validate that:
+
+- scroll can update membership under cache-hit reuse,
+- crossing window boundaries does not require dirtying the parent cache-root,
+- correctness remains stale-paint safe under view-cache + shell reuse.
+"#;
+
+pub(crate) const USAGE_UI_KIT_LIST_TORTURE: &str = r#"
+Run with view-cache enabled:
+
+- `FRET_UI_GALLERY_VIEW_CACHE=1`
+- `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+
+Script:
+
+- `tools/diag-scripts/ui-gallery-ui-kit-list-window-boundary-scroll.json`
+"#;
+
 pub(crate) const DOC_CODE_VIEW_TORTURE: &str = r#"
 ## Code View (torture harness)
 
@@ -420,6 +443,91 @@ use fret_ui_kit::declarative::tree::tree_view;
 ```
 "#;
 
+pub(crate) const DOC_TABLE_RETAINED_TORTURE: &str = r#"
+## Table (retained torture harness)
+
+This page is a baseline for the **UI Kit table surface** running on the virt-003 retained host path (ADR 0192).
+
+It exists to validate:
+
+- overscan window boundary updates reconcile attach/detach deltas (without notify-based dirty views),
+- header sorting + row selection remain correct under cache-root reuse,
+- scripted regressions stay stable as we migrate more of the full table surface into retained hosts (GPUI-MVP5-eco-002).
+"#;
+
+pub(crate) const USAGE_TABLE_RETAINED_TORTURE: &str = r#"
+```rust
+use fret_ui_kit::declarative::table::table_virtualized_retained_v0;
+```
+"#;
+
+pub(crate) const DOC_AI_TRANSCRIPT_TORTURE: &str = r#"
+## AI transcript (torture harness)
+
+This page is a baseline for **long scrolling conversations** (chat transcripts).
+
+It exists to validate:
+
+- scroll stability under view-cache reuse (no stale paint),
+- virtualization correctness under composable message rows (virt-003 retained hosts; ADR 0192),
+- future migrations toward prepaint-windowed/ephemeral updates (ADR 0190/0193).
+"#;
+
+pub(crate) const USAGE_AI_TRANSCRIPT_TORTURE: &str = r#"
+```rust
+use fret_ui_ai::{ConversationMessage, ConversationTranscript, MessageRole};
+
+let transcript = ConversationTranscript::new(vec![
+    ConversationMessage::new(1, MessageRole::User, "Hello"),
+    ConversationMessage::new(2, MessageRole::Assistant, "Hi!"),
+]);
+```
+"#;
+
+pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
+## Inspector (torture harness)
+
+This page is a baseline for **inspector-style property lists**:
+
+- long, scroll-heavy surfaces,
+- small per-row interaction chrome (hover/selection),
+- stable identity requirements (editing/focus) under view-cache reuse.
+
+It exists to validate:
+
+- retained-host window boundary updates (attach/detach deltas, no notify-driven dirtiness),
+- stale-paint safety while scrolling under cache+shell,
+- readiness for migrating future editor inspector panels (GPUI-MVP5-eco-009).
+"#;
+
+pub(crate) const USAGE_INSPECTOR_TORTURE: &str = r#"
+```rust
+// This harness uses `virtual_list_keyed_retained_with_layout` directly.
+```
+"#;
+
+pub(crate) const DOC_FILE_TREE_TORTURE: &str = r#"
+## File tree (torture harness)
+
+This page is a baseline for **file-tree / outline surfaces**:
+
+- large scrolling lists with indentation (tree depth),
+- stable row identity under view-cache reuse,
+- hover/selection chrome that should not force rerenders.
+
+It exists to validate:
+
+- retained-host window boundary updates (attach/detach deltas, no notify-driven dirtiness),
+- stale-paint safety while scrolling under cache+shell,
+- readiness for migrating editor file trees and outlines (GPUI-MVP5-eco-009).
+"#;
+
+pub(crate) const USAGE_FILE_TREE_TORTURE: &str = r#"
+```rust
+// This harness uses `virtual_list_keyed_retained_with_layout_fn` directly.
+```
+"#;
+
 pub(crate) const DOC_BUTTON: &str = r#"
 ## Button
 
@@ -613,6 +721,185 @@ use std::sync::Arc;
 
 let value = app.models_mut().insert(None::<Arc<str>>);
 let a = m3::Radio::new_value("A", value.clone()).a11y_label("A");
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_BADGE: &str = r#"
+## Material 3 Badge (MVP)
+
+This page validates a Material 3 badge surface:
+
+- token-driven sizing + colors via `md.comp.badge.*`
+- dot and large (value) variants
+- navigation icon placement (Material Web labs placement parity)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_BADGE: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_core::Px;
+use fret_ui::element::{ContainerProps, Length};
+
+let mut anchor = ContainerProps::default();
+anchor.layout.size.width = Length::Px(Px(24.0));
+anchor.layout.size.height = Length::Px(Px(24.0));
+
+let badged = m3::Badge::text("9")
+    .navigation_anchor_size(Px(24.0))
+    .into_element(cx, |cx| [cx.container(anchor, |_cx| [])]);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_TOP_APP_BAR: &str = r#"
+## Material 3 Top App Bar (Primitives)
+
+This page validates top app bar primitives driven by Material Web v30 tokens:
+
+- variants: small / small-centered / medium / large
+- token-driven sizing + colors via `md.comp.top-app-bar.*`
+- minimal "scrolled" surface (switches to `on-scroll` container tokens)
+
+Note: Fret currently models top app bar semantics as `Group` (core does not yet expose a dedicated
+toolbar semantics role). This is tracked in the Material 3 next wave workstream.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TOP_APP_BAR: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_icons::ids;
+
+let bar = m3::TopAppBar::new("Title")
+    .variant(m3::TopAppBarVariant::Small)
+    .navigation_icon(m3::TopAppBarAction::new(ids::ui::CHEVRON_RIGHT).a11y_label("Navigate"))
+    .actions(vec![
+        m3::TopAppBarAction::new(ids::ui::SEARCH).a11y_label("Search"),
+        m3::TopAppBarAction::new(ids::ui::MORE_HORIZONTAL).a11y_label("More"),
+    ])
+    .scrolled(false)
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_BOTTOM_SHEET: &str = r#"
+## Material 3 Bottom Sheet (Primitives)
+
+This page validates bottom sheet primitives driven by Material Web v30 tokens:
+
+- token-driven container outcomes via `md.comp.sheet.bottom.*`
+- drag handle sizing + opacity
+- modal variant: `OverlayRequest::modal` with a scrim and focus trap/restore
+- dismissal: outside press on the scrim (Escape handling is tracked separately)
+
+Non-goals (for this MVP):
+
+- Compose-style `SheetState`, dragging, nested scrolling, and partial expansion.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_BOTTOM_SHEET: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_runtime::Model;
+
+let open: Model<bool> = app.models_mut().insert(false);
+
+let sheet = m3::ModalBottomSheet::new(open.clone()).into_element(
+    cx,
+    |cx| m3::Button::new("Open").into_element(cx),
+    |cx| [m3::Button::new("Close").into_element(cx)],
+);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_DATE_PICKER: &str = r#"
+## Material 3 Date Picker (Primitives)
+
+This page validates date picker primitives driven by Material Web v30 tokens:
+
+- token-driven container + day cell outcomes via `md.comp.date-picker.{docked,modal}.*`
+- docked variant: a non-overlay surface suitable for scaffold-like layouts
+- modal variant: `OverlayRequest::modal` with a scrim and focus trap/restore
+- selection is staged while open and applied on confirm
+
+Non-goals (for this MVP):
+
+- range selection, year selection, and input mode.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_DATE_PICKER: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use fret_ui_headless::calendar::CalendarMonth;
+use time::{Date, Month};
+
+let open = app.models_mut().insert(false);
+let month = app.models_mut().insert(CalendarMonth::new(2026, Month::January));
+let selected = app.models_mut().insert(None::<Date>);
+
+let dialog = m3::DatePickerDialog::new(open, month.clone(), selected.clone())
+    .into_element(cx, |cx| m3::Button::new("Open").into_element(cx));
+
+let docked = m3::DockedDatePicker::new(month, selected).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_TIME_PICKER: &str = r#"
+## Material 3 Time Picker (Primitives)
+
+This page validates time picker primitives driven by Material Web v30 tokens:
+
+- token-driven outcomes via `md.comp.time-picker.*`
+- docked variant: a non-overlay surface suitable for scaffold-like layouts
+- modal variant: `OverlayRequest::modal` with a scrim and focus trap/restore
+- selection is staged while open and applied on confirm
+
+Non-goals (for this MVP):
+
+- drag/gesture dial selection and input mode toggle.
+"#;
+
+pub(crate) const USAGE_MATERIAL3_TIME_PICKER: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use time::Time;
+
+let open = app.models_mut().insert(false);
+let selected = app.models_mut().insert(Time::from_hms(9, 41, 0).unwrap());
+
+let dialog = m3::TimePickerDialog::new(open, selected.clone())
+    .into_element(cx, |cx| m3::Button::new("Open").into_element(cx));
+
+let docked = m3::DockedTimePicker::new(selected).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_SEGMENTED_BUTTON: &str = r#"
+## Material 3 Segmented Button (MVP)
+
+This page validates an outlined segmented button surface:
+
+- token-driven sizing + colors via `md.comp.outlined-segmented-button.*`
+- single-select and multi-select groups
+- roving focus (Arrow keys + Home/End; skip disabled)
+- state layer (hover / pressed / focus) and bounded ripple
+"#;
+
+pub(crate) const USAGE_MATERIAL3_SEGMENTED_BUTTON: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::collections::BTreeSet;
+use std::sync::Arc;
+
+let single = app.models_mut().insert(Arc::<str>::from("alpha"));
+let multi: BTreeSet<Arc<str>> = [Arc::<str>::from("alpha")].into_iter().collect();
+let multi = app.models_mut().insert(multi);
+
+let set = m3::SegmentedButtonSet::single(single)
+    .items(vec![
+        m3::SegmentedButtonItem::new("alpha", "Alpha"),
+        m3::SegmentedButtonItem::new("beta", "Beta"),
+    ])
+    .a11y_label("Options")
+    .into_element(cx);
 ```
 "#;
 
@@ -1397,5 +1684,513 @@ let field = shadcn::Field::new(vec![
     shadcn::FieldContent::new(vec![email]).into_element(cx),
 ])
 .into_element(cx);
+```
+"#;
+
+// --- shadcn/ui v4 component coverage (additional pages) ---
+
+pub(crate) const DOC_ALERT: &str = r#"
+## Alert
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/alert.mdx`.
+"#;
+
+pub(crate) const USAGE_ALERT: &str = r#"
+```rust
+let alert = shadcn::Alert::new(vec![
+    shadcn::AlertTitle::new("Heads up!").into_element(cx),
+    shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
+])
+.into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_ALERT_DIALOG: &str = r#"
+## Alert Dialog
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/alert-dialog.mdx`.
+"#;
+
+pub(crate) const USAGE_ALERT_DIALOG: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_ASPECT_RATIO: &str = r#"
+## Aspect Ratio
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/aspect-ratio.mdx`.
+"#;
+
+pub(crate) const USAGE_ASPECT_RATIO: &str = r#"
+```rust
+let ratio = shadcn::AspectRatio::new(16.0 / 9.0, vec![/* content */]).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_BREADCRUMB: &str = r#"
+## Breadcrumb
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/breadcrumb.mdx`.
+"#;
+
+pub(crate) const USAGE_BREADCRUMB: &str = r#"
+```rust
+// See the gallery preview for `Breadcrumb`, `BreadcrumbItem`, and separators.
+```
+"#;
+
+pub(crate) const DOC_BUTTON_GROUP: &str = r#"
+## Button Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/button-group.mdx`.
+"#;
+
+pub(crate) const USAGE_BUTTON_GROUP: &str = r#"
+```rust
+// ButtonGroup is intended for segmented controls and grouped actions.
+```
+"#;
+
+pub(crate) const DOC_CALENDAR: &str = r#"
+## Calendar
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/calendar.mdx`.
+"#;
+
+pub(crate) const USAGE_CALENDAR: &str = r#"
+```rust
+// See the gallery preview for a minimal Calendar configuration.
+```
+"#;
+
+pub(crate) const DOC_CAROUSEL: &str = r#"
+## Carousel
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/carousel.mdx`.
+"#;
+
+pub(crate) const USAGE_CAROUSEL: &str = r#"
+```rust
+let carousel = shadcn::Carousel::new([
+    cx.text("Slide 1"),
+    cx.text("Slide 2"),
+    cx.text("Slide 3"),
+])
+.item_basis_main_px(Px(260.0))
+.refine_layout(LayoutRefinement::default().w_px(Px(360.0)))
+.into_element(cx);
+
+// Vertical carousel.
+let vertical = shadcn::Carousel::new([
+    cx.text("A"),
+    cx.text("B"),
+    cx.text("C"),
+])
+.orientation(shadcn::CarouselOrientation::Vertical)
+.item_basis_main_px(Px(120.0))
+.refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+.into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_CHART: &str = r#"
+## Chart
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/chart.mdx`.
+"#;
+
+pub(crate) const USAGE_CHART: &str = r#"
+```rust
+// Gallery preview is a smoke stub; see `fret-ui-shadcn` tests for web parity.
+```
+"#;
+
+pub(crate) const DOC_CHECKBOX: &str = r#"
+## Checkbox
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/checkbox.mdx`.
+"#;
+
+pub(crate) const USAGE_CHECKBOX: &str = r#"
+```rust
+let checked: Model<bool> = cx.app.models_mut().insert(false);
+let checkbox = shadcn::Checkbox::new(checked)
+    .a11y_label("Accept terms")
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_COLLAPSIBLE: &str = r#"
+## Collapsible
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/collapsible.mdx`.
+"#;
+
+pub(crate) const USAGE_COLLAPSIBLE: &str = r#"
+```rust
+// See the gallery preview for the recommended structure.
+```
+"#;
+
+pub(crate) const DOC_CONTEXT_MENU: &str = r#"
+## Context Menu
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/context-menu.mdx`.
+"#;
+
+pub(crate) const USAGE_CONTEXT_MENU: &str = r#"
+```rust
+// See the "Menus" page (Dropdown/Context) for the full demo.
+```
+"#;
+
+pub(crate) const DOC_DIALOG: &str = r#"
+## Dialog
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/dialog.mdx`.
+"#;
+
+pub(crate) const USAGE_DIALOG: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_DRAWER: &str = r#"
+## Drawer
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/drawer.mdx`.
+"#;
+
+pub(crate) const USAGE_DRAWER: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_DROPDOWN_MENU: &str = r#"
+## Dropdown Menu
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/dropdown-menu.mdx`.
+"#;
+
+pub(crate) const USAGE_DROPDOWN_MENU: &str = r#"
+```rust
+// See the "Menus" page (Dropdown/Context) for the full demo.
+```
+"#;
+
+pub(crate) const DOC_EMPTY: &str = r#"
+## Empty
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/empty.mdx`.
+"#;
+
+pub(crate) const USAGE_EMPTY: &str = r#"
+```rust
+let empty = shadcn::Empty::new([]).into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_FORM: &str = r#"
+## Form
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/form.mdx`.
+"#;
+
+pub(crate) const USAGE_FORM: &str = r#"
+```rust
+// Fret favors builder-style ergonomic form composition; see `Field` + "Forms" pages.
+```
+"#;
+
+pub(crate) const DOC_HOVER_CARD: &str = r#"
+## Hover Card
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/hover-card.mdx`.
+"#;
+
+pub(crate) const USAGE_HOVER_CARD: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_INPUT: &str = r#"
+## Input
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/input.mdx`.
+"#;
+
+pub(crate) const USAGE_INPUT: &str = r#"
+```rust
+let value: Model<String> = cx.app.models_mut().insert(String::new());
+let input = shadcn::Input::new(value)
+    .a11y_label("Email")
+    .placeholder("name@example.com")
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_INPUT_GROUP: &str = r#"
+## Input Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/input-group.mdx`.
+"#;
+
+pub(crate) const USAGE_INPUT_GROUP: &str = r#"
+```rust
+// Gallery preview is a smoke stub; expand as needed.
+```
+"#;
+
+pub(crate) const DOC_INPUT_OTP: &str = r#"
+## Input OTP
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/input-otp.mdx`.
+"#;
+
+pub(crate) const USAGE_INPUT_OTP: &str = r#"
+```rust
+// Gallery preview is a smoke stub; expand as needed.
+```
+"#;
+
+pub(crate) const DOC_ITEM: &str = r#"
+## Item
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/item.mdx`.
+"#;
+
+pub(crate) const USAGE_ITEM: &str = r#"
+```rust
+// See the gallery preview for the basic Item surface.
+```
+"#;
+
+pub(crate) const DOC_KBD: &str = r#"
+## Kbd
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/kbd.mdx`.
+"#;
+
+pub(crate) const USAGE_KBD: &str = r#"
+```rust
+let kbd = shadcn::Kbd::new("Ctrl+K").into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_LABEL: &str = r#"
+## Label
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/label.mdx`.
+"#;
+
+pub(crate) const USAGE_LABEL: &str = r#"
+```rust
+let label = shadcn::Label::new("Email").into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MENUBAR: &str = r#"
+## Menubar
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/menubar.mdx`.
+"#;
+
+pub(crate) const USAGE_MENUBAR: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_NATIVE_SELECT: &str = r#"
+## Native Select
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/native-select.mdx`.
+"#;
+
+pub(crate) const USAGE_NATIVE_SELECT: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_NAVIGATION_MENU: &str = r#"
+## Navigation Menu
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx`.
+"#;
+
+pub(crate) const USAGE_NAVIGATION_MENU: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_PAGINATION: &str = r#"
+## Pagination
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/pagination.mdx`.
+"#;
+
+pub(crate) const USAGE_PAGINATION: &str = r#"
+```rust
+// Gallery preview is a smoke stub.
+```
+"#;
+
+pub(crate) const DOC_POPOVER: &str = r#"
+## Popover
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/popover.mdx`.
+"#;
+
+pub(crate) const USAGE_POPOVER: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_RADIO_GROUP: &str = r#"
+## Radio Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/radio-group.mdx`.
+"#;
+
+pub(crate) const USAGE_RADIO_GROUP: &str = r#"
+```rust
+let group = shadcn::RadioGroup::uncontrolled(Some("comfortable"))
+    .a11y_label("Options")
+    .item(shadcn::RadioGroupItem::new("default", "Default"))
+    .item(shadcn::RadioGroupItem::new("comfortable", "Comfortable"))
+    .item(shadcn::RadioGroupItem::new("compact", "Compact"))
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SEPARATOR: &str = r#"
+## Separator
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/separator.mdx`.
+"#;
+
+pub(crate) const USAGE_SEPARATOR: &str = r#"
+```rust
+let sep = shadcn::Separator::new().into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SHEET: &str = r#"
+## Sheet
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/sheet.mdx`.
+"#;
+
+pub(crate) const USAGE_SHEET: &str = r#"
+```rust
+// See the gallery preview for the recommended composition shape.
+```
+"#;
+
+pub(crate) const DOC_SIDEBAR: &str = r#"
+## Sidebar
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/sidebar.mdx`.
+"#;
+
+pub(crate) const USAGE_SIDEBAR: &str = r#"
+```rust
+// Gallery preview is a smoke stub; the gallery shell itself is already sidebar-shaped.
+```
+"#;
+
+pub(crate) const DOC_SONNER: &str = r#"
+## Sonner
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/sonner.mdx`.
+"#;
+
+pub(crate) const USAGE_SONNER: &str = r#"
+```rust
+// See the "Toast" page (Sonner-backed) for the full demo.
+```
+"#;
+
+pub(crate) const DOC_SPINNER: &str = r#"
+## Spinner
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/spinner.mdx`.
+"#;
+
+pub(crate) const USAGE_SPINNER: &str = r#"
+```rust
+let spinner = shadcn::Spinner::new().into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_SWITCH: &str = r#"
+## Switch
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/switch.mdx`.
+"#;
+
+pub(crate) const USAGE_SWITCH: &str = r#"
+```rust
+let checked: Model<bool> = cx.app.models_mut().insert(false);
+let switch = shadcn::Switch::new(checked)
+    .a11y_label("Enable feature")
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_TEXTAREA: &str = r#"
+## Textarea
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/textarea.mdx`.
+"#;
+
+pub(crate) const USAGE_TEXTAREA: &str = r#"
+```rust
+let value: Model<String> = cx.app.models_mut().insert(String::new());
+let textarea = shadcn::Textarea::new(value).a11y_label("Message").into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_TOGGLE: &str = r#"
+## Toggle
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/toggle.mdx`.
+"#;
+
+pub(crate) const USAGE_TOGGLE: &str = r#"
+```rust
+// See the gallery preview for a minimal Toggle configuration.
+```
+"#;
+
+pub(crate) const DOC_TOGGLE_GROUP: &str = r#"
+## Toggle Group
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/toggle-group.mdx`.
+"#;
+
+pub(crate) const USAGE_TOGGLE_GROUP: &str = r#"
+```rust
+// See the gallery preview for the recommended ToggleGroup structure.
+```
+"#;
+
+pub(crate) const DOC_TYPOGRAPHY: &str = r#"
+## Typography
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/typography.mdx`.
+"#;
+
+pub(crate) const USAGE_TYPOGRAPHY: &str = r#"
+```rust
+let h1 = shadcn::typography::h1(cx, "The Joke Tax Chronicles");
 ```
 "#;

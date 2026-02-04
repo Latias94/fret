@@ -139,6 +139,40 @@ pub fn request_dock_invalidation<H: UiHost>(
     invalidate_windows(app, windows);
 }
 
+/// Recenter in-window floating containers back into the visible bounds of a window.
+///
+/// This is intended as a "recovery" affordance for editor-grade layouts where floatings can end up
+/// fully off-screen (or stacked) due to persisted state, DPI changes, or window resizes.
+pub fn recenter_in_window_floatings<H: UiHost>(app: &mut H, window: AppWindowId) {
+    let bounds = app
+        .global::<fret_core::WindowMetricsService>()
+        .and_then(|svc| svc.inner_bounds(window))
+        .unwrap_or_else(|| {
+            fret_core::Rect::new(
+                fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+                fret_core::Size::new(fret_core::Px(960.0), fret_core::Px(720.0)),
+            )
+        });
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let floatings = dock.graph.floating_windows_mut(window);
+        for (ix, floating) in floatings.iter_mut().enumerate() {
+            let size = floating.rect.size;
+            let dx = (ix as f32) * 16.0;
+            let dy = (ix as f32) * 16.0;
+            let origin = fret_core::Point::new(
+                fret_core::Px(bounds.origin.x.0 + (bounds.size.width.0 - size.width.0) * 0.5 + dx),
+                fret_core::Px(
+                    bounds.origin.y.0 + (bounds.size.height.0 - size.height.0) * 0.5 + dy,
+                ),
+            );
+            floating.rect = clamp_rect_to_bounds(fret_core::Rect::new(origin, size), bounds);
+        }
+    });
+
+    request_dock_invalidation(app, [window]);
+}
+
 fn clamp_rect_to_bounds(rect: fret_core::Rect, bounds: fret_core::Rect) -> fret_core::Rect {
     let mut out = rect;
     if bounds.size.width.0 > 0.0 && bounds.size.height.0 > 0.0 {

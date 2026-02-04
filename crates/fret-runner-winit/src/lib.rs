@@ -556,8 +556,21 @@ impl WinitInputState {
                 source,
                 ..
             } => {
-                let pointer_id = map_pointer_id_from_pointer_source(*device_id, source);
-                let pointer_type = map_pointer_type_from_pointer_source(source);
+                // Some platforms/reporters can emit `PointerMoved` with `PointerSource::Unknown`
+                // even for the primary mouse cursor. If we treat that as a distinct pointer id,
+                // higher-level UI (which often assumes `PointerId(0)` for mouse) will see a
+                // mismatch between button events (mouse) and move events (unknown), breaking
+                // hover/drag interactions (e.g. docking float-zone hover or floating window drag).
+                //
+                // Be conservative: map `Unknown` pointer-moves to the primary mouse pointer.
+                let (pointer_id, pointer_type) = if matches!(source, PointerSource::Unknown) {
+                    (PointerId(0), self.last_pointer_type)
+                } else {
+                    (
+                        map_pointer_id_from_pointer_source(*device_id, source),
+                        map_pointer_type_from_pointer_source(source),
+                    )
+                };
 
                 let logical: LogicalPosition<f32> = position.to_logical(window_scale_factor);
                 let pos = Point::new(Px(logical.x), Px(logical.y));
@@ -569,6 +582,20 @@ impl WinitInputState {
                 }
 
                 self.pointer_state_mut(pointer_id).click.update_move(pos);
+                if std::env::var_os("FRET_WINIT_POINTER_DEBUG").is_some_and(|v| !v.is_empty())
+                    && (pointer_id != PointerId(0) || matches!(source, PointerSource::Unknown))
+                {
+                    tracing::info!(
+                        pointer_id = ?pointer_id,
+                        pointer_type = ?pointer_type,
+                        source = ?source,
+                        device_id = ?device_id,
+                        pos = ?pos,
+                        buttons = ?self.pointer_buttons(pointer_id),
+                        modifiers = ?self.modifiers,
+                        "winit pointer move"
+                    );
+                }
                 out.push(Event::Pointer(PointerEvent::Move {
                     pointer_id,
                     position: pos,
@@ -639,6 +666,19 @@ impl WinitInputState {
                 };
                 let pressed = matches!(state, ElementState::Pressed);
                 let mapped_button = map_mouse_button(winit_button);
+
+                if std::env::var_os("FRET_WINIT_POINTER_DEBUG").is_some_and(|v| !v.is_empty())
+                    && pointer_id != PointerId(0)
+                {
+                    tracing::info!(
+                        pointer_id = ?pointer_id,
+                        pointer_type = ?pointer_type,
+                        button = ?mapped_button,
+                        pressed = pressed,
+                        device_id = ?device_id,
+                        "winit pointer button"
+                    );
+                }
 
                 let (evt, buttons_now) = {
                     let pointer_state = self.pointer_state_mut(pointer_id);

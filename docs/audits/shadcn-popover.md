@@ -85,6 +85,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - `cargo check -p fret-ui-shadcn`
 - `cargo nextest run -p fret-ui-shadcn popover::tests`
+- Underlay scroll anchor stability gate: when the trigger lives inside a scrolling underlay, the
+  popover panel tracks the trigger after wheel-driven scroll updates (validated in
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` via
+  `fret_popover_tracks_trigger_when_underlay_scrolls`).
 
 ## Follow-ups (recommended)
 

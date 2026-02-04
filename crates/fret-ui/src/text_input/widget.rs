@@ -1322,9 +1322,12 @@ impl<H: UiHost> Widget<H> for TextInput {
             caret_local.size,
         );
 
-        // Anchor IME UI to the *current* caret position (including preedit cursor offset).
-        // This keeps the IME candidate/composition UI tracking the cursor within the preedit text.
-        let ime_rect = caret;
+        // Anchor IME UI to the *visual* caret position (including preedit cursor offset).
+        //
+        // Note that render transforms (scrolling, anchored popovers, etc) do not affect layout
+        // bounds. For platform IME positioning we must apply the accumulated transform so the OS
+        // sees the same coordinates the user sees on screen.
+        let ime_rect = cx.visual_rect_aabb(caret);
 
         if self.last_sent_cursor != Some(ime_rect) {
             self.last_sent_cursor = Some(ime_rect);
