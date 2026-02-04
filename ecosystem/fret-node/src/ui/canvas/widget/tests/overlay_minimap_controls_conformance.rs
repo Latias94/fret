@@ -2,14 +2,17 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use fret_core::{
-    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
+    AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px,
+    Rect, Size,
 };
+use fret_runtime::{CommandId, Effect};
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{Graph, GraphId};
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::commands::CMD_NODE_GRAPH_ZOOM_IN;
 use crate::ui::{
     NodeGraphControlsOverlay, NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
     NodeGraphMiniMapOverlay, NodeGraphStyle,
@@ -238,6 +241,101 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
         Some(underlay),
         "expected controls button activation to request focus to the canvas node"
     );
+}
+
+#[test]
+fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_returns_focus_to_canvas()
+ {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let view = host.models.insert(NodeGraphViewState::default());
+    let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
+    let controls_node = ui.create_node_retained(controls);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, controls_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(controls_node));
+    assert_eq!(ui.focus(), Some(controls_node));
+
+    // Default active button is the first one. ArrowDown selects ZoomIn, then Enter activates it.
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Enter,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        host.effects.iter().any(|e| matches!(
+            e,
+            Effect::Command { command, .. } if *command == CommandId::from(CMD_NODE_GRAPH_ZOOM_IN)
+        )),
+        "expected keyboard activation to dispatch zoom-in command"
+    );
+    assert_eq!(
+        ui.focus(),
+        Some(underlay),
+        "expected activation to request focus to the canvas node"
+    );
+}
+
+#[test]
+fn controls_overlay_escape_returns_focus_to_canvas_without_dispatching_command() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let view = host.models.insert(NodeGraphViewState::default());
+    let controls = NodeGraphControlsOverlay::new(underlay, view, test_style());
+    let controls_node = ui.create_node_retained(controls);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, controls_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(controls_node));
+    assert_eq!(ui.focus(), Some(controls_node));
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Escape,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        !host
+            .effects
+            .iter()
+            .any(|e| matches!(e, Effect::Command { .. })),
+        "expected Escape to only change focus, not dispatch commands"
+    );
+    assert_eq!(ui.focus(), Some(underlay));
 }
 
 #[test]

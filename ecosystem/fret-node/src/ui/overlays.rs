@@ -904,6 +904,7 @@ pub struct NodeGraphControlsOverlay {
     style: NodeGraphStyle,
     hovered: Option<ControlsButton>,
     pressed: Option<ControlsButton>,
+    keyboard_active: Option<ControlsButton>,
     text_blobs: Vec<TextBlobId>,
     placement: OverlayPlacement,
 }
@@ -920,6 +921,7 @@ impl NodeGraphControlsOverlay {
             style,
             hovered: None,
             pressed: None,
+            keyboard_active: None,
             text_blobs: Vec::new(),
             placement: OverlayPlacement::FloatingInCanvas,
         }
@@ -1018,6 +1020,41 @@ impl NodeGraphControlsOverlay {
         cx.request_redraw();
     }
 
+    fn items() -> &'static [ControlsButton] {
+        &[
+            ControlsButton::ToggleConnectionMode,
+            ControlsButton::ZoomIn,
+            ControlsButton::ZoomOut,
+            ControlsButton::FrameAll,
+            ControlsButton::FrameSelection,
+            ControlsButton::ResetView,
+        ]
+    }
+
+    fn next_button(current: Option<ControlsButton>, dir: i32) -> ControlsButton {
+        let items = Self::items();
+        let idx = current
+            .and_then(|c| items.iter().position(|b| *b == c))
+            .unwrap_or(0);
+        let len = items.len().max(1);
+        let idx_i32 = idx as i32;
+        let len_i32 = len as i32;
+        let mut next = idx_i32 + dir;
+        next = ((next % len_i32) + len_i32) % len_i32;
+        items[next as usize]
+    }
+
+    fn a11y_button_label(btn: ControlsButton) -> &'static str {
+        match btn {
+            ControlsButton::ToggleConnectionMode => "Toggle connection mode",
+            ControlsButton::ZoomIn => "Zoom in",
+            ControlsButton::ZoomOut => "Zoom out",
+            ControlsButton::FrameAll => "Frame all",
+            ControlsButton::FrameSelection => "Frame selection",
+            ControlsButton::ResetView => "Reset view",
+        }
+    }
+
     fn label_for(btn: ControlsButton, mode: NodeGraphConnectionMode) -> &'static str {
         match btn {
             ControlsButton::ToggleConnectionMode => match mode {
@@ -1052,6 +1089,57 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
 
     fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
         match event {
+            Event::KeyDown { key, repeat: _, .. } => match *key {
+                KeyCode::ArrowDown => {
+                    self.hovered = None;
+                    self.pressed = None;
+                    self.keyboard_active = Some(Self::next_button(self.keyboard_active, 1));
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                KeyCode::ArrowUp => {
+                    self.hovered = None;
+                    self.pressed = None;
+                    self.keyboard_active = Some(Self::next_button(self.keyboard_active, -1));
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                KeyCode::Home => {
+                    self.hovered = None;
+                    self.pressed = None;
+                    self.keyboard_active = Self::items().first().copied();
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                KeyCode::End => {
+                    self.hovered = None;
+                    self.pressed = None;
+                    self.keyboard_active = Self::items().last().copied();
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                KeyCode::Enter | KeyCode::NumpadEnter | KeyCode::Space => {
+                    let btn = self
+                        .keyboard_active
+                        .or_else(|| Self::items().first().copied())
+                        .expect("controls buttons");
+                    self.dispatch_button(cx, btn);
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                KeyCode::Escape => {
+                    cx.request_focus(self.canvas_node);
+                    cx.stop_propagation();
+                    cx.request_redraw();
+                    cx.invalidate_self(Invalidation::Paint);
+                }
+                _ => {}
+            },
             Event::Pointer(fret_core::PointerEvent::Move { position, .. }) => {
                 let hovered = self.button_at(cx.bounds, *position);
                 if hovered.is_some() {
@@ -1106,7 +1194,13 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
         cx.set_role(fret_core::SemanticsRole::Panel);
         cx.set_label("Controls");
         cx.set_test_id("node_graph.controls");
-        cx.set_focusable(false);
+        cx.set_focusable(true);
+
+        let active = self
+            .keyboard_active
+            .or_else(|| Self::items().first().copied())
+            .expect("controls buttons");
+        cx.set_value(Self::a11y_button_label(active));
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -1144,7 +1238,11 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
         };
 
         for (btn, rect) in &layout.buttons {
-            let hovered = self.hovered == Some(*btn);
+            let hovered = self.hovered == Some(*btn)
+                || (self.hovered.is_none()
+                    && self.pressed.is_none()
+                    && cx.focus == Some(cx.node)
+                    && self.keyboard_active == Some(*btn));
             let pressed = self.pressed == Some(*btn);
             let button_bg = if pressed {
                 self.style.controls_active_background

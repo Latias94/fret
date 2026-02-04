@@ -42,6 +42,8 @@ interactive bounds**.
 - Commands: clicking a button dispatches the corresponding command (zoom, frame, reset, etc.).
 - Focus: successful button activation requests focus to the `canvas_node` so keyboard input remains
   on the canvas.
+- Keyboard: when focused, arrow keys move the active button selection and Enter/Space activates the
+  selected button. Escape returns focus to the canvas without dispatching a command.
 
 ### MiniMap
 
@@ -76,4 +78,3 @@ may be added later via a dedicated composite widget.
 ## Conformance gates
 
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
-
