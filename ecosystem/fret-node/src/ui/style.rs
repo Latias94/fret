@@ -1,6 +1,27 @@
 use fret_core::{Color, Px, TextStyle};
 use fret_ui::{Theme, ThemeSnapshot};
 
+/// Background/theming configuration for the node graph canvas.
+///
+/// This is intentionally policy-light: it is a pure token/config bundle that can be
+/// stored in a B-layer store and applied without touching interaction logic.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NodeGraphBackgroundStyle {
+    pub background: Color,
+
+    pub grid_pattern: NodeGraphBackgroundPattern,
+    pub grid_spacing: f32,
+    pub grid_minor_color: Color,
+    pub grid_major_every: u32,
+    pub grid_major_color: Color,
+    /// Grid stroke thickness in screen pixels (XyFlow `BackgroundProps.lineWidth`).
+    pub grid_line_width: f32,
+    /// Dot diameter in canvas units at zoom=1 (XyFlow `BackgroundProps.size` for dots).
+    pub grid_dot_size: f32,
+    /// Cross size in canvas units at zoom=1 (XyFlow `BackgroundProps.size` for cross).
+    pub grid_cross_size: f32,
+}
+
 /// Background grid pattern variant (XyFlow `BackgroundVariant`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeGraphBackgroundPattern {
@@ -611,5 +632,32 @@ impl NodeGraphStyle {
             min_zoom: 0.15,
             max_zoom: 4.0,
         }
+    }
+
+    pub fn background_style(&self) -> NodeGraphBackgroundStyle {
+        NodeGraphBackgroundStyle {
+            background: self.background,
+            grid_pattern: self.grid_pattern,
+            grid_spacing: self.grid_spacing,
+            grid_minor_color: self.grid_minor_color,
+            grid_major_every: self.grid_major_every,
+            grid_major_color: self.grid_major_color,
+            grid_line_width: self.grid_line_width,
+            grid_dot_size: self.grid_dot_size,
+            grid_cross_size: self.grid_cross_size,
+        }
+    }
+
+    pub fn with_background_style(mut self, background: NodeGraphBackgroundStyle) -> Self {
+        self.background = background.background;
+        self.grid_pattern = background.grid_pattern;
+        self.grid_spacing = background.grid_spacing;
+        self.grid_minor_color = background.grid_minor_color;
+        self.grid_major_every = background.grid_major_every;
+        self.grid_major_color = background.grid_major_color;
+        self.grid_line_width = background.grid_line_width;
+        self.grid_dot_size = background.grid_dot_size;
+        self.grid_cross_size = background.grid_cross_size;
+        self
     }
 }

@@ -65,7 +65,7 @@ use crate::ui::presenter::{
     NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
     PortAnchorHint,
 };
-use crate::ui::style::{NodeGraphColorMode, NodeGraphStyle};
+use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
@@ -528,6 +528,18 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.geometry.geom_key = None;
         self.geometry.index_key = None;
         self.geometry.drag_preview = None;
+        self
+    }
+
+    pub fn background_style(&self) -> NodeGraphBackgroundStyle {
+        self.style.background_style()
+    }
+
+    pub fn with_background_style(mut self, background: NodeGraphBackgroundStyle) -> Self {
+        self.style = self.style.with_background_style(background);
+        // Background theming must not rebuild derived geometry; it is a paint-only concern.
+        // Clear the grid cache to avoid retaining tiles for unused background variants.
+        self.grid_scene_cache.clear();
         self
     }
 

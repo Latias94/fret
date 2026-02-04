@@ -102,3 +102,7 @@ Planned additions (M2):
 - Internals/derived: `ecosystem/fret-node/src/ui/internals.rs`,
   `ecosystem/fret-node/src/ui/canvas/widget/stores/`
 
+## Evidence (M2)
+
+- Background style updates do not rebuild derived geometry:
+  `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`

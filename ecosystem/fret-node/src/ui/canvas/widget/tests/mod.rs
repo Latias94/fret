@@ -21,6 +21,7 @@ use crate::core::{
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 
+mod background_style_conformance;
 mod cached_edge_labels_tile_equivalence_conformance;
 mod cached_edges_tile_equivalence_conformance;
 mod callbacks_conformance;
