@@ -2666,3 +2666,26 @@ Bundles:
 - run 4: `target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc-r7/1770245650104-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
 - run 5: `target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc-r7/1770245750183-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
 - run 6: `target/fret-diag-perf/2026-02-05-pointer-move-layer-scan-no-alloc-r7/1770245849788-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 07:05:30 (commit `c2ea017b`)
+
+Change:
+- feat(diag): include pointer-move max frame ids in triage
+
+Why:
+- The repeat=7 pointer-move gate had a visible “single-run outlier” (run 0 max much higher than others). Without the
+  ability to locate the exact snapshot id, explaining and fixing dispatch/hit-test tails is unnecessarily slow.
+
+Notes:
+
+- `fretboard diag triage --json` now includes:
+  - `stats.pointer_move.max_dispatch_at.{window,tick_id,frame_id}`
+  - `stats.pointer_move.max_hit_test_at.{window,tick_id,frame_id}`
+- On the run 0 bundle above, the outlier snapshot was:
+  - `max_dispatch_at`: `window=4294967297 tick=128 frame=130`
+  - `max_hit_test_at`: `window=4294967297 tick=128 frame=130`
+
+Next:
+
+- Use this snapshot identity to add a more detailed breakdown for the dispatch/hit-test time (so the outlier can be
+  explained in terms of concrete work, not just wall time).

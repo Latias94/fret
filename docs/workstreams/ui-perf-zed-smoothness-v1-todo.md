@@ -178,6 +178,9 @@ Correctness acceptance:
     harness is robust.
     - Evidence: a repeat=7 run completed when launching a prebuilt binary
       (`--launch -- target/release/fret-ui-gallery`); see the perf log entry for commit `b83ae7a5`.
+- [x] Make pointer-move gate outliers explainable (include snapshot id for pointer-move maxima).
+  - Implemented by `feat(diag): include pointer-move max frame ids in triage` (commit `c2ea017b`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `c2ea017b`.
 - [x] Eliminate changed-but-unobserved model churn on pointer-move frames.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dd1a22e8` shows pointer-move
     frames with `changed_models=2` and `propagated_model_change_unobserved_models=2` while remaining paint-only.
