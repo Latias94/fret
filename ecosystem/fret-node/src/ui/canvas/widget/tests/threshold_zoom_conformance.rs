@@ -7,6 +7,7 @@ use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_wi
 use crate::ui::canvas::state::{
     PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDragKind,
 };
+use crate::ui::canvas::widget::hit_test::hit_test_canvas_units_from_screen_px;
 
 fn bounds() -> Rect {
     Rect::new(
@@ -53,7 +54,13 @@ fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
             &mut prevented_default_actions,
         );
 
-        let pos_small = Point::new(Px((threshold_screen - eps_screen) / zoom), Px(0.0));
+        let pos_small = Point::new(
+            Px(hit_test_canvas_units_from_screen_px(
+                threshold_screen - eps_screen,
+                zoom,
+            )),
+            Px(0.0),
+        );
         assert!(pending_drag::handle_pending_node_drag_move(
             &mut canvas,
             &mut cx,
@@ -64,7 +71,13 @@ fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
         assert!(canvas.interaction.node_drag.is_none());
         assert!(canvas.interaction.pending_node_drag.is_some());
 
-        let pos_big = Point::new(Px((threshold_screen + 1.0) / zoom), Px(0.0));
+        let pos_big = Point::new(
+            Px(hit_test_canvas_units_from_screen_px(
+                threshold_screen + 1.0,
+                zoom,
+            )),
+            Px(0.0),
+        );
         assert!(!pending_drag::handle_pending_node_drag_move(
             &mut canvas,
             &mut cx,
@@ -119,7 +132,13 @@ fn connection_drag_threshold_is_zoom_invariant_in_screen_space() {
             &mut prevented_default_actions,
         );
 
-        let pos_small = Point::new(Px((threshold_screen - eps_screen) / zoom), Px(0.0));
+        let pos_small = Point::new(
+            Px(hit_test_canvas_units_from_screen_px(
+                threshold_screen - eps_screen,
+                zoom,
+            )),
+            Px(0.0),
+        );
         assert!(pending_wire_drag::handle_pending_wire_drag_move(
             &mut canvas,
             &mut cx,
@@ -131,7 +150,13 @@ fn connection_drag_threshold_is_zoom_invariant_in_screen_space() {
         assert!(canvas.interaction.wire_drag.is_none());
         assert!(canvas.interaction.pending_wire_drag.is_some());
 
-        let pos_big = Point::new(Px((threshold_screen + 1.0) / zoom), Px(0.0));
+        let pos_big = Point::new(
+            Px(hit_test_canvas_units_from_screen_px(
+                threshold_screen + 1.0,
+                zoom,
+            )),
+            Px(0.0),
+        );
         let _ = pending_wire_drag::handle_pending_wire_drag_move(
             &mut canvas,
             &mut cx,
