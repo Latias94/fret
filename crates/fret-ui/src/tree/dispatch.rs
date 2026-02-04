@@ -100,7 +100,7 @@ impl<H: UiHost> UiTree<H> {
         window: AppWindowId,
         hit_for_hover: Option<NodeId>,
         hit_for_hover_region: Option<NodeId>,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
         needs_redraw: &mut bool,
     ) {
         let hovered_pressable: Option<crate::elements::GlobalElementId> =
@@ -282,7 +282,7 @@ impl<H: UiHost> UiTree<H> {
         barrier_root: Option<NodeId>,
         event: &Event,
         needs_redraw: &mut bool,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) {
         let Event::Pointer(PointerEvent::Move {
             pointer_id,
@@ -379,7 +379,7 @@ impl<H: UiHost> UiTree<H> {
     fn apply_pending_invalidations(
         &mut self,
         pending: HashMap<NodeId, PendingInvalidation>,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut impl InvalidationVisited,
     ) {
         if pending.is_empty() {
             return;
@@ -571,7 +571,7 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         event: &Event,
         needs_redraw: &mut bool,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
@@ -1010,7 +1010,27 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let mut invalidation_visited = HashMap::<NodeId, u8>::new();
+        let mut invalidation_visited = std::mem::take(&mut self.invalidation_dedup);
+        invalidation_visited.begin();
+        struct InvalidationVisitedRestore<H: UiHost> {
+            tree: *mut UiTree<H>,
+            visited: InvalidationDedupTable,
+        }
+
+        impl<H: UiHost> Drop for InvalidationVisitedRestore<H> {
+            fn drop(&mut self) {
+                // Safety: `dispatch_event` holds an exclusive `&mut self` for its full duration.
+                unsafe {
+                    (*self.tree).invalidation_dedup = std::mem::take(&mut self.visited);
+                }
+            }
+        }
+
+        let mut invalidation_visited_restore = InvalidationVisitedRestore {
+            tree: self as *mut UiTree<H>,
+            visited: invalidation_visited,
+        };
+        let invalidation_visited = &mut invalidation_visited_restore.visited;
         let mut needs_redraw = false;
 
         // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
@@ -1038,7 +1058,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         focus,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::FocusVisiblePolicy,
                     );
@@ -1046,7 +1066,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         base_root,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::FocusVisiblePolicy,
                     );
@@ -1060,7 +1080,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         focus,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::InputModalityPolicy,
                     );
@@ -1068,7 +1088,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         base_root,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::InputModalityPolicy,
                     );
@@ -1115,7 +1135,7 @@ impl<H: UiHost> UiTree<H> {
                     node,
                     event,
                     &mut needs_redraw,
-                    &mut invalidation_visited,
+                    invalidation_visited,
                 );
                 if stopped {
                     if needs_redraw {
@@ -1140,7 +1160,7 @@ impl<H: UiHost> UiTree<H> {
                     layer.root,
                     event,
                     &mut needs_redraw,
-                    &mut invalidation_visited,
+                    invalidation_visited,
                 );
                 if stopped {
                     if needs_redraw {
@@ -1361,7 +1381,7 @@ impl<H: UiHost> UiTree<H> {
                                     &input_ctx,
                                     candidate.root,
                                     &candidate.down_event,
-                                    &mut invalidation_visited,
+                                    invalidation_visited,
                                 );
                                 needs_redraw = true;
                                 suppress_touch_up_outside_dispatch = candidate.consume;
@@ -1459,7 +1479,7 @@ impl<H: UiHost> UiTree<H> {
                             hit,
                             event,
                         },
-                        &mut invalidation_visited,
+                        invalidation_visited,
                     );
                     if pointer_down_outside.dispatched {
                         needs_redraw = true;
@@ -1484,7 +1504,7 @@ impl<H: UiHost> UiTree<H> {
                     window,
                     hit_for_hover,
                     hit,
-                    &mut invalidation_visited,
+                    invalidation_visited,
                     &mut needs_redraw,
                 );
             }
@@ -1633,7 +1653,7 @@ impl<H: UiHost> UiTree<H> {
                     barrier_root,
                     event,
                     &mut needs_redraw,
-                    &mut invalidation_visited,
+                    invalidation_visited,
                 );
             }
             if needs_redraw {
@@ -2459,7 +2479,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_source(
                         node,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Hover,
                     );
                 }
@@ -2480,7 +2500,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_source(
                         node,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Hover,
                     );
                 }
@@ -2550,7 +2570,7 @@ impl<H: UiHost> UiTree<H> {
                 &input_ctx,
                 prev,
                 event,
-                &mut invalidation_visited,
+                invalidation_visited,
             );
             needs_redraw = true;
         }
@@ -2604,7 +2624,7 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 hit_for_hover,
                 hit,
-                &mut invalidation_visited,
+                invalidation_visited,
                 &mut needs_redraw,
             );
         }
@@ -2629,7 +2649,7 @@ impl<H: UiHost> UiTree<H> {
             barrier_root,
             event,
             &mut needs_redraw,
-            &mut invalidation_visited,
+            invalidation_visited,
         );
         if needs_redraw {
             self.request_redraw_coalesced(app);
@@ -2722,7 +2742,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })

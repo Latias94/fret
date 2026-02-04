@@ -4419,7 +4419,7 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         services: &mut dyn UiServices,
         params: PointerDownOutsideParams<'_>,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
         let hit_root = hit.and_then(|n| self.node_root(n));
