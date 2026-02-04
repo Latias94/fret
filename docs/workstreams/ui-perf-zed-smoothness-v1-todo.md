@@ -243,17 +243,19 @@ TODO:
     - Commits: `6bd82329` + `5f7e4fd0` + `3d1510a7`
     - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `3d1510a7`
       (see `svg_cache_misses` / `svg_evictions` columns).
-  - [ ] path/MSAA intermediate churn (alloc/reuse/evict, upload bytes).
+  - [x] Intermediate pool lifecycle churn signals (alloc/reuse/release/free bytes/texture counts + budget/in_use/peak).
+    - Commit: `52f555d5`
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `52f555d5`.
+  - [ ] Path/MSAA per-pass churn (uploads/resolves/temporary targets) beyond the pooled intermediate counters.
 - [x] Replace keyed repaint forcing with a representative invalidation-driven workload.
   - The legacy `svg_upload_torture` harness keys the Canvas subtree by frame to bypass paint-cache replay.
   - Added an invalidation-driven scroll workload that uses wheel input to shift the VirtualList window:
     - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=svg_scroll_torture` (commit `dd8bc0f8`)
     - Script: `tools/diag-scripts/ui-gallery-svg-scroll-thrash-steady.json`
     - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `dd8bc0f8`.
-- [ ] Standardize “churn triage checklist” in the perf log template:
-  - `top_renderer_text_atlas_upload_bytes`, `top_renderer_text_atlas_evicted_pages`,
-    `top_renderer_intermediate_peak_in_use_bytes`, `top_renderer_intermediate_pool_evictions`,
-    and their relationship to `top_total_time_us`.
+- [x] Standardize “churn triage checklist” in the perf log template:
+  - `tools/perf/perf_log.py` now emits churn + intermediate pool lifecycle tables and includes captured stdout paths.
+  - Commit: `2c40a3fb`
 - [x] Keep ADRs and audits in sync with the diagnostics bundle schema.
   - Update ADR 0174 bundle/export notes when schema changes (renderer counters, script steps, screenshot wiring).
   - Update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` evidence and gaps when tooling contracts change.

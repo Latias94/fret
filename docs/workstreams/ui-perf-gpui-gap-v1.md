@@ -30,14 +30,38 @@ budgets across editor-class pages. The remaining work is mainly about *systemic*
 
 Recent “make GPU churn measurable” win (so we can explain tail hitches, not just average frame time):
 
-- Diagnostics bundles now export best-effort text atlas + intermediate pool churn signals, and `fretboard` can sort by them.
-  - Evidence: commits `d10cac5a` + `c9a8b168` + perf log entries in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+- Diagnostics bundles now export best-effort renderer churn signals, and `fretboard` / `tools/perf/perf_log.py`
+  can surface them in a commit-addressable way:
+  - text atlas upload / eviction signals,
+  - non-text upload bytes (SVG + image),
+  - SVG raster cache occupancy + eviction signals,
+  - intermediate pool lifecycle signals (budget / peak / in_use, allocations / reuses / releases / evictions, free bytes / textures).
+  - Evidence: perf log entries for commits `3d1510a7` (SVG cache churn) and `52f555d5` (intermediate pool lifecycle).
 - A deterministic blur/effects workload exists to make intermediate pool counters non-zero:
   - Harness: `FRET_UI_GALLERY_HARNESS_ONLY=effects_blur_torture`
   - Scripts: `tools/diag-scripts/ui-gallery-effects-blur-torture-steady.json`,
     `tools/diag-scripts/ui-gallery-effects-blur-thrash-steady.json`
 
 ---
+
+## 0.1 Is GPUI the right north star?
+
+GPUI is a strong reference for “Zed feel”, but it is not a universal renderer template.
+
+What is most transferable for Fret:
+
+- explicit frame-to-frame reuse contracts (cached views + `notify` semantics),
+- aggressive per-frame scratch / arena allocation discipline,
+- a deliberate text layout cache model (double-buffered reuse, visible-window aware),
+- scene replay primitives that make caching explicit and cheap.
+
+What is less transferable 1:1:
+
+- effect-heavy pipelines that require pooled intermediates (blur, clip masks, soft clipping),
+- “multi-viewport editor chrome + docking” interaction arbitration (where policy and mechanism boundaries differ).
+
+For effect/renderer architecture, it is often more productive to cross-check against render-graph style engines
+(and existing large-scale UIs like Flutter/Skia) while using GPUI as the interaction + caching reference model.
 
 ## 1) What GPUI does that matters for smoothness
 
