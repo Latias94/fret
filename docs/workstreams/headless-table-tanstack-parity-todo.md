@@ -212,8 +212,13 @@ ColumnDef keys referenced by upstream feature implementations:
   - Done (parity-gated): group-header `columnSizingStart` fan-out (multiple leaf headers + group entry) matches TanStack.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json`
-- [ ] HTP-size-050 Align “controlled state” hooks:
+- [x] HTP-size-050 Align “controlled state” hooks:
   - `onColumnSizingChange` and `onColumnSizingInfoChange` equivalence.
+  - Done (parity-gated): controlled no-op semantics using fixture-only markers:
+    - `__onColumnSizingChange="noop"` (sizing stays unchanged) and `__onColumnSizingInfoChange="noop"`
+      (info+sizing stay unchanged due to upstream `newColumnSizing` computation placement).
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
 
 ---
 
