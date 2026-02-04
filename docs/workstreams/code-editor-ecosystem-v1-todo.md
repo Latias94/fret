@@ -156,13 +156,15 @@ Evidence anchors:
 - [x] Fix the “no stale lines” torture failure (scroll-driven window changes must not show stale row text).
   - Mechanism: `ScrollProps.windowed_paint` forces view-cache rerender on scroll offset changes for windowed paint surfaces.
   - Paint correctness: `windowed_rows_surface` now anchors row rects at the canvas bounds origin to avoid “left clipped / prefixes missing”.
+- [x] Clamp windowed row hit-testing during drags (keeps selection updates continuous when the pointer leaves bounds).
+- [x] Drag-to-select edge autoscroll (Zed-style scaling), including a timer-driven path so it continues while the pointer is stationary at the viewport edge.
 
 Evidence anchors:
 
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditor`, row painting + selection/caret + IME)
 - `crates/fret-ui/src/element.rs` (`TextInputRegionProps`, `ElementKind::TextInputRegion`)
 - `crates/fret-ui/src/declarative/host_widget/event/text_input_region.rs` (IME/TextInput forwarding)
-- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`on_pointer_up`/`on_pointer_cancel`)
+- `ecosystem/fret-ui-kit/src/declarative/windowed_rows_surface.rs` (`row_index_for_pointer` clamp, `on_timer` wiring)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_MVP`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`)
 - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_CODE_EDITOR_TORTURE`)
