@@ -1589,6 +1589,16 @@ impl<'a, TData> Table<'a, TData> {
         if header_id.starts_with("right_") {
             return self.right_header_groups();
         }
+        // TanStack note: Leaf header `id` is the column id even for pinned header families
+        // (left/center/right). `header.getStart()` is computed within the header group, so for leaf
+        // headers we need to choose the appropriate family based on current column pinning.
+        if self.column(header_id).is_some() {
+            return match self.column_pin_position(header_id) {
+                Some(super::ColumnPinPosition::Left) => self.left_header_groups(),
+                Some(super::ColumnPinPosition::Right) => self.right_header_groups(),
+                None => self.center_header_groups(),
+            };
+        }
         self.header_groups()
     }
 

@@ -55,6 +55,9 @@ type SnapshotId =
   | "group_resize_on_change_move_updates"
   | "group_resize_on_change_end_resets"
   | "group_resize_on_end_end_writes"
+  | "group_resize_pinned_on_change_move_updates"
+  | "group_resize_pinned_on_change_end_resets"
+  | "group_resize_pinned_on_end_end_writes"
   | "sorting_fns_builtin_basic"
   | "sorting_fns_builtin_datetime"
   | "sorting_fns_builtin_text"
@@ -3754,6 +3757,10 @@ function snapshotColumnPinning(
       enableColumnResizing: true,
     }
 
+    const pinnedState: TanStackState = {
+      columnPinning: { left: ["a", "b"], right: ["c"] },
+    }
+
     const mkActions = (
       id: SnapshotId,
       options: TanStackOptions,
@@ -3813,6 +3820,47 @@ function snapshotColumnPinning(
           columnResizeDirection: "ltr",
         },
         {},
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_change_move_updates",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_change_end_resets",
+        {
+          ...baseOptions,
+          columnResizeMode: "onChange",
+          columnResizeDirection: "ltr",
+        },
+        pinnedState,
+        [
+          { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
+          { type: "columnResizeMove", client_x: 35 },
+          { type: "columnResizeEnd", client_x: 35 },
+        ],
+      ),
+      mkActions(
+        "group_resize_pinned_on_end_end_writes",
+        {
+          ...baseOptions,
+          columnResizeMode: "onEnd",
+          columnResizeDirection: "ltr",
+        },
+        pinnedState,
         [
           { type: "columnResizeBegin", column_id: "ab", client_x: 10 },
           { type: "columnResizeMove", client_x: 35 },
