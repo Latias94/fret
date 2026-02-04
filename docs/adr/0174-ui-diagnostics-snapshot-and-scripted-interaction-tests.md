@@ -140,12 +140,16 @@ Privacy and portability rules:
 
 Implementation note (non-normative):
 
-- The current bundle format exports renderer metrics as flat counters under
+ - The current bundle format exports renderer metrics as flat counters under
   `.windows[].snapshots[].debug.stats.renderer_*` when enabled:
   - timings: `renderer_encode_scene_us`, `renderer_prepare_text_us`, `renderer_prepare_svg_us`
   - batching: `renderer_draw_calls`, `renderer_pipeline_switches`, `renderer_bind_group_switches`, `renderer_scissor_sets`
   - churn (best-effort per-frame): `renderer_text_atlas_upload_bytes`, `renderer_text_atlas_evicted_pages`,
-    `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_pool_evictions`,
+    `renderer_intermediate_budget_bytes`, `renderer_intermediate_in_use_bytes`,
+    `renderer_intermediate_peak_in_use_bytes`, `renderer_intermediate_release_targets`,
+    `renderer_intermediate_pool_allocations`, `renderer_intermediate_pool_reuses`,
+    `renderer_intermediate_pool_releases`, `renderer_intermediate_pool_evictions`,
+    `renderer_intermediate_pool_free_bytes`, `renderer_intermediate_pool_free_textures`,
     non-text upload bytes/counters (`renderer_svg_upload_bytes`, `renderer_svg_uploads`,
     `renderer_image_upload_bytes`, `renderer_image_uploads`),
     and SVG raster cache occupancy/churn (`renderer_svg_raster_budget_bytes`, `renderer_svg_rasters_live`,
