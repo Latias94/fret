@@ -1437,6 +1437,9 @@ impl NodeGraphDemoDriver {
             });
         let tuning_node = ui.create_node_retained(tuning);
 
+        let help_overlay = DemoHelpOverlay::new(style.clone());
+        let help_node = ui.create_node_retained(help_overlay);
+
         let minimap_overlay = NodeGraphMiniMapOverlay::new(
             canvas_node,
             models.graph.clone(),
@@ -1489,6 +1492,7 @@ impl NodeGraphDemoDriver {
                 portal_node,
                 controls_node,
                 tuning_node,
+                help_node,
                 minimap_node,
                 node_toolbar_node,
                 edge_toolbar_node,
@@ -2275,6 +2279,94 @@ impl DemoToolbarStrip {
         match btn {
             DemoToolbarButton::Delete => "Del",
             DemoToolbarButton::Fit => "Fit",
+        }
+    }
+}
+
+struct DemoHelpOverlay {
+    style: NodeGraphStyle,
+    text_blobs: Vec<TextBlobId>,
+}
+
+impl DemoHelpOverlay {
+    const PAD_PX: f32 = 10.0;
+    const WIDTH_PX: f32 = 360.0;
+    const HEIGHT_PX: f32 = 132.0;
+
+    fn new(style: NodeGraphStyle) -> Self {
+        Self {
+            style,
+            text_blobs: Vec::new(),
+        }
+    }
+
+    fn rect(&self, bounds: Rect) -> Rect {
+        let w = Self::WIDTH_PX.max(0.0);
+        let h = Self::HEIGHT_PX.max(0.0);
+        let x = bounds.origin.x.0 + Self::PAD_PX;
+        let y = bounds.origin.y.0 + Self::PAD_PX;
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+    }
+}
+
+impl<H: UiHost> Widget<H> for DemoHelpOverlay {
+    fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+        false
+    }
+
+    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
+        for id in self.text_blobs.drain(..) {
+            services.text().release(id);
+        }
+    }
+
+    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        for id in self.text_blobs.drain(..) {
+            cx.services.text().release(id);
+        }
+
+        let rect = self.rect(cx.bounds);
+        let corner = self.style.context_menu_corner_radius.max(6.0);
+
+        cx.scene.push(SceneOp::Quad {
+            order: DrawOrder(21_600),
+            rect,
+            background: self.style.context_menu_background,
+            border: Edges::all(Px(1.0)),
+            border_color: self.style.context_menu_border,
+            corner_radii: Corners::all(Px(corner)),
+        });
+
+        let text_style = self.style.controls_text_style.clone();
+        let constraints = TextConstraints {
+            max_width: Some(Px(rect.size.width.0 - 2.0 * Self::PAD_PX)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: cx.scale_factor,
+        };
+
+        let lines = [
+            "NodeGraph demo (built-ins):",
+            "• Controls + MiniMap overlays (panel composition)",
+            "• NodeToolbar + EdgeToolbar overlays (selection-driven)",
+            "• Background patterns: Cmd/Ctrl+B",
+            "• Log internals: Cmd/Ctrl+I; measured stores: Cmd/Ctrl+M",
+        ];
+
+        let mut cy = rect.origin.y.0 + Self::PAD_PX;
+        for line in lines {
+            let (id, metrics) = cx
+                .services
+                .text()
+                .prepare_str(line, &text_style, constraints);
+            self.text_blobs.push(id);
+            cx.scene.push(SceneOp::Text {
+                order: DrawOrder(21_601),
+                text: id,
+                origin: Point::new(Px(rect.origin.x.0 + Self::PAD_PX), Px(cy)),
+                color: self.style.controls_text,
+            });
+            cy += metrics.size.height.0;
         }
     }
 }

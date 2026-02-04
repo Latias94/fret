@@ -310,11 +310,13 @@ Work items:
 Goal: make the aligned surfaces *discoverable* and safe to depend on.
 
 Work items:
-- [ ] Update demos to showcase the new built-ins (background variants, toolbars, custom edges).
-- [ ] Add an API-level “How to build a node editor like XyFlow” guide:
+- [x] Update demos to showcase the new built-ins (background variants, toolbars, custom edges).
+  - Evidence: `apps/fret-examples/src/node_graph_demo.rs`
+- [x] Add an API-level “How to build a node editor like XyFlow” guide:
   - store-driven integration (recommended),
   - controlled mode integration (advanced),
   - extension points: presenter vs nodeTypes/edgeTypes vs middleware.
+  - Evidence: `docs/node-graph-how-to-build-like-xyflow.md`
 
 ### M5 — Canvas substrate extraction (fret-canvas) (P1)
 

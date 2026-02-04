@@ -12,6 +12,7 @@ If you are looking for overall sequencing and milestones, see `docs/node-graph-r
 If you are looking for an execution plan (milestones + deliverables), see
 `docs/workstreams/fret-node-xyflow-parity.md`.
 If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed-connections.md`.
+If you are looking for an API-level guide, see `docs/node-graph-how-to-build-like-xyflow.md`.
 
 ## How to use this doc
 
