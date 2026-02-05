@@ -1848,6 +1848,72 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
 }
 
 #[test]
+fn text_input_key_hooks_can_intercept_navigation_keys() {
+    use fret_core::{Event, KeyCode, Modifiers};
+
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+    let opened = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let opened_for_hook = opened.clone();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-key-hooks-intercept",
+        move |cx| {
+            vec![cx.text_input_with_id_props(|cx, id| {
+                let opened = opened_for_hook.clone();
+                cx.key_add_on_key_down_for(
+                    id,
+                    Arc::new(move |host, action_cx, down| {
+                        if down.key != KeyCode::ArrowDown {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&opened, |v| *v = true);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+                crate::element::TextInputProps::new(model.clone())
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        app.models().get_copied(&opened).unwrap_or(false),
+        "expected key hook to run for focused text input"
+    );
+}
+
+#[test]
 fn text_input_middle_click_pastes_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
