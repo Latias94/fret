@@ -172,9 +172,12 @@ Interpretation:
 - The stable-frame paint cost is not distributed across “many small widgets”; it is dominated by a few host-widget
   nodes.
 - The ops deltas (`1/1`) suggest the cost is not scene construction, but CPU bookkeeping in the host-widget paint path.
-- The most likely culprit is element-runtime observation access that currently clones per-element dependency vectors
-  (`elements::{observed_models_for_element, observed_globals_for_element}`), causing per-frame allocations on stable
-  frames.
+- Initial hypothesis: element-runtime observation access was cloning per-element dependency vectors and/or paying
+  hidden “touch” clone costs on cache-hit frames.
+- Update: quick attempts to remove/avoid those clones (commits `424ca9fc`, `df5df0b7`) did not materially reduce the
+  hotspots on this probe (see the perf log entries on 2026-02-05 20:28 and 20:37).
+  - Next: add sub-timers inside `ElementHostWidget::paint_impl` (obs-models, obs-globals, instance lookup) so the
+    remaining ~1ms slices are attributable before refactoring further.
 
 ---
 

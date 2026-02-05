@@ -344,6 +344,8 @@ Evidence:
   `fret_ui::declarative::host_widget::ElementHostWidget` nodes (top-3 sum ~98% of the widget paint slice), and those
   nodes have `ops(excl/incl)=1/1` (suggesting CPU bookkeeping dominates, not scene encoding).
   - Evidence run: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-05 20:03 (commit `e1132c95`).
+- Follow-up A/B attempts to remove/avoid observation vector clones did not materially reduce the hotspots on this
+  probe (commits `424ca9fc`, `df5df0b7`).
 
 Implication:
 

@@ -37,6 +37,11 @@ Conventions:
 - [x] Export top-N widget paint hotspots (exclusive time) so `paint_widget_time_us` is attributable.
   - Evidence: `feat(diag): export paint widget hotspots` (commit `e1132c95`).
   - Evidence bundle: `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/.../bundle.json`
+- [ ] Add `ElementHostWidget` paint sub-timers so we can explain the top hotspots:
+  - obs-models iteration,
+  - obs-globals iteration,
+  - element instance lookup,
+  - view-cache / frame-prep overhead (first-call per frame).
 - [ ] Add paint-phase micro timers for the remaining dominant candidates:
   - per-node traversal overhead on stable frames (excluding widget code),
   - observation merging/collapse costs beyond the already-timed “collapse observations” step.
@@ -53,6 +58,8 @@ Conventions:
   - Candidate fix: replace `elements::{observed_models_for_element, observed_globals_for_element}` returning `Vec<_>`
     with a zero-allocation iterator/closure API, and update host-widget layout/measure/paint to use it.
   - Evidence target: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-05 20:03 (commit `e1132c95`).
+  - Update: initial attempts (`424ca9fc`, `df5df0b7`) did not materially reduce `ElementHostWidget` paint hotspots on the
+    menubar steady probe (see log entries 2026-02-05 20:28 and 20:37).
 - [ ] Validate against `ui-gallery-steady` baseline (repeat=7) and record delta in the perf log.
 - [ ] Ensure view-cache correctness remains unchanged:
   - `cargo test -p fret-ui` (or nextest equivalent) remains green,

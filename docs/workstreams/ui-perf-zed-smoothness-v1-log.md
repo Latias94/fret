@@ -3645,3 +3645,62 @@ Takeaway:
   (likely element-runtime observation access and/or instance lookup).
 - Next: remove per-frame allocation/clone in element-runtime observation accessors
   (`elements::{observed_models_for_element, observed_globals_for_element}` or equivalent) and re-run this probe.
+
+## 2026-02-05 20:28:06 (commit `424ca9fc`)
+
+Change:
+- Replace per-call cloning of element-runtime observation vectors with a zero-allocation iterator/closure API:
+  - `observed_models_for_element(...) -> Vec<_>` becomes `with_observed_models_for_element(..., |items| ...)`
+  - Same for globals.
+
+Why:
+- Hypothesis: the stable-frame `ElementHostWidget` paint hotspots were dominated by per-frame `Vec` clones of observed
+  model/global dependencies.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-observed-models-no-clone.424ca9fc.1770294486/`
+- Command (repeat=7; `sort=time`): same as 20:03 entry, with the new `--dir`.
+
+Results (us; `--sort time`):
+- `top_total_time_us`: p50 ~3510, p95 ~3724, max 3724 (note: slightly worse than the 20:03 run; could be noise)
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-observed-models-no-clone.424ca9fc.1770294486/1770294488214-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown:
+  - `paint_time_us=2654`
+  - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2545/12`
+  - `paint_widget_hotspots` (top 3):
+    - `us=1140 type=ElementHostWidget ops(excl/incl)=1/1`
+    - `us=965  type=ElementHostWidget ops(excl/incl)=1/1`
+    - `us=383  type=ElementHostWidget ops(excl/incl)=1/1`
+
+Takeaway:
+- This change did **not** reduce the `ElementHostWidget` paint hotspots for this probe.
+- Likely the dominant cost is elsewhere in the host-widget paint path (instance lookup, view-cache bookkeeping, or
+  first-call per-frame preparation in `ElementRuntime`), not the `Vec` clone itself.
+
+## 2026-02-05 20:37:01 (commit `df5df0b7`)
+
+Change:
+- When `observed_*_next` is missing for an element, fall back to `observed_*_rendered` without cloning into `*_next`.
+
+Why:
+- Hypothesis: stable cached frames were paying hidden clone cost via `touch_observed_*_for_element_if_recorded(...)`.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-observed-models-merge-rendered.df5df0b7.1770295021/`
+
+Results (us; `--sort time`):
+- `top_total_time_us`: p50 ~3523, p95 ~3857, max 3857 (worse; likely extra lookup overhead + noise)
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-observed-models-merge-rendered.df5df0b7.1770295021/1770295023042-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown:
+  - `paint_time_us=2761`
+  - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2649/13`
+  - `paint_widget_hotspots` remains dominated by `ElementHostWidget` (top-3 sum ~2.59ms).
+
+Takeaway:
+- The “missing observed_*_next” fallback did not improve stable-frame paint for this probe.
+- Next: instrument `ElementHostWidget::paint_impl` with sub-timers (obs-models, obs-globals, instance lookup) to locate
+  the remaining ~1ms+ slices, and only then attempt a targeted refactor.
