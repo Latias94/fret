@@ -1,5 +1,14 @@
 use super::*;
 use std::any::TypeId;
+use std::sync::OnceLock;
+
+fn paint_cache_relax_view_cache_gating() -> bool {
+    static RELAX: OnceLock<bool> = OnceLock::new();
+    *RELAX.get_or_init(|| {
+        std::env::var_os("FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING")
+            .is_some_and(|v| !v.is_empty())
+    })
+}
 
 impl<H: UiHost> UiTree<H> {
     #[stacksafe::stacksafe]
@@ -294,9 +303,11 @@ impl<H: UiHost> UiTree<H> {
         let children_render_transform = self.node_children_render_transform(node);
         let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
         let key = PaintCacheKey::new(bounds, sf, theme_revision, child_transform);
+        let relax_view_cache_gating = paint_cache_relax_view_cache_gating();
         let cache_enabled = self.paint_cache_enabled()
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
+                || relax_view_cache_gating
                 || self.nodes.get(node).is_some_and(|n| n.view_cache.enabled));
         if let Some(key_started) = key_started {
             self.debug_stats.paint_cache_key_time = self
