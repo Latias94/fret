@@ -77,13 +77,15 @@ direct dependency.
 - Async ecosystems (tokio/reqwest/sqlx/etc.) should integrate through optional adapters:
   - run async work in the runtime of choice,
   - apply results via inbox draining and model updates.
+- For `fret-query` async fetch, install a `FutureSpawnerHandle` global; see
+  `docs/integrating-tokio-and-reqwest.md`.
 
 ## Key decision gates
 
 These are the “hard-to-change” parts of the authoring story:
 
 1. **Selector ergonomics and safety rails** (deps builder, keyed variants, diagnostics).
-2. **Query keying conventions** (namespace + structured key).
+2. **Query keying conventions** (namespace + structured key; see `docs/query-key-conventions.md`).
 3. **Async fetch adapter story** (tokio/wasm) without compromising portability.
 4. **Template + docs convergence** (one golden path, one set of patterns).
 

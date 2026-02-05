@@ -3,7 +3,9 @@ use std::time::Duration;
 
 use fret_kit::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
-use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+use fret_query::{
+    QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryState, QueryStatus, with_query_client,
+};
 
 const CMD_INVALIDATE: &str = "query_demo.invalidate";
 const CMD_INVALIDATE_NAMESPACE: &str = "query_demo.invalidate_namespace";
@@ -15,7 +17,7 @@ struct DemoData {
 }
 
 fn demo_key() -> QueryKey<DemoData> {
-    QueryKey::new("query_demo", &0u8)
+    QueryKey::new("fret-examples.query_demo.demo_data.v1", &0u8)
 }
 
 struct QueryDemoState {
@@ -58,12 +60,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
         stale_time: Duration::from_secs(2),
         cache_time: Duration::from_secs(30),
         keep_previous_data_while_loading: true,
+        retry: QueryRetryPolicy::exponential(3, Duration::from_millis(250), Duration::from_secs(2)),
         ..Default::default()
     };
 
     let handle = cx.use_query(key, policy, move |_token| {
         if fail_mode {
-            return Err(Arc::<str>::from("simulated fetch error"));
+            return Err(QueryError::transient("simulated fetch error"));
         }
         let label: Arc<str> =
             Arc::from(format!("fetched at {:?}", fret_core::time::Instant::now()));
@@ -109,11 +112,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
         .map(|d| d.label.clone())
         .unwrap_or_else(|| Arc::from("<no data>"));
 
-    let error_line: Option<Arc<str>> = state.error.clone();
+    let error_line = state.error.clone();
 
     let duration_line = state
         .last_duration
         .map(|d| Arc::from(format!("last_duration={d:?}")));
+
+    let retry_line = state.retry.next_retry_at.map(|at| {
+        Arc::from(format!(
+            "retry: failures={} next_at={at:?}",
+            state.retry.failures
+        ))
+    });
 
     let toggle_mode_btn = shadcn::Button::new("Toggle error mode")
         .variant(shadcn::ButtonVariant::Secondary)
@@ -143,7 +153,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
         out.push(ui::raw_text(cx, data_line).into_element(cx));
         if let Some(err) = error_line {
             out.push(
-                ui::raw_text(cx, format!("error={err}"))
+                ui::raw_text(cx, format!("error={err} kind={:?}", err.kind()))
                     .text_color(ColorRef::Color(theme.color_required("destructive")))
                     .into_element(cx),
             );
@@ -151,6 +161,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut QueryDemoState) -> ViewElemen
         if let Some(dur) = duration_line {
             out.push(
                 ui::raw_text(cx, dur)
+                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                    .into_element(cx),
+            );
+        }
+        if let Some(retry) = retry_line {
+            out.push(
+                ui::raw_text(cx, retry)
                     .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
                     .into_element(cx),
             );
@@ -216,7 +233,7 @@ fn on_command(
         }
         CMD_INVALIDATE_NAMESPACE => {
             let _ = with_query_client(app, |client, _app| {
-                client.invalidate_namespace("query_demo");
+                client.invalidate_namespace("fret-examples.query_demo.demo_data.v1");
             });
             app.request_redraw(window);
         }

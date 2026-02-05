@@ -16,4 +16,4 @@ ui = ["dep:fret-runtime", "dep:fret-ui"]
 [dependencies]
 fret-runtime = { path = "../../crates/fret-runtime", optional = true }
 fret-ui = { path = "../../crates/fret-ui", optional = true }
-
+tracing.workspace = true

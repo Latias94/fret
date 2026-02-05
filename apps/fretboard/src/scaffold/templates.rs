@@ -200,7 +200,7 @@ struct TipData {
 }
 
 fn tip_key() -> QueryKey<TipData> {
-    QueryKey::new("todo.tip", &0u8)
+    QueryKey::new("todo.tip.v1", &0u8)
 }
 
 fn tip_policy() -> QueryPolicy {
@@ -328,8 +328,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         QueryStatus::Error => {
             let err = tip_state
                 .error
-                .clone()
-                .unwrap_or_else(|| Arc::<str>::from("unknown error"));
+                .as_ref()
+                .map(|e| e.to_string())
+                .unwrap_or_else(|| String::from("unknown error"));
             (Arc::from(format!("Tip error: {err}")), "destructive")
         }
         QueryStatus::Success => {

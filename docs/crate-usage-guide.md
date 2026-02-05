@@ -237,6 +237,11 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - deliver results through inboxes drained at a driver boundary (ADR 0190),
 - propagate cancellation via `CancellationToken`.
 
+**Async adapters (optional):**
+
+- install a `FutureSpawnerHandle` global (tokio/wasm) and use `spawn_future_to_inbox(...)` to
+  bridge async ecosystems into the inbox + driver-boundary apply model.
+
 **Use it when:** you need to run work off the UI thread (or cooperatively on wasm) and want a
 consistent inbox + cancellation vocabulary.
 
@@ -261,6 +266,9 @@ introducing “tick models” or storing every derived value in the model store.
 
 **Use it when:** you need loading/error/cache/invalidation semantics for remote resources or expensive
 computations.
+
+**Async fetch:** install a `FutureSpawnerHandle` global and use `use_query_async` /
+`use_query_async_local`. See `docs/integrating-tokio-and-reqwest.md`.
 
 ### `fret-canvas`
 
