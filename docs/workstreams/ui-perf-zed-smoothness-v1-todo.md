@@ -274,17 +274,19 @@ Correctness acceptance:
     - Wired into: `fretboard diag stats --json` (bundle triage without manual JSON digging).
     - Implemented by `feat(diag): attribute dispatch time by event class` (commit `5ab4ba71`).
     - Evidence: perf log entry for commit `5ab4ba71`.
-  - [ ] Reduce timer-driven dispatch work during pointer-move workloads.
-    - Why: In the stripes pointer-move probe, the “dispatch gap” is primarily **timer event dispatch** (not pointer
-      routing). On the worst pointer-move frame, `dispatch_timer_event_time_us` accounts for ~95%+ of `dispatch_time_us`.
-    - Deliverable: a perf log entry showing pointer-move timer frames collapse toward the no-timer baseline.
-    - Subtasks:
-      - Add attribution for timer routing mode:
-        - Count targeted timer dispatches (token has a recorded element target) vs fallback broadcasts.
-        - For broadcasts, count layers visited and time spent in the broadcast loop.
-      - Identify the top timer sources (which services/widgets schedule them) and whether they are avoidable for hover-only moves.
-      - Coalesce or defer timers so they do not fire on alternating pointer-move frames (or at least do near-zero work).
-      - Add a “no timer dispatch during pointer-move” guard for harness workloads where appropriate (debug-only if needed).
+  - [x] Reduce timer-driven dispatch work during pointer-move workloads.
+    - Why: In the stripes pointer-move probe, the “dispatch gap” was primarily **timer event dispatch** (not pointer
+      routing). On the worst pointer-move frame, `dispatch_timer_event_time_us` accounted for ~95%+ of `dispatch_time_us`.
+    - Root cause: ui-gallery’s dev-only config polling (`with_config_files_watcher(...)`) installs a repeating global
+      timer, and the timer could co-occur with scripted pointer-move frames.
+    - Deliverable:
+      - Timer routing attribution exported (commit `98ca4fe3`).
+      - Harness runs avoid config watcher timer traffic (commit `06feeb41`).
+      - Evidence: perf log entries for commits `98ca4fe3` and `06feeb41` (p95 dispatch drops to ~tens of microseconds).
+    - Remaining follow-ups (generalizing beyond the ui-gallery harness):
+      - [ ] Make “background timers” avoid the UI dispatch hot path by default (or run them out-of-band).
+      - [ ] Add a configurable “timer budget / priority” contract so non-UX-critical timers cannot steal time from
+        interactive input frames.
   - A/B experiments:
     - [x] Run the pointer-move gate with `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and record:
       - `hit_test_time_us` distribution, and

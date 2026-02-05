@@ -214,6 +214,11 @@ Fret:
 - Pointer-move frames can include timer event dispatch, and the timer work can dominate per-frame dispatch time.
 - Evidence (stripes pointer-move probe, commit `5ab4ba71`): timer pointer-move frames spend ~220–230us in
   `dispatch_timer_event_time_us` p50, while pointer routing itself is ~10–40us.
+- Follow-up attribution (commit `98ca4fe3`) showed the slow timer frames were dominated by a single broadcast token
+  (`TimerToken(1)`) rather than targeted timer routing.
+- For scripted harness perf probes, suppressing ui-gallery’s dev-only config poller timer
+  (`with_config_files_watcher(...)`) removed timer dispatch from pointer-move frames entirely and collapsed
+  pointer-move dispatch p95 from ~247us → ~26us (commit `06feeb41`).
 
 Implication:
 

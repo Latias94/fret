@@ -3231,3 +3231,93 @@ Takeaway:
 Bundles:
 - Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-target-only-7c40fcd3/`
 - Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-target-only-7c40fcd3/1770267697192-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 19:10:00 (commit `98ca4fe3`)
+
+Change:
+- feat(diag): break down timer dispatch
+
+Why:
+- The stripes pointer-move probe showed a large dispatch tail that attribution (commit `5ab4ba71`) already narrowed to
+  timer event dispatch. We still needed to answer:
+  - Is this timer work coming from targeted timer routing, or fallback broadcast routing?
+  - Is the broadcast loop (layers visited) itself expensive, or is the cost elsewhere?
+  - Which timer token is responsible for the slow frames?
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-route-breakdown-dirty-21c14e33 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- `dispatch_time_us`: p50 ~29, p95 ~247, max (across runs) 736
+- `dispatch_pointer_event_time_us`: p50 ~16, p95 ~23, max (across runs) 32
+- `dispatch_timer_event_time_us`: p50 ~0, p95 ~229, max (across runs) 714
+- Timer routing detail:
+  - `dispatch_timer_targeted_events`: p95 ~0 (no targeted timer delivery observed)
+  - `dispatch_timer_broadcast_time_us`: p50 ~0, p95 ~223, max (across runs) 703
+  - `dispatch_timer_broadcast_loop_time_us`: p50 ~0, p95 ~4, max (across runs) 22
+  - Slowest token observed: `dispatch_timer_slowest_token` = 1 (broadcast)
+
+Takeaway:
+- The tail is a **single broadcast timer token** (`TimerToken(1)`).
+- The broadcast **layer loop is not the cost** (loop time stays tiny); most of the time is “outside the loop”, i.e. due
+  to other work performed during timer event handling.
+- Next: verify whether the timer tail is avoidable background work (and if so, remove it from the probe), or else make
+  it cheap enough to coexist with pointer-move events.
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-route-breakdown-dirty-21c14e33/`
+- Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-route-breakdown-dirty-21c14e33/1770270312252-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 20:10:00 (commit `06feeb41`)
+
+Change:
+- perf(ui-gallery): skip config watcher in harness
+
+Why:
+- The timer token dominating the pointer-move tail (`TimerToken(1)`) was consistent with ui-gallery’s dev-only
+  config-file poller (`with_config_files_watcher(...)`), which installs a repeating global timer.
+- Scripted harness runs (especially perf probes) should isolate UI dispatch costs. Periodic background polling adds
+  unrelated timer traffic that can co-occur with pointer-move frames and dominate p95/maximum dispatch time.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-harness-skip-config-watcher-dirty-21c14e33 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- `dispatch_time_us`: p50 ~16, p95 ~26, max (across runs) 37
+- `dispatch_timer_event_time_us`: p95 ~0 (no timer dispatch observed during pointer-move frames)
+- `hit_test_time_us`: p50 ~2, p95 ~4, max (across runs) 13
+
+Takeaway:
+- The pointer-move dispatch tail was dominated by **dev-only config polling timer traffic** in ui-gallery.
+- With config watcher suppressed during scripted harness runs, the probe reflects the intended UI mechanisms:
+  pointer routing + hit-test remain in the ~tens-of-microseconds range on this machine.
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-harness-skip-config-watcher-dirty-21c14e33/`
+- Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-harness-skip-config-watcher-dirty-21c14e33/1770272814649-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
