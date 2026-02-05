@@ -867,6 +867,25 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        #[derive(Clone, Copy)]
+        enum DebugDispatchEventClass {
+            Pointer,
+            Timer,
+            Other,
+        }
+
+        fn classify_debug_dispatch_event(event: &Event) -> DebugDispatchEventClass {
+            match event {
+                Event::Pointer(_)
+                | Event::PointerCancel(_)
+                | Event::ExternalDrag(_)
+                | Event::ExternalDropData(_)
+                | Event::InternalDrag(_) => DebugDispatchEventClass::Pointer,
+                Event::Timer { .. } => DebugDispatchEventClass::Timer,
+                _ => DebugDispatchEventClass::Other,
+            }
+        }
+
         struct DebugDispatchTimer {
             stats: *mut super::UiDebugFrameStats,
             started: Option<Instant>,
@@ -885,14 +904,70 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let debug_stats_ptr = if self.debug_enabled {
+            &mut self.debug_stats as *mut super::UiDebugFrameStats
+        } else {
+            std::ptr::null_mut()
+        };
+
+        let debug_event_class = classify_debug_dispatch_event(event);
+        if self.debug_enabled {
+            match debug_event_class {
+                DebugDispatchEventClass::Pointer => {
+                    self.debug_stats.dispatch_pointer_events =
+                        self.debug_stats.dispatch_pointer_events.saturating_add(1);
+                }
+                DebugDispatchEventClass::Timer => {
+                    self.debug_stats.dispatch_timer_events =
+                        self.debug_stats.dispatch_timer_events.saturating_add(1);
+                }
+                DebugDispatchEventClass::Other => {
+                    self.debug_stats.dispatch_other_events =
+                        self.debug_stats.dispatch_other_events.saturating_add(1);
+                }
+            }
+        }
+
+        struct DebugDispatchEventClassTimer {
+            stats: *mut super::UiDebugFrameStats,
+            started: Option<Instant>,
+            class: DebugDispatchEventClass,
+        }
+
+        impl Drop for DebugDispatchEventClassTimer {
+            fn drop(&mut self) {
+                let Some(started) = self.started else {
+                    return;
+                };
+                // Safety: `dispatch_event` holds an exclusive `&mut self` for its full duration.
+                // The raw pointer refers to `self.debug_stats` and remains valid for the scope.
+                unsafe {
+                    match self.class {
+                        DebugDispatchEventClass::Pointer => {
+                            (*self.stats).dispatch_pointer_event_time += started.elapsed();
+                        }
+                        DebugDispatchEventClass::Timer => {
+                            (*self.stats).dispatch_timer_event_time += started.elapsed();
+                        }
+                        DebugDispatchEventClass::Other => {
+                            (*self.stats).dispatch_other_event_time += started.elapsed();
+                        }
+                    }
+                }
+            }
+        }
+
         let _dispatch_timer = DebugDispatchTimer {
-            stats: if self.debug_enabled {
-                &mut self.debug_stats as *mut super::UiDebugFrameStats
-            } else {
-                std::ptr::null_mut()
-            },
+            stats: debug_stats_ptr,
             started: self.debug_enabled.then(Instant::now),
         };
+
+        let _dispatch_event_class_timer = DebugDispatchEventClassTimer {
+            stats: debug_stats_ptr,
+            started: self.debug_enabled.then(Instant::now),
+            class: debug_event_class,
+        };
+
         if self.debug_enabled {
             self.debug_stats.dispatch_events = self.debug_stats.dispatch_events.saturating_add(1);
         }

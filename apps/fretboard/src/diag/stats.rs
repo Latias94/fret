@@ -227,6 +227,12 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) prepaint_time_us: u64,
     pub(super) paint_time_us: u64,
     pub(super) dispatch_time_us: u64,
+    pub(super) dispatch_pointer_events: u32,
+    pub(super) dispatch_pointer_event_time_us: u64,
+    pub(super) dispatch_timer_events: u32,
+    pub(super) dispatch_timer_event_time_us: u64,
+    pub(super) dispatch_other_events: u32,
+    pub(super) dispatch_other_event_time_us: u64,
     pub(super) hit_test_time_us: u64,
     pub(super) dispatch_hover_update_time_us: u64,
     pub(super) dispatch_scroll_handle_invalidation_time_us: u64,
@@ -1135,6 +1141,30 @@ impl BundleStatsReport {
                 obj.insert(
                     "dispatch_time_us".to_string(),
                     Value::from(row.dispatch_time_us),
+                );
+                obj.insert(
+                    "dispatch_pointer_events".to_string(),
+                    Value::from(row.dispatch_pointer_events),
+                );
+                obj.insert(
+                    "dispatch_pointer_event_time_us".to_string(),
+                    Value::from(row.dispatch_pointer_event_time_us),
+                );
+                obj.insert(
+                    "dispatch_timer_events".to_string(),
+                    Value::from(row.dispatch_timer_events),
+                );
+                obj.insert(
+                    "dispatch_timer_event_time_us".to_string(),
+                    Value::from(row.dispatch_timer_event_time_us),
+                );
+                obj.insert(
+                    "dispatch_other_events".to_string(),
+                    Value::from(row.dispatch_other_events),
+                );
+                obj.insert(
+                    "dispatch_other_event_time_us".to_string(),
+                    Value::from(row.dispatch_other_event_time_us),
                 );
                 obj.insert(
                     "hit_test_time_us".to_string(),
@@ -4205,6 +4235,33 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("dispatch_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let dispatch_pointer_events = stats
+                .and_then(|m| m.get("dispatch_pointer_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let dispatch_pointer_event_time_us = stats
+                .and_then(|m| m.get("dispatch_pointer_event_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_timer_events = stats
+                .and_then(|m| m.get("dispatch_timer_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let dispatch_timer_event_time_us = stats
+                .and_then(|m| m.get("dispatch_timer_event_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_other_events = stats
+                .and_then(|m| m.get("dispatch_other_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let dispatch_other_event_time_us = stats
+                .and_then(|m| m.get("dispatch_other_event_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let hit_test_time_us = stats
                 .and_then(|m| m.get("hit_test_time_us"))
                 .and_then(|v| v.as_u64())
@@ -4856,6 +4913,12 @@ pub(super) fn bundle_stats_from_json_with_options(
                 prepaint_time_us,
                 paint_time_us,
                 dispatch_time_us,
+                dispatch_pointer_events,
+                dispatch_pointer_event_time_us,
+                dispatch_timer_events,
+                dispatch_timer_event_time_us,
+                dispatch_other_events,
+                dispatch_other_event_time_us,
                 hit_test_time_us,
                 dispatch_hover_update_time_us,
                 dispatch_scroll_handle_invalidation_time_us,

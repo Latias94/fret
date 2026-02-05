@@ -204,6 +204,18 @@ pub struct UiDebugFrameStats {
     /// This includes pointer routing, capture/focus arbitration, and widget event hooks. It does
     /// not include layout/prepaint/paint, which are tracked separately.
     pub dispatch_time: Duration,
+    /// Number of pointer/drag events dispatched during the current frame.
+    pub dispatch_pointer_events: u32,
+    /// Total wall time spent dispatching pointer/drag events during the current frame.
+    pub dispatch_pointer_event_time: Duration,
+    /// Number of timer events dispatched during the current frame.
+    pub dispatch_timer_events: u32,
+    /// Total wall time spent dispatching timer events during the current frame.
+    pub dispatch_timer_event_time: Duration,
+    /// Number of non-pointer, non-timer events dispatched during the current frame.
+    pub dispatch_other_events: u32,
+    /// Total wall time spent dispatching non-pointer, non-timer events during the current frame.
+    pub dispatch_other_event_time: Duration,
     /// Time spent inside hit-testing during the current frame (subset of `dispatch_time`).
     pub hit_test_time: Duration,
     /// Number of events dispatched during the current frame.
@@ -1893,6 +1905,12 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.element_children_vec_pool_reuses = 0;
         self.debug_stats.element_children_vec_pool_misses = 0;
         self.debug_stats.dispatch_time = Duration::default();
+        self.debug_stats.dispatch_pointer_events = u32::default();
+        self.debug_stats.dispatch_pointer_event_time = Duration::default();
+        self.debug_stats.dispatch_timer_events = u32::default();
+        self.debug_stats.dispatch_timer_event_time = Duration::default();
+        self.debug_stats.dispatch_other_events = u32::default();
+        self.debug_stats.dispatch_other_event_time = Duration::default();
         self.debug_stats.hit_test_time = Duration::default();
         self.debug_stats.dispatch_events = 0;
         self.debug_stats.hit_test_queries = 0;

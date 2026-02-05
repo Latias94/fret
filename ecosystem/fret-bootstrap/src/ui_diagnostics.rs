@@ -6160,6 +6160,18 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub dispatch_time_us: u64,
     #[serde(default)]
+    pub dispatch_pointer_events: u32,
+    #[serde(default)]
+    pub dispatch_pointer_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_other_events: u32,
+    #[serde(default)]
+    pub dispatch_other_event_time_us: u64,
+    #[serde(default)]
     pub hit_test_time_us: u64,
     #[serde(default)]
     pub dispatch_events: u32,
@@ -6482,6 +6494,12 @@ impl UiFrameStatsV1 {
             prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
             dispatch_time_us: stats.dispatch_time.as_micros() as u64,
+            dispatch_pointer_events: stats.dispatch_pointer_events,
+            dispatch_pointer_event_time_us: stats.dispatch_pointer_event_time.as_micros() as u64,
+            dispatch_timer_events: stats.dispatch_timer_events,
+            dispatch_timer_event_time_us: stats.dispatch_timer_event_time.as_micros() as u64,
+            dispatch_other_events: stats.dispatch_other_events,
+            dispatch_other_event_time_us: stats.dispatch_other_event_time.as_micros() as u64,
             hit_test_time_us: stats.hit_test_time.as_micros() as u64,
             dispatch_events: stats.dispatch_events,
             hit_test_queries: stats.hit_test_queries,
