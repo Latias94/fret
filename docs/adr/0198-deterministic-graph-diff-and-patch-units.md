@@ -59,7 +59,8 @@ The diff emits ops in the following high-level order:
 3) Nodes (add/remove + setters)
 4) Ports (add/remove + setters)
 5) Edges (add/remove + setters)
-6) Groups / sticky notes (future; out of MVP)
+6) Groups (add/remove + setters; color changes via remove+add)
+7) Sticky notes (add/remove; changes via remove+add)
 
 Rationale:
 
@@ -93,4 +94,8 @@ Additionally:
 
 - `ecosystem/fret-node/src/ops/diff.rs`
 - `ecosystem/fret-node/src/ops/tests.rs` (diff determinism + roundtrip)
+Note (MVP compromise):
+
+- Port-level setters are not defined yet, so port changes are represented as remove+add (and edges
+  are re-added afterwards). This preserves correctness and determinism but is not minimal.
 

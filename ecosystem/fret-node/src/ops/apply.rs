@@ -217,6 +217,24 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             edge.kind = *to;
         }
+        GraphOp::SetEdgeSelectable { id, to, .. } => {
+            let Some(edge) = graph.edges.get_mut(id) else {
+                return Err(ApplyError::MissingEdge { id: *id });
+            };
+            edge.selectable = *to;
+        }
+        GraphOp::SetEdgeDeletable { id, to, .. } => {
+            let Some(edge) = graph.edges.get_mut(id) else {
+                return Err(ApplyError::MissingEdge { id: *id });
+            };
+            edge.deletable = *to;
+        }
+        GraphOp::SetEdgeReconnectable { id, to, .. } => {
+            let Some(edge) = graph.edges.get_mut(id) else {
+                return Err(ApplyError::MissingEdge { id: *id });
+            };
+            edge.reconnectable = *to;
+        }
         GraphOp::SetEdgeEndpoints { id, to, .. } => {
             let Some(edge) = graph.edges.get_mut(id) else {
                 return Err(ApplyError::MissingEdge { id: *id });

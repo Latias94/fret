@@ -10,6 +10,7 @@ mod tx_sanity;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::EdgeReconnectable;
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, GraphId, GraphImport, Group,
     GroupId, Node, NodeId, NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
@@ -116,6 +117,24 @@ pub enum GraphOp {
         id: EdgeId,
         from: EdgeKind,
         to: EdgeKind,
+    },
+    /// Sets an edge selectable override.
+    SetEdgeSelectable {
+        id: EdgeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets an edge deletable override.
+    SetEdgeDeletable {
+        id: EdgeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets an edge reconnectable override.
+    SetEdgeReconnectable {
+        id: EdgeId,
+        from: Option<EdgeReconnectable>,
+        to: Option<EdgeReconnectable>,
     },
     /// Sets an edge's endpoints (preserving edge identity for reconnection workflows).
     SetEdgeEndpoints {

@@ -57,6 +57,9 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         | GraphOp::SetSymbolName { .. }
         | GraphOp::SetSymbolType { .. }
         | GraphOp::SetSymbolDefaultValue { .. }
+        | GraphOp::SetEdgeSelectable { .. }
+        | GraphOp::SetEdgeDeletable { .. }
+        | GraphOp::SetEdgeReconnectable { .. }
         | GraphOp::RemoveNode { .. }
         | GraphOp::SetNodeKind { .. }
         | GraphOp::SetNodeKindVersion { .. }

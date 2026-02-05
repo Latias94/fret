@@ -10,12 +10,14 @@ pub fn graph_diff(from: &Graph, to: &Graph) -> GraphTransaction {
 
     diff_imports(from, to, &mut tx);
     diff_symbols(from, to, &mut tx);
+    diff_groups(from, to, &mut tx);
 
     // Nodes/ports/edges: MVP focuses on headless collaboration patching. We keep the phase order
     // apply-safe (edges last because they reference ports).
     diff_nodes(from, to, &mut tx);
     diff_ports(from, to, &mut tx);
     diff_edges(from, to, &mut tx);
+    diff_sticky_notes(from, to, &mut tx);
 
     normalize_transaction(tx)
 }
@@ -237,6 +239,28 @@ fn diff_edges(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
                     to: to_ep,
                 });
             }
+
+            if edge_from.selectable != edge_to.selectable {
+                tx.ops.push(GraphOp::SetEdgeSelectable {
+                    id: *id,
+                    from: edge_from.selectable,
+                    to: edge_to.selectable,
+                });
+            }
+            if edge_from.deletable != edge_to.deletable {
+                tx.ops.push(GraphOp::SetEdgeDeletable {
+                    id: *id,
+                    from: edge_from.deletable,
+                    to: edge_to.deletable,
+                });
+            }
+            if edge_from.reconnectable != edge_to.reconnectable {
+                tx.ops.push(GraphOp::SetEdgeReconnectable {
+                    id: *id,
+                    from: edge_from.reconnectable,
+                    to: edge_to.reconnectable,
+                });
+            }
         } else {
             tx.ops.push(GraphOp::AddEdge {
                 id: *id,
@@ -250,6 +274,109 @@ fn diff_edges(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
             tx.ops.push(GraphOp::RemoveEdge {
                 id: *id,
                 edge: edge_from.clone(),
+            });
+        }
+    }
+}
+
+fn diff_groups(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
+    for (id, group_to) in &to.groups {
+        if let Some(group_from) = from.groups.get(id) {
+            if group_from.color != group_to.color {
+                // No field-level color setter yet; preserve correctness with remove+add.
+                if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_group_op(from, *id) {
+                    tx.ops.push(op);
+                } else {
+                    let detached: Vec<(crate::core::NodeId, Option<crate::core::GroupId>)> = from
+                        .nodes
+                        .iter()
+                        .filter_map(|(node_id, node)| {
+                            (node.parent == Some(*id)).then_some((*node_id, Some(*id)))
+                        })
+                        .collect();
+                    tx.ops.push(GraphOp::RemoveGroup {
+                        id: *id,
+                        group: group_from.clone(),
+                        detached,
+                    });
+                }
+                tx.ops.push(GraphOp::AddGroup {
+                    id: *id,
+                    group: group_to.clone(),
+                });
+                continue;
+            }
+
+            if group_from.rect != group_to.rect {
+                tx.ops.push(GraphOp::SetGroupRect {
+                    id: *id,
+                    from: group_from.rect,
+                    to: group_to.rect,
+                });
+            }
+            if group_from.title != group_to.title {
+                tx.ops.push(GraphOp::SetGroupTitle {
+                    id: *id,
+                    from: group_from.title.clone(),
+                    to: group_to.title.clone(),
+                });
+            }
+        } else {
+            tx.ops.push(GraphOp::AddGroup {
+                id: *id,
+                group: group_to.clone(),
+            });
+        }
+    }
+
+    for (id, group_from) in &from.groups {
+        if !to.groups.contains_key(id) {
+            if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_group_op(from, *id) {
+                tx.ops.push(op);
+            } else {
+                let detached: Vec<(crate::core::NodeId, Option<crate::core::GroupId>)> = from
+                    .nodes
+                    .iter()
+                    .filter_map(|(node_id, node)| {
+                        (node.parent == Some(*id)).then_some((*node_id, Some(*id)))
+                    })
+                    .collect();
+                tx.ops.push(GraphOp::RemoveGroup {
+                    id: *id,
+                    group: group_from.clone(),
+                    detached,
+                });
+            }
+        }
+    }
+}
+
+fn diff_sticky_notes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
+    for (id, note_to) in &to.sticky_notes {
+        if let Some(note_from) = from.sticky_notes.get(id) {
+            if serde_json::to_value(note_from).ok() != serde_json::to_value(note_to).ok() {
+                tx.ops.push(GraphOp::RemoveStickyNote {
+                    id: *id,
+                    note: note_from.clone(),
+                });
+                tx.ops.push(GraphOp::AddStickyNote {
+                    id: *id,
+                    note: note_to.clone(),
+                });
+            }
+        } else {
+            tx.ops.push(GraphOp::AddStickyNote {
+                id: *id,
+                note: note_to.clone(),
+            });
+        }
+    }
+
+    for (id, note_from) in &from.sticky_notes {
+        if !to.sticky_notes.contains_key(id) {
+            tx.ops.push(GraphOp::RemoveStickyNote {
+                id: *id,
+                note: note_from.clone(),
             });
         }
     }

@@ -103,6 +103,33 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
             true
         }
         (
+            GraphOp::SetEdgeSelectable {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetEdgeSelectable { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetEdgeDeletable {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetEdgeDeletable { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetEdgeReconnectable {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetEdgeReconnectable { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
             GraphOp::SetEdgeEndpoints {
                 id: a, to: last_to, ..
             },
@@ -181,6 +208,9 @@ fn op_is_noop(op: &GraphOp) -> bool {
         GraphOp::SetNodeData { from, to, .. } => from == to,
 
         GraphOp::SetEdgeKind { from, to, .. } => from == to,
+        GraphOp::SetEdgeSelectable { from, to, .. } => from == to,
+        GraphOp::SetEdgeDeletable { from, to, .. } => from == to,
+        GraphOp::SetEdgeReconnectable { from, to, .. } => from == to,
         GraphOp::SetEdgeEndpoints { from, to, .. } => from == to,
 
         GraphOp::SetImportAlias { from, to, .. } => from == to,

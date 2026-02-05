@@ -801,6 +801,28 @@ fn graph_diff_is_deterministic_and_roundtrips() {
     from.nodes.insert(a, make_node("core.a"));
     from.nodes.insert(b, make_node("core.b"));
 
+    let out = PortId::new();
+    let inn = PortId::new();
+    from.ports
+        .insert(out, make_port(a, "out", PortDirection::Out));
+    from.ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    from.nodes.get_mut(&a).unwrap().ports.push(out);
+    from.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::from_u128(123);
+    from.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out,
+            to: inn,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
     let imported = GraphId::from_u128(10);
     from.imports.insert(imported, GraphImport::default());
 
@@ -831,6 +853,12 @@ fn graph_diff_is_deterministic_and_roundtrips() {
             meta: serde_json::json!({ "k": 1 }),
         },
     );
+    if let Some(edge) = to.edges.get_mut(&edge_id) {
+        edge.deletable = Some(true);
+        edge.reconnectable = Some(crate::core::EdgeReconnectable::Endpoint(
+            crate::core::EdgeReconnectableEndpoint::Target,
+        ));
+    }
     if let Some(node) = to.nodes.get_mut(&a) {
         node.pos.x = 42.0;
     }
