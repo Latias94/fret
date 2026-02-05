@@ -67,6 +67,8 @@ an interactive chat demo:
 - `PromptInput`: textarea + send/stop + disabled/loading states, with keyboard-first selectors.
 - `ToolCallBlock` + `SourcesBlock` + `InlineCitation`: initial tooling surfaces (collapsible tool
   calls, sources list, citation button chrome).
+- `ConversationEmptyState` + `ConversationScrollButton` + `ConversationDownload` + `MessageToolbar`:
+  conversation/message parts for app composition.
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
   - `AI chat (demo)` (`ai_chat_demo`): small interactive demo with `fretboard diag` gates.
@@ -326,8 +328,11 @@ Token list (v0):
 
 Implemented today:
 
-- `fret.ai.message.*.bg` / `fret.ai.message.*.fg` are read by `MessageParts` with shadcn fallback
-  tokens when not configured.
+- `fret.ai.message.*.bg` / `fret.ai.message.*.fg` are read by `Message` and `MessageParts` with
+  shadcn fallback tokens when not configured.
+- `fret.ai.conversation.padding` / `fret.ai.conversation.gap` and
+  `fret.ai.conversation.scroll_button.offset_bottom` are used as defaults by transcript surfaces.
+- `fret.ai.prompt_input.min_height` is used as a default by `PromptInput`.
 
 Avoid hard-coded string keys like `theme.color_required("primary")` in `fret-ui-ai` where a
 tokenized mapping is feasible.
@@ -391,13 +396,13 @@ Legend:
 
 | Upstream (AI Elements) | Fret owner (candidate) | Fret module/path (candidate) | Status | Notes |
 | --- | --- | --- | --- | --- |
-| `conversation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/conversation.rs` | Partial | Transcript + scroll affordances exist; still missing parts surface + empty state + download. |
-| `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Minimal role chrome exists; needs parts-based composition (content/actions/toolbar). |
+| `conversation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/conversation.rs` | Partial | Transcript exists; parts for empty/download/scroll button exist as separate surfaces (see `conversation_*` files). |
+| `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Role chrome exists; parts-based composition is available via `MessageParts` + `MessageToolbar` (action policies remain app-owned). |
 | (subset) | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_response.rs` | Partial | Markdown rendering exists; streaming append + finalize supported; richer per-block actions (copy/download) are TODO. |
 | `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Done | MVP: textarea + send/stop + disabled/loading + stable selectors. |
 | `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool_call_block.rs` | Partial | Tool call block exists (collapsible + state chrome); richer payload views are pending. |
-| `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources_block.rs` | Partial | Sources list exists; inline linking + open-url intent wiring is still evolving. |
-| `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Partial | Citation chrome exists; anchor/jump/highlight contract is TODO. |
+| `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources_block.rs` | Partial | Sources list exists; v0 highlight contract supports “select citation → highlight source row”. |
+| `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Partial | Citation chrome exists; v0 select/highlight contract is implemented via a shared model. |
 | `attachments.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/attachments.rs` | Defer | Needs file picker/bytes ownership contract; keep as intent-only. |
 | `code-block.tsx` | `fret-ui-ai` + `fret-code-view` | `ecosystem/fret-markdown` + `ecosystem/fret-code-view` | Partial | Code fences render via markdown; copy/expand/download actions need slots. |
 | `snippet.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Defer | Likely a thin wrapper over code view + metadata chrome. |
@@ -406,7 +411,7 @@ Legend:
 | `image.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/image.rs` | Defer | Depends on image decode/asset pipeline policy. |
 | `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Defer | Depends on audio backend + buffering policy. |
 | `shimmer.tsx` | `fret-ui-shadcn` | `ecosystem/fret-ui-shadcn` skeleton/loading recipes | Defer | Prefer reusing existing shadcn skeleton/loading surfaces. |
-| `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Planned (M1) | Message action row; likely composes shadcn buttons + dropdowns. |
+| `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Done | Message toolbar part; composes shadcn buttons + menus (policy app-owned). |
 | `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestion.rs` | Defer | Only implement if an app uses suggestions. |
 | `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Defer | Needs explicit policy: show/hide reasoning, storage, redaction. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | N/A | Avoid baking “CoT UI” as a default surface without a consumer. |

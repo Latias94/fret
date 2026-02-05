@@ -98,8 +98,8 @@ Status legend:
 
 ### M1 — Chat surfaces (usable app kit)
 
-- [ ] AIEL-MVP1-chat-001 Port `Conversation` parts: content, empty state, scroll button, download.
-- [ ] AIEL-MVP1-chat-002 Port `Message` parts: content wrapper, actions, toolbar slots.
+- [x] AIEL-MVP1-chat-001 Port `Conversation` parts: content, empty state, scroll button, download.
+- [x] AIEL-MVP1-chat-002 Port `Message` parts: content wrapper, actions, toolbar slots.
 - [x] AIEL-MVP1-chat-003 Add `MessageResponse` (markdown/code rendering + initial code actions).
 - [x] AIEL-MVP1-chat-004 Port `PromptInput` MVP (text input + send/stop + disabled/loading states).
 - [x] AIEL-MVP1-chat-005 UI Gallery page(s): chat demo with streaming append + tool calls (not just torture).
@@ -124,6 +124,7 @@ Existing gates (UI Gallery `ai_chat_demo`):
 Planned next gate:
 
 - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
+- `tools/diag-scripts/ui-gallery-ai-transcript-scroll-button.json`
 
 ### M3 — Code artifacts (developer-facing outputs)
 
