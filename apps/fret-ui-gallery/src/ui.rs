@@ -11449,15 +11449,28 @@ fn preview_ai_transcript_torture(
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
             let revision = messages.len().min(u64::MAX as usize) as u64;
 
+            let transcript = ui_ai::ConversationTranscript::from_arc(messages.clone())
+                .content_revision(revision)
+                .scroll_handle(scroll_handle.clone())
+                .stick_to_bottom(false)
+                .show_scroll_to_bottom_button(false)
+                .debug_root_test_id("ui-gallery-ai-transcript-root")
+                .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
+                .into_element(cx);
+
+            let scroll_button = ui_ai::ConversationScrollButton::new(scroll_handle)
+                .test_id("ui-gallery-ai-transcript-scroll-bottom")
+                .into_element(cx);
+
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().w_full().h_full().relative(),
+            );
+
             vec![
-                ui_ai::ConversationTranscript::from_arc(messages.clone())
-                    .content_revision(revision)
-                    .scroll_handle(scroll_handle)
-                    .stick_to_bottom(false)
-                    .show_scroll_to_bottom_button(false)
-                    .debug_root_test_id("ui-gallery-ai-transcript-root")
-                    .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
-                    .into_element(cx),
+                cx.stack_props(fret_ui::element::StackProps { layout }, |_cx| {
+                    vec![transcript, scroll_button]
+                }),
             ]
         });
 
