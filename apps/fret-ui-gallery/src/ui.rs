@@ -1417,12 +1417,49 @@ fn preview_hit_test_torture_surface_only(cx: &mut ElementContext<'_, App>) -> Ve
     let stripes = ui_gallery_hit_test_torture_stripes();
     let noise = ui_gallery_hit_test_torture_noise();
 
+    // The hit-test torture surface is intentionally paint-stable. For automated perf probes that
+    // need per-pointer-move frame stats, we optionally request redraw on pointer movement so
+    // `move_pointer_sweep` steps can advance deterministically.
+    let redraw_on_move = matches!(
+        std::env::var_os("FRET_UI_GALLERY_HIT_TEST_TORTURE_REDRAW_ON_MOVE")
+            .filter(|v| !v.is_empty())
+            .map(|v| v.to_string_lossy().trim().to_ascii_lowercase()),
+        Some(v) if !(v == "0" || v == "false" || v == "no" || v == "off")
+    );
+
+    if redraw_on_move {
+        let mut needs_lease = false;
+        cx.with_state(
+            || None::<ContinuousFrames>,
+            |lease| {
+                if lease.is_none() {
+                    needs_lease = true;
+                }
+            },
+        );
+        if needs_lease {
+            let lease = cx.begin_continuous_frames();
+            cx.with_state(
+                || None::<ContinuousFrames>,
+                |slot| {
+                    *slot = Some(lease);
+                },
+            );
+        }
+    }
+
     let area_w = Px(1024.0);
     let area_h = Px(480.0);
     let stripe_w = Px((area_w.0 / stripes as f32).max(1.0));
 
-    let on_pointer_move: fret_ui::action::OnPointerMove =
-        Arc::new(|_host, _action_cx, _mv: PointerMoveCx| false);
+    let on_pointer_move: fret_ui::action::OnPointerMove = if redraw_on_move {
+        Arc::new(|host, action_cx, _mv: PointerMoveCx| {
+            host.request_redraw(action_cx.window);
+            false
+        })
+    } else {
+        Arc::new(|_host, _action_cx, _mv: PointerMoveCx| false)
+    };
 
     vec![preview_hit_test_torture_surface(
         cx,
