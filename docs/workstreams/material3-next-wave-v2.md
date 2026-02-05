@@ -290,6 +290,11 @@ Non-goals:
         - [x] Overlay sizing parity with `Select` (match-anchor-width + clamp height, collision padding).
         - [x] A11y: `ComboBox` input + `ListBox` overlay, with `controls_element` + `labelled_by_element`.
         - [x] Keyboard: ArrowDown/ArrowUp open + active item, Enter selects, Escape dismisses.
+        - [x] Filtering: typing filters options by label/value; options expose stable `test_id` for automation.
+          - Evidence:
+            - `ecosystem/fret-ui-material3/src/autocomplete.rs` (`filter_items`, option `PressableA11y::test_id`)
+            - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_autocomplete_filters_items_by_query_v1`)
+            - `tools/diag-scripts/ui-gallery-material3-autocomplete-filtering.json`
         - [x] Gallery page + dialog-embedded probe (avoid clipping regressions).
           - Evidence:
             - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_AUTOCOMPLETE`)
