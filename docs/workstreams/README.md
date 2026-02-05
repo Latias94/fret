@@ -10,6 +10,10 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/state-management-v1.md`
+- `docs/workstreams/state-management-v1-todo.md`
+- `docs/workstreams/authoring-paradigm-gpui-style-v1.md`
+- `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
 - `docs/workstreams/ai-elements-port.md`

@@ -968,6 +968,8 @@ name = "fret-authoring"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-query",
+ "fret-selector",
  "fret-ui",
 ]
 
@@ -1167,8 +1169,10 @@ dependencies = [
  "fret-node",
  "fret-plot",
  "fret-plot3d",
+ "fret-query",
  "fret-render",
  "fret-runtime",
+ "fret-selector",
  "fret-ui",
  "fret-ui-app",
  "fret-ui-assets",
@@ -1389,6 +1393,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-query"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-executor",
+ "fret-runtime",
+ "fret-ui",
+ "tracing",
+]
+
+[[package]]
 name = "fret-render"
 version = "0.1.0"
 dependencies = [
@@ -1454,6 +1470,14 @@ dependencies = [
  "serde_json",
  "slotmap",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "fret-selector"
+version = "0.1.0"
+dependencies = [
+ "fret-runtime",
+ "fret-ui",
 ]
 
 [[package]]

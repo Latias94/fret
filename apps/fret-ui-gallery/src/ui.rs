@@ -7656,6 +7656,8 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct SidebarModels {
         collapsed: Option<Model<bool>>,
+        selected: Option<Model<Arc<str>>>,
+        selected_rtl: Option<Model<Arc<str>>>,
     }
 
     let collapsed = cx.with_state(SidebarModels::default, |st| st.collapsed.clone());
@@ -7676,75 +7678,304 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         .copied()
         .unwrap_or(false);
 
-    let header = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Button::new("Toggle")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .toggle_model(collapsed.clone())
-                    .into_element(cx),
-                cx.text(if is_collapsed {
-                    "collapsed"
-                } else {
-                    "expanded"
-                }),
-            ]
-        },
-    );
+    let selected = cx.with_state(SidebarModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
+            cx.with_state(SidebarModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
 
-    let sidebar = shadcn::Sidebar::new([
-        shadcn::SidebarHeader::new([cx.text("Workspace")]).into_element(cx),
-        shadcn::SidebarContent::new([shadcn::SidebarGroup::new([
-            shadcn::SidebarGroupLabel::new("General").into_element(cx),
-            shadcn::SidebarMenu::new([
-                shadcn::SidebarMenuItem::new(
-                    shadcn::SidebarMenuButton::new("Home")
-                        .icon(fret_icons::IconId::new_static("lucide.home"))
-                        .active(true)
-                        .collapsed(is_collapsed)
-                        .on_click(CMD_APP_OPEN)
+    let selected_rtl = cx.with_state(SidebarModels::default, |st| st.selected_rtl.clone());
+    let selected_rtl = match selected_rtl {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
+            cx.with_state(SidebarModels::default, |st| {
+                st.selected_rtl = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_value = cx.get_model_cloned(&selected, Invalidation::Layout);
+    let selected_value = selected_value.unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let menu_button = |cx: &mut ElementContext<'_, App>,
+                       selected_model: Model<Arc<str>>,
+                       active_value: &Arc<str>,
+                       value: &'static str,
+                       label: &'static str,
+                       icon: &'static str,
+                       collapsed: bool| {
+        let is_active = active_value.as_ref() == value;
+        let selected_for_activate = selected_model.clone();
+        let value_for_activate: Arc<str> = Arc::from(value);
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let _ = host
+                .models_mut()
+                .update(&selected_for_activate, |v| *v = value_for_activate.clone());
+            host.request_redraw(action_cx.window);
+        });
+
+        shadcn::SidebarMenuButton::new(label)
+            .icon(fret_icons::IconId::new_static(icon))
+            .active(is_active)
+            .collapsed(collapsed)
+            .on_activate(on_activate)
+            .into_element(cx)
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let demo = {
+        let toolbar = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Button::new("Toggle")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .toggle_model(collapsed.clone())
                         .into_element(cx),
-                )
+                    cx.text(if is_collapsed {
+                        "collapsed"
+                    } else {
+                        "expanded"
+                    }),
+                    cx.text(format!("active={}", selected_value.as_ref())),
+                ]
+            },
+        );
+
+        let platform = shadcn::SidebarGroup::new([
+            shadcn::SidebarGroupLabel::new("Platform")
+                .collapsed(is_collapsed)
                 .into_element(cx),
-                shadcn::SidebarMenuItem::new(
-                    shadcn::SidebarMenuButton::new("Settings")
-                        .icon(fret_icons::IconId::new_static("lucide.settings"))
-                        .collapsed(is_collapsed)
-                        .on_click(CMD_APP_SETTINGS)
-                        .into_element(cx),
-                )
+            shadcn::SidebarMenu::new([
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "playground",
+                    "Playground",
+                    "lucide.square-terminal",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "models",
+                    "Models",
+                    "lucide.bot",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "documentation",
+                    "Documentation",
+                    "lucide.book-open",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "settings",
+                    "Settings",
+                    "lucide.settings-2",
+                    is_collapsed,
+                ))
                 .into_element(cx),
             ])
             .into_element(cx),
         ])
-        .into_element(cx)])
+        .into_element(cx);
+
+        let projects = shadcn::SidebarGroup::new([
+            shadcn::SidebarGroupLabel::new("Projects")
+                .collapsed(is_collapsed)
+                .into_element(cx),
+            shadcn::SidebarMenu::new([
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "design",
+                    "Design Engineering",
+                    "lucide.frame",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "sales",
+                    "Sales & Marketing",
+                    "lucide.pie-chart",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "travel",
+                    "Travel",
+                    "lucide.map",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx);
+
+        let sidebar = shadcn::Sidebar::new([
+            shadcn::SidebarHeader::new([cx.text("Sidebar")]).into_element(cx),
+            shadcn::SidebarContent::new([platform, projects])
+                .collapsed(is_collapsed)
+                .into_element(cx),
+            shadcn::SidebarFooter::new([cx.text("User")]).into_element(cx),
+        ])
         .collapsed(is_collapsed)
-        .into_element(cx),
-        shadcn::SidebarFooter::new([cx.text("Footer")]).into_element(cx),
-    ])
-    .collapsed(is_collapsed)
-    .into_element(cx);
+        .refine_layout(LayoutRefinement::default().h_px(Px(360.0)))
+        .into_element(cx);
 
-    let content = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Content").into_element(cx)])
+        let content = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Content").into_element(cx)])
+                .into_element(cx),
+            shadcn::CardContent::new(vec![
+                cx.text("In upstream shadcn/ui, SidebarProvider/Trigger/Rail/Inset exist."),
+                cx.text(
+                    "In Fret, the gallery demo drives `collapsed` via a model (manual toggle).",
+                ),
+            ])
             .into_element(cx),
-        shadcn::CardContent::new(vec![cx.text("Sidebar is a composable surface.")])
-            .into_element(cx),
-    ])
-    .refine_layout(LayoutRefinement::default().w_full().h_full())
-    .into_element(cx);
+        ])
+        .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+        .into_element(cx);
 
-    vec![
-        header,
-        stack::hstack(
+        let frame = stack::hstack(
             cx,
-            stack::HStackProps::default().gap(Space::N4).items_start(),
+            stack::HStackProps::default()
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
             |_cx| vec![sidebar, content],
-        ),
-    ]
+        );
+
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            |_cx| vec![toolbar, frame],
+        );
+        section(cx, "Demo", body)
+    };
+
+    let rtl = {
+        let menu = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                let selected_value = cx.get_model_cloned(&selected_rtl, Invalidation::Layout);
+                let selected_value = selected_value.unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+                let platform = shadcn::SidebarGroup::new([
+                    shadcn::SidebarGroupLabel::new("المنصة")
+                        .collapsed(false)
+                        .into_element(cx),
+                    shadcn::SidebarMenu::new([
+                        shadcn::SidebarMenuItem::new(menu_button(
+                            cx,
+                            selected_rtl.clone(),
+                            &selected_value,
+                            "playground",
+                            "ملعب",
+                            "lucide.square-terminal",
+                            false,
+                        ))
+                        .into_element(cx),
+                        shadcn::SidebarMenuItem::new(menu_button(
+                            cx,
+                            selected_rtl.clone(),
+                            &selected_value,
+                            "documentation",
+                            "التوثيق",
+                            "lucide.book-open",
+                            false,
+                        ))
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx);
+
+                let sidebar = shadcn::Sidebar::new([
+                    shadcn::SidebarHeader::new([cx.text("الشريط الجانبي")]).into_element(cx),
+                    shadcn::SidebarContent::new([platform])
+                        .collapsed(false)
+                        .into_element(cx),
+                    shadcn::SidebarFooter::new([cx.text("مستخدم")]).into_element(cx),
+                ])
+                .collapsed(false)
+                .refine_layout(LayoutRefinement::default().h_px(Px(280.0)))
+                .into_element(cx);
+
+                let content = shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("RTL").into_element(cx)])
+                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        cx.text("Sidebar does not currently expose `dir`/`side` props."),
+                        cx.text("This preview uses the direction provider + right-side placement."),
+                    ])
+                    .into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+                .into_element(cx);
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N4)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| vec![content, sidebar],
+                )
+            },
+        );
+        section(cx, "RTL", menu)
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N6).items_start(),
+        |_cx| vec![demo, rtl],
+    )]
 }
 
 fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

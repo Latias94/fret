@@ -21,6 +21,9 @@ Related ADRs:
 - `fret-kit` (desktop-first batteries-included entry point)
   - wraps `fret-bootstrap` (golden-path wiring) + `fret-ui-shadcn` (default component surface)
   - enables a practical desktop-first default stack via `fret/native-wgpu`
+- Optional ecosystem helpers (recommended defaults):
+  - `fret-selector` (memoized derived state)
+  - `fret-query` (async resource state + caching, TanStack Query-like)
 
 ## Quick start (template)
 
@@ -55,6 +58,8 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-kit = { path = "../../ecosystem/fret-kit" }
+fret-selector = { path = "../../ecosystem/fret-selector" } # optional
+fret-query = { path = "../../ecosystem/fret-query" } # optional
 ```
 
 ## Minimal startup
@@ -79,12 +84,18 @@ Notes:
 ```rust,ignore
 use std::sync::Arc;
 use fret_runtime::Model;
+use fret_kit::prelude::MessageRouter;
 
 #[derive(Clone)]
 struct TodoItem {
     id: u64,
-    done: bool,
+    done: Model<bool>,
     text: Arc<str>,
+}
+
+#[derive(Debug, Clone)]
+enum Msg {
+    Remove(u64),
 }
 
 struct TodoWindowState {
@@ -92,6 +103,8 @@ struct TodoWindowState {
     root: Option<fret_core::NodeId>,
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
+    router: MessageRouter<Msg>,
+    next_id: u64,
 }
 ```
 
@@ -101,22 +114,26 @@ We recommend keeping UI → app communication as command IDs:
 
 ```rust,ignore
 use fret_runtime::CommandId;
+use fret_kit::prelude::MessageRouter;
 
 const CMD_ADD: &str = "todo.add";
 const CMD_CLEAR_DONE: &str = "todo.clear_done";
-const CMD_TOGGLE_PREFIX: &str = "todo.toggle.";
-const CMD_REMOVE_PREFIX: &str = "todo.remove.";
+const CMD_REFRESH_TIP: &str = "todo.refresh_tip";
 
-fn toggle_cmd(id: u64) -> CommandId {
-    CommandId::new(format!("{CMD_TOGGLE_PREFIX}{id}"))
-}
-
-fn remove_cmd(id: u64) -> CommandId {
-    CommandId::new(format!("{CMD_REMOVE_PREFIX}{id}"))
+#[derive(Debug, Clone)]
+enum Msg {
+    Remove(u64),
 }
 ```
 
-This avoids storing long-lived closures at arbitrary nodes and keeps hot reload resets predictable (ADR 0107).
+Recommended pattern:
+
+- Keep **stable** command IDs for keybindable actions (`CMD_ADD`, `CMD_CLEAR_DONE`).
+- Use a per-window `MessageRouter<Msg>` to allocate per-item commands (toggle/remove) without
+  stringly `"prefix.{id}"` parsing.
+
+This avoids storing long-lived closures at arbitrary nodes and keeps hot reload resets predictable
+(ADR 0107).
 
 ## View (build retained UI tree)
 
@@ -139,6 +156,48 @@ fn view(cx: &mut ElementContext<'_, fret_app::App>, st: &mut TodoWindowState) ->
 Note: `fret-kit::prelude` includes the shadcn authoring vocabulary (layout/styling + common types) so app code can stay
 on a single dependency for the default story.
 
+## Derived state (selectors)
+
+For editor-style UIs, views often need derived values (counts, filters, projections). We recommend
+memoizing these computations with selectors instead of:
+
+- recomputing every frame, or
+- introducing “tick models” to force refresh.
+
+High-level sketch:
+
+```rust,ignore
+use fret_selector::ui::SelectorElementContextExt as _;
+
+let (done_count, total_count) = cx.use_selector(
+    |cx| { /* observe the models you encode */ },
+    |cx| { /* compute derived values */ },
+);
+```
+
+## Async resource state (queries)
+
+For async data (network, disk, indexing), we recommend storing cached resource state in
+`Model<QueryState<T>>` via `fret-query` so the UI can observe loading/error/success consistently.
+
+High-level sketch:
+
+```rust,ignore
+use fret_query::ui::QueryElementContextExt as _;
+use fret_query::{QueryKey, QueryPolicy, QueryState};
+
+let handle = cx.use_query(key, policy, move |token| fetch(token));
+let state: QueryState<T> = cx.watch_model(handle.model()).layout().cloned().unwrap_or_default();
+```
+
+To invalidate/refetch from app logic:
+
+```rust,ignore
+use fret_query::with_query_client;
+
+let _ = with_query_client(app, |client, app| client.invalidate(app, key));
+```
+
 ## Event pipeline (platform → UI)
 
 In a typical window driver:
@@ -159,15 +218,18 @@ fn on_command(
     window: fret_core::AppWindowId,
     ui: &mut fret_ui::UiTree<fret_app::App>,
     state: &mut TodoWindowState,
-    cmd: CommandId,
+    cmd: &CommandId,
 ) {
     // App commands: update models.
     match cmd.as_str() {
         CMD_ADD => { /* read draft, push todo, clear draft */ }
         CMD_CLEAR_DONE => { /* retain only !done */ }
-        other => {
-            if let Some(id) = other.strip_prefix(CMD_TOGGLE_PREFIX) { /* toggle */ }
-            if let Some(id) = other.strip_prefix(CMD_REMOVE_PREFIX) { /* remove */ }
+        CMD_REFRESH_TIP => { /* invalidate query key */ }
+        _ => {
+            let Some(msg) = state.router.try_take(cmd) else { return };
+            match msg {
+                Msg::Remove(id) => { /* remove */ }
+            }
         }
     }
 }

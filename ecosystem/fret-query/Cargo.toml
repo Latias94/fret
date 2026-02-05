@@ -1,5 +1,5 @@
 [package]
-name = "fret-imui"
+name = "fret-query"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,15 +10,16 @@ homepage.workspace = true
 documentation.workspace = true
 
 [features]
-default = []
-query = ["fret-authoring/query"]
-selector = ["fret-authoring/selector"]
+default = ["ui"]
+ui = ["dep:fret-ui"]
 
 [dependencies]
-fret-authoring = { path = "../fret-authoring" }
 fret-core = { path = "../../crates/fret-core" }
+fret-executor = { path = "../fret-executor" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui" }
+fret-ui = { path = "../../crates/fret-ui", optional = true }
+tracing.workspace = true
 
 [dev-dependencies]
-fret-ui-kit = { path = "../fret-ui-kit", features = ["imui"] }
+fret-app = { path = "../../crates/fret-app" }
+
