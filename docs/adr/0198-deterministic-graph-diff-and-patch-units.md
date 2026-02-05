@@ -96,6 +96,7 @@ Additionally:
 - `ecosystem/fret-node/src/ops/tests.rs` (diff determinism + roundtrip)
 Note (MVP compromise):
 
-- Port-level setters are not defined yet, so port changes are represented as remove+add (and edges
-  are re-added afterwards). This preserves correctness and determinism but is not minimal.
-
+- Port-level setters exist for the most common "soft" fields:
+  - `connectable`, `connectable_start`, `connectable_end`, `ty`, and `data`.
+- Structural port changes (owner node, key, dir, kind, capacity) are represented as remove+add
+  (and edges are re-added afterwards). This preserves correctness and determinism but is not minimal.

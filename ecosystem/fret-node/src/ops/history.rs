@@ -217,6 +217,33 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             }
             out
         }
+        GraphOp::SetPortConnectable { id, from, to } => vec![GraphOp::SetPortConnectable {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetPortConnectableStart { id, from, to } => {
+            vec![GraphOp::SetPortConnectableStart {
+                id: *id,
+                from: *to,
+                to: *from,
+            }]
+        }
+        GraphOp::SetPortConnectableEnd { id, from, to } => vec![GraphOp::SetPortConnectableEnd {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetPortType { id, from, to } => vec![GraphOp::SetPortType {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
+        GraphOp::SetPortData { id, from, to } => vec![GraphOp::SetPortData {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
 
         GraphOp::AddEdge { id, edge } => vec![GraphOp::RemoveEdge {
             id: *id,

@@ -107,6 +107,36 @@ pub enum GraphOp {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         edges: Vec<(EdgeId, Edge)>,
     },
+    /// Sets a port connectable override.
+    SetPortConnectable {
+        id: PortId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a port start-connectable override.
+    SetPortConnectableStart {
+        id: PortId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a port end-connectable override.
+    SetPortConnectableEnd {
+        id: PortId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a port type descriptor.
+    SetPortType {
+        id: PortId,
+        from: Option<TypeDesc>,
+        to: Option<TypeDesc>,
+    },
+    /// Sets a port domain-owned data payload.
+    SetPortData {
+        id: PortId,
+        from: serde_json::Value,
+        to: serde_json::Value,
+    },
 
     /// Adds an edge.
     AddEdge { id: EdgeId, edge: Edge },

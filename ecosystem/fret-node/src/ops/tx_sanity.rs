@@ -57,6 +57,11 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         | GraphOp::SetSymbolName { .. }
         | GraphOp::SetSymbolType { .. }
         | GraphOp::SetSymbolDefaultValue { .. }
+        | GraphOp::SetPortConnectable { .. }
+        | GraphOp::SetPortConnectableStart { .. }
+        | GraphOp::SetPortConnectableEnd { .. }
+        | GraphOp::SetPortType { .. }
+        | GraphOp::SetPortData { .. }
         | GraphOp::SetEdgeSelectable { .. }
         | GraphOp::SetEdgeDeletable { .. }
         | GraphOp::SetEdgeReconnectable { .. }

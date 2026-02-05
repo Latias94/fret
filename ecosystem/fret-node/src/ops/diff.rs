@@ -187,14 +187,56 @@ fn diff_nodes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
 fn diff_ports(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
     for (id, port_to) in &to.ports {
         if let Some(port_from) = from.ports.get(id) {
-            // For MVP we do not have per-port setters yet; fall back to remove+add if different.
-            if serde_json::to_value(port_from).ok() != serde_json::to_value(port_to).ok() {
+            let structural_equal = port_from.node == port_to.node
+                && port_from.key == port_to.key
+                && port_from.dir == port_to.dir
+                && port_from.kind == port_to.kind
+                && port_from.capacity == port_to.capacity;
+
+            if !structural_equal {
                 if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_port_op(from, *id) {
                     tx.ops.push(op);
                 }
                 tx.ops.push(GraphOp::AddPort {
                     id: *id,
                     port: port_to.clone(),
+                });
+                continue;
+            }
+
+            if port_from.connectable != port_to.connectable {
+                tx.ops.push(GraphOp::SetPortConnectable {
+                    id: *id,
+                    from: port_from.connectable,
+                    to: port_to.connectable,
+                });
+            }
+            if port_from.connectable_start != port_to.connectable_start {
+                tx.ops.push(GraphOp::SetPortConnectableStart {
+                    id: *id,
+                    from: port_from.connectable_start,
+                    to: port_to.connectable_start,
+                });
+            }
+            if port_from.connectable_end != port_to.connectable_end {
+                tx.ops.push(GraphOp::SetPortConnectableEnd {
+                    id: *id,
+                    from: port_from.connectable_end,
+                    to: port_to.connectable_end,
+                });
+            }
+            if port_from.ty != port_to.ty {
+                tx.ops.push(GraphOp::SetPortType {
+                    id: *id,
+                    from: port_from.ty.clone(),
+                    to: port_to.ty.clone(),
+                });
+            }
+            if port_from.data != port_to.data {
+                tx.ops.push(GraphOp::SetPortData {
+                    id: *id,
+                    from: port_from.data.clone(),
+                    to: port_to.data.clone(),
                 });
             }
         } else {

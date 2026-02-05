@@ -94,6 +94,51 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
             true
         }
         (
+            GraphOp::SetPortConnectable {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetPortConnectable { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetPortConnectableStart {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetPortConnectableStart { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetPortConnectableEnd {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetPortConnectableEnd { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = *to;
+            true
+        }
+        (
+            GraphOp::SetPortType {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetPortType { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetPortData {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetPortData { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
             GraphOp::SetEdgeKind {
                 id: a, to: last_to, ..
             },
@@ -206,6 +251,12 @@ fn op_is_noop(op: &GraphOp) -> bool {
         GraphOp::SetNodeCollapsed { from, to, .. } => from == to,
         GraphOp::SetNodePorts { from, to, .. } => from == to,
         GraphOp::SetNodeData { from, to, .. } => from == to,
+
+        GraphOp::SetPortConnectable { from, to, .. } => from == to,
+        GraphOp::SetPortConnectableStart { from, to, .. } => from == to,
+        GraphOp::SetPortConnectableEnd { from, to, .. } => from == to,
+        GraphOp::SetPortType { from, to, .. } => from == to,
+        GraphOp::SetPortData { from, to, .. } => from == to,
 
         GraphOp::SetEdgeKind { from, to, .. } => from == to,
         GraphOp::SetEdgeSelectable { from, to, .. } => from == to,

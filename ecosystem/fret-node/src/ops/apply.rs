@@ -190,6 +190,36 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
                 node.ports.retain(|p| p != id);
             }
         }
+        GraphOp::SetPortConnectable { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.connectable = *to;
+        }
+        GraphOp::SetPortConnectableStart { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.connectable_start = *to;
+        }
+        GraphOp::SetPortConnectableEnd { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.connectable_end = *to;
+        }
+        GraphOp::SetPortType { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.ty = to.clone();
+        }
+        GraphOp::SetPortData { id, to, .. } => {
+            let Some(port) = graph.ports.get_mut(id) else {
+                return Err(ApplyError::MissingPort { id: *id });
+            };
+            port.data = to.clone();
+        }
         GraphOp::AddEdge { id, edge } => {
             if graph.edges.contains_key(id) {
                 return Err(ApplyError::EdgeAlreadyExists { id: *id });

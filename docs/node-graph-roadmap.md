@@ -186,4 +186,5 @@ Legend:
 - [~] Deterministic graph diff/patch set for collaboration.
   - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
+  - Patch units: ports use setter ops for soft fields (connectable/ty/data) and fall back to remove+add only for structural changes.
   - Tests: `ecosystem/fret-node/src/ops/tests.rs`

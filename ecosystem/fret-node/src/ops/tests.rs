@@ -801,8 +801,8 @@ fn graph_diff_is_deterministic_and_roundtrips() {
     from.nodes.insert(a, make_node("core.a"));
     from.nodes.insert(b, make_node("core.b"));
 
-    let out = PortId::new();
-    let inn = PortId::new();
+    let out = PortId::from_u128(10);
+    let inn = PortId::from_u128(11);
     from.ports
         .insert(out, make_port(a, "out", PortDirection::Out));
     from.ports
@@ -859,6 +859,11 @@ fn graph_diff_is_deterministic_and_roundtrips() {
             crate::core::EdgeReconnectableEndpoint::Target,
         ));
     }
+    if let Some(port) = to.ports.get_mut(&out) {
+        port.connectable = Some(false);
+        port.ty = Some(TypeDesc::String);
+        port.data = serde_json::json!({ "p": 1 });
+    }
     if let Some(node) = to.nodes.get_mut(&a) {
         node.pos.x = 42.0;
     }
@@ -869,6 +874,32 @@ fn graph_diff_is_deterministic_and_roundtrips() {
         serde_json::to_string(&tx1.ops).unwrap(),
         serde_json::to_string(&tx2.ops).unwrap(),
         "diff must be deterministic"
+    );
+
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetPortConnectable { id, .. } if *id == out)),
+        "diff must use port setter ops for soft fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetPortType { id, .. } if *id == out)),
+        "diff must use port setter ops for soft fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetPortData { id, .. } if *id == out)),
+        "diff must use port setter ops for soft fields"
+    );
+    assert!(
+        !tx1.ops.iter().any(|op| {
+            matches!(op, GraphOp::RemovePort { id, .. } if *id == out)
+                || matches!(op, GraphOp::AddPort { id, .. } if *id == out)
+        }),
+        "diff must not fall back to remove+add for soft port changes"
     );
 
     let mut patched = from.clone();
