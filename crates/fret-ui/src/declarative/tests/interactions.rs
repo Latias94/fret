@@ -1100,6 +1100,130 @@ fn selectable_text_double_click_respects_window_text_boundary_mode_under_scroll_
 }
 
 #[test]
+fn selectable_text_ctrl_arrow_word_navigation_respects_window_text_boundary_mode() {
+    fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (usize, usize) {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let rich = attributed_plain("can't");
+        let text_len = rich.text.len();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "selectable-text-ctrl-arrow-boundary-mode",
+            |cx| vec![cx.selectable_text(rich.clone())],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let selectable_node = ui.children(root)[0];
+        ui.set_focus(Some(selectable_node));
+
+        let record =
+            crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+                .expect("selectable record");
+        let element = record.element;
+
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| {
+                state.selection_anchor = 0;
+                state.caret = 0;
+            },
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let caret_right = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| state.caret,
+        );
+
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| {
+                state.selection_anchor = text_len;
+                state.caret = text_len;
+            },
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        let caret_left = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| state.caret,
+        );
+
+        (caret_right, caret_left)
+    }
+
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        (5, 0),
+        "UnicodeWord should treat \"can't\" as a single word"
+    );
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        (3, 4),
+        "Identifier should split \"can't\" around the apostrophe"
+    );
+}
+
+#[test]
 fn selectable_text_pointer_down_requests_focus() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -2379,6 +2503,243 @@ fn text_input_double_click_respects_window_text_boundary_mode_under_scroll_offse
 }
 
 #[test]
+fn text_input_ctrl_arrow_word_navigation_respects_window_text_boundary_mode() {
+    fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (u32, u32) {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-input-ctrl-arrow-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextInputProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(160.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                vec![cx.text_input(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let input_node = ui.children(root)[0];
+        ui.set_focus(Some(input_node));
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let move_home = CommandId::from("text.move_home");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_home),
+            "expected text.move_home to be handled by text input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_right = focus_u16;
+
+        let move_end = CommandId::from("text.move_end");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_end),
+            "expected text.move_end to be handled by text input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowLeft,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_left = focus_u16;
+
+        (caret_right, caret_left)
+    }
+
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        (5, 0),
+        "UnicodeWord should treat \"can't\" as a single word"
+    );
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        (3, 4),
+        "Identifier should split \"can't\" around the apostrophe"
+    );
+}
+
+#[test]
+fn text_input_ctrl_backspace_delete_word_respects_window_text_boundary_mode() {
+    fn text_after_key(
+        mode: fret_runtime::TextBoundaryMode,
+        prep_command: &'static str,
+        key: fret_core::KeyCode,
+    ) -> String {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(220.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-input-ctrl-word-delete-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextInputProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(160.0));
+                props.layout.size.height = Length::Px(Px(32.0));
+                vec![cx.text_input(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let input_node = ui.children(root)[0];
+        ui.set_focus(Some(input_node));
+
+        let prep_command = CommandId::from(prep_command);
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &prep_command),
+            "expected {prep_command:?} to be handled by text input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key,
+                modifiers: Modifiers {
+                    ctrl: true,
+                    ..Default::default()
+                },
+                repeat: false,
+            },
+        );
+
+        app.models()
+            .get_cloned(&model)
+            .unwrap_or_default()
+            .to_string()
+    }
+
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            "text.move_end",
+            fret_core::KeyCode::Backspace,
+        ),
+        "",
+        "UnicodeWord should delete the whole word on Ctrl+Backspace"
+    );
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::Identifier,
+            "text.move_end",
+            fret_core::KeyCode::Backspace,
+        ),
+        "can'",
+        "Identifier should delete only the last identifier segment on Ctrl+Backspace"
+    );
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            "text.move_home",
+            fret_core::KeyCode::Delete,
+        ),
+        "",
+        "UnicodeWord should delete the whole word on Ctrl+Delete"
+    );
+    assert_eq!(
+        text_after_key(
+            fret_runtime::TextBoundaryMode::Identifier,
+            "text.move_home",
+            fret_core::KeyCode::Delete,
+        ),
+        "'t",
+        "Identifier should delete only the first identifier segment on Ctrl+Delete"
+    );
+}
+
+#[test]
 fn text_input_double_click_cancels_ime_preedit() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::PlatformCapabilities::default());
@@ -3426,6 +3787,241 @@ fn text_area_double_click_respects_window_text_boundary_mode_under_scroll_offset
         selection_utf16,
         Some((0, 3)),
         "Identifier mode should stop at the apostrophe"
+    );
+}
+
+#[test]
+fn text_area_word_navigation_respects_window_text_boundary_mode() {
+    fn caret_positions_for_mode(mode: fret_runtime::TextBoundaryMode) -> (u32, u32) {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(220.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-area-word-nav-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextAreaProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(200.0));
+                props.layout.size.height = Length::Px(Px(80.0));
+                vec![cx.text_area(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let area_node = ui.children(root)[0];
+        ui.set_focus(Some(area_node));
+
+        // Ensure the underlying text blob exists so line-based commands (`move_home` / `move_end`)
+        // can use text geometry queries.
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let move_home = CommandId::from("text.move_home");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_home),
+            "expected text.move_home to be handled by text area"
+        );
+        let move_word_right = CommandId::from("text.move_word_right");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_word_right),
+            "expected text.move_word_right to be handled by text area"
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_right = focus_u16;
+
+        let select_all = CommandId::from("text.select_all");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &select_all),
+            "expected text.select_all to be handled by text area"
+        );
+        let move_right = CommandId::from("text.move_right");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_right),
+            "expected text.move_right to be handled by text area"
+        );
+        let move_word_left = CommandId::from("text.move_word_left");
+        assert!(
+            ui.dispatch_command(&mut app, &mut services, &move_word_left),
+            "expected text.move_word_left to be handled by text area"
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        let (anchor_u16, focus_u16) = snapshot.selection_utf16.expect("selection");
+        assert_eq!(
+            anchor_u16, focus_u16,
+            "expected a collapsed selection after move"
+        );
+        let caret_left = focus_u16;
+
+        (caret_right, caret_left)
+    }
+
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        (5, 0),
+        "UnicodeWord should treat \"can't\" as a single word"
+    );
+    assert_eq!(
+        caret_positions_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        (3, 4),
+        "Identifier should split \"can't\" around the apostrophe"
+    );
+}
+
+#[test]
+fn text_area_delete_word_respects_window_text_boundary_mode() {
+    fn text_after_commands(
+        mode: fret_runtime::TextBoundaryMode,
+        commands: &[&'static str],
+    ) -> String {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(220.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-area-delete-word-boundary-mode",
+            |cx| {
+                let mut props = crate::element::TextAreaProps::new(model.clone());
+                props.layout.size.width = Length::Px(Px(200.0));
+                props.layout.size.height = Length::Px(Px(80.0));
+                vec![cx.text_area(props)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let area_node = ui.children(root)[0];
+        ui.set_focus(Some(area_node));
+
+        for command in commands {
+            let command_id = CommandId::from(*command);
+            assert!(
+                ui.dispatch_command(&mut app, &mut services, &command_id),
+                "expected {command_id:?} to be handled by text area"
+            );
+        }
+
+        app.models().get_cloned(&model).unwrap_or_default()
+    }
+
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            &[
+                "text.select_all",
+                "text.move_right",
+                "text.delete_word_backward"
+            ],
+        ),
+        "",
+        "UnicodeWord should delete the whole word on delete_word_backward"
+    );
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::Identifier,
+            &[
+                "text.select_all",
+                "text.move_right",
+                "text.delete_word_backward"
+            ],
+        ),
+        "can'",
+        "Identifier should delete only the last identifier segment on delete_word_backward"
+    );
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::UnicodeWord,
+            &[
+                "text.select_all",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.delete_word_forward",
+            ],
+        ),
+        "",
+        "UnicodeWord should delete the whole word on delete_word_forward"
+    );
+    assert_eq!(
+        text_after_commands(
+            fret_runtime::TextBoundaryMode::Identifier,
+            &[
+                "text.select_all",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.move_word_left",
+                "text.delete_word_forward",
+            ],
+        ),
+        "'t",
+        "Identifier should delete only the first identifier segment on delete_word_forward"
     );
 }
 
