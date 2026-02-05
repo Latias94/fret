@@ -6,7 +6,7 @@ use fret_runtime::{Model, ModelId};
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, OpacityProps, Overflow,
-    PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsProps,
+    PositionStyle, PressableA11y, PressableProps, RingPlacement, RingStyle, SemanticsDecoration,
     SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -418,15 +418,13 @@ impl DialogContent {
 
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Dialog,
-                labelled_by_element,
-                described_by_element,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
-        )
+
+        container.attach_semantics(SemanticsDecoration {
+            role: Some(SemanticsRole::Dialog),
+            labelled_by_element,
+            described_by_element,
+            ..Default::default()
+        })
     }
 }
 

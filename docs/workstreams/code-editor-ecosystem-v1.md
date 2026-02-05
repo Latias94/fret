@@ -1,14 +1,91 @@
-# Code Editor Ecosystem v1 — Refactor Plan & TODO Tracker
+# Code Editor Ecosystem v1 - Refactor Plan & TODO Tracker
 
-Status: Draft (workstream document; normative contracts live in ADRs)
-Last updated: 2026-01-30
+Status: Active (workstream document; normative contracts live in ADRs)
+Last updated: 2026-02-04
 
-Recent changes (2026-01-30):
+Recent changes (2026-02-04):
 
+- Editor paint: anchor caret Y to the actual row text blob baseline (fixes caret drifting above glyphs in mixed-font / rich-span lines).
+
+Recent changes (2026-02-02):
+
+- Branch sync: merge local `main` into `code-editor-ecosystem-v1` to stay aligned with the latest runner/text/diagnostics baselines.
+- Web: fix the UI Gallery code editor MVP being “visible but not editable” by binding focus/key/command/pointer hooks to the `TextInputRegion` element id scope (not the outer keyed scope); this unblocks Web/WASM input routing.
+- Web IME: emit `Effect::ImeAllow { enabled: true }` during pointer-down focus for editor-grade `TextInputRegion` surfaces so the hidden textarea bridge can be focused within the same user-activation gesture (browser restrictions).
+- UiTree: compute `focus_is_text_input` from the declarative element kind (`TextInput` / `TextArea` / `TextInputRegion`) when available, not only from cached host-widget flags (fixes global “IME stays disabled” regressions on web).
+- Web runner: flush effect/event turns synchronously on pointer-button events (`WindowEvent::PointerButton`, press/release) so `Effect::ImeAllow` can focus the hidden textarea within the browser user-activation window (prevents “click input but IME never enables”).
+- Buffer: move `TextBuffer` to rope-backed storage (`ropey`) while preserving the UTF-8 byte-index contract; adapt view/editor consumers to slice-based APIs.
+- Editor geometry: start migrating caret/selection/pointer hit-testing from the monospace "cell width" heuristic to renderer-provided caret stops (per-row cached); add `CanvasPainter::{text_with_blob, rich_text_with_blob}` to support geometry queries.
+- Editor geometry: harden caret-stop hit-testing for non-monotonic X runs (e.g. mixed-direction/bidi rows) while keeping the caret-stop path as the v1 event-stage baseline.
+- Editor code health: split `fret-code-editor` into `editor/*` submodules (`input`, `paint`, `geom`, `a11y`, `tests`) to reduce merge conflicts and unblock follow-up refactors.
+- Editor navigation: preserve a pixel `preferred_x` for caret up/down navigation (via caret stops), not the last display column.
+- Editor harness: show caret geometry hints (`preferred_x`, cached caret stops) in the code editor torture overlay for faster mixed-script debugging.
+
+Recent changes (2026-02-03):
+
+- Web IME: anchor the hidden textarea to the caret rect **center** (instead of origin) and adapt textarea line metrics to caret height to reduce candidate/composition UI drift.
+- Web IME: add an opt-in browser console logger for focus/cursor-area updates (`?ime_debug=1` or `window.__FRET_IME_DEBUG=true`) to debug cases where the in-app panel isn't visible.
+- Scroll/view-cache: add a mechanism switch (`ScrollProps.windowed_paint`) so windowed paint surfaces can force view-cache rerender on scroll-offset changes (prevents “stale lines” when a cached subtree would otherwise replay).
+- Windowed surfaces: fix `windowed_rows_surface` to pass row `Rect`s anchored at the canvas bounds origin (not `0,0`), fixing “left side clipped / prefixes missing” in `code_editor_torture` and the windowed-surface torture pages.
+- Editor UX: scroll the caret into view after edits/navigation and refresh `last_bounds` from paint so IME cursor-area anchoring can follow keyboard-only flows.
+- UI Gallery: make the word-boundary harness render both the fixture and debug output using `CodeEditor` surfaces (avoid backend-dependent multiline text rendering).
+- Editor infra: add `CodeEditor::key(u64)` so multiple editors can coexist under the same element-id scope without keyed-id collisions (fixes semantics snapshot cycles in multi-editor UIs).
+- UI Gallery: add a “Dump layout…” button that writes a Taffy subtree dump to `.fret/taffy-dumps` for debugging nested scroll/clip/layout issues.
+
+Next up (priority order):
+
+1. Re-validate the “no stale lines” torture harness:
+   - confirm the line-prefix invariant visually and keep the view-cache + scroll invalidation tests green.
+2. Editor surface MVP correctness (native first):
+   - ensure typing, selection, undo/redo, and caret navigation remain correct under scroll + soft-wrap.
+3. Fonts on web:
+   - confirm `cjk-lite` default bundle is sufficient for common CJK IME flows; decide whether to enable `emoji-fonts` by default or gate behind a flag (payload tradeoff).
+4. Web IME (wasm): **deferred**
+   - Known issue: IME enable/focus can still be flaky on some browsers/dev setups (activation-window timing).
+   - Keep `?demo=ui_gallery&page=web_ime_harness` as the repro surface and revisit after core editor correctness/stability is locked.
+
+Verification quickstart:
+
+- Web (UI Gallery): `cargo run -p fretboard -- dev web --demo ui_gallery`
+  - `http://127.0.0.1:8080/?demo=ui_gallery&page=code_editor_mvp`
+  - `http://127.0.0.1:8080/?demo=ui_gallery&page=code_editor_torture`
+  - `http://127.0.0.1:8080/?demo=ui_gallery&page=web_ime_harness` (deferred; use for repro only)
+- Native (optional): `cargo run -p fretboard -- dev native --bin components_gallery`
+- Debug logs: set `FRET_WINDOWED_ROWS_POINTER_DEBUG=1` to print pointer/row mapping for windowed row surfaces.
+
+Recent changes (2026-02-01):
+
+- Branch sync: merge local `main` into `code-editor-ecosystem-v1` to stay aligned with the text/diagnostics baselines.
 - Web: avoid wasm panics from unsupported `std::time` usage; prefer `fret_core::time` / wasm-capable time sources.
+- Buffer: update `TextBuffer` line index incrementally on edits (avoid full rescans); add newline-boundary tests.
 - Web IME: add a debug snapshot surface + UI Gallery harness to observe textarea bridge state/counters.
+- Web IME: add a cursor-area debug overlay and include mount/DPR fields in the debug snapshot for faster triage.
+- Web IME: add textarea DOM metrics (client/scroll size + selectionStart/End) to debug snapshot to debug candidate UI jitter.
+- Web IME: widen the hidden textarea and align cursor-area to integer pixels to reduce candidate UI jitter.
+- View: add a minimal display map that supports column-based soft wrap (byte ↔ wrapped row/col mapping + tests).
+- View: expose `DisplayMap::display_row_byte_range` to slice buffer text into wrapped display rows (tests included).
+- Editor: render wrapped display rows in the windowed surface (selection/caret/preedit/syntax spans operate in display-row space).
+- Editor: fix caret up/down movement clamping to display rows when soft wrap is enabled (regression test included).
+- View/Editor: reduce per-keystroke overhead by avoiding full display-map rebuilds when wrap is disabled and line count is unchanged.
+- Editor: implement Home/End navigation over visual rows under soft wrap (Ctrl+Home/End clamps to document bounds).
+- Editor: add word navigation/deletion shortcuts (`Ctrl/Alt+Arrow`, `Ctrl/Alt+Backspace/Delete`) using the shared text-boundary mode.
+- Editor: add PageUp/PageDown navigation based on the scroll viewport height (moves caret + scrolls).
+- Editor: bubble Ctrl/Meta+PageUp/PageDown to workspace keymaps (do not cancel preedit for these chords).
+- Editor: add bundle-friendly cache counters (row text + syntax) and expose them via `CodeEditorHandle::cache_stats()`.
+- UI Gallery: show code-editor cache counters (total + per-frame deltas) in the torture overlay.
+- UI Gallery: add a word-boundary harness (fixture + char/word stepping + apply caret/selection into the editor).
+- UI Kit/Diagnostics: record and export windowed-rows-surface visible-window telemetry in UI diagnostics snapshots.
+- UI Kit/Diagnostics: include a best-effort app/harness snapshot blob in UI diagnostics bundles (ui-gallery exports page + code-editor toggles; includes web IME bridge snapshot when available).
+- View: expand word-boundary conformance tests (UnicodeWord vs Identifier) for selection and movement; fix `move_word_left` at token boundaries.
 - Web IME: improve hidden textarea styling to reduce IME activation flakiness.
 - Web IME: prevent preedit wrapping in the hidden textarea to reduce candidate UI vertical jitter.
+- Web IME: track hidden textarea bridges per `AppWindowId` (no longer a global singleton).
+- Web IME: mount the hidden textarea into a per-canvas overlay layer (wrapper + overlay; no longer appended directly to `document.body`).
+- Web IME: treat the mount element as either wrapper or overlay; do not clobber overlay positioning when applying “mount-owned” styles.
+- A11y: promote `TextInputRegion` to `SemanticsRole::TextField` and allow publishing value/selection/composition ranges (ADR 0071).
+- A11y: wire `SetTextSelection` into the code editor via `TextInputRegion` (best-effort, windowed value).
+- Web: enable a default CJK demo font bundle (`cjk-lite` subset) to reduce “tofu” in IME/editor harnesses (still limited; use “Load fonts…” for full coverage).
+- UI Gallery: add a code-editor “Load fonts…” action (file dialog → `Effect::TextAddFonts`) and a soft-wrap toggle for wrap-boundary regression checks.
 - Desktop: update Windows taskbar visibility wiring for winit 0.31 platform attributes.
 
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
@@ -63,6 +140,41 @@ We are **not** building “the editor app”; we are building reusable ecosystem
 - Collaboration/CRDT/OT.
 - Full VSCode-class feature parity.
 - Cross-element text selection (still out of baseline; see ADR 0152).
+
+---
+
+## Next Up (recommended priority)
+
+P0 (correctness and contracts):
+
+- Scroll stability: fix the “no stale lines” torture failure (row cache keys, invalidation boundaries, replay correctness).
+- Editing baseline: ensure typing/selection/caret/undo remain correct under scroll + soft-wrap.
+- Selection + composition range invariants: expand ADR 0071 coverage across TextInput/TextArea/CodeEditor (including a11y selection actions).
+- Code editor: keep pointer hit-testing stable on mixed-direction (bidi) rows (caret-stop hit-testing is the event-stage baseline; decide later whether to expose `TextService::hit_test_point` to pointer handlers).
+- Web: document and enforce the default font story for editor-grade surfaces (monospace + CJK + emoji).
+  - Baseline: `TextFontFamilyConfig` + `common_fallback` seeded via `FontFamilyDefaultsPolicy::FillIfEmptyWithCuratedCandidates`.
+  - Web default: ship a small `cjk-lite` subset + optional emoji bundle; accept that glyph coverage is limited and "tofu" is expected outside the subset.
+  - Escape hatch: UI Gallery “Load fonts…” (`Effect::TextAddFonts`) for full CJK coverage when validating IME/editor behavior.
+  - Diagnostics: surface `TextFontStackKey` + `TextFontFamilyConfig` + `FontCatalog` in the UI Gallery web IME harness panel to make tofu causes debuggable.
+  - Runner: load bundled default fonts during web renderer adoption (not via a delayed `TextAddFonts` effect) to reduce “first frame” tofu.
+  - Evidence: `crates/fret-runtime/src/font_bootstrap.rs` (curated defaults), `crates/fret-render/src/text.rs` (`cjk_fallback_*` tests).
+
+P1 (robustness and testability):
+
+- Expand word-boundary + click-selection tests across widgets and scroll/transform cases.
+- Add regression checks around wrap boundaries (caret, selection, preedit, syntax spans) using the existing UI Gallery soft-wrap toggle.
+
+P2 (features):
+
+- Improve the incremental syntax strategy (edits → visible-window invalidation) and document the tradeoffs.
+- Wrap: add a pixel-accurate wrapping mode (measure-driven) while preserving stable buffer ↔ display ↔ pixel mapping.
+- Grow the display-map surface (wrap → fold → inlay) without breaking caret/selection invariants.
+- Diagnostics: add renderer-level churn counters (text blob churn, glyph atlas pressure) to make perf regressions bundle-debuggable.
+
+Deferred (Web/WASM IME):
+
+- Web IME: stabilize enable/focus across browsers (user-activation timing) and reduce candidate UI drift.
+- Web IME: harden the mount strategy for future multi-canvas/docking (per-canvas wrapper/overlay exists; next is a true per-window overlay registry).
 
 ---
 
@@ -230,7 +342,15 @@ Implemented (evidence):
   - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_torture`)
   - `apps/fret-ui-gallery/src/docs.rs`
 
-### M4 — Incremental highlighting (visible-window materialization)
+### M4 — Buffer model + undo hooks
+
+Exit criteria:
+
+- A v1 text buffer structure is selected (rope / piece table / hybrid) with stated tradeoffs.
+- Edit ops remain UTF-8 byte indexed and transaction hooks remain compatible with ADR 0136.
+- Document identity (URI-like) is locked for multi-document workflows (workspace shells).
+
+### M5 — Incremental highlighting (visible-window materialization)
 
 Exit criteria:
 
@@ -238,7 +358,21 @@ Exit criteria:
 - Only visible rows are materialized into spans for paint.
 - Theme changes do not trigger reshaping; only paint changes.
 
-### M5 — Display map growth (wrap/fold/inlay) (optional for v1)
+### M6 — Semantics (a11y) + selection/composition invariants
+
+Exit criteria:
+
+- The editor surface exports a stable semantics role and a documented projection strategy for windowed content.
+- Selection and IME composition ranges follow ADR 0071 rules (display text indices) consistently.
+
+### M7 — Diagnostics and perf attribution
+
+Exit criteria:
+
+- Bundle-friendly counters exist for windowed surfaces and editor caches (hits/misses/churn/pressure).
+- Diagnostics snapshots expose window telemetry for windowed surfaces (ADR 0190 alignment).
+
+### M8 — Display map growth (wrap/fold/inlay) (optional for v1)
 
 Exit criteria:
 
@@ -246,7 +380,7 @@ Exit criteria:
 - Fold regions and placeholders (if adopted) do not break caret/selection semantics.
 - Inlays (if adopted) are represented without mutating the underlying buffer.
 
-### M6 — Composable rows / retained host (only if needed)
+### M9 — Composable rows / retained host (only if needed)
 
 Exit criteria:
 
@@ -284,7 +418,7 @@ Legend:
   - `composition*` → `ImeEvent`,
   - command-dispatch suppression to avoid double insert.
 - [x] Implement UTF-16 ↔ UTF-8 conversion utility with deterministic clamping.
-- [x] Add debug-only counters/logging for bridge behavior (snapshot published as a global for harness views).
+- [x] Add debug-only counters/logging for bridge behavior (snapshot published as a global for harness views, including a small recent-event ring buffer).
 - [x] Add a web harness page (or demo mode) dedicated to IME conformance.
 
 Evidence anchors:
@@ -317,6 +451,8 @@ Evidence anchors:
 - `crates/fret-ui/src/tree/dispatch.rs` / `crates/fret-ui/src/tree/paint.rs` (publishes focused override in `InputContext`)
 - `crates/fret-ui/src/text_edit.rs` (Unicode/identifier segmentation + tests)
 - `crates/fret-ui/src/text_input/widget.rs` / `crates/fret-ui/src/text_area/widget.rs` / `crates/fret-ui/src/declarative/host_widget/event/selectable_text.rs` (integration)
+- `crates/fret-ui/src/declarative/host_widget.rs` / `crates/fret-ui/src/text_input/bound.rs` / `crates/fret-ui/src/text_area/bound.rs` (platform text input delegation for declarative widgets)
+- `crates/fret-ui/src/declarative/tests/interactions.rs` (scroll/transform double-click selection coverage for TextInput/TextArea)
 - `ecosystem/fret-code-editor/src/lib.rs` (`CodeEditorHandle::set_text_boundary_mode`)
 - `apps/fret-ui-gallery/src/ui.rs` (`preview_code_editor_mvp`, `preview_code_editor_torture` boundary mode toggle)
 
@@ -326,6 +462,7 @@ Evidence anchors:
   - paint-driven windowed surface (stable tree, `Scroll` + `Canvas`), or
   - VirtualList-based rows (only if composability is required early).
 - [x] Implement a minimal editor surface vertical slice (fixed-height rows, no wrap):
+- [x] Implement a minimal editor surface vertical slice (fixed-height rows, optional column-based soft wrap):
   - per-row text paint via windowed surface,
   - caret + selection (mouse + keyboard),
   - clipboard copy/paste (best-effort),
@@ -381,15 +518,36 @@ Evidence anchors:
 
 ### 6) Semantics (a11y) and selection state
 
-- [ ] Define semantics role for the editor surface (likely `SemanticsRole::TextField` or a dedicated editor role).
-- [ ] Ensure selection and composition ranges follow ADR 0071 rules (display text indices).
-- [ ] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (document the tradeoff).
+- [~] Define semantics role for the editor surface (currently: `TextInputRegion` emits `SemanticsRole::TextField`).
+- [~] Ensure selection and composition ranges follow ADR 0071 rules (partial: `TextInputRegion` can publish UTF-8 ranges within an app-provided value).
+- [x] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1.
+  - v1 decision: **stub/viewport semantics**.
+  - We expose:
+    - one `TextField` node (the `TextInputRegion`) whose `value` is a **windowed** buffer slice around the caret,
+      plus selection/composition ranges within that value (ADR 0071).
+    - one `Viewport` node for the scrollable windowed surface (no per-row semantics nodes).
+  - Tradeoff: this is not full-document accessible text. It is, however, stable and performant for very large
+    documents and keeps the semantics tree bounded and deterministic while the editor virtualization story evolves.
 
 ### 7) Diagnostics and perf attribution
 
-- [ ] Add bundle-friendly counters:
-  - visible rows, overscan, cache hits/misses, text blob churn, glyph atlas pressure.
-- [ ] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+- [~] Add bundle-friendly counters:
+  - Done: visible window + overscan (windowed surfaces), editor-local cache hits/misses (row text + syntax).
+  - TODO: text blob churn + glyph atlas pressure (likely from renderer/canvas caches).
+- [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
+
+### 8) Display map expansion (wrap/fold/inlay) (optional v1 → v2)
+
+- [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels).
+  - Implemented: column-based wrapping + stable byte ↔ display row/col mapping.
+  - Known gaps: not pixel-accurate wrapping; cell-width heuristic still used for geometry.
+- [ ] Fold regions + placeholders without breaking caret/selection.
+- [ ] Inlays (injected display fragments) without mutating the underlying buffer.
+
+### 9) Retained host / composable rows (only if required)
+
+- [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
+- [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
 
 ---
 

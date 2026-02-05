@@ -1,14 +1,16 @@
 use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
+use fret_code_editor_view as code_editor_view;
 use fret_code_view as code_view;
 use fret_core::{
-    AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
-    Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan, TextStyle, TextWrap,
+    AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId,
+    FontWeight, ImageId, Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan,
+    TextStyle, TextWrap,
 };
 use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
 use fret_ui::Theme;
-use fret_ui::element::{CanvasProps, StackProps};
+use fret_ui::element::{CanvasProps, SemanticsDecoration, StackProps};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
@@ -90,18 +92,11 @@ pub(crate) fn sidebar_view(
 
     let query_input = {
         let nav_query = nav_query.clone();
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(Arc::<str>::from("ui-gallery-nav-search")),
-                ..Default::default()
-            },
-            move |cx| {
-                [shadcn::Input::new(nav_query.clone())
-                    .a11y_label("Search components")
-                    .placeholder("Search (id / tag)")
-                    .into_element(cx)]
-            },
-        )
+        shadcn::Input::new(nav_query.clone())
+            .a11y_label("Search components")
+            .placeholder("Search (id / tag)")
+            .into_element(cx)
+            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-nav-search"))
     };
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
@@ -114,24 +109,11 @@ pub(crate) fn sidebar_view(
                 }
 
                 let is_selected = selected == item.id;
-                let variant = if is_selected {
-                    shadcn::ButtonVariant::Secondary
-                } else {
-                    shadcn::ButtonVariant::Ghost
-                };
 
                 group_items.push(cx.keyed(item.id, |cx| {
                     let selected_page_for_activate = selected_page.clone();
                     let workspace_tabs_for_activate = workspace_tabs.clone();
                     let page_id_for_activate: Arc<str> = Arc::from(item.id);
-
-                    let mut button = shadcn::Button::new(item.label)
-                        .variant(variant)
-                        .on_click(item.command)
-                        .refine_layout(LayoutRefinement::default().w_full());
-
-                    button =
-                        button.test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")));
 
                     let on_activate: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
@@ -154,9 +136,13 @@ pub(crate) fn sidebar_view(
                                 action_cx.window,
                             ));
                         });
-                    button = button.on_activate(on_activate);
-
-                    button.into_element(cx)
+                    shadcn::SidebarMenuButton::new(item.label)
+                        .active(is_selected)
+                        .collapsed(false)
+                        .on_click(item.command)
+                        .on_activate(on_activate)
+                        .test_id(format!("ui-gallery-nav-{}", item.id.replace('_', "-")))
+                        .into_element(cx)
                 }));
             }
 
@@ -201,13 +187,7 @@ pub(crate) fn sidebar_view(
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         };
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(Arc::<str>::from("ui-gallery-nav-scroll")),
-                ..Default::default()
-            },
-            move |_cx| [nav_scroll],
-        )
+        nav_scroll.attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-nav-scroll"))
     };
 
     let container = cx.container(
@@ -288,6 +268,10 @@ pub(crate) fn content_view(
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_autocomplete_value: Model<String>,
+    material3_autocomplete_disabled: Model<bool>,
+    material3_autocomplete_error: Model<bool>,
+    material3_autocomplete_dialog_open: Model<bool>,
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -303,6 +287,7 @@ pub(crate) fn content_view(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let bisect = ui_gallery_bisect_flags();
 
@@ -449,6 +434,10 @@ pub(crate) fn content_view(
         material3_text_field_value,
         material3_text_field_disabled,
         material3_text_field_error,
+        material3_autocomplete_value,
+        material3_autocomplete_disabled,
+        material3_autocomplete_error,
+        material3_autocomplete_dialog_open,
         material3_menu_open,
         text_input,
         text_area,
@@ -464,6 +453,7 @@ pub(crate) fn content_view(
         virtual_list_torture_scroll,
         code_editor_syntax_rust,
         code_editor_boundary_identifier,
+        code_editor_soft_wrap,
     );
 
     let active_tab: Arc<str> = cx
@@ -550,33 +540,21 @@ pub(crate) fn content_view(
         })
     };
 
-    let content = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            test_id: Some(Arc::<str>::from("ui-gallery-content-scroll")),
-            ..Default::default()
-        },
-        move |_cx| [content_inner],
-    );
+    let content = content_inner
+        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-content-scroll"));
 
     cx.named("ui_gallery.content_view_root", |cx| {
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(page_test_id),
-                ..Default::default()
-            },
-            move |cx| {
-                [cx.container(
-                    decl_style::container_props(
-                        theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(theme.color_required("background")))
-                            .p(Space::N6),
-                        LayoutRefinement::default().w_full().h_full(),
-                    ),
-                    |_cx| [content],
-                )]
-            },
+        cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(theme.color_required("background")))
+                    .p(Space::N6),
+                LayoutRefinement::default().w_full().h_full(),
+            ),
+            |_cx| [content],
         )
+        .attach_semantics(SemanticsDecoration::default().test_id(page_test_id))
     })
 }
 
@@ -629,6 +607,10 @@ fn page_preview(
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_autocomplete_value: Model<String>,
+    material3_autocomplete_disabled: Model<bool>,
+    material3_autocomplete_error: Model<bool>,
+    material3_autocomplete_dialog_open: Model<bool>,
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -644,6 +626,7 @@ fn page_preview(
     virtual_list_torture_scroll: VirtualListScrollHandle,
     code_editor_syntax_rust: Model<bool>,
     code_editor_boundary_identifier: Model<bool>,
+    code_editor_soft_wrap: Model<bool>,
 ) -> AnyElement {
     let body: Vec<AnyElement> = match selected {
         PAGE_LAYOUT => preview_layout(cx, theme),
@@ -674,12 +657,14 @@ fn page_preview(
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_CODE_EDITOR_TORTURE => preview_code_editor_torture(
             cx,
             theme,
             code_editor_syntax_rust,
             code_editor_boundary_identifier,
+            code_editor_soft_wrap,
         ),
         PAGE_TEXT_SELECTION_PERF => preview_text_selection_perf(cx, theme),
         PAGE_TEXT_BIDI_RTL_CONFORMANCE => preview_text_bidi_rtl_conformance(cx, theme),
@@ -712,6 +697,7 @@ fn page_preview(
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
+        PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -896,6 +882,17 @@ fn page_preview(
         PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_select(cx)
         }),
+        PAGE_MATERIAL3_AUTOCOMPLETE => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_autocomplete(
+                    cx,
+                    material3_autocomplete_value,
+                    material3_autocomplete_disabled,
+                    material3_autocomplete_error,
+                    material3_autocomplete_dialog_open,
+                )
+            })
+        }
         PAGE_MATERIAL3_TEXT_FIELD => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_text_field(
@@ -1062,13 +1059,10 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             ]
         },
     );
-    let grid = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-grid")),
-            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-grid")),
-            ..Default::default()
-        },
-        move |_cx| [grid],
+    let grid = grid.attach_semantics(
+        SemanticsDecoration::default()
+            .label("Debug:ui-gallery:intro:preview-grid")
+            .test_id("ui-gallery-intro-preview-grid"),
     );
 
     let note = {
@@ -1084,13 +1078,10 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.").into_element(cx)]
         })
     };
-    let note = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-note")),
-            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-note")),
-            ..Default::default()
-        },
-        move |_cx| [note],
+    let note = note.attach_semantics(
+        SemanticsDecoration::default()
+            .label("Debug:ui-gallery:intro:preview-note")
+            .test_id("ui-gallery-intro-preview-note"),
     );
 
     vec![grid, note]
@@ -1343,12 +1334,11 @@ fn preview_view_cache(
         .into_element(cx)
     };
 
-    vec![cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Generic,
-            test_id: Some(Arc::<str>::from("ui-gallery-view-cache-root")),
-            ..Default::default()
-        },
+    let root = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3),
         move |cx| {
             vec![
                 shadcn::Card::new(vec![
@@ -1377,7 +1367,14 @@ fn preview_view_cache(
                 }),
             ]
         },
-    )]
+    )
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Generic)
+            .test_id("ui-gallery-view-cache-root"),
+    );
+
+    vec![root]
 }
 
 fn preview_layout(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
@@ -1572,20 +1569,16 @@ fn preview_virtual_list_torture(
             Arc::<str>::from("editing_row=<none>")
         };
 
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: fret_core::SemanticsRole::Text,
-                label: Some(label),
-                test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-editing")),
-                ..Default::default()
-            },
-            |cx| {
-                if let Some(row) = header_editing_row {
-                    vec![cx.text(format!("Editing row: {row}"))]
-                } else {
-                    vec![cx.text("Editing row: <none>")]
-                }
-            },
+        let text = if let Some(row) = header_editing_row {
+            cx.text(format!("Editing row: {row}"))
+        } else {
+            cx.text("Editing row: <none>")
+        };
+        text.attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Text)
+                .label(label)
+                .test_id("ui-gallery-virtual-list-editing"),
         )
     });
 
@@ -1689,7 +1682,6 @@ fn preview_virtual_list_torture(
                     );
                     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-                    let row_layout = container_props.layout;
                     let container = cx.container(container_props, |_cx| {
                         if variable_height && index % 15 == 0 {
                             vec![row_label, extra_line]
@@ -1697,12 +1689,9 @@ fn preview_virtual_list_torture(
                             vec![row_label]
                         }
                     });
-                    let mut semantics = fret_ui::element::SemanticsProps::default();
-                    semantics.layout = row_layout;
-                    semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
-                        "ui-gallery-virtual-list-row-{index}-label"
-                    )));
-                    cx.semantics(semantics, |_cx| vec![container])
+                    container.attach_semantics(SemanticsDecoration::default().test_id(
+                        Arc::<str>::from(format!("ui-gallery-virtual-list-row-{index}-label")),
+                    ))
                 });
 
                 cx.virtual_list_keyed_retained_with_layout(
@@ -1751,7 +1740,6 @@ fn preview_virtual_list_torture(
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-                        let row_layout = container_props.layout;
                         let container = cx.container(container_props, |_cx| {
                             if variable_height && index % 15 == 0 {
                                 vec![row_label, extra_line]
@@ -1759,12 +1747,9 @@ fn preview_virtual_list_torture(
                                 vec![row_label]
                             }
                         });
-                        let mut semantics = fret_ui::element::SemanticsProps::default();
-                        semantics.layout = row_layout;
-                        semantics.test_id = Some(std::sync::Arc::<str>::from(format!(
-                            "ui-gallery-virtual-list-row-{index}-label"
-                        )));
-                        cx.semantics(semantics, |_cx| vec![container])
+                        container.attach_semantics(SemanticsDecoration::default().test_id(
+                            Arc::<str>::from(format!("ui-gallery-virtual-list-row-{index}-label")),
+                        ))
                     },
                 )
             }
@@ -2003,13 +1988,10 @@ fn preview_virtual_list_torture(
             )
         };
 
-        let list = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: fret_core::SemanticsRole::List,
-                test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
-                ..Default::default()
-            },
-            |_cx| [list],
+        let list = list.attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::List)
+                .test_id("ui-gallery-virtual-list-root"),
         );
 
         vec![list]
@@ -2023,13 +2005,10 @@ fn preview_virtual_list_torture(
         |_cx| vec![header, list],
     );
 
-    let root = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-torture-root")),
-            ..Default::default()
-        },
-        |_cx| [root],
+    let root = root.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-virtual-list-torture-root"),
     );
 
     vec![root]
@@ -2098,14 +2077,9 @@ fn preview_ui_kit_list_torture(
                     let mut out = Vec::new();
                     let label = cx.text(format!("Item {i}"));
                     let label = if i == 0 {
-                        cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                test_id: Some(Arc::<str>::from(
-                                    "ui-gallery-ui-kit-list-row-0-label",
-                                )),
-                                ..Default::default()
-                            },
-                            |_cx| [label],
+                        label.attach_semantics(
+                            SemanticsDecoration::default()
+                                .test_id("ui-gallery-ui-kit-list-row-0-label"),
                         )
                     } else {
                         label
@@ -2121,13 +2095,10 @@ fn preview_ui_kit_list_torture(
         ]
     });
 
-    let list = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::List,
-            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-root")),
-            ..Default::default()
-        },
-        |_cx| [list],
+    let list = list.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::List)
+            .test_id("ui-gallery-ui-kit-list-root"),
     );
 
     let root = stack::vstack(
@@ -2138,13 +2109,10 @@ fn preview_ui_kit_list_torture(
         |_cx| vec![header, list],
     );
 
-    let root = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-torture-root")),
-            ..Default::default()
-        },
-        |_cx| [root],
+    let root = root.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-ui-kit-list-torture-root"),
     );
 
     vec![root]
@@ -2203,13 +2171,10 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
         .max_height(Px(420.0));
     let block = block.into_element(cx);
 
-    let block = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-code-view-root")),
-            ..Default::default()
-        },
-        |_cx| vec![block],
+    let block = block.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-code-view-root"),
     );
 
     vec![header, block]
@@ -2264,11 +2229,92 @@ fn code_editor_torture_source() -> String {
         .clone()
 }
 
+fn code_editor_word_boundary_fixture() -> String {
+    [
+        "// Word boundary fixture (UI Gallery)\n",
+        "\n",
+        "世界 hello 😀 foo123_bar baz foo.bar\n",
+        "a_b c\t  hello   world\n",
+        "αβγ δ\n",
+    ]
+    .concat()
+}
+
+fn format_word_boundary_debug(text: &str, idx: usize) -> String {
+    let idx = code_editor_view::clamp_to_char_boundary(text, idx).min(text.len());
+    fn move_n_chars_left(text: &str, mut idx: usize, n: usize) -> usize {
+        for _ in 0..n {
+            let prev = code_editor_view::prev_char_boundary(text, idx);
+            if prev == idx {
+                break;
+            }
+            idx = prev;
+        }
+        idx
+    }
+
+    fn move_n_chars_right(text: &str, mut idx: usize, n: usize) -> usize {
+        for _ in 0..n {
+            let next = code_editor_view::next_char_boundary(text, idx);
+            if next == idx {
+                break;
+            }
+            idx = next;
+        }
+        idx
+    }
+
+    fn sanitize_inline(s: &str) -> String {
+        let mut out = String::with_capacity(s.len());
+        for ch in s.chars() {
+            match ch {
+                '\n' => out.push('⏎'),
+                '\t' => out.push('⇥'),
+                '\r' => out.push('␍'),
+                _ => out.push(ch),
+            }
+        }
+        out
+    }
+
+    let ctx_start = move_n_chars_left(text, idx, 16);
+    let ctx_end = move_n_chars_right(text, idx, 16);
+    let ctx_start = code_editor_view::clamp_to_char_boundary(text, ctx_start).min(text.len());
+    let ctx_end = code_editor_view::clamp_to_char_boundary(text, ctx_end).min(text.len());
+    let ctx_before = sanitize_inline(text.get(ctx_start..idx).unwrap_or(""));
+    let ctx_after = sanitize_inline(text.get(idx..ctx_end).unwrap_or(""));
+    let caret_ch = text.get(idx..).and_then(|s| s.chars().next());
+    let caret_ch = caret_ch.map(|c| sanitize_inline(&c.to_string()));
+
+    let unicode = fret_runtime::TextBoundaryMode::UnicodeWord;
+    let ident = fret_runtime::TextBoundaryMode::Identifier;
+
+    let (u_a, u_b) = code_editor_view::select_word_range(text, idx, unicode);
+    let (i_a, i_b) = code_editor_view::select_word_range(text, idx, ident);
+
+    let u_l = code_editor_view::move_word_left(text, idx, unicode);
+    let u_r = code_editor_view::move_word_right(text, idx, unicode);
+    let i_l = code_editor_view::move_word_left(text, idx, ident);
+    let i_r = code_editor_view::move_word_right(text, idx, ident);
+
+    [
+        format!(
+            "idx={idx} caret_char={}",
+            caret_ch.as_deref().unwrap_or("<eof>")
+        ),
+        format!("context: {ctx_before}|{ctx_after}"),
+        format!("UnicodeWord: select={u_a}..{u_b} left={u_l} right={u_r}"),
+        format!("Identifier: select={i_a}..{i_b} left={i_l} right={i_r}"),
+    ]
+    .join("\n")
+}
+
 fn preview_code_editor_mvp(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -2276,6 +2322,49 @@ fn preview_code_editor_mvp(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+        |h| h.clone(),
+    );
+    let word_handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
+        |h| h.clone(),
+    );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        let mode = if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        };
+        handle.set_text_boundary_mode(mode);
+        word_handle.set_text_boundary_mode(mode);
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
+
+    let word_fixture_loaded = cx.with_state(|| Rc::new(Cell::new(true)), |v| v.clone());
+    let word_idx = cx.with_state(|| Rc::new(Cell::new(0usize)), |v| v.clone());
+    let word_debug = cx.with_state(
+        || Rc::new(std::cell::RefCell::new(String::new())),
+        |v| v.clone(),
+    );
+
+    let syntax_rust_switch = syntax_rust.clone();
+    let boundary_identifier_switch = boundary_identifier.clone();
+    let boundary_identifier_for_harness = boundary_identifier.clone();
+    let soft_wrap_switch = soft_wrap.clone();
+    let word_handle_for_harness = word_handle.clone();
+    let word_debug_for_harness = word_debug.clone();
+    let word_debug_for_render = word_debug.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2290,7 +2379,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(syntax_rust.clone())
+                            shadcn::Switch::new(syntax_rust_switch.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
                                 .into_element(cx),
                             cx.text(if syntax_enabled {
@@ -2306,7 +2395,7 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
-                            shadcn::Switch::new(boundary_identifier.clone())
+                            shadcn::Switch::new(boundary_identifier_switch.clone())
                                 .a11y_label("Toggle identifier word boundaries")
                                 .into_element(cx),
                             cx.text(if boundary_identifier_enabled {
@@ -2317,31 +2406,319 @@ fn preview_code_editor_mvp(
                         ]
                     },
                 ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Button::new("Dump layout…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap_switch.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        let text = word_handle_for_harness.with_buffer(|b| b.text_string());
+                        let caret = word_handle_for_harness.selection().caret().min(text.len());
+                        if word_idx.get() != caret {
+                            word_idx.set(caret);
+                        }
+                        *word_debug_for_harness.borrow_mut() =
+                            format_word_boundary_debug(text.as_str(), caret);
+
+                        let apply_fixture_handle = word_handle_for_harness.clone();
+                        let apply_fixture_loaded = word_fixture_loaded.clone();
+                        let apply_fixture_idx = word_idx.clone();
+                        let apply_fixture_debug = word_debug_for_harness.clone();
+                        let apply_fixture: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                let fixture = code_editor_word_boundary_fixture();
+                                apply_fixture_handle.set_text(fixture.clone());
+                                apply_fixture_handle.set_caret(0);
+                                apply_fixture_loaded.set(true);
+                                apply_fixture_idx.set(0);
+                                *apply_fixture_debug.borrow_mut() =
+                                    format_word_boundary_debug(&fixture, 0);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_char_loaded = word_fixture_loaded.clone();
+                        let prev_char_idx = word_idx.clone();
+                        let prev_char_handle = word_handle_for_harness.clone();
+                        let prev_char_debug = word_debug_for_harness.clone();
+                        let prev_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_char_loaded.get() {
+                                    return;
+                                }
+                                let text = prev_char_handle.with_buffer(|b| b.text_string());
+                                let cur = prev_char_idx.get().min(text.len());
+                                let next = code_editor_view::prev_char_boundary(text.as_str(), cur);
+                                prev_char_idx.set(next);
+                                prev_char_handle.set_caret(next);
+                                *prev_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_char_loaded = word_fixture_loaded.clone();
+                        let next_char_idx = word_idx.clone();
+                        let next_char_handle = word_handle_for_harness.clone();
+                        let next_char_debug = word_debug_for_harness.clone();
+                        let next_char: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_char_loaded.get() {
+                                    return;
+                                }
+                                let text = next_char_handle.with_buffer(|b| b.text_string());
+                                let cur = next_char_idx.get().min(text.len());
+                                let next = code_editor_view::next_char_boundary(text.as_str(), cur);
+                                next_char_idx.set(next);
+                                next_char_handle.set_caret(next);
+                                *next_char_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let prev_word_loaded = word_fixture_loaded.clone();
+                        let prev_word_idx = word_idx.clone();
+                        let prev_word_handle = word_handle_for_harness.clone();
+                        let prev_word_debug = word_debug_for_harness.clone();
+                        let prev_word_mode = boundary_identifier_for_harness.clone();
+                        let prev_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !prev_word_loaded.get() {
+                                    return;
+                                }
+                                let text = prev_word_handle.with_buffer(|b| b.text_string());
+                                let cur = prev_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&prev_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_left(text.as_str(), cur, mode);
+                                prev_word_idx.set(next);
+                                prev_word_handle.set_caret(next);
+                                *prev_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let next_word_loaded = word_fixture_loaded.clone();
+                        let next_word_idx = word_idx.clone();
+                        let next_word_handle = word_handle_for_harness.clone();
+                        let next_word_debug = word_debug_for_harness.clone();
+                        let next_word_mode = boundary_identifier_for_harness.clone();
+                        let next_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !next_word_loaded.get() {
+                                    return;
+                                }
+                                let text = next_word_handle.with_buffer(|b| b.text_string());
+                                let cur = next_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&next_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let next = code_editor_view::move_word_right(text.as_str(), cur, mode);
+                                next_word_idx.set(next);
+                                next_word_handle.set_caret(next);
+                                *next_word_debug.borrow_mut() =
+                                    format_word_boundary_debug(text.as_str(), next);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_caret_loaded = word_fixture_loaded.clone();
+                        let apply_caret_idx = word_idx.clone();
+                        let apply_caret_handle = word_handle_for_harness.clone();
+                        let apply_caret: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_caret_loaded.get() {
+                                    return;
+                                }
+                                let text = apply_caret_handle.with_buffer(|b| b.text_string());
+                                let idx = apply_caret_idx.get().min(text.len());
+                                apply_caret_handle.set_caret(idx);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        let apply_word_loaded = word_fixture_loaded.clone();
+                        let apply_word_idx = word_idx.clone();
+                        let apply_word_handle = word_handle_for_harness.clone();
+                        let apply_word_mode = boundary_identifier_for_harness.clone();
+                        let apply_word: fret_ui::action::OnActivate =
+                            Arc::new(move |host, action_cx, _reason| {
+                                if !apply_word_loaded.get() {
+                                    return;
+                                }
+                                let text = apply_word_handle.with_buffer(|b| b.text_string());
+                                let idx = apply_word_idx.get().min(text.len());
+                                let identifier = host
+                                    .models_mut()
+                                    .read(&apply_word_mode, |v| *v)
+                                    .unwrap_or(true);
+                                let mode = if identifier {
+                                    fret_runtime::TextBoundaryMode::Identifier
+                                } else {
+                                    fret_runtime::TextBoundaryMode::UnicodeWord
+                                };
+                                let (a, b) = code_editor_view::select_word_range(text.as_str(), idx, mode);
+                                apply_word_handle.set_selection(code_editor::Selection {
+                                    anchor: a,
+                                    focus: b,
+                                });
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                            });
+
+                        vec![
+                            shadcn::Button::new("Load word-boundary fixture")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_fixture)
+                                .into_element(cx),
+                            shadcn::Button::new("Prev char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next char")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_char)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Prev word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(prev_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Next word")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(next_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply caret")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_caret)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                            shadcn::Button::new("Apply selection")
+                                .variant(shadcn::ButtonVariant::Ghost)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_activate(apply_word)
+                                .disabled(!word_fixture_loaded.get())
+                                .into_element(cx),
+                        ]
+                    },
+                ),
+                cx.keyed("word-boundary-debug", |cx| {
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        move |cx| {
+                            let fixture_editor = code_editor::CodeEditor::new(word_handle.clone())
+                                .key(1)
+                                .overscan(8)
+                                .soft_wrap_cols(None)
+                                .viewport_test_id("ui-gallery-code-editor-word-fixture-viewport")
+                                .into_element(cx);
+                            let fixture_panel = cx.container(
+                                decl_style::container_props(
+                                    theme,
+                                    ChromeRefinement::default()
+                                        .border_1()
+                                        .rounded(Radius::Md)
+                                        .bg(ColorRef::Color(theme.color_required("background"))),
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .h_px(MetricRef::Px(Px(150.0))),
+                                ),
+                                |_cx| vec![fixture_editor],
+                            );
+
+                            let debug = word_debug_for_render.borrow().clone();
+                            let lines: Vec<Arc<str>> = debug
+                                .lines()
+                                .map(|line| Arc::<str>::from(line.to_string()))
+                                .collect();
+                            let debug_lines = stack::vstack(
+                                cx,
+                                stack::VStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N0),
+                                move |cx| {
+                                    lines
+                                        .iter()
+                                        .cloned()
+                                        .map(|line| {
+                                            let mut props = fret_ui::element::TextProps::new(line);
+                                            props.style = Some(TextStyle {
+                                                font: FontId::monospace(),
+                                                size: Px(12.0),
+                                                ..Default::default()
+                                            });
+                                            props.wrap = TextWrap::None;
+                                            props.overflow = TextOverflow::Clip;
+                                            cx.text_props(props)
+                                        })
+                                        .collect::<Vec<_>>()
+                                },
+                            );
+
+                            vec![fixture_panel, debug_lines]
+                        },
+                    )
+                }),
             ]
         },
     );
 
-    let handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
-        |h| h.clone(),
-    );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_applied.get() != Some(syntax_enabled) {
-        handle.set_language(if syntax_enabled { Some("rust") } else { None });
-        last_applied.set(Some(syntax_enabled));
-    }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_boundaries.get() != Some(boundary_identifier_enabled) {
-        handle.set_text_boundary_mode(if boundary_identifier_enabled {
-            fret_runtime::TextBoundaryMode::Identifier
-        } else {
-            fret_runtime::TextBoundaryMode::UnicodeWord
-        });
-        last_boundaries.set(Some(boundary_identifier_enabled));
-    }
-
     let editor = code_editor::CodeEditor::new(handle)
+        .key(0)
         .overscan(32)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
+        .viewport_test_id("ui-gallery-code-editor-mvp-viewport")
         .into_element(cx);
 
     let panel = cx.container(
@@ -2358,13 +2735,10 @@ fn preview_code_editor_mvp(
         |_cx| vec![editor],
     );
 
-    let panel = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-root")),
-            ..Default::default()
-        },
-        |_cx| vec![panel],
+    let panel = panel.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-code-editor-root"),
     );
 
     vec![header, panel]
@@ -2375,6 +2749,7 @@ fn preview_code_editor_torture(
     theme: &Theme,
     syntax_rust: Model<bool>,
     boundary_identifier: Model<bool>,
+    soft_wrap: Model<bool>,
 ) -> Vec<AnyElement> {
     let syntax_enabled = cx
         .get_model_copied(&syntax_rust, Invalidation::Layout)
@@ -2382,6 +2757,9 @@ fn preview_code_editor_torture(
     let boundary_identifier_enabled = cx
         .get_model_copied(&boundary_identifier, Invalidation::Layout)
         .unwrap_or(true);
+    let soft_wrap_enabled = cx
+        .get_model_copied(&soft_wrap, Invalidation::Layout)
+        .unwrap_or(false);
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2391,6 +2769,7 @@ fn preview_code_editor_torture(
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
+                cx.text("Note: with soft wrap enabled, continuation rows may start mid-token (the numeric prefix does not repeat)."),
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
@@ -2419,6 +2798,27 @@ fn preview_code_editor_torture(
                                 "Word boundaries: Identifier"
                             } else {
                                 "Word boundaries: UnicodeWord"
+                            }),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Button::new("Load fonts…")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Switch::new(soft_wrap.clone())
+                                .a11y_label("Toggle soft wrap at 80 columns")
+                                .into_element(cx),
+                            cx.text(if soft_wrap_enabled {
+                                "Soft wrap: 80 cols"
+                            } else {
+                                "Soft wrap: off"
                             }),
                         ]
                     },
@@ -2448,7 +2848,9 @@ fn preview_code_editor_torture(
 
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
+        .soft_wrap_cols(soft_wrap_enabled.then_some(80))
         .torture(code_editor::CodeEditorTorture::auto_scroll_bounce(Px(8.0)))
+        .viewport_test_id("ui-gallery-code-editor-torture-viewport")
         .into_element(cx);
 
     let panel = cx.container(
@@ -2465,13 +2867,10 @@ fn preview_code_editor_torture(
         |_cx| vec![editor],
     );
 
-    let panel = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-code-editor-torture-root")),
-            ..Default::default()
-        },
-        |_cx| vec![panel],
+    let panel = panel.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-code-editor-torture-root"),
     );
 
     vec![header, panel]
@@ -2734,13 +3133,10 @@ fn preview_text_selection_perf(cx: &mut ElementContext<'_, App>, theme: &Theme) 
         },
     );
 
-    let panel = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-text-selection-perf-root")),
-            ..Default::default()
-        },
-        |_cx| vec![panel],
+    let panel = panel.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-text-selection-perf-root"),
     );
 
     vec![header, panel]
@@ -3259,15 +3655,17 @@ fn preview_text_bidi_rtl_conformance(
         )
     };
 
-    let panel = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from(
-                "ui-gallery-text-bidi-rtl-conformance-root",
-            )),
-            ..Default::default()
-        },
+    let panel = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
         |_cx| vec![sample_buttons, selectable_samples, diagnostic],
+    )
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-text-bidi-rtl-conformance-root"),
     );
 
     vec![header, panel]
@@ -3431,7 +3829,7 @@ fn preview_web_ime_harness(
             .preedit
             .as_deref()
             .unwrap_or("<none>");
-        let ime_enabled = st.ime_enabled as u8;
+        let harness_region_ime_enabled = st.ime_enabled as u8;
 
         let panel = cx.container(
             decl_style::container_props(
@@ -3452,10 +3850,13 @@ fn preview_web_ime_harness(
                         .gap(Space::N2),
                     |cx| {
                         let mut lines = vec![
-                            cx.text(format!("ime_enabled={ime_enabled}")),
+                            cx.text(format!(
+                                "harness_region_ime_enabled={harness_region_ime_enabled}"
+                            )),
                             cx.text(format!("preedit={preedit:?}")),
                             cx.text(format!("committed_tail={committed_tail:?}")),
                             cx.text(format!("last_event={:?}", st.last)),
+                            cx.text("Console logging: add ?ime_debug=1 or set window.__FRET_IME_DEBUG=true"),
                             cx.text(format!(
                                 "counts: text_input={} ime_commit={} ime_preedit={} ime_delete_surrounding={} enabled={} disabled={}",
                                 st.text_input_count,
@@ -3466,6 +3867,94 @@ fn preview_web_ime_harness(
                                 st.ime_disabled_count
                             )),
                         ];
+
+                        if let Some(snapshot) = cx
+                            .app
+                            .global::<fret_runtime::WindowTextInputSnapshotService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_text_input_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} is_composing={}",
+                                snapshot.focus_is_text_input as u8, snapshot.is_composing as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  text_len_utf16={} selection_utf16={:?} marked_utf16={:?}",
+                                snapshot.text_len_utf16, snapshot.selection_utf16, snapshot.marked_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  ime_cursor_area={:?}",
+                                snapshot.ime_cursor_area
+                            )));
+                        } else {
+                            lines.push(cx.text("window_text_input_snapshot: <unavailable>"));
+                        }
+
+                        if let Some(input_ctx) = cx
+                            .app
+                            .global::<fret_runtime::WindowInputContextService>()
+                            .and_then(|svc| svc.snapshot(cx.window))
+                            .cloned()
+                        {
+                            lines.push(cx.text("window_input_context_snapshot:"));
+                            lines.push(cx.text(format!(
+                                "  focus_is_text_input={} text_boundary_mode={:?}",
+                                input_ctx.focus_is_text_input as u8, input_ctx.text_boundary_mode
+                            )));
+                        } else {
+                            lines.push(cx.text("window_input_context_snapshot: <unavailable>"));
+                        }
+
+                        if let Some(key) = cx.app.global::<fret_runtime::TextFontStackKey>() {
+                            lines.push(cx.text(format!("text_font_stack_key={}", key.0)));
+                        } else {
+                            lines.push(cx.text("text_font_stack_key: <unavailable>"));
+                        }
+
+                        if let Some(cfg) = cx.app.global::<fret_core::TextFontFamilyConfig>().cloned()
+                        {
+                            let fmt = |v: &[String]| -> String {
+                                let head = v.iter().take(4).cloned().collect::<Vec<_>>().join(", ");
+                                if v.len() > 4 {
+                                    format!("[{head}, …] (len={})", v.len())
+                                } else {
+                                    format!("[{head}] (len={})", v.len())
+                                }
+                            };
+                            lines.push(cx.text("text_font_families:"));
+                            lines.push(cx.text(format!("  ui_sans={}", fmt(&cfg.ui_sans))));
+                            lines.push(cx.text(format!("  ui_serif={}", fmt(&cfg.ui_serif))));
+                            lines.push(cx.text(format!("  ui_mono={}", fmt(&cfg.ui_mono))));
+                            lines.push(cx.text(format!(
+                                "  common_fallback={}",
+                                fmt(&cfg.common_fallback)
+                            )));
+                        } else {
+                            lines.push(cx.text("text_font_families: <unavailable>"));
+                        }
+
+                        if let Some(catalog) = cx.app.global::<fret_runtime::FontCatalog>().cloned()
+                        {
+                            let head = catalog
+                                .families
+                                .iter()
+                                .take(6)
+                                .cloned()
+                                .collect::<Vec<_>>()
+                                .join(", ");
+                            lines.push(cx.text("font_catalog:"));
+                            lines.push(cx.text(format!(
+                                "  revision={} families_len={}",
+                                catalog.revision,
+                                catalog.families.len()
+                            )));
+                            if !catalog.families.is_empty() {
+                                lines.push(cx.text(format!("  head=[{head}]")));
+                            }
+                        } else {
+                            lines.push(cx.text("font_catalog: <unavailable>"));
+                        }
 
                         let snapshot = cx
                             .app
@@ -3478,6 +3967,25 @@ fn preview_web_ime_harness(
                                 snapshot.enabled as u8,
                                 snapshot.composing as u8,
                                 snapshot.suppress_next_input as u8
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_preedit_text={:?} preedit_cursor_utf16={:?}",
+                                snapshot.last_preedit_text.as_deref(),
+                                snapshot.last_preedit_cursor_utf16
+                            )));
+                            lines.push(cx.text(format!(
+                                "  last_commit_text={:?}",
+                                snapshot.last_commit_text.as_deref()
+                            )));
+                            lines.push(cx.text(format!(
+                                "  position_mode={:?} mount_kind={:?} dpr={:?}",
+                                snapshot.position_mode.as_deref(),
+                                snapshot.mount_kind.as_deref(),
+                                snapshot.device_pixel_ratio,
+                            )));
+                            lines.push(cx.text(format!(
+                                "  textarea_has_focus={:?} active_element_tag={:?}",
+                                snapshot.textarea_has_focus, snapshot.active_element_tag
                             )));
                             lines.push(cx.text(format!(
                                 "  last_input_type={:?}",
@@ -3496,6 +4004,10 @@ fn preview_web_ime_harness(
                                 snapshot.last_key_code, snapshot.last_cursor_area
                             )));
                             lines.push(cx.text(format!(
+                                "  last_cursor_anchor_px={:?}",
+                                snapshot.last_cursor_anchor_px
+                            )));
+                            lines.push(cx.text(format!(
                                 "  counts: beforeinput={} input={} suppressed={} comp_start={} comp_update={} comp_end={} cursor_area_set={}",
                                 snapshot.beforeinput_seen,
                                 snapshot.input_seen,
@@ -3505,6 +4017,23 @@ fn preview_web_ime_harness(
                                 snapshot.composition_end_seen,
                                 snapshot.cursor_area_set_seen,
                             )));
+                            lines.push(cx.text(format!(
+                                "  textarea: chars={:?} sel_utf16={:?}..{:?} client={:?}x{:?} scroll={:?}x{:?}",
+                                snapshot.textarea_value_chars,
+                                snapshot.textarea_selection_start_utf16,
+                                snapshot.textarea_selection_end_utf16,
+                                snapshot.textarea_client_width_px,
+                                snapshot.textarea_client_height_px,
+                                snapshot.textarea_scroll_width_px,
+                                snapshot.textarea_scroll_height_px,
+                            )));
+
+                            if !snapshot.recent_events.is_empty() {
+                                lines.push(cx.text("  recent_events:"));
+                                for e in snapshot.recent_events.iter().rev().take(10) {
+                                    lines.push(cx.text(format!("    {e}")));
+                                }
+                            }
                         } else {
                             lines.push(cx.text("bridge_debug_snapshot: <unavailable>"));
                         }
@@ -3779,13 +4308,10 @@ fn preview_text_measure_overlay(
         },
     );
 
-    let panel = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-text-measure-overlay-root")),
-            ..Default::default()
-        },
-        |_cx| vec![panel],
+    let panel = panel.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-text-measure-overlay-root"),
     );
 
     vec![header, panel]
@@ -3800,7 +4326,6 @@ fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Ve
         TimeAxisScale,
     };
     use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
-    use fret_ui::element::SemanticsProps;
 
     let header = stack::vstack(
         cx,
@@ -3954,14 +4479,10 @@ fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Ve
     props.engine = Some(engine);
     props.input_map = fret_chart::input_map::ChartInputMap::default();
 
-    let chart = chart_canvas_panel(cx, props);
-    let chart = cx.semantics(
-        SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-chart-torture-root")),
-            ..Default::default()
-        },
-        |_cx| vec![chart],
+    let chart = chart_canvas_panel(cx, props).attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-chart-torture-root"),
     );
 
     vec![header, chart]
@@ -3976,7 +4497,7 @@ fn preview_canvas_cull_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
         Corners, DrawOrder, Edges, FontId, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
     };
     use fret_ui::canvas::CanvasTextConstraints;
-    use fret_ui::element::{CanvasCachePolicy, Length, SemanticsProps};
+    use fret_ui::element::{CanvasCachePolicy, Length};
     use std::cmp::Ordering;
 
     let header = stack::vstack(
@@ -4124,14 +4645,13 @@ fn preview_canvas_cull_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
                 });
             });
 
-            vec![cx.semantics(
-                SemanticsProps {
-                    role: SemanticsRole::Group,
-                    test_id: Some(Arc::<str>::from("ui-gallery-canvas-cull-root")),
-                    ..Default::default()
-                },
-                |_cx| vec![canvas],
-            )]
+            vec![
+                canvas.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .test_id("ui-gallery-canvas-cull-root"),
+                ),
+            ]
         });
 
     vec![header, canvas]
@@ -4154,8 +4674,6 @@ fn preview_chrome_torture(
     checkbox: Model<bool>,
     switch: Model<bool>,
 ) -> Vec<AnyElement> {
-    use fret_ui::element::SemanticsProps;
-
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -4171,148 +4689,132 @@ fn preview_chrome_torture(
         },
     );
 
-    let content = cx.semantics(
-        SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-chrome-torture-root")),
-            ..Default::default()
-        },
+    let body = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N4),
         |cx| {
-            let body = stack::vstack(
+            let mut out = Vec::new();
+
+            out.extend(preview_overlay(
+                cx,
+                popover_open,
+                dialog_open,
+                alert_dialog_open,
+                sheet_open,
+                portal_geometry_popover_open,
+                dropdown_open,
+                context_menu_open,
+                context_menu_edge_open,
+                last_action,
+            ));
+
+            let controls = stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N4),
+                    .gap(Space::N3),
                 |cx| {
-                    let mut out = Vec::new();
+                    let mut out: Vec<AnyElement> = Vec::new();
 
-                    out.extend(preview_overlay(
+                    let row = stack::hstack(
                         cx,
-                        popover_open,
-                        dialog_open,
-                        alert_dialog_open,
-                        sheet_open,
-                        portal_geometry_popover_open,
-                        dropdown_open,
-                        context_menu_open,
-                        context_menu_edge_open,
-                        last_action,
-                    ));
-
-                    let controls = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N3),
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
                         |cx| {
-                            let mut out: Vec<AnyElement> = Vec::new();
-
-                            let row = stack::hstack(
-                                cx,
-                                stack::HStackProps::default().gap(Space::N2).items_center(),
-                                |cx| {
-                                    vec![
-                                        shadcn::Button::new("One")
-                                            .test_id("ui-gallery-chrome-btn-1")
-                                            .into_element(cx),
-                                        shadcn::Button::new("Two")
-                                            .variant(shadcn::ButtonVariant::Secondary)
-                                            .test_id("ui-gallery-chrome-btn-2")
-                                            .into_element(cx),
-                                        shadcn::Button::new("Three")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("ui-gallery-chrome-btn-3")
-                                            .into_element(cx),
-                                        shadcn::Button::new("Disabled")
-                                            .disabled(true)
-                                            .test_id("ui-gallery-chrome-btn-disabled")
-                                            .into_element(cx),
-                                    ]
-                                },
-                            );
-                            out.push(row);
-
-                            let fields = stack::hstack(
-                                cx,
-                                stack::HStackProps::default().gap(Space::N2).items_start(),
-                                |cx| {
-                                    vec![
-                                        stack::vstack(
-                                            cx,
-                                            stack::VStackProps::default().gap(Space::N1),
-                                            |cx| {
-                                                let input = shadcn::Input::new(text_input.clone())
-                                                    .a11y_label("Chrome torture input")
-                                                    .placeholder("Type")
-                                                    .into_element(cx);
-                                                let input = cx.semantics(
-                                                    SemanticsProps {
-                                                        role: fret_core::SemanticsRole::TextField,
-                                                        test_id: Some(Arc::<str>::from(
-                                                            "ui-gallery-chrome-text-input",
-                                                        )),
-                                                        ..Default::default()
-                                                    },
-                                                    |_cx| vec![input],
-                                                );
-                                                vec![cx.text("Text input"), input]
-                                            },
-                                        ),
-                                        stack::vstack(
-                                            cx,
-                                            stack::VStackProps::default().gap(Space::N1),
-                                            |cx| {
-                                                let textarea =
-                                                    shadcn::Textarea::new(text_area.clone())
-                                                        .a11y_label("Chrome torture textarea")
-                                                        .into_element(cx);
-                                                let textarea = cx.semantics(
-                                                    SemanticsProps {
-                                                        role: fret_core::SemanticsRole::TextField,
-                                                        test_id: Some(Arc::<str>::from(
-                                                            "ui-gallery-chrome-text-area",
-                                                        )),
-                                                        ..Default::default()
-                                                    },
-                                                    |_cx| vec![textarea],
-                                                );
-                                                vec![cx.text("Text area"), textarea]
-                                            },
-                                        ),
-                                    ]
-                                },
-                            );
-                            out.push(fields);
-
-                            let toggles = stack::hstack(
-                                cx,
-                                stack::HStackProps::default().gap(Space::N3).items_center(),
-                                |cx| {
-                                    vec![
-                                        shadcn::Checkbox::new(checkbox.clone())
-                                            .a11y_label("Chrome torture checkbox")
-                                            .test_id("ui-gallery-chrome-checkbox")
-                                            .into_element(cx),
-                                        shadcn::Switch::new(switch.clone())
-                                            .a11y_label("Chrome torture switch")
-                                            .test_id("ui-gallery-chrome-switch")
-                                            .into_element(cx),
-                                    ]
-                                },
-                            );
-                            out.push(toggles);
-
-                            out
+                            vec![
+                                shadcn::Button::new("One")
+                                    .test_id("ui-gallery-chrome-btn-1")
+                                    .into_element(cx),
+                                shadcn::Button::new("Two")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .test_id("ui-gallery-chrome-btn-2")
+                                    .into_element(cx),
+                                shadcn::Button::new("Three")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .test_id("ui-gallery-chrome-btn-3")
+                                    .into_element(cx),
+                                shadcn::Button::new("Disabled")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-chrome-btn-disabled")
+                                    .into_element(cx),
+                            ]
                         },
                     );
-                    out.push(controls);
+                    out.push(row);
+
+                    let fields = stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_start(),
+                        |cx| {
+                            vec![
+                                stack::vstack(
+                                    cx,
+                                    stack::VStackProps::default().gap(Space::N1),
+                                    |cx| {
+                                        let input = shadcn::Input::new(text_input.clone())
+                                            .a11y_label("Chrome torture input")
+                                            .placeholder("Type")
+                                            .into_element(cx);
+                                        let input = input.attach_semantics(
+                                            SemanticsDecoration::default()
+                                                .role(fret_core::SemanticsRole::TextField)
+                                                .test_id("ui-gallery-chrome-text-input"),
+                                        );
+                                        vec![cx.text("Text input"), input]
+                                    },
+                                ),
+                                stack::vstack(
+                                    cx,
+                                    stack::VStackProps::default().gap(Space::N1),
+                                    |cx| {
+                                        let textarea = shadcn::Textarea::new(text_area.clone())
+                                            .a11y_label("Chrome torture textarea")
+                                            .into_element(cx);
+                                        let textarea = textarea.attach_semantics(
+                                            SemanticsDecoration::default()
+                                                .role(fret_core::SemanticsRole::TextField)
+                                                .test_id("ui-gallery-chrome-text-area"),
+                                        );
+                                        vec![cx.text("Text area"), textarea]
+                                    },
+                                ),
+                            ]
+                        },
+                    );
+                    out.push(fields);
+
+                    let toggles = stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N3).items_center(),
+                        |cx| {
+                            vec![
+                                shadcn::Checkbox::new(checkbox.clone())
+                                    .a11y_label("Chrome torture checkbox")
+                                    .test_id("ui-gallery-chrome-checkbox")
+                                    .into_element(cx),
+                                shadcn::Switch::new(switch.clone())
+                                    .a11y_label("Chrome torture switch")
+                                    .test_id("ui-gallery-chrome-switch")
+                                    .into_element(cx),
+                            ]
+                        },
+                    );
+                    out.push(toggles);
 
                     out
                 },
             );
+            out.push(controls);
 
-            vec![body]
+            out
         },
+    );
+
+    let content = body.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-chrome-torture-root"),
     );
 
     vec![header, content]
@@ -4371,52 +4873,45 @@ fn preview_windowed_rows_surface_torture(
             props.scroll_handle = scroll_handle.clone();
             props.canvas.cache_policy = fret_ui::element::CanvasCachePolicy::smooth_default();
 
-            vec![cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: SemanticsRole::Group,
-                    test_id: Some(Arc::<str>::from("ui-gallery-windowed-rows-root")),
-                    ..Default::default()
-                },
-                |cx| {
-                    vec![windowed_rows_surface(
-                        cx,
-                        props,
-                        move |painter, index, rect| {
-                            let background = if (index % 2) == 0 { bg_even } else { bg_odd };
-                            painter.scene().push(fret_core::SceneOp::Quad {
-                                order: DrawOrder(0),
-                                rect,
-                                background,
-                                border: Edges::all(Px(0.0)),
-                                border_color: fret_core::Color::TRANSPARENT,
-                                corner_radii: Corners::all(Px(0.0)),
-                            });
+            let surface = windowed_rows_surface(cx, props, move |painter, index, rect| {
+                let background = if (index % 2) == 0 { bg_even } else { bg_odd };
+                painter.scene().push(fret_core::SceneOp::Quad {
+                    order: DrawOrder(0),
+                    rect,
+                    background,
+                    border: Edges::all(Px(0.0)),
+                    border_color: fret_core::Color::TRANSPARENT,
+                    corner_radii: Corners::all(Px(0.0)),
+                });
 
-                            let label = format!("Row {index}");
-                            let origin = fret_core::Point::new(
-                                Px(rect.origin.x.0 + 8.0),
-                                Px(rect.origin.y.0 + 4.0),
-                            );
-                            let scope = painter.key_scope(&"ui-gallery-windowed-rows");
-                            let key: u64 = painter.child_key(scope, &index).into();
-                            let _ = painter.text(
-                                key,
-                                DrawOrder(1),
-                                origin,
-                                label,
-                                text_style.clone(),
-                                fg,
-                                CanvasTextConstraints {
-                                    max_width: Some(Px(rect.size.width.0.max(0.0) - 16.0)),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                },
-                                painter.scale_factor(),
-                            );
-                        },
-                    )]
-                },
-            )]
+                let label = format!("Row {index}");
+                let origin =
+                    fret_core::Point::new(Px(rect.origin.x.0 + 8.0), Px(rect.origin.y.0 + 4.0));
+                let scope = painter.key_scope(&"ui-gallery-windowed-rows");
+                let key: u64 = painter.child_key(scope, &index).into();
+                let _ = painter.text(
+                    key,
+                    DrawOrder(1),
+                    origin,
+                    label,
+                    text_style.clone(),
+                    fg,
+                    CanvasTextConstraints {
+                        max_width: Some(Px(rect.size.width.0.max(0.0) - 16.0)),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    },
+                    painter.scale_factor(),
+                );
+            });
+
+            vec![
+                surface.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Group)
+                        .test_id("ui-gallery-windowed-rows-root"),
+                ),
+            ]
         });
 
     vec![header, surface]
@@ -4616,50 +5111,266 @@ fn preview_windowed_rows_surface_interactive_torture(
 }
 
 fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let variants = stack::hstack(
+    let theme = Theme::global(&*cx.app).clone();
+
+    let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+    let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+    let muted_fg = ColorRef::Color(theme.color_required("muted-foreground"));
+
+    let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
+        shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))
+    };
+
+    let content_text = |cx: &mut ElementContext<'_, App>, text: &'static str, fg: ColorRef| {
+        ui::text(cx, text)
+            .font_medium()
+            .nowrap()
+            .text_color(fg)
+            .into_element(cx)
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let size = {
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N3).items_start(),
+            |cx| {
+                vec![
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |cx| {
+                            vec![
+                                shadcn::Button::new("Small")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .into_element(cx),
+                                shadcn::Button::new("Submit")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::IconSm)
+                                    .children([icon(
+                                        cx,
+                                        "lucide.arrow-up-right",
+                                        outline_fg.clone(),
+                                    )])
+                                    .into_element(cx),
+                            ]
+                        },
+                    ),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |cx| {
+                            vec![
+                                shadcn::Button::new("Default")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .into_element(cx),
+                                shadcn::Button::new("Submit")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Icon)
+                                    .children([icon(
+                                        cx,
+                                        "lucide.arrow-up-right",
+                                        outline_fg.clone(),
+                                    )])
+                                    .into_element(cx),
+                            ]
+                        },
+                    ),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |cx| {
+                            vec![
+                                shadcn::Button::new("Large")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Lg)
+                                    .into_element(cx),
+                                shadcn::Button::new("Submit")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::IconLg)
+                                    .children([icon(
+                                        cx,
+                                        "lucide.arrow-up-right",
+                                        outline_fg.clone(),
+                                    )])
+                                    .into_element(cx),
+                            ]
+                        },
+                    ),
+                ]
+            },
+        );
+        section(cx, "Size", body)
+    };
+
+    let default_body = shadcn::Button::new("Button").into_element(cx);
+    let default = section(cx, "Default", default_body);
+
+    let outline_body = shadcn::Button::new("Outline")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into_element(cx);
+    let outline = section(cx, "Outline", outline_body);
+
+    let secondary_body = shadcn::Button::new("Secondary")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .into_element(cx);
+    let secondary = section(cx, "Secondary", secondary_body);
+
+    let ghost_body = shadcn::Button::new("Ghost")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .into_element(cx);
+    let ghost = section(cx, "Ghost", ghost_body);
+
+    let destructive_body = shadcn::Button::new("Destructive")
+        .variant(shadcn::ButtonVariant::Destructive)
+        .into_element(cx);
+    let destructive = section(cx, "Destructive", destructive_body);
+
+    let link_body = shadcn::Button::new("Link")
+        .variant(shadcn::ButtonVariant::Link)
+        .into_element(cx);
+    let link = section(cx, "Link", link_body);
+
+    let icon_only_body = shadcn::Button::new("Submit")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .children([icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+        .into_element(cx);
+    let icon_only = section(cx, "Icon", icon_only_body);
+
+    let with_icon = {
+        let body = shadcn::Button::new("New Branch")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .children([
+                icon(cx, "lucide.git-branch", outline_fg.clone()),
+                content_text(cx, "New Branch", outline_fg.clone()),
+            ])
+            .into_element(cx);
+        section(cx, "With Icon", body)
+    };
+
+    let rounded_body = shadcn::Button::new("Scroll to top")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Icon)
+        .children([icon(cx, "lucide.arrow-up", outline_fg.clone())])
+        .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+        .into_element(cx);
+    let rounded = section(cx, "Rounded", rounded_body);
+
+    let spinner = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Button::new("Generating")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .disabled(true)
+                        .children([
+                            shadcn::Spinner::new()
+                                .color(outline_fg.clone())
+                                .into_element(cx),
+                            content_text(cx, "Generating", outline_fg.clone()),
+                        ])
+                        .into_element(cx),
+                    shadcn::Button::new("Downloading")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .disabled(true)
+                        .children([
+                            content_text(cx, "Downloading", secondary_fg.clone()),
+                            shadcn::Spinner::new()
+                                .color(secondary_fg.clone())
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        section(cx, "Spinner", body)
+    };
+
+    let button_group = {
+        let demo = preview_button_group(cx)
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| cx.text("ButtonGroup demo is missing"));
+        section(cx, "Button Group", demo)
+    };
+
+    let render_link = {
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            |cx| {
+                vec![
+                    shadcn::Button::new("Documentation")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .on_click(CMD_APP_OPEN)
+                        .into_element(cx),
+                    ui::text(cx, "TODO: `Button::render` / `asChild` composition is not implemented yet in fret-ui-shadcn. For now, use `variant=Link` or a dedicated link component.")
+                        .text_color(muted_fg.clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        section(cx, "Link (render)", body)
+    };
+
+    let rtl = {
+        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |cx| {
+                        vec![
+                            shadcn::Button::new("التالي")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .into_element(cx),
+                            shadcn::Button::new("السابق")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .into_element(cx),
+                        ]
+                    },
+                )
+            },
+        );
+        section(cx, "RTL", body)
+    };
+
+    vec![stack::vstack(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
+        stack::VStackProps::default().gap(Space::N4).items_start(),
+        |_cx| {
             vec![
-                shadcn::Button::new("Default").into_element(cx),
-                shadcn::Button::new("Secondary")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .into_element(cx),
-                shadcn::Button::new("Outline")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .into_element(cx),
-                shadcn::Button::new("Ghost")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .into_element(cx),
-                shadcn::Button::new("Destructive")
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .into_element(cx),
-                shadcn::Button::new("Disabled")
-                    .disabled(true)
-                    .into_element(cx),
+                size,
+                default,
+                outline,
+                secondary,
+                ghost,
+                destructive,
+                link,
+                icon_only,
+                with_icon,
+                rounded,
+                spinner,
+                button_group,
+                render_link,
+                rtl,
             ]
         },
-    );
-
-    let sizes = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Button::new("Small")
-                    .size(shadcn::ButtonSize::Sm)
-                    .into_element(cx),
-                shadcn::Button::new("Default")
-                    .size(shadcn::ButtonSize::Default)
-                    .into_element(cx),
-                shadcn::Button::new("Large")
-                    .size(shadcn::ButtonSize::Lg)
-                    .into_element(cx),
-            ]
-        },
-    );
-
-    vec![variants, sizes]
+    )]
 }
 
 fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -4838,6 +5549,8 @@ fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
     _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
+    let trunc_layout = LayoutRefinement::default().max_w(Px(80.0));
+
     vec![
         shadcn::Breadcrumb::new()
             .items([
@@ -4851,14 +5564,139 @@ fn preview_breadcrumb(
                 shadcn::BreadcrumbItem::new("Home"),
                 shadcn::BreadcrumbItem::ellipsis(),
                 shadcn::BreadcrumbItem::new("Examples"),
-                shadcn::BreadcrumbItem::new("Data Fetching"),
+                shadcn::BreadcrumbItem::new("Data Fetching")
+                    .truncate(true)
+                    .refine_layout(trunc_layout.clone()),
+                shadcn::BreadcrumbItem::new("Caching and Revalidating")
+                    .truncate(true)
+                    .refine_layout(trunc_layout),
             ])
             .into_element(cx),
     ]
 }
 
 fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let group = shadcn::ButtonGroup::new([
+    #[derive(Default)]
+    struct ButtonGroupModels {
+        search_value: Option<Model<String>>,
+        message_value: Option<Model<String>>,
+        amount_value: Option<Model<String>>,
+        dropdown_open: Option<Model<bool>>,
+        select_open: Option<Model<bool>>,
+        select_value: Option<Model<Option<Arc<str>>>>,
+        popover_open: Option<Model<bool>>,
+        popover_text: Option<Model<String>>,
+    }
+
+    let search_value = cx.with_state(ButtonGroupModels::default, |st| st.search_value.clone());
+    let search_value = match search_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.search_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let message_value = cx.with_state(ButtonGroupModels::default, |st| st.message_value.clone());
+    let message_value = match message_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.message_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let amount_value = cx.with_state(ButtonGroupModels::default, |st| st.amount_value.clone());
+    let amount_value = match amount_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.amount_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let dropdown_open = cx.with_state(ButtonGroupModels::default, |st| st.dropdown_open.clone());
+    let dropdown_open = match dropdown_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.dropdown_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let select_open = cx.with_state(ButtonGroupModels::default, |st| st.select_open.clone());
+    let select_open = match select_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.select_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let select_value = cx.with_state(ButtonGroupModels::default, |st| st.select_value.clone());
+    let select_value = match select_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("$")));
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.select_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let popover_open = cx.with_state(ButtonGroupModels::default, |st| st.popover_open.clone());
+    let popover_open = match popover_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.popover_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let popover_text = cx.with_state(ButtonGroupModels::default, |st| st.popover_text.clone());
+    let popover_text = match popover_text {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(String::from("Describe your task in natural language."));
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.popover_text = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let theme = Theme::global(&*cx.app).clone();
+    let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+    let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+
+    let icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
+        shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), None, Some(fg))
+    };
+
+    // Mirrors the top-level `button-group-demo` preview slot.
+    let demo = shadcn::ButtonGroup::new([
         shadcn::Button::new("Left").into(),
         shadcn::Button::new("Middle").into(),
         shadcn::Button::new("Right").into(),
@@ -4866,7 +5704,374 @@ fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     .a11y_label("Button group")
     .into_element(cx);
 
-    vec![group]
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let orientation = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Increase")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+            shadcn::Button::new("Decrease")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.minus", outline_fg.clone())])
+                .into(),
+        ])
+        .orientation(shadcn::ButtonGroupOrientation::Vertical)
+        .a11y_label("Media controls")
+        .into_element(cx);
+        section(cx, "Orientation", body)
+    };
+
+    let size = {
+        let small = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Small")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+
+        let medium = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Default")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+
+        let large = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Large")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
+                .into(),
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
+                .into(),
+            shadcn::Button::new("Group")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Lg)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconLg)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+
+        let body = stack::vstack(cx, stack::VStackProps::default().gap(Space::N4), |_cx| {
+            vec![small, medium, large]
+        });
+        section(cx, "Size", body)
+    };
+
+    let nested = {
+        let digits = shadcn::ButtonGroup::new([
+            shadcn::Button::new("1")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("2")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("3")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("4")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Button::new("5")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+        ]);
+
+        let nav = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Previous")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
+                .children([icon(cx, "lucide.arrow-left", outline_fg.clone())])
+                .into(),
+            shadcn::Button::new("Next")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::IconSm)
+                .children([icon(cx, "lucide.arrow-right", outline_fg.clone())])
+                .into(),
+        ]);
+
+        let body = shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);
+        section(cx, "Nested", body)
+    };
+
+    let separator = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Copy")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+            shadcn::Separator::new()
+                .orientation(shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            shadcn::Button::new("Paste")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .into(),
+        ])
+        .into_element(cx);
+        section(cx, "Separator", body)
+    };
+
+    let split = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Button")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .into(),
+            shadcn::Separator::new()
+                .orientation(shadcn::SeparatorOrientation::Vertical)
+                .into(),
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", secondary_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+        section(cx, "Split", body)
+    };
+
+    let input = {
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Input::new(search_value.clone())
+                .a11y_label("Search")
+                .placeholder("Search...")
+                .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
+                .into_element(cx)
+                .into(),
+            shadcn::Button::new("Search")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.search", outline_fg.clone())])
+                .into(),
+        ])
+        .into_element(cx);
+        section(cx, "Input", body)
+    };
+
+    let input_group = {
+        let group = shadcn::InputGroup::new(message_value.clone())
+            .a11y_label("Message")
+            .leading([shadcn::InputGroupText::new("To").into_element(cx)])
+            .trailing([shadcn::InputGroupButton::new("Send").into_element(cx)]);
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Add")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Icon)
+                .children([icon(cx, "lucide.plus", outline_fg.clone())])
+                .into(),
+            group.into(),
+        ])
+        .into_element(cx);
+        section(cx, "Input Group", body)
+    };
+
+    let dropdown = {
+        let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(
+            cx,
+            |cx| {
+                shadcn::Button::new("More")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Icon)
+                    .children([icon(cx, "lucide.chevron-down", outline_fg.clone())])
+                    .toggle_model(dropdown_open.clone())
+                    .into_element(cx)
+            },
+            |cx| {
+                vec![
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mute Conversation").leading(icon(
+                            cx,
+                            "lucide.volume-x",
+                            outline_fg.clone(),
+                        )),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mark as Read").leading(icon(
+                            cx,
+                            "lucide.check",
+                            outline_fg.clone(),
+                        )),
+                    ),
+                    shadcn::DropdownMenuEntry::Separator,
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Delete Conversation")
+                            .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                            .leading(icon(cx, "lucide.trash", outline_fg.clone())),
+                    ),
+                ]
+            },
+        );
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Follow")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            dropdown.into(),
+        ])
+        .into_element(cx);
+        section(cx, "Dropdown Menu", body)
+    };
+
+    let select = {
+        let currency = shadcn::Select::new(select_value.clone(), select_open.clone())
+            .placeholder("$")
+            .refine_layout(LayoutRefinement::default().w_px(Px(96.0)))
+            .items([
+                shadcn::SelectItem::new("$", "US Dollar"),
+                shadcn::SelectItem::new("€", "Euro"),
+                shadcn::SelectItem::new("£", "British Pound"),
+            ])
+            .into_element(cx);
+
+        let amount = shadcn::Input::new(amount_value.clone())
+            .a11y_label("Amount")
+            .placeholder("10.00")
+            .refine_layout(LayoutRefinement::default().w_px(Px(140.0)))
+            .into_element(cx);
+
+        let send = shadcn::Button::new("Send")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .children([icon(cx, "lucide.arrow-right", outline_fg.clone())]);
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::ButtonGroup::new([currency.into(), amount.into()]).into(),
+            shadcn::ButtonGroup::new([send.into()]).into(),
+        ])
+        .into_element(cx);
+        section(cx, "Select", body)
+    };
+
+    let popover = {
+        let popover = shadcn::Popover::new(popover_open.clone())
+            .side(shadcn::PopoverSide::Bottom)
+            .align(shadcn::PopoverAlign::End)
+            .into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new("Open Popover")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Icon)
+                        .children([icon(cx, "lucide.chevron-down", outline_fg.clone())])
+                        .toggle_model(popover_open.clone())
+                        .into_element(cx)
+                },
+                |cx| {
+                    shadcn::PopoverContent::new(vec![
+                        shadcn::PopoverTitle::new("Agent Tasks").into_element(cx),
+                        shadcn::Separator::new().into_element(cx),
+                        shadcn::Textarea::new(popover_text.clone())
+                            .a11y_label("Task")
+                            .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+                            .into_element(cx),
+                    ])
+                    .into_element(cx)
+                },
+            );
+
+        let body = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Copilot")
+                .variant(shadcn::ButtonVariant::Outline)
+                .children([icon(cx, "lucide.bot", outline_fg.clone())])
+                .into(),
+            popover.into(),
+        ])
+        .into_element(cx);
+        section(cx, "Popover", body)
+    };
+
+    let rtl = {
+        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                shadcn::ButtonGroup::new([
+                    shadcn::Button::new("التالي")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into(),
+                    shadcn::Button::new("السابق")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .into(),
+                ])
+                .into_element(cx)
+            },
+        );
+        section(cx, "RTL", body)
+    };
+
+    let examples = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| {
+            vec![
+                orientation,
+                size,
+                nested,
+                separator,
+                split,
+                input,
+                input_group,
+                dropdown,
+                select,
+                popover,
+                rtl,
+            ]
+        },
+    );
+
+    vec![demo, examples]
 }
 
 fn preview_calendar(
@@ -4874,10 +6079,535 @@ fn preview_calendar(
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
-    let calendar = shadcn::Calendar::new(month, selected)
-        .number_of_months(1)
+    use fret_ui_headless::calendar::DateRangeSelection;
+
+    let theme = Theme::global(&*cx.app).clone();
+    let today = time::OffsetDateTime::now_utc().date();
+
+    #[derive(Default, Clone)]
+    struct CalendarModels {
+        caption_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        caption_selected: Option<Model<Option<Date>>>,
+        range_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        range_selected: Option<Model<DateRangeSelection>>,
+        presets_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        presets_selected: Option<Model<Option<Date>>>,
+        time_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        time_selected: Option<Model<Option<Date>>>,
+        time_from: Option<Model<String>>,
+        time_to: Option<Model<String>>,
+        booked_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        booked_selected: Option<Model<Option<Date>>>,
+        custom_cell_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        custom_cell_selected: Option<Model<Option<Date>>>,
+        week_number_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        week_number_selected: Option<Model<Option<Date>>>,
+        rtl_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        rtl_selected: Option<Model<Option<Date>>>,
+    }
+
+    let initial_month = cx
+        .get_model_copied(&month, Invalidation::Layout)
+        .unwrap_or_else(|| fret_ui_headless::calendar::CalendarMonth::from_date(today));
+
+    let state = cx.with_state(CalendarModels::default, |st| st.clone());
+
+    let caption_month = match state.caption_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.caption_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let caption_selected = match state.caption_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Date>);
+            cx.with_state(CalendarModels::default, |st| {
+                st.caption_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let range_month = match state.range_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.range_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let range_selected = match state.range_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(DateRangeSelection::default());
+            cx.with_state(CalendarModels::default, |st| {
+                st.range_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let preset_date = time::Date::from_calendar_date(today.year(), time::Month::February, 12)
+        .expect("valid preset date");
+    let presets_initial_month = fret_ui_headless::calendar::CalendarMonth::from_date(preset_date);
+    let presets_month = match state.presets_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(presets_initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.presets_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let presets_selected = match state.presets_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(preset_date));
+            cx.with_state(CalendarModels::default, |st| {
+                st.presets_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let time_date = time::Date::from_calendar_date(today.year(), today.month(), 12)
+        .expect("valid time picker date");
+    let time_initial_month = fret_ui_headless::calendar::CalendarMonth::from_date(time_date);
+    let time_month = match state.time_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(time_initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.time_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let time_selected = match state.time_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(time_date));
+            cx.with_state(CalendarModels::default, |st| {
+                st.time_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+    let time_from = match state.time_from {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::from("10:30:00"));
+            cx.with_state(CalendarModels::default, |st| {
+                st.time_from = Some(model.clone())
+            });
+            model
+        }
+    };
+    let time_to = match state.time_to {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::from("12:30:00"));
+            cx.with_state(CalendarModels::default, |st| {
+                st.time_to = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let booked_month = match state.booked_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.booked_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let booked_selected = match state.booked_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Date>);
+            cx.with_state(CalendarModels::default, |st| {
+                st.booked_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let custom_cell_month = match state.custom_cell_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.custom_cell_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let custom_cell_selected = match state.custom_cell_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Date>);
+            cx.with_state(CalendarModels::default, |st| {
+                st.custom_cell_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let week_number_month = match state.week_number_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.week_number_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let week_number_selected = match state.week_number_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Date>);
+            cx.with_state(CalendarModels::default, |st| {
+                st.week_number_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let rtl_month = match state.rtl_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.rtl_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let rtl_selected = match state.rtl_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(today));
+            cx.with_state(CalendarModels::default, |st| {
+                st.rtl_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let basic = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N6).items_start(),
+            |cx| {
+                let selected_str = cx
+                    .get_model_copied(&selected, Invalidation::Layout)
+                    .flatten()
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "<none>".to_string());
+
+                vec![
+                    shadcn::Calendar::new(month.clone(), selected.clone())
+                        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+                        .into_element(cx),
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(Space::N1).items_start(),
+                        |cx| {
+                            vec![cx.text_props(TextProps {
+                                layout: Default::default(),
+                                text: Arc::from(format!("selected={}", selected_str)),
+                                style: None,
+                                color: Some(theme.color_required("muted-foreground")),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                            })]
+                        },
+                    ),
+                ]
+            },
+        );
+        section(cx, "Basic", body)
+    };
+
+    let range = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N6).items_start(),
+            |cx| {
+                let range = cx
+                    .get_model_copied(&range_selected, Invalidation::Layout)
+                    .unwrap_or_default();
+                let from = range
+                    .from
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "<none>".to_string());
+                let to = range
+                    .to
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "<none>".to_string());
+
+                vec![
+                    shadcn::CalendarRange::new(range_month.clone(), range_selected.clone())
+                        .number_of_months(2)
+                        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+                        .into_element(cx),
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(Space::N1).items_start(),
+                        |cx| {
+                            vec![
+                                cx.text_props(TextProps {
+                                    layout: Default::default(),
+                                    text: Arc::from(format!("from={}", from)),
+                                    style: None,
+                                    color: Some(theme.color_required("muted-foreground")),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                                cx.text_props(TextProps {
+                                    layout: Default::default(),
+                                    text: Arc::from(format!("to={}", to)),
+                                    style: None,
+                                    color: Some(theme.color_required("muted-foreground")),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                            ]
+                        },
+                    ),
+                ]
+            },
+        );
+        section(cx, "Range Calendar", body)
+    };
+
+    let month_year_selector = {
+        let body = shadcn::Calendar::new(caption_month.clone(), caption_selected.clone())
+            .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+            .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+            .into_element(cx);
+        section(cx, "Month and Year Selector", body)
+    };
+
+    let presets = {
+        let preset_button =
+            |cx: &mut ElementContext<'_, App>, label: &'static str, days: i64| -> AnyElement {
+                let month = presets_month.clone();
+                let selected = presets_selected.clone();
+                shadcn::Button::new(label)
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .refine_layout(LayoutRefinement::default().flex_1().w_full())
+                    .on_activate(Arc::new(move |host, _acx, _reason| {
+                        let new_date = today + time::Duration::days(days);
+                        let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
+                        let _ = host.models_mut().update(&month, |m| {
+                            *m = fret_ui_headless::calendar::CalendarMonth::from_date(new_date);
+                        });
+                    }))
+                    .into_element(cx)
+            };
+
+        let calendar = shadcn::Calendar::new(presets_month.clone(), presets_selected.clone())
+            .cell_size(Px(38.0))
+            .refine_style(ChromeRefinement::default().p(Space::N0))
+            .into_element(cx);
+
+        let footer = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start(),
+            |cx| {
+                vec![
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full()),
+                        |cx| {
+                            vec![
+                                preset_button(cx, "Today", 0),
+                                preset_button(cx, "Tomorrow", 1),
+                                preset_button(cx, "In 3 days", 3),
+                            ]
+                        },
+                    ),
+                    stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full()),
+                        |cx| {
+                            vec![
+                                preset_button(cx, "In a week", 7),
+                                preset_button(cx, "In 2 weeks", 14),
+                            ]
+                        },
+                    ),
+                ]
+            },
+        );
+
+        let card = shadcn::Card::new(vec![
+            shadcn::CardContent::new(vec![calendar]).into_element(cx),
+            shadcn::CardFooter::new(vec![footer]).into_element(cx),
+        ])
+        .size(shadcn::CardSize::Sm)
+        .refine_layout(
+            LayoutRefinement::default()
+                .max_w(MetricRef::Px(Px(300.0)))
+                .min_w_0(),
+        )
         .into_element(cx);
-    vec![calendar]
+
+        section(cx, "Presets", card)
+    };
+
+    let date_and_time_picker = {
+        let clock_fg = ColorRef::Color(theme.color_required("muted-foreground"));
+        let clock_icon = |cx: &mut ElementContext<'_, App>| {
+            shadcn::icon::icon_with(
+                cx,
+                fret_icons::IconId::new_static("lucide.clock-2"),
+                None,
+                Some(clock_fg.clone()),
+            )
+        };
+
+        let calendar = shadcn::Calendar::new(time_month.clone(), time_selected.clone())
+            .refine_style(ChromeRefinement::default().p(Space::N0))
+            .into_element(cx);
+
+        let footer = shadcn::FieldGroup::new([
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Start Time").into_element(cx),
+                shadcn::InputGroup::new(time_from.clone())
+                    .a11y_label("Start Time")
+                    .trailing([clock_icon(cx)])
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("End Time").into_element(cx),
+                shadcn::InputGroup::new(time_to.clone())
+                    .a11y_label("End Time")
+                    .trailing([clock_icon(cx)])
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx);
+
+        let card = shadcn::Card::new(vec![
+            shadcn::CardContent::new(vec![calendar]).into_element(cx),
+            shadcn::CardFooter::new(vec![footer]).into_element(cx),
+        ])
+        .size(shadcn::CardSize::Sm)
+        .refine_layout(LayoutRefinement::default().min_w_0())
+        .into_element(cx);
+
+        section(cx, "Date and Time Picker", card)
+    };
+
+    let booked_dates = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N6).items_start(),
+            |cx| {
+                vec![
+                    shadcn::Calendar::new(booked_month.clone(), booked_selected.clone())
+                        .disabled_by(|d| {
+                            matches!(d.weekday(), time::Weekday::Saturday | time::Weekday::Sunday)
+                        })
+                        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+                        .into_element(cx),
+                    cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: Arc::from("Disabled: weekends"),
+                        style: None,
+                        color: Some(theme.color_required("muted-foreground")),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    }),
+                ]
+            },
+        );
+        section(cx, "Booked dates", body)
+    };
+
+    let custom_cell_size = {
+        let body = shadcn::Calendar::new(custom_cell_month.clone(), custom_cell_selected.clone())
+            .cell_size(Px(44.0))
+            .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+            .into_element(cx);
+        section(cx, "Custom Cell Size", body)
+    };
+
+    let week_numbers = {
+        let body = shadcn::Calendar::new(week_number_month.clone(), week_number_selected.clone())
+            .show_week_number(true)
+            .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+            .into_element(cx);
+        section(cx, "Week Numbers", body)
+    };
+
+    let rtl = {
+        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                shadcn::Calendar::new(rtl_month.clone(), rtl_selected.clone())
+                    .cell_size(Px(36.0))
+                    .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                    .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+                    .into_element(cx)
+            },
+        );
+        section(cx, "RTL", body)
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| {
+            vec![
+                basic,
+                range,
+                month_year_selector,
+                presets,
+                date_and_time_picker,
+                booked_dates,
+                custom_cell_size,
+                week_numbers,
+                rtl,
+            ]
+        },
+    )]
 }
 
 fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -4998,47 +6728,778 @@ fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    use shadcn::{MenubarEntry, MenubarItem, MenubarMenu};
+    use shadcn::{
+        Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu,
+        MenubarRadioGroup, MenubarRadioItemSpec, MenubarShortcut,
+    };
 
-    let file = MenubarMenu::new("File").entries([
-        MenubarEntry::Item(MenubarItem::new("Open").on_select(CMD_APP_OPEN)),
-        MenubarEntry::Item(MenubarItem::new("Save").on_select(CMD_APP_SAVE)),
-        MenubarEntry::Separator,
-        MenubarEntry::Item(MenubarItem::new("Settings").on_select(CMD_APP_SETTINGS)),
-    ]);
+    #[derive(Default)]
+    struct MenubarModels {
+        view_bookmarks_bar: Option<Model<bool>>,
+        view_full_urls: Option<Model<bool>>,
+        format_strikethrough: Option<Model<bool>>,
+        format_code: Option<Model<bool>>,
+        format_superscript: Option<Model<bool>>,
+        profile: Option<Model<Option<Arc<str>>>>,
+        theme: Option<Model<Option<Arc<str>>>>,
+    }
 
-    let edit = MenubarMenu::new("Edit").entries([
-        MenubarEntry::Item(MenubarItem::new("Undo").on_select(fret_app::core_commands::EDIT_UNDO)),
-        MenubarEntry::Item(MenubarItem::new("Redo").on_select(fret_app::core_commands::EDIT_REDO)),
-    ]);
+    let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
 
-    vec![shadcn::Menubar::new([file, edit]).into_element(cx)]
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
+        shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+    };
+
+    let view_bookmarks_bar =
+        cx.with_state(MenubarModels::default, |st| st.view_bookmarks_bar.clone());
+    let view_bookmarks_bar = match view_bookmarks_bar {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(MenubarModels::default, |st| {
+                st.view_bookmarks_bar = Some(model.clone())
+            });
+            model
+        }
+    };
+    let view_full_urls = cx.with_state(MenubarModels::default, |st| st.view_full_urls.clone());
+    let view_full_urls = match view_full_urls {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(MenubarModels::default, |st| {
+                st.view_full_urls = Some(model.clone())
+            });
+            model
+        }
+    };
+    let format_strikethrough =
+        cx.with_state(MenubarModels::default, |st| st.format_strikethrough.clone());
+    let format_strikethrough = match format_strikethrough {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(true);
+            cx.with_state(MenubarModels::default, |st| {
+                st.format_strikethrough = Some(model.clone())
+            });
+            model
+        }
+    };
+    let format_code = cx.with_state(MenubarModels::default, |st| st.format_code.clone());
+    let format_code = match format_code {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(MenubarModels::default, |st| {
+                st.format_code = Some(model.clone())
+            });
+            model
+        }
+    };
+    let format_superscript =
+        cx.with_state(MenubarModels::default, |st| st.format_superscript.clone());
+    let format_superscript = match format_superscript {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(MenubarModels::default, |st| {
+                st.format_superscript = Some(model.clone())
+            });
+            model
+        }
+    };
+    let profile = cx.with_state(MenubarModels::default, |st| st.profile.clone());
+    let profile = match profile {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("benoit")));
+            cx.with_state(MenubarModels::default, |st| {
+                st.profile = Some(model.clone())
+            });
+            model
+        }
+    };
+    let theme = cx.with_state(MenubarModels::default, |st| st.theme.clone());
+    let theme = match theme {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("system")));
+            cx.with_state(MenubarModels::default, |st| st.theme = Some(model.clone()));
+            model
+        }
+    };
+
+    let demo = {
+        let file = MenubarMenu::new("File").entries([
+            MenubarEntry::Group(MenubarGroup::new([
+                MenubarEntry::Item(
+                    MenubarItem::new("New Tab")
+                        .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+                ),
+                MenubarEntry::Item(MenubarItem::new("New Window")),
+            ])),
+            MenubarEntry::Separator,
+            MenubarEntry::Group(MenubarGroup::new([
+                MenubarEntry::Item(MenubarItem::new("Share").close_on_select(false)),
+                MenubarEntry::Item(MenubarItem::new("Print").close_on_select(false)),
+            ])),
+        ]);
+        let menubar = Menubar::new([file])
+            .refine_layout(width.clone())
+            .into_element(cx);
+        let body = centered(cx, menubar);
+        section(cx, "Demo", body)
+    };
+
+    let checkbox = {
+        let view = MenubarMenu::new("View").entries([
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                view_bookmarks_bar.clone(),
+                "Always Show Bookmarks Bar",
+            )),
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                view_full_urls.clone(),
+                "Always Show Full URLs",
+            )),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Reload")
+                    .inset(true)
+                    .trailing(MenubarShortcut::new("⌘R").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("Force Reload")
+                    .disabled(true)
+                    .inset(true)
+                    .trailing(MenubarShortcut::new("⇧⌘R").into_element(cx)),
+            ),
+        ]);
+        let format = MenubarMenu::new("Format").entries([
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                format_strikethrough.clone(),
+                "Strikethrough",
+            )),
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(format_code.clone(), "Code")),
+            MenubarEntry::CheckboxItem(MenubarCheckboxItem::new(
+                format_superscript.clone(),
+                "Superscript",
+            )),
+        ]);
+        let menubar = Menubar::new([view, format])
+            .refine_layout(width.clone())
+            .into_element(cx);
+        let body = centered(cx, menubar);
+        section(cx, "Checkbox", body)
+    };
+
+    let radio = {
+        let profiles = MenubarMenu::new("Profiles").entries([
+            MenubarEntry::RadioGroup(
+                MenubarRadioGroup::new(profile.clone())
+                    .item(MenubarRadioItemSpec::new("andy", "Andy"))
+                    .item(MenubarRadioItemSpec::new("benoit", "Benoit"))
+                    .item(MenubarRadioItemSpec::new("luis", "Luis")),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Edit...").inset(true)),
+            MenubarEntry::Item(MenubarItem::new("Add Profile...").inset(true)),
+        ]);
+        let themes = MenubarMenu::new("Theme").entries([MenubarEntry::RadioGroup(
+            MenubarRadioGroup::new(theme.clone())
+                .item(MenubarRadioItemSpec::new("light", "Light"))
+                .item(MenubarRadioItemSpec::new("dark", "Dark"))
+                .item(MenubarRadioItemSpec::new("system", "System")),
+        )]);
+        let menubar = Menubar::new([profiles, themes])
+            .refine_layout(width.clone())
+            .into_element(cx);
+        let body = centered(cx, menubar);
+        section(cx, "Radio", body)
+    };
+
+    let submenu = {
+        let file = MenubarMenu::new("File").entries([
+            MenubarEntry::Submenu(MenubarItem::new("Share").submenu([
+                MenubarEntry::Item(MenubarItem::new("Email link")),
+                MenubarEntry::Item(MenubarItem::new("Messages")),
+                MenubarEntry::Item(MenubarItem::new("Notes")),
+            ])),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Print...").trailing(MenubarShortcut::new("⌘P").into_element(cx)),
+            ),
+        ]);
+        let edit = MenubarMenu::new("Edit").entries([
+            MenubarEntry::Item(
+                MenubarItem::new("Undo").trailing(MenubarShortcut::new("⌘Z").into_element(cx)),
+            ),
+            MenubarEntry::Item(
+                MenubarItem::new("Redo").trailing(MenubarShortcut::new("⇧⌘Z").into_element(cx)),
+            ),
+            MenubarEntry::Separator,
+            MenubarEntry::Submenu(MenubarItem::new("Find").submenu([
+                MenubarEntry::Item(MenubarItem::new("Find...")),
+                MenubarEntry::Item(MenubarItem::new("Find Next")),
+                MenubarEntry::Item(MenubarItem::new("Find Previous")),
+            ])),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(MenubarItem::new("Cut")),
+            MenubarEntry::Item(MenubarItem::new("Copy")),
+            MenubarEntry::Item(MenubarItem::new("Paste")),
+        ]);
+        let menubar = Menubar::new([file, edit])
+            .refine_layout(width.clone())
+            .into_element(cx);
+        let body = centered(cx, menubar);
+        section(cx, "Submenu", body)
+    };
+
+    let with_icons = {
+        let file = MenubarMenu::new("File").entries([
+            MenubarEntry::Item(
+                MenubarItem::new("New File")
+                    .leading(icon(cx, "lucide.file"))
+                    .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
+            ),
+            MenubarEntry::Item(MenubarItem::new("Open Folder").leading(icon(cx, "lucide.folder"))),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Save")
+                    .leading(icon(cx, "lucide.save"))
+                    .trailing(MenubarShortcut::new("⌘S").into_element(cx)),
+            ),
+        ]);
+        let more = MenubarMenu::new("More").entries([MenubarEntry::Group(MenubarGroup::new([
+            MenubarEntry::Item(MenubarItem::new("Settings").leading(icon(cx, "lucide.settings"))),
+            MenubarEntry::Item(MenubarItem::new("Help").leading(icon(cx, "lucide.info"))),
+            MenubarEntry::Separator,
+            MenubarEntry::Item(
+                MenubarItem::new("Delete")
+                    .leading(icon(cx, "lucide.trash"))
+                    .variant(shadcn::menubar::MenubarItemVariant::Destructive),
+            ),
+        ]))]);
+        let menubar = Menubar::new([file, more])
+            .refine_layout(width.clone())
+            .into_element(cx);
+        let body = centered(cx, menubar);
+        section(cx, "With Icons", body)
+    };
+
+    let rtl = {
+        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                let file = MenubarMenu::new("ملف").entries([
+                    MenubarEntry::Item(
+                        MenubarItem::new("علامة تبويب جديدة")
+                            .trailing(MenubarShortcut::new("⌘T").into_element(cx)),
+                    ),
+                    MenubarEntry::Item(
+                        MenubarItem::new("نافذة جديدة")
+                            .trailing(MenubarShortcut::new("⌘N").into_element(cx)),
+                    ),
+                    MenubarEntry::Separator,
+                    MenubarEntry::Item(
+                        MenubarItem::new("طباعة...")
+                            .trailing(MenubarShortcut::new("⌘P").into_element(cx)),
+                    ),
+                ]);
+                Menubar::new([file])
+                    .refine_layout(width.clone())
+                    .into_element(cx)
+            },
+        );
+        let body = centered(cx, body);
+        section(cx, "RTL", body)
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N6).items_start(),
+        |_cx| vec![demo, checkbox, radio, submenu, with_icons, rtl],
+    )]
 }
 
 fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let intro = shadcn::NavigationMenuItem::new(
-        "intro",
-        "Introduction",
-        vec![
-            cx.text("A basic NavigationMenu item."),
-            cx.text("Content is shown in a popover."),
-        ],
-    );
-    let components = shadcn::NavigationMenuItem::new(
-        "components",
-        "Components",
-        vec![
-            cx.text("This demo is intentionally lightweight."),
-            cx.text("We can expand it to match shadcn/ui registry examples."),
-        ],
-    );
+    #[derive(Default, Clone)]
+    struct NavigationMenuModels {
+        demo_value: Option<Model<Option<Arc<str>>>>,
+        rtl_value: Option<Model<Option<Arc<str>>>>,
+    }
 
-    vec![
-        shadcn::NavigationMenu::uncontrolled(Some("intro"))
-            .indicator(true)
-            .list(shadcn::NavigationMenuList::new([intro, components]))
-            .into_element(cx),
-    ]
+    let theme = Theme::global(&*cx.app).clone();
+
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let state = cx.with_state(NavigationMenuModels::default, |st| st.clone());
+    let demo_value = match state.demo_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(NavigationMenuModels::default, |st| {
+                st.demo_value = Some(model.clone())
+            });
+            model
+        }
+    };
+    let rtl_value = match state.rtl_value {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Arc<str>>);
+            cx.with_state(NavigationMenuModels::default, |st| {
+                st.rtl_value = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let list_item = |cx: &mut ElementContext<'_, App>,
+                     model: Model<Option<Arc<str>>>,
+                     title: &'static str,
+                     description: &'static str,
+                     command: &'static str| {
+        let title_el = cx.text_props(TextProps {
+            layout: Default::default(),
+            text: Arc::from(title),
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: Px(14.0),
+                weight: FontWeight::MEDIUM,
+                slant: Default::default(),
+                line_height: None,
+                letter_spacing_em: None,
+            }),
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+        });
+        let description_el = cx.text_props(TextProps {
+            layout: Default::default(),
+            text: Arc::from(description),
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: Px(14.0),
+                weight: FontWeight::NORMAL,
+                slant: Default::default(),
+                line_height: None,
+                letter_spacing_em: None,
+            }),
+            color: Some(theme.color_required("muted-foreground")),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Ellipsis,
+        });
+
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N1).items_start(),
+            move |_cx| [title_el, description_el],
+        );
+
+        shadcn::NavigationMenuLink::new(model, [body])
+            .label(title)
+            .on_click(command)
+            .into_element(cx)
+    };
+
+    let icon_row = |cx: &mut ElementContext<'_, App>,
+                    model: Model<Option<Arc<str>>>,
+                    icon: &'static str,
+                    label: &'static str,
+                    command: &'static str| {
+        let icon_el = shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
+        let label_el = cx.text(label);
+        let row = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |_cx| [icon_el, label_el],
+        );
+        shadcn::NavigationMenuLink::new(model, [row])
+            .label(label)
+            .on_click(command)
+            .into_element(cx)
+    };
+
+    let demo = {
+        let getting_started = shadcn::NavigationMenuItem::new(
+            "getting_started",
+            "Getting started",
+            [stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_px(Px(384.0)).min_w_0()),
+                |cx| {
+                    vec![
+                        list_item(
+                            cx,
+                            demo_value.clone(),
+                            "Introduction",
+                            "Re-usable components built with Tailwind CSS.",
+                            CMD_APP_OPEN,
+                        ),
+                        list_item(
+                            cx,
+                            demo_value.clone(),
+                            "Installation",
+                            "How to install dependencies and structure your app.",
+                            CMD_APP_OPEN,
+                        ),
+                        list_item(
+                            cx,
+                            demo_value.clone(),
+                            "Typography",
+                            "Styles for headings, paragraphs, lists...etc",
+                            CMD_APP_OPEN,
+                        ),
+                    ]
+                },
+            )],
+        );
+
+        let components = shadcn::NavigationMenuItem::new(
+            "components",
+            "Components",
+            [stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_px(Px(600.0)).min_w_0()),
+                |cx| {
+                    let left = stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(Space::N2).items_start(),
+                        |cx| {
+                            vec![
+                                list_item(
+                                    cx,
+                                    demo_value.clone(),
+                                    "Alert Dialog",
+                                    "A modal dialog that interrupts the user with important content and expects a response.",
+                                    CMD_APP_OPEN,
+                                ),
+                                list_item(
+                                    cx,
+                                    demo_value.clone(),
+                                    "Hover Card",
+                                    "For sighted users to preview content available behind a link.",
+                                    CMD_APP_OPEN,
+                                ),
+                                list_item(
+                                    cx,
+                                    demo_value.clone(),
+                                    "Progress",
+                                    "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
+                                    CMD_APP_OPEN,
+                                ),
+                            ]
+                        },
+                    );
+
+                    let right = stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(Space::N2).items_start(),
+                        |cx| {
+                            vec![
+                                list_item(
+                                    cx,
+                                    demo_value.clone(),
+                                    "Scroll-area",
+                                    "Visually or semantically separates content.",
+                                    CMD_APP_SAVE,
+                                ),
+                                list_item(
+                                    cx,
+                                    demo_value.clone(),
+                                    "Tabs",
+                                    "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
+                                    CMD_APP_SAVE,
+                                ),
+                                list_item(
+                                    cx,
+                                    demo_value.clone(),
+                                    "Tooltip",
+                                    "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
+                                    CMD_APP_SAVE,
+                                ),
+                            ]
+                        },
+                    );
+
+                    [left, right]
+                },
+            )],
+        );
+
+        let with_icon = shadcn::NavigationMenuItem::new(
+            "with_icon",
+            "With Icon",
+            [stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0()),
+                |cx| {
+                    vec![
+                        icon_row(
+                            cx,
+                            demo_value.clone(),
+                            "lucide.circle-alert",
+                            "Backlog",
+                            CMD_APP_OPEN,
+                        ),
+                        icon_row(
+                            cx,
+                            demo_value.clone(),
+                            "lucide.circle-dashed",
+                            "To Do",
+                            CMD_APP_OPEN,
+                        ),
+                        icon_row(
+                            cx,
+                            demo_value.clone(),
+                            "lucide.circle-check",
+                            "Done",
+                            CMD_APP_OPEN,
+                        ),
+                    ]
+                },
+            )],
+        );
+
+        let docs = shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty());
+
+        let menu = shadcn::NavigationMenu::new(demo_value.clone())
+            .list(shadcn::NavigationMenuList::new([
+                getting_started,
+                components,
+                with_icon,
+                docs,
+            ]))
+            .into_element(cx);
+        let body = centered(cx, menu);
+        section(cx, "Demo", body)
+    };
+
+    let rtl = {
+        let menu = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                let getting_started = shadcn::NavigationMenuItem::new(
+                    "getting_started",
+                    "البدء",
+                    [stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .gap(Space::N1)
+                            .items_start()
+                            .layout(LayoutRefinement::default().w_px(Px(384.0)).min_w_0()),
+                        |cx| {
+                            vec![
+                                list_item(
+                                    cx,
+                                    rtl_value.clone(),
+                                    "مقدمة",
+                                    "مكونات قابلة لإعادة الاستخدام مبنية باستخدام Tailwind CSS.",
+                                    CMD_APP_OPEN,
+                                ),
+                                list_item(
+                                    cx,
+                                    rtl_value.clone(),
+                                    "التثبيت",
+                                    "كيفية تثبيت التبعيات وتنظيم تطبيقك.",
+                                    CMD_APP_OPEN,
+                                ),
+                                list_item(
+                                    cx,
+                                    rtl_value.clone(),
+                                    "الطباعة",
+                                    "أنماط للعناوين والفقرات والقوائم...إلخ",
+                                    CMD_APP_OPEN,
+                                ),
+                            ]
+                        },
+                    )],
+                );
+
+                let components = shadcn::NavigationMenuItem::new(
+                    "components",
+                    "المكونات",
+                    [stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .gap(Space::N2)
+                            .items_start()
+                            .layout(LayoutRefinement::default().w_px(Px(600.0)).min_w_0()),
+                        |cx| {
+                            let left = stack::vstack(
+                                cx,
+                                stack::VStackProps::default().gap(Space::N2).items_start(),
+                                |cx| {
+                                    vec![
+                                        list_item(
+                                            cx,
+                                            rtl_value.clone(),
+                                            "حوار التنبيه",
+                                            "حوار نافذة يقطع المستخدم بمحتوى مهم ويتوقع استجابة.",
+                                            CMD_APP_OPEN,
+                                        ),
+                                        list_item(
+                                            cx,
+                                            rtl_value.clone(),
+                                            "بطاقة التحويم",
+                                            "للمستخدمين المبصرين لمعاينة المحتوى المتاح خلف الرابط.",
+                                            CMD_APP_OPEN,
+                                        ),
+                                        list_item(
+                                            cx,
+                                            rtl_value.clone(),
+                                            "التقدم",
+                                            "يعرض مؤشرًا يوضح تقدم إتمام المهمة، عادةً يتم عرضه كشريط تقدم.",
+                                            CMD_APP_OPEN,
+                                        ),
+                                    ]
+                                },
+                            );
+
+                            let right = stack::vstack(
+                                cx,
+                                stack::VStackProps::default().gap(Space::N2).items_start(),
+                                |cx| {
+                                    vec![
+                                        list_item(
+                                            cx,
+                                            rtl_value.clone(),
+                                            "منطقة التمرير",
+                                            "يفصل المحتوى بصريًا أو دلاليًا.",
+                                            CMD_APP_SAVE,
+                                        ),
+                                        list_item(
+                                            cx,
+                                            rtl_value.clone(),
+                                            "التبويبات",
+                                            "مجموعة من أقسام المحتوى المتعددة الطبقات—المعروفة بألواح التبويب—التي يتم عرضها واحدة في كل مرة.",
+                                            CMD_APP_SAVE,
+                                        ),
+                                        list_item(
+                                            cx,
+                                            rtl_value.clone(),
+                                            "تلميح",
+                                            "نافذة منبثقة تعرض معلومات متعلقة بعنصر عندما يتلقى العنصر التركيز على لوحة المفاتيح أو عند تحويم الماوس فوقه.",
+                                            CMD_APP_SAVE,
+                                        ),
+                                    ]
+                                },
+                            );
+
+                            [left, right]
+                        },
+                    )],
+                );
+
+                let with_icon = shadcn::NavigationMenuItem::new(
+                    "with_icon",
+                    "مع أيقونة",
+                    [stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .gap(Space::N1)
+                            .items_start()
+                            .layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0()),
+                        |cx| {
+                            vec![
+                                icon_row(
+                                    cx,
+                                    rtl_value.clone(),
+                                    "lucide.circle-alert",
+                                    "قائمة الانتظار",
+                                    CMD_APP_OPEN,
+                                ),
+                                icon_row(
+                                    cx,
+                                    rtl_value.clone(),
+                                    "lucide.circle-dashed",
+                                    "المهام",
+                                    CMD_APP_OPEN,
+                                ),
+                                icon_row(
+                                    cx,
+                                    rtl_value.clone(),
+                                    "lucide.circle-check",
+                                    "منجز",
+                                    CMD_APP_OPEN,
+                                ),
+                            ]
+                        },
+                    )],
+                );
+
+                let docs = shadcn::NavigationMenuItem::new("docs", "الوثائق", std::iter::empty());
+
+                shadcn::NavigationMenu::new(rtl_value.clone())
+                    .list(shadcn::NavigationMenuList::new([
+                        getting_started,
+                        components,
+                        with_icon,
+                        docs,
+                    ]))
+                    .into_element(cx)
+            },
+        );
+        let body = centered(cx, menu);
+        section(cx, "RTL", body)
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N6).items_start(),
+        |_cx| vec![demo, rtl],
+    )]
 }
 
 fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -5219,6 +7680,8 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     #[derive(Default)]
     struct SidebarModels {
         collapsed: Option<Model<bool>>,
+        selected: Option<Model<Arc<str>>>,
+        selected_rtl: Option<Model<Arc<str>>>,
     }
 
     let collapsed = cx.with_state(SidebarModels::default, |st| st.collapsed.clone());
@@ -5239,75 +7702,304 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         .copied()
         .unwrap_or(false);
 
-    let header = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Button::new("Toggle")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .toggle_model(collapsed.clone())
-                    .into_element(cx),
-                cx.text(if is_collapsed {
-                    "collapsed"
-                } else {
-                    "expanded"
-                }),
-            ]
-        },
-    );
+    let selected = cx.with_state(SidebarModels::default, |st| st.selected.clone());
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
+            cx.with_state(SidebarModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
+            model
+        }
+    };
 
-    let sidebar = shadcn::Sidebar::new([
-        shadcn::SidebarHeader::new([cx.text("Workspace")]).into_element(cx),
-        shadcn::SidebarContent::new([shadcn::SidebarGroup::new([
-            shadcn::SidebarGroupLabel::new("General").into_element(cx),
-            shadcn::SidebarMenu::new([
-                shadcn::SidebarMenuItem::new(
-                    shadcn::SidebarMenuButton::new("Home")
-                        .icon(fret_icons::IconId::new_static("lucide.home"))
-                        .active(true)
-                        .collapsed(is_collapsed)
-                        .on_click(CMD_APP_OPEN)
+    let selected_rtl = cx.with_state(SidebarModels::default, |st| st.selected_rtl.clone());
+    let selected_rtl = match selected_rtl {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
+            cx.with_state(SidebarModels::default, |st| {
+                st.selected_rtl = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let selected_value = cx.get_model_cloned(&selected, Invalidation::Layout);
+    let selected_value = selected_value.unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+    let menu_button = |cx: &mut ElementContext<'_, App>,
+                       selected_model: Model<Arc<str>>,
+                       active_value: &Arc<str>,
+                       value: &'static str,
+                       label: &'static str,
+                       icon: &'static str,
+                       collapsed: bool| {
+        let is_active = active_value.as_ref() == value;
+        let selected_for_activate = selected_model.clone();
+        let value_for_activate: Arc<str> = Arc::from(value);
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+            let _ = host
+                .models_mut()
+                .update(&selected_for_activate, |v| *v = value_for_activate.clone());
+            host.request_redraw(action_cx.window);
+        });
+
+        shadcn::SidebarMenuButton::new(label)
+            .icon(fret_icons::IconId::new_static(icon))
+            .active(is_active)
+            .collapsed(collapsed)
+            .on_activate(on_activate)
+            .into_element(cx)
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let demo = {
+        let toolbar = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            |cx| {
+                vec![
+                    shadcn::Button::new("Toggle")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .toggle_model(collapsed.clone())
                         .into_element(cx),
-                )
+                    cx.text(if is_collapsed {
+                        "collapsed"
+                    } else {
+                        "expanded"
+                    }),
+                    cx.text(format!("active={}", selected_value.as_ref())),
+                ]
+            },
+        );
+
+        let platform = shadcn::SidebarGroup::new([
+            shadcn::SidebarGroupLabel::new("Platform")
+                .collapsed(is_collapsed)
                 .into_element(cx),
-                shadcn::SidebarMenuItem::new(
-                    shadcn::SidebarMenuButton::new("Settings")
-                        .icon(fret_icons::IconId::new_static("lucide.settings"))
-                        .collapsed(is_collapsed)
-                        .on_click(CMD_APP_SETTINGS)
-                        .into_element(cx),
-                )
+            shadcn::SidebarMenu::new([
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "playground",
+                    "Playground",
+                    "lucide.square-terminal",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "models",
+                    "Models",
+                    "lucide.bot",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "documentation",
+                    "Documentation",
+                    "lucide.book-open",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "settings",
+                    "Settings",
+                    "lucide.settings-2",
+                    is_collapsed,
+                ))
                 .into_element(cx),
             ])
             .into_element(cx),
         ])
-        .into_element(cx)])
+        .into_element(cx);
+
+        let projects = shadcn::SidebarGroup::new([
+            shadcn::SidebarGroupLabel::new("Projects")
+                .collapsed(is_collapsed)
+                .into_element(cx),
+            shadcn::SidebarMenu::new([
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "design",
+                    "Design Engineering",
+                    "lucide.frame",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "sales",
+                    "Sales & Marketing",
+                    "lucide.pie-chart",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+                shadcn::SidebarMenuItem::new(menu_button(
+                    cx,
+                    selected.clone(),
+                    &selected_value,
+                    "travel",
+                    "Travel",
+                    "lucide.map",
+                    is_collapsed,
+                ))
+                .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .into_element(cx);
+
+        let sidebar = shadcn::Sidebar::new([
+            shadcn::SidebarHeader::new([cx.text("Sidebar")]).into_element(cx),
+            shadcn::SidebarContent::new([platform, projects])
+                .collapsed(is_collapsed)
+                .into_element(cx),
+            shadcn::SidebarFooter::new([cx.text("User")]).into_element(cx),
+        ])
         .collapsed(is_collapsed)
-        .into_element(cx),
-        shadcn::SidebarFooter::new([cx.text("Footer")]).into_element(cx),
-    ])
-    .collapsed(is_collapsed)
-    .into_element(cx);
+        .refine_layout(LayoutRefinement::default().h_px(Px(360.0)))
+        .into_element(cx);
 
-    let content = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Content").into_element(cx)])
+        let content = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![shadcn::CardTitle::new("Content").into_element(cx)])
+                .into_element(cx),
+            shadcn::CardContent::new(vec![
+                cx.text("In upstream shadcn/ui, SidebarProvider/Trigger/Rail/Inset exist."),
+                cx.text(
+                    "In Fret, the gallery demo drives `collapsed` via a model (manual toggle).",
+                ),
+            ])
             .into_element(cx),
-        shadcn::CardContent::new(vec![cx.text("Sidebar is a composable surface.")])
-            .into_element(cx),
-    ])
-    .refine_layout(LayoutRefinement::default().w_full().h_full())
-    .into_element(cx);
+        ])
+        .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+        .into_element(cx);
 
-    vec![
-        header,
-        stack::hstack(
+        let frame = stack::hstack(
             cx,
-            stack::HStackProps::default().gap(Space::N4).items_start(),
+            stack::HStackProps::default()
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
             |_cx| vec![sidebar, content],
-        ),
-    ]
+        );
+
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            |_cx| vec![toolbar, frame],
+        );
+        section(cx, "Demo", body)
+    };
+
+    let rtl = {
+        let menu = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                let selected_value = cx.get_model_cloned(&selected_rtl, Invalidation::Layout);
+                let selected_value = selected_value.unwrap_or_else(|| Arc::<str>::from("<none>"));
+
+                let platform = shadcn::SidebarGroup::new([
+                    shadcn::SidebarGroupLabel::new("المنصة")
+                        .collapsed(false)
+                        .into_element(cx),
+                    shadcn::SidebarMenu::new([
+                        shadcn::SidebarMenuItem::new(menu_button(
+                            cx,
+                            selected_rtl.clone(),
+                            &selected_value,
+                            "playground",
+                            "ملعب",
+                            "lucide.square-terminal",
+                            false,
+                        ))
+                        .into_element(cx),
+                        shadcn::SidebarMenuItem::new(menu_button(
+                            cx,
+                            selected_rtl.clone(),
+                            &selected_value,
+                            "documentation",
+                            "التوثيق",
+                            "lucide.book-open",
+                            false,
+                        ))
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx);
+
+                let sidebar = shadcn::Sidebar::new([
+                    shadcn::SidebarHeader::new([cx.text("الشريط الجانبي")]).into_element(cx),
+                    shadcn::SidebarContent::new([platform])
+                        .collapsed(false)
+                        .into_element(cx),
+                    shadcn::SidebarFooter::new([cx.text("مستخدم")]).into_element(cx),
+                ])
+                .collapsed(false)
+                .refine_layout(LayoutRefinement::default().h_px(Px(280.0)))
+                .into_element(cx);
+
+                let content = shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![shadcn::CardTitle::new("RTL").into_element(cx)])
+                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        cx.text("Sidebar does not currently expose `dir`/`side` props."),
+                        cx.text("This preview uses the direction provider + right-side placement."),
+                    ])
+                    .into_element(cx),
+                ])
+                .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+                .into_element(cx);
+
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N4)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| vec![content, sidebar],
+                )
+            },
+        );
+        section(cx, "RTL", menu)
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N6).items_start(),
+        |_cx| vec![demo, rtl],
+    )]
 }
 
 fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -7254,13 +9946,8 @@ fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         props.background =
             Some(theme_for_anchor.color_required("md.sys.color.surface-container-low"));
         props.corner_radii = Corners::all(Px(8.0));
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(Arc::<str>::from(test_id)),
-                ..Default::default()
-            },
-            move |cx| vec![cx.container(props, |_cx| Vec::<AnyElement>::new())],
-        )
+        cx.container(props, |_cx| Vec::<AnyElement>::new())
+            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
     };
 
     let row = stack::hstack(
@@ -8171,6 +10858,304 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 ]
             },
         ),
+    ]
+}
+
+fn preview_material3_autocomplete(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<String>,
+    disabled: Model<bool>,
+    error: Model<bool>,
+    dialog_open: Model<bool>,
+) -> Vec<AnyElement> {
+    let disabled_now = cx
+        .get_model_copied(&disabled, Invalidation::Layout)
+        .unwrap_or(false);
+    let error_now = cx
+        .get_model_copied(&error, Invalidation::Layout)
+        .unwrap_or(false);
+
+    #[derive(Default)]
+    struct LocalState {
+        selected_value: Option<Model<Option<Arc<str>>>>,
+        exposed_selected_value: Option<Model<Option<Arc<str>>>>,
+        exposed_query: Option<Model<String>>,
+    }
+
+    let selected_value = cx.with_state(LocalState::default, |st| st.selected_value.clone());
+    let selected_value = if let Some(model) = selected_value {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(None::<Arc<str>>);
+        cx.with_state(LocalState::default, |st| {
+            st.selected_value = Some(model.clone())
+        });
+        model
+    };
+
+    let exposed_selected_value =
+        cx.with_state(LocalState::default, |st| st.exposed_selected_value.clone());
+    let exposed_selected_value = if let Some(model) = exposed_selected_value {
+        model
+    } else {
+        let model = cx
+            .app
+            .models_mut()
+            .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+        cx.with_state(LocalState::default, |st| {
+            st.exposed_selected_value = Some(model.clone())
+        });
+        model
+    };
+
+    let exposed_query = cx.with_state(LocalState::default, |st| st.exposed_query.clone());
+    let exposed_query = if let Some(model) = exposed_query {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(String::new());
+        cx.with_state(LocalState::default, |st| {
+            st.exposed_query = Some(model.clone())
+        });
+        model
+    };
+
+    let query_now = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or_default();
+    let selected_now = cx
+        .get_model_cloned(&selected_value, Invalidation::Layout)
+        .unwrap_or(None);
+    let selected_label = selected_now.as_deref().unwrap_or("<none>");
+
+    let exposed_selected_now = cx
+        .get_model_cloned(&exposed_selected_value, Invalidation::Layout)
+        .unwrap_or(None);
+    let exposed_selected_label = exposed_selected_now.as_deref().unwrap_or("<none>");
+
+    let toggles = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                cx.text("disabled"),
+                material3::Switch::new(disabled.clone())
+                    .a11y_label("Disable autocomplete")
+                    .test_id("ui-gallery-material3-autocomplete-disabled")
+                    .into_element(cx),
+                cx.text("error"),
+                material3::Switch::new(error.clone())
+                    .a11y_label("Toggle autocomplete error state")
+                    .test_id("ui-gallery-material3-autocomplete-error")
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let items: Arc<[material3::AutocompleteItem]> = Arc::from(vec![
+        material3::AutocompleteItem::new("alpha", "Alpha"),
+        material3::AutocompleteItem::new("beta", "Beta"),
+        material3::AutocompleteItem::new("gamma", "Gamma"),
+        material3::AutocompleteItem::new("delta", "Delta"),
+        material3::AutocompleteItem::new("epsilon", "Epsilon"),
+        material3::AutocompleteItem::new("zeta", "Zeta"),
+    ]);
+
+    let supporting = if error_now {
+        "Error: required"
+    } else {
+        "Supporting text"
+    };
+
+    let outlined = material3::Autocomplete::new(value.clone())
+        .selected_value(selected_value.clone())
+        .variant(material3::AutocompleteVariant::Outlined)
+        .label("Search")
+        .placeholder("Type to filter")
+        .supporting_text(supporting)
+        .items(items.clone())
+        .disabled(disabled_now)
+        .error(error_now)
+        .a11y_label("autocomplete outlined")
+        .test_id("ui-gallery-material3-autocomplete")
+        .into_element(cx);
+
+    let outlined_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Outlined").into_element(cx),
+            shadcn::CardDescription::new(
+                "Combobox-style: focus stays on the input; the active option is exposed via active-descendant.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![outlined]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let filled = material3::Autocomplete::new(value.clone())
+        .selected_value(selected_value.clone())
+        .variant(material3::AutocompleteVariant::Filled)
+        .label("Search (filled)")
+        .placeholder("Type to filter")
+        .supporting_text(supporting)
+        .items(items.clone())
+        .disabled(disabled_now)
+        .error(error_now)
+        .a11y_label("autocomplete filled")
+        .test_id("ui-gallery-material3-autocomplete-filled")
+        .into_element(cx);
+
+    let filled_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Filled").into_element(cx),
+            shadcn::CardDescription::new(
+                "Filled container + active indicator outcomes (token-driven).",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![filled]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let exposed = material3::ExposedDropdown::new(exposed_selected_value.clone())
+        .query(exposed_query.clone())
+        .variant(material3::AutocompleteVariant::Outlined)
+        .label("Searchable select")
+        .placeholder("Type to filter")
+        .supporting_text(
+            "Policy: when the input blurs, the query reverts to the committed selection.",
+        )
+        .items(items.clone())
+        .disabled(disabled_now)
+        .error(error_now)
+        .a11y_label("exposed dropdown")
+        .test_id("ui-gallery-material3-exposed-dropdown")
+        .into_element(cx);
+
+    let exposed_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Exposed dropdown (composition)").into_element(cx),
+            shadcn::CardDescription::new(
+                "Compose-style: a committed selection model drives the closed display, while the query stays editable while focused.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![exposed]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let open_action: fret_ui::action::OnActivate = {
+        let dialog_open = dialog_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&dialog_open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let close_action: fret_ui::action::OnActivate = {
+        let dialog_open = dialog_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&dialog_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let dialog = material3::Dialog::new(dialog_open.clone())
+        .headline("Autocomplete (Dialog probe)")
+        .supporting_text("Overlay should anchor correctly inside a modal dialog without clipping.")
+        .actions(vec![material3::DialogAction::new("Close").on_activate(close_action)])
+        .test_id("ui-gallery-material3-autocomplete-dialog")
+        .into_element(
+            cx,
+            move |cx| {
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N4),
+                    move |cx| {
+                        vec![
+                            material3::Button::new("Open dialog probe")
+                                .variant(material3::ButtonVariant::Filled)
+                                .on_activate(open_action.clone())
+                                .test_id("ui-gallery-material3-autocomplete-dialog-open")
+                                .into_element(cx),
+                            cx.text("Tip: focus the autocomplete and press ArrowDown; keep typing while the menu is open."),
+                        ]
+                    },
+                )
+            },
+            {
+                let items = items.clone();
+                let value = value.clone();
+                move |cx| {
+                    let spacer = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = fret_ui::element::Length::Fill;
+                                l.size.height = fret_ui::element::Length::Px(Px(360.0));
+                                l
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    );
+
+                    vec![stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N4),
+                        move |cx| {
+                            vec![
+                                material3::Autocomplete::new(value.clone())
+                                    .selected_value(selected_value.clone())
+                                    .variant(material3::AutocompleteVariant::Outlined)
+                                    .label("Dialog autocomplete")
+                                    .placeholder("Type to filter")
+                                    .supporting_text("Bottom-edge clamping probe: open near the dialog bottom.")
+                                    .items(items.clone())
+                                    .a11y_label("autocomplete dialog")
+                                    .test_id("ui-gallery-material3-autocomplete-dialog-field")
+                                    .into_element(cx),
+                                spacer,
+                                material3::Autocomplete::new(value.clone())
+                                    .selected_value(selected_value.clone())
+                                    .variant(material3::AutocompleteVariant::Outlined)
+                                    .label("Dialog autocomplete (bottom)")
+                                    .placeholder("Type to filter")
+                                    .supporting_text("Open menu near the dialog bottom edge.")
+                                    .items(items.clone())
+                                    .a11y_label("autocomplete dialog bottom")
+                                    .test_id("ui-gallery-material3-autocomplete-dialog-field-bottom")
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                }
+            },
+        );
+
+    vec![
+        cx.text("Material 3 Autocomplete: editable combobox input with a listbox popover menu."),
+        toggles,
+        cx.text(Arc::from(format!(
+            "Query: \"{}\" | Selected value: {}",
+            query_now, selected_label
+        ))),
+        cx.text(Arc::from(format!(
+            "Exposed dropdown committed value: {}",
+            exposed_selected_label
+        ))),
+        exposed_card,
+        outlined_card,
+        filled_card,
+        dialog,
     ]
 }
 
@@ -9419,108 +12404,443 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 }
 
 fn preview_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let left = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Card").into_element(cx),
-            shadcn::CardDescription::new("A composed surface primitive.").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![
-            cx.text("Cards are used as building blocks for many gallery sections."),
-            stack::hstack(
+    #[derive(Default)]
+    struct CardModels {
+        email: Option<Model<String>>,
+        password: Option<Model<String>>,
+    }
+
+    let email = cx.with_state(CardModels::default, |st| st.email.clone());
+    let email = match email {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(CardModels::default, |st| st.email = Some(model.clone()));
+            model
+        }
+    };
+
+    let password = cx.with_state(CardModels::default, |st| st.password.clone());
+    let password = match password {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(CardModels::default, |st| st.password = Some(model.clone()));
+            model
+        }
+    };
+
+    let max_w_sm = LayoutRefinement::default()
+        .w_full()
+        .max_w(MetricRef::Px(Px(384.0)))
+        .min_w_0();
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
+
+    let demo = {
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Login to your account").into_element(cx),
+                shadcn::CardDescription::new("Enter your email below to login to your account")
+                    .into_element(cx),
+                shadcn::CardAction::new(vec![
+                    shadcn::Button::new("Sign Up")
+                        .variant(shadcn::ButtonVariant::Link)
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![stack::vstack(
                 cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
+                stack::VStackProps::default()
+                    .gap(Space::N6)
+                    .layout(LayoutRefinement::default().w_full()),
+                |cx| {
+                    let email =
+                        stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
+                            vec![
+                                shadcn::Label::new("Email").into_element(cx),
+                                shadcn::Input::new(email.clone())
+                                    .a11y_label("Email")
+                                    .placeholder("m@example.com")
+                                    .into_element(cx),
+                            ]
+                        });
+
+                    let password =
+                        stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
+                            vec![
+                                stack::hstack(
+                                    cx,
+                                    stack::HStackProps::default()
+                                        .layout(LayoutRefinement::default().w_full())
+                                        .justify_between()
+                                        .items_center(),
+                                    |cx| {
+                                        vec![
+                                            shadcn::Label::new("Password").into_element(cx),
+                                            shadcn::Button::new("Forgot your password?")
+                                                .variant(shadcn::ButtonVariant::Link)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                ),
+                                shadcn::Input::new(password.clone())
+                                    .a11y_label("Password")
+                                    .placeholder("••••••••")
+                                    .into_element(cx),
+                            ]
+                        });
+
+                    vec![email, password]
+                },
+            )])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full()),
                 |cx| {
                     vec![
-                        shadcn::Badge::new("layout").into_element(cx),
-                        shadcn::Badge::new("chrome")
-                            .variant(shadcn::BadgeVariant::Secondary)
+                        shadcn::Button::new("Login")
+                            .refine_layout(LayoutRefinement::default().w_full())
                             .into_element(cx),
-                        shadcn::Badge::new("token")
-                            .variant(shadcn::BadgeVariant::Outline)
+                        shadcn::Button::new("Login with Google")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .refine_layout(LayoutRefinement::default().w_full())
                             .into_element(cx),
                     ]
                 },
-            ),
+            )])
+            .into_element(cx),
         ])
-        .into_element(cx),
-        shadcn::CardFooter::new(vec![
-            shadcn::Button::new("Cancel")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .into_element(cx),
-            shadcn::Button::new("Continue").into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-    .into_element(cx);
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx);
 
-    let right = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![
-            shadcn::CardTitle::new("Embedded Content").into_element(cx),
-            shadcn::CardDescription::new("Cards stretch their sections by default.")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new(vec![
-            shadcn::Button::new("Primary").into_element(cx),
-            shadcn::Button::new("Outline")
+        centered(cx, card)
+    };
+
+    let size = {
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Small Card").into_element(cx),
+                shadcn::CardDescription::new("This card uses the small size variant.")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![cx.text(
+                "The card component supports a size prop that can be set to \"sm\" for a more compact appearance.",
+            )])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![shadcn::Button::new("Action")
                 .variant(shadcn::ButtonVariant::Outline)
-                .into_element(cx),
+                .size(shadcn::ButtonSize::Sm)
+                .refine_layout(LayoutRefinement::default().flex_1().w_full())
+                .into_element(cx)])
+            .into_element(cx),
         ])
-        .into_element(cx),
-    ])
-    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-    .into_element(cx);
+        .size(shadcn::CardSize::Sm)
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx);
 
-    vec![stack::hstack(
+        centered(cx, card)
+    };
+
+    let image = {
+        let theme = Theme::global(&*cx.app).clone();
+        let cover_bg = theme.color_required("muted");
+
+        let cover = shadcn::AspectRatio::new(
+            16.0 / 9.0,
+            cx.container(
+                fret_ui::element::ContainerProps {
+                    background: Some(cover_bg),
+                    ..Default::default()
+                },
+                |cx| vec![cx.text("Event cover")],
+            ),
+        )
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx);
+
+        let card = shadcn::Card::new(vec![
+            cover,
+            shadcn::CardHeader::new(vec![
+                shadcn::CardAction::new(vec![
+                    shadcn::Badge::new("Featured")
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::CardTitle::new("Design systems meetup").into_element(cx),
+                shadcn::CardDescription::new(
+                    "A practical talk on component APIs, accessibility, and shipping faster.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![
+                shadcn::Button::new("View Event")
+                    .refine_layout(LayoutRefinement::default().flex_1().w_full())
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_style(ChromeRefinement::default().pt(Space::N0))
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx);
+
+        centered(cx, card)
+    };
+
+    vec![stack::vstack(
         cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4)
-            .items_stretch(),
-        |_cx| [left, right],
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                section(cx, "Demo", demo),
+                section(cx, "Size", size),
+                section(cx, "Image", image),
+            ]
+        },
     )]
 }
 
 fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            [
-                shadcn::Badge::new("Default").into_element(cx),
-                shadcn::Badge::new("Secondary")
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-                shadcn::Badge::new("Destructive")
-                    .variant(shadcn::BadgeVariant::Destructive)
-                    .into_element(cx),
-                shadcn::Badge::new("Outline")
-                    .variant(shadcn::BadgeVariant::Outline)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let theme = Theme::global(&*cx.app).clone();
 
-    vec![
-        row,
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let row = |cx: &mut ElementContext<'_, App>, children: Vec<AnyElement>| {
         stack::hstack(
             cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
+            stack::HStackProps::default()
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full()),
+            move |_cx| children,
+        )
+    };
+
+    let badge_icon = |cx: &mut ElementContext<'_, App>, name: &'static str, fg: ColorRef| {
+        shadcn::icon::icon_with(
+            cx,
+            fret_icons::IconId::new_static(name),
+            Some(Px(12.0)),
+            Some(fg),
+        )
+    };
+
+    let variants = {
+        let children = vec![
+            shadcn::Badge::new("Default").into_element(cx),
+            shadcn::Badge::new("Secondary")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+            shadcn::Badge::new("Destructive")
+                .variant(shadcn::BadgeVariant::Destructive)
+                .into_element(cx),
+            shadcn::Badge::new("Outline")
+                .variant(shadcn::BadgeVariant::Outline)
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "Variants", body)
+    };
+
+    let with_icon = {
+        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+
+        let children = vec![
+            shadcn::Badge::new("Verified")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .children([badge_icon(cx, "lucide.badge-check", secondary_fg.clone())])
+                .into_element(cx),
+            shadcn::Badge::new("Bookmark")
+                .variant(shadcn::BadgeVariant::Outline)
+                .children([badge_icon(cx, "lucide.bookmark", outline_fg.clone())])
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "With Icon", body)
+    };
+
+    let with_spinner = {
+        let destructive_fg = ColorRef::Color(theme.color_required("destructive-foreground"));
+        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+
+        let children = vec![
+            shadcn::Badge::new("Deleting")
+                .variant(shadcn::BadgeVariant::Destructive)
+                .children([shadcn::Spinner::new()
+                    .color(destructive_fg.clone())
+                    .into_element(cx)])
+                .into_element(cx),
+            shadcn::Badge::new("Generating")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .children([shadcn::Spinner::new()
+                    .color(secondary_fg.clone())
+                    .into_element(cx)])
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "With Spinner", body)
+    };
+
+    let link = {
+        let outline_fg = ColorRef::Color(theme.color_required("foreground"));
+
+        let children = vec![
+            shadcn::Badge::new("Open Link")
+                .variant(shadcn::BadgeVariant::Outline)
+                .children([badge_icon(cx, "lucide.arrow-up-right", outline_fg.clone())])
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "Link", body)
+    };
+
+    let custom_colors = {
+        let border_transparent =
+            ChromeRefinement::default().border_color(ColorRef::Color(CoreColor::TRANSPARENT));
+
+        let children = vec![
+            shadcn::Badge::new("Blue")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.90,
+                            g: 0.95,
+                            b: 1.00,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Green")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.91,
+                            g: 0.98,
+                            b: 0.91,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Sky")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.90,
+                            g: 0.97,
+                            b: 1.00,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Purple")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 0.95,
+                            g: 0.92,
+                            b: 1.00,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+            shadcn::Badge::new("Red")
+                .variant(shadcn::BadgeVariant::Outline)
+                .refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(CoreColor {
+                            r: 1.00,
+                            g: 0.92,
+                            b: 0.92,
+                            a: 1.0,
+                        }))
+                        .merge(border_transparent.clone()),
+                )
+                .into_element(cx),
+        ];
+        let body = row(cx, children);
+        section(cx, "Custom Colors", body)
+    };
+
+    let rtl = {
+        let secondary_fg = ColorRef::Color(theme.color_required("secondary-foreground"));
+
+        let body = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
-                vec![
-                    shadcn::Button::new("Filter")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .into_element(cx),
-                    shadcn::Badge::new("new")
+                let children = vec![
+                    shadcn::Badge::new("شارة").into_element(cx),
+                    shadcn::Badge::new("ثانوي")
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
-                    cx.text("Badges work well inline with buttons and text."),
-                ]
+                    shadcn::Badge::new("متحقق")
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .children([badge_icon(cx, "lucide.badge-check", secondary_fg.clone())])
+                        .into_element(cx),
+                ];
+                row(cx, children)
             },
-        ),
-    ]
+        );
+        section(cx, "RTL", body)
+    };
+
+    vec![stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| vec![variants, with_icon, with_spinner, link, custom_colors, rtl],
+    )]
 }
 
 fn preview_avatar(
@@ -9668,13 +12988,47 @@ fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
 fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     cx.keyed("ui_gallery.slider_page", |cx| {
+        #[derive(Default)]
+        struct SliderPageState {
+            last_commit: Option<Model<Vec<f32>>>,
+        }
+
+        let last_commit = cx.with_state(SliderPageState::default, |st| st.last_commit.clone());
+        let last_commit = match last_commit {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(Vec::<f32>::new());
+                cx.with_state(SliderPageState::default, |st| {
+                    st.last_commit = Some(model.clone());
+                });
+                model
+            }
+        };
+
         let single = cx.keyed("ui_gallery.slider.single", |cx| {
+            let last_commit_for_cb = last_commit.clone();
             shadcn::Slider::new_controllable(cx, None, || vec![35.0])
                 .range(0.0, 100.0)
                 .test_id("ui-gallery-slider-single")
                 .a11y_label("Single value slider")
+                .on_value_commit(move |host, _cx, values| {
+                    let _ = host.models_mut().update(&last_commit_for_cb, |v| {
+                        *v = values;
+                    });
+                })
                 .into_element(cx)
         });
+
+        let last_commit_values = cx
+            .watch_model(&last_commit)
+            .layout()
+            .cloned()
+            .unwrap_or_default();
+        let last_commit_text = if last_commit_values.is_empty() {
+            "<none>".to_string()
+        } else {
+            format!("{last_commit_values:?}")
+        };
 
         let range = cx.keyed("ui_gallery.slider.range", |cx| {
             shadcn::Slider::new_controllable(cx, None, || vec![20.0, 80.0])
@@ -9693,13 +13047,48 @@ fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 .into_element(cx)
         });
 
+        let inverted = cx.keyed("ui_gallery.slider.inverted", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+                .range(0.0, 100.0)
+                .inverted(true)
+                .test_id("ui-gallery-slider-inverted")
+                .a11y_label("Inverted slider")
+                .into_element(cx)
+        });
+
+        let rtl = cx.keyed("ui_gallery.slider.rtl", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+                .range(0.0, 100.0)
+                .dir(fret_ui_kit::primitives::direction::LayoutDirection::Rtl)
+                .test_id("ui-gallery-slider-rtl")
+                .a11y_label("RTL slider")
+                .into_element(cx)
+        });
+
+        let vertical = cx.keyed("ui_gallery.slider.vertical", |cx| {
+            shadcn::Slider::new_controllable(cx, None, || vec![60.0])
+                .range(0.0, 100.0)
+                .orientation(fret_ui_kit::primitives::slider::SliderOrientation::Vertical)
+                .refine_layout(LayoutRefinement::default().h_px(Px(176.0)))
+                .test_id("ui-gallery-slider-vertical")
+                .a11y_label("Vertical slider")
+                .into_element(cx)
+        });
+
         let items: Vec<AnyElement> = vec![
             cx.text("Single value"),
             single,
+            cx.text(format!("Last commit: {last_commit_text}")),
             cx.text("Range (two thumbs)"),
             range,
             cx.text("Disabled"),
             disabled,
+            cx.text("Inverted"),
+            inverted,
+            cx.text("RTL"),
+            rtl,
+            cx.text("Vertical"),
+            vertical,
         ];
 
         vec![
@@ -9956,6 +13345,9 @@ fn preview_combobox(
             shadcn::ComboboxItem::new("disabled", "Disabled").disabled(true),
         ])
         .into_element(cx);
+    let combo = combo.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-combobox-trigger"),
+    );
 
     let selected = cx
         .app
@@ -9968,11 +13360,15 @@ fn preview_combobox(
         .get_model_cloned(&query, Invalidation::Layout)
         .unwrap_or_default();
 
-    vec![
-        combo,
-        cx.text(format!("Selected: {selected}")),
-        cx.text(format!("Query: {query_text}")),
-    ]
+    let selected_label = cx.text(format!("Selected: {selected}")).attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .test_id("ui-gallery-combobox-selected-label"),
+    );
+    let query_label = cx.text(format!("Query: {query_text}")).attach_semantics(
+        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-combobox-query-label"),
+    );
+
+    vec![combo, selected_label, query_label]
 }
 
 fn preview_date_picker(
@@ -10042,13 +13438,10 @@ fn preview_resizable(
             ])
             .into_element(cx);
 
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                label: Some(Arc::<str>::from("Debug:ui-gallery:resizable-panels")),
-                test_id: Some(Arc::<str>::from("ui-gallery-resizable-panels")),
-                ..Default::default()
-            },
-            move |_cx| [root],
+        root.attach_semantics(
+            SemanticsDecoration::default()
+                .label("Debug:ui-gallery:resizable-panels")
+                .test_id("ui-gallery-resizable-panels"),
         )
     };
 
@@ -10184,26 +13577,14 @@ fn preview_data_table(
                     _ => cx.text("?"),
                 };
 
-                cx.semantics(
-                    fret_ui::element::SemanticsProps {
-                        test_id: Some(Arc::<str>::from(format!(
-                            "ui-gallery-data-table-cell-{}-{}",
-                            row.id, col_id
-                        ))),
-                        ..Default::default()
-                    },
-                    move |_cx| vec![cell],
-                )
+                cell.attach_semantics(SemanticsDecoration::default().test_id(Arc::<str>::from(
+                    format!("ui-gallery-data-table-cell-{}-{}", row.id, col_id),
+                )))
             },
         );
 
-    let table = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            test_id: Some(Arc::<str>::from("ui-gallery-data-table-root")),
-            ..Default::default()
-        },
-        move |_cx| vec![table],
-    );
+    let table = table
+        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-data-table-root"));
 
     vec![
         cx.text("Click header to sort; click row to toggle selection."),
@@ -10311,106 +13692,104 @@ fn preview_data_table_torture(
 
     let table =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-            vec![cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: fret_core::SemanticsRole::Group,
-                    test_id: Some(Arc::<str>::from("ui-gallery-data-table-torture-root")),
-                    ..Default::default()
-                },
-                |cx| {
-                    let retained =
-                        std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
-                    vec![if retained {
-                        let mut t = shadcn::DataTable::new();
-                        if keep_alive > 0 {
-                            t = t.keep_alive(keep_alive);
-                        }
-                        t.overscan(10)
-                            .row_height(Px(28.0))
-                            .measure_rows(variable_height)
-                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
-                            .into_element_retained(
-                                cx,
-                                data.clone(),
-                                1,
-                                state,
-                                columns.clone(),
-                                |row, _index, _parent| RowKey(row.id),
-                                |col| Arc::<str>::from(col.id.as_ref()),
-                                move |cx, col, row| match col.id.as_ref() {
-                                    "name" => {
-                                        if variable_height && row.id % 15 == 0 {
-                                            stack::vstack(
-                                                cx,
-                                                stack::VStackProps::default().gap(Space::N0),
-                                                |cx| {
-                                                    vec![
-                                                        cx.text(row.name.as_ref()),
-                                                        cx.text(format!(
-                                                            "Details: id={} cpu={} mem={}",
-                                                            row.id, row.cpu, row.mem_mb
-                                                        )),
-                                                    ]
-                                                },
-                                            )
-                                        } else {
-                                            cx.text(row.name.as_ref())
-                                        }
-                                    }
-                                    "status" => cx.text(row.status.as_ref()),
-                                    "cpu%" => cx.text(format!("{}%", row.cpu)),
-                                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                                    _ => cx.text("?"),
-                                },
-                                Some(Arc::<str>::from("ui-gallery-data-table-header-")),
-                                Some(Arc::<str>::from("ui-gallery-data-table-row-")),
-                            )
-                    } else {
-                        let mut t = shadcn::DataTable::new();
-                        if keep_alive > 0 {
-                            t = t.keep_alive(keep_alive);
-                        }
-                        t.overscan(10)
-                            .row_height(Px(28.0))
-                            .measure_rows(variable_height)
-                            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
-                            .into_element(
-                                cx,
-                                data.clone(),
-                                1,
-                                state,
-                                columns.clone(),
-                                |row, _index, _parent| RowKey(row.id),
-                                |col| Arc::<str>::from(col.id.as_ref()),
-                                move |cx, col, row| match col.id.as_ref() {
-                                    "name" => {
-                                        if variable_height && row.id % 15 == 0 {
-                                            stack::vstack(
-                                                cx,
-                                                stack::VStackProps::default().gap(Space::N0),
-                                                |cx| {
-                                                    vec![
-                                                        cx.text(row.name.as_ref()),
-                                                        cx.text(format!(
-                                                            "Details: id={} cpu={} mem={}",
-                                                            row.id, row.cpu, row.mem_mb
-                                                        )),
-                                                    ]
-                                                },
-                                            )
-                                        } else {
-                                            cx.text(row.name.as_ref())
-                                        }
-                                    }
-                                    "status" => cx.text(row.status.as_ref()),
-                                    "cpu%" => cx.text(format!("{}%", row.cpu)),
-                                    "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                                    _ => cx.text("?"),
-                                },
-                            )
-                    }]
-                },
-            )]
+            let retained = std::env::var_os("FRET_UI_GALLERY_DATA_TABLE_RETAINED").is_some();
+            let data_table = if retained {
+                let mut t = shadcn::DataTable::new();
+                if keep_alive > 0 {
+                    t = t.keep_alive(keep_alive);
+                }
+                t.overscan(10)
+                    .row_height(Px(28.0))
+                    .measure_rows(variable_height)
+                    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                    .into_element_retained(
+                        cx,
+                        data.clone(),
+                        1,
+                        state,
+                        columns.clone(),
+                        |row, _index, _parent| RowKey(row.id),
+                        |col| Arc::<str>::from(col.id.as_ref()),
+                        move |cx, col, row| match col.id.as_ref() {
+                            "name" => {
+                                if variable_height && row.id % 15 == 0 {
+                                    stack::vstack(
+                                        cx,
+                                        stack::VStackProps::default().gap(Space::N0),
+                                        |cx| {
+                                            vec![
+                                                cx.text(row.name.as_ref()),
+                                                cx.text(format!(
+                                                    "Details: id={} cpu={} mem={}",
+                                                    row.id, row.cpu, row.mem_mb
+                                                )),
+                                            ]
+                                        },
+                                    )
+                                } else {
+                                    cx.text(row.name.as_ref())
+                                }
+                            }
+                            "status" => cx.text(row.status.as_ref()),
+                            "cpu%" => cx.text(format!("{}%", row.cpu)),
+                            "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                            _ => cx.text("?"),
+                        },
+                        Some(Arc::<str>::from("ui-gallery-data-table-header-")),
+                        Some(Arc::<str>::from("ui-gallery-data-table-row-")),
+                    )
+            } else {
+                let mut t = shadcn::DataTable::new();
+                if keep_alive > 0 {
+                    t = t.keep_alive(keep_alive);
+                }
+                t.overscan(10)
+                    .row_height(Px(28.0))
+                    .measure_rows(variable_height)
+                    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
+                    .into_element(
+                        cx,
+                        data.clone(),
+                        1,
+                        state,
+                        columns.clone(),
+                        |row, _index, _parent| RowKey(row.id),
+                        |col| Arc::<str>::from(col.id.as_ref()),
+                        move |cx, col, row| match col.id.as_ref() {
+                            "name" => {
+                                if variable_height && row.id % 15 == 0 {
+                                    stack::vstack(
+                                        cx,
+                                        stack::VStackProps::default().gap(Space::N0),
+                                        |cx| {
+                                            vec![
+                                                cx.text(row.name.as_ref()),
+                                                cx.text(format!(
+                                                    "Details: id={} cpu={} mem={}",
+                                                    row.id, row.cpu, row.mem_mb
+                                                )),
+                                            ]
+                                        },
+                                    )
+                                } else {
+                                    cx.text(row.name.as_ref())
+                                }
+                            }
+                            "status" => cx.text(row.status.as_ref()),
+                            "cpu%" => cx.text(format!("{}%", row.cpu)),
+                            "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                            _ => cx.text("?"),
+                        },
+                    )
+            };
+
+            vec![
+                data_table.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Group)
+                        .test_id("ui-gallery-data-table-torture-root"),
+                ),
+            ]
         });
 
     let mut container_props = decl_style::container_props(
@@ -10519,48 +13898,40 @@ fn preview_tree_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     );
 
     let tree = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-        vec![cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: fret_core::SemanticsRole::Group,
-                test_id: Some(Arc::<str>::from("ui-gallery-tree-torture-root")),
-                ..Default::default()
-            },
-            |cx| {
-                let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
-                    .filter(|v| !v.is_empty())
-                    .is_some();
+        let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")
+            .filter(|v| !v.is_empty())
+            .is_some();
 
-                if retained {
-                    if variable_height {
-                        vec![
-                            fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
-                                cx,
-                                items,
-                                state,
-                                fret_ui_kit::Size::Medium,
-                                fret_ui::element::VirtualListMeasureMode::Measured,
-                                Some(Arc::<str>::from("ui-gallery-tree-row")),
-                            ),
-                        ]
-                    } else {
-                        vec![fret_ui_kit::declarative::tree::tree_view_retained(
-                            cx,
-                            items,
-                            state,
-                            fret_ui_kit::Size::Medium,
-                            Some(Arc::<str>::from("ui-gallery-tree-row")),
-                        )]
-                    }
-                } else {
-                    vec![fret_ui_kit::declarative::tree::tree_view(
-                        cx,
-                        items,
-                        state,
-                        fret_ui_kit::Size::Medium,
-                    )]
-                }
-            },
-        )]
+        let tree = if retained {
+            if variable_height {
+                fret_ui_kit::declarative::tree::tree_view_retained_with_measure_mode(
+                    cx,
+                    items,
+                    state,
+                    fret_ui_kit::Size::Medium,
+                    fret_ui::element::VirtualListMeasureMode::Measured,
+                    Some(Arc::<str>::from("ui-gallery-tree-row")),
+                )
+            } else {
+                fret_ui_kit::declarative::tree::tree_view_retained(
+                    cx,
+                    items,
+                    state,
+                    fret_ui_kit::Size::Medium,
+                    Some(Arc::<str>::from("ui-gallery-tree-row")),
+                )
+            }
+        } else {
+            fret_ui_kit::declarative::tree::tree_view(cx, items, state, fret_ui_kit::Size::Medium)
+        };
+
+        vec![
+            tree.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-tree-torture-root"),
+            ),
+        ]
     });
 
     let mut container_props = decl_style::container_props(
@@ -10641,15 +14012,28 @@ fn preview_ai_transcript_torture(
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
             let revision = messages.len().min(u64::MAX as usize) as u64;
 
+            let transcript = ui_ai::ConversationTranscript::from_arc(messages.clone())
+                .content_revision(revision)
+                .scroll_handle(scroll_handle.clone())
+                .stick_to_bottom(false)
+                .show_scroll_to_bottom_button(false)
+                .debug_root_test_id("ui-gallery-ai-transcript-root")
+                .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
+                .into_element(cx);
+
+            let scroll_button = ui_ai::ConversationScrollButton::new(scroll_handle)
+                .test_id("ui-gallery-ai-transcript-scroll-bottom")
+                .into_element(cx);
+
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().w_full().h_full().relative(),
+            );
+
             vec![
-                ui_ai::ConversationTranscript::from_arc(messages.clone())
-                    .content_revision(revision)
-                    .scroll_handle(scroll_handle)
-                    .stick_to_bottom(false)
-                    .show_scroll_to_bottom_button(false)
-                    .debug_root_test_id("ui-gallery-ai-transcript-root")
-                    .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
-                    .into_element(cx),
+                cx.stack_props(fret_ui::element::StackProps { layout }, |_cx| {
+                    vec![transcript, scroll_button]
+                }),
             ]
         });
 
@@ -10663,6 +14047,460 @@ fn preview_ai_transcript_torture(
     vec![
         header,
         cx.container(container_props, |_cx| vec![transcript]),
+    ]
+}
+
+fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::Invalidation;
+    use fret_ui::action::OnActivate;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Debug, Clone)]
+    struct PendingReply {
+        assistant_id: u64,
+        chunks: Arc<[Arc<str>]>,
+        next_chunk: usize,
+        markdown: Arc<str>,
+        tool_call_running: ui_ai::ToolCall,
+        tool_call_final: ui_ai::ToolCall,
+        sources: Arc<[ui_ai::SourceItem]>,
+        citations: Arc<[ui_ai::CitationItem]>,
+    }
+
+    #[derive(Default)]
+    struct ChatModels {
+        prompt: Option<Model<String>>,
+        messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
+        loading: Option<Model<bool>>,
+        pending: Option<Model<Option<PendingReply>>>,
+        next_id: Option<Model<u64>>,
+        content_revision: Option<Model<u64>>,
+        exported_md_len: Option<Model<Option<usize>>>,
+    }
+
+    let prompt = cx.with_state(ChatModels::default, |st| st.prompt.clone());
+    let prompt = match prompt {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ChatModels::default, |st| st.prompt = Some(model.clone()));
+            model
+        }
+    };
+
+    let messages = cx.with_state(ChatModels::default, |st| st.messages.clone());
+    let messages = match messages {
+        Some(model) => model,
+        None => {
+            let initial: Arc<[ui_ai::AiMessage]> = Arc::from(vec![
+                ui_ai::AiMessage::new(
+                    1,
+                    ui_ai::MessageRole::User,
+                    [ui_ai::MessagePart::Text(Arc::<str>::from("Hello!"))],
+                ),
+                ui_ai::AiMessage::new(
+                    2,
+                    ui_ai::MessageRole::Assistant,
+                    [ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::new(
+                        Arc::<str>::from(
+                            "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.\n\n```rust\nfn demo() {\n    println!(\"hello from code fence\");\n}\n```",
+                        ),
+                    ))],
+                ),
+            ]);
+            let model = cx.app.models_mut().insert(initial);
+            cx.with_state(ChatModels::default, |st| st.messages = Some(model.clone()));
+            model
+        }
+    };
+
+    let loading = cx.with_state(ChatModels::default, |st| st.loading.clone());
+    let loading = match loading {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ChatModels::default, |st| st.loading = Some(model.clone()));
+            model
+        }
+    };
+
+    let pending = cx.with_state(ChatModels::default, |st| st.pending.clone());
+    let pending = match pending {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<PendingReply>);
+            cx.with_state(ChatModels::default, |st| st.pending = Some(model.clone()));
+            model
+        }
+    };
+
+    let next_id = cx.with_state(ChatModels::default, |st| st.next_id.clone());
+    let next_id = match next_id {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(3u64);
+            cx.with_state(ChatModels::default, |st| st.next_id = Some(model.clone()));
+            model
+        }
+    };
+
+    let content_revision = cx.with_state(ChatModels::default, |st| st.content_revision.clone());
+    let content_revision = match content_revision {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(ChatModels::default, |st| {
+                st.content_revision = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let exported_md_len = cx.with_state(ChatModels::default, |st| st.exported_md_len.clone());
+    let exported_md_len = match exported_md_len {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<usize>);
+            cx.with_state(ChatModels::default, |st| {
+                st.exported_md_len = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let loading_value = cx
+        .get_model_copied(&loading, Invalidation::Paint)
+        .unwrap_or(false);
+    let pending_value = cx
+        .get_model_cloned(&pending, Invalidation::Paint)
+        .unwrap_or(None);
+
+    if loading_value {
+        if let Some(pending_state) = pending_value {
+            if pending_state.next_chunk < pending_state.chunks.len() {
+                cx.request_frame();
+
+                if let Some(chunk) = pending_state.chunks.get(pending_state.next_chunk).cloned() {
+                    let new_markdown =
+                        Arc::<str>::from(format!("{}{}", pending_state.markdown, chunk));
+
+                    let _ = cx.app.models_mut().update(&pending, |v| {
+                        if let Some(p) = v {
+                            p.markdown = new_markdown.clone();
+                            p.next_chunk = p.next_chunk.saturating_add(1);
+                        }
+                    });
+
+                    let assistant_id = pending_state.assistant_id;
+                    let tool_call_running = pending_state.tool_call_running.clone();
+                    let sources = pending_state.sources.clone();
+                    let citations = pending_state.citations.clone();
+
+                    let _ = cx.app.models_mut().update(&messages, |list| {
+                        let mut vec = list.as_ref().to_vec();
+                        if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
+                            msg.parts = Arc::from(vec![
+                                ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                                    new_markdown.clone(),
+                                )),
+                                ui_ai::MessagePart::ToolCall(tool_call_running),
+                                ui_ai::MessagePart::Sources(sources),
+                                ui_ai::MessagePart::Citations(citations),
+                            ]);
+                        }
+                        *list = vec.into();
+                    });
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&content_revision, |v| *v = v.saturating_add(1));
+                } else {
+                    let _ = cx.app.models_mut().update(&pending, |v| *v = None);
+                    let _ = cx.app.models_mut().update(&loading, |v| *v = false);
+                }
+            } else {
+                let assistant_id = pending_state.assistant_id;
+                let markdown = pending_state.markdown.clone();
+                let tool_call_final = pending_state.tool_call_final.clone();
+                let sources = pending_state.sources.clone();
+                let citations = pending_state.citations.clone();
+
+                let _ = cx.app.models_mut().update(&messages, |list| {
+                    let mut vec = list.as_ref().to_vec();
+                    if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
+                        msg.parts = Arc::from(vec![
+                            ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::new(markdown)),
+                            ui_ai::MessagePart::ToolCall(tool_call_final),
+                            ui_ai::MessagePart::Sources(sources),
+                            ui_ai::MessagePart::Citations(citations),
+                        ]);
+                    }
+                    *list = vec.into();
+                });
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&content_revision, |v| *v = v.saturating_add(1));
+
+                let _ = cx.app.models_mut().update(&pending, |v| *v = None);
+                let _ = cx.app.models_mut().update(&loading, |v| *v = false);
+            }
+        }
+    }
+
+    let send: OnActivate = Arc::new({
+        let prompt = prompt.clone();
+        let messages = messages.clone();
+        let pending = pending.clone();
+        let loading = loading.clone();
+        let next_id = next_id.clone();
+        let content_revision = content_revision.clone();
+        move |host, _action_cx, _reason| {
+            fn chunk_for_demo(text: &str, chars_per_chunk: usize) -> Arc<[Arc<str>]> {
+                let mut out = Vec::new();
+                let mut buf = String::new();
+                let mut count = 0usize;
+
+                for ch in text.chars() {
+                    buf.push(ch);
+                    count = count.saturating_add(1);
+                    if count >= chars_per_chunk {
+                        out.push(Arc::<str>::from(std::mem::take(&mut buf)));
+                        count = 0;
+                    }
+                }
+
+                if !buf.is_empty() {
+                    out.push(Arc::<str>::from(buf));
+                }
+
+                out.into()
+            }
+
+            let text = host.models_mut().read(&prompt, Clone::clone).ok();
+            let Some(text) = text else { return };
+            let text = text.trim().to_string();
+            if text.is_empty() {
+                return;
+            }
+
+            let user_id = host
+                .models_mut()
+                .update(&next_id, |v| {
+                    let id = *v;
+                    *v = v.saturating_add(1);
+                    id
+                })
+                .ok()
+                .unwrap_or(0);
+            let assistant_id = host
+                .models_mut()
+                .update(&next_id, |v| {
+                    let id = *v;
+                    *v = v.saturating_add(1);
+                    id
+                })
+                .ok()
+                .unwrap_or(0);
+
+            let tool_call = ui_ai::ToolCall::new("toolcall-0", "search")
+                .state(ui_ai::ToolCallState::Running)
+                .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "query": text,
+                    "k": 3
+                })));
+
+            let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
+                ui_ai::SourceItem::new("src-0", "Example source A")
+                    .url("https://example.com/a")
+                    .excerpt("A short excerpt used for truncation and wrapping tests."),
+                ui_ai::SourceItem::new("src-1", "Example source B")
+                    .url("https://example.com/b")
+                    .excerpt("Another excerpt: this should wrap and remain readable."),
+            ]);
+
+            let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
+                ui_ai::CitationItem::new("src-0", "[1]"),
+                ui_ai::CitationItem::from_arc(
+                    Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]),
+                    "[2]",
+                ),
+            ]);
+
+            let reply = format!(
+                "Echo: **{text}**\n\nThis reply is streamed via append-only updates.\n\n```rust\nfn streamed_demo() {{\n    println!(\"{text}\");\n}}\n"
+            );
+            let chunks = chunk_for_demo(&reply, 12);
+
+            let tool_call_final = tool_call
+                .clone()
+                .state(ui_ai::ToolCallState::Succeeded)
+                .output(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "results": [
+                        {"title": "A", "score": 0.9},
+                        {"title": "B", "score": 0.8}
+                    ]
+                })));
+
+            let _ = host.models_mut().update(&messages, |list| {
+                let mut vec = list.as_ref().to_vec();
+                vec.push(ui_ai::AiMessage::new(
+                    user_id,
+                    ui_ai::MessageRole::User,
+                    [ui_ai::MessagePart::Text(Arc::<str>::from(text))],
+                ));
+                vec.push(ui_ai::AiMessage::new(
+                    assistant_id,
+                    ui_ai::MessageRole::Assistant,
+                    [
+                        ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                            Arc::<str>::from(""),
+                        )),
+                        ui_ai::MessagePart::ToolCall(tool_call.clone()),
+                        ui_ai::MessagePart::Sources(sources.clone()),
+                        ui_ai::MessagePart::Citations(citations.clone()),
+                    ],
+                ));
+                *list = vec.into();
+            });
+            let _ = host
+                .models_mut()
+                .update(&content_revision, |v| *v = v.saturating_add(1));
+
+            let _ = host.models_mut().update(&pending, |v| {
+                *v = Some(PendingReply {
+                    assistant_id,
+                    chunks,
+                    next_chunk: 0,
+                    markdown: Arc::<str>::from(""),
+                    tool_call_running: tool_call,
+                    tool_call_final,
+                    sources,
+                    citations,
+                })
+            });
+            let _ = host.models_mut().update(&loading, |v| *v = true);
+        }
+    });
+
+    let stop: OnActivate = Arc::new({
+        let messages = messages.clone();
+        let pending = pending.clone();
+        let loading = loading.clone();
+        let content_revision = content_revision.clone();
+        move |host, _action_cx, _reason| {
+            let assistant_id = host
+                .models_mut()
+                .read(&pending, |v| v.as_ref().map(|p| p.assistant_id))
+                .ok()
+                .flatten();
+
+            let _ = host.models_mut().update(&pending, |v| *v = None);
+            let _ = host.models_mut().update(&loading, |v| *v = false);
+
+            let Some(assistant_id) = assistant_id else {
+                return;
+            };
+            let _ = host.models_mut().update(&messages, |list| {
+                let vec: Vec<_> = list
+                    .iter()
+                    .cloned()
+                    .filter(|m| m.id != assistant_id)
+                    .collect();
+                *list = vec.into();
+            });
+            let _ = host
+                .models_mut()
+                .update(&content_revision, |v| *v = v.saturating_add(1));
+        }
+    });
+
+    let export_markdown: OnActivate = Arc::new({
+        let messages = messages.clone();
+        let exported_md_len = exported_md_len.clone();
+        move |host, _action_cx, _reason| {
+            let messages = host.models_mut().read(&messages, Clone::clone).ok();
+            let Some(messages) = messages else {
+                return;
+            };
+
+            let md = ui_ai::messages_to_markdown(messages.as_ref());
+            let _ = host
+                .models_mut()
+                .update(&exported_md_len, |v| *v = Some(md.len()));
+        }
+    });
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: interactive demo for PromptInput + transcript append."),
+                cx.text("Send triggers a short \"loading\" window where Stop is available."),
+            ]
+        },
+    );
+
+    let actions_demo = {
+        let copy = ui_ai::MessageAction::new("Copy")
+            .tooltip("Copy")
+            .test_id("ui-gallery-ai-chat-action-copy")
+            .children([shadcn::icon::icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.copy"),
+            )])
+            .into_element(cx);
+
+        ui_ai::MessageActions::new([copy])
+            .test_id("ui-gallery-ai-chat-actions")
+            .into_element(cx)
+    };
+
+    let chat = ui_ai::AiChat::new(messages.clone(), prompt)
+        .loading_model(loading.clone())
+        .content_revision_model(content_revision.clone())
+        .on_send(send)
+        .on_stop(stop)
+        .show_download(true)
+        .on_download(export_markdown)
+        .download_test_id("ui-gallery-ai-chat-download")
+        .message_test_id_prefix("ui-ai-msg-")
+        .transcript_root_test_id("ui-gallery-ai-chat-transcript-root")
+        .transcript_row_test_id_prefix("ui-gallery-ai-chat-transcript-row-")
+        .scroll_button_test_id("ui-gallery-ai-chat-scroll-bottom")
+        .prompt_root_test_id("ui-gallery-ai-chat-prompt-root")
+        .prompt_textarea_test_id("ui-gallery-ai-chat-prompt-textarea")
+        .prompt_send_test_id("ui-gallery-ai-chat-prompt-send")
+        .prompt_stop_test_id("ui-gallery-ai-chat-prompt-stop")
+        .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(460.0)))
+        .into_element(cx);
+
+    let exported_value = cx
+        .get_model_cloned(&exported_md_len, Invalidation::Paint)
+        .unwrap_or(None);
+    let exported = exported_value.map(|len| {
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-exported-md-len")),
+                ..Default::default()
+            },
+            move |cx| vec![cx.text(format!("Exported markdown: {len} chars"))],
+        )
+    });
+
+    vec![
+        header,
+        actions_demo,
+        chat,
+        exported.unwrap_or_else(|| cx.text("")),
     ]
 }
 
@@ -10737,7 +14575,6 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
         );
         row_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-        let row_layout = row_props.layout;
         let row = cx.container(row_props, |cx| {
             vec![stack::hstack(
                 cx,
@@ -10749,12 +14586,11 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
             )]
         });
 
-        let mut semantics = fret_ui::element::SemanticsProps::default();
-        semantics.layout = row_layout;
-        semantics.test_id = Some(Arc::<str>::from(format!(
-            "ui-gallery-inspector-row-{index}-label"
-        )));
-        cx.semantics(semantics, |_cx| vec![row])
+        row.attach_semantics(
+            SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
+                "ui-gallery-inspector-row-{index}-label"
+            ))),
+        )
     };
 
     let list = cx.virtual_list_keyed_retained_with_layout_fn(
@@ -10766,11 +14602,11 @@ fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) ->
         row,
     );
 
-    let mut semantics = fret_ui::element::SemanticsProps::default();
-    semantics.role = fret_core::SemanticsRole::List;
-    semantics.layout = list_layout;
-    semantics.test_id = Some(Arc::<str>::from("ui-gallery-inspector-root"));
-    let list = cx.semantics(semantics, |_cx| vec![list]);
+    let list = list.attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::List)
+            .test_id("ui-gallery-inspector-root"),
+    );
 
     vec![cx.cached_subtree_with(
         CachedSubtreeProps::default().contained_layout(true),
@@ -10985,88 +14821,85 @@ fn preview_table_retained_torture(
 
     let table =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
-            vec![cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: fret_core::SemanticsRole::Group,
-                    test_id: Some(Arc::<str>::from("ui-gallery-table-retained-torture-root")),
-                    ..Default::default()
-                },
-                |cx| {
-                    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
 
-                    let state_revision = cx.app.models().revision(&state).unwrap_or(0);
-                    let items_revision = 1 ^ state_revision.rotate_left(17);
+            let state_revision = cx.app.models().revision(&state).unwrap_or(0);
+            let items_revision = 1 ^ state_revision.rotate_left(17);
 
-                    let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
-                    props.overscan = 10;
-                    props.row_height = Some(Px(28.0));
-                    if keep_alive > 0 {
-                        props.keep_alive = Some(keep_alive);
-                    }
-                    props.row_measure_mode = if variable_height {
-                        fret_ui_kit::declarative::table::TableRowMeasureMode::Measured
-                    } else {
-                        fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed
-                    };
-                    props.enable_column_grouping = false;
-                    props.enable_column_resizing = false;
+            let mut props = fret_ui_kit::declarative::table::TableViewProps::default();
+            props.overscan = 10;
+            props.row_height = Some(Px(28.0));
+            if keep_alive > 0 {
+                props.keep_alive = Some(keep_alive);
+            }
+            props.row_measure_mode = if variable_height {
+                fret_ui_kit::declarative::table::TableRowMeasureMode::Measured
+            } else {
+                fret_ui_kit::declarative::table::TableRowMeasureMode::Fixed
+            };
+            props.enable_column_grouping = false;
+            props.enable_column_resizing = false;
 
-                    let header_label =
-                        Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
-                    let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
-                    let cell_at = Arc::new(
-                        move |cx: &mut ElementContext<'_, App>,
-                              col: &ColumnDef<TableRow>,
-                              row: &TableRow| {
-                            match col.id.as_ref() {
-                                "name" => {
-                                    if variable_height && row.id % 15 == 0 {
-                                        stack::vstack(
-                                            cx,
-                                            stack::VStackProps::default().gap(Space::N0),
-                                            |cx| {
-                                                vec![
-                                                    cx.text(row.name.as_ref()),
-                                                    cx.text(format!(
-                                                        "Details: id={} cpu={} mem={}",
-                                                        row.id, row.cpu, row.mem_mb
-                                                    )),
-                                                ]
-                                            },
-                                        )
-                                    } else {
-                                        cx.text(row.name.as_ref())
-                                    }
-                                }
-                                "status" => cx.text(row.status.as_ref()),
-                                "cpu%" => cx.text(format!("{}%", row.cpu)),
-                                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
-                                _ => cx.text("?"),
+            let header_label =
+                Arc::new(|col: &ColumnDef<TableRow>| Arc::<str>::from(col.id.as_ref()));
+            let row_key_at = Arc::new(|row: &TableRow, _index: usize| RowKey(row.id));
+            let cell_at = Arc::new(
+                move |cx: &mut ElementContext<'_, App>,
+                      col: &ColumnDef<TableRow>,
+                      row: &TableRow| {
+                    match col.id.as_ref() {
+                        "name" => {
+                            if variable_height && row.id % 15 == 0 {
+                                stack::vstack(
+                                    cx,
+                                    stack::VStackProps::default().gap(Space::N0),
+                                    |cx| {
+                                        vec![
+                                            cx.text(row.name.as_ref()),
+                                            cx.text(format!(
+                                                "Details: id={} cpu={} mem={}",
+                                                row.id, row.cpu, row.mem_mb
+                                            )),
+                                        ]
+                                    },
+                                )
+                            } else {
+                                cx.text(row.name.as_ref())
                             }
-                        },
-                    );
-
-                    vec![
-                        fret_ui_kit::declarative::table::table_virtualized_retained_v0(
-                            cx,
-                            data.clone(),
-                            columns.clone(),
-                            state.clone(),
-                            &scroll_handle,
-                            items_revision,
-                            row_key_at,
-                            Some(Arc::new(|row: &TableRow, _index: usize| {
-                                Arc::from(row.id.to_string())
-                            })),
-                            props,
-                            header_label,
-                            cell_at,
-                            Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
-                            Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
-                        ),
-                    ]
+                        }
+                        "status" => cx.text(row.status.as_ref()),
+                        "cpu%" => cx.text(format!("{}%", row.cpu)),
+                        "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                        _ => cx.text("?"),
+                    }
                 },
-            )]
+            );
+
+            let table = fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                cx,
+                data.clone(),
+                columns.clone(),
+                state.clone(),
+                &scroll_handle,
+                items_revision,
+                row_key_at,
+                Some(Arc::new(|row: &TableRow, _index: usize| {
+                    Arc::from(row.id.to_string())
+                })),
+                props,
+                header_label,
+                cell_at,
+                Some(Arc::<str>::from("ui-gallery-table-retained-header-")),
+                Some(Arc::<str>::from("ui-gallery-table-retained-row-")),
+            );
+
+            vec![
+                table.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Group)
+                        .test_id("ui-gallery-table-retained-torture-root"),
+                ),
+            ]
         });
 
     let mut container_props = decl_style::container_props(
@@ -11173,40 +15006,309 @@ fn preview_accordion(
     cx: &mut ElementContext<'_, App>,
     value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
-    let open = cx
-        .app
-        .models()
-        .get_cloned(&value)
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let _ = value;
 
-    let accordion = shadcn::Accordion::single(value)
-        .collapsible(true)
-        .refine_layout(LayoutRefinement::default().w_full())
-        .items([
-            shadcn::AccordionItem::new(
-                "item-1",
-                shadcn::AccordionTrigger::new(vec![cx.text("Item 1")]),
-                shadcn::AccordionContent::new(vec![cx.text("This section is collapsible.")]),
+    let theme = Theme::global(&*cx.app).clone();
+
+    let max_w_lg = LayoutRefinement::default()
+        .w_full()
+        .max_w(MetricRef::Px(Px(512.0)))
+        .min_w_0();
+    let max_w_sm = LayoutRefinement::default()
+        .w_full()
+        .max_w(MetricRef::Px(Px(384.0)))
+        .min_w_0();
+
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    // Mirrors the top-level `accordion-demo` preview slot.
+    let demo = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("shipping"))
+            .collapsible(true)
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "shipping",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What are your shipping options?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We offer standard (5-7 days), express (2-3 days), and overnight shipping. Free shipping on international orders.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "returns",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What is your return policy?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Returns accepted within 30 days. Items must be unused and in original packaging. Refunds processed within 5-7 business days.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "support",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How can I contact customer support?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Reach us via email, live chat, or phone. We respond within 24 hours during business days.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        centered(cx, accordion)
+    };
+
+    let basic = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("item-1"))
+            .collapsible(true)
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "item-1",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How do I reset my password?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Click on 'Forgot Password' on the login page, enter your email address, and we'll send you a link to reset your password. The link will expire in 24 hours.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "item-2",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Can I change my subscription plan?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Yes, you can upgrade or downgrade your plan at any time from your account settings. Changes will be reflected in your next billing cycle.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "item-3",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What payment methods do you accept?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We accept all major credit cards, PayPal, and bank transfers. All payments are processed securely through our payment partners.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        let body = centered(cx, accordion);
+        section(cx, "Basic", body)
+    };
+
+    let multiple = {
+        let accordion = shadcn::Accordion::multiple_uncontrolled(["notifications"])
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "notifications",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Notification Settings")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Manage how you receive notifications. You can enable email alerts for updates or push notifications for mobile devices.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "privacy",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Privacy & Security")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Control your privacy settings and security preferences. Enable two-factor authentication, manage connected devices, review active sessions, and configure data sharing preferences. You can also download your data or delete your account.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "billing",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Billing & Subscription")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "View your current plan, payment history, and upcoming invoices. Update your payment method, change your subscription tier, or cancel your subscription.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        let body = centered(cx, accordion);
+        section(cx, "Multiple", body)
+    };
+
+    let disabled = {
+        let accordion = shadcn::Accordion::single_uncontrolled(None::<Arc<str>>)
+            .collapsible(true)
+            .refine_layout(max_w_lg.clone())
+            .items([
+                shadcn::AccordionItem::new(
+                    "item-1",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Can I access my account history?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Yes, you can view your complete account history including all transactions, plan changes, and support tickets in the Account History section of your dashboard.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "item-2",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Premium feature information")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "This section contains information about premium features. Upgrade your plan to access this content.",
+                    )]),
+                )
+                .disabled(true),
+                shadcn::AccordionItem::new(
+                    "item-3",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How do I update my email address?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "You can update your email address in your account settings. You'll receive a verification email at your new address to confirm the change.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+        let body = centered(cx, accordion);
+        section(cx, "Disabled", body)
+    };
+
+    let borders = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("billing"))
+            .collapsible(true)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .items([
+                shadcn::AccordionItem::new(
+                    "billing",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We offer monthly and annual subscription plans. Billing is charged at the beginning of each cycle, and you can cancel anytime. All plans include automatic backups, 24/7 support, and unlimited team members.",
+                    )]),
+                )
+                .refine_style(ChromeRefinement::default().px(Space::N4)),
+                shadcn::AccordionItem::new(
+                    "security",
+                    shadcn::AccordionTrigger::new(vec![cx.text("Is my data secure?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Yes. We use end-to-end encryption, SOC 2 Type II compliance, and regular third-party security audits. All data is encrypted at rest and in transit using industry-standard protocols.",
+                    )]),
+                )
+                .refine_style(ChromeRefinement::default().px(Space::N4)),
+                shadcn::AccordionItem::new(
+                    "integration",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What integrations do you support?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We integrate with 500+ popular tools including Slack, Zapier, Salesforce, HubSpot, and more. You can also build custom integrations using our REST API and webhooks.",
+                    )]),
+                )
+                .refine_style(ChromeRefinement::default().px(Space::N4)),
+            ])
+            .into_element(cx);
+
+        let wrapper = cx.container(
+            decl_style::container_props(
+                &theme,
+                ChromeRefinement::default().border_1().rounded(Radius::Lg),
+                max_w_lg.clone(),
             ),
-            shadcn::AccordionItem::new(
-                "item-2",
-                shadcn::AccordionTrigger::new(vec![cx.text("Item 2")]),
-                shadcn::AccordionContent::new(vec![
-                    cx.text("Keyboard navigation uses roving focus."),
-                ]),
-            ),
-            shadcn::AccordionItem::new(
-                "item-3",
-                shadcn::AccordionTrigger::new(vec![cx.text("Item 3")]),
-                shadcn::AccordionContent::new(vec![
-                    cx.text("Content lives in normal layout flow (no portal)."),
-                ]),
-            ),
+            move |_cx| vec![accordion],
+        );
+
+        let body = centered(cx, wrapper);
+        section(cx, "Borders", body)
+    };
+
+    let card = {
+        let accordion = shadcn::Accordion::single_uncontrolled(Some("plans"))
+            .collapsible(true)
+            .refine_layout(LayoutRefinement::default().w_full())
+            .items([
+                shadcn::AccordionItem::new(
+                    "plans",
+                    shadcn::AccordionTrigger::new(vec![cx.text("What subscription plans do you offer?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "We offer three subscription tiers: Starter ($9/month), Professional ($29/month), and Enterprise ($99/month). Each plan includes increasing storage limits, API access, priority support, and team collaboration features.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "billing",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "Billing occurs automatically at the start of each billing cycle. We accept all major credit cards, PayPal, and ACH transfers for enterprise customers. You'll receive an invoice via email after each payment.",
+                    )]),
+                ),
+                shadcn::AccordionItem::new(
+                    "cancel",
+                    shadcn::AccordionTrigger::new(vec![cx.text("How do I cancel my subscription?")]),
+                    shadcn::AccordionContent::new(vec![cx.text(
+                        "You can cancel your subscription anytime from your account settings. There are no cancellation fees or penalties. Your access will continue until the end of your current billing period.",
+                    )]),
+                ),
+            ])
+            .into_element(cx);
+
+        let card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Subscription & Billing").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Common questions about your account, plans, payments and cancellations.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![accordion]).into_element(cx),
         ])
+        .refine_layout(max_w_sm.clone())
         .into_element(cx);
 
-    vec![accordion, cx.text(format!("Open item: {open}"))]
+        let body = centered(cx, card);
+        section(cx, "Card", body)
+    };
+
+    let rtl = {
+        let accordion = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                shadcn::Accordion::single_uncontrolled(Some("item-1"))
+                    .collapsible(true)
+                    .dir(Some(fret_ui_kit::primitives::direction::LayoutDirection::Rtl))
+                    .refine_layout(max_w_lg.clone())
+                    .items([
+                        shadcn::AccordionItem::new(
+                            "item-1",
+                            shadcn::AccordionTrigger::new(vec![cx.text("كيف يمكنني إعادة تعيين كلمة المرور؟")]),
+                            shadcn::AccordionContent::new(vec![cx.text(
+                                "انقر على 'نسيت كلمة المرور' في صفحة تسجيل الدخول، أدخل عنوان بريدك الإلكتروني، وسنرسل لك رابطًا لإعادة تعيين كلمة المرور. سينتهي صلاحية الرابط خلال 24 ساعة.",
+                            )]),
+                        ),
+                        shadcn::AccordionItem::new(
+                            "item-2",
+                            shadcn::AccordionTrigger::new(vec![cx.text("هل يمكنني تغيير خطة الاشتراك الخاصة بي؟")]),
+                            shadcn::AccordionContent::new(vec![cx.text(
+                                "نعم، يمكنك ترقية أو تخفيض خطتك في أي وقت من إعدادات حسابك. ستظهر التغييرات في دورة الفوترة التالية.",
+                            )]),
+                        ),
+                        shadcn::AccordionItem::new(
+                            "item-3",
+                            shadcn::AccordionTrigger::new(vec![cx.text("ما هي طرق الدفع التي تقبلونها؟")]),
+                            shadcn::AccordionContent::new(vec![cx.text(
+                                "نقبل جميع بطاقات الائتمان الرئيسية و PayPal والتحويلات المصرفية. تتم معالجة جميع المدفوعات بأمان من خلال شركاء الدفع لدينا.",
+                            )]),
+                        ),
+                    ])
+                    .into_element(cx)
+            },
+        );
+        let body = centered(cx, accordion);
+        section(cx, "RTL", body)
+    };
+
+    let examples = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| vec![basic, multiple, disabled, borders, card, rtl],
+    );
+
+    vec![demo, examples]
 }
 
 fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -11238,15 +15340,12 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         shadcn::TableRow::new(
             3,
             vec![
-                shadcn::TableCell::new(cx.semantics(
-                    fret_ui::element::SemanticsProps {
-                        test_id: Some(Arc::<str>::from("ui-gallery-table-cell-fret-ui")),
-                        ..Default::default()
-                    },
-                    |cx| vec![cx.text("fret-ui")],
-                ))
-                .refine_layout(LayoutRefinement::default().w_px(crate_w))
-                .into_element(cx),
+                shadcn::TableCell::new(cx.text("fret-ui"))
+                    .refine_layout(LayoutRefinement::default().w_px(crate_w))
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default().test_id("ui-gallery-table-cell-fret-ui"),
+                    ),
                 shadcn::TableCell::new(cx.text("mechanisms"))
                     .refine_layout(LayoutRefinement::default().w_px(layer_w))
                     .into_element(cx),
@@ -11295,15 +15394,10 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
     let table = shadcn::Table::new(vec![header, body, caption])
         .refine_layout(LayoutRefinement::default().w_full())
-        .into_element(cx);
+        .into_element(cx)
+        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-table-root"));
 
-    vec![cx.semantics(
-        fret_ui::element::SemanticsProps {
-            test_id: Some(Arc::<str>::from("ui-gallery-table-root")),
-            ..Default::default()
-        },
-        move |_cx| vec![table],
-    )]
+    vec![table]
 }
 
 fn preview_progress(cx: &mut ElementContext<'_, App>, progress: Model<f32>) -> Vec<AnyElement> {
@@ -11495,12 +15589,8 @@ fn preview_overlay(
             .get_cloned(&last_action)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         let text = format!("last action: {last}");
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(Arc::from("ui-gallery-overlay-last-action")),
-                ..Default::default()
-            },
-            |cx| [cx.text(text)],
+        cx.text(text).attach_semantics(
+            SemanticsDecoration::default().test_id("ui-gallery-overlay-last-action"),
         )
     };
 
@@ -11648,20 +15738,13 @@ fn preview_overlay(
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-tooltip-trigger")
                     .into_element(cx),
-                cx.semantics(
-                    fret_ui::element::SemanticsProps {
-                        test_id: Some(Arc::from("ui-gallery-tooltip-content")),
-                        ..Default::default()
-                    },
-                    |cx| {
-                        vec![
-                            shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                                cx,
-                                "Tooltip: hover intent + placement",
-                            )])
-                            .into_element(cx),
-                        ]
-                    },
+                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                    cx,
+                    "Tooltip: hover intent + placement",
+                )])
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("ui-gallery-tooltip-content"),
                 ),
             )
             .arrow(true)
@@ -11677,20 +15760,13 @@ fn preview_overlay(
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-hovercard-trigger")
                     .into_element(cx),
-                cx.semantics(
-                    fret_ui::element::SemanticsProps {
-                        test_id: Some(Arc::from("ui-gallery-hovercard-content")),
-                        ..Default::default()
-                    },
-                    |cx| {
-                        vec![
-                            shadcn::HoverCardContent::new(vec![
-                                cx.text("HoverCard content (overlay-root)"),
-                                cx.text("Move pointer from trigger to content."),
-                            ])
-                            .into_element(cx),
-                        ]
-                    },
+                shadcn::HoverCardContent::new(vec![
+                    cx.text("HoverCard content (overlay-root)"),
+                    cx.text("Move pointer from trigger to content."),
+                ])
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default().test_id("ui-gallery-hovercard-content"),
                 ),
             )
             .open_delay_frames(10)
@@ -11733,21 +15809,14 @@ fn preview_overlay(
                             .toggle_model(popover_open.clone())
                             .into_element(cx);
 
-                        cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                test_id: Some(Arc::from("ui-gallery-popover-content")),
-                                ..Default::default()
-                            },
-                            |cx| {
-                                vec![
-                                    shadcn::PopoverContent::new(vec![
-                                        cx.text("Popover content"),
-                                        open_dialog,
-                                        close,
-                                    ])
-                                    .into_element(cx),
-                                ]
-                            },
+                        shadcn::PopoverContent::new(vec![
+                            cx.text("Popover content"),
+                            open_dialog,
+                            close,
+                        ])
+                        .into_element(cx)
+                        .attach_semantics(
+                            SemanticsDecoration::default().test_id("ui-gallery-popover-content"),
                         )
                     },
                 );
@@ -11762,70 +15831,55 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            test_id: Some(Arc::from("ui-gallery-dialog-content")),
-                            ..Default::default()
-                        },
-                        |cx| {
-                            vec![
-                                shadcn::DialogContent::new(vec![
-                                    shadcn::DialogHeader::new(vec![
-                                        shadcn::DialogTitle::new("Dialog").into_element(cx),
-                                        shadcn::DialogDescription::new(
-                                            "Escape / overlay click closes",
-                                        )
-                                        .into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                    {
-                                        let body = stack::vstack(
-                                            cx,
-                                            stack::VStackProps::default().gap(Space::N2).layout(
-                                                LayoutRefinement::default()
-                                                    .w_full()
-                                                    .min_w_0()
-                                                    .min_h_0(),
-                                            ),
-                                            |cx| {
-                                                (0..64)
-                                                    .map(|i| {
-                                                        cx.text(format!(
-                                                            "Scrollable content line {}",
-                                                            i + 1
-                                                        ))
-                                                    })
-                                                    .collect::<Vec<_>>()
-                                            },
-                                        );
-
-                                        shadcn::ScrollArea::new([body])
-                                            .refine_layout(
-                                                LayoutRefinement::default()
-                                                    .w_full()
-                                                    .h_px(Px(240.0))
-                                                    .min_w_0()
-                                                    .min_h_0(),
-                                            )
-                                            .viewport_test_id("ui-gallery-dialog-scroll-viewport")
-                                            .into_element(cx)
-                                    },
-                                    shadcn::DialogFooter::new(vec![
-                                        shadcn::Button::new("Close")
-                                            .variant(shadcn::ButtonVariant::Secondary)
-                                            .test_id("ui-gallery-dialog-close")
-                                            .toggle_model(dialog_open.clone())
-                                            .into_element(cx),
-                                        shadcn::Button::new("Confirm")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("ui-gallery-dialog-confirm")
-                                            .into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                ])
+                    shadcn::DialogContent::new(vec![
+                        shadcn::DialogHeader::new(vec![
+                            shadcn::DialogTitle::new("Dialog").into_element(cx),
+                            shadcn::DialogDescription::new("Escape / overlay click closes")
                                 .into_element(cx),
-                            ]
+                        ])
+                        .into_element(cx),
+                        {
+                            let body = stack::vstack(
+                                cx,
+                                stack::VStackProps::default().gap(Space::N2).layout(
+                                    LayoutRefinement::default().w_full().min_w_0().min_h_0(),
+                                ),
+                                |cx| {
+                                    (0..64)
+                                        .map(|i| {
+                                            cx.text(format!("Scrollable content line {}", i + 1))
+                                        })
+                                        .collect::<Vec<_>>()
+                                },
+                            );
+
+                            shadcn::ScrollArea::new([body])
+                                .refine_layout(
+                                    LayoutRefinement::default()
+                                        .w_full()
+                                        .h_px(Px(240.0))
+                                        .min_w_0()
+                                        .min_h_0(),
+                                )
+                                .viewport_test_id("ui-gallery-dialog-scroll-viewport")
+                                .into_element(cx)
                         },
+                        shadcn::DialogFooter::new(vec![
+                            shadcn::Button::new("Close")
+                                .variant(shadcn::ButtonVariant::Secondary)
+                                .test_id("ui-gallery-dialog-close")
+                                .toggle_model(dialog_open.clone())
+                                .into_element(cx),
+                            shadcn::Button::new("Confirm")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .test_id("ui-gallery-dialog-confirm")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default().test_id("ui-gallery-dialog-content"),
                     )
                 },
             );
@@ -11840,42 +15894,29 @@ fn preview_overlay(
                         .into_element(cx)
                 },
                 |cx| {
-                    cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            test_id: Some(Arc::from("ui-gallery-alert-dialog-content")),
-                            ..Default::default()
-                        },
-                        |cx| {
-                            vec![
-                                shadcn::AlertDialogContent::new(vec![
-                                    shadcn::AlertDialogHeader::new(vec![
-                                        shadcn::AlertDialogTitle::new("Are you absolutely sure?")
-                                            .into_element(cx),
-                                        shadcn::AlertDialogDescription::new(
-                                            "This is non-closable by overlay click.",
-                                        )
-                                        .into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                    shadcn::AlertDialogFooter::new(vec![
-                                        shadcn::AlertDialogCancel::new(
-                                            "Cancel",
-                                            alert_dialog_open.clone(),
-                                        )
-                                        .test_id("ui-gallery-alert-dialog-cancel")
-                                        .into_element(cx),
-                                        shadcn::AlertDialogAction::new(
-                                            "Continue",
-                                            alert_dialog_open.clone(),
-                                        )
-                                        .test_id("ui-gallery-alert-dialog-action")
-                                        .into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                                ])
+                    shadcn::AlertDialogContent::new(vec![
+                        shadcn::AlertDialogHeader::new(vec![
+                            shadcn::AlertDialogTitle::new("Are you absolutely sure?")
                                 .into_element(cx),
-                            ]
-                        },
+                            shadcn::AlertDialogDescription::new(
+                                "This is non-closable by overlay click.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::AlertDialogFooter::new(vec![
+                            shadcn::AlertDialogCancel::new("Cancel", alert_dialog_open.clone())
+                                .test_id("ui-gallery-alert-dialog-cancel")
+                                .into_element(cx),
+                            shadcn::AlertDialogAction::new("Continue", alert_dialog_open.clone())
+                                .test_id("ui-gallery-alert-dialog-action")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default().test_id("ui-gallery-alert-dialog-content"),
                     )
                 },
             );
@@ -11893,68 +15934,49 @@ fn preview_overlay(
                             .into_element(cx)
                     },
                     |cx| {
-                        cx.semantics(
-                            fret_ui::element::SemanticsProps {
-                                test_id: Some(Arc::from("ui-gallery-sheet-content")),
-                                ..Default::default()
-                            },
-                            |cx| {
-                                vec![
-                                    shadcn::SheetContent::new(vec![
-                                        shadcn::SheetHeader::new(vec![
-                                            shadcn::SheetTitle::new("Sheet").into_element(cx),
-                                            shadcn::SheetDescription::new("A modal side panel.")
-                                                .into_element(cx),
-                                        ])
-                                        .into_element(cx),
-                                        {
-                                            let body = stack::vstack(
-                                                cx,
-                                                stack::VStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .layout(
-                                                        LayoutRefinement::default()
-                                                            .w_full()
-                                                            .min_w_0()
-                                                            .min_h_0(),
-                                                    ),
-                                                |cx| {
-                                                    (0..96)
-                                                        .map(|i| {
-                                                            cx.text(format!(
-                                                                "Sheet body line {}",
-                                                                i + 1
-                                                            ))
-                                                        })
-                                                        .collect::<Vec<_>>()
-                                                },
-                                            );
-
-                                            shadcn::ScrollArea::new([body])
-                                                .refine_layout(
-                                                    LayoutRefinement::default()
-                                                        .flex_1()
-                                                        .w_full()
-                                                        .min_w_0()
-                                                        .min_h_0(),
-                                                )
-                                                .viewport_test_id(
-                                                    "ui-gallery-sheet-scroll-viewport",
-                                                )
-                                                .into_element(cx)
-                                        },
-                                        shadcn::SheetFooter::new(vec![
-                                            shadcn::Button::new("Close")
-                                                .variant(shadcn::ButtonVariant::Secondary)
-                                                .test_id("ui-gallery-sheet-close")
-                                                .toggle_model(sheet_open.clone())
-                                                .into_element(cx),
-                                        ])
-                                        .into_element(cx),
-                                    ])
+                        shadcn::SheetContent::new(vec![
+                            shadcn::SheetHeader::new(vec![
+                                shadcn::SheetTitle::new("Sheet").into_element(cx),
+                                shadcn::SheetDescription::new("A modal side panel.")
                                     .into_element(cx),
-                                ]
+                            ])
+                            .into_element(cx),
+                            {
+                                let body = stack::vstack(
+                                    cx,
+                                    stack::VStackProps::default().gap(Space::N2).layout(
+                                        LayoutRefinement::default().w_full().min_w_0().min_h_0(),
+                                    ),
+                                    |cx| {
+                                        (0..96)
+                                            .map(|i| cx.text(format!("Sheet body line {}", i + 1)))
+                                            .collect::<Vec<_>>()
+                                    },
+                                );
+
+                                shadcn::ScrollArea::new([body])
+                                    .refine_layout(
+                                        LayoutRefinement::default()
+                                            .flex_1()
+                                            .w_full()
+                                            .min_w_0()
+                                            .min_h_0(),
+                                    )
+                                    .viewport_test_id("ui-gallery-sheet-scroll-viewport")
+                                    .into_element(cx)
                             },
+                            shadcn::SheetFooter::new(vec![
+                                shadcn::Button::new("Close")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .test_id("ui-gallery-sheet-close")
+                                    .toggle_model(sheet_open.clone())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ])
+                        .into_element(cx)
+                        .attach_semantics(
+                            SemanticsDecoration::default().test_id("ui-gallery-sheet-content"),
                         )
                     },
                 );
@@ -11982,28 +16004,18 @@ fn preview_overlay(
                                 .toggle_model(portal_geometry_popover_open.clone())
                                 .into_element(cx);
 
-                            cx.semantics(
-                                fret_ui::element::SemanticsProps {
-                                    test_id: Some(Arc::from(
-                                        "ui-gallery-portal-geometry-popover-content",
-                                    )),
-                                    ..Default::default()
-                                },
-                                |cx| {
-                                    vec![
-                                        shadcn::PopoverContent::new(vec![
-                                            cx.text("Popover content (placement + clamp)"),
-                                            cx.text("Wheel-scroll the viewport while open."),
-                                            close,
-                                        ])
-                                        .refine_layout(
-                                            LayoutRefinement::default()
-                                                .w_px(Px(360.0))
-                                                .h_px(Px(220.0)),
-                                        )
-                                        .into_element(cx),
-                                    ]
-                                },
+                            shadcn::PopoverContent::new(vec![
+                                cx.text("Popover content (placement + clamp)"),
+                                cx.text("Wheel-scroll the viewport while open."),
+                                close,
+                            ])
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(Px(360.0)).h_px(Px(220.0)),
+                            )
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default()
+                                    .test_id("ui-gallery-portal-geometry-popover-content"),
                             )
                         },
                     );
@@ -12023,12 +16035,9 @@ fn preview_overlay(
                     .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))
                     .into_element(cx);
 
-                let scroll = cx.semantics(
-                    fret_ui::element::SemanticsProps {
-                        test_id: Some(Arc::from("ui-gallery-portal-geometry-scroll-area")),
-                        ..Default::default()
-                    },
-                    |_cx| vec![scroll],
+                let scroll = scroll.attach_semantics(
+                    SemanticsDecoration::default()
+                        .test_id("ui-gallery-portal-geometry-scroll-area"),
                 );
 
                 shadcn::Card::new(vec![
@@ -12104,34 +16113,27 @@ fn preview_overlay(
             vec![body]
         });
 
-    let dialog_open_flag = {
-        let open = cx
-            .get_model_copied(&dialog_open, Invalidation::Layout)
-            .unwrap_or(false);
-        if open {
-            Some(cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    test_id: Some(Arc::from("ui-gallery-dialog-open")),
-                    ..Default::default()
-                },
-                |cx| [cx.text("Dialog open")],
-            ))
-        } else {
-            None
-        }
-    };
+    let dialog_open_flag =
+        {
+            let open = cx
+                .get_model_copied(&dialog_open, Invalidation::Layout)
+                .unwrap_or(false);
+            if open {
+                Some(cx.text("Dialog open").attach_semantics(
+                    SemanticsDecoration::default().test_id("ui-gallery-dialog-open"),
+                ))
+            } else {
+                None
+            }
+        };
 
     let alert_dialog_open_flag = {
         let open = cx
             .get_model_copied(&alert_dialog_open, Invalidation::Layout)
             .unwrap_or(false);
         if open {
-            Some(cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    test_id: Some(Arc::from("ui-gallery-alert-dialog-open")),
-                    ..Default::default()
-                },
-                |cx| vec![cx.text("AlertDialog open")],
+            Some(cx.text("AlertDialog open").attach_semantics(
+                SemanticsDecoration::default().test_id("ui-gallery-alert-dialog-open"),
             ))
         } else {
             None
@@ -12143,12 +16145,8 @@ fn preview_overlay(
             .get_model_cloned(&last_action, Invalidation::Layout)
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
         if last.as_ref() == "popover:dismissed" {
-            Some(cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    test_id: Some(Arc::from("ui-gallery-popover-dismissed")),
-                    ..Default::default()
-                },
-                |cx| [cx.text("Popover dismissed")],
+            Some(cx.text("Popover dismissed").attach_semantics(
+                SemanticsDecoration::default().test_id("ui-gallery-popover-dismissed"),
             ))
         } else {
             None

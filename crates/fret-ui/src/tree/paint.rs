@@ -27,7 +27,7 @@ impl<H: UiHost> UiTree<H> {
 
         // Keep IME enabled state in sync even if focus is set programmatically and no input event
         // has been dispatched yet (ADR 0012).
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.set_ime_allowed(app, focus_is_text_input);
         let (active_layers, barrier_root) = self.active_input_layers();
         let _ = active_layers;

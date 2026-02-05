@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    RenderTransformProps, SemanticsProps, SizeStyle,
+    RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -60,7 +60,7 @@ impl AlertDialog {
         Self {
             open,
             overlay_color: None,
-            window_padding: Space::N6,
+            window_padding: Space::N4,
             on_open_auto_focus: None,
             on_close_auto_focus: None,
         }
@@ -194,18 +194,18 @@ impl AlertDialog {
                     let desired_h = last_size.map(|s| s.height).unwrap_or(Px(240.0));
 
                     let content_w = Px(desired_w.0.min(available_w.0).max(0.0));
-                    let content_h = Px(desired_h.0.min(available_h.0).max(0.0));
+                    let content_h_hint = Px(desired_h.0.max(0.0));
 
                     let left = Px(outer.origin.x.0
                         + window_padding_px.0
                         + ((available_w.0 - content_w.0) * 0.5).max(0.0));
                     let top = Px(outer.origin.y.0
                         + window_padding_px.0
-                        + ((available_h.0 - content_h.0) * 0.5).max(0.0));
+                        + (available_h.0 - content_h_hint.0) * 0.5);
 
                     let origin = Point::new(
                         Px(left.0 + content_w.0 * 0.5),
-                        Px(top.0 + content_h.0 * 0.5),
+                        Px(top.0 + content_h_hint.0 * 0.5),
                     );
                     let zoom = overlay_motion::shadcn_zoom_transform(origin, opacity);
 
@@ -221,7 +221,6 @@ impl AlertDialog {
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(content_w),
-                                    height: Length::Px(content_h),
                                     ..Default::default()
                                 },
                                 overflow: Overflow::Visible,
@@ -365,27 +364,28 @@ impl AlertDialogContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let children = self.children;
-        let container = shadcn_layout::container_vstack_gap(
+        let container = shadcn_layout::container_vstack(
             cx,
             ContainerProps {
                 shadow: Some(shadow),
                 ..props
             },
-            Space::N4,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full())
+                .items_stretch(),
             children,
         );
 
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::AlertDialog,
-                labelled_by_element,
-                described_by_element,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
-        )
+
+        container.attach_semantics(SemanticsDecoration {
+            role: Some(SemanticsRole::AlertDialog),
+            labelled_by_element,
+            described_by_element,
+            ..Default::default()
+        })
     }
 }
 
@@ -404,11 +404,19 @@ impl AlertDialogHeader {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pb(Space::N4),
-            LayoutRefinement::default(),
+            ChromeRefinement::default(),
+            LayoutRefinement::default().w_full(),
         );
         let children = self.children;
-        shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children)
+        shadcn_layout::container_vstack(
+            cx,
+            props,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full())
+                .items_stretch(),
+            children,
+        )
     }
 }
 
@@ -425,21 +433,42 @@ impl AlertDialogFooter {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        use fret_ui_kit::declarative::stack;
+
+        // Tailwind `sm:` breakpoints apply at the viewport level. Mirror `sm:flex-row` at 640px.
+        let sm_breakpoint = cx.bounds.size.width >= Px(640.0);
+
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pt(Space::N4),
-            LayoutRefinement::default(),
+            ChromeRefinement::default(),
+            LayoutRefinement::default().w_full(),
         );
-        let children = self.children;
-        shadcn_layout::container_hstack(
-            cx,
-            props,
-            fret_ui_kit::declarative::stack::HStackProps::default()
-                .gap(Space::N2)
-                .justify_end()
-                .items_center(),
-            children,
-        )
+
+        let mut children = self.children;
+        if sm_breakpoint {
+            shadcn_layout::container_hstack(
+                cx,
+                props,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_end()
+                    .items_center(),
+                children,
+            )
+        } else {
+            // Tailwind: `flex-col-reverse gap-2`
+            children.reverse();
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_stretch(),
+                children,
+            )
+        }
     }
 }
 

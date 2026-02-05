@@ -276,6 +276,8 @@ pub(crate) const USAGE_WEB_IME_HARNESS: &str = r#"
 ```rust
 // Click the region to focus it. On wasm, it should focus a hidden textarea via `Effect::ImeAllow`.
 // Use an IME to ensure `Event::Ime` and `Event::TextInput` are routed correctly.
+// Optional: add `?ime_debug=1` to the URL (or set `window.__FRET_IME_DEBUG=true`) to log bridge
+// focus/cursor-area updates to the browser console.
 ```
 "#;
 
@@ -482,6 +484,28 @@ let transcript = ConversationTranscript::new(vec![
 ```
 "#;
 
+pub(crate) const DOC_AI_CHAT_DEMO: &str = r#"
+## AI chat (demo)
+
+This page is a small, interactive demo for the `fret-ui-ai` chat surfaces:
+
+- `ConversationTranscript` for a short transcript,
+- `PromptInput` for composing + sending messages,
+- stable `test_id` anchors for automation.
+
+It exists to validate:
+
+- prompt input ergonomics (send/stop/disabled/loading),
+- transcript append behavior + stick-to-bottom eligibility,
+- a keyboard-first automation path via `fretboard diag`.
+"#;
+
+pub(crate) const USAGE_AI_CHAT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{ConversationTranscript, PromptInput};
+```
+"#;
+
 pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
 ## Inspector (torture harness)
 
@@ -532,6 +556,8 @@ pub(crate) const DOC_BUTTON: &str = r#"
 Validate `variant` / `size` behaviors and default styling consistency.
 
 This layer is **visual recipes**. Interaction policies (hover intent, focus trap, etc.) should live in `fret-ui-kit` / ecosystem crates.
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/button.mdx`.
 "#;
 
 pub(crate) const USAGE_BUTTON: &str = r#"
@@ -924,6 +950,49 @@ let items = [
 
 let select = m3::Select::new(model)
     .placeholder("Pick one")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_AUTOCOMPLETE: &str = r#"
+## Material 3 Autocomplete (MVP)
+
+This page validates a Material 3 autocomplete surface:
+
+- token-driven input + menu outcomes via `md.comp.{outlined,filled}-autocomplete.*`
+- combobox semantics (ADR 0073): `active_descendant` + `controls` ↔ `labelled_by`
+- non-modal popover menu that stays interactive while typing (click-through)
+- composition surface: `ExposedDropdown` (searchable select policy over `Autocomplete`)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_AUTOCOMPLETE: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let query = app.models_mut().insert(String::new());
+let selected_value = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::AutocompleteItem::new("alpha", "Alpha"),
+    m3::AutocompleteItem::new("beta", "Beta"),
+];
+
+let ac = m3::Autocomplete::new(query)
+    .selected_value(selected_value)
+    .label("Search")
+    .placeholder("Type to filter")
+    .items(items)
+    .into_element(cx);
+
+// Composition: searchable select.
+let committed = app
+    .models_mut()
+    .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+let exposed_query = app.models_mut().insert(String::new());
+let exposed = m3::ExposedDropdown::new(committed)
+    .query(exposed_query)
+    .label("Searchable select")
     .items(items)
     .into_element(cx);
 ```
@@ -1602,7 +1671,10 @@ pub(crate) const DOC_SLIDER: &str = r#"
 Slider is a pointer-driven control with support for:
 
 - single value
-- multi-thumb range
+- multi-thumb range (`min_steps_between_thumbs`)
+- `orientation` (horizontal / vertical)
+- direction-aware mapping (`dir` + `inverted`, Radix-aligned)
+- `on_value_commit` (Radix `onValueCommit`)
 
 This page uses `Slider::new_controllable` to keep demo state local to the subtree.
 "#;
@@ -1611,6 +1683,9 @@ pub(crate) const USAGE_SLIDER: &str = r#"
 ```rust
 let slider = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
     .range(0.0, 100.0)
+    .on_value_commit(|_host, _cx, _values| {
+        // Called on pointer up and keyboard commits.
+    })
     .into_element(cx);
 ```
 "#;
@@ -1995,12 +2070,20 @@ let label = shadcn::Label::new("Email").into_element(cx);
 pub(crate) const DOC_MENUBAR: &str = r#"
 ## Menubar
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/menubar.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/menubar.mdx`.
 "#;
 
 pub(crate) const USAGE_MENUBAR: &str = r#"
 ```rust
-// Gallery preview is a smoke stub.
+use fret_ui_shadcn as shadcn;
+
+let file = shadcn::MenubarMenu::new("File").entries([
+    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("New Tab")),
+    shadcn::MenubarEntry::Separator,
+    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Print...")),
+]);
+
+let bar = shadcn::Menubar::new([file]).into_element(cx);
 ```
 "#;
 
@@ -2019,12 +2102,33 @@ pub(crate) const USAGE_NATIVE_SELECT: &str = r#"
 pub(crate) const DOC_NAVIGATION_MENU: &str = r#"
 ## Navigation Menu
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/navigation-menu.mdx`.
 "#;
 
 pub(crate) const USAGE_NAVIGATION_MENU: &str = r#"
 ```rust
-// Gallery preview is a smoke stub.
+use fret_ui_shadcn as shadcn;
+use std::sync::Arc;
+
+let value = cx.app.models_mut().insert(None::<Arc<str>>);
+
+let item = shadcn::NavigationMenuItem::new(
+    "getting_started",
+    "Getting started",
+    [
+        shadcn::NavigationMenuLink::new(value.clone(), [cx.text("Introduction")])
+            .on_click("app.open")
+            .into_element(cx),
+    ],
+);
+
+let menu = shadcn::NavigationMenu::new(value.clone())
+    .list(shadcn::NavigationMenuList::new([
+        item,
+        // Items with empty content behave like the shadcn `navigationMenuTriggerStyle()` link.
+        shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty()),
+    ]))
+    .into_element(cx);
 ```
 "#;
 

@@ -777,6 +777,30 @@ impl WindowElementState {
         }
     }
 
+    pub(crate) fn clear_stale_interaction_targets_for_frame(&mut self, frame_id: FrameId) {
+        let is_live_this_frame = |id: GlobalElementId| {
+            self.nodes
+                .get(&id)
+                .is_some_and(|entry| entry.last_seen_frame == frame_id)
+        };
+
+        if let Some(id) = self.hovered_pressable
+            && !is_live_this_frame(id)
+        {
+            self.hovered_pressable = None;
+        }
+        if let Some(id) = self.pressed_pressable
+            && !is_live_this_frame(id)
+        {
+            self.pressed_pressable = None;
+        }
+        if let Some(id) = self.hovered_hover_region
+            && !is_live_this_frame(id)
+        {
+            self.hovered_hover_region = None;
+        }
+    }
+
     pub(crate) fn set_root_bounds(&mut self, root: GlobalElementId, bounds: Rect) {
         self.root_bounds.insert(root, bounds);
     }

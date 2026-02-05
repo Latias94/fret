@@ -17,7 +17,12 @@
 //! If you need fully composable rows with per-item semantics/focus, prefer `VirtualList`-based
 //! helpers (e.g. `list_virtualized`) and keep the “window jump” cost low via overscan.
 
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::panic::Location;
+
 use fret_core::{Point, Px, Rect, Size};
+use fret_runtime::FrameId;
 use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, UiPointerActionHost};
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
@@ -26,6 +31,7 @@ use fret_ui::element::{
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::virtual_list::VirtualListMetrics;
 use fret_ui::{ElementContext, UiHost};
+use tracing::info;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WindowedRowsPaintFrame {
@@ -37,6 +43,70 @@ pub struct WindowedRowsPaintFrame {
 
 pub type OnWindowedRowsPaintFrame =
     std::sync::Arc<dyn for<'p> Fn(&mut CanvasPainter<'p>, WindowedRowsPaintFrame) + 'static>;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WindowedRowsSurfaceWindowTelemetry {
+    pub callsite_id: u64,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
+
+    pub len: u64,
+    pub row_height: Px,
+    pub overscan: u64,
+    pub gap: Px,
+    pub scroll_margin: Px,
+
+    pub viewport_height: Px,
+    pub offset_y: Px,
+    pub content_height: Px,
+
+    pub visible_start: Option<u64>,
+    pub visible_end: Option<u64>,
+    pub visible_count: u64,
+}
+
+#[derive(Default)]
+pub struct WindowedRowsSurfaceDiagnosticsStore {
+    per_window: HashMap<fret_core::AppWindowId, WindowedRowsSurfaceDiagnosticsFrame>,
+}
+
+#[derive(Default)]
+struct WindowedRowsSurfaceDiagnosticsFrame {
+    frame_id: FrameId,
+    windows: Vec<WindowedRowsSurfaceWindowTelemetry>,
+}
+
+impl WindowedRowsSurfaceDiagnosticsStore {
+    pub fn begin_frame(&mut self, window: fret_core::AppWindowId, frame_id: FrameId) {
+        let w = self.per_window.entry(window).or_default();
+        if w.frame_id != frame_id {
+            w.frame_id = frame_id;
+            w.windows.clear();
+        }
+    }
+
+    pub fn record_window(
+        &mut self,
+        window: fret_core::AppWindowId,
+        frame_id: FrameId,
+        telemetry: WindowedRowsSurfaceWindowTelemetry,
+    ) {
+        self.begin_frame(window, frame_id);
+        let w = self.per_window.entry(window).or_default();
+        w.windows.push(telemetry);
+    }
+
+    #[allow(dead_code)]
+    pub fn windows_for_window(
+        &self,
+        window: fret_core::AppWindowId,
+        frame_id: FrameId,
+    ) -> Option<&[WindowedRowsSurfaceWindowTelemetry]> {
+        let w = self.per_window.get(&window)?;
+        (w.frame_id == frame_id).then_some(w.windows.as_slice())
+    }
+}
 
 /// Props for [`windowed_rows_surface`].
 ///
@@ -81,15 +151,21 @@ impl Default for WindowedRowsSurfaceProps {
 
 /// Build a fixed-row-height scroll surface that paints only the visible row window.
 ///
-/// `paint_row` is called for each visible row (including overscan) with the row bounds in
-/// **content space**. The scroll container applies the scroll transform to descendants, so the
-/// painted rows appear in viewport space automatically.
+/// `paint_row` is called for each visible row (including overscan).
+///
+/// Coordinate space: the provided `Rect` is expressed in the same "content space" that the
+/// scroll container uses for its child subtree. Concretely, it is anchored at the canvas node's
+/// layout bounds (not `0,0`).
+///
+/// This matches how other `CanvasPainter` consumers treat `Rect` coordinates (absolute in the
+/// current transform space) and avoids callers accidentally painting at the window origin.
 #[track_caller]
 pub fn windowed_rows_surface<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: WindowedRowsSurfaceProps,
     paint_row: impl for<'p> Fn(&mut CanvasPainter<'p>, usize, Rect) + 'static,
 ) -> AnyElement {
+    let caller = Location::caller();
     let WindowedRowsSurfaceProps {
         mut scroll,
         mut canvas,
@@ -112,8 +188,64 @@ pub fn windowed_rows_surface<H: UiHost>(
     );
     let content_h = metrics.total_height();
 
+    let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
+    let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
+    let offset_y = metrics.clamp_offset(offset_y, viewport_h);
+    let visible = metrics.visible_range(offset_y, viewport_h, overscan);
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    caller.file().hash(&mut hasher);
+    caller.line().hash(&mut hasher);
+    caller.column().hash(&mut hasher);
+    let callsite_id = hasher.finish();
+
+    cx.app.with_global_mut_untracked(
+        WindowedRowsSurfaceDiagnosticsStore::default,
+        |store, _app| {
+            let (visible_start, visible_end, visible_count) = visible
+                .map(|visible| {
+                    let count = visible.count;
+                    if count == 0 {
+                        return (None, None, 0u64);
+                    }
+                    let start = visible.start_index.saturating_sub(visible.overscan);
+                    let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
+                    (
+                        Some(start as u64),
+                        Some(end as u64),
+                        (end.saturating_sub(start) as u64).saturating_add(1),
+                    )
+                })
+                .unwrap_or((None, None, 0));
+            store.record_window(
+                cx.window,
+                cx.frame_id,
+                WindowedRowsSurfaceWindowTelemetry {
+                    callsite_id,
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                    len: len as u64,
+                    row_height,
+                    overscan: overscan as u64,
+                    gap,
+                    scroll_margin,
+                    viewport_height: viewport_h,
+                    offset_y,
+                    content_height: content_h,
+                    visible_start,
+                    visible_end,
+                    visible_count,
+                },
+            );
+        },
+    );
+
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
+    // This surface's paint output depends on the scroll offset (visible window changes), so
+    // scroll-handle updates must be allowed to invalidate view-cache reuse.
+    scroll.windowed_paint = true;
 
     canvas.layout.size.width = Length::Fill;
     canvas.layout.size.height = Length::Px(content_h);
@@ -132,7 +264,10 @@ pub fn windowed_rows_surface<H: UiHost>(
                 return;
             };
 
-            let width = Px(painter.bounds().size.width.0.max(0.0));
+            let bounds = painter.bounds();
+            let origin_x = bounds.origin.x;
+            let origin_y = bounds.origin.y;
+            let width = Px(bounds.size.width.0.max(0.0));
             let count = visible.count;
             if count == 0 {
                 return;
@@ -156,7 +291,10 @@ pub fn windowed_rows_surface<H: UiHost>(
             for index in start..=end {
                 let y = metrics.offset_for_index(index);
                 let h = metrics.height_at(index);
-                let rect = Rect::new(Point::new(Px(0.0), y), Size::new(width, h));
+                let rect = Rect::new(
+                    Point::new(origin_x, Px(origin_y.0 + y.0)),
+                    Size::new(width, h),
+                );
                 paint_row(painter, index, rect);
             }
         })]
@@ -214,13 +352,40 @@ fn row_index_for_pointer(
     let offset_y = metrics.clamp_offset(offset_y, viewport_h);
 
     let local_y = Px(position.y.0 - bounds.origin.y.0);
-    if local_y.0 < 0.0 {
-        return None;
+
+    if std::env::var_os("FRET_WINDOWED_ROWS_POINTER_DEBUG")
+        .is_some_and(|v| !v.is_empty() && v != "0")
+    {
+        info!(
+            "windowed_rows_pointer bounds_y={} pos_y={} local_y={} offset_y={} viewport_h={}",
+            bounds.origin.y.0, position.y.0, local_y.0, offset_y.0, viewport_h.0
+        );
     }
 
-    let content_y = Px(offset_y.0 + local_y.0);
-    let idx = metrics.index_for_offset(content_y);
-    (idx < len).then_some(idx)
+    // Pointer event positions are mapped through the UI tree's transforms. Scroll containers apply
+    // their offset via `children_render_transform`, so descendants typically receive positions in
+    // stable "content space" already.
+    //
+    // For robustness (and to avoid double-counting the scroll offset), compute candidate indices
+    // for both:
+    // - viewport-space events: content_y = offset + local
+    // - content-space events:  content_y = local
+    let idx_viewport = metrics.index_for_offset(Px(offset_y.0 + local_y.0));
+    let idx_content = metrics.index_for_offset(local_y);
+
+    let idx = if let Some(visible) = metrics.visible_range(offset_y, viewport_h, 0) {
+        let in_visible = |idx: usize| idx >= visible.start_index && idx <= visible.end_index;
+        match (in_visible(idx_viewport), in_visible(idx_content)) {
+            (true, false) => idx_viewport,
+            (false, true) => idx_content,
+            // Prefer content-space indices by default (matches runtime event mapping).
+            _ => idx_content,
+        }
+    } else {
+        idx_content
+    };
+
+    Some(idx.min(len.saturating_sub(1)))
 }
 
 /// Like [`windowed_rows_surface`], but wraps the canvas in a `PointerRegion` that performs row
@@ -234,6 +399,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
     content_semantics: Option<fret_ui::element::SemanticsProps>,
     paint_row: impl for<'p> Fn(&mut CanvasPainter<'p>, usize, Rect) + 'static,
 ) -> AnyElement {
+    let caller = Location::caller();
     let WindowedRowsSurfacePointerHandlers {
         on_pointer_down,
         on_pointer_move,
@@ -262,6 +428,59 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         scroll_margin,
     );
     let content_h = metrics.total_height();
+
+    let viewport_h = Px(scroll_handle.viewport_size().height.0.max(0.0));
+    let offset_y = Px(scroll_handle.offset().y.0.max(0.0));
+    let offset_y = metrics.clamp_offset(offset_y, viewport_h);
+    let visible = metrics.visible_range(offset_y, viewport_h, overscan);
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    caller.file().hash(&mut hasher);
+    caller.line().hash(&mut hasher);
+    caller.column().hash(&mut hasher);
+    let callsite_id = hasher.finish();
+
+    cx.app.with_global_mut_untracked(
+        WindowedRowsSurfaceDiagnosticsStore::default,
+        |store, _app| {
+            let (visible_start, visible_end, visible_count) = visible
+                .map(|visible| {
+                    let count = visible.count;
+                    if count == 0 {
+                        return (None, None, 0u64);
+                    }
+                    let start = visible.start_index.saturating_sub(visible.overscan);
+                    let end = (visible.end_index + visible.overscan).min(count.saturating_sub(1));
+                    (
+                        Some(start as u64),
+                        Some(end as u64),
+                        (end.saturating_sub(start) as u64).saturating_add(1),
+                    )
+                })
+                .unwrap_or((None, None, 0));
+            store.record_window(
+                cx.window,
+                cx.frame_id,
+                WindowedRowsSurfaceWindowTelemetry {
+                    callsite_id,
+                    file: caller.file(),
+                    line: caller.line(),
+                    column: caller.column(),
+                    len: len as u64,
+                    row_height,
+                    overscan: overscan as u64,
+                    gap,
+                    scroll_margin,
+                    viewport_height: viewport_h,
+                    offset_y,
+                    content_height: content_h,
+                    visible_start,
+                    visible_end,
+                    visible_count,
+                },
+            );
+        },
+    );
 
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
@@ -343,7 +562,10 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                     return;
                 };
 
-                let width = Px(painter.bounds().size.width.0.max(0.0));
+                let bounds = painter.bounds();
+                let origin_x = bounds.origin.x;
+                let origin_y = bounds.origin.y;
+                let width = Px(bounds.size.width.0.max(0.0));
                 let count = visible.count;
                 if count == 0 {
                     return;
@@ -367,7 +589,10 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
                 for index in start..=end {
                     let y = metrics.offset_for_index(index);
                     let h = metrics.height_at(index);
-                    let rect = Rect::new(Point::new(Px(0.0), y), Size::new(width, h));
+                    let rect = Rect::new(
+                        Point::new(origin_x, Px(origin_y.0 + y.0)),
+                        Size::new(width, h),
+                    );
                     paint_row(painter, index, rect);
                 }
             })];

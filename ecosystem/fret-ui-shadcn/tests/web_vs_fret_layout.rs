@@ -6002,21 +6002,39 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
 
     let mut group_items = group_items;
     group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
-    let group_items = &group_items[..3];
+    let mut distinct_items: Vec<Rect> = Vec::with_capacity(3);
+    for rect in group_items {
+        if distinct_items
+            .last()
+            .is_some_and(|prev| (rect.origin.x.0 - prev.origin.x.0).abs() <= 1.0)
+        {
+            continue;
+        }
+        distinct_items.push(rect);
+        if distinct_items.len() == 3 {
+            break;
+        }
+    }
 
-    let min_x = group_items
+    assert!(
+        distinct_items.len() == 3,
+        "expected 3 distinct avatar group x positions; got={}; items={distinct_items:?}",
+        distinct_items.len(),
+    );
+
+    let min_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0)
         .fold(f32::INFINITY, f32::min);
-    let min_y = group_items
+    let min_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0)
         .fold(f32::INFINITY, f32::min);
-    let max_x = group_items
+    let max_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0 + r.size.width.0)
         .fold(f32::NEG_INFINITY, f32::max);
-    let max_y = group_items
+    let max_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0 + r.size.height.0)
         .fold(f32::NEG_INFINITY, f32::max);
@@ -6288,21 +6306,39 @@ fn web_vs_fret_layout_empty_avatar_group_geometry() {
 
     let mut group_items = group_items;
     group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
-    let group_items = &group_items[..3];
+    let mut distinct_items: Vec<Rect> = Vec::with_capacity(3);
+    for rect in group_items {
+        if distinct_items
+            .last()
+            .is_some_and(|prev| (rect.origin.x.0 - prev.origin.x.0).abs() <= 1.0)
+        {
+            continue;
+        }
+        distinct_items.push(rect);
+        if distinct_items.len() == 3 {
+            break;
+        }
+    }
 
-    let min_x = group_items
+    assert!(
+        distinct_items.len() == 3,
+        "expected 3 distinct avatar group x positions; got={}; items={distinct_items:?}",
+        distinct_items.len(),
+    );
+
+    let min_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0)
         .fold(f32::INFINITY, f32::min);
-    let min_y = group_items
+    let min_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0)
         .fold(f32::INFINITY, f32::min);
-    let max_x = group_items
+    let max_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0 + r.size.width.0)
         .fold(f32::NEG_INFINITY, f32::max);
-    let max_y = group_items
+    let max_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0 + r.size.height.0)
         .fold(f32::NEG_INFINITY, f32::max);
@@ -6476,21 +6512,39 @@ fn web_vs_fret_layout_item_avatar_geometry() {
 
     let mut group_items = group_items;
     group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
-    let group_items = &group_items[..3];
+    let mut distinct_items: Vec<Rect> = Vec::with_capacity(3);
+    for rect in group_items {
+        if distinct_items
+            .last()
+            .is_some_and(|prev| (rect.origin.x.0 - prev.origin.x.0).abs() <= 1.0)
+        {
+            continue;
+        }
+        distinct_items.push(rect);
+        if distinct_items.len() == 3 {
+            break;
+        }
+    }
 
-    let min_x = group_items
+    assert!(
+        distinct_items.len() == 3,
+        "expected 3 distinct item-avatar group x positions; got={}; items={distinct_items:?}",
+        distinct_items.len(),
+    );
+
+    let min_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0)
         .fold(f32::INFINITY, f32::min);
-    let min_y = group_items
+    let min_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0)
         .fold(f32::INFINITY, f32::min);
-    let max_x = group_items
+    let max_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0 + r.size.width.0)
         .fold(f32::NEG_INFINITY, f32::max);
-    let max_y = group_items
+    let max_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0 + r.size.height.0)
         .fold(f32::NEG_INFINITY, f32::max);
@@ -17206,46 +17260,37 @@ fn web_vs_fret_layout_field_group_geometry() {
         let tasks_push: Model<bool> = cx.app.models_mut().insert(false);
         let tasks_email: Model<bool> = cx.app.models_mut().insert(false);
 
-        let responses_label = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
+        let responses_label = fret_ui_shadcn::FieldLabel::new("Responses")
+            .into_element(cx)
+            .attach_semantics(fret_ui::element::SemanticsDecoration {
+                role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:responses:label")),
                 ..Default::default()
-            },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Responses").into_element(cx)],
-        );
-        let responses_desc = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:responses:desc")),
-                ..Default::default()
-            },
-            move |cx| {
-                vec![fret_ui_shadcn::FieldDescription::new(
-                    "Get notified when ChatGPT responds to requests that take time, like research or image generation.",
-                )
-                .into_element(cx)]
-            },
-        );
-        let responses_row = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:responses:row")),
-                ..Default::default()
-            },
-            move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(responses_push)
-                    .disabled(true)
-                    .a11y_label("push")
-                    .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
-                vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                ]
-            },
-        );
+            });
+        let responses_desc = fret_ui_shadcn::FieldDescription::new(
+            "Get notified when ChatGPT responds to requests that take time, like research or image generation.",
+        )
+        .into_element(cx)
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:responses:desc")),
+            ..Default::default()
+        });
+        let responses_row = {
+            let checkbox = fret_ui_shadcn::Checkbox::new(responses_push)
+                .disabled(true)
+                .a11y_label("push")
+                .into_element(cx);
+            let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
+            fret_ui_shadcn::Field::new(vec![checkbox, label])
+                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                .into_element(cx)
+        }
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:responses:row")),
+            ..Default::default()
+        });
         let responses_checkbox_group = fret_ui_shadcn::FieldGroup::new(vec![responses_row])
             .checkbox_group()
             .into_element(cx);
@@ -17256,65 +17301,50 @@ fn web_vs_fret_layout_field_group_geometry() {
         ])
         .into_element(cx);
 
-        let tasks_label = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
+        let tasks_label = fret_ui_shadcn::FieldLabel::new("Tasks")
+            .into_element(cx)
+            .attach_semantics(fret_ui::element::SemanticsDecoration {
+                role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:tasks:label")),
                 ..Default::default()
-            },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Tasks").into_element(cx)],
-        );
-        let tasks_desc = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:tasks:desc")),
-                ..Default::default()
-            },
-            move |cx| {
-                vec![
-                    fret_ui_shadcn::FieldDescription::new(
-                        "Get notified when tasks you've created have updates. Manage tasks",
-                    )
-                    .into_element(cx),
-                ]
-            },
-        );
-        let tasks_row_push = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:tasks:push-row")),
-                ..Default::default()
-            },
-            move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(tasks_push)
-                    .a11y_label("push-tasks")
-                    .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
-                vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                ]
-            },
-        );
-        let tasks_row_email = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:tasks:email-row")),
-                ..Default::default()
-            },
-            move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(tasks_email)
-                    .a11y_label("email-tasks")
-                    .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Email notifications").into_element(cx);
-                vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                ]
-            },
-        );
+            });
+        let tasks_desc = fret_ui_shadcn::FieldDescription::new(
+            "Get notified when tasks you've created have updates. Manage tasks",
+        )
+        .into_element(cx)
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:tasks:desc")),
+            ..Default::default()
+        });
+        let tasks_row_push = {
+            let checkbox = fret_ui_shadcn::Checkbox::new(tasks_push)
+                .a11y_label("push-tasks")
+                .into_element(cx);
+            let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
+            fret_ui_shadcn::Field::new(vec![checkbox, label])
+                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                .into_element(cx)
+        }
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:tasks:push-row")),
+            ..Default::default()
+        });
+        let tasks_row_email = {
+            let checkbox = fret_ui_shadcn::Checkbox::new(tasks_email)
+                .a11y_label("email-tasks")
+                .into_element(cx);
+            let label = fret_ui_shadcn::FieldLabel::new("Email notifications").into_element(cx);
+            fret_ui_shadcn::Field::new(vec![checkbox, label])
+                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                .into_element(cx)
+        }
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:tasks:email-row")),
+            ..Default::default()
+        });
         let tasks_checkbox_group =
             fret_ui_shadcn::FieldGroup::new(vec![tasks_row_push, tasks_row_email])
                 .checkbox_group()
@@ -17340,14 +17370,13 @@ fn web_vs_fret_layout_field_group_geometry() {
             move |_cx| vec![group],
         );
 
-        vec![cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
+        vec![
+            root.attach_semantics(fret_ui::element::SemanticsDecoration {
+                role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:root")),
                 ..Default::default()
-            },
-            move |_cx| vec![root],
-        )]
+            }),
+        ]
     });
 
     let root = find_semantics(&snap, SemanticsRole::Panel, Some("Golden:field-group:root"))

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Px, TextWrap};
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -9,8 +9,59 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
+use crate::test_id::attach_test_id;
 
-fn card_chrome(theme: &Theme) -> ChromeRefinement {
+const CARD_ACTION_TEST_ID: &str = "fret-ui-shadcn.card-action";
+
+fn is_card_action_marker(element: &AnyElement) -> bool {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.test_id.as_deref())
+        == Some(CARD_ACTION_TEST_ID)
+        || match &element.kind {
+            ElementKind::Semantics(props) => props.test_id.as_deref() == Some(CARD_ACTION_TEST_ID),
+            _ => false,
+        }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CardSize {
+    #[default]
+    Default,
+    Sm,
+}
+
+#[derive(Debug, Default)]
+struct CardSizeProviderState {
+    current: Option<CardSize>,
+}
+
+fn card_size_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> CardSize {
+    cx.inherited_state_where::<CardSizeProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current)
+        .unwrap_or_default()
+}
+
+#[track_caller]
+fn with_card_size_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    size: CardSize,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(CardSizeProviderState::default, |st| {
+        let prev = st.current;
+        st.current = Some(size);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(CardSizeProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
+
+fn card_chrome(theme: &Theme, size: CardSize) -> ChromeRefinement {
     let bg = theme.color_required("card");
     let border = theme.color_required("border");
 
@@ -26,6 +77,11 @@ fn card_chrome(theme: &Theme) -> ChromeRefinement {
     let base_radius = theme.metric_required("metric.radius.lg");
     let rounded_xl = Px(base_radius.0 + 4.0);
 
+    let py = match size {
+        CardSize::Default => Space::N6,
+        CardSize::Sm => Space::N4,
+    };
+
     // shadcn/ui v4 card base:
     // - `rounded-xl border bg-card text-card-foreground shadow-sm`
     // - `flex flex-col gap-6 py-6` (gap handled by the inner vstack)
@@ -34,12 +90,13 @@ fn card_chrome(theme: &Theme) -> ChromeRefinement {
         .border_1()
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
-        .py(Space::N6)
+        .py(py)
 }
 
 #[derive(Debug, Clone)]
 pub struct Card {
     children: Vec<AnyElement>,
+    size: CardSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -49,9 +106,15 @@ impl Card {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: CardSize::Default,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = size;
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -65,22 +128,31 @@ impl Card {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let chrome = card_chrome(&theme).merge(self.chrome);
-        let mut props = decl_style::container_props(&theme, chrome, self.layout);
-        let radius = props.corner_radii.top_left;
-        props.shadow = Some(decl_style::shadow_sm(&theme, radius));
-        let children = self.children;
-        // Cards behave like block containers in shadcn/ui examples: their sections are expected to
-        // stretch to the card width unless explicitly constrained.
-        shadcn_layout::container_vstack(
-            cx,
-            props,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .layout(LayoutRefinement::default().w_full()),
-            children,
-        )
+        let size = self.size;
+        with_card_size_provider(cx, size, |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let chrome = card_chrome(&theme, size).merge(self.chrome);
+            let mut props = decl_style::container_props(&theme, chrome, self.layout);
+            let radius = props.corner_radii.top_left;
+            props.shadow = Some(decl_style::shadow_sm(&theme, radius));
+            let children = self.children;
+
+            let gap = match size {
+                CardSize::Default => Space::N6,
+                CardSize::Sm => Space::N4,
+            };
+
+            // Cards behave like block containers in shadcn/ui examples: their sections are expected to
+            // stretch to the card width unless explicitly constrained.
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default()
+                    .gap(gap)
+                    .layout(LayoutRefinement::default().w_full()),
+                children,
+            )
+        })
     }
 }
 
@@ -119,21 +191,150 @@ impl CardHeader {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let size = card_size_in_scope(cx);
+        let px = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
         let props = decl_style::container_props(
             &theme,
             // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(Space::N6),
+            ChromeRefinement::default().px(px),
             LayoutRefinement::default().w_full(),
         );
+
+        let mut action: Option<AnyElement> = None;
+        let mut left: Vec<AnyElement> = Vec::with_capacity(self.children.len());
+
+        for child in self.children {
+            let is_action = is_card_action_marker(&child);
+            if is_action && action.is_none() {
+                action = Some(child);
+            } else {
+                left.push(child);
+            }
+        }
+
+        if let Some(action) = action {
+            let left_col = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().flex_1().min_w_0()),
+                move |_cx| left,
+            );
+
+            shadcn_layout::container_hstack(
+                cx,
+                props,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_between()
+                    .items_start(),
+                vec![left_col, action],
+            )
+        } else {
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full()),
+                left,
+            )
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CardAction {
+    children: Vec<AnyElement>,
+    layout: LayoutRefinement,
+}
+
+impl CardAction {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            children: children.into_iter().collect(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default(),
+            LayoutRefinement::default().merge(self.layout),
+        );
+
         let children = self.children;
-        shadcn_layout::container_vstack(
-            cx,
-            props,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full()),
-            children,
+        let el = cx.container(props, move |cx| {
+            if children.len() <= 1 {
+                children
+            } else {
+                vec![stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |_cx| children,
+                )]
+            }
+        });
+
+        attach_test_id(el, Arc::<str>::from(CARD_ACTION_TEST_ID))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_ui::element::{ContainerProps, SemanticsDecoration, SemanticsProps};
+    use fret_ui::elements::GlobalElementId;
+
+    #[test]
+    fn card_action_marker_matches_semantics_decoration_test_id() {
+        let el = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
         )
+        .attach_semantics(SemanticsDecoration::default().test_id(CARD_ACTION_TEST_ID));
+
+        assert!(is_card_action_marker(&el));
+    }
+
+    #[test]
+    fn card_action_marker_matches_legacy_semantics_test_id() {
+        let el = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Semantics(SemanticsProps {
+                test_id: Some(Arc::<str>::from(CARD_ACTION_TEST_ID)),
+                ..Default::default()
+            }),
+            Vec::new(),
+        );
+
+        assert!(is_card_action_marker(&el));
+    }
+
+    #[test]
+    fn card_action_marker_ignores_other_test_ids() {
+        let el = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        )
+        .attach_semantics(SemanticsDecoration::default().test_id("not-a-card-action"));
+
+        assert!(!is_card_action_marker(&el));
     }
 }
 
@@ -150,10 +351,15 @@ impl CardContent {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let size = card_size_in_scope(cx);
+        let px = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
         let props = decl_style::container_props(
             &theme,
             // shadcn/ui v4: `px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(Space::N6),
+            ChromeRefinement::default().px(px),
             LayoutRefinement::default().w_full(),
         );
         let children = self.children;
@@ -181,10 +387,15 @@ impl CardFooter {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let size = card_size_in_scope(cx);
+        let px = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
         let props = decl_style::container_props(
             &theme,
             // shadcn/ui v4: `flex items-center px-6` (no default y padding; gap comes from the Card root).
-            ChromeRefinement::default().px(Space::N6),
+            ChromeRefinement::default().px(px),
             LayoutRefinement::default().w_full(),
         );
         let children = self.children;

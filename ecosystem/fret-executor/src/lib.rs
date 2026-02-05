@@ -6,7 +6,9 @@
 
 use std::{
     collections::VecDeque,
+    future::Future,
     marker::PhantomData,
+    pin::Pin,
     rc::Rc,
     sync::atomic::{AtomicBool, Ordering},
     sync::{Arc, Mutex},
@@ -258,6 +260,95 @@ impl Executors {
         Self { dispatcher }
     }
 
+    /// Spawn a `Send` future and deliver its output into an inbox, waking the runner on success.
+    ///
+    /// This is intended for integrating async runtimes (tokio/async-std/etc.) with Fret's
+    /// driver-boundary inbox model (ADR 0190), without forcing a specific runtime on the kernel.
+    pub fn spawn_future_to_inbox<M, Fut>(
+        &self,
+        spawner: &dyn FutureSpawner,
+        window: Option<AppWindowId>,
+        inbox: InboxSender<M>,
+        task: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+    ) -> BackgroundTask
+    where
+        M: Send + 'static,
+        Fut: Future<Output = M> + Send + 'static,
+    {
+        let token = CancellationToken {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        };
+        let task_token = token.clone();
+        let dispatcher = self.dispatcher.clone();
+
+        spawner.spawn_send(Box::pin(async move {
+            if task_token.is_cancelled() {
+                return;
+            }
+
+            let msg = task(task_token.clone()).await;
+
+            if task_token.is_cancelled() {
+                return;
+            }
+
+            if inbox.send(msg) {
+                dispatcher.wake(window);
+            }
+        }));
+
+        BackgroundTask {
+            token,
+            cancel_on_drop: true,
+        }
+    }
+
+    /// Spawn a `!Send` future (usually wasm `spawn_local`) and deliver its output into an inbox.
+    ///
+    /// Returns `None` if the provided spawner does not support local futures.
+    pub fn spawn_local_future_to_inbox<M, Fut>(
+        &self,
+        spawner: &dyn FutureSpawner,
+        window: Option<AppWindowId>,
+        inbox: InboxSender<M>,
+        task: impl FnOnce(CancellationToken) -> Fut + 'static,
+    ) -> Option<BackgroundTask>
+    where
+        M: Send + 'static,
+        Fut: Future<Output = M> + 'static,
+    {
+        let token = CancellationToken {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        };
+        let task_token = token.clone();
+        let dispatcher = self.dispatcher.clone();
+
+        let fut = Box::pin(async move {
+            if task_token.is_cancelled() {
+                return;
+            }
+
+            let msg = task(task_token.clone()).await;
+
+            if task_token.is_cancelled() {
+                return;
+            }
+
+            if inbox.send(msg) {
+                dispatcher.wake(window);
+            }
+        });
+
+        if !spawner.spawn_local(fut) {
+            return None;
+        }
+
+        Some(BackgroundTask {
+            token,
+            cancel_on_drop: true,
+        })
+    }
+
     pub fn dispatch_on_main_thread(&self, task: Runnable) {
         self.spawn_on_main_thread(move |_| task()).detach();
     }
@@ -391,12 +482,73 @@ impl Executors {
     }
 }
 
+pub type FutureSpawnerHandle = Arc<dyn FutureSpawner>;
+
+/// Runtime-provided future spawner used for async ecosystem adapters.
+///
+/// Fret does not require a specific async runtime (Tokio/async-std/etc.). Instead, apps or runners
+/// can install a `FutureSpawnerHandle` as a global and ecosystem crates can consume it.
+pub trait FutureSpawner: Send + Sync + 'static {
+    /// Spawn a `Send` future.
+    fn spawn_send(&self, fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>);
+
+    /// Spawn a `!Send` future (usually only available on wasm via `spawn_local`).
+    ///
+    /// Returns `true` if the future was accepted/spawned.
+    fn spawn_local(&self, fut: Pin<Box<dyn Future<Output = ()> + 'static>>) -> bool {
+        let _ = fut;
+        false
+    }
+}
+
+#[cfg(feature = "tokio")]
+#[derive(Clone)]
+pub struct TokioSpawner {
+    handle: tokio::runtime::Handle,
+}
+
+#[cfg(feature = "tokio")]
+impl TokioSpawner {
+    pub fn new(handle: tokio::runtime::Handle) -> Self {
+        Self { handle }
+    }
+
+    pub fn try_current() -> Result<Self, tokio::runtime::TryCurrentError> {
+        Ok(Self::new(tokio::runtime::Handle::try_current()?))
+    }
+}
+
+#[cfg(feature = "tokio")]
+impl FutureSpawner for TokioSpawner {
+    fn spawn_send(&self, fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
+        let _ = self.handle.spawn(fut);
+    }
+}
+
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+#[derive(Debug, Clone, Copy, Default)]
+pub struct WasmSpawner;
+
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+impl FutureSpawner for WasmSpawner {
+    fn spawn_send(&self, fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
+        wasm_bindgen_futures::spawn_local(fut);
+    }
+
+    fn spawn_local(&self, fut: Pin<Box<dyn Future<Output = ()> + 'static>>) -> bool {
+        wasm_bindgen_futures::spawn_local(fut);
+        true
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::pin::Pin;
     use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 
     use fret_runtime::{Dispatcher, ExecCapabilities};
+    use pollster::block_on;
 
     #[derive(Default)]
     struct TestDispatcher {
@@ -611,5 +763,85 @@ mod tests {
         dispatcher.drain_main();
 
         assert_eq!(ran.load(AtomicOrdering::Relaxed), 0);
+    }
+
+    #[derive(Default)]
+    struct TestSpawner {
+        send: Mutex<Vec<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>>,
+    }
+
+    impl TestSpawner {
+        fn drain_send(&self) -> Vec<Pin<Box<dyn Future<Output = ()> + Send + 'static>>> {
+            let mut guard = self.send.lock().unwrap();
+            std::mem::take(&mut *guard)
+        }
+    }
+
+    impl FutureSpawner for TestSpawner {
+        fn spawn_send(&self, fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
+            self.send.lock().unwrap().push(fut);
+        }
+    }
+
+    #[test]
+    fn dropped_future_task_suppresses_inbox_and_wake() {
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let ex = Executors::new(dispatcher.clone());
+        let spawner = TestSpawner::default();
+
+        let inbox = Inbox::new(InboxConfig {
+            capacity: 4,
+            overflow: InboxOverflowStrategy::DropOldest,
+        });
+        let sender = inbox.sender();
+
+        let ran = Arc::new(AtomicUsize::new(0));
+        {
+            let ran = ran.clone();
+            let task = ex.spawn_future_to_inbox(&spawner, None, sender, move |_| async move {
+                ran.fetch_add(1, AtomicOrdering::Relaxed);
+                123
+            });
+            drop(task);
+        }
+
+        for task in spawner.drain_send() {
+            block_on(task);
+        }
+
+        assert_eq!(ran.load(AtomicOrdering::Relaxed), 0);
+        assert!(inbox.drain().is_empty());
+        assert_eq!(dispatcher.wakes.load(AtomicOrdering::Relaxed), 0);
+    }
+
+    #[test]
+    fn detached_future_task_runs_and_wakes() {
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let ex = Executors::new(dispatcher.clone());
+        let spawner = TestSpawner::default();
+
+        let inbox = Inbox::new(InboxConfig {
+            capacity: 4,
+            overflow: InboxOverflowStrategy::DropOldest,
+        });
+        let sender = inbox.sender();
+
+        let ran = Arc::new(AtomicUsize::new(0));
+        {
+            let ran = ran.clone();
+            ex.spawn_future_to_inbox(&spawner, None, sender, move |_| async move {
+                ran.fetch_add(1, AtomicOrdering::Relaxed);
+                456
+            })
+            .detach();
+        }
+
+        for task in spawner.drain_send() {
+            block_on(task);
+        }
+
+        assert_eq!(ran.load(AtomicOrdering::Relaxed), 1);
+        assert_eq!(inbox.drain(), vec![456]);
+        assert_eq!(dispatcher.wakes.load(AtomicOrdering::Relaxed), 1);
     }
 }

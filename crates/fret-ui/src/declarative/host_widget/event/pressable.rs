@@ -74,6 +74,10 @@ pub(super) fn handle_pressable<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
+            crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
+        }
+
         #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
@@ -190,6 +194,23 @@ pub(super) fn handle_pressable<H: UiHost>(
                 pointer_type,
             } => {
                 cx.set_cursor_icon(CursorIcon::Pointer);
+
+                // If we captured the pointer on down but never receive a matching pointer-up,
+                // a subsequent move can report no pressed buttons while this pressable remains
+                // globally pressed. Clear pressed + capture to avoid stuck Active visuals.
+                if cx.captured == Some(cx.node)
+                    && !buttons.left
+                    && crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element)
+                {
+                    cx.release_pointer_capture();
+                    if let Some(prev_node) =
+                        crate::elements::set_pressed_pressable(&mut *cx.app, window, None)
+                    {
+                        cx.invalidate(prev_node, Invalidation::Paint);
+                    }
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+                }
 
                 let hook = crate::elements::with_element_state(
                     &mut *cx.app,
@@ -309,7 +330,11 @@ pub(super) fn handle_pressable<H: UiHost>(
                     cx.request_focus(cx.node);
                 }
                 cx.capture_pointer(cx.node);
-                crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element));
+                if let Some(prev_node) =
+                    crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element))
+                {
+                    cx.invalidate(prev_node, Invalidation::Paint);
+                }
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
                 cx.stop_propagation();
@@ -323,12 +348,6 @@ pub(super) fn handle_pressable<H: UiHost>(
                 click_count,
                 pointer_type,
             } => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                let pressed =
-                    crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
-
                 let hook = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
@@ -338,7 +357,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 );
 
                 let mut skip_activate = false;
-                if let Some(h) = hook {
+                if let Some(h) = hook.clone() {
                     let up = action::PointerUpCx {
                         pointer_id: *pointer_id,
                         position: *position,
@@ -380,8 +399,24 @@ pub(super) fn handle_pressable<H: UiHost>(
                     );
                 }
 
+                if *button != MouseButton::Left {
+                    if hook.is_some() {
+                        cx.request_redraw();
+                    }
+                    return;
+                }
+
+                let pressed =
+                    crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
+
                 cx.release_pointer_capture();
-                crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
+                if let Some(prev_node) =
+                    crate::elements::set_pressed_pressable(&mut *cx.app, window, None)
+                {
+                    cx.invalidate(prev_node, Invalidation::Paint);
+                }
+                cx.invalidate_self(Invalidation::Paint);
+                cx.request_redraw();
 
                 // Activate based on the pointer-up position, not the cached hovered state. This
                 // keeps click-through outside-press dismissal semantics (ADR 0069) robust even
@@ -497,6 +532,21 @@ pub(super) fn handle_pressable<H: UiHost>(
             }
             _ => {}
         },
+        Event::PointerCancel(_) => {
+            if !crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element) {
+                return;
+            }
+            if cx.captured == Some(cx.node) {
+                cx.release_pointer_capture();
+            }
+            if let Some(prev_node) =
+                crate::elements::set_pressed_pressable(&mut *cx.app, window, None)
+            {
+                cx.invalidate(prev_node, Invalidation::Paint);
+            }
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
+        }
         Event::KeyDown { key, repeat, .. } => {
             if *repeat {
                 return;
@@ -512,7 +562,11 @@ pub(super) fn handle_pressable<H: UiHost>(
             ) {
                 return;
             }
-            crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element));
+            if let Some(prev_node) =
+                crate::elements::set_pressed_pressable(&mut *cx.app, window, Some(this.element))
+            {
+                cx.invalidate(prev_node, Invalidation::Paint);
+            }
             cx.invalidate_self(Invalidation::Paint);
             cx.request_redraw();
             cx.stop_propagation();
@@ -533,7 +587,13 @@ pub(super) fn handle_pressable<H: UiHost>(
             if !pressed {
                 return;
             }
-            crate::elements::set_pressed_pressable(&mut *cx.app, window, None);
+            if let Some(prev_node) =
+                crate::elements::set_pressed_pressable(&mut *cx.app, window, None)
+            {
+                cx.invalidate(prev_node, Invalidation::Paint);
+            }
+            cx.invalidate_self(Invalidation::Paint);
+            cx.request_redraw();
             let hook = crate::elements::with_element_state(
                 &mut *cx.app,
                 window,

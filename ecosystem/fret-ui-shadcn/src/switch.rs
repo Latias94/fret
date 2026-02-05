@@ -351,14 +351,14 @@ impl Switch {
                 chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
                 chrome_props.layout.size = pressable_layout.size;
 
-                // shadcn-web uses `box-sizing: border-box` for the track, so the thumb's visible
-                // inset includes the track border. Fret's border is paint-only (does not affect
-                // layout), so we compensate by incorporating border + padding into the absolute
-                // thumb insets.
-                let chrome_inset_y = Px(chrome_props.border.top.0
-                    + chrome_props.border.bottom.0
-                    + chrome_props.padding.top.0
-                    + chrome_props.padding.bottom.0);
+                // NOTE: Container layout already treats border as part of layout insets
+                // (Tailwind-like border-box behavior). Child positioning is relative to the inner
+                // content area, so we should not double-count border/padding when computing the
+                // thumb's absolute insets.
+                let chrome_inset_y = Px(chrome_props.border.top.0.max(0.0)
+                    + chrome_props.border.bottom.0.max(0.0)
+                    + chrome_props.padding.top.0.max(0.0)
+                    + chrome_props.padding.bottom.0.max(0.0));
 
                 let mut a11y = switch_a11y(a11y_label.clone(), on);
                 a11y.test_id = test_id.clone();
@@ -376,34 +376,30 @@ impl Switch {
                     // - Outer track size is border-box (`h-[1.15rem] w-8 border ...`).
                     // - Thumb is laid out at the content edge, so its outer offset equals the
                     //   track border (1px) plus any explicit padding.
+                    let chrome_inset_x = Px(chrome_props.border.left.0.max(0.0)
+                        + chrome_props.border.right.0.max(0.0)
+                        + chrome_props.padding.left.0.max(0.0)
+                        + chrome_props.padding.right.0.max(0.0));
+
+                    let inner_w = Px((w.0 - chrome_inset_x.0).max(0.0));
                     let inner_h = Px((h.0 - chrome_inset_y.0).max(0.0));
 
-                    let pad_y = Px((chrome_props.border.top.0
-                        + chrome_props.padding.top.0
-                        + ((inner_h.0 - thumb.0) * 0.5).max(0.0))
-                    .max(0.0));
+                    let y = Px(((inner_h.0 - thumb.0) * 0.5).max(0.0));
 
-                    // Additional horizontal inset beyond the border/padding compensation.
-                    let extra_x = pad_x.0.max(0.0);
-                    let pad_left = Px((chrome_props.border.left.0
-                        + chrome_props.padding.left.0
-                        + extra_x)
-                        .max(0.0));
-                    let pad_right = Px((chrome_props.border.right.0
-                        + chrome_props.padding.right.0
-                        + extra_x)
-                        .max(0.0));
+                    // Additional inset beyond the border/padding insets (e.g. shadcn `p-[2px]`-like
+                    // outcomes). This is relative to the inner content area.
+                    let extra_x = Px(pad_x.0.max(0.0));
 
                     let x = if on {
-                        Px((w.0 - pad_right.0 - thumb.0).max(pad_left.0))
+                        Px((inner_w.0 - extra_x.0 - thumb.0).max(extra_x.0))
                     } else {
-                        pad_left
+                        extra_x
                     };
 
                     let thumb_layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
-                            top: Some(pad_y),
+                            top: Some(y),
                             left: Some(x),
                             ..Default::default()
                         },

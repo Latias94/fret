@@ -975,7 +975,7 @@ impl<H: UiHost> UiTree<H> {
             self.focus = None;
         }
 
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
@@ -2492,6 +2492,19 @@ impl<H: UiHost> UiTree<H> {
             self.captured.remove(&pointer_id);
         }
 
+        if matches!(event, Event::PointerCancel(_))
+            && let Some(window) = self.window
+            && let Some(prev_node) = crate::elements::set_pressed_pressable(app, window, None)
+        {
+            needs_redraw = true;
+            self.mark_invalidation_dedup_with_source(
+                prev_node,
+                Invalidation::Paint,
+                &mut invalidation_visited,
+                UiDebugInvalidationSource::Other,
+            );
+        }
+
         if let Event::PointerCancel(e) = event
             && let Some(window) = self.window
             && pointer_type_supports_hover(e.pointer_type)
@@ -2546,7 +2559,7 @@ impl<H: UiHost> UiTree<H> {
                 repeat,
             } = event
         {
-            let focus_is_text_input = self.focus_is_text_input();
+            let focus_is_text_input = self.focus_is_text_input(app);
             let input_ctx_for_shortcuts = InputContext {
                 focus_is_text_input,
                 ..input_ctx.clone()
@@ -2682,7 +2695,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.set_ime_allowed(app, focus_is_text_input);
 
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)

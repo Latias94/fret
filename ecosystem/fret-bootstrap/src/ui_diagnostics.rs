@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use slotmap::{Key as _, KeyData};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct UiDiagnosticsConfig {
@@ -208,6 +209,8 @@ pub struct UiDiagnosticsService {
     pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
     pick_armed_run_id: Option<u64>,
     pending_pick: Option<PendingPick>,
+    app_snapshot_provider:
+        Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -226,6 +229,13 @@ struct InspectToast {
 impl UiDiagnosticsService {
     pub fn is_enabled(&self) -> bool {
         self.cfg.enabled
+    }
+
+    pub fn set_app_snapshot_provider(
+        &mut self,
+        provider: Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+    ) {
+        self.app_snapshot_provider = provider;
     }
 
     pub fn poll_exit_trigger(&mut self) -> bool {
@@ -2339,6 +2349,11 @@ impl UiDiagnosticsService {
         );
         debug.viewport_input = viewport_input;
 
+        let app_snapshot = self
+            .app_snapshot_provider
+            .as_ref()
+            .and_then(|provider| provider(app, window));
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
@@ -2355,6 +2370,7 @@ impl UiDiagnosticsService {
             changed_globals: std::mem::take(&mut ring.last_changed_globals),
             changed_model_sources_top,
             resource_caches,
+            app_snapshot,
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
@@ -2886,6 +2902,9 @@ pub struct UiDiagnosticsSnapshotV1 {
 
     #[serde(default)]
     pub resource_caches: Option<UiResourceCachesV1>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub app_snapshot: Option<serde_json::Value>,
 
     pub debug: UiTreeDebugSnapshotV1,
 }
@@ -3857,6 +3876,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub virtual_list_window_shift_samples: Vec<UiVirtualListWindowShiftSampleV1>,
     #[serde(default)]
+    pub windowed_rows_surfaces: Vec<UiWindowedRowsSurfaceWindowV1>,
+    #[serde(default)]
     pub retained_virtual_list_reconciles: Vec<UiRetainedVirtualListReconcileV1>,
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
@@ -3880,6 +3901,8 @@ pub struct UiTreeDebugSnapshotV1 {
     /// gate on “viewport tooling input was actually exercised” without scraping logs.
     #[serde(default)]
     pub viewport_input: Vec<UiViewportInputEventV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub web_ime_bridge: Option<UiWebImeBridgeDebugSnapshotV1>,
     /// Docking interaction ownership snapshot (best-effort).
     ///
     /// This is sourced from a frame-local diagnostics store populated by policy-heavy ecosystem
@@ -3912,6 +3935,109 @@ pub struct UiTreeDebugSnapshotV1 {
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWebImeBridgeDebugSnapshotV1 {
+    pub enabled: bool,
+    pub composing: bool,
+    pub suppress_next_input: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_has_focus: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_element_tag: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position_mode: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mount_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device_pixel_ratio: Option<f64>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_value_chars: Option<usize>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_selection_start_utf16: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_selection_end_utf16: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_client_width_px: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_client_height_px: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_scroll_width_px: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub textarea_scroll_height_px: Option<i32>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_input_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_beforeinput_data: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_input_data: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_key_code: Option<KeyCode>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cursor_area: Option<RectV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_cursor_anchor_px: Option<(f32, f32)>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_text: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_preedit_cursor_utf16: Option<(u32, u32)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_commit_text: Option<String>,
+
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub recent_events: Vec<String>,
+
+    pub beforeinput_seen: u64,
+    pub input_seen: u64,
+    pub suppressed_input_seen: u64,
+    pub composition_start_seen: u64,
+    pub composition_update_seen: u64,
+    pub composition_end_seen: u64,
+    pub cursor_area_set_seen: u64,
+}
+
+impl UiWebImeBridgeDebugSnapshotV1 {
+    fn from_snapshot(snapshot: &fret_core::input::WebImeBridgeDebugSnapshot) -> Self {
+        Self {
+            enabled: snapshot.enabled,
+            composing: snapshot.composing,
+            suppress_next_input: snapshot.suppress_next_input,
+            textarea_has_focus: snapshot.textarea_has_focus,
+            active_element_tag: snapshot.active_element_tag.clone(),
+            position_mode: snapshot.position_mode.clone(),
+            mount_kind: snapshot.mount_kind.clone(),
+            device_pixel_ratio: snapshot.device_pixel_ratio,
+            textarea_value_chars: snapshot.textarea_value_chars,
+            textarea_selection_start_utf16: snapshot.textarea_selection_start_utf16,
+            textarea_selection_end_utf16: snapshot.textarea_selection_end_utf16,
+            textarea_client_width_px: snapshot.textarea_client_width_px,
+            textarea_client_height_px: snapshot.textarea_client_height_px,
+            textarea_scroll_width_px: snapshot.textarea_scroll_width_px,
+            textarea_scroll_height_px: snapshot.textarea_scroll_height_px,
+            last_input_type: snapshot.last_input_type.clone(),
+            last_beforeinput_data: snapshot.last_beforeinput_data.clone(),
+            last_input_data: snapshot.last_input_data.clone(),
+            last_key_code: snapshot.last_key_code,
+            last_cursor_area: snapshot.last_cursor_area.map(RectV1::from),
+            last_cursor_anchor_px: snapshot.last_cursor_anchor_px,
+            last_preedit_text: snapshot.last_preedit_text.clone(),
+            last_preedit_cursor_utf16: snapshot.last_preedit_cursor_utf16,
+            last_commit_text: snapshot.last_commit_text.clone(),
+            recent_events: snapshot.recent_events.clone(),
+            beforeinput_seen: snapshot.beforeinput_seen,
+            input_seen: snapshot.input_seen,
+            suppressed_input_seen: snapshot.suppressed_input_seen,
+            composition_start_seen: snapshot.composition_start_seen,
+            composition_update_seen: snapshot.composition_update_seen,
+            composition_end_seen: snapshot.composition_end_seen,
+            cursor_area_set_seen: snapshot.cursor_area_set_seen,
+        }
+    }
 }
 
 impl UiTreeDebugSnapshotV1 {
@@ -3962,6 +4088,17 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiVirtualListWindowShiftSampleV1::from_sample)
                 .collect(),
+            windowed_rows_surfaces: app
+                .global::<fret_ui_kit::declarative::windowed_rows_surface::WindowedRowsSurfaceDiagnosticsStore>(
+                )
+                .and_then(|store| store.windows_for_window(window, app.frame_id()))
+                .map(|windows| {
+                    windows
+                        .iter()
+                        .map(UiWindowedRowsSurfaceWindowV1::from_telemetry)
+                        .collect()
+                })
+                .unwrap_or_default(),
             retained_virtual_list_reconciles: ui
                 .debug_retained_virtual_list_reconciles()
                 .iter()
@@ -4020,9 +4157,13 @@ impl UiTreeDebugSnapshotV1 {
                         .copied()
                         .map(UiOverlaySynthesisEventV1::from_event)
                         .collect()
-                })
+            })
                 .unwrap_or_default(),
             viewport_input: Vec::new(),
+            web_ime_bridge: app
+                .global::<fret_core::input::WebImeBridgeDebugSnapshot>()
+                .filter(|snapshot| **snapshot != fret_core::input::WebImeBridgeDebugSnapshot::default())
+                .map(UiWebImeBridgeDebugSnapshotV1::from_snapshot),
             docking_interaction: app
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                 .and_then(|store| store.docking_for_window(window, app.frame_id()))
@@ -4515,6 +4656,54 @@ impl UiVirtualListWindowShiftSampleV1 {
             prev_window_range: sample.prev_window_range.map(UiVirtualRangeV1::from_range),
             window_range: sample.window_range.map(UiVirtualRangeV1::from_range),
             render_window_range: sample.render_window_range.map(UiVirtualRangeV1::from_range),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWindowedRowsSurfaceWindowV1 {
+    pub callsite_id: u64,
+    pub location: UiSourceLocationV1,
+
+    pub len: u64,
+    pub row_height: f32,
+    pub overscan: u64,
+    pub gap: f32,
+    pub scroll_margin: f32,
+
+    pub viewport_height: f32,
+    pub offset_y: f32,
+    pub content_height: f32,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible_start: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visible_end: Option<u64>,
+    pub visible_count: u64,
+}
+
+impl UiWindowedRowsSurfaceWindowV1 {
+    fn from_telemetry(
+        telemetry: &fret_ui_kit::declarative::windowed_rows_surface::WindowedRowsSurfaceWindowTelemetry,
+    ) -> Self {
+        Self {
+            callsite_id: telemetry.callsite_id,
+            location: UiSourceLocationV1 {
+                file: telemetry.file.to_string(),
+                line: telemetry.line,
+                column: telemetry.column,
+            },
+            len: telemetry.len,
+            row_height: telemetry.row_height.0,
+            overscan: telemetry.overscan,
+            gap: telemetry.gap.0,
+            scroll_margin: telemetry.scroll_margin.0,
+            viewport_height: telemetry.viewport_height.0,
+            offset_y: telemetry.offset_y.0,
+            content_height: telemetry.content_height.0,
+            visible_start: telemetry.visible_start,
+            visible_end: telemetry.visible_end,
+            visible_count: telemetry.visible_count,
         }
     }
 }

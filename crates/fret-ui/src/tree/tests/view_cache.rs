@@ -495,6 +495,7 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
                         visible_items: Vec::new(),
                     },
                 ),
+                semantics_decoration: None,
             },
         );
     });
@@ -535,6 +536,93 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
     assert!(ui.nodes[boundary].invalidation.paint);
     assert!(ui.nodes[boundary].view_cache_needs_rerender);
     assert!(!ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
+fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let boundary = ui.create_node(TestStack::default());
+    let scroll_node = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![scroll_node]);
+
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.nodes[boundary].bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let handle_key = scroll_handle.binding_key();
+
+    // Register the element instance + scroll-handle binding used by the invalidation pass.
+    let scroll_element = crate::GlobalElementId(2);
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        window_frame.instances.insert(
+            scroll_node,
+            crate::declarative::frame::ElementRecord {
+                element: scroll_element,
+                instance: crate::declarative::frame::ElementInstance::Scroll(
+                    crate::element::ScrollProps {
+                        layout: crate::element::LayoutStyle::default(),
+                        axis: crate::element::ScrollAxis::Y,
+                        scroll_handle: Some(scroll_handle.clone()),
+                        intrinsic_measure_mode: crate::element::ScrollIntrinsicMeasureMode::Content,
+                        windowed_paint: true,
+                        probe_unbounded: true,
+                    },
+                ),
+                semantics_decoration: None,
+            },
+        );
+    });
+
+    let frame_id = app.frame_id();
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [crate::declarative::frame::ScrollHandleBinding {
+            handle_key,
+            element: scroll_element,
+            handle: scroll_handle.clone(),
+        }],
+    );
+
+    // Prime scroll-handle revisions so the next change is treated as a delta.
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
+    for id in [root, boundary, scroll_node] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    // Programmatic scroll should mark the cache root dirty so windowed paint surfaces can update.
+    scroll_handle.set_offset(fret_core::Point::new(
+        fret_core::Px(0.0),
+        fret_core::Px(250.0),
+    ));
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
+
+    assert!(ui.nodes[boundary].view_cache_needs_rerender);
+    assert!(!ui.should_reuse_view_cache_node(boundary));
+    // The scroll node itself remains hit-test-only invalidated; the rerender flag carries the
+    // windowed-paint contract.
+    assert!(ui.nodes[scroll_node].invalidation.hit_test);
 }
 
 #[test]

@@ -75,6 +75,8 @@ impl Args {
             "md.comp.filled-text-field.".to_string(),
             "md.comp.outlined-select.".to_string(),
             "md.comp.filled-select.".to_string(),
+            "md.comp.outlined-autocomplete.".to_string(),
+            "md.comp.filled-autocomplete.".to_string(),
             "md.comp.dialog.".to_string(),
             "md.comp.full-screen-dialog.".to_string(),
             "md.comp.divider.".to_string(),
@@ -325,6 +327,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn generate_output(args: &Args) -> Result<String, Box<dyn std::error::Error>> {
     let parsed = parse_sass_dir(&args.sass_dir)?;
     let selected = select_tokens(&parsed, &args.prefixes);
+    if args.debug {
+        let selected_autocomplete = selected
+            .iter()
+            .filter(|def| def.token_key.contains("autocomplete"))
+            .count();
+        eprintln!(
+            "import: parsed_tokens={} selected_tokens={} selected_autocomplete={}",
+            parsed.by_token.len(),
+            selected.len(),
+            selected_autocomplete
+        );
+    }
 
     let resolved = resolve_all(selected, &parsed)?;
     let out_rs = emit_rust(&resolved, &args.sass_dir);
@@ -847,6 +861,22 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     );
     emit_inject_comp_scalars(
         &mut out,
+        "inject_comp_outlined_autocomplete_scalars",
+        "md.comp.outlined-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-autocomplete."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_filled_autocomplete_scalars",
+        "md.comp.filled-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-autocomplete."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
         "inject_comp_date_picker_docked_scalars",
         "md.comp.date-picker.docked.",
         defs.iter()
@@ -1056,6 +1086,22 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.filled-select.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.filled-select."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_outlined_autocomplete_colors_from_sys",
+        "md.comp.outlined-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-autocomplete."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_filled_autocomplete_colors_from_sys",
+        "md.comp.filled-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-autocomplete."))
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_color_aliases(

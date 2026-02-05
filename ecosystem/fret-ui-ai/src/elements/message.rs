@@ -1,34 +1,58 @@
 use std::sync::Arc;
 
-use fret_core::{FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
+use fret_core::SemanticsRole;
+use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 
-/// Message role taxonomy aligned with typical chat UIs.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MessageRole {
-    User,
-    Assistant,
-    System,
-    Tool,
-}
+use crate::model::MessageRole;
 
-/// A minimal message bubble built on top of `fret-ui-shadcn::Card`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+/// A role-aware message wrapper aligned with AI Elements `Message` (`message.tsx`).
+///
+/// This component is layout-only: it is responsible for alignment (user → right) and spacing
+/// between message sections (content, actions, toolbars).
 pub struct Message {
-    role: MessageRole,
-    text: Arc<str>,
+    from: MessageRole,
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+    gap: Space,
     layout: LayoutRefinement,
 }
 
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Message")
+            .field("from", &self.from)
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_deref())
+            .field("gap", &self.gap)
+            .field("layout", &self.layout)
+            .finish()
+    }
+}
+
 impl Message {
-    pub fn new(role: MessageRole, text: impl Into<Arc<str>>) -> Self {
+    pub fn new(from: MessageRole, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
-            role,
-            text: text.into(),
+            from,
+            children: children.into_iter().collect(),
+            test_id: None,
+            gap: Space::N2,
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -36,51 +60,140 @@ impl Message {
         self
     }
 
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let theme = Theme::global(&*cx.app).clone();
-        let text = self.text;
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let justify = if self.from == MessageRole::User {
+            Justify::End
+        } else {
+            Justify::Start
+        };
 
-        let chrome = match self.role {
-            MessageRole::User => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("primary")))
-            }
-            MessageRole::Assistant => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("card")))
-            }
-            MessageRole::System => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("muted")))
-            }
-            MessageRole::Tool => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("secondary")))
-            }
+        let gap = self.gap;
+        let children = self.children;
+        let layout = self.layout.merge(LayoutRefinement::default().w_full());
+
+        let inner = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().min_w_0())
+                .gap(gap),
+            move |_cx| children,
+        );
+
+        let row = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(layout)
+                .gap(Space::N0)
+                .justify(justify),
+            move |_cx| vec![inner],
+        );
+
+        let Some(test_id) = self.test_id else {
+            return row;
+        };
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Group,
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            move |_cx| vec![row],
+        )
+    }
+}
+
+#[derive(Clone)]
+/// Message bubble surface aligned with AI Elements `MessageContent`.
+///
+/// Upstream styles user messages as a rounded bubble (`bg-secondary px-4 py-3`) and renders
+/// assistant messages as plain flow content (no bubble by default).
+pub struct MessageContent {
+    from: MessageRole,
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+    layout: LayoutRefinement,
+    chrome: ChromeRefinement,
+}
+
+impl std::fmt::Debug for MessageContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MessageContent")
+            .field("from", &self.from)
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_deref())
+            .field("layout", &self.layout)
+            .field("chrome", &self.chrome)
+            .finish()
+    }
+}
+
+impl MessageContent {
+    pub fn new(from: MessageRole, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            from,
+            children: children.into_iter().collect(),
+            test_id: None,
+            layout: LayoutRefinement::default(),
+            chrome: ChromeRefinement::default(),
         }
-        .rounded(Radius::Lg)
-        .p(Space::N4);
+    }
 
-        let fg = match self.role {
-            MessageRole::User => theme.color_required("primary-foreground"),
-            _ => theme.color_required("foreground"),
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
+        let base_chrome = if self.from == MessageRole::User {
+            let bg = theme
+                .color_by_key("fret.ai.message.user.bg")
+                .unwrap_or_else(|| theme.color_required("secondary"));
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(bg))
+                .px(Space::N4)
+                .py(Space::N3)
+                .rounded(Radius::Lg)
+        } else {
+            ChromeRefinement::default()
         };
 
-        let text_style = TextStyle {
-            font: Default::default(),
-            size: theme.metric_required("font.size"),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(theme.metric_required("font.line_height")),
-            letter_spacing_em: None,
-        };
+        let chrome = base_chrome.merge(self.chrome);
+        let layout = self.layout.merge(LayoutRefinement::default().min_w_0());
+        let children = self.children;
 
-        fret_ui_shadcn::Card::new(vec![cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text,
-            style: Some(text_style),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-        })])
-        .refine_style(chrome)
-        .refine_layout(self.layout)
-        .into_element(cx)
+        let props = decl_style::container_props(&theme, chrome, layout);
+        let content = cx.container(props, move |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2),
+                move |_cx| children,
+            )]
+        });
+
+        let Some(test_id) = self.test_id else {
+            return content;
+        };
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Group,
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            move |_cx| vec![content],
+        )
     }
 }

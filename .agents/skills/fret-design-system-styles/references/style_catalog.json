@@ -1,0 +1,219 @@
+{
+  "version": "1",
+  "notes": [
+    "This catalog is intentionally small and editor-focused.",
+    "Each entry provides: baseline shadcn preset suggestion + a ThemeConfig override patch.",
+    "Overrides are designed to be layered on top of apply_shadcn_new_york_v4(...)."
+  ],
+  "styles": [
+    {
+      "id": "editor-compact",
+      "label": "Compact editor (dense)",
+      "keywords": [
+        "compact",
+        "dense",
+        "tight",
+        "editor",
+        "inspector",
+        "datatable",
+        "data table",
+        "property list"
+      ],
+      "baseline": { "preset": "shadcn-new-york-v4", "base": "zinc", "scheme": "dark" },
+      "overrides": {
+        "name": "compact-editor-overrides",
+        "metrics": {
+          "metric.padding.sm": 7.0,
+          "metric.padding.md": 9.0,
+          "component.size.md.input.h": 32.0,
+          "component.size.md.button.h": 32.0,
+          "component.size.sm.button.h": 28.0,
+          "component.size.lg.button.h": 36.0,
+          "component.size.md.icon_button.size": 32.0,
+          "component.table.row_min_h": 32.0,
+          "component.list.row_height": 24.0,
+          "component.ring.width": 2.0,
+          "component.ring.offset": 0.0
+        }
+      }
+    },
+    {
+      "id": "editor-comfortable",
+      "label": "Comfortable editor (spacious)",
+      "keywords": [
+        "comfortable",
+        "spacious",
+        "cozy",
+        "relaxed",
+        "editor",
+        "settings",
+        "forms"
+      ],
+      "baseline": { "preset": "shadcn-new-york-v4", "base": "neutral", "scheme": "dark" },
+      "overrides": {
+        "name": "comfortable-editor-overrides",
+        "metrics": {
+          "metric.padding.sm": 10.0,
+          "metric.padding.md": 12.0,
+          "metric.radius.lg": 12.0,
+          "component.size.md.input.h": 40.0,
+          "component.size.md.button.h": 40.0,
+          "component.size.sm.button.h": 36.0,
+          "component.size.lg.button.h": 44.0,
+          "component.size.md.icon_button.size": 40.0,
+          "component.table.row_min_h": 40.0,
+          "component.list.row_height": 28.0,
+          "component.ring.width": 3.0,
+          "component.ring.offset": 0.0
+        }
+      }
+    },
+    {
+      "id": "editor-soft",
+      "label": "Soft UI editor (round + diffuse)",
+      "keywords": [
+        "soft",
+        "soft ui",
+        "rounded",
+        "gentle",
+        "friendly",
+        "low contrast"
+      ],
+      "baseline": { "preset": "shadcn-new-york-v4", "base": "stone", "scheme": "dark" },
+      "overrides": {
+        "name": "soft-ui-editor-overrides",
+        "metrics": {
+          "metric.radius.sm": 8.0,
+          "metric.radius.md": 10.0,
+          "metric.radius.lg": 14.0,
+          "component.ring.width": 2.0,
+          "component.ring.offset": 2.0,
+          "component.shadow.sm.offset_y": 1.0,
+          "component.shadow.sm.softness": 3.0,
+          "component.shadow.md.offset_y": 2.0,
+          "component.shadow.md.softness": 6.0,
+          "component.shadow.lg.offset_y": 3.0,
+          "component.shadow.lg.softness": 10.0
+        }
+      }
+    },
+    {
+      "id": "editor-neubrutal",
+      "label": "Neubrutal editor (flat + bold focus)",
+      "keywords": [
+        "neubrutal",
+        "neubrutalism",
+        "brutal",
+        "flat",
+        "bold",
+        "high contrast",
+        "outline"
+      ],
+      "baseline": { "preset": "shadcn-new-york-v4", "base": "neutral", "scheme": "light" },
+      "overrides": {
+        "name": "neubrutal-editor-overrides",
+        "colors": {
+          "background": "#F8F8F8",
+          "foreground": "#111111",
+          "card": "#FFFFFF",
+          "card-foreground": "#111111",
+          "popover": "#FFFFFF",
+          "popover-foreground": "#111111",
+          "border": "#111111",
+          "ring": "#111111",
+          "ring-offset-background": "#F8F8F8",
+          "primary": "#111111",
+          "primary-foreground": "#FFFFFF",
+          "accent": "#FFD60A",
+          "accent-foreground": "#111111"
+        },
+        "metrics": {
+          "component.radius.sm": 2.0,
+          "component.radius.md": 2.0,
+          "component.radius.lg": 2.0,
+          "component.shadow.xs.offset_x": 0.0,
+          "component.shadow.xs.offset_y": 0.0,
+          "component.shadow.xs.spread": 0.0,
+          "component.shadow.xs.softness": 0.0,
+          "component.shadow.sm.offset_x": 0.0,
+          "component.shadow.sm.offset_y": 0.0,
+          "component.shadow.sm.spread": 0.0,
+          "component.shadow.sm.softness": 0.0,
+          "component.shadow.md.offset_x": 0.0,
+          "component.shadow.md.offset_y": 0.0,
+          "component.shadow.md.spread": 0.0,
+          "component.shadow.md.softness": 0.0,
+          "component.shadow.lg.offset_x": 0.0,
+          "component.shadow.lg.offset_y": 0.0,
+          "component.shadow.lg.spread": 0.0,
+          "component.shadow.lg.softness": 0.0,
+          "component.ring.width": 4.0,
+          "component.ring.offset": 2.0
+        }
+      }
+    },
+    {
+      "id": "editor-hud",
+      "label": "HUD / sci‑fi editor (dark + neon accent)",
+      "keywords": [
+        "hud",
+        "sci-fi",
+        "scifi",
+        "neon",
+        "cyber",
+        "terminal",
+        "fui"
+      ],
+      "baseline": { "preset": "shadcn-new-york-v4", "base": "slate", "scheme": "dark" },
+      "overrides": {
+        "name": "hud-editor-overrides",
+        "colors": {
+          "background": "#050B14",
+          "foreground": "#E6EDF7",
+          "card": "#0B1020",
+          "card-foreground": "#E6EDF7",
+          "popover": "#0B1020",
+          "popover-foreground": "#E6EDF7",
+          "border": "#24324D",
+          "ring": "#22D3EE",
+          "ring-offset-background": "#050B14",
+          "primary": "#22D3EE",
+          "primary-foreground": "#001018",
+          "accent": "#0D1B2A",
+          "accent-foreground": "#E6EDF7"
+        },
+        "metrics": {
+          "component.ring.width": 2.0,
+          "component.ring.offset": 0.0,
+          "metric.radius.lg": 10.0,
+          "metric.scrollbar.width": 10.0
+        }
+      }
+    },
+    {
+      "id": "overlays-glass",
+      "label": "Glass overlays (selective; not global)",
+      "keywords": [
+        "glass",
+        "glassmorphism",
+        "frosted",
+        "blur",
+        "overlay",
+        "popover",
+        "dialog"
+      ],
+      "baseline": { "preset": "shadcn-new-york-v4", "base": "zinc", "scheme": "dark" },
+      "overrides": {
+        "name": "glass-overlays-overrides",
+        "colors": {
+          "component.glass.tint": "#FFFFFF22",
+          "component.glass.border": "#FFFFFF26"
+        },
+        "metrics": {
+          "component.glass.blur_radius_px": 18.0,
+          "component.glass.blur_downsample": 2.0
+        }
+      }
+    }
+  ]
+}

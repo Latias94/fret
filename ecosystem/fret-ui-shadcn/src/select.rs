@@ -1,4 +1,5 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::test_id::attach_test_id;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -306,19 +307,7 @@ where
                     );
                     viewport_id_out.set(Some(scroll.id));
 
-                    let scroll = cx.semantics(
-                        SemanticsProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
-                            },
-                            test_id: Some(Arc::from("select-scroll-viewport")),
-                            ..Default::default()
-                        },
-                        |_cx| vec![scroll],
-                    );
+                    let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
 
                     if let Some(active_element) = active_element_ref.get() {
                         let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {
@@ -430,8 +419,8 @@ where
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SelectAlign {
-    #[default]
     Start,
+    #[default]
     Center,
     End,
 }
@@ -509,8 +498,9 @@ impl SelectLabel {
 
 /// shadcn/ui `SelectGroup` (v4).
 ///
-/// In the upstream DOM implementation this is a structural wrapper. In Fret we render it by
-/// flattening its entries into the surrounding listbox.
+/// In the upstream DOM implementation this is a structural wrapper (`role=group`). In Fret we
+/// preserve a similar structure for semantics, while still flattening groups for internal
+/// roving/typeahead policy.
 #[derive(Debug, Clone)]
 pub struct SelectGroup {
     pub entries: Vec<SelectEntry>,
@@ -1076,12 +1066,18 @@ fn select_impl<H: UiHost>(
         // Treat that as the semantic minimum regardless of theme overrides.
         let min_width = Px(min_width.0.max(128.0));
 
-        let trigger_layout = decl_style::layout_style(
+        let mut trigger_layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
                 .h_px(resolved.min_height)
                 .merge(layout),
         );
+        // shadcn/ui v4 `SelectTrigger` includes `w-fit` so it does not stretch under parent stacks
+        // using `items-stretch`. Approximate that by opting out of cross-axis stretch unless a
+        // width is explicitly requested.
+        if matches!(trigger_layout.size.width, Length::Auto) {
+            trigger_layout.flex.align_self = Some(CrossAlign::Start);
+        }
 
         let mut border = resolved.border_color;
         let mut border_focus = resolved.border_color_focused;
@@ -2155,7 +2151,10 @@ fn select_impl<H: UiHost>(
                                                                 });
                                                                 let mut first_valid_alignment_item_found = false;
 
-                                                                for (row_idx, row) in rows.iter().cloned().enumerate() {
+                                                                let mut render_row = |cx: &mut ElementContext<'_, H>,
+                                                                                      row_idx: usize,
+                                                                                      row: SelectRow,
+                                                                                      out: &mut Vec<AnyElement>| {
                                                                     match row {
                                                                         SelectRow::Label(label) => {
                                                                             let theme = Theme::global(&*cx.app).clone();
@@ -2669,7 +2668,112 @@ fn select_impl<H: UiHost>(
                                                                             }));
                                                                         }
                                                                     }
+                                                                };
+
+                                                                fn select_group_label(entries: &[SelectEntry]) -> Option<Arc<str>> {
+                                                                    entries.iter().find_map(|e| match e {
+                                                                        SelectEntry::Label(label) => Some(label.text.clone()),
+                                                                        _ => None,
+                                                                    })
                                                                 }
+
+                                                                fn render_entries<H: UiHost>(
+                                                                    cx: &mut ElementContext<'_, H>,
+                                                                    entries: &[SelectEntry],
+                                                                    out: &mut Vec<AnyElement>,
+                                                                    row_idx_cursor: &mut usize,
+                                                                    render_row: &mut impl FnMut(
+                                                                        &mut ElementContext<'_, H>,
+                                                                        usize,
+                                                                        SelectRow,
+                                                                        &mut Vec<AnyElement>,
+                                                                    ),
+                                                                ) {
+                                                                    for entry in entries {
+                                                                        match entry {
+                                                                            SelectEntry::Item(item) => {
+                                                                                let row_idx = *row_idx_cursor;
+                                                                                *row_idx_cursor = row_idx.saturating_add(1);
+                                                                                render_row(
+                                                                                    cx,
+                                                                                    row_idx,
+                                                                                    SelectRow::Item(item.clone()),
+                                                                                    out,
+                                                                                );
+                                                                            }
+                                                                            SelectEntry::Label(label) => {
+                                                                                let row_idx = *row_idx_cursor;
+                                                                                *row_idx_cursor = row_idx.saturating_add(1);
+                                                                                render_row(
+                                                                                    cx,
+                                                                                    row_idx,
+                                                                                    SelectRow::Label(label.clone()),
+                                                                                    out,
+                                                                                );
+                                                                            }
+                                                                            SelectEntry::Separator(_) => {
+                                                                                let row_idx = *row_idx_cursor;
+                                                                                *row_idx_cursor = row_idx.saturating_add(1);
+                                                                                render_row(
+                                                                                    cx,
+                                                                                    row_idx,
+                                                                                    SelectRow::Separator,
+                                                                                    out,
+                                                                                );
+                                                                            }
+                                                                            SelectEntry::Group(group) => {
+                                                                                let label =
+                                                                                    select_group_label(&group.entries);
+                                                                                let mut layout =
+                                                                                    LayoutStyle::default();
+                                                                                layout.size.width = Length::Fill;
+                                                                                out.push(cx.semantics(
+                                                                                    SemanticsProps {
+                                                                                        layout,
+                                                                                        role: SemanticsRole::Group,
+                                                                                        label,
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    |cx| {
+                                                                                        vec![cx.flex(
+                                                                                            FlexProps {
+                                                                                                layout: LayoutStyle::default(),
+                                                                                                direction:
+                                                                                                    fret_core::Axis::Vertical,
+                                                                                                gap: Px(0.0),
+                                                                                                padding: Edges::all(Px(0.0)),
+                                                                                                justify: MainAlign::Start,
+                                                                                                align: CrossAlign::Stretch,
+                                                                                                wrap: false,
+                                                                                            },
+                                                                                            |cx| {
+                                                                                                let mut inner =
+                                                                                                    Vec::new();
+                                                                                                render_entries(
+                                                                                                    cx,
+                                                                                                    &group.entries,
+                                                                                                    &mut inner,
+                                                                                                    row_idx_cursor,
+                                                                                                    render_row,
+                                                                                                );
+                                                                                                inner
+                                                                                            },
+                                                                                        )]
+                                                                                    },
+                                                                                ));
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                let mut row_idx_cursor: usize = 0;
+                                                                render_entries(
+                                                                    cx,
+                                                                    entries,
+                                                                    &mut out,
+                                                                    &mut row_idx_cursor,
+                                                                    &mut render_row,
+                                                                );
 
                                                                 let listbox_content = cx.flex(
                                                                     FlexProps {
@@ -2976,8 +3080,8 @@ mod tests {
     use fret_ui::tree::UiTree;
 
     #[test]
-    fn select_align_default_is_start() {
-        assert_eq!(SelectAlign::default(), SelectAlign::Start);
+    fn select_align_default_is_center() {
+        assert_eq!(SelectAlign::default(), SelectAlign::Center);
     }
 
     #[test]
@@ -3775,6 +3879,74 @@ mod tests {
         assert_eq!(active_node.label.as_deref(), Some("Beta"));
         assert_eq!(active_node.pos_in_set, Some(2));
         assert_eq!(active_node.set_size, Some(2));
+    }
+
+    #[test]
+    fn select_group_renders_group_semantics_node() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = vec![SelectEntry::Group(SelectGroup::new(vec![
+            SelectLabel::new("Fruits").into(),
+            SelectItem::new("apple", "Apple").into(),
+            SelectItem::new("banana", "Banana").into(),
+        ]))];
+
+        // First frame: establish stable trigger bounds.
+        let _ = render_frame_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+
+        let _ = render_frame_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            entries.clone(),
+        );
+
+        // Second open frame: allow overlay tree identity + semantics snapshot to stabilize.
+        let _ = render_frame_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model,
+            open,
+            entries,
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.role == SemanticsRole::Group && n.label.as_deref() == Some("Fruits")
+            }),
+            "expected a `role=group` semantics node labeled by the group label"
+        );
     }
 
     #[test]
