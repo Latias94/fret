@@ -71,6 +71,7 @@ pub mod separator;
 pub mod shadcn_themes;
 pub mod sheet;
 mod shortcut_display;
+pub mod shortcut_hint;
 pub mod sidebar;
 pub mod skeleton;
 pub mod slider;
@@ -231,6 +232,7 @@ pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
     Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide, SheetTitle,
 };
+pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{
     Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader,
     SidebarMenu, SidebarMenuButton, SidebarMenuItem,

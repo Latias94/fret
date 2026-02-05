@@ -69,11 +69,13 @@ impl<H: UiHost> TreeRowRenderer<H> for DefaultTreeRowRenderer {
         entry: &TreeEntry,
         _state: TreeRowState,
     ) -> Elements {
-        vec![crate::ui::text(cx, entry.label.as_ref())
-            .flex_shrink(1.0)
-            .min_w_0()
-            .truncate()
-            .into_element(cx)]
+        vec![
+            crate::ui::text(cx, entry.label.as_ref())
+                .flex_shrink(1.0)
+                .min_w_0()
+                .truncate()
+                .into_element(cx),
+        ]
         .into()
     }
 }
