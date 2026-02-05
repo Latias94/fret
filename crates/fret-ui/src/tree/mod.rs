@@ -252,7 +252,8 @@ pub struct UiDebugFrameStats {
     pub dispatch_widget_bubble_time: Duration,
     /// Total wall time spent computing the cursor icon from the pointer hit during dispatch.
     pub dispatch_cursor_query_time: Duration,
-    /// Total wall time spent dispatching pointer-move layer observers (when pointer dispatch is suppressed).
+    /// Total wall time spent dispatching pointer-move layer observers (both post-dispatch and when
+    /// pointer dispatch is suppressed).
     pub dispatch_pointer_move_layer_observers_time: Duration,
     /// Total wall time spent dispatching the synthetic hover-move observer chain when the pointer crosses targets.
     pub dispatch_synth_hover_observer_time: Duration,

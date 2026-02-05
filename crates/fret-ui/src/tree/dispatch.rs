@@ -2685,6 +2685,7 @@ impl<H: UiHost> UiTree<H> {
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
+        let started = self.debug_enabled.then(Instant::now);
         self.dispatch_pointer_move_layer_observers(
             app,
             services,
@@ -2694,6 +2695,9 @@ impl<H: UiHost> UiTree<H> {
             &mut needs_redraw,
             invalidation_visited,
         );
+        if let Some(started) = started {
+            self.debug_stats.dispatch_pointer_move_layer_observers_time += started.elapsed();
+        }
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
