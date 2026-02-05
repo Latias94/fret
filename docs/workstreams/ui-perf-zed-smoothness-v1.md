@@ -149,8 +149,8 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-tortu
   --dir target/fret-diag-perf/hit-test-stripes-move-sweep-pointer-move-gate ^
   --timeout-ms 300000 --poll-ms 100 ^
   --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json ^
-  --max-pointer-move-dispatch-us 2000 ^
-  --max-pointer-move-hit-test-us 1500 ^
+  --max-pointer-move-dispatch-us 800 ^
+  --max-pointer-move-hit-test-us 100 ^
   --max-pointer-move-global-changes 0 ^
   --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture ^
   --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 ^
@@ -159,6 +159,8 @@ cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-tortu
 
 Notes:
 
+- The thresholds above assume the bounds-tree index is enabled and cached-path hit testing is skipped under bounds-tree.
+  Evidence lives in the perf log entry for commit `8bc15eda` (see `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`).
 - `fretboard diag perf` defaults `--timeout-ms 30000`. If `--launch -- cargo run ... --release` triggers a rebuild,
   compilation alone can exceed 30s, so the suite can time out before the app even starts. Prefer passing an
   explicit `--timeout-ms` (e.g. 300000).
