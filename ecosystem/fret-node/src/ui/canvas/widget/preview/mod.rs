@@ -3,6 +3,7 @@ mod node_resize;
 
 use std::collections::HashMap;
 
+use super::super::state::DragPreviewCacheMetaMut;
 use super::*;
 
 pub(super) fn ports_for_node<'a>(
@@ -68,4 +69,14 @@ pub(super) fn moved_nodes_and_next_positions(
     }
 
     Some((moved_nodes, next_positions))
+}
+
+pub(super) fn set_preview_node_position_and_rect(
+    meta: &mut DragPreviewCacheMetaMut<'_>,
+    node_id: GraphNodeId,
+    pos: CanvasPoint,
+    rect: Rect,
+) {
+    meta.node_positions.insert(node_id, pos);
+    meta.node_rects.insert(node_id, rect);
 }

@@ -139,8 +139,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     );
                 }
 
-                meta.node_positions.insert(node_id, pos);
-                meta.node_rects.insert(node_id, next_rect);
+                super::set_preview_node_position_and_rect(meta, node_id, pos, next_rect);
             })
     }
 }
