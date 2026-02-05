@@ -18,8 +18,7 @@ const CMD_TOGGLE_PREFIX: &str = "todo.toggle.";
 
 const TEST_ID_INPUT: &str = "todo-input";
 const TEST_ID_ADD: &str = "todo-add";
-const TEST_ID_VISUAL_TOGGLE: &str = "todo-visual-toggle";
-const TEST_ID_VISUAL_PANEL: &str = "todo-visual-panel";
+const TEST_ID_SHORTCUTS: &str = "todo-shortcuts";
 
 fn todo_item_test_id(id: u64, suffix: &str) -> Arc<str> {
     Arc::from(format!("todo-item-{id}-{suffix}"))
@@ -60,10 +59,7 @@ pub fn run() -> anyhow::Result<()> {
             let cfg = ThemeConfig::from_slice(include_bytes!("todo_theme_overrides.json")).expect(
                 "todo_demo theme overrides must be valid ThemeConfig JSON (see ThemeConfig)",
             );
-            // IMPORTANT: this is a *token patch* (metrics-only today). Using `apply_config` would
-            // reset the shadcn palette we just applied, which makes `primary-foreground` wrong
-            // (e.g. checkmarks become invisible on a light `primary` background).
-            Theme::with_global_mut(app, |theme| theme.extend_tokens_from_config(&cfg));
+            Theme::with_global_mut(app, |theme| theme.apply_config_patch(&cfg));
         })
         .run()?;
     Ok(())
@@ -126,14 +122,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
 
     let add_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::Icon)
-        .variant(shadcn::ButtonVariant::Default)
+        .variant(shadcn::ButtonVariant::Secondary)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
         .children([icon::icon_with(
             cx,
             IconId::new("lucide.plus"),
             Some(Px(16.0)),
-            Some(ColorRef::Color(theme.color_required("primary-foreground"))),
+            Some(ColorRef::Color(if add_enabled {
+                theme.color_required("secondary-foreground")
+            } else {
+                theme.color_required("muted-foreground")
+            })),
         )])
         .into_element(cx)
         .attach_semantics(
@@ -266,9 +266,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         ])
         .into_element(cx);
 
-    let debug_panel = todo_visual_debug_panel(cx, &theme, &draft_value, add_enabled);
-
-    let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [input_row, tabs, debug_panel])
+    let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [input_row, tabs])
         .gap(Space::N4)
         .w_full()
         .into_element(cx)])
@@ -289,25 +287,24 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                 .items_center()
                 .into_element(cx);
 
-            let help = shadcn::KbdGroup::new([
-                shadcn::Kbd::new("Enter").into_element(cx),
-                ui::raw_text(cx, "添加")
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                    .into_element(cx),
-                shadcn::Kbd::new("↑/↓").into_element(cx),
-                ui::raw_text(cx, "移动")
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                    .into_element(cx),
-                shadcn::Kbd::new("Space").into_element(cx),
-                ui::raw_text(cx, "切换完成")
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                    .into_element(cx),
-                shadcn::Kbd::new("Del").into_element(cx),
-                ui::raw_text(cx, "删除")
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                    .into_element(cx),
-            ])
-            .into_element(cx);
+            let help = ui::h_flex(cx, |cx| {
+                [
+                    shadcn::ShortcutHint::new("Enter", "添加").into_element(cx),
+                    shadcn::ShortcutHint::new("↑/↓", "移动").into_element(cx),
+                    shadcn::ShortcutHint::new("Space", "切换完成").into_element(cx),
+                    shadcn::ShortcutHint::new("Del", "删除").into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .wrap()
+            .justify_end()
+            .items_center()
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Panel)
+                    .test_id(TEST_ID_SHORTCUTS),
+            );
 
             [row, help]
         })
@@ -330,21 +327,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         .into_element(cx);
 
     let page = ui::container(cx, |cx| {
-        [ui::v_flex(cx, |cx| {
-            [
-                card,
-                ui::raw_text(cx, "Shadcn 风格 · Fret UiAppDriver demo · keyboard-first")
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                    .nowrap()
-                    .into_element(cx),
-            ]
-        })
-        .w_full()
-        .h_full()
-        .justify_center()
-        .items_center()
-        .gap(Space::N6)
-        .into_element(cx)]
+        [ui::v_flex(cx, |_cx| [card])
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            .gap(Space::N6)
+            .into_element(cx)]
     })
     .bg(ColorRef::Color(theme.color_required("background")))
     .p(Space::N4)
@@ -352,11 +341,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
     .h_full()
     .into_element(cx);
 
-    ViewElements::from([page.attach_semantics(
-        SemanticsDecoration::default()
-            .role(SemanticsRole::Panel)
-            .label("Debug:todo-demo:page"),
-    )])
+    ViewElements::from([page])
 }
 
 fn todo_list_panel(
@@ -418,11 +403,13 @@ fn todo_list_panel(
             .into_boxed_slice(),
     );
 
+    let mut rows_layout = LayoutStyle::default();
+    rows_layout.size.width = Length::Fill;
     let rows = roving_focus_group::roving_focus_group_apg(
         cx,
         RovingFlexProps {
             flex: FlexProps {
-                layout: LayoutStyle::default(),
+                layout: rows_layout,
                 direction: Axis::Vertical,
                 gap: MetricRef::space(Space::N2).resolve(theme),
                 padding: Edges::all(Px(0.0)),
@@ -576,7 +563,12 @@ fn todo_row(
                     .or_else(|| theme.color_by_key("border"))
                     .unwrap_or(border);
                 let checkbox_fg = theme.color_required("primary-foreground");
-                let checkbox_icon_size = Px((checkbox_size.0 - 2.0).max(10.0));
+                let checkbox_icon_size = Px((checkbox_size.0 - 4.0).max(10.0));
+                let checkbox_border = if done {
+                    theme.color_required("primary")
+                } else {
+                    checkbox_border
+                };
 
                 let indicator = ui::container(cx, |cx| {
                     let icon = done.then(|| {
@@ -610,7 +602,7 @@ fn todo_row(
                 );
 
                 let label = ui::text(cx, text.clone())
-                    .flex_1()
+                    .flex_grow(1.0)
                     .min_w_0()
                     .nowrap()
                     .truncate()
@@ -618,7 +610,7 @@ fn todo_row(
                     .into_element(cx);
 
                 let left = ui::h_flex(cx, |_cx| [indicator, label])
-                    .flex_1()
+                    .flex_grow(1.0)
                     .min_w_0()
                     .gap(Space::N3)
                     .items_center()
@@ -752,222 +744,4 @@ fn remove_cmd(id: u64) -> CommandId {
 
 fn toggle_cmd(id: u64) -> CommandId {
     CommandId::new(format!("{CMD_TOGGLE_PREFIX}{id}"))
-}
-
-fn todo_visual_debug_panel(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-    draft_value: &str,
-    add_enabled: bool,
-) -> AnyElement {
-    let border = theme.color_required("border");
-    let muted_fg = theme.color_required("muted-foreground");
-
-    let primary = theme.color_required("primary");
-    let primary_fg = theme.color_required("primary-foreground");
-    let foreground = theme.color_required("foreground");
-    let background = theme.color_required("background");
-
-    let token_line: Arc<str> = Arc::from(format!(
-        "tokens(primary={primary:?} primary-foreground={primary_fg:?} foreground={foreground:?} background={background:?})",
-    ));
-    let draft_line: Arc<str> = Arc::from(format!(
-        "draft(len={} enabled={}) value={:?}",
-        draft_value.len(),
-        add_enabled,
-        draft_value
-    ));
-
-    shadcn::Collapsible::uncontrolled(false)
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element_with_open_model(
-            cx,
-            move |cx, open, is_open| {
-                let caret = if is_open {
-                    IconId::new("lucide.chevron-up")
-                } else {
-                    IconId::new("lucide.chevron-down")
-                };
-
-                shadcn::Button::new("视觉自检")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .toggle_model(open)
-                    .test_id(TEST_ID_VISUAL_TOGGLE)
-                    .children([icon::icon_with(
-                        cx,
-                        caret,
-                        Some(Px(16.0)),
-                        Some(ColorRef::Color(muted_fg)),
-                    )])
-                    .into_element(cx)
-            },
-            move |cx| {
-                let token_dbg = ui::raw_text(cx, token_line.clone())
-                    .text_color(ColorRef::Color(muted_fg))
-                    .into_element(cx);
-                let draft_dbg = ui::raw_text(cx, draft_line.clone())
-                    .text_color(ColorRef::Color(muted_fg))
-                    .into_element(cx);
-
-                let swatch = |cx: &mut ElementContext<'_, App>,
-                              bg: fret_core::Color,
-                              fg: fret_core::Color,
-                              label: &'static str| {
-                    ui::container(cx, |cx| {
-                        [ui::raw_text(cx, label)
-                            .text_color(ColorRef::Color(fg))
-                            .into_element(cx)]
-                    })
-                    .bg(ColorRef::Color(bg))
-                    .border_1()
-                    .border_color(ColorRef::Color(border))
-                    .rounded(Radius::Md)
-                    .px(Space::N2)
-                    .py(Space::N1)
-                    .into_element(cx)
-                };
-
-                let primary_swatch =
-                    swatch(cx, primary, primary_fg, "primary on primary-foreground");
-                let fg_swatch = swatch(cx, primary, foreground, "primary on foreground");
-
-                let icon_sample = |cx: &mut ElementContext<'_, App>,
-                                   icon_id: IconId,
-                                   color: fret_core::Color,
-                                   size: Px| {
-                    ui::container(cx, |cx| {
-                        let icon =
-                            icon::icon_with(cx, icon_id, Some(size), Some(ColorRef::Color(color)));
-                        [ui::h_flex(cx, |_cx| [icon])
-                            .w_full()
-                            .h_full()
-                            .justify_center()
-                            .items_center()
-                            .into_element(cx)]
-                    })
-                    .w_px(Px(28.0))
-                    .h_px(Px(28.0))
-                    .border_1()
-                    .border_color(ColorRef::Color(border))
-                    .rounded(Radius::Md)
-                    .into_element(cx)
-                };
-
-                let checkbox_probe =
-                    |cx: &mut ElementContext<'_, App>, done: bool, label: &'static str| {
-                        let checkbox_size = Px(16.0);
-                        let checkbox_bg = if done { primary } else { background };
-                        let checkbox_border = theme
-                            .color_by_key("input")
-                            .or_else(|| theme.color_by_key("border"))
-                            .unwrap_or(border);
-                        let checkbox_fg = primary_fg;
-
-                        let indicator = ui::container(cx, |cx| {
-                            let icon = done.then(|| {
-                                icon::icon_with(
-                                    cx,
-                                    IconId::new("lucide.check"),
-                                    Some(checkbox_size),
-                                    Some(ColorRef::Color(checkbox_fg)),
-                                )
-                            });
-                            [ui::h_flex(cx, |_cx| icon.into_iter())
-                                .w_full()
-                                .h_full()
-                                .justify_center()
-                                .items_center()
-                                .into_element(cx)]
-                        })
-                        .w_px(checkbox_size)
-                        .h_px(checkbox_size)
-                        .flex_shrink_0()
-                        .rounded(Radius::Sm)
-                        .border_1()
-                        .border_color(ColorRef::Color(checkbox_border))
-                        .bg(ColorRef::Color(checkbox_bg))
-                        .into_element(cx);
-
-                        let label = ui::text(cx, label)
-                            .nowrap()
-                            .truncate()
-                            .text_color(ColorRef::Color(foreground))
-                            .into_element(cx);
-
-                        ui::h_flex(cx, |_cx| [indicator, label])
-                            .gap(Space::N2)
-                            .items_center()
-                            .into_element(cx)
-                    };
-
-                let content = ui::v_flex(cx, |cx| {
-                    let row1 = ui::h_flex(cx, |_cx| [token_dbg, draft_dbg])
-                        .gap(Space::N2)
-                        .w_full()
-                        .into_element(cx);
-
-                    let row2 = ui::h_flex(cx, |_cx| [primary_swatch, fg_swatch])
-                        .gap(Space::N2)
-                        .w_full()
-                        .items_center()
-                        .into_element(cx);
-
-                    let row3 = ui::h_flex(cx, |cx| {
-                        [
-                            icon_sample(cx, IconId::new("lucide.plus"), primary_fg, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.check"), primary_fg, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.check"), foreground, Px(16.0)),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .w_full()
-                    .items_center()
-                    .into_element(cx);
-
-                    let row4 = ui::h_flex(cx, |cx| {
-                        [
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(12.0)),
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(20.0)),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .w_full()
-                    .items_center()
-                    .into_element(cx);
-
-                    let row5 = ui::h_flex(cx, |cx| {
-                        [
-                            checkbox_probe(cx, false, "align probe"),
-                            checkbox_probe(cx, true, "align probe (checked)"),
-                        ]
-                    })
-                    .gap(Space::N3)
-                    .w_full()
-                    .items_center()
-                    .into_element(cx);
-
-                    [row1, row2, row3, row4, row5]
-                })
-                .gap(Space::N2)
-                .w_full()
-                .into_element(cx);
-
-                let panel = ui::container(cx, |_cx| [content])
-                    .border_1()
-                    .border_color(ColorRef::Color(border))
-                    .rounded(Radius::Lg)
-                    .p(Space::N3)
-                    .w_full()
-                    .into_element(cx);
-
-                panel.attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Panel)
-                        .test_id(TEST_ID_VISUAL_PANEL),
-                )
-            },
-        )
 }

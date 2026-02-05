@@ -1,0 +1,267 @@
+# AI Elements Port (`fret-ui-ai`) — TODO Tracker
+
+Status: Active (workstream tracker)
+
+This document tracks executable TODOs for porting AI Elements into Fret’s ecosystem.
+
+Upstream reference:
+
+- Components: `repo-ref/ai-elements/packages/elements/src/*.tsx`
+- Docs: `repo-ref/ai-elements/apps/docs/content/components/*/*.mdx`
+
+Workstream narrative: `docs/workstreams/ai-elements-port.md`
+
+## Tracking format
+
+Each TODO is labeled:
+
+- ID: `AIEL-MVP{n}-{area}-{nnn}`
+- Status: `[ ]` (open), `[~]` (in progress), `[x]` (done), `[!]` (blocked)
+
+## Milestones (make progress measurable)
+
+### M0 — Foundations (composition + gates)
+
+- [ ] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (conversation/message/prompt/tool/code/utils).
+- [ ] AIEL-MVP0-foundation-002 Add crate-level docs and a small “usage” section for each exported surface.
+- [ ] AIEL-MVP0-foundation-003 Add baseline `test_id` conventions (roots/rows/actions) for diag automation.
+- [ ] AIEL-MVP0-foundation-004 Add at least one `fretboard diag` script that targets the existing transcript torture page.
+- [ ] AIEL-MVP0-foundation-005 Define the `fret-ui-ai` data model v0 (message parts, tool calls, sources, citations).
+- [ ] AIEL-MVP0-foundation-006 Define the `fret.ai.*` theme token v0 list (keep small; document defaults + usage rules).
+
+## Component inventory (upstream baseline)
+
+Source of truth: `repo-ref/ai-elements/packages/elements/src/*.tsx`.
+
+Status legend:
+
+- `Prototype`: exists in `fret-ui-ai`, but not yet aligned with upstream decomposition.
+- `Not started`: no Fret port yet.
+
+### Chatbot
+
+| Upstream | Status | Planned owner | Notes |
+| --- | --- | --- | --- |
+| `conversation` | Prototype | `fret-ui-ai` | Transcript virtualization exists; missing empty state/download/parts. |
+| `message` | Prototype | `fret-ui-ai` | Minimal bubble exists; missing composition parts + markdown response. |
+| `prompt-input` | Not started | `fret-ui-ai` | Will be built on `fret-ui-shadcn::{InputGroup, CommandPalette, Select, DropdownMenu}`. |
+| `tool` | Not started | `fret-ui-ai` | Likely needs collapsible + code/markdown slots. |
+| `sources` | Not started | `fret-ui-ai` | Open-url intent should be app-owned. |
+| `inline-citation` | Not started | `fret-ui-ai` | Needs stable anchor + highlight behavior. |
+| `reasoning` | Not started | `fret-ui-ai` | Only if apps need it. |
+| `suggestion` | Not started | `fret-ui-ai` | Optional. |
+| `queue` | Not started | `fret-ui-ai` | Optional. |
+| `model-selector` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
+| `persona` | Not started | `fret-ui-ai` | Optional; prefer app composition. |
+| `attachments` | Not started | `fret-ui-ai` | Requires host effects (file pick); keep policy-only in components. |
+| `chain-of-thought` | Not started | `fret-ui-ai` | Consider mapping to `reasoning`/disclosure patterns. |
+| `checkpoint` | Not started | `fret-ui-ai` | Likely a styling recipe. |
+| `confirmation` | Not started | `fret-ui-ai` | Likely maps to shadcn alert/dialog. |
+| `context` | Not started | `fret-ui-ai` | Decide if needed; likely app-level. |
+| `plan` | Not started | `fret-ui-ai` | Optional; depends on product needs. |
+| `shimmer` | Not started | `fret-ui-ai` | Can likely reuse `fret-ui-shadcn::Skeleton`. |
+| `task` | Not started | `fret-ui-ai` | Optional; depends on “agent/task” UIs. |
+
+### Code
+
+| Upstream | Status | Planned owner | Notes |
+| --- | --- | --- | --- |
+| `code-block` | Not started | `fret-ui-ai` | Backed by `ecosystem/fret-code-view`. |
+| `snippet` | Not started | `fret-ui-ai` | Likely a thin wrapper over `code-block`. |
+| `file-tree` | Not started | `fret-ui-ai` | Reuse `fret-ui-kit` tree + virtualization patterns. |
+| `commit` | Not started | `fret-ui-ai` | Add only after code-block is stable. |
+| `schema-display` | Not started | `fret-ui-ai` | Useful for tool I/O; decide data model early. |
+| `terminal` | Not started | `fret-ui-ai` | Depends on whether we want ANSI rendering; may become a separate crate. |
+| `test-results` | Not started | `fret-ui-ai` | Optional; can be app-level initially. |
+| `jsx-preview` | Not started | n/a | Likely out of scope for Rust. |
+| `web-preview` | Not started | n/a | Needs embedded webview; out of scope unless there is a host. |
+| `artifact` / `agent` / `sandbox` / `package-info` / `environment-variables` / `stack-trace` | Not started | `fret-ui-ai` | Only if there is a concrete app consumer. |
+
+### Utilities
+
+| Upstream | Status | Planned owner | Notes |
+| --- | --- | --- | --- |
+| `image` | Not started | `fret-ui-ai` or `fret-ui-shadcn` | Decide whether it is generic enough to live in shadcn. |
+| `open-in-chat` | Not started | `fret-ui-ai` | Likely app-level wiring; component is just chrome. |
+
+### Workflow
+
+| Upstream | Status | Planned owner | Notes |
+| --- | --- | --- | --- |
+| `canvas` / `node` / `edge` / `panel` / `toolbar` / `controls` / `connection` | Not started | `fret-ui-ai` (wrappers) | Prefer “styling recipes” over new engines; reuse `fret-node`/`fret-canvas`. |
+
+### Voice
+
+| Upstream | Status | Planned owner | Notes |
+| --- | --- | --- | --- |
+| `audio-player` / `mic-selector` / `speech-input` / `transcription` / `voice-selector` | Not started | TBD | Defer until there is a concrete consumer. |
+
+### M1 — Chat surfaces (usable app kit)
+
+- [ ] AIEL-MVP1-chat-001 Port `Conversation` parts: content, empty state, scroll button, download.
+- [ ] AIEL-MVP1-chat-002 Port `Message` parts: content wrapper, actions, toolbar slots.
+- [ ] AIEL-MVP1-chat-003 Add `MessageResponse` (markdown/code rendering + streaming-friendly updates).
+- [ ] AIEL-MVP1-chat-004 Port `PromptInput` MVP (text input + send/stop + disabled/loading states).
+- [ ] AIEL-MVP1-chat-005 UI Gallery page(s): chat demo with streaming append + tool calls (not just torture).
+
+### M2 — Tooling surfaces (assistant/tooling apps)
+
+- [ ] AIEL-MVP2-tools-001 Port `Tool` (input/output blocks, running/success/error states, collapse).
+- [ ] AIEL-MVP2-tools-002 Port `Sources` and `InlineCitation` (stable linking and display).
+- [ ] AIEL-MVP2-tools-003 Port `Suggestion` and `Queue` (optional; only if apps need them).
+
+### M3 — Code artifacts (developer-facing outputs)
+
+Prioritize thin adapters over new engines:
+
+- [ ] AIEL-MVP3-code-001 `CodeBlock` / `Snippet` backed by `ecosystem/fret-code-view` + `ecosystem/fret-syntax`.
+- [ ] AIEL-MVP3-code-002 `FileTree` backed by `fret-ui-kit` tree primitives (virtualized).
+- [ ] AIEL-MVP3-code-003 `Commit` / `StackTrace` / `TestResults` surfaces (only after CodeBlock is solid).
+- [ ] AIEL-MVP3-code-004 `SchemaDisplay` (portable JSON schema-ish viewer) if needed for tool outputs.
+
+### M4 — Workflow surfaces (optional; reuse existing ecosystem)
+
+Only implement if it is mostly “styling recipes over existing crates”:
+
+- [ ] AIEL-MVP4-workflow-001 Map `Canvas/Node/Edge/Panel/Toolbar` to `ecosystem/fret-node` + `ecosystem/fret-canvas`.
+- [ ] AIEL-MVP4-workflow-002 Provide shadcn-aligned chrome wrappers (panels, toolbars, controls).
+
+### M5 — Voice surfaces (defer until there is a concrete consumer)
+
+- [ ] AIEL-MVP5-voice-001 Decide whether voice UI belongs in `fret-ui-ai` or a sibling crate (`fret-ui-voice`).
+- [ ] AIEL-MVP5-voice-002 If in scope: `AudioPlayer`, `MicSelector`, `Transcription`, `VoiceSelector`.
+
+## Upstream inventory (keep honest)
+
+These are the upstream component entrypoints in the pinned checkout:
+`repo-ref/ai-elements/packages/elements/src/*.tsx`.
+
+Keep this list in sync with the pinned upstream commit recorded in
+`docs/workstreams/ai-elements-port.md`.
+
+- `agent.tsx`
+- `artifact.tsx`
+- `attachments.tsx`
+- `audio-player.tsx`
+- `canvas.tsx`
+- `chain-of-thought.tsx`
+- `checkpoint.tsx`
+- `code-block.tsx`
+- `commit.tsx`
+- `confirmation.tsx`
+- `connection.tsx`
+- `context.tsx`
+- `controls.tsx`
+- `conversation.tsx`
+- `edge.tsx`
+- `environment-variables.tsx`
+- `file-tree.tsx`
+- `image.tsx`
+- `inline-citation.tsx`
+- `jsx-preview.tsx`
+- `message.tsx`
+- `mic-selector.tsx`
+- `model-selector.tsx`
+- `node.tsx`
+- `open-in-chat.tsx`
+- `package-info.tsx`
+- `panel.tsx`
+- `persona.tsx`
+- `plan.tsx`
+- `prompt-input.tsx`
+- `queue.tsx`
+- `reasoning.tsx`
+- `sandbox.tsx`
+- `schema-display.tsx`
+- `shimmer.tsx`
+- `snippet.tsx`
+- `sources.tsx`
+- `speech-input.tsx`
+- `stack-trace.tsx`
+- `suggestion.tsx`
+- `task.tsx`
+- `terminal.tsx`
+- `test-results.tsx`
+- `tool.tsx`
+- `toolbar.tsx`
+- `transcription.tsx`
+- `voice-selector.tsx`
+- `web-preview.tsx`
+
+## TODOs by subsystem
+
+### Foundation
+
+- [x] AIEL-MVP0-foundation-010 Add a component inventory table (upstream file → Fret module → status).
+- [ ] AIEL-MVP0-foundation-011 Ensure all public surfaces are declarative-only (no retained widget authoring).
+- [ ] AIEL-MVP0-foundation-012 Add “where should this code live?” rules of thumb (copy from shadcn workstream patterns).
+- [x] AIEL-MVP0-foundation-013 Add a short “Public API rules” section to the workstream and keep it updated.
+  - Target: `docs/workstreams/ai-elements-port.md` (parts, controlled/uncontrolled, intents not effects, stable selectors).
+- [x] AIEL-MVP0-foundation-014 Add “Version stamp” update rules (pinned upstream commit must be updated first).
+  - Target: `docs/workstreams/ai-elements-port.md`
+
+### Data model (v0)
+
+- [ ] AIEL-MVP0-model-001 Confirm `MessageId = u64` (align with `crates/fret-ui::ItemKey`) and document stability rules.
+  - Include interop guidance: keep optional `external_id: Arc<str>` and derive `u64` key at the app boundary.
+- [ ] AIEL-MVP0-model-002 Define `MessageRole` + `MessagePart` enums (markdown/tool/sources/attachments).
+- [ ] AIEL-MVP0-model-003 Define `ToolCall` lifecycle state model (Pending/Running/Succeeded/Failed/Cancelled).
+- [ ] AIEL-MVP0-model-004 Define `SourceItem` + inline citation referencing (stable anchor keys for scripts).
+- [ ] AIEL-MVP0-model-005 Define streaming update contract for markdown/text parts (append + finalize).
+
+### Theme tokens (v0)
+
+- [ ] AIEL-MVP0-theme-001 Create a minimal token list under `fret.ai.*` (padding/gaps/chrome basics).
+- [ ] AIEL-MVP0-theme-002 Add default token values to the baseline shadcn theme config (or document required overrides).
+- [ ] AIEL-MVP0-theme-003 Replace hard-coded theme string keys in `fret-ui-ai` where tokenized mapping is feasible.
+
+### Conversation / Transcript
+
+- [ ] AIEL-MVP1-chat-020 Split transcript into composable parts (Conversation root vs transcript body).
+- [ ] AIEL-MVP1-chat-021 Add “empty state” surface (title/description/icon).
+- [ ] AIEL-MVP1-chat-022 Add “download transcript” helper (format function hook; effect performed by app).
+- [ ] AIEL-MVP1-chat-023 Add “scroll-to-bottom” button styling parity (rounded, outline, dark-mode background).
+- [ ] AIEL-MVP1-chat-024 Define selection/search contracts for long transcripts (defer implementation if needed, but write the contract).
+
+### Message
+
+- [ ] AIEL-MVP1-chat-040 Replace `Message(text)` with a composition surface (container + content + actions slots).
+- [ ] AIEL-MVP1-chat-041 Implement branch selector outcomes (optional; only if there is a consumer).
+- [ ] AIEL-MVP1-chat-042 Add per-role chrome tokens (avoid hard-coded theme string keys in component code).
+
+### MessageResponse (markdown + streaming)
+
+- [ ] AIEL-MVP1-chat-060 Integrate `ecosystem/fret-markdown` for markdown rendering.
+- [ ] AIEL-MVP1-chat-061 Define streaming update contract (append chunks, finalize, stable block IDs for code fences).
+- [ ] AIEL-MVP1-chat-062 Add code fence actions slot (copy / expand / download) using `MarkdownComponents`.
+
+### PromptInput
+
+- [ ] AIEL-MVP1-chat-080 Prompt input MVP: text input + send + stop + loading spinner.
+- [ ] AIEL-MVP1-chat-081 Optional attachments chips: add/remove/clear (app performs file picker effects).
+- [ ] AIEL-MVP1-chat-082 Optional model selector and persona surfaces only if used by apps (avoid porting for completeness).
+- [ ] AIEL-MVP1-chat-083 Add a diag script for keyboard-only operation (type, submit, cancel/stop).
+
+### Tool calls / Sources / Citations
+
+- [ ] AIEL-MVP2-tools-100 Tool call block: request/response sections, collapse, error state.
+- [ ] AIEL-MVP2-tools-101 Sources list: title/url, open-url intent hook, truncation rules.
+- [ ] AIEL-MVP2-tools-102 Inline citation: stable anchor behavior (jump/highlight) within a transcript.
+
+## Regression gates (default requirement)
+
+- [ ] AIEL-MVP0-gates-001 Add `tools/diag-scripts/ui-gallery-ai-transcript-scroll.json`.
+  - Scenario: open UI Gallery `ai_transcript_torture`, wheel-scroll for N steps, capture bundle.
+  - Env baseline:
+    - `FRET_UI_GALLERY_START_PAGE=ai_transcript_torture`
+    - `FRET_UI_GALLERY_AI_TRANSCRIPT_LEN=5000`
+    - optional: `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`
+  - Checks (choose at least one): stale paint, view-cache reuse stability, top-frame perf snapshot.
+- [ ] AIEL-MVP0-gates-002 Add `tools/diag-scripts/ui-gallery-ai-transcript-append.json`.
+  - Scenario: append messages (or bump revision) while scrolled near-bottom and away-from-bottom; verify stick-to-bottom eligibility.
+- [ ] AIEL-MVP1-gates-010 Add a stable UI Gallery page for “chat demo” and gate basic interactions via diag.
+  - Minimum: prompt input type/submit/stop, tool call collapse/expand, copy action on code fence.
+- [ ] AIEL-MVP1-gates-011 Add `tools/diag-scripts/ui-gallery-ai-prompt-input-keyboard.json`.
+  - Scenario: keyboard-only driving of prompt input (focus, type, submit, cancel/stop).
+- [ ] AIEL-MVP1-gates-020 Add at least one unit test per shipped component family asserting a fragile invariant
+  (e.g. stick-to-bottom eligibility rules, stable key mapping, overlay dismiss outcomes).

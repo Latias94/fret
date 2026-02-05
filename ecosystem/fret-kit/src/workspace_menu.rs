@@ -5,9 +5,9 @@ use fret_core::{
     TextWrap,
 };
 use fret_runtime::{
-    CommandId, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem, Platform,
-    PlatformCapabilities, WhenExpr, WindowCommandEnabledService, WindowInputContextService,
-    format_sequence,
+    CommandId, CommandScope, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem,
+    Platform, PlatformCapabilities, WhenExpr, WindowCommandGatingSnapshot,
+    best_effort_snapshot_for_window_with_input_ctx_fallback, format_sequence,
 };
 use fret_ui::action::{ActionCx, OnDismissRequest, UiActionHost};
 use fret_ui::element::{
@@ -85,6 +85,7 @@ struct InWindowMenuItem {
     command: Option<CommandId>,
     shortcut: Option<Arc<str>>,
     has_submenu: bool,
+    keep_if_empty_submenu: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -192,18 +193,18 @@ fn command_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     command: &CommandId,
     item_when: Option<&WhenExpr>,
-    base_ctx: &InputContext,
+    gating: &WindowCommandGatingSnapshot,
+    shortcut_base_ctx: &InputContext,
     opts: &MenubarFromRuntimeOptions,
 ) -> InWindowMenuItem {
-    let (label, shortcut, meta_disabled) = match cx.app.commands().get(command.clone()) {
+    let (label, shortcut, meta_enabled) = match cx.app.commands().get(command.clone()) {
         Some(meta) => {
-            let label = meta.title.clone();
             let shortcut = if opts.include_shortcuts {
                 cx.app
                     .global::<KeymapService>()
                     .and_then(|svc| {
                         svc.keymap
-                            .display_shortcut_for_command_sequence(base_ctx, command)
+                            .display_shortcut_for_command_sequence(shortcut_base_ctx, command)
                     })
                     .or_else(|| {
                         meta.default_keybindings
@@ -215,19 +216,20 @@ fn command_item<H: UiHost>(
             } else {
                 None
             };
-            let meta_disabled = meta.when.as_ref().is_some_and(|w| !w.eval(base_ctx));
-            (label, shortcut, meta_disabled)
+            let enabled = gating.is_enabled_for_meta(command, meta.scope, meta.when.as_ref());
+            (meta.title.clone(), shortcut, enabled)
         }
-        None => (Arc::<str>::from(command.as_str()), None, false),
+        None => (
+            Arc::<str>::from(command.as_str()),
+            None,
+            gating.is_enabled_for_meta(command, CommandScope::App, None),
+        ),
     };
 
-    let item_disabled = item_when.is_some_and(|w| !w.eval(base_ctx));
-    let command_disabled = cx
-        .app
-        .global::<WindowCommandEnabledService>()
-        .and_then(|svc| svc.enabled(cx.window, command))
-        == Some(false);
-    let disabled = meta_disabled || item_disabled || command_disabled;
+    let item_enabled = item_when
+        .map(|w| w.eval(gating.input_ctx()))
+        .unwrap_or(true);
+    let disabled = !meta_enabled || !item_enabled;
 
     InWindowMenuItem {
         label,
@@ -236,6 +238,7 @@ fn command_item<H: UiHost>(
         command: Some(command.clone()),
         shortcut,
         has_submenu: false,
+        keep_if_empty_submenu: false,
     }
 }
 
@@ -247,6 +250,7 @@ fn submenu_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMen
         command: None,
         shortcut: None,
         has_submenu: true,
+        keep_if_empty_submenu: false,
     }
 }
 
@@ -256,15 +260,60 @@ fn system_menu_placeholder_item(
     items: Vec<InWindowMenuEntry>,
 ) -> InWindowMenuEntry {
     InWindowMenuEntry::Submenu(InWindowSubmenu {
-        trigger: submenu_item(title, value, true),
+        trigger: InWindowMenuItem {
+            label: title,
+            value,
+            disabled: true,
+            command: None,
+            shortcut: None,
+            has_submenu: true,
+            keep_if_empty_submenu: true,
+        },
         entries: Arc::from(items.into_boxed_slice()),
     })
+}
+
+fn sanitize_entries(entries: Vec<InWindowMenuEntry>) -> Vec<InWindowMenuEntry> {
+    let mut out: Vec<InWindowMenuEntry> = Vec::new();
+    let mut last_was_separator = false;
+
+    for entry in entries {
+        match entry {
+            InWindowMenuEntry::Separator => {
+                if out.is_empty() || last_was_separator {
+                    continue;
+                }
+                out.push(InWindowMenuEntry::Separator);
+                last_was_separator = true;
+            }
+            InWindowMenuEntry::Item(item) => {
+                out.push(InWindowMenuEntry::Item(item));
+                last_was_separator = false;
+            }
+            InWindowMenuEntry::Submenu(mut submenu) => {
+                let sanitized = sanitize_entries(submenu.entries.as_ref().to_vec());
+                if sanitized.is_empty() && !submenu.trigger.keep_if_empty_submenu {
+                    continue;
+                }
+                submenu.entries = Arc::from(sanitized.into_boxed_slice());
+                out.push(InWindowMenuEntry::Submenu(submenu));
+                last_was_separator = false;
+            }
+        }
+    }
+
+    while matches!(out.last(), Some(InWindowMenuEntry::Separator)) {
+        out.pop();
+    }
+
+    out
 }
 
 fn build_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     items: &[MenuItem],
-    base_ctx: &InputContext,
+    gating: &WindowCommandGatingSnapshot,
+    shortcut_base_ctx: &InputContext,
     opts: &MenubarFromRuntimeOptions,
     prefix: &str,
 ) -> Vec<InWindowMenuEntry> {
@@ -289,15 +338,17 @@ fn build_entries<H: UiHost>(
                 cx,
                 command,
                 when.as_ref(),
-                base_ctx,
+                gating,
+                shortcut_base_ctx,
                 opts,
             ))),
             MenuItem::Submenu { title, when, items } => {
                 let value: Arc<str> = Arc::from(format!("{prefix}.submenu.{idx}"));
-                let disabled = when.as_ref().is_some_and(|w| !w.eval(base_ctx));
+                let disabled = when.as_ref().is_some_and(|w| !w.eval(gating.input_ctx()));
                 let trigger = submenu_item(title.clone(), value, disabled);
                 let child_prefix = format!("{prefix}.submenu.{idx}");
-                let entries = build_entries(cx, items, base_ctx, opts, &child_prefix);
+                let entries =
+                    build_entries(cx, items, gating, shortcut_base_ctx, opts, &child_prefix);
                 out.push(InWindowMenuEntry::Submenu(InWindowSubmenu {
                     trigger,
                     entries: Arc::from(entries.into_boxed_slice()),
@@ -305,7 +356,7 @@ fn build_entries<H: UiHost>(
             }
         }
     }
-    out
+    sanitize_entries(out)
 }
 
 /// Render an in-window menubar from the data-only `fret-runtime` [`MenuBar`].
@@ -338,13 +389,23 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
     let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
 
-    let base_ctx = menu_shortcut_input_context(cx, opts.platform);
+    let fallback_ctx = menu_fallback_input_context(cx, opts.platform);
+    let gating =
+        best_effort_snapshot_for_window_with_input_ctx_fallback(cx.app, cx.window, fallback_ctx);
+    let shortcut_base_ctx = menu_shortcut_display_input_context(&gating, opts.platform);
     let menus: Vec<InWindowMenu> = menu_bar
         .menus
         .iter()
         .enumerate()
         .map(|(idx, menu)| {
-            let entries = build_entries(cx, &menu.items, &base_ctx, &opts, &format!("menu.{idx}"));
+            let entries = build_entries(
+                cx,
+                &menu.items,
+                &gating,
+                &shortcut_base_ctx,
+                &opts,
+                &format!("menu.{idx}"),
+            );
             let enabled = entries
                 .iter()
                 .any(|e| !matches!(e, InWindowMenuEntry::Separator));
@@ -647,6 +708,10 @@ fn request_menu_overlay<H: UiHost>(
         std::rc::Rc::new(std::cell::Cell::new(None));
     let content_focus_id_for_children = content_focus_id.clone();
 
+    let first_item_focus_id: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>> =
+        std::rc::Rc::new(std::cell::Cell::new(None));
+    let first_item_focus_id_for_children = first_item_focus_id.clone();
+
     let open_for_overlay = open.clone();
     let group_active_for_overlay = group_active.clone();
     let trigger_registry_for_overlay = trigger_registry.clone();
@@ -755,6 +820,7 @@ fn request_menu_overlay<H: UiHost>(
                                         Some((submenu_for_panel_items.clone(), submenu_cfg)),
                                         pad,
                                         item_text_for_panel_items.clone(),
+                                        first_item_focus_id_for_children.clone(),
                                     )
                                 },
                             )]
@@ -855,6 +921,7 @@ fn request_menu_overlay<H: UiHost>(
                                                 )),
                                                 pad,
                                                 item_text_for_submenu_items.clone(),
+                                                std::rc::Rc::new(std::cell::Cell::new(None)),
                                             )
                                         },
                                     ),
@@ -877,9 +944,10 @@ fn request_menu_overlay<H: UiHost>(
         host.request_redraw(acx.window);
     }));
 
+    let keyboard_entry_focus = first_item_focus_id.get().or_else(|| content_focus_id.get());
     let initial_focus = menu::root::MenuInitialFocusTargets::new()
         .pointer_content_focus(content_focus_id.get())
-        .keyboard_entry_focus(content_focus_id.get());
+        .keyboard_entry_focus(keyboard_entry_focus);
     let request = menu::root::dismissible_menu_request_with_modal_and_dismiss_handler(
         cx,
         trigger_id,
@@ -893,7 +961,7 @@ fn request_menu_overlay<H: UiHost>(
         None,
         on_dismiss_request,
         dismissible_on_pointer_move,
-        false,
+        true,
     );
     OverlayController::request(cx, request);
 }
@@ -909,6 +977,7 @@ fn render_menu_entries<H: UiHost>(
     submenu: Option<(menu::sub::MenuSubmenuModels, menu::sub::MenuSubmenuConfig)>,
     pad: Px,
     item_text: TextStyle,
+    first_item_focus_id: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>>,
 ) -> Vec<AnyElement> {
     let fg = theme.color_required("color.text.primary");
     let fg_muted = theme.color_required("color.text.muted");
@@ -952,6 +1021,7 @@ fn render_menu_entries<H: UiHost>(
                     fg_muted,
                     fg_disabled,
                     item_hover,
+                    first_item_focus_id.clone(),
                 ));
             }
             InWindowMenuEntry::Submenu(submenu_entry) => {
@@ -970,6 +1040,7 @@ fn render_menu_entries<H: UiHost>(
                     fg_muted,
                     fg_disabled,
                     item_hover,
+                    first_item_focus_id.clone(),
                 ));
             }
         }
@@ -993,10 +1064,15 @@ fn render_menu_item<H: UiHost>(
     fg_muted: Color,
     fg_disabled: Color,
     item_hover: Color,
+    first_item_focus_id: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
     let disabled = item.disabled;
 
     cx.pressable_with_id_props(|cx, st, item_id| {
+        if !disabled && first_item_focus_id.get().is_none() {
+            first_item_focus_id.set(Some(item_id));
+        }
+
         menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
             cx,
             item_id,
@@ -1164,7 +1240,7 @@ fn render_menu_item<H: UiHost>(
     })
 }
 
-fn menu_shortcut_input_context<H: UiHost>(
+fn menu_fallback_input_context<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     platform: Platform,
 ) -> InputContext {
@@ -1174,13 +1250,7 @@ fn menu_shortcut_input_context<H: UiHost>(
         .cloned()
         .unwrap_or_default();
 
-    let snapshot = cx
-        .app
-        .global::<WindowInputContextService>()
-        .and_then(|svc| svc.snapshot(cx.window))
-        .cloned();
-
-    let mut ctx = snapshot.unwrap_or(InputContext {
+    let mut ctx = InputContext {
         platform,
         caps,
         ui_has_modal: false,
@@ -1190,10 +1260,23 @@ fn menu_shortcut_input_context<H: UiHost>(
         edit_can_undo: true,
         edit_can_redo: true,
         dispatch_phase: InputDispatchPhase::Bubble,
-    });
+    };
 
     ctx.platform = platform;
     ctx.dispatch_phase = InputDispatchPhase::Bubble;
+    ctx
+}
+
+fn menu_shortcut_display_input_context(
+    gating: &WindowCommandGatingSnapshot,
+    platform: Platform,
+) -> InputContext {
+    let mut ctx = gating.input_ctx().clone();
+    ctx.platform = platform;
+    ctx.dispatch_phase = InputDispatchPhase::Bubble;
+    // Shortcut labels should remain stable even when command availability changes.
+    ctx.edit_can_undo = true;
+    ctx.edit_can_redo = true;
     ctx
 }
 
@@ -1202,6 +1285,70 @@ impl Default for MenubarFromRuntimeOptions {
         Self {
             platform: Platform::current(),
             include_shortcuts: true,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn plain_item(label: &str) -> InWindowMenuItem {
+        InWindowMenuItem {
+            label: Arc::from(label),
+            value: Arc::from(label),
+            disabled: false,
+            command: None,
+            shortcut: None,
+            has_submenu: false,
+            keep_if_empty_submenu: false,
+        }
+    }
+
+    #[test]
+    fn sanitize_entries_drops_leading_trailing_and_duplicate_separators() {
+        let entries = vec![
+            InWindowMenuEntry::Separator,
+            InWindowMenuEntry::Separator,
+            InWindowMenuEntry::Item(plain_item("A")),
+            InWindowMenuEntry::Separator,
+            InWindowMenuEntry::Separator,
+            InWindowMenuEntry::Item(plain_item("B")),
+            InWindowMenuEntry::Separator,
+        ];
+
+        let sanitized = sanitize_entries(entries);
+        assert!(!matches!(
+            sanitized.first(),
+            Some(InWindowMenuEntry::Separator)
+        ));
+        assert!(!matches!(
+            sanitized.last(),
+            Some(InWindowMenuEntry::Separator)
+        ));
+
+        let mut prev_sep = false;
+        for e in &sanitized {
+            let is_sep = matches!(e, InWindowMenuEntry::Separator);
+            assert!(!(prev_sep && is_sep), "expected no duplicate separators");
+            prev_sep = is_sep;
+        }
+    }
+
+    #[test]
+    fn sanitize_entries_drops_empty_submenus_but_keeps_system_placeholders() {
+        let empty_submenu = InWindowMenuEntry::Submenu(InWindowSubmenu {
+            trigger: submenu_item(Arc::from("Empty"), Arc::from("empty"), false),
+            entries: Arc::from(Vec::<InWindowMenuEntry>::new().into_boxed_slice()),
+        });
+        let system_placeholder =
+            system_menu_placeholder_item(Arc::from("Services"), Arc::from("sys"), Vec::new());
+
+        let sanitized = sanitize_entries(vec![empty_submenu, system_placeholder]);
+        assert_eq!(sanitized.len(), 1);
+        match &sanitized[0] {
+            InWindowMenuEntry::Submenu(sub) => assert!(sub.trigger.keep_if_empty_submenu),
+            _ => panic!("expected submenu placeholder"),
         }
     }
 }
