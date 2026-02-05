@@ -304,6 +304,15 @@ Non-goals:
           - Evidence:
             - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_autocomplete_suite_goldens_v1`)
             - `goldens/material3-headless/v1/material3-autocomplete.scale1_0.light.tonal_spot.json` (representative; full matrix is generated).
+      - Follow-ups (v2):
+        - [x] Split query vs committed selection:
+          - `Autocomplete::new(query: Model<String>)` remains the editable input model.
+          - `Autocomplete::selected_value(Model<Option<Arc<str>>>)` tracks the committed option `value`.
+          - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `apps/fret-ui-gallery/src/ui.rs`.
+        - [x] A11y: `ListBoxOption.selected` reflects the committed selection (not the active descendant).
+          - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
+        - [x] Hook: optional `on_select` callback with a selection method enum for downstream effects.
+          - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `ecosystem/fret-ui-material3/src/lib.rs`.
   - References:
     - Material Web tokens:
       `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-autocomplete.scss`,

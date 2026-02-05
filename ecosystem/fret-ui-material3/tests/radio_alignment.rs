@@ -8364,6 +8364,9 @@ fn material3_autocomplete_semantics_v1() {
     );
 
     let model = app.models_mut().insert(String::new());
+    let selected_value = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
     let items: Arc<[AutocompleteItem]> = Arc::from(vec![
         AutocompleteItem::new("alpha", "Alpha"),
         AutocompleteItem::new("beta", "Beta"),
@@ -8374,6 +8377,7 @@ fn material3_autocomplete_semantics_v1() {
         move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
                 let ac = Autocomplete::new(model.clone())
+                    .selected_value(selected_value.clone())
                     .items(items.clone())
                     .a11y_label("autocomplete")
                     .test_id("material3-autocomplete")
@@ -8486,6 +8490,13 @@ fn material3_autocomplete_semantics_v1() {
         .find(|n| n.id == active)
         .expect("active_descendant should reference a node in the snapshot");
     assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
+
+    let beta = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-option-beta"))
+        .expect("expected beta option node");
+    assert!(beta.flags.selected, "expected beta to be marked selected");
 
     // Typing still works while the overlay is open.
     ui.set_focus(Some(input.id));
@@ -8643,6 +8654,8 @@ fn material3_autocomplete_enter_commits_and_does_not_reopen_v1() {
     );
 
     let model = app.models_mut().insert(String::new());
+    let selected_value = app.models_mut().insert(None::<Arc<str>>);
+    let selected_value_for_render = selected_value.clone();
     let items: Arc<[AutocompleteItem]> = Arc::from(vec![
         AutocompleteItem::new("alpha", "Alpha"),
         AutocompleteItem::new("beta", "Beta"),
@@ -8653,6 +8666,7 @@ fn material3_autocomplete_enter_commits_and_does_not_reopen_v1() {
         move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
                 let ac = Autocomplete::new(model.clone())
+                    .selected_value(selected_value_for_render.clone())
                     .items(items.clone())
                     .a11y_label("autocomplete")
                     .test_id("material3-autocomplete")
@@ -8752,6 +8766,13 @@ fn material3_autocomplete_enter_commits_and_does_not_reopen_v1() {
         .find(|n| n.test_id.as_deref() == Some("material3-autocomplete"))
         .expect("combobox input node after Enter");
     assert_eq!(input.value.as_deref(), Some("Alpha"));
+
+    let selected = app.models_mut().get_cloned(&selected_value).unwrap_or(None);
+    assert_eq!(
+        selected.as_deref(),
+        Some("alpha"),
+        "expected selected_value model to be committed on Enter"
+    );
 }
 
 #[test]

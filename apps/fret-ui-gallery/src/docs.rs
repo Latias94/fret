@@ -944,14 +944,17 @@ This page validates a Material 3 autocomplete surface:
 pub(crate) const USAGE_MATERIAL3_AUTOCOMPLETE: &str = r#"
 ```rust
 use fret_ui_material3 as m3;
+use std::sync::Arc;
 
 let query = app.models_mut().insert(String::new());
+let selected_value = app.models_mut().insert(None::<Arc<str>>);
 let items = [
     m3::AutocompleteItem::new("alpha", "Alpha"),
     m3::AutocompleteItem::new("beta", "Beta"),
 ];
 
 let ac = m3::Autocomplete::new(query)
+    .selected_value(selected_value)
     .label("Search")
     .placeholder("Type to filter")
     .items(items)

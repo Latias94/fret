@@ -14,6 +14,7 @@ use fret_core::{
     TextSpan, TextWrap,
 };
 use fret_runtime::Model;
+use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, PressableA11y,
     PressableProps, ScrollProps, SemanticsProps, StyledTextProps, TextProps,
@@ -81,12 +82,30 @@ impl AutocompleteItem {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AutocompleteSelectMethod {
+    KeyboardEnter,
+    Pointer,
+}
+
+#[derive(Debug, Clone)]
+pub struct AutocompleteSelectCx {
+    pub item: AutocompleteItem,
+    pub method: AutocompleteSelectMethod,
+}
+
+pub type OnAutocompleteSelect =
+    Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, AutocompleteSelectCx) + 'static>;
+
 #[derive(Clone)]
 pub struct Autocomplete {
-    model: Model<String>,
+    query: Model<String>,
+    selected_value: Option<Model<Option<Arc<str>>>>,
     items: Arc<[AutocompleteItem]>,
     variant: AutocompleteVariant,
     open_on_focus: bool,
+    set_query_on_select: bool,
+    on_select: Option<OnAutocompleteSelect>,
     disabled: bool,
     error: bool,
     label: Option<Arc<str>>,
@@ -112,12 +131,15 @@ impl std::fmt::Debug for Autocomplete {
 }
 
 impl Autocomplete {
-    pub fn new(model: Model<String>) -> Self {
+    pub fn new(query: Model<String>) -> Self {
         Self {
-            model,
+            query,
+            selected_value: None,
             items: Arc::from([]),
             variant: AutocompleteVariant::default(),
             open_on_focus: true,
+            set_query_on_select: true,
+            on_select: None,
             disabled: false,
             error: false,
             label: None,
@@ -138,8 +160,23 @@ impl Autocomplete {
         self
     }
 
+    pub fn selected_value(mut self, selected_value: Model<Option<Arc<str>>>) -> Self {
+        self.selected_value = Some(selected_value);
+        self
+    }
+
     pub fn open_on_focus(mut self, open_on_focus: bool) -> Self {
         self.open_on_focus = open_on_focus;
+        self
+    }
+
+    pub fn set_query_on_select(mut self, set_query_on_select: bool) -> Self {
+        self.set_query_on_select = set_query_on_select;
+        self
+    }
+
+    pub fn on_select(mut self, on_select: OnAutocompleteSelect) -> Self {
+        self.on_select = Some(on_select);
         self
     }
 
@@ -327,10 +364,16 @@ fn autocomplete_into_element<H: UiHost>(
             .unwrap_or(None);
 
         let query = cx
-            .get_model_cloned(&autocomplete.model, Invalidation::Layout)
+            .get_model_cloned(&autocomplete.query, Invalidation::Layout)
             .unwrap_or_default();
 
         let filtered_items = filter_items(&query, &autocomplete.items);
+
+        let selected_value = autocomplete
+            .selected_value
+            .as_ref()
+            .and_then(|m| cx.get_model_cloned(m, Invalidation::Layout))
+            .unwrap_or(None);
 
         let focused_input = runtime
             .input_element_id
@@ -351,6 +394,10 @@ fn autocomplete_into_element<H: UiHost>(
             let _ = cx.app.models_mut().update(&runtime.suppress_open, |v| *v = false);
         }
 
+        if !focused_input && suppress_open {
+            let _ = cx.app.models_mut().update(&runtime.suppress_open, |v| *v = false);
+        }
+
         let should_open = !autocomplete.disabled
             && focused_input
             && !suppress_open
@@ -365,6 +412,16 @@ fn autocomplete_into_element<H: UiHost>(
             if (active_index.is_none() && !opened_due_to_focus) || query_changed {
                 let idx = first_enabled(&filtered_items).unwrap_or(0);
                 let _ = cx.app.models_mut().update(&runtime.active_index, |v| *v = Some(idx));
+            } else if opened_due_to_focus && active_index.is_none() {
+                let idx = selected_value.as_ref().and_then(|selected| {
+                    filtered_items.iter().position(|it| it.value.as_ref() == selected.as_ref())
+                });
+                if let Some(idx) = idx {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&runtime.active_index, |v| *v = Some(idx));
+                }
             }
         }
 
@@ -375,6 +432,16 @@ fn autocomplete_into_element<H: UiHost>(
         let open_now = cx
             .get_model_copied(&runtime.open, Invalidation::Layout)
             .unwrap_or(open_now);
+        let active_index = if open_now
+            && let Some(idx) = active_index
+            && idx >= filtered_items.len()
+        {
+            let idx = first_enabled(&filtered_items).unwrap_or(0);
+            let _ = cx.app.models_mut().update(&runtime.active_index, |v| *v = Some(idx));
+            Some(idx)
+        } else {
+            active_index
+        };
         if !open_now && active_index.is_some() {
             let _ = cx.app.models_mut().update(&runtime.active_index, |v| *v = None);
         }
@@ -400,7 +467,7 @@ fn autocomplete_into_element<H: UiHost>(
         let controls_element = runtime.listbox_element_id.get().map(|id| id.0);
 
         let input_id_out = runtime.input_element_id.clone();
-        let trigger = TextField::new(autocomplete.model.clone())
+        let trigger = TextField::new(autocomplete.query.clone())
             .variant(autocomplete.variant.as_text_field_variant())
             .token_namespace(TextFieldTokenNamespace::Autocomplete)
             .label_opt(autocomplete.label.clone())
@@ -424,12 +491,15 @@ fn autocomplete_into_element<H: UiHost>(
         install_input_key_handlers(
             cx,
             input_id,
-            autocomplete.model.clone(),
+            autocomplete.query.clone(),
+            autocomplete.selected_value.clone(),
             runtime.open.clone(),
             runtime.suppress_open.clone(),
             runtime.active_index.clone(),
             filtered_items.clone(),
             autocomplete.disabled,
+            autocomplete.set_query_on_select,
+            autocomplete.on_select.clone(),
         );
 
         if overlay_presence.present {
@@ -484,6 +554,11 @@ fn autocomplete_into_element<H: UiHost>(
                     let test_id = autocomplete.test_id.clone();
                     let disabled = autocomplete.disabled;
                     let query = Arc::<str>::from(query.clone());
+                    let selected_value = selected_value.clone();
+                    let selected_value_model = autocomplete.selected_value.clone();
+                    let set_query_on_select = autocomplete.set_query_on_select;
+                    let on_select = autocomplete.on_select.clone();
+                    let query_model = autocomplete.query.clone();
 
                     move |cx| {
                         vec![autocomplete_listbox_panel(
@@ -494,6 +569,9 @@ fn autocomplete_into_element<H: UiHost>(
                             a11y_label.clone(),
                             test_id.clone(),
                             query.clone(),
+                            query_model.clone(),
+                            selected_value.clone(),
+                            selected_value_model.clone(),
                             disabled,
                             open.clone(),
                             suppress_open.clone(),
@@ -503,7 +581,8 @@ fn autocomplete_into_element<H: UiHost>(
                             listbox_element_id_out.clone(),
                             option_elements_out.clone(),
                             scroll_viewport_id_out.clone(),
-                            autocomplete.model.clone(),
+                            set_query_on_select,
+                            on_select.clone(),
                         )]
                     }
                 },
@@ -561,15 +640,51 @@ fn autocomplete_into_element<H: UiHost>(
     })
 }
 
+fn commit_selection(
+    host: &mut dyn UiActionHost,
+    action_cx: ActionCx,
+    query_model: Model<String>,
+    selected_value_model: Option<Model<Option<Arc<str>>>>,
+    set_query_on_select: bool,
+    on_select: Option<OnAutocompleteSelect>,
+    item: AutocompleteItem,
+    method: AutocompleteSelectMethod,
+    open: Model<bool>,
+    suppress_open: Model<bool>,
+) {
+    if let Some(selected) = selected_value_model {
+        let value = item.value.clone();
+        let _ = host.models_mut().update(&selected, |v| *v = Some(value));
+    }
+
+    if set_query_on_select {
+        let label = item.label.clone();
+        let _ = host
+            .models_mut()
+            .update(&query_model, |v| *v = label.as_ref().to_string());
+    }
+
+    if let Some(handler) = on_select {
+        handler(host, action_cx, AutocompleteSelectCx { item, method });
+    }
+
+    let _ = host.models_mut().update(&open, |v| *v = false);
+    let _ = host.models_mut().update(&suppress_open, |v| *v = true);
+    host.request_redraw(action_cx.window);
+}
+
 fn install_input_key_handlers<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     input_id: GlobalElementId,
-    model: Model<String>,
+    query_model: Model<String>,
+    selected_value_model: Option<Model<Option<Arc<str>>>>,
     open: Model<bool>,
     suppress_open: Model<bool>,
     active_index: Model<Option<usize>>,
     items: Arc<[AutocompleteItem]>,
     disabled: bool,
+    set_query_on_select: bool,
+    on_select: Option<OnAutocompleteSelect>,
 ) {
     if disabled {
         return;
@@ -636,13 +751,18 @@ fn install_input_key_handlers<H: UiHost>(
                     return true;
                 }
 
-                let label = item.label.clone();
-                let _ = host
-                    .models_mut()
-                    .update(&model, |v| *v = label.as_ref().to_string());
-                let _ = host.models_mut().update(&open, |v| *v = false);
-                let _ = host.models_mut().update(&suppress_open, |v| *v = true);
-                host.request_redraw(action_cx.window);
+                commit_selection(
+                    host,
+                    action_cx,
+                    query_model.clone(),
+                    selected_value_model.clone(),
+                    set_query_on_select,
+                    on_select.clone(),
+                    item.clone(),
+                    AutocompleteSelectMethod::KeyboardEnter,
+                    open.clone(),
+                    suppress_open.clone(),
+                );
                 true
             }
             KeyCode::Escape => {
@@ -664,6 +784,9 @@ fn autocomplete_listbox_panel<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     query: Arc<str>,
+    query_model: Model<String>,
+    selected_value: Option<Arc<str>>,
+    selected_value_model: Option<Model<Option<Arc<str>>>>,
     disabled: bool,
     open: Model<bool>,
     suppress_open: Model<bool>,
@@ -673,7 +796,8 @@ fn autocomplete_listbox_panel<H: UiHost>(
     listbox_element_id_out: Rc<Cell<Option<GlobalElementId>>>,
     option_elements_out: Rc<RefCell<Vec<GlobalElementId>>>,
     scroll_viewport_id_out: Rc<Cell<Option<GlobalElementId>>>,
-    model: Model<String>,
+    set_query_on_select: bool,
+    on_select: Option<OnAutocompleteSelect>,
 ) -> AnyElement {
     let listbox_test_id = test_id
         .as_ref()
@@ -753,7 +877,10 @@ fn autocomplete_listbox_panel<H: UiHost>(
 
                     for (idx, item) in items.iter().enumerate() {
                         let item_disabled = disabled || item.disabled;
-                        let selected = active_now == Some(idx);
+                        let active = active_now == Some(idx);
+                        let selected = selected_value
+                            .as_ref()
+                            .is_some_and(|v| v.as_ref() == item.value.as_ref());
                         let label_style = label_style.clone();
                         let query = query.clone();
                         let option_test_id = item.test_id.clone().or_else(|| {
@@ -768,8 +895,10 @@ fn autocomplete_listbox_panel<H: UiHost>(
 
                         let open_for_select = open.clone();
                         let suppress_open_for_select = suppress_open.clone();
-                        let model_for_select = model.clone();
-                        let label_for_select = item.label.clone();
+                        let query_model_for_select = query_model.clone();
+                        let selected_value_model_for_select = selected_value_model.clone();
+                        let on_select_for_select = on_select.clone();
+                        let item_for_select = item.clone();
                         let active_for_hover = active_index.clone();
                         let option_elements_out = option_elements_out.clone();
 
@@ -797,14 +926,18 @@ fn autocomplete_listbox_panel<H: UiHost>(
                                 if !enabled_for_select {
                                     return;
                                 }
-                                let _ = host.models_mut().update(&model_for_select, |v| {
-                                    *v = label_for_select.as_ref().to_string();
-                                });
-                                let _ = host.models_mut().update(&open_for_select, |v| *v = false);
-                                let _ = host
-                                    .models_mut()
-                                    .update(&suppress_open_for_select, |v| *v = true);
-                                host.request_redraw(action_cx.window);
+                                commit_selection(
+                                    host,
+                                    action_cx,
+                                    query_model_for_select.clone(),
+                                    selected_value_model_for_select.clone(),
+                                    set_query_on_select,
+                                    on_select_for_select.clone(),
+                                    item_for_select.clone(),
+                                    AutocompleteSelectMethod::Pointer,
+                                    open_for_select.clone(),
+                                    suppress_open_for_select.clone(),
+                                );
                             }));
 
                             use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
@@ -880,7 +1013,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
                                 ContainerProps {
                                     layout: child_layout,
                                     padding: Edges::all(Px(12.0)),
-                                    background: selected.then_some(selected_bg),
+                                    background: (active || selected).then_some(selected_bg),
                                     ..Default::default()
                                 },
                                 move |_cx| vec![text],

@@ -46,7 +46,10 @@ pub mod tokens;
 pub mod tooltip;
 pub mod top_app_bar;
 
-pub use autocomplete::{Autocomplete, AutocompleteItem, AutocompleteVariant};
+pub use autocomplete::{
+    Autocomplete, AutocompleteItem, AutocompleteSelectCx, AutocompleteSelectMethod,
+    AutocompleteVariant, OnAutocompleteSelect,
+};
 pub use badge::{Badge, BadgePlacement, BadgeValue};
 pub use bottom_sheet::{DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet};
 pub use button::{Button, ButtonStyle, ButtonVariant};

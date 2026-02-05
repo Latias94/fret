@@ -8949,6 +8949,30 @@ fn preview_material3_autocomplete(
         .get_model_copied(&error, Invalidation::Layout)
         .unwrap_or(false);
 
+    #[derive(Default)]
+    struct LocalState {
+        selected_value: Option<Model<Option<Arc<str>>>>,
+    }
+
+    let selected_value = cx.with_state(LocalState::default, |st| st.selected_value.clone());
+    let selected_value = if let Some(model) = selected_value {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(None::<Arc<str>>);
+        cx.with_state(LocalState::default, |st| {
+            st.selected_value = Some(model.clone())
+        });
+        model
+    };
+
+    let query_now = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or_default();
+    let selected_now = cx
+        .get_model_cloned(&selected_value, Invalidation::Layout)
+        .unwrap_or(None);
+    let selected_label = selected_now.as_deref().unwrap_or("<none>");
+
     let toggles = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N4).items_center(),
@@ -8984,6 +9008,7 @@ fn preview_material3_autocomplete(
     };
 
     let outlined = material3::Autocomplete::new(value.clone())
+        .selected_value(selected_value.clone())
         .variant(material3::AutocompleteVariant::Outlined)
         .label("Search")
         .placeholder("Type to filter")
@@ -9010,6 +9035,7 @@ fn preview_material3_autocomplete(
     .into_element(cx);
 
     let filled = material3::Autocomplete::new(value.clone())
+        .selected_value(selected_value.clone())
         .variant(material3::AutocompleteVariant::Filled)
         .label("Search (filled)")
         .placeholder("Type to filter")
@@ -9095,11 +9121,12 @@ fn preview_material3_autocomplete(
                     vec![stack::vstack(
                         cx,
                         stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
+                                    .layout(LayoutRefinement::default().w_full())
                             .gap(Space::N4),
                         move |cx| {
                             vec![
                                 material3::Autocomplete::new(value.clone())
+                                    .selected_value(selected_value.clone())
                                     .variant(material3::AutocompleteVariant::Outlined)
                                     .label("Dialog autocomplete")
                                     .placeholder("Type to filter")
@@ -9110,6 +9137,7 @@ fn preview_material3_autocomplete(
                                     .into_element(cx),
                                 spacer,
                                 material3::Autocomplete::new(value.clone())
+                                    .selected_value(selected_value.clone())
                                     .variant(material3::AutocompleteVariant::Outlined)
                                     .label("Dialog autocomplete (bottom)")
                                     .placeholder("Type to filter")
@@ -9128,6 +9156,10 @@ fn preview_material3_autocomplete(
     vec![
         cx.text("Material 3 Autocomplete: editable combobox input with a listbox popover menu."),
         toggles,
+        cx.text(Arc::from(format!(
+            "Query: \"{}\" | Selected value: {}",
+            query_now, selected_label
+        ))),
         outlined_card,
         filled_card,
         dialog,
