@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 use fret_authoring::Response;
 use fret_authoring::UiWriter;
-use fret_core::{Corners, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole};
+use fret_core::{Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, Size};
 use fret_runtime::DragPhase;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
@@ -235,6 +235,29 @@ fn float_window_drag_kind_for_element(element: GlobalElementId) -> fret_runtime:
     fret_runtime::DragKindId(FLOAT_WINDOW_DRAG_KIND_MASK | element.0)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FloatWindowResizeHandle {
+    Right,
+    Bottom,
+    BottomRight,
+}
+
+const FLOAT_WINDOW_RESIZE_KIND_BASE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.resize.v1");
+
+fn float_window_resize_kind_for_element(
+    element: GlobalElementId,
+    handle: FloatWindowResizeHandle,
+) -> fret_runtime::DragKindId {
+    let handle_tag = match handle {
+        FloatWindowResizeHandle::Right => 1,
+        FloatWindowResizeHandle::Bottom => 2,
+        FloatWindowResizeHandle::BottomRight => 3,
+    };
+    fret_runtime::DragKindId(
+        FLOAT_WINDOW_RESIZE_KIND_BASE ^ element.0.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ handle_tag,
+    )
+}
+
 const KEY_FLOAT_WINDOW_ACTIVATE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.activate.v1");
 
 /// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
@@ -269,9 +292,14 @@ impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUiFacade<'cx, 'a, H> {
 struct FloatWindowState {
     position: Point,
     last_drag_position: Option<Point>,
+    size: Size,
+    last_resize_position: Option<Point>,
     window_test_id: Arc<str>,
     title_bar_test_id: Arc<str>,
     close_button_test_id: Arc<str>,
+    resize_right_test_id: Arc<str>,
+    resize_bottom_test_id: Arc<str>,
+    resize_corner_test_id: Arc<str>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -771,7 +799,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_position: Point,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        self.floating_window_impl(id, title.into(), None, initial_position, f);
+        self.floating_window_impl(id, title.into(), None, initial_position, None, f);
     }
 
     /// Render a floating window controlled by an `open` model (ImGui-style `bool* p_open`).
@@ -785,7 +813,48 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_position: Point,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        self.floating_window_impl(id, title.into(), Some(open), initial_position, f);
+        self.floating_window_impl(id, title.into(), Some(open), initial_position, None, f);
+    }
+
+    /// Render a resizable in-window floating window with a fixed initial size.
+    ///
+    /// This installs minimal resize handles (right edge, bottom edge, bottom-right corner).
+    fn floating_window_resizable(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        initial_size: Size,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.floating_window_impl(
+            id,
+            title.into(),
+            None,
+            initial_position,
+            Some(initial_size),
+            f,
+        );
+    }
+
+    /// Render a resizable floating window controlled by an `open` model.
+    fn floating_window_open_resizable(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        initial_size: Size,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.floating_window_impl(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            Some(initial_size),
+            f,
+        );
     }
 
     fn floating_window_impl(
@@ -794,6 +863,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         title: Arc<str>,
         open: Option<&fret_runtime::Model<bool>>,
         initial_position: Point,
+        initial_size: Option<Size>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
         if let Some(open) = open {
@@ -828,40 +898,114 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .filter(|drag| drag.kind == drag_kind)
                     .map(|drag| (drag.dragging, drag.position, drag.start_position));
 
-                let (position, window_test_id, title_bar_test_id, close_button_test_id) = cx
-                    .with_state_for(
-                        window_id,
-                        || FloatWindowState {
-                            position: initial_position,
-                            last_drag_position: None,
-                            window_test_id: Arc::from(format!("imui.float_window.window:{id}")),
-                            title_bar_test_id: Arc::from(format!(
-                                "imui.float_window.title_bar:{id}"
-                            )),
-                            close_button_test_id: Arc::from(format!(
-                                "imui.float_window.close:{id}"
-                            )),
-                        },
-                        |st| {
-                            if let Some((dragging, current, start)) = drag_snapshot {
-                                if dragging {
-                                    let prev = st.last_drag_position.unwrap_or(start);
-                                    st.position = point_add(st.position, point_sub(current, prev));
-                                    st.last_drag_position = Some(current);
-                                } else {
-                                    st.last_drag_position = None;
-                                }
+                let resizable = initial_size.is_some();
+                let resize_snapshot = if resizable {
+                    [
+                        FloatWindowResizeHandle::Right,
+                        FloatWindowResizeHandle::Bottom,
+                        FloatWindowResizeHandle::BottomRight,
+                    ]
+                    .into_iter()
+                    .find_map(|handle| {
+                        let kind = float_window_resize_kind_for_element(window_id, handle);
+                        cx.app
+                            .find_drag_pointer_id(|d| {
+                                d.kind == kind
+                                    && d.source_window == cx.window
+                                    && d.current_window == cx.window
+                            })
+                            .and_then(|pointer_id| cx.app.drag(pointer_id))
+                            .filter(|drag| drag.kind == kind)
+                            .map(|drag| (handle, drag.dragging, drag.position, drag.start_position))
+                    })
+                } else {
+                    None
+                };
+
+                let (
+                    position,
+                    size,
+                    window_test_id,
+                    title_bar_test_id,
+                    close_button_test_id,
+                    resize_right_test_id,
+                    resize_bottom_test_id,
+                    resize_corner_test_id,
+                ) = cx.with_state_for(
+                    window_id,
+                    || FloatWindowState {
+                        position: initial_position,
+                        last_drag_position: None,
+                        size: initial_size.unwrap_or_else(|| Size::new(Px(0.0), Px(0.0))),
+                        last_resize_position: None,
+                        window_test_id: Arc::from(format!("imui.float_window.window:{id}")),
+                        title_bar_test_id: Arc::from(format!("imui.float_window.title_bar:{id}")),
+                        close_button_test_id: Arc::from(format!("imui.float_window.close:{id}")),
+                        resize_right_test_id: Arc::from(format!(
+                            "imui.float_window.resize.right:{id}"
+                        )),
+                        resize_bottom_test_id: Arc::from(format!(
+                            "imui.float_window.resize.bottom:{id}"
+                        )),
+                        resize_corner_test_id: Arc::from(format!(
+                            "imui.float_window.resize.corner:{id}"
+                        )),
+                    },
+                    |st| {
+                        if let Some((dragging, current, start)) = drag_snapshot {
+                            if dragging {
+                                let prev = st.last_drag_position.unwrap_or(start);
+                                st.position = point_add(st.position, point_sub(current, prev));
+                                st.last_drag_position = Some(current);
                             } else {
                                 st.last_drag_position = None;
                             }
-                            (
-                                st.position,
-                                st.window_test_id.clone(),
-                                st.title_bar_test_id.clone(),
-                                st.close_button_test_id.clone(),
-                            )
-                        },
-                    );
+                        } else {
+                            st.last_drag_position = None;
+                        }
+
+                        if let Some((handle, dragging, current, start)) = resize_snapshot {
+                            if dragging {
+                                let prev = st.last_resize_position.unwrap_or(start);
+                                let delta = point_sub(current, prev);
+
+                                let min = Size::new(Px(120.0), Px(72.0));
+                                match handle {
+                                    FloatWindowResizeHandle::Right => {
+                                        st.size.width =
+                                            Px((st.size.width.0 + delta.x.0).max(min.width.0));
+                                    }
+                                    FloatWindowResizeHandle::Bottom => {
+                                        st.size.height =
+                                            Px((st.size.height.0 + delta.y.0).max(min.height.0));
+                                    }
+                                    FloatWindowResizeHandle::BottomRight => {
+                                        st.size.width =
+                                            Px((st.size.width.0 + delta.x.0).max(min.width.0));
+                                        st.size.height =
+                                            Px((st.size.height.0 + delta.y.0).max(min.height.0));
+                                    }
+                                }
+
+                                st.last_resize_position = Some(current);
+                            } else {
+                                st.last_resize_position = None;
+                            }
+                        } else {
+                            st.last_resize_position = None;
+                        }
+                        (
+                            st.position,
+                            st.size,
+                            st.window_test_id.clone(),
+                            st.title_bar_test_id.clone(),
+                            st.close_button_test_id.clone(),
+                            st.resize_right_test_id.clone(),
+                            st.resize_bottom_test_id.clone(),
+                            st.resize_corner_test_id.clone(),
+                        )
+                    },
+                );
 
                 let (popover, border, muted) = {
                     let theme = fret_ui::Theme::global(&*cx.app);
@@ -883,6 +1027,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     overflow: Overflow::Visible,
                     ..Default::default()
                 };
+                if resizable {
+                    window_props.layout.size.width = Length::Px(size.width);
+                    window_props.layout.size.height = Length::Px(size.height);
+                }
                 window_props.background = Some(popover);
                 window_props.border = Edges::all(Px(1.0));
                 window_props.border_color = Some(border);
@@ -1109,7 +1257,150 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         },
                     );
 
-                    vec![cx.column(col, |_cx| vec![title_bar, content])]
+                    let body = cx.column(col, |_cx| vec![title_bar, content]);
+                    if !resizable {
+                        return vec![body];
+                    }
+
+                    let window_id = window_id;
+                    let mut resize_handle = |handle: FloatWindowResizeHandle, test_id: Arc<str>| {
+                        let (cursor, layout) = match handle {
+                            FloatWindowResizeHandle::Right => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Px(Px(6.0));
+                                layout.size.height = Length::Fill;
+                                (CursorIcon::ColResize, layout)
+                            }
+                            FloatWindowResizeHandle::Bottom => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(Px(6.0));
+                                (CursorIcon::RowResize, layout)
+                            }
+                            FloatWindowResizeHandle::BottomRight => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    right: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Px(Px(10.0));
+                                layout.size.height = Length::Px(Px(10.0));
+                                (CursorIcon::ColResize, layout)
+                            }
+                        };
+
+                        let kind = float_window_resize_kind_for_element(window_id, handle);
+                        cx.pointer_region(
+                            PointerRegionProps {
+                                layout,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                cx.pointer_region_clear_on_pointer_down();
+                                cx.pointer_region_clear_on_pointer_move();
+                                cx.pointer_region_clear_on_pointer_up();
+
+                                cx.pointer_region_on_pointer_down(Arc::new(
+                                    move |host, acx, down| {
+                                        if down.button != MouseButton::Left {
+                                            return false;
+                                        }
+
+                                        host.request_focus(acx.target);
+                                        host.capture_pointer();
+                                        host.set_cursor_icon(cursor);
+                                        if host.drag(down.pointer_id).is_none() {
+                                            host.begin_drag_with_kind(
+                                                down.pointer_id,
+                                                kind,
+                                                acx.window,
+                                                down.position,
+                                            );
+                                        }
+                                        host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
+                                        host.notify(acx);
+                                        false
+                                    },
+                                ));
+
+                                cx.pointer_region_on_pointer_move(Arc::new(
+                                    move |host, acx, mv| {
+                                        host.set_cursor_icon(cursor);
+
+                                        let Some(drag) = host.drag_mut(mv.pointer_id) else {
+                                            return false;
+                                        };
+                                        if drag.kind != kind || drag.source_window != acx.window {
+                                            return false;
+                                        }
+
+                                        drag.current_window = acx.window;
+                                        drag.position = mv.position;
+                                        drag.dragging = true;
+                                        drag.phase = DragPhase::Dragging;
+
+                                        if !mv.buttons.left {
+                                            drag.phase = DragPhase::Canceled;
+                                            host.cancel_drag(mv.pointer_id);
+                                            host.release_pointer_capture();
+                                            host.notify(acx);
+                                            return false;
+                                        }
+
+                                        host.notify(acx);
+                                        false
+                                    },
+                                ));
+
+                                cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+                                    if let Some(drag) = host.drag(up.pointer_id)
+                                        && drag.kind == kind
+                                        && drag.source_window == acx.window
+                                    {
+                                        host.cancel_drag(up.pointer_id);
+                                    }
+                                    host.release_pointer_capture();
+                                    host.notify(acx);
+                                    false
+                                }));
+
+                                Vec::new()
+                            },
+                        )
+                        .attach_semantics(
+                            fret_ui::element::SemanticsDecoration::default()
+                                .test_id(test_id.clone()),
+                        )
+                    };
+
+                    let right =
+                        resize_handle(FloatWindowResizeHandle::Right, resize_right_test_id.clone());
+                    let bottom = resize_handle(
+                        FloatWindowResizeHandle::Bottom,
+                        resize_bottom_test_id.clone(),
+                    );
+                    let corner = resize_handle(
+                        FloatWindowResizeHandle::BottomRight,
+                        resize_corner_test_id.clone(),
+                    );
+
+                    vec![cx.stack(|_cx| vec![body, right, bottom, corner])]
                 });
                 // `cx.container(...)` introduces a fresh scoped id; normalize the outer window element
                 // id back to the named scope id so z-order state can track windows by `window_id`.
