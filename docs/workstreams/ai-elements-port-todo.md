@@ -202,11 +202,11 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 ### Data model (v0)
 
-- [ ] AIEL-MVP0-model-001 Confirm `MessageId = u64` (align with `crates/fret-ui::ItemKey`) and document stability rules.
+- [x] AIEL-MVP0-model-001 Confirm `MessageId = u64` (align with `crates/fret-ui::ItemKey`) and document stability rules.
   - Include interop guidance: keep optional `external_id: Arc<str>` and derive `u64` key at the app boundary.
-- [ ] AIEL-MVP0-model-002 Define `MessageRole` + `MessagePart` enums (markdown/tool/sources/attachments).
-- [ ] AIEL-MVP0-model-003 Define `ToolCall` lifecycle state model (Pending/Running/Succeeded/Failed/Cancelled).
-- [ ] AIEL-MVP0-model-004 Define `SourceItem` + inline citation referencing (stable anchor keys for scripts).
+- [x] AIEL-MVP0-model-002 Define `MessageRole` + `MessagePart` enums (markdown/tool/sources/attachments).
+- [x] AIEL-MVP0-model-003 Define `ToolCall` lifecycle state model (Pending/Running/Succeeded/Failed/Cancelled).
+- [x] AIEL-MVP0-model-004 Define `SourceItem` + inline citation referencing (stable anchor keys for scripts).
 - [ ] AIEL-MVP0-model-005 Define streaming update contract for markdown/text parts (append + finalize).
 
 ### Theme tokens (v0)
@@ -231,7 +231,7 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 ### MessageResponse (markdown + streaming)
 
-- [ ] AIEL-MVP1-chat-060 Integrate `ecosystem/fret-markdown` for markdown rendering.
+- [x] AIEL-MVP1-chat-060 Integrate `ecosystem/fret-markdown` for markdown rendering.
 - [ ] AIEL-MVP1-chat-061 Define streaming update contract (append chunks, finalize, stable block IDs for code fences).
 - [ ] AIEL-MVP1-chat-062 Add code fence actions slot (copy / expand / download) using `MarkdownComponents`.
 

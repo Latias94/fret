@@ -9,7 +9,7 @@ scope: ecosystem/fret-ui-ai, shadcn recipes reuse, diag gates
 
 This workstream tracks the port of Vercel's **AI Elements** component taxonomy into Fret’s ecosystem:
 
-- Upstream reference: `repo-ref/ai-elements/packages/elements`
+- Upstream reference (local snapshot): `$FRET_REPO_REF_ROOT/ai-elements/packages/elements`
 - Baseline UI vocabulary: `ecosystem/fret-ui-shadcn` (shadcn/ui v4-aligned taxonomy)
 - Goal crate: `ecosystem/fret-ui-ai` (policy-heavy, AI-native surfaces)
 
@@ -17,7 +17,10 @@ This is an **outcomes-first** port: we align behavior and composition outcomes, 
 
 ## Version stamp (upstream reference)
 
-The upstream spec for this workstream is the pinned local checkout under `repo-ref/ai-elements`.
+The upstream spec for this workstream is the pinned local checkout under
+`$FRET_REPO_REF_ROOT/ai-elements` (default in this dev environment: `F:/SourceCodes/Rust/fret/repo-ref`).
+
+Note: `repo-ref` is a local developer asset store and is not required to build the workspace.
 
 - Upstream repo: `vercel/ai-elements`
 - Pinned commit: `e7566cacc888d41cedd2a41510d2cf0df36928da` (commit date `2026-02-04`)
@@ -88,7 +91,7 @@ P2 (workflow + voice):
 ## Port strategy (use Fret’s existing strengths)
 
 1. **Inventory + mapping**
-   - Track the upstream component list (by file in `repo-ref/ai-elements/packages/elements/src`).
+   - Track the upstream component list (by file in `$FRET_REPO_REF_ROOT/ai-elements/packages/elements/src`).
    - For each component: decide the owning layer and required dependencies (shadcn primitives vs new headless).
 
 2. **Build thin, composable surfaces**
@@ -108,8 +111,8 @@ P2 (workflow + voice):
 Recommended loop (mirrors how `fret-ui-shadcn` work is kept honest):
 
 1. **Pick the upstream spec** for the component (docs + source):
-   - Upstream component source: `repo-ref/ai-elements/packages/elements/src/<component>.tsx`
-   - Upstream docs page (when helpful): `repo-ref/ai-elements/apps/docs/content/components/**/<component>.mdx`
+   - Upstream component source: `$FRET_REPO_REF_ROOT/ai-elements/packages/elements/src/<component>.tsx`
+   - Upstream docs page (when helpful): `$FRET_REPO_REF_ROOT/ai-elements/apps/docs/content/components/**/<component>.mdx`
 2. **Map to the correct layer** (mechanism vs headless vs shadcn recipe vs ai policy).
 3. **Implement the smallest composable surface** that matches outcomes (split container/content/actions).
 4. **Add gates immediately**:
@@ -215,21 +218,29 @@ Recommended derivation strategy:
 - If your upstream gives you an ordered stream, use a **monotonic counter** (best).
 - If you need to key by a string ID, use a **stable hash with a fixed seed** at the app boundary and
   **detect duplicates** during message list construction (fail fast in debug builds).
+- Avoid using `Vec` indices as IDs if you ever insert/remove in the middle of the transcript (it
+  breaks keyed identity and can cause per-row state to “jump”).
 
 ### Message content model
 
 Prefer a “parts” model rather than a single `text` field, so we can render rich assistant outputs
 without retrofitting later.
 
-Draft shape (not yet code):
+Implemented in `ecosystem/fret-ui-ai/src/model.rs` as:
 
-- `Message` has `Vec<MessagePart>`.
-- `MessagePart` can include:
-  - `Markdown { text, stream_id? }`
-  - `ToolCall { id, name, status, input, output, error }`
-  - `Sources { items }`
-  - `Attachment { id, kind, name, bytes? }` (bytes are app-owned; UI just displays metadata)
-  - `CodeBlock { language?, text, block_id }` (usually produced by markdown rendering)
+- `AiMessage { id, external_id?, role, parts: Arc<[MessagePart]> }`
+- `MessagePart` variants:
+  - `Text(Arc<str>)` (typically user input)
+  - `Markdown(Arc<str>)` (typically assistant output)
+  - `ToolCall(ToolCall)` (structured input/output + lifecycle)
+  - `Sources(Arc<[SourceItem]>)`
+
+Notes:
+
+- Use `Arc<[T]>` for `parts` to keep `AiMessage` cheap to clone while still allowing apps to own the
+  source-of-truth message list.
+- “Attachments” and richer “code block parts” are deferred until we have a stable authoring contract
+  for file pickers / bytes ownership / per-block state.
 
 ### Tool call lifecycle
 
@@ -340,9 +351,65 @@ Concrete script names and gating checklists live in the TODO tracker:
 The upstream AI Elements repo groups components into (chatbot / code / workflow / voice / utilities).
 We port in the same order, but we lean on existing Fret ecosystem crates.
 
-Canonical list source: `repo-ref/ai-elements/packages/elements/src/*.tsx`.
+Canonical list source: `$FRET_REPO_REF_ROOT/ai-elements/packages/elements/src/*.tsx`.
 
 Tracking and milestones live in: `docs/workstreams/ai-elements-port-todo.md`.
+
+Legend:
+
+- **Owner**: which crate should own the surface (not necessarily where every helper lives).
+- **Status**: `Done` | `Partial` | `Planned (M1/M2/...)` | `Defer` (no consumer) | `N/A` (not applicable in Fret).
+
+| Upstream (AI Elements) | Fret owner (candidate) | Fret module/path (candidate) | Status | Notes |
+| --- | --- | --- | --- | --- |
+| `conversation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/conversation.rs` | Partial | Transcript + scroll affordances exist; still missing parts surface + empty state + download. |
+| `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Minimal role chrome exists; needs parts-based composition (content/actions/toolbar). |
+| (subset) | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_response.rs` | Partial | Markdown rendering exists; streaming + code actions are TODO. |
+| `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Planned (M1) | MVP: textarea + send/stop + disabled/loading + test_id. |
+| `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool_call.rs` | Planned (M2) | Render `ToolCall` parts: running/success/error + collapse + stable anchors. |
+| `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources.rs` | Planned (M2) | `SourceItem` list + open-url intent hook. |
+| `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Planned (M2) | Transcript-local anchor/jump/highlight contract; needs stable selectors. |
+| `attachments.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/attachments.rs` | Defer | Needs file picker/bytes ownership contract; keep as intent-only. |
+| `code-block.tsx` | `fret-ui-ai` + `fret-code-view` | `ecosystem/fret-markdown` + `ecosystem/fret-code-view` | Partial | Code fences render via markdown; copy/expand/download actions need slots. |
+| `snippet.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Defer | Likely a thin wrapper over code view + metadata chrome. |
+| `file-tree.tsx` | `fret-ui-ai` + `fret-ui-kit` | `ecosystem/fret-ui-kit` (tree infra) + `fret-ui-ai` chrome | Defer | We should reuse outliner/tree recipes; virtualization + stable identity required. |
+| `artifact.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/artifact.rs` | Defer | Needs “artifact” data model + viewer surfaces (markdown/code/file tree). |
+| `image.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/image.rs` | Defer | Depends on image decode/asset pipeline policy. |
+| `audio-player.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/audio_player.rs` | Defer | Depends on audio backend + buffering policy. |
+| `shimmer.tsx` | `fret-ui-shadcn` | `ecosystem/fret-ui-shadcn` skeleton/loading recipes | Defer | Prefer reusing existing shadcn skeleton/loading surfaces. |
+| `toolbar.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_toolbar.rs` | Planned (M1) | Message action row; likely composes shadcn buttons + dropdowns. |
+| `suggestion.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/suggestion.rs` | Defer | Only implement if an app uses suggestions. |
+| `reasoning.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/reasoning.rs` | Defer | Needs explicit policy: show/hide reasoning, storage, redaction. |
+| `chain-of-thought.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/chain_of_thought.rs` | N/A | Avoid baking “CoT UI” as a default surface without a consumer. |
+| `plan.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/plan.rs` | Defer | Could be a markdown-like block with disclosure; wait for consumer. |
+| `stack-trace.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/stack_trace.rs` | Defer | Likely a code block variant with copy + collapse. |
+| `terminal.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/terminal.rs` | Defer | Prefer tying to existing terminal viewport/runner if present. |
+| `schema-display.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/schema_display.rs` | Defer | JSON schema tree; may live in a generic “json viewer” crate later. |
+| `jsx-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/jsx_preview.rs` | Defer | Would need a sandboxed renderer/preview system. |
+| `web-preview.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/web_preview.rs` | Defer | Needs webview/viewport integration. |
+| `sandbox.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sandbox.rs` | Defer | Depends on execution sandbox and policies. |
+| `test-results.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/test_results.rs` | Defer | Only if tied to a concrete workflow. |
+| `checkpoint.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/checkpoint.rs` | Defer | Workflow-specific; not core chat UI. |
+| `queue.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/queue.rs` | Defer | Workflow-specific. |
+| `task.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/task.rs` | Defer | Workflow-specific. |
+| `agent.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/agent.rs` | Defer | Likely app-specific persona chrome. |
+| `persona.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/persona.rs` | Defer | Same. |
+| `model-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/model_selector.rs` | Defer | Only if app needs it; depends on overlay/select recipes. |
+| `mic-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/mic_selector.rs` | Defer | Voice surfaces are optional. |
+| `voice-selector.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/voice_selector.rs` | Defer | Voice surfaces are optional. |
+| `speech-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/speech_input.rs` | Defer | Depends on audio/ASR stack. |
+| `transcription.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/transcription.rs` | Defer | Voice pipeline dependent. |
+| `controls.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/controls.rs` | Defer | Only if it maps to app-level transport controls. |
+| `confirmation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/confirmation.rs` | Defer | Likely a dialog/sheet recipe (shadcn owner), not AI-specific by default. |
+| `context.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/context.rs` | Defer | Needs a “context items” data model + file references. |
+| `open-in-chat.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/open_in_chat.rs` | Defer | App-specific affordance. |
+| `panel.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/panel.rs` | Defer | Workspace shell/panels belong in docking/viewports workstreams. |
+| `canvas.tsx` | `fret-canvas` + `fret-ui-ai` | `ecosystem/fret-canvas` (core) + `fret-ui-ai` chrome | Defer | Only when chat embeds interactive canvases. |
+| `node.tsx` / `edge.tsx` | `fret-node` + `fret-ui-ai` | `ecosystem/fret-node` (core) + `fret-ui-ai` chrome | Defer | Same. |
+| `commit.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/commit.rs` | Defer | Workflow-specific. |
+| `connection.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/connection.rs` | Defer | Workflow-specific. |
+| `environment-variables.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/environment_variables.rs` | Defer | Workflow-specific. |
+| `package-info.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/package_info.rs` | Defer | Workflow-specific. |
 
 ## Risks & design constraints (track proactively)
 
