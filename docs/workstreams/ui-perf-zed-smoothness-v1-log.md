@@ -3882,3 +3882,30 @@ Takeaway:
 - We can now track whether the *same element ids* are repeatedly missing their blobs across frames, or whether these
   are first-appearance spikes. Next: correlate these element ids with cleanup/remove-subtree records and cache-root
   reuse reasons.
+
+## 2026-02-05 15:25:21 (commit `21198872`)
+
+Change:
+- Refresh steady-state suite evidence (no runtime changes expected; captures current tail metrics + bundles).
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```bash
+target/codex-perf/debug/fretboard diag perf ui-gallery-steady \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --warmup-frames 10 --repeat 3 --reuse-launch --sort time --json \
+  --dir target/fret-diag-codex-suite \
+  --launch -- target/codex-perf/release/fret-ui-gallery
+```
+
+Worst overall:
+- script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- top_total_time_us: `14447`
+- bundle: `target/fret-diag-codex-suite/1770305149472-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- The worst frame is layout-dominant (`layout_time_us=10591`) and includes resize-driven text re-prepare
+  (`paint_text_prepare.us(time/calls)=2008/20`, `reasons=width_changed=20`), which is expected for a resize stress probe.
