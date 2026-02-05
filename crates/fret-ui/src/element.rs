@@ -19,11 +19,26 @@ pub struct AnyElement {
     pub id: GlobalElementId,
     pub kind: ElementKind,
     pub children: Vec<AnyElement>,
+    /// Layout-transparent semantics overrides applied when producing semantics snapshots.
+    pub semantics_decoration: Option<SemanticsDecoration>,
 }
 
 impl AnyElement {
     pub fn new(id: GlobalElementId, kind: ElementKind, children: Vec<AnyElement>) -> Self {
-        Self { id, kind, children }
+        Self {
+            id,
+            kind,
+            children,
+            semantics_decoration: None,
+        }
+    }
+
+    pub fn attach_semantics(mut self, decoration: SemanticsDecoration) -> Self {
+        self.semantics_decoration = Some(match self.semantics_decoration.take() {
+            Some(existing) => existing.merge(decoration),
+            None => decoration,
+        });
+        self
     }
 }
 
@@ -361,6 +376,53 @@ impl Default for ContainerProps {
             corner_radii: Corners::all(Px(0.0)),
             snap_to_device_pixels: false,
         }
+    }
+}
+
+/// Layout-transparent semantics overrides attached to an existing element (ADR 1161).
+///
+/// This is primarily intended for diagnostics and UI automation (`test_id`) and for restricted
+/// a11y stamping on typed elements without introducing a layout wrapper.
+#[derive(Debug, Default, Clone)]
+pub struct SemanticsDecoration {
+    pub role: Option<SemanticsRole>,
+    pub label: Option<Arc<str>>,
+    /// Debug/test-only identifier for deterministic automation.
+    ///
+    /// This MUST NOT be mapped into platform accessibility name/label fields by default.
+    pub test_id: Option<Arc<str>>,
+    pub value: Option<Arc<str>>,
+}
+
+impl SemanticsDecoration {
+    /// Merges two decorations, with `other` taking precedence.
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            role: other.role.or(self.role),
+            label: other.label.or(self.label),
+            test_id: other.test_id.or(self.test_id),
+            value: other.value.or(self.value),
+        }
+    }
+
+    pub fn role(mut self, role: SemanticsRole) -> Self {
+        self.role = Some(role);
+        self
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = Some(value.into());
+        self
     }
 }
 

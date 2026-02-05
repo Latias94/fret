@@ -275,5 +275,22 @@ impl ElementHostWidget {
             }
             _ => {}
         }
+
+        if let Some(Some(decoration)) = with_element_record_for_node(cx.app, window, cx.node, |r| {
+            r.semantics_decoration.clone()
+        }) {
+            if let Some(role) = decoration.role {
+                cx.set_role(role);
+            }
+            if let Some(label) = decoration.label.as_ref() {
+                cx.set_label(label.as_ref().to_string());
+            }
+            if let Some(test_id) = decoration.test_id.as_ref() {
+                cx.set_test_id(test_id.as_ref().to_string());
+            }
+            if let Some(value) = decoration.value.as_ref() {
+                cx.set_value(value.as_ref().to_string());
+            }
+        }
     }
 }
