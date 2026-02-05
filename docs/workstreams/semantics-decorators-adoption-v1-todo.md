@@ -92,7 +92,14 @@ layout. This workstream is about making that the default across ecosystem code.
 ### M3 — UI Gallery: migrate authoring patterns
 
 - [~] SDC-gal-300 Update UI Gallery component previews to avoid `Semantics`-for-test-id patterns.
-  - Evidence (initial core selectors): `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-nav-search`, `ui-gallery-nav-scroll`, `ui-gallery-content-scroll`, `ui-gallery-page-*`)
+  - Evidence: `apps/fret-ui-gallery/src/ui.rs`
+    - Global selectors: `ui-gallery-nav-search`, `ui-gallery-nav-scroll`, `ui-gallery-content-scroll`, `ui-gallery-page-*`
+    - Preview roots: `ui-gallery-view-cache-root`, `ui-gallery-code-editor-root`, `ui-gallery-code-editor-torture-root`,
+      `ui-gallery-text-selection-perf-root`, `ui-gallery-text-bidi-rtl-conformance-root`,
+      `ui-gallery-text-measure-overlay-root`, `ui-gallery-chart-torture-root`, `ui-gallery-windowed-rows-root`,
+      `ui-gallery-canvas-cull-root`, `ui-gallery-resizable-panels`, `ui-gallery-data-table-root`
+  - Note: avoid using `Semantics` as a layout fragment (it is an overlay wrapper). When a preview needs a semantics-stamped
+    group root, create an explicit layout root (e.g. `stack::vstack`) and attach the decoration there.
 - [ ] SDC-gal-310 Add notes to the shadcn UI Gallery tracker pointing to this workstream.
 
 ---
