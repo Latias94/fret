@@ -534,6 +534,8 @@ pub(crate) const DOC_BUTTON: &str = r#"
 Validate `variant` / `size` behaviors and default styling consistency.
 
 This layer is **visual recipes**. Interaction policies (hover intent, focus trap, etc.) should live in `fret-ui-kit` / ecosystem crates.
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/button.mdx`.
 "#;
 
 pub(crate) const USAGE_BUTTON: &str = r#"
@@ -2003,12 +2005,20 @@ let label = shadcn::Label::new("Email").into_element(cx);
 pub(crate) const DOC_MENUBAR: &str = r#"
 ## Menubar
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/menubar.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/menubar.mdx`.
 "#;
 
 pub(crate) const USAGE_MENUBAR: &str = r#"
 ```rust
-// Gallery preview is a smoke stub.
+use fret_ui_shadcn as shadcn;
+
+let file = shadcn::MenubarMenu::new("File").entries([
+    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("New Tab")),
+    shadcn::MenubarEntry::Separator,
+    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Print...")),
+]);
+
+let bar = shadcn::Menubar::new([file]).into_element(cx);
 ```
 "#;
 
