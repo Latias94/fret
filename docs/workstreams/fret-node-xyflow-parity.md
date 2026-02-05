@@ -137,7 +137,7 @@ Headless / substrate ergonomics:
 
 Built-in add-ons:
 - [x] Background variants parity (dots / cross) + per-editor theming.
-- [~] First-class NodeToolbar / EdgeToolbar primitives (overlay positioning + hit-testing discipline).
+- [x] First-class NodeToolbar / EdgeToolbar primitives (overlay positioning + hit-testing discipline).
 - [x] “Custom edge” Stage 2 (custom path builders) with a stable contract.
 
 ## Milestones
