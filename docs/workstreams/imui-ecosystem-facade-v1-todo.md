@@ -46,9 +46,13 @@ Exit criteria:
 - `ecosystem/fret-imui` is policy-light (builder + identity + output sink).
 - The facade surface is hosted in `ecosystem/fret-ui-kit` behind the existing `imui` feature.
 
-- [ ] IMUIECO-scope-000 Move minimal `Response` to `ecosystem/fret-authoring` (breaking change OK).
-- [ ] IMUIECO-scope-001 Slim `ecosystem/fret-imui` dependencies (move policy/widget helpers to ui-kit where appropriate).
-- [ ] IMUIECO-scope-002 Decide whether to extract the facade into a dedicated crate later (default: keep in `fret-ui-kit` for v1).
+- [x] IMUIECO-scope-000 Move minimal `Response` to `ecosystem/fret-authoring` (breaking change OK).
+  - Evidence: `ecosystem/fret-authoring/src/lib.rs`, commit `1bee2c7`.
+- [x] IMUIECO-scope-001 Slim `ecosystem/fret-imui` dependencies (move policy/widget helpers to ui-kit where appropriate).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs`, commit `cca950d`.
+- [x] IMUIECO-scope-002 Decide whether to extract the facade into a dedicated crate later (default: keep in `fret-ui-kit` for v1).
+  - Decision: keep in `fret-ui-kit` (feature `imui`) for v1; revisit if surface size grows.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs`, commit `b373045`.
 
 ---
 
@@ -62,6 +66,8 @@ Exit criteria:
 - [ ] IMUIECO-scope-010 Decide whether shadcn integration is via an optional feature or a dedicated adapter module/crate.
 - [ ] IMUIECO-scope-011 Choose a canonical delegation seam for returning `Response` from canonical components.
 - [ ] IMUIECO-scope-012 Decide whether “tear-off to OS window” is docking-only for v1 (recommended) or generalized.
+- [ ] IMUIECO-scope-013 Define the `ResponseExt` signal storage model (transient vs element-local state) and document it.
+- [ ] IMUIECO-scope-014 Define a tiered delegation rule for official widgets (primitive wrappers vs canonical component adapters).
 
 ---
 
@@ -102,9 +108,18 @@ Exit criteria:
 - Floating windows/areas exist as first-class outcomes in-window, aligned with ImGui-style UX.
 
 - [ ] IMUIECO-overlays-030 Menu/popover/tooltip convenience wrappers built on `OverlayController`.
-- [ ] IMUIECO-float-031 Implement a floating window/area primitive in `fret-ui-kit` (policy-heavy).
-- [ ] IMUIECO-float-032 Add `fret-ui-kit` immediate wrappers (`ui.window(...)`, `ui.area(...)`) returning a meaningful `Response`.
-- [ ] IMUIECO-float-033 (If generalized) Add a capability-gated “promote to OS window” path; otherwise keep docking-only.
+- [ ] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
+  - move (drag) + z-order + focus activation,
+  - predictable hit-testing with overlays,
+  - degrade cleanly when multi-window is unavailable (always in-window).
+- [ ] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
+  - title bar, close button, Esc-to-close,
+  - resize handles + resize session state,
+  - focus trap/restore when appropriate (aligned with overlay policy).
+- [ ] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
+- [ ] IMUIECO-float-034 Decide OS-window promotion scope:
+  - docking-only for v1 (recommended), or
+  - generalized capability-gated promotion later.
 
 ---
 
@@ -118,7 +133,11 @@ Exit criteria:
 
 - [ ] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
 - [ ] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
-- [ ] IMUIECO-test-042 Add nextest coverage for facade crates (smoke + key behavior tests).
+- [ ] IMUIECO-test-042 Add nextest coverage for facade crates (smoke + key behavior tests):
+  - click variants are delivered once (clear-on-read),
+  - drag lifecycle is consistent across frames,
+  - context-menu request is stable (mouse + keyboard if supported).
 - [ ] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
 - [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
 - [ ] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
+- [ ] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).

@@ -11,6 +11,12 @@ The central decision: keep `ecosystem/fret-imui` **policy-light and minimal**, a
 egui/imgui” convenience (richer `Response` signals, floating windows/areas, menus, adapters for
 common controls) into **ecosystem facade crates**.
 
+Status snapshot (2026-02-05):
+
+- The minimal shared `Response` contract lives in `ecosystem/fret-authoring`.
+- `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
+- The initial egui/imgui-like convenience surface is hosted in `ecosystem/fret-ui-kit` behind its `imui` feature.
+
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
@@ -195,6 +201,14 @@ Pre-open-source recommendation:
   crates depend on it.
 - Keep richer / more opinionated signals in the facade layer (ui-kit) until they settle.
 
+Signal storage model (recommended):
+
+- Use **transient events (clear-on-read)** for one-shot signals (clicked variants, context-menu request).
+- Use **element-local state** (`ElementContext::with_state_for`) for continuous interactions (drag in-progress,
+  accumulated delta, resize session bookkeeping).
+- Source geometry from `last_bounds_for_element` (two-frame stabilization): treat the first frame as “no rect”
+  and document this explicitly where it matters (overlays/floating).
+
 ### 5.4 Canonical-widget delegation (no duplicated state machines)
 
 The hardest design seam is: “how do we return `Response` while delegating to the canonical
@@ -278,7 +292,9 @@ This workstream must not duplicate that effort. Instead:
 
 Minimum “v1 done” outcomes:
 
-- A dedicated facade crate exists in `ecosystem/` with a documented scope and layering rules.
+- A documented immediate-mode facade surface exists in `ecosystem/` with clear layering rules:
+  - v1 target: `ecosystem/fret-ui-kit` (feature: `imui`),
+  - optional later extraction: `ecosystem/fret-imui-kit` if the surface grows large.
 - A richer `Response` surface is available to immediate-mode callers (at least click + drag).
 - A floating window/area primitive exists (in-window floating), aligned with ImGui-style behavior
   and Fret’s overlay contracts.
@@ -310,16 +326,15 @@ Minimum “v1 done” outcomes:
 
 ## 9) Open Questions
 
-1) Where should the long-term “shared `Response` contract” live?
-   - keep in `fret-imui`,
-   - move into `fret-authoring`,
-   - or define a minimal shared `ResponseCore` in `fret-authoring` and keep richer signals in facade.
-
-2) What is the best “canonical delegation seam” for returning `Response` without duplication?
+1) What is the best “canonical delegation seam” for returning `Response` without duplication?
    - `with_id` callbacks,
    - explicit “signal sink” plumbing,
    - or a small public mechanism API for transient event recording/querying.
 
-3) How far should non-docking floating windows go toward OS-window tear-off (ImGui multi-viewport)?
+2) How far should non-docking floating windows go toward OS-window tear-off (ImGui multi-viewport)?
    - Keep docking-only for v1,
    - or add a capability-gated path in ui-kit + runner for general floating surfaces.
+
+3) How should `ResponseExt` evolve before we consider moving any portion into the shared contract?
+   - Keep all “rich” signals in the facade indefinitely, or
+   - graduate a minimal `ResponseCore` + stable “interaction session” types once patterns settle.
