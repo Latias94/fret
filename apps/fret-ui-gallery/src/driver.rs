@@ -2227,13 +2227,20 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    fret_bootstrap::BootstrapBuilder::new(app, build_driver())
+    let mut builder = fret_bootstrap::BootstrapBuilder::new(app, build_driver())
         .configure(move |c| {
             *c = config;
         })
         .with_default_diagnostics()
-        .with_default_config_files()?
-        .with_config_files_watcher(Duration::from_millis(500))
+        .with_default_config_files()?;
+
+    // Avoid introducing unrelated timer traffic (config polling) into scripted harness runs,
+    // especially perf probes that attempt to isolate UI dispatch costs.
+    if std::env::var_os("FRET_UI_GALLERY_HARNESS_ONLY").is_none() {
+        builder = builder.with_config_files_watcher(Duration::from_millis(500));
+    }
+
+    builder
         .with_lucide_icons()
         .preload_icon_svgs_on_gpu_ready()
         .run()
