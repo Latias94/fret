@@ -112,6 +112,15 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
             true
         }
         (
+            GraphOp::SetImportAlias {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetImportAlias { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
             GraphOp::SetSymbolMeta {
                 id: a, to: last_to, ..
             },
@@ -174,6 +183,8 @@ fn op_is_noop(op: &GraphOp) -> bool {
         GraphOp::SetEdgeKind { from, to, .. } => from == to,
         GraphOp::SetEdgeEndpoints { from, to, .. } => from == to,
 
+        GraphOp::SetImportAlias { from, to, .. } => from == to,
+
         GraphOp::SetSymbolName { from, to, .. } => from == to,
         GraphOp::SetSymbolType { from, to, .. } => from == to,
         GraphOp::SetSymbolDefaultValue { from, to, .. } => from == to,
@@ -188,6 +199,8 @@ fn op_is_noop(op: &GraphOp) -> bool {
         | GraphOp::RemovePort { .. }
         | GraphOp::AddEdge { .. }
         | GraphOp::RemoveEdge { .. }
+        | GraphOp::AddImport { .. }
+        | GraphOp::RemoveImport { .. }
         | GraphOp::AddSymbol { .. }
         | GraphOp::RemoveSymbol { .. }
         | GraphOp::AddGroup { .. }

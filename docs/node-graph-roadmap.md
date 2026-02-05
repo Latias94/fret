@@ -174,6 +174,8 @@ Legend:
 - [~] Subgraph graph references + cycle-safe import.
   - ADR: `docs/adr/0197-subgraph-graph-references-and-cycle-safe-import.md`
   - Core closure + tests: `ecosystem/fret-node/src/core/imports.rs`, `ecosystem/fret-node/src/core/tests.rs`
+  - Import edit ops (Add/Remove/Alias): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
+  - Tests: `ecosystem/fret-node/src/ops/tests.rs`
 - [~] Blackboard variables + typed symbol references (domain-ready).
   - Symbol edit ops (name/type/default/meta): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
   - Tests: `ecosystem/fret-node/src/ops/tests.rs`

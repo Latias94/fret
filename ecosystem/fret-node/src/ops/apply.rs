@@ -1,4 +1,4 @@
-use crate::core::{Edge, EdgeId, Graph, GroupId, NodeId, PortId, StickyNoteId, SymbolId};
+use crate::core::{Edge, EdgeId, Graph, GraphId, GroupId, NodeId, PortId, StickyNoteId, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
 
 #[derive(Debug, thiserror::Error)]
@@ -33,6 +33,10 @@ pub enum ApplyError {
     NodePortsUnknownPort { node: NodeId, port: PortId },
     #[error("edge references missing port: edge={edge:?} port={port:?}")]
     EdgeMissingPort { edge: EdgeId, port: PortId },
+    #[error("import already exists: {id}")]
+    ImportAlreadyExists { id: GraphId },
+    #[error("missing import: {id}")]
+    MissingImport { id: GraphId },
     #[error("remove node op did not match current node: {id:?}")]
     RemoveNodeMismatch { id: NodeId },
     #[error("remove port op did not match current port: {id:?}")]
@@ -231,6 +235,24 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             }
             edge.from = to.from;
             edge.to = to.to;
+        }
+        GraphOp::AddImport { id, import } => {
+            if graph.imports.contains_key(id) {
+                return Err(ApplyError::ImportAlreadyExists { id: *id });
+            }
+            graph.imports.insert(*id, import.clone());
+        }
+        GraphOp::RemoveImport { id, .. } => {
+            if !graph.imports.contains_key(id) {
+                return Err(ApplyError::MissingImport { id: *id });
+            }
+            graph.imports.remove(id);
+        }
+        GraphOp::SetImportAlias { id, to, .. } => {
+            let Some(import) = graph.imports.get_mut(id) else {
+                return Err(ApplyError::MissingImport { id: *id });
+            };
+            import.alias = to.clone();
         }
         GraphOp::AddSymbol { id, symbol } => {
             if graph.symbols.contains_key(id) {

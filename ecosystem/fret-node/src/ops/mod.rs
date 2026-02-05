@@ -10,8 +10,8 @@ mod tx_sanity;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId,
-    NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, GraphId, GraphImport, Group,
+    GroupId, Node, NodeId, NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
 };
 use crate::types::TypeDesc;
 
@@ -120,6 +120,17 @@ pub enum GraphOp {
         id: EdgeId,
         from: EdgeEndpoints,
         to: EdgeEndpoints,
+    },
+
+    /// Adds a graph import reference.
+    AddImport { id: GraphId, import: GraphImport },
+    /// Removes a graph import reference.
+    RemoveImport { id: GraphId, import: GraphImport },
+    /// Sets an import alias.
+    SetImportAlias {
+        id: GraphId,
+        from: Option<String>,
+        to: Option<String>,
     },
 
     /// Adds a symbol.

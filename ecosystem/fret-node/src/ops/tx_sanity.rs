@@ -51,7 +51,13 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
             .then_some("SetEdgeEndpoints.from")
             .or_else(|| (!endpoints_is_finite(*to)).then_some("SetEdgeEndpoints.to")),
 
-        GraphOp::RemoveNode { .. }
+        GraphOp::AddImport { .. }
+        | GraphOp::RemoveImport { .. }
+        | GraphOp::SetImportAlias { .. }
+        | GraphOp::SetSymbolName { .. }
+        | GraphOp::SetSymbolType { .. }
+        | GraphOp::SetSymbolDefaultValue { .. }
+        | GraphOp::RemoveNode { .. }
         | GraphOp::SetNodeKind { .. }
         | GraphOp::SetNodeKindVersion { .. }
         | GraphOp::SetNodeParent { .. }
@@ -66,9 +72,6 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         | GraphOp::SetEdgeKind { .. }
         | GraphOp::AddSymbol { .. }
         | GraphOp::RemoveSymbol { .. }
-        | GraphOp::SetSymbolName { .. }
-        | GraphOp::SetSymbolType { .. }
-        | GraphOp::SetSymbolDefaultValue { .. }
         | GraphOp::SetSymbolMeta { .. }
         | GraphOp::RemoveGroup { .. }
         | GraphOp::RemoveStickyNote { .. } => None,

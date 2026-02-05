@@ -1,7 +1,7 @@
 use crate::core::{
-    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, Group, GroupId, Node,
-    NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind, Symbol,
-    SymbolId,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, GraphImport,
+    Group, GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
+    PortKind, Symbol, SymbolId,
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
@@ -751,6 +751,42 @@ fn symbol_setters_roundtrip_through_normalize_and_invert() {
         graph.symbols.get(&symbol_id).unwrap().default_value,
         Some(serde_json::json!(123))
     );
+
+    let inverse = invert_transaction(&tx);
+    apply_transaction(&mut graph, &inverse).expect("apply inverse");
+    assert_eq!(serde_json::to_value(&graph).unwrap(), baseline);
+}
+
+#[test]
+fn graph_import_ops_roundtrip_through_normalize_and_invert() {
+    let mut graph = Graph::default();
+    let baseline = serde_json::to_value(&graph).unwrap();
+
+    let imported = GraphId::from_u128(2);
+    let import = GraphImport {
+        alias: Some("math".to_string()),
+    };
+
+    let mut tx = GraphTransaction::new();
+    tx.ops.push(GraphOp::AddImport {
+        id: imported,
+        import: import.clone(),
+    });
+    tx.ops.push(GraphOp::SetImportAlias {
+        id: imported,
+        from: Some("math".to_string()),
+        to: Some("stdlib".to_string()),
+    });
+    tx.ops.push(GraphOp::SetImportAlias {
+        id: imported,
+        from: Some("stdlib".to_string()),
+        to: None,
+    });
+
+    let tx = crate::ops::normalize_transaction(tx);
+    apply_transaction(&mut graph, &tx).expect("apply");
+    assert!(graph.imports.contains_key(&imported));
+    assert_eq!(graph.imports.get(&imported).unwrap().alias, None);
 
     let inverse = invert_transaction(&tx);
     apply_transaction(&mut graph, &inverse).expect("apply inverse");

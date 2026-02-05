@@ -237,6 +237,20 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             to: *from,
         }],
 
+        GraphOp::AddImport { id, import } => vec![GraphOp::RemoveImport {
+            id: *id,
+            import: import.clone(),
+        }],
+        GraphOp::RemoveImport { id, import } => vec![GraphOp::AddImport {
+            id: *id,
+            import: import.clone(),
+        }],
+        GraphOp::SetImportAlias { id, from, to } => vec![GraphOp::SetImportAlias {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
+
         GraphOp::AddSymbol { id, symbol } => vec![GraphOp::RemoveSymbol {
             id: *id,
             symbol: symbol.clone(),
