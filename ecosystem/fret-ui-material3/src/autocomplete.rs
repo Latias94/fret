@@ -34,6 +34,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
+use crate::interaction::state_layer::StateLayerAnimator;
 use crate::motion::ms_to_frames;
 use crate::text_field::{TextField, TextFieldTokenNamespace, TextFieldVariant};
 use crate::tokens::autocomplete as autocomplete_tokens;
@@ -291,6 +292,12 @@ struct AutocompleteFrameState {
     was_focused_input: bool,
 }
 
+#[derive(Debug, Default)]
+struct AutocompleteChevronRuntime {
+    target_open: bool,
+    anim: StateLayerAnimator,
+}
+
 fn first_enabled(items: &[AutocompleteItem]) -> Option<usize> {
     items.iter().position(|it| !it.disabled)
 }
@@ -494,6 +501,35 @@ fn autocomplete_into_element<H: UiHost>(
         let input_id_out = runtime.input_element_id.clone();
         let field_id_out = runtime.field_element_id.clone();
 
+        let now_frame = cx.frame_id.0;
+        let (chevron_progress, chevron_want_frames) = if autocomplete.show_trailing_dropdown_icon {
+            let open_duration_ms = dropdown_menu_tokens::open_duration_ms(&theme);
+            let close_duration_ms = dropdown_menu_tokens::close_duration_ms(&theme);
+            let easing = dropdown_menu_tokens::easing(&theme);
+            cx.with_state(AutocompleteChevronRuntime::default, |rt| {
+                if rt.target_open != open_now {
+                    rt.target_open = open_now;
+                    rt.anim.set_target(
+                        now_frame,
+                        if open_now { 1.0 } else { 0.0 },
+                        if open_now {
+                            open_duration_ms
+                        } else {
+                            close_duration_ms
+                        },
+                        easing,
+                    );
+                }
+                rt.anim.advance(now_frame);
+                (rt.anim.value(), rt.anim.is_active())
+            })
+        } else {
+            (0.0, false)
+        };
+        if chevron_want_frames {
+            cx.request_animation_frame();
+        }
+
         let mut text_field = TextField::new(autocomplete.query.clone())
             .variant(autocomplete.variant.as_text_field_variant())
             .token_namespace(TextFieldTokenNamespace::Autocomplete)
@@ -551,7 +587,7 @@ fn autocomplete_into_element<H: UiHost>(
             text_field = text_field
                 .trailing_icon(fret_icons::ids::ui::CHEVRON_DOWN)
                 .trailing_icon_a11y_label(icon_label)
-                .trailing_icon_rotation_progress(if open_now { 1.0 } else { 0.0 })
+                .trailing_icon_rotation_progress(chevron_progress)
                 .on_trailing_icon_pointer_down(on_pointer_down);
         }
 

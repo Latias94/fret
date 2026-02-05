@@ -322,6 +322,9 @@ Non-goals:
               the text input node alone (e.g. the trailing dropdown icon), so `Autocomplete` wires
               the full field container as an additional dismissable branch to avoid the
               "dismiss then immediately re-open" toggle race.
+            - The trailing chevron rotation is animated using the dropdown menu motion tokens
+              (`open_duration_ms` / `close_duration_ms` + `easing`) so the icon aligns with overlay
+              open/close motion.
           - Evidence:
             - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField::{trailing_icon,field_id_out}`)
             - `ecosystem/fret-ui-material3/src/autocomplete.rs` (popover request `dismissable_branches`)
