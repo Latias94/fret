@@ -8,26 +8,58 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         snapshot: &ViewSnapshot,
         delta_screen_px: CanvasPoint,
     ) {
+        let zoom = snapshot.zoom;
+        if !zoom.is_finite() || zoom <= 0.0 {
+            return;
+        }
+
+        let delta = CanvasPoint {
+            x: fret_canvas::scale::canvas_units_from_screen_px(delta_screen_px.x, zoom),
+            y: fret_canvas::scale::canvas_units_from_screen_px(delta_screen_px.y, zoom),
+        };
+        self.nudge_selection_by_canvas_delta(
+            host,
+            window,
+            snapshot,
+            delta,
+            snapshot.interaction.snap_to_grid,
+        );
+    }
+
+    pub(in super::super) fn nudge_selection_by_grid_step<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &ViewSnapshot,
+        steps: CanvasPoint,
+    ) {
+        let grid = snapshot.interaction.snap_grid;
+        let delta = CanvasPoint {
+            x: steps.x * grid.width,
+            y: steps.y * grid.height,
+        };
+        self.nudge_selection_by_canvas_delta(host, window, snapshot, delta, true);
+    }
+
+    fn nudge_selection_by_canvas_delta<H: UiHost>(
+        &mut self,
+        host: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &ViewSnapshot,
+        mut delta: CanvasPoint,
+        snap_to_grid: bool,
+    ) {
         let selected_nodes = snapshot.selected_nodes.clone();
         let selected_groups = snapshot.selected_groups.clone();
         if selected_nodes.is_empty() && selected_groups.is_empty() {
             return;
         }
 
-        let zoom = snapshot.zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return;
-        }
-
-        let mut delta = CanvasPoint {
-            x: fret_canvas::scale::canvas_units_from_screen_px(delta_screen_px.x, zoom),
-            y: fret_canvas::scale::canvas_units_from_screen_px(delta_screen_px.y, zoom),
-        };
         if !delta.x.is_finite() || !delta.y.is_finite() {
             return;
         }
 
-        if snapshot.interaction.snap_to_grid {
+        if snap_to_grid {
             if let Some(primary) = selected_nodes.first().copied() {
                 let primary_start = self
                     .graph

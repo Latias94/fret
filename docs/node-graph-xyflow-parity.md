@@ -879,7 +879,10 @@ canonical data flow and invalidation boundaries:
       - `selectionKeyCode`: `NodeGraphInteractionState.selection_key` (default: Shift)
       - `multiSelectionKeyCode`: `NodeGraphInteractionState.multi_selection_key` (default: Ctrl/Cmd)
       - `disableKeyboardA11y`: `NodeGraphInteractionState.disable_keyboard_a11y` (disables keyboard focus traversal / a11y paths, not delete/copy/paste)
-    - TODO: configurable nudge step (screen px vs grid step) and keyboard focus semantics
+    - [x] configurable nudge step (screen px vs grid step):
+      - config: `NodeGraphInteractionState.{nudge_step_mode,nudge_step_px,nudge_fast_step_px}` in `ecosystem/fret-node/src/io/mod.rs`
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
+    - TODO: keyboard focus semantics
 
 - [~] **Roving focus / a11y semantics**
   - XyFlow: has ARIA descriptions and keyboard a11y paths in `NodeWrapper`

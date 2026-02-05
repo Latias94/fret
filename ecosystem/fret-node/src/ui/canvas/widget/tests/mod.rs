@@ -60,6 +60,7 @@ mod middleware_conformance;
 mod node_origin_conformance;
 mod node_resize_preview_conformance;
 mod node_sizing_conformance;
+mod nudge_step_conformance;
 mod only_render_visible_elements_conformance;
 mod op_batching_determinism_conformance;
 mod overlay_group_rename_conformance;
