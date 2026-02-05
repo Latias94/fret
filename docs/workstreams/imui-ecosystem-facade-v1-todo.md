@@ -119,6 +119,11 @@ Exit criteria:
 - [x] IMUIECO-overlays-030 Menu/popover/tooltip convenience wrappers built on `OverlayController`.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{open_popup_at,begin_popup_menu,begin_popup_context_menu,menu_item}`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_opens_on_right_click_and_closes_on_outside_click`).
+- [x] IMUIECO-overlays-031 Align menu-like popup focus policy (Radix-style initial focus + restore).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`begin_popup_menu_ex`: `primitives::menu::root::dismissible_menu_request_with_modal` + `MenuInitialFocusTargets`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigger_focus`).
+- [x] IMUIECO-overlays-032 Add a minimal `BeginPopupModal`-style primitive (ImGui-aligned).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`open_popup`, `begin_popup_modal(_ex)`, `PopupModalOptions`).
 - [ ] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
   - move (drag) + z-order + focus activation,
   - predictable hit-testing with overlays,

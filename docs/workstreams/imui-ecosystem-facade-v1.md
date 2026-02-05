@@ -18,6 +18,10 @@ Status snapshot (2026-02-05):
 - The initial egui/imgui-like convenience surface is hosted in `ecosystem/fret-ui-kit` behind its `imui` feature.
 - `ResponseExt` now covers common v1 signals (secondary + double click, drag lifecycle + deltas, context-menu request + anchor).
 - A minimal menu-like popup primitive exists (`open_popup_at` + `begin_popup_menu` / `begin_popup_context_menu` + `menu_item`), built on `OverlayController`.
+  - Menu popups now use Radix-aligned initial focus policy (pointer-open focuses the menu container; keyboard-open focuses the first focusable item when available).
+  - `Escape` closes menu popups via `DismissableLayer`, and focus restore routes back to the trigger when appropriate.
+- A minimal modal popup primitive exists (`open_popup` + `begin_popup_modal`), built on `OverlayRequest::modal`.
+  - Default policy: `Escape` closes; outside presses are ignored (unless explicitly enabled via options).
 - A minimal in-window floating window primitive exists (`floating_window` / `floating_window_open`):
   - draggable title bar + element-local position state,
   - optional ImGui-style `open` model + close button,
