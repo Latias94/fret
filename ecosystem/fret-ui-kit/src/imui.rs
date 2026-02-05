@@ -10,10 +10,15 @@ use std::sync::Arc;
 
 use fret_authoring::Response;
 use fret_authoring::UiWriter;
-use fret_core::SemanticsRole;
+use fret_core::{Corners, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole};
+use fret_runtime::DragPhase;
 use fret_ui::action::UiActionHostExt as _;
-use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
+use fret_ui::element::{
+    AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
+    PositionStyle,
+};
+use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::UiBuilder;
 use crate::{UiIntoElement, UiPatchTarget};
@@ -122,10 +127,25 @@ impl<H: UiHost, W: UiWriter<H> + ?Sized> UiWriterUiKitExt<H> for W {}
 /// This is a ui-kit-level convenience wrapper: it extends the minimal `fret-authoring::Response`
 /// contract with additional commonly requested signals.
 #[derive(Debug, Clone, Copy, Default)]
+pub struct DragResponse {
+    pub started: bool,
+    pub dragging: bool,
+    pub stopped: bool,
+    pub delta: Point,
+    pub total: Point,
+}
+
+/// A richer interaction result intended for immediate-mode facade helpers.
+///
+/// This is a ui-kit-level convenience wrapper: it extends the minimal `fret-authoring::Response`
+/// contract with additional commonly requested signals.
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ResponseExt {
     pub core: Response,
     pub secondary_clicked: bool,
     pub double_clicked: bool,
+    pub context_menu_requested: bool,
+    pub drag: DragResponse,
 }
 
 impl ResponseExt {
@@ -136,6 +156,43 @@ impl ResponseExt {
     pub fn changed(self) -> bool {
         self.core.changed()
     }
+
+    pub fn secondary_clicked(self) -> bool {
+        self.secondary_clicked
+    }
+
+    pub fn double_clicked(self) -> bool {
+        self.double_clicked
+    }
+
+    pub fn context_menu_requested(self) -> bool {
+        self.context_menu_requested
+    }
+
+    pub fn drag_started(self) -> bool {
+        self.drag.started
+    }
+
+    pub fn dragging(self) -> bool {
+        self.drag.dragging
+    }
+
+    pub fn drag_stopped(self) -> bool {
+        self.drag.stopped
+    }
+
+    pub fn drag_delta(self) -> Point {
+        self.drag.delta
+    }
+
+    pub fn drag_total(self) -> Point {
+        self.drag.total
+    }
+}
+
+#[derive(Debug, Default)]
+struct DragReportState {
+    last_position: Option<Point>,
 }
 
 const fn fnv1a64(bytes: &[u8]) -> u64 {
@@ -153,6 +210,64 @@ const KEY_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.clicked.v1");
 const KEY_CHANGED: u64 = fnv1a64(b"fret-ui-kit.imui.changed.v1");
 const KEY_SECONDARY_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.secondary_clicked.v1");
 const KEY_DOUBLE_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.double_clicked.v1");
+const KEY_CONTEXT_MENU_REQUESTED: u64 = fnv1a64(b"fret-ui-kit.imui.context_menu_requested.v1");
+const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
+const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
+
+const DRAG_THRESHOLD_PX: f32 = 4.0;
+const DRAG_KIND_MASK: u64 = 0x8000_0000_0000_0000;
+
+fn drag_kind_for_element(element: GlobalElementId) -> fret_runtime::DragKindId {
+    fret_runtime::DragKindId(DRAG_KIND_MASK | element.0)
+}
+
+fn point_sub(a: Point, b: Point) -> Point {
+    Point::new(Px(a.x.0 - b.x.0), Px(a.y.0 - b.y.0))
+}
+
+fn point_add(a: Point, b: Point) -> Point {
+    Point::new(Px(a.x.0 + b.x.0), Px(a.y.0 + b.y.0))
+}
+
+const FLOAT_WINDOW_DRAG_KIND_MASK: u64 = 0x4000_0000_0000_0000;
+
+fn float_window_drag_kind_for_element(element: GlobalElementId) -> fret_runtime::DragKindId {
+    fret_runtime::DragKindId(FLOAT_WINDOW_DRAG_KIND_MASK | element.0)
+}
+
+/// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
+///
+/// This mirrors the `fret-imui::ImUi` pattern without depending on the `fret-imui` crate.
+pub struct ImUiFacade<'cx, 'a, H: UiHost> {
+    cx: &'cx mut ElementContext<'a, H>,
+    out: &'cx mut Vec<AnyElement>,
+}
+
+impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
+    pub fn cx_mut(&mut self) -> &mut ElementContext<'a, H> {
+        self.cx
+    }
+
+    pub fn add(&mut self, element: AnyElement) {
+        self.out.push(element);
+    }
+}
+
+impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUiFacade<'cx, 'a, H> {
+    fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
+        f(self.cx)
+    }
+
+    fn add(&mut self, element: AnyElement) {
+        self.out.push(element);
+    }
+}
+
+#[derive(Debug)]
+struct FloatWindowState {
+    position: Point,
+    last_drag_position: Option<Point>,
+}
 
 /// Immediate-mode facade helpers for any authoring frontend that implements `UiWriter`.
 ///
@@ -193,17 +308,97 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
+                cx.key_clear_on_key_down_for(id);
 
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
                     host.notify(acx);
                 }));
 
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        let is_menu_key = down.key == KeyCode::ContextMenu;
+                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
+                        if !(is_menu_key || is_shift_f10) {
+                            return false;
+                        }
+
+                        host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
+                        host.notify(acx);
+                        true
+                    }),
+                );
+
+                cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                    if down.button != MouseButton::Left {
+                        return PressablePointerDownResult::Continue;
+                    }
+
+                    if host.drag(down.pointer_id).is_none() {
+                        host.begin_drag_with_kind(
+                            down.pointer_id,
+                            drag_kind_for_element(acx.target),
+                            acx.window,
+                            down.position,
+                        );
+                    }
+
+                    PressablePointerDownResult::Continue
+                }));
+
+                cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    let Some(drag) = host.drag_mut(mv.pointer_id) else {
+                        return false;
+                    };
+                    if drag.kind != drag_kind_for_element(acx.target)
+                        || drag.source_window != acx.window
+                    {
+                        return false;
+                    }
+
+                    drag.current_window = acx.window;
+                    drag.position = mv.position;
+
+                    if !mv.buttons.left {
+                        if drag.dragging {
+                            drag.phase = DragPhase::Canceled;
+                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
+                        }
+                        host.cancel_drag(mv.pointer_id);
+                        host.notify(acx);
+                        return false;
+                    }
+
+                    let d = point_sub(drag.position, drag.start_position);
+                    let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
+                    if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                        drag.dragging = true;
+                        drag.phase = DragPhase::Dragging;
+                        host.record_transient_event(acx, KEY_DRAG_STARTED);
+                    }
+
+                    host.notify(acx);
+                    false
+                }));
+
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                    if let Some(drag) = host.drag(up.pointer_id)
+                        && drag.kind == drag_kind_for_element(acx.target)
+                        && drag.source_window == acx.window
+                    {
+                        if drag.dragging {
+                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
+                        }
+                        host.cancel_drag(up.pointer_id);
+                        host.notify(acx);
+                    }
+
                     if up.is_click && up.button == fret_core::MouseButton::Right {
                         host.record_transient_event(acx, KEY_SECONDARY_CLICKED);
+                        host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
                         host.notify(acx);
-                        return fret_ui::action::PressablePointerUpResult::SkipActivate;
+                        return PressablePointerUpResult::SkipActivate;
                     }
 
                     if up.is_click
@@ -214,7 +409,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         host.notify(acx);
                     }
 
-                    fret_ui::action::PressablePointerUpResult::Continue
+                    PressablePointerUpResult::Continue
                 }));
 
                 response.core.hovered = state.hovered;
@@ -223,6 +418,39 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
                 response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
+                response.context_menu_requested =
+                    cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
+                response.drag.started = cx.take_transient_for(id, KEY_DRAG_STARTED);
+                response.drag.stopped = cx.take_transient_for(id, KEY_DRAG_STOPPED);
+                response.drag.dragging = false;
+                response.drag.delta = Point::default();
+                response.drag.total = Point::default();
+                let kind = drag_kind_for_element(id);
+                let pointer_id = cx.app.find_drag_pointer_id(|d| {
+                    d.kind == kind && d.source_window == cx.window && d.current_window == cx.window
+                });
+                let drag_snapshot = pointer_id.and_then(|pointer_id| {
+                    cx.app
+                        .drag(pointer_id)
+                        .filter(|drag| drag.kind == kind)
+                        .map(|drag| (drag.dragging, drag.position, drag.start_position))
+                });
+                if let Some((dragging, current, start)) = drag_snapshot {
+                    response.drag.dragging = dragging;
+                    let (delta, total) = cx.with_state_for(id, DragReportState::default, |st| {
+                        let prev = st.last_position.unwrap_or(current);
+                        st.last_position = Some(current);
+                        (point_sub(current, prev), point_sub(current, start))
+                    });
+                    if dragging {
+                        response.drag.delta = delta;
+                        response.drag.total = total;
+                    }
+                } else {
+                    cx.with_state_for(id, DragReportState::default, |st| {
+                        st.last_position = None;
+                    });
+                }
                 response.core.rect = cx.last_bounds_for_element(id);
 
                 vec![cx.text(label.clone())]
@@ -259,6 +487,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_down();
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
+                cx.key_clear_on_key_down_for(id);
 
                 let model = model.clone();
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
@@ -267,10 +496,139 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     host.notify(acx);
                 }));
 
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        let is_menu_key = down.key == KeyCode::ContextMenu;
+                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
+                        if !(is_menu_key || is_shift_f10) {
+                            return false;
+                        }
+
+                        host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
+                        host.notify(acx);
+                        true
+                    }),
+                );
+
+                cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                    if down.button != MouseButton::Left {
+                        return PressablePointerDownResult::Continue;
+                    }
+
+                    if host.drag(down.pointer_id).is_none() {
+                        host.begin_drag_with_kind(
+                            down.pointer_id,
+                            drag_kind_for_element(acx.target),
+                            acx.window,
+                            down.position,
+                        );
+                    }
+
+                    PressablePointerDownResult::Continue
+                }));
+
+                cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    let Some(drag) = host.drag_mut(mv.pointer_id) else {
+                        return false;
+                    };
+                    if drag.kind != drag_kind_for_element(acx.target)
+                        || drag.source_window != acx.window
+                    {
+                        return false;
+                    }
+
+                    drag.current_window = acx.window;
+                    drag.position = mv.position;
+
+                    if !mv.buttons.left {
+                        if drag.dragging {
+                            drag.phase = DragPhase::Canceled;
+                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
+                        }
+                        host.cancel_drag(mv.pointer_id);
+                        host.notify(acx);
+                        return false;
+                    }
+
+                    let d = point_sub(drag.position, drag.start_position);
+                    let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
+                    if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                        drag.dragging = true;
+                        drag.phase = DragPhase::Dragging;
+                        host.record_transient_event(acx, KEY_DRAG_STARTED);
+                    }
+
+                    host.notify(acx);
+                    false
+                }));
+
+                cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                    if let Some(drag) = host.drag(up.pointer_id)
+                        && drag.kind == drag_kind_for_element(acx.target)
+                        && drag.source_window == acx.window
+                    {
+                        if drag.dragging {
+                            host.record_transient_event(acx, KEY_DRAG_STOPPED);
+                        }
+                        host.cancel_drag(up.pointer_id);
+                        host.notify(acx);
+                    }
+
+                    if up.is_click && up.button == MouseButton::Right {
+                        host.record_transient_event(acx, KEY_SECONDARY_CLICKED);
+                        host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
+                        host.notify(acx);
+                        return PressablePointerUpResult::SkipActivate;
+                    }
+
+                    if up.is_click && up.button == MouseButton::Left && up.click_count == 2 {
+                        host.record_transient_event(acx, KEY_DOUBLE_CLICKED);
+                        host.notify(acx);
+                    }
+
+                    PressablePointerUpResult::Continue
+                }));
+
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
                 response.core.focused = state.focused;
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
+                response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
+                response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
+                response.context_menu_requested =
+                    cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
+                response.drag.started = cx.take_transient_for(id, KEY_DRAG_STARTED);
+                response.drag.stopped = cx.take_transient_for(id, KEY_DRAG_STOPPED);
+                response.drag.dragging = false;
+                response.drag.delta = Point::default();
+                response.drag.total = Point::default();
+                let kind = drag_kind_for_element(id);
+                let pointer_id = cx.app.find_drag_pointer_id(|d| {
+                    d.kind == kind && d.source_window == cx.window && d.current_window == cx.window
+                });
+                let drag_snapshot = pointer_id.and_then(|pointer_id| {
+                    cx.app
+                        .drag(pointer_id)
+                        .filter(|drag| drag.kind == kind)
+                        .map(|drag| (drag.dragging, drag.position, drag.start_position))
+                });
+                if let Some((dragging, current, start)) = drag_snapshot {
+                    response.drag.dragging = dragging;
+                    let (delta, total) = cx.with_state_for(id, DragReportState::default, |st| {
+                        let prev = st.last_position.unwrap_or(current);
+                        st.last_position = Some(current);
+                        (point_sub(current, prev), point_sub(current, start))
+                    });
+                    if dragging {
+                        response.drag.delta = delta;
+                        response.drag.total = total;
+                    }
+                } else {
+                    cx.with_state_for(id, DragReportState::default, |st| {
+                        st.last_position = None;
+                    });
+                }
                 response.core.rect = cx.last_bounds_for_element(id);
 
                 let prefix: Arc<str> = if value {
@@ -284,6 +642,230 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
         self.add(element);
         response
+    }
+
+    /// Render a minimal in-window floating window.
+    ///
+    /// This is intentionally v1-small:
+    /// - in-window (not an OS window / viewport),
+    /// - draggable via the title bar,
+    /// - position is stored as element-local state under the window id scope.
+    ///
+    /// Notes:
+    /// - `id` must be stable across frames (mirrors Dear ImGui's "window name is the id" rule).
+    /// - Z-order and focus arbitration are tracked as a separate work item (see workstream TODO).
+    fn floating_window(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let title = title.into();
+
+        let element = self.with_cx_mut(|cx| {
+            cx.named(id, |cx| {
+                let window_id = cx.root_id();
+                let drag_kind = float_window_drag_kind_for_element(window_id);
+
+                let drag_snapshot = cx
+                    .app
+                    .find_drag_pointer_id(|d| {
+                        d.kind == drag_kind
+                            && d.source_window == cx.window
+                            && d.current_window == cx.window
+                    })
+                    .and_then(|pointer_id| cx.app.drag(pointer_id))
+                    .filter(|drag| drag.kind == drag_kind)
+                    .map(|drag| (drag.dragging, drag.position, drag.start_position));
+
+                let position = cx.with_state_for(
+                    window_id,
+                    || FloatWindowState {
+                        position: initial_position,
+                        last_drag_position: None,
+                    },
+                    |st| {
+                        if let Some((dragging, current, start)) = drag_snapshot {
+                            if dragging {
+                                let prev = st.last_drag_position.unwrap_or(start);
+                                st.position = point_add(st.position, point_sub(current, prev));
+                                st.last_drag_position = Some(current);
+                            } else {
+                                st.last_drag_position = None;
+                            }
+                        } else {
+                            st.last_drag_position = None;
+                        }
+                        st.position
+                    },
+                );
+
+                let (popover, border, muted) = {
+                    let theme = fret_ui::Theme::global(&*cx.app);
+                    (
+                        theme.color_required("popover"),
+                        theme.color_required("border"),
+                        theme.color_required("muted"),
+                    )
+                };
+
+                let mut window_props = ContainerProps::default();
+                window_props.layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        left: Some(position.x),
+                        top: Some(position.y),
+                        ..Default::default()
+                    },
+                    overflow: Overflow::Visible,
+                    ..Default::default()
+                };
+                window_props.background = Some(popover);
+                window_props.border = Edges::all(Px(1.0));
+                window_props.border_color = Some(border);
+                window_props.corner_radii = Corners::all(Px(8.0));
+
+                cx.container(window_props, |cx| {
+                    let mut col = ColumnProps::default();
+                    col.layout.size.width = Length::Auto;
+                    col.layout.size.height = Length::Auto;
+
+                    let title = title.clone();
+                    let title_bar = cx.pressable_with_id(
+                        {
+                            let mut props = fret_ui::element::PressableProps::default();
+                            props.focusable = false;
+                            props.a11y = fret_ui::element::PressableA11y {
+                                role: Some(SemanticsRole::Button),
+                                label: Some(title.clone()),
+                                test_id: Some(Arc::from(format!(
+                                    "imui.float_window.title_bar:{id}"
+                                ))),
+                                ..Default::default()
+                            };
+                            props.layout.size.width = Length::Fill;
+                            props.layout.size.height = Length::Px(Px(24.0));
+                            props
+                        },
+                        move |cx, _state, _title_bar_id| {
+                            cx.pressable_clear_on_activate();
+                            cx.pressable_clear_on_pointer_down();
+                            cx.pressable_clear_on_pointer_move();
+                            cx.pressable_clear_on_pointer_up();
+
+                            cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                                if down.button != MouseButton::Left {
+                                    return PressablePointerDownResult::Continue;
+                                }
+
+                                host.capture_pointer();
+                                if host.drag(down.pointer_id).is_none() {
+                                    host.begin_drag_with_kind(
+                                        down.pointer_id,
+                                        drag_kind,
+                                        acx.window,
+                                        down.position,
+                                    );
+                                }
+
+                                PressablePointerDownResult::Continue
+                            }));
+
+                            cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                                let Some(drag) = host.drag_mut(mv.pointer_id) else {
+                                    return false;
+                                };
+                                if drag.kind != drag_kind || drag.source_window != acx.window {
+                                    return false;
+                                }
+
+                                drag.current_window = acx.window;
+                                drag.position = mv.position;
+
+                                if !mv.buttons.left {
+                                    drag.phase = DragPhase::Canceled;
+                                    host.cancel_drag(mv.pointer_id);
+                                    host.release_pointer_capture();
+                                    host.notify(acx);
+                                    return false;
+                                }
+
+                                let d = point_sub(drag.position, drag.start_position);
+                                let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
+                                if !drag.dragging
+                                    && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX
+                                {
+                                    drag.dragging = true;
+                                    drag.phase = DragPhase::Dragging;
+                                }
+
+                                host.notify(acx);
+                                false
+                            }));
+
+                            cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                                if let Some(drag) = host.drag(up.pointer_id)
+                                    && drag.kind == drag_kind
+                                    && drag.source_window == acx.window
+                                {
+                                    host.cancel_drag(up.pointer_id);
+                                }
+                                host.release_pointer_capture();
+                                host.notify(acx);
+                                PressablePointerUpResult::Continue
+                            }));
+
+                            let mut title_container = ContainerProps::default();
+                            title_container.padding = Edges {
+                                left: Px(8.0),
+                                right: Px(8.0),
+                                top: Px(4.0),
+                                bottom: Px(4.0),
+                            };
+                            title_container.background = Some(muted);
+                            title_container.border = Edges {
+                                left: Px(0.0),
+                                right: Px(0.0),
+                                top: Px(0.0),
+                                bottom: Px(1.0),
+                            };
+                            title_container.border_color = Some(border);
+                            title_container.corner_radii = Corners {
+                                top_left: Px(8.0),
+                                top_right: Px(8.0),
+                                bottom_left: Px(0.0),
+                                bottom_right: Px(0.0),
+                            };
+
+                            vec![cx.container(title_container, |cx| vec![cx.text(title.clone())])]
+                        },
+                    );
+
+                    let content = cx.container(
+                        {
+                            let mut props = ContainerProps::default();
+                            props.padding = Edges::all(Px(8.0));
+                            props
+                        },
+                        |cx| {
+                            let mut out = Vec::new();
+                            {
+                                let mut ui = ImUiFacade { cx, out: &mut out };
+                                f(&mut ui);
+                            }
+                            let mut content_col = ColumnProps::default();
+                            content_col.layout.size.width = Length::Fill;
+                            vec![cx.column(content_col, |_cx| out)]
+                        },
+                    );
+
+                    vec![cx.column(col, |_cx| vec![title_bar, content])]
+                })
+            })
+        });
+
+        self.add(element);
     }
 }
 

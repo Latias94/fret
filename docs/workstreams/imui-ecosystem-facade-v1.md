@@ -16,6 +16,8 @@ Status snapshot (2026-02-05):
 - The minimal shared `Response` contract lives in `ecosystem/fret-authoring`.
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
 - The initial egui/imgui-like convenience surface is hosted in `ecosystem/fret-ui-kit` behind its `imui` feature.
+- `ResponseExt` now covers common v1 signals (secondary + double click, drag lifecycle + deltas, context-menu request).
+- A minimal in-window floating window skeleton exists (`floating_window`: draggable title bar; no resize/close yet).
 
 Tracking:
 

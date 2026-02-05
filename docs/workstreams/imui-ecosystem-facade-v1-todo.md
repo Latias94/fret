@@ -47,12 +47,12 @@ Exit criteria:
 - The facade surface is hosted in `ecosystem/fret-ui-kit` behind the existing `imui` feature.
 
 - [x] IMUIECO-scope-000 Move minimal `Response` to `ecosystem/fret-authoring` (breaking change OK).
-  - Evidence: `ecosystem/fret-authoring/src/lib.rs`, commit `1bee2c7`.
+  - Evidence: `ecosystem/fret-authoring/src/lib.rs` (`Response`, `UiWriter`).
 - [x] IMUIECO-scope-001 Slim `ecosystem/fret-imui` dependencies (move policy/widget helpers to ui-kit where appropriate).
-  - Evidence: `ecosystem/fret-imui/src/lib.rs`, commit `cca950d`.
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (crate docs: policy-light stance).
 - [x] IMUIECO-scope-002 Decide whether to extract the facade into a dedicated crate later (default: keep in `fret-ui-kit` for v1).
   - Decision: keep in `fret-ui-kit` (feature `imui`) for v1; revisit if surface size grows.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs`, commit `b373045`.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (feature-gated facade module).
 
 ---
 
@@ -77,11 +77,18 @@ Exit criteria:
 
 - The facade exposes a richer `Response` surface that covers the most common immediate-mode queries.
 
-- [~] IMUIECO-resp-010 Add click variants (secondary, double click, long press where applicable).
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt`, `UiWriterImUiFacadeExt::button`)
-- [ ] IMUIECO-resp-011 Add drag lifecycle signals (started/dragging/stopped) and useful geometry/delta fields.
-- [ ] IMUIECO-resp-012 Add context-menu request signal (right click / keyboard menu key).
-- [ ] IMUIECO-resp-013 Document “two-frame stabilization” where geometry is sourced from last-frame bounds.
+- [x] IMUIECO-resp-010 Add click variants (secondary + double click).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::{secondary_clicked,double_clicked}`, `UiWriterImUiFacadeExt::button`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`right_click_sets_context_menu_requested_true_once`, `double_click_sets_double_clicked_true_once`).
+- [ ] IMUIECO-resp-010b Add long-press / press-and-hold signal (touch-first; schedule-aware).
+- [x] IMUIECO-resp-011 Add drag lifecycle signals (started/dragging/stopped) and useful geometry/delta fields.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::drag`, `UiWriterImUiFacadeExt::button`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`drag_started_stopped_and_delta_are_consistent`).
+- [x] IMUIECO-resp-012 Add context-menu request signal (right click / keyboard menu key).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::context_menu_requested`, key hook + right-click hook).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`right_click_sets_context_menu_requested_true_once`, `shift_f10_sets_context_menu_requested_true_once`).
+- [x] IMUIECO-resp-013 Document “two-frame stabilization” where geometry is sourced from last-frame bounds.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.3).
 
 ---
 
@@ -112,11 +119,15 @@ Exit criteria:
   - move (drag) + z-order + focus activation,
   - predictable hit-testing with overlays,
   - degrade cleanly when multi-window is unavailable (always in-window).
+- [x] IMUIECO-float-032a Add a minimal floating window skeleton (in-window) with a draggable title bar.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_moves_when_dragging_title_bar`).
 - [ ] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
   - title bar, close button, Esc-to-close,
   - resize handles + resize session state,
   - focus trap/restore when appropriate (aligned with overlay policy).
-- [ ] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
+- [~] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
 - [ ] IMUIECO-float-034 Decide OS-window promotion scope:
   - docking-only for v1 (recommended), or
   - generalized capability-gated promotion later.

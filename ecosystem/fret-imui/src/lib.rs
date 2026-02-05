@@ -152,8 +152,8 @@ mod tests {
     };
 
     use fret_core::{
-        AppWindowId, CaretAffinity, Event, Modifiers, MouseButton, Point, PointerId, PointerType,
-        Px, Rect, Size, TextConstraints, TextMetrics, TextService,
+        AppWindowId, CaretAffinity, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
+        PointerId, PointerType, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{
         ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
@@ -510,6 +510,110 @@ mod tests {
         );
     }
 
+    fn double_click_at(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 2,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 2,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    fn right_click_at(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Right,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    fn pointer_move_at(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+        buttons: MouseButtons,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: PointerId(0),
+                position: at,
+                buttons,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    fn key_down(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        key: KeyCode,
+        modifiers: Modifiers,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::KeyDown {
+                key,
+                modifiers,
+                repeat: false,
+            },
+        );
+    }
+
     fn pointer_down_at(
         ui: &mut UiTree<TestHost>,
         app: &mut TestHost,
@@ -536,6 +640,16 @@ mod tests {
         services: &mut FakeTextService,
         at: Point,
     ) {
+        pointer_up_at_with_is_click(ui, app, services, at, true);
+    }
+
+    fn pointer_up_at_with_is_click(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+        is_click: bool,
+    ) {
         ui.dispatch_event(
             app,
             services,
@@ -544,7 +658,7 @@ mod tests {
                 position: at,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
-                is_click: true,
+                is_click,
                 click_count: 1,
                 pointer_type: PointerType::Mouse,
             }),
@@ -625,6 +739,257 @@ mod tests {
             },
         );
         assert!(!clicked.get());
+    }
+
+    #[test]
+    fn right_click_sets_context_menu_requested_true_once() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let requested = Rc::new(Cell::new(false));
+        let secondary_clicked = Rc::new(Cell::new(false));
+        let requested_out = requested.clone();
+        let secondary_clicked_out = secondary_clicked.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-right-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    requested_out.set(resp.context_menu_requested());
+                    secondary_clicked_out.set(resp.secondary_clicked());
+                })
+            },
+        );
+        assert!(!requested.get());
+        assert!(!secondary_clicked.get());
+
+        let at = first_child_point(&ui, root);
+        right_click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let secondary_clicked_out = secondary_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-right-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    requested_out.set(resp.context_menu_requested());
+                    secondary_clicked_out.set(resp.secondary_clicked());
+                })
+            },
+        );
+        assert!(requested.get());
+        assert!(secondary_clicked.get());
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let secondary_clicked_out = secondary_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-right-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    requested_out.set(resp.context_menu_requested());
+                    secondary_clicked_out.set(resp.secondary_clicked());
+                })
+            },
+        );
+        assert!(!requested.get());
+        assert!(!secondary_clicked.get());
+    }
+
+    #[test]
+    fn double_click_sets_double_clicked_true_once() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let double_clicked = Rc::new(Cell::new(false));
+        let double_clicked_out = double_clicked.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-double-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    double_clicked_out.set(ui.button("OK").double_clicked());
+                })
+            },
+        );
+        assert!(!double_clicked.get());
+
+        let at = first_child_point(&ui, root);
+        double_click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let double_clicked_out = double_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-double-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    double_clicked_out.set(ui.button("OK").double_clicked());
+                })
+            },
+        );
+        assert!(double_clicked.get());
+
+        app.advance_frame();
+        let double_clicked_out = double_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-double-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    double_clicked_out.set(ui.button("OK").double_clicked());
+                })
+            },
+        );
+        assert!(!double_clicked.get());
+    }
+
+    #[test]
+    fn shift_f10_sets_context_menu_requested_true_once() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let requested = Rc::new(Cell::new(false));
+        let requested_out = requested.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(!requested.get());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(!requested.get());
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::F10,
+            Modifiers {
+                shift: true,
+                ..Modifiers::default()
+            },
+        );
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(requested.get());
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(!requested.get());
     }
 
     #[allow(dead_code)]
@@ -763,6 +1128,279 @@ mod tests {
             },
         );
         assert!(!clicked.get());
+    }
+
+    #[test]
+    fn drag_started_stopped_and_delta_are_consistent() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let started = Rc::new(Cell::new(false));
+        let dragging = Rc::new(Cell::new(false));
+        let stopped = Rc::new(Cell::new(false));
+        let delta = Rc::new(Cell::new(Point::default()));
+
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(!stopped.get());
+
+        let start = first_child_point(&ui, root);
+        pointer_down_at(&mut ui, &mut app, &mut services, start);
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(!stopped.get());
+
+        // Move below the threshold.
+        let p1 = Point::new(Px(start.x.0 + 2.0), Px(start.y.0));
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            p1,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(!stopped.get());
+
+        // Move past the threshold to start dragging (delta should be the frame delta, not the total).
+        let p2 = Point::new(Px(start.x.0 + 6.0), Px(start.y.0));
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            p2,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(started.get());
+        assert!(dragging.get());
+        assert!(!stopped.get());
+        assert_eq!(delta.get(), Point::new(Px(4.0), Px(0.0)));
+
+        pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, p2, false);
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(stopped.get());
+    }
+
+    fn floating_window_nodes(
+        ui: &UiTree<TestHost>,
+        root: fret_core::NodeId,
+    ) -> (fret_core::NodeId, fret_core::NodeId) {
+        let window = ui.children(root)[0];
+        let col = ui.children(window)[0];
+        let title_bar = ui.children(col)[0];
+        (window, title_bar)
+    }
+
+    #[test]
+    fn floating_window_moves_when_dragging_title_bar() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-drag",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window("demo", "Demo", Point::new(Px(10.0), Px(10.0)), |ui| {
+                        ui.text("Hello");
+                    });
+                })
+            },
+        );
+
+        let (window_node, title_bar_node) = floating_window_nodes(&ui, root);
+        let before = ui.debug_node_bounds(window_node).expect("window bounds");
+        let title_bounds = ui
+            .debug_node_bounds(title_bar_node)
+            .expect("title bar bounds");
+        let start = Point::new(
+            Px(title_bounds.origin.x.0 + 2.0),
+            Px(title_bounds.origin.y.0 + 2.0),
+        );
+
+        pointer_down_at(&mut ui, &mut app, &mut services, start);
+        let moved = Point::new(Px(start.x.0 + 6.0), start.y);
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            moved,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-drag",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window("demo", "Demo", Point::new(Px(10.0), Px(10.0)), |ui| {
+                        ui.text("Hello");
+                    });
+                })
+            },
+        );
+
+        let (window_node, _title_bar_node) = floating_window_nodes(&ui, root);
+        let after = ui.debug_node_bounds(window_node).expect("window bounds");
+        assert!(
+            after.origin.x.0 > before.origin.x.0,
+            "expected floating window to move right"
+        );
+
+        pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, moved, false);
     }
 
     #[test]
