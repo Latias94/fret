@@ -983,3 +983,67 @@ fn graph_diff_is_deterministic_and_roundtrips() {
         "diff must roundtrip"
     );
 }
+
+#[test]
+fn graph_diff_roundtrips_when_deleting_a_node_with_ports_and_edges() {
+    let mut from = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    from.nodes.insert(a, make_node("core.a"));
+    from.nodes.insert(b, make_node("core.b"));
+
+    let out = PortId::from_u128(20);
+    let inn = PortId::from_u128(21);
+    from.ports
+        .insert(out, make_port(a, "out", PortDirection::Out));
+    from.ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    from.nodes.get_mut(&a).unwrap().ports.push(out);
+    from.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::from_u128(456);
+    from.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out,
+            to: inn,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let mut to = from.clone();
+    to.nodes.remove(&b);
+    to.ports.remove(&inn);
+    to.edges.remove(&edge_id);
+
+    let tx = graph_diff(&from, &to);
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveNode { id, .. } if *id == b)),
+        "diff must use reversible RemoveNode for node deletion"
+    );
+    assert!(
+        !tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemovePort { id, .. } if *id == inn)),
+        "diff must not double-remove ports that are already removed by RemoveNode"
+    );
+    assert!(
+        !tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveEdge { id, .. } if *id == edge_id)),
+        "diff must not double-remove edges that are already removed by RemoveNode"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
+}

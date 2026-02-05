@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use crate::core::{EdgeId, Graph, GraphId, PortId, SymbolId};
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction, normalize_transaction};
 
@@ -7,6 +9,8 @@ use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction, normalize_transaction
 /// It prefers correctness + determinism over minimality.
 pub fn graph_diff(from: &Graph, to: &Graph) -> GraphTransaction {
     let mut tx = GraphTransaction::new();
+    let mut removed_ports_by_cascade: BTreeSet<PortId> = BTreeSet::new();
+    let mut removed_edges_by_cascade: BTreeSet<EdgeId> = BTreeSet::new();
 
     diff_imports(from, to, &mut tx);
     diff_symbols(from, to, &mut tx);
@@ -14,9 +18,21 @@ pub fn graph_diff(from: &Graph, to: &Graph) -> GraphTransaction {
 
     // Nodes/ports/edges: MVP focuses on headless collaboration patching. We keep the phase order
     // apply-safe (edges last because they reference ports).
-    diff_nodes(from, to, &mut tx);
-    diff_ports(from, to, &mut tx);
-    diff_edges(from, to, &mut tx);
+    diff_nodes(
+        from,
+        to,
+        &mut tx,
+        &mut removed_ports_by_cascade,
+        &mut removed_edges_by_cascade,
+    );
+    diff_ports(
+        from,
+        to,
+        &mut tx,
+        &removed_ports_by_cascade,
+        &mut removed_edges_by_cascade,
+    );
+    diff_edges(from, to, &mut tx, &removed_edges_by_cascade);
     diff_sticky_notes(from, to, &mut tx);
 
     normalize_transaction(tx)
@@ -99,7 +115,13 @@ fn diff_symbols(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
     }
 }
 
-fn diff_nodes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
+fn diff_nodes(
+    from: &Graph,
+    to: &Graph,
+    tx: &mut GraphTransaction,
+    removed_ports_by_cascade: &mut BTreeSet<PortId>,
+    removed_edges_by_cascade: &mut BTreeSet<EdgeId>,
+) {
     for (id, node_to) in &to.nodes {
         if let Some(node_from) = from.nodes.get(id) {
             if node_from.kind != node_to.kind {
@@ -219,6 +241,10 @@ fn diff_nodes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
         if !to.nodes.contains_key(id) {
             // Prefer the reversible removal op with captured ports/edges.
             if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_node_op(from, *id) {
+                if let GraphOp::RemoveNode { ports, edges, .. } = &op {
+                    removed_ports_by_cascade.extend(ports.iter().map(|(id, _)| *id));
+                    removed_edges_by_cascade.extend(edges.iter().map(|(id, _)| *id));
+                }
                 tx.ops.push(op);
             } else {
                 // Fallback: remove node only (should not happen if graph is consistent).
@@ -233,7 +259,13 @@ fn diff_nodes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
     }
 }
 
-fn diff_ports(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
+fn diff_ports(
+    from: &Graph,
+    to: &Graph,
+    tx: &mut GraphTransaction,
+    removed_ports_by_cascade: &BTreeSet<PortId>,
+    removed_edges_by_cascade: &mut BTreeSet<EdgeId>,
+) {
     for (id, port_to) in &to.ports {
         if let Some(port_from) = from.ports.get(id) {
             let structural_equal = port_from.node == port_to.node
@@ -244,6 +276,9 @@ fn diff_ports(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
 
             if !structural_equal {
                 if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_port_op(from, *id) {
+                    if let GraphOp::RemovePort { edges, .. } = &op {
+                        removed_edges_by_cascade.extend(edges.iter().map(|(id, _)| *id));
+                    }
                     tx.ops.push(op);
                 }
                 tx.ops.push(GraphOp::AddPort {
@@ -298,14 +333,25 @@ fn diff_ports(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
 
     for (id, _port_from) in &from.ports {
         if !to.ports.contains_key(id) {
+            if removed_ports_by_cascade.contains(id) {
+                continue;
+            }
             if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_port_op(from, *id) {
+                if let GraphOp::RemovePort { edges, .. } = &op {
+                    removed_edges_by_cascade.extend(edges.iter().map(|(id, _)| *id));
+                }
                 tx.ops.push(op);
             }
         }
     }
 }
 
-fn diff_edges(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
+fn diff_edges(
+    from: &Graph,
+    to: &Graph,
+    tx: &mut GraphTransaction,
+    removed_edges_by_cascade: &BTreeSet<EdgeId>,
+) {
     for (id, edge_to) in &to.edges {
         if let Some(edge_from) = from.edges.get(id) {
             if edge_from.kind != edge_to.kind {
@@ -362,6 +408,9 @@ fn diff_edges(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
 
     for (id, edge_from) in &from.edges {
         if !to.edges.contains_key(id) {
+            if removed_edges_by_cascade.contains(id) {
+                continue;
+            }
             tx.ops.push(GraphOp::RemoveEdge {
                 id: *id,
                 edge: edge_from.clone(),
