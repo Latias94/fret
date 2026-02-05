@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
+use fret_core::{FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
@@ -15,6 +15,7 @@ pub struct MessageParts {
     role: MessageRole,
     parts: Arc<[MessagePart]>,
     on_link_activate: Option<fret_markdown::OnLinkActivate>,
+    test_id_prefix: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
 
@@ -24,6 +25,7 @@ impl std::fmt::Debug for MessageParts {
             .field("role", &self.role)
             .field("parts_len", &self.parts.len())
             .field("has_on_link_activate", &self.on_link_activate.is_some())
+            .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .field("layout", &self.layout)
             .finish()
     }
@@ -35,12 +37,22 @@ impl MessageParts {
             role,
             parts: parts.into(),
             on_link_activate: None,
+            test_id_prefix: None,
             layout: LayoutRefinement::default(),
         }
     }
 
     pub fn on_link_activate(mut self, on_link_activate: fret_markdown::OnLinkActivate) -> Self {
         self.on_link_activate = Some(on_link_activate);
+        self
+    }
+
+    /// Optional `test_id` prefix used to stamp stable selectors on rendered parts.
+    ///
+    /// This is intended for automation/debug gates. Callers should provide a stable prefix (e.g.
+    /// derived from `MessageId`) so part selectors remain stable across inserts/removals.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -75,11 +87,15 @@ impl MessageParts {
         };
 
         let on_link_activate = self.on_link_activate;
+        let test_id_prefix = self.test_id_prefix;
         let parts = self.parts;
 
         let content = cx.stack(move |cx| {
             let mut out = Vec::new();
-            for part in parts.iter() {
+            for (index, part) in parts.iter().enumerate() {
+                let part_id = test_id_prefix
+                    .clone()
+                    .map(|p| Arc::<str>::from(format!("{p}part-{index}")));
                 match part {
                     MessagePart::Text(text) => {
                         let text_style = TextStyle {
@@ -91,29 +107,70 @@ impl MessageParts {
                             letter_spacing_em: None,
                         };
 
-                        out.push(cx.text_props(TextProps {
+                        let el = cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
                             text: text.clone(),
                             style: Some(text_style),
                             color: Some(fg),
                             wrap: TextWrap::Word,
                             overflow: TextOverflow::Clip,
-                        }));
+                        });
+
+                        let Some(test_id) = part_id else {
+                            out.push(el);
+                            continue;
+                        };
+
+                        out.push(cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Group,
+                                test_id: Some(test_id),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![el],
+                        ));
                     }
                     MessagePart::Markdown(source) => {
                         let mut response = MessageResponse::new(source.clone());
                         if let Some(handler) = on_link_activate.clone() {
                             response = response.on_link_activate(handler);
                         }
-                        out.push(response.into_element(cx));
+                        let el = response.into_element(cx);
+                        let Some(test_id) = part_id else {
+                            out.push(el);
+                            continue;
+                        };
+
+                        out.push(cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Group,
+                                test_id: Some(test_id),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![el],
+                        ));
                     }
                     MessagePart::ToolCall(call) => {
-                        out.push(ToolCallBlock::new(call.clone()).into_element(cx));
+                        let mut block = ToolCallBlock::new(call.clone());
+                        if let Some(prefix) = test_id_prefix.clone() {
+                            let root = Arc::<str>::from(format!("{prefix}toolcall-{index}"));
+                            let trigger =
+                                Arc::<str>::from(format!("{prefix}toolcall-trigger-{index}"));
+                            block = block.test_id_root(root).test_id_trigger(trigger);
+                        }
+                        out.push(block.into_element(cx));
                     }
                     MessagePart::Sources(items) => {
                         let mut block = SourcesBlock::new(items.clone());
                         if let Some(handler) = on_link_activate.clone() {
                             block = block.on_open_url(handler);
+                        }
+                        if let Some(prefix) = test_id_prefix.clone() {
+                            block = block
+                                .test_id_root(Arc::<str>::from(format!("{prefix}sources-{index}")))
+                                .test_id_row_prefix(Arc::<str>::from(format!(
+                                    "{prefix}source-row-{index}-"
+                                )));
                         }
                         out.push(block.into_element(cx));
                     }

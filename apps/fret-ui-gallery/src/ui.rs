@@ -11748,6 +11748,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         .content_revision(revision)
         .scroll_handle(scroll_handle)
         .stick_to_bottom(true)
+        .test_id_message_prefix("ui-ai-msg-")
         .debug_root_test_id("ui-gallery-ai-chat-transcript-root")
         .debug_row_test_id_prefix("ui-gallery-ai-chat-transcript-row-")
         .into_element(cx);

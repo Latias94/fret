@@ -21,6 +21,7 @@ pub struct AiConversationTranscript {
     stick_threshold: Px,
     scroll_handle: Option<VirtualListScrollHandle>,
     on_link_activate: Option<fret_markdown::OnLinkActivate>,
+    test_id_message_prefix: Option<Arc<str>>,
     debug_root_test_id: Option<Arc<str>>,
     debug_row_test_id_prefix: Option<Arc<str>>,
 }
@@ -37,6 +38,10 @@ impl std::fmt::Debug for AiConversationTranscript {
             .field("stick_threshold", &self.stick_threshold)
             .field("has_scroll_handle", &self.scroll_handle.is_some())
             .field("has_on_link_activate", &self.on_link_activate.is_some())
+            .field(
+                "test_id_message_prefix",
+                &self.test_id_message_prefix.as_deref(),
+            )
             .field("debug_root_test_id", &self.debug_root_test_id.as_deref())
             .field(
                 "debug_row_test_id_prefix",
@@ -62,6 +67,7 @@ impl AiConversationTranscript {
             stick_threshold: Px(8.0),
             scroll_handle: None,
             on_link_activate: None,
+            test_id_message_prefix: None,
             debug_root_test_id: None,
             debug_row_test_id_prefix: None,
         }
@@ -105,6 +111,15 @@ impl AiConversationTranscript {
 
     pub fn on_link_activate(mut self, on_link_activate: fret_markdown::OnLinkActivate) -> Self {
         self.on_link_activate = Some(on_link_activate);
+        self
+    }
+
+    /// Optional `test_id` prefix used to stamp stable selectors on message parts.
+    ///
+    /// Selectors are derived as `${prefix}${message_id}-...` and are intended for automation and
+    /// regression gates.
+    pub fn test_id_message_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_message_prefix = Some(prefix.into());
         self
     }
 
@@ -183,6 +198,7 @@ impl AiConversationTranscript {
         let messages = self.messages;
         let debug_row_test_id_prefix = self.debug_row_test_id_prefix;
         let on_link_activate = self.on_link_activate;
+        let test_id_message_prefix = self.test_id_message_prefix;
 
         let key_at: Arc<dyn Fn(usize) -> u64> = Arc::new({
             let messages = messages.clone();
@@ -201,6 +217,10 @@ impl AiConversationTranscript {
                 let mut bubble = MessageParts::new(msg.role, msg.parts.clone());
                 if let Some(handler) = on_link_activate.clone() {
                     bubble = bubble.on_link_activate(handler);
+                }
+                if let Some(prefix) = test_id_message_prefix.clone() {
+                    bubble =
+                        bubble.test_id_prefix(Arc::<str>::from(format!("{prefix}{}-", msg.id)));
                 }
                 let bubble = bubble.into_element(cx);
 
