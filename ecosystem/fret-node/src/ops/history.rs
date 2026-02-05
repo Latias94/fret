@@ -245,6 +245,21 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             id: *id,
             symbol: symbol.clone(),
         }],
+        GraphOp::SetSymbolName { id, from, to } => vec![GraphOp::SetSymbolName {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
+        GraphOp::SetSymbolType { id, from, to } => vec![GraphOp::SetSymbolType {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
+        GraphOp::SetSymbolDefaultValue { id, from, to } => vec![GraphOp::SetSymbolDefaultValue {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
         GraphOp::SetSymbolMeta { id, from, to } => vec![GraphOp::SetSymbolMeta {
             id: *id,
             from: to.clone(),

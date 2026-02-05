@@ -121,6 +121,33 @@ fn try_coalesce_setter(last: &mut GraphOp, next: &GraphOp) -> bool {
             true
         }
         (
+            GraphOp::SetSymbolName {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetSymbolName { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetSymbolType {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetSymbolType { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
+            GraphOp::SetSymbolDefaultValue {
+                id: a, to: last_to, ..
+            },
+            GraphOp::SetSymbolDefaultValue { id: b, from, to },
+        ) if a == b && last_to == from => {
+            *last_to = to.clone();
+            true
+        }
+        (
             GraphOp::SetGroupRect {
                 id: a, to: last_to, ..
             },
@@ -147,6 +174,9 @@ fn op_is_noop(op: &GraphOp) -> bool {
         GraphOp::SetEdgeKind { from, to, .. } => from == to,
         GraphOp::SetEdgeEndpoints { from, to, .. } => from == to,
 
+        GraphOp::SetSymbolName { from, to, .. } => from == to,
+        GraphOp::SetSymbolType { from, to, .. } => from == to,
+        GraphOp::SetSymbolDefaultValue { from, to, .. } => from == to,
         GraphOp::SetSymbolMeta { from, to, .. } => from == to,
 
         GraphOp::SetGroupRect { from, to, .. } => from == to,

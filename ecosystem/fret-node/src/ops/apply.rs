@@ -247,6 +247,24 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             }
             graph.symbols.remove(id);
         }
+        GraphOp::SetSymbolName { id, to, .. } => {
+            let Some(symbol) = graph.symbols.get_mut(id) else {
+                return Err(ApplyError::MissingSymbol { id: *id });
+            };
+            symbol.name = to.clone();
+        }
+        GraphOp::SetSymbolType { id, to, .. } => {
+            let Some(symbol) = graph.symbols.get_mut(id) else {
+                return Err(ApplyError::MissingSymbol { id: *id });
+            };
+            symbol.ty = to.clone();
+        }
+        GraphOp::SetSymbolDefaultValue { id, to, .. } => {
+            let Some(symbol) = graph.symbols.get_mut(id) else {
+                return Err(ApplyError::MissingSymbol { id: *id });
+            };
+            symbol.default_value = to.clone();
+        }
         GraphOp::SetSymbolMeta { id, to, .. } => {
             let Some(symbol) = graph.symbols.get_mut(id) else {
                 return Err(ApplyError::MissingSymbol { id: *id });

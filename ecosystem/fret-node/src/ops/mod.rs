@@ -13,6 +13,7 @@ use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId,
     NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
 };
+use crate::types::TypeDesc;
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
 pub use build::GraphOpBuilderExt;
@@ -125,6 +126,24 @@ pub enum GraphOp {
     AddSymbol { id: SymbolId, symbol: Symbol },
     /// Removes a symbol.
     RemoveSymbol { id: SymbolId, symbol: Symbol },
+    /// Sets a symbol name.
+    SetSymbolName {
+        id: SymbolId,
+        from: String,
+        to: String,
+    },
+    /// Sets a symbol type descriptor.
+    SetSymbolType {
+        id: SymbolId,
+        from: Option<TypeDesc>,
+        to: Option<TypeDesc>,
+    },
+    /// Sets a symbol default value.
+    SetSymbolDefaultValue {
+        id: SymbolId,
+        from: Option<serde_json::Value>,
+        to: Option<serde_json::Value>,
+    },
     /// Updates a symbol metadata payload (domain-owned).
     SetSymbolMeta {
         id: SymbolId,

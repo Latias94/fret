@@ -66,6 +66,9 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         | GraphOp::SetEdgeKind { .. }
         | GraphOp::AddSymbol { .. }
         | GraphOp::RemoveSymbol { .. }
+        | GraphOp::SetSymbolName { .. }
+        | GraphOp::SetSymbolType { .. }
+        | GraphOp::SetSymbolDefaultValue { .. }
         | GraphOp::SetSymbolMeta { .. }
         | GraphOp::RemoveGroup { .. }
         | GraphOp::RemoveStickyNote { .. } => None,

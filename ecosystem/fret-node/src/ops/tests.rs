@@ -1,11 +1,13 @@
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, Group, GroupId, Node,
-    NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind, Symbol,
+    SymbolId,
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
     IdRemapSeed, IdRemapper, PasteTuning, apply_transaction, invert_transaction,
 };
+use crate::types::TypeDesc;
 use uuid::Uuid;
 
 fn make_node(kind: &str) -> Node {
@@ -693,4 +695,64 @@ fn history_undo_redo_roundtrip() {
         })
         .unwrap();
     assert_eq!(serde_json::to_value(&graph).unwrap(), forward_state);
+}
+
+#[test]
+fn symbol_setters_roundtrip_through_normalize_and_invert() {
+    let mut graph = Graph::default();
+    let symbol_id = SymbolId::new();
+    graph.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "A".to_string(),
+            ty: None,
+            default_value: None,
+            meta: serde_json::Value::Null,
+        },
+    );
+
+    let baseline = serde_json::to_value(&graph).unwrap();
+
+    let mut tx = GraphTransaction::new();
+    tx.ops.push(GraphOp::SetSymbolName {
+        id: symbol_id,
+        from: "A".to_string(),
+        to: "B".to_string(),
+    });
+    tx.ops.push(GraphOp::SetSymbolName {
+        id: symbol_id,
+        from: "B".to_string(),
+        to: "C".to_string(),
+    });
+    tx.ops.push(GraphOp::SetSymbolType {
+        id: symbol_id,
+        from: None,
+        to: Some(TypeDesc::Int),
+    });
+    tx.ops.push(GraphOp::SetSymbolDefaultValue {
+        id: symbol_id,
+        from: None,
+        to: Some(serde_json::json!(123)),
+    });
+
+    let tx = crate::ops::normalize_transaction(tx);
+    assert!(
+        tx.ops.len() < 4,
+        "expected normalize to coalesce setter chain"
+    );
+
+    apply_transaction(&mut graph, &tx).expect("apply forward");
+    assert_eq!(graph.symbols.get(&symbol_id).unwrap().name, "C");
+    assert_eq!(
+        graph.symbols.get(&symbol_id).unwrap().ty,
+        Some(TypeDesc::Int)
+    );
+    assert_eq!(
+        graph.symbols.get(&symbol_id).unwrap().default_value,
+        Some(serde_json::json!(123))
+    );
+
+    let inverse = invert_transaction(&tx);
+    apply_transaction(&mut graph, &inverse).expect("apply inverse");
+    assert_eq!(serde_json::to_value(&graph).unwrap(), baseline);
 }
