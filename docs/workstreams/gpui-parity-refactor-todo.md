@@ -1259,7 +1259,13 @@ topics (if/when we implement them):
     - UI Gallery harness: `PAGE_NODE_GRAPH_CULL_TORTURE` with root test id `ui-gallery-node-graph-cull-root` (retained `fret-node` stress scene).
     - Script: `tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json` (middle-drag + wheel).
     - Suite: `fretboard diag suite ui-gallery-node-graph-cull` (defaults: view-cache + shell + screenshots).
+    - UI debug: add `node_graph_cull_window_shift` prepaint action + `node_graph_cull_window_key` payload, exported into diagnostics bundles.
+      - `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::NodeGraphCullWindowShift`)
+      - `crates/fret-ui/src/widget.rs` (`PrepaintCx::debug_record_node_graph_cull_window_shift`)
+      - `ecosystem/fret-node/src/ui/canvas/widget.rs` (`Widget::prepaint` records the window key)
+      - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiPrepaintActionKindV1::NodeGraphCullWindowShift`)
     - Recommended gate: `--check-drag-cache-root-paint-only ui-gallery-node-graph-cull-root` (warmup >= 5).
+    - Optional diagnostics gate: `--check-node-graph-cull-window-shifts-min <n>` (evidence: `check.node_graph_cull_window_shifts_min.json`).
     - Evidence bundle (cache+shell, release): `target/fret-diag-node-graph-cull-torture/1770256423358-ui-gallery-node-graph-cull-pan-zoom/bundle.json`
 - [x] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:

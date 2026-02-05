@@ -578,6 +578,7 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
                 chart_sampling_window_key: None,
+                node_graph_cull_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         self.tree.invalidate_with_detail(
@@ -606,6 +607,7 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
                 chart_sampling_window_key: None,
+                node_graph_cull_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         let Some(window) = self.window else {
@@ -630,6 +632,7 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
                 chart_sampling_window_key: None,
+                node_graph_cull_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
@@ -660,6 +663,27 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
                 chart_sampling_window_key: Some(sampling_window_key),
+                node_graph_cull_window_key: None,
+                frame_id: self.app.frame_id(),
+            });
+    }
+
+    /// Records a debug-only "cull window shift" prepaint action.
+    ///
+    /// This is intended for ecosystem canvases (e.g. node graphs) that maintain a windowed
+    /// viewport culling contract and want to expose a stable output key in diagnostics bundles.
+    pub fn debug_record_node_graph_cull_window_shift(&mut self, cull_window_key: u64) {
+        self.tree
+            .debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                node: self.node,
+                target: None,
+                kind: crate::tree::UiDebugPrepaintActionKind::NodeGraphCullWindowShift,
+                invalidation: None,
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
+                node_graph_cull_window_key: Some(cull_window_key),
                 frame_id: self.app.frame_id(),
             });
     }
