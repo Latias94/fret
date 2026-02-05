@@ -450,6 +450,9 @@ Perf acceptance:
     - `paint_text_prepare_reason_*` (commit `80a46d49`)
   - Per-frame top-N text prepare hotspots with node/element ids + constraints + reason mask:
     - `paint_text_prepare_hotspots` (commit `77979100`)
+- [x] Add a steady-state menubar hover probe to confirm “text prepares happen only on first appearance”.
+  - Script: `tools/diag-scripts/ui-gallery-menubar-open-hover-sweep-steady.json` (commit `0a8191eb`)
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for `ui-gallery-menubar-open-hover-sweep-steady`.
 - [ ] Ensure atlas eviction and re-upload events are observable in perf snapshots.
 
 Perf acceptance:

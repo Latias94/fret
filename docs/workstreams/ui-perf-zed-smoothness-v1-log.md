@@ -3882,6 +3882,8 @@ Takeaway:
 - We can now track whether the *same element ids* are repeatedly missing their blobs across frames, or whether these
   are first-appearance spikes. Next: correlate these element ids with cleanup/remove-subtree records and cache-root
   reuse reasons.
+- In the captured bundle above, each `paint_text_prepare_hotspots` element id only appears in a single snapshot,
+  consistent with “first appearance” prepares (not per-frame churn).
 
 ## 2026-02-05 15:25:21 (commit `21198872`)
 
@@ -3909,3 +3911,28 @@ Worst overall:
 Notes:
 - The worst frame is layout-dominant (`layout_time_us=10591`) and includes resize-driven text re-prepare
   (`paint_text_prepare.us(time/calls)=2008/20`, `reasons=width_changed=20`), which is expected for a resize stress probe.
+
+## 2026-02-05 15:36:09 (commit `0a8191eb`)
+
+Change:
+- Add a steady-state menubar probe that opens the File menu, resets diagnostics after mount, then runs a pointer-move
+  sweep to validate “hover frames do not re-prepare text”.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-open-hover-sweep-steady.json`
+- Bundle:
+  - `target/fret-diag-codex-menubar-sweep/1770305770074-script-step-0013-press_key/bundle.json`
+
+Command:
+```bash
+target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-open-hover-sweep-steady.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --warmup-frames 5 --repeat 1 --reuse-launch --sort time --json \
+  --dir target/fret-diag-codex-menubar-sweep \
+  --launch -- target/codex-perf/release/fret-ui-gallery
+```
+
+Results:
+- `paint_text_prepare_calls==0` across the measured sweep frames (no `paint_text_prepare_hotspots` recorded).
+- Derived pointer-move maxima: `dispatch<=20us`, `hit_test<=1us` across 25 pointer-move frames.
