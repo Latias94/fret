@@ -129,6 +129,51 @@ fn normal_from_tangent(tangent: Point) -> Point {
     Point::new(Px(-dy / len), Px(dx / len))
 }
 
+fn wire_ctrl_points(from: Point, to: Point, zoom: f32) -> (Point, Point) {
+    let zoom = if zoom.is_finite() && zoom > 0.0 {
+        zoom
+    } else {
+        1.0
+    };
+    let dx = to.x.0 - from.x.0;
+    let ctrl = (dx.abs() * 0.5).clamp(40.0 / zoom, 160.0 / zoom);
+    let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
+    let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
+    let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
+    (c1, c2)
+}
+
+fn cubic_bezier(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
+    let t = t.clamp(0.0, 1.0);
+    let mt = 1.0 - t;
+    let mt2 = mt * mt;
+    let t2 = t * t;
+
+    let w0 = mt2 * mt;
+    let w1 = 3.0 * mt2 * t;
+    let w2 = 3.0 * mt * t2;
+    let w3 = t2 * t;
+
+    Point::new(
+        Px(w0 * p0.x.0 + w1 * p1.x.0 + w2 * p2.x.0 + w3 * p3.x.0),
+        Px(w0 * p0.y.0 + w1 * p1.y.0 + w2 * p2.y.0 + w3 * p3.y.0),
+    )
+}
+
+fn cubic_bezier_derivative(p0: Point, p1: Point, p2: Point, p3: Point, t: f32) -> Point {
+    let t = t.clamp(0.0, 1.0);
+    let mt = 1.0 - t;
+
+    let w0 = 3.0 * mt * mt;
+    let w1 = 6.0 * mt * t;
+    let w2 = 3.0 * t * t;
+
+    Point::new(
+        Px(w0 * (p1.x.0 - p0.x.0) + w1 * (p2.x.0 - p1.x.0) + w2 * (p3.x.0 - p2.x.0)),
+        Px(w0 * (p1.y.0 - p0.y.0) + w1 * (p2.y.0 - p1.y.0) + w2 * (p3.y.0 - p2.y.0)),
+    )
+}
+
 struct LabelRoutePresenter {
     label: Arc<str>,
     route: EdgeRouteKind,
@@ -196,6 +241,34 @@ fn expected_text_origin_step(
     let z = zoom.max(1.0e-6);
     let off = style.edge_label_offset / z;
     let anchor = Point::new(Px(pos.x.0), Px(pos.y.0 - off));
+
+    let w = label.len() as f32 * 7.0;
+    let h = 14.0;
+    let baseline = 11.0;
+    Point::new(
+        Px(anchor.x.0 - 0.5 * w),
+        Px(anchor.y.0 - 0.5 * h + baseline),
+    )
+}
+
+fn expected_text_origin_bezier(
+    style: &NodeGraphStyle,
+    from: Point,
+    to: Point,
+    zoom: f32,
+    label: &str,
+) -> Point {
+    let (c1, c2) = wire_ctrl_points(from, to, zoom);
+    let pos = cubic_bezier(from, c1, c2, to, 0.5);
+    let d = cubic_bezier_derivative(from, c1, c2, to, 0.5);
+    let normal = normal_from_tangent(d);
+
+    let z = zoom.max(1.0e-6);
+    let off = style.edge_label_offset / z;
+    let anchor = Point::new(
+        Px(pos.x.0 + normal.x.0 * off),
+        Px(pos.y.0 + normal.y.0 * off),
+    );
 
     let w = label.len() as f32 * 7.0;
     let h = 14.0;
@@ -279,7 +352,9 @@ fn capture_label_origin_for_route(route: EdgeRouteKind, zoom: f32) -> (Point, Po
         EdgeRouteKind::Step => {
             expected_text_origin_step(&canvas.style, from, to, zoom, label.as_ref())
         }
-        EdgeRouteKind::Bezier => unreachable!("this helper only supports Straight/Step"),
+        EdgeRouteKind::Bezier => {
+            expected_text_origin_bezier(&canvas.style, from, to, zoom, label.as_ref())
+        }
     };
 
     (origin, expected)
@@ -330,5 +405,29 @@ fn edge_label_anchor_offset_is_zoom_safe_for_step_route() {
     assert!(
         err1 <= 1.0e-3 && err2 <= 1.0e-3,
         "expected zoom-safe label anchors for step route; err1={err1} err2={err2}"
+    );
+}
+
+#[test]
+fn edge_label_anchor_matches_bezier_route_math() {
+    let (origin, expected) = capture_label_origin_for_route(EdgeRouteKind::Bezier, 1.0);
+    let dx = (origin.x.0 - expected.x.0).abs();
+    let dy = (origin.y.0 - expected.y.0).abs();
+    assert!(
+        dx + dy <= 1.0e-3,
+        "expected bezier-route label origin to match cubic midpoint+normal anchor; dx={dx} dy={dy}"
+    );
+}
+
+#[test]
+fn edge_label_anchor_offset_is_zoom_safe_for_bezier_route() {
+    let (origin_z1, expected_z1) = capture_label_origin_for_route(EdgeRouteKind::Bezier, 1.0);
+    let (origin_z2, expected_z2) = capture_label_origin_for_route(EdgeRouteKind::Bezier, 2.0);
+
+    let err1 = (origin_z1.x.0 - expected_z1.x.0).abs() + (origin_z1.y.0 - expected_z1.y.0).abs();
+    let err2 = (origin_z2.x.0 - expected_z2.x.0).abs() + (origin_z2.y.0 - expected_z2.y.0).abs();
+    assert!(
+        err1 <= 1.0e-3 && err2 <= 1.0e-3,
+        "expected zoom-safe label anchors for bezier route; err1={err1} err2={err2}"
     );
 }
