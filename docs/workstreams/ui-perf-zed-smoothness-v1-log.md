@@ -3376,3 +3376,46 @@ Takeaway:
 - On current `main`, forcing the ui-gallery config watcher back on does **not** reintroduce a measurable pointer-move
   dispatch tail for this probe. This suggests the earlier timer-driven hitch mechanism has been eliminated or reduced
   to “noise floor” for this workload.
+
+## 2026-02-05 16:12:00 (commit `b87bf64d` → `5b5d3fe3`)
+
+Change:
+- Run the steady-state gate on current `main` against the older macOS M4 baseline (v5), then reduce timer noise:
+  - `perf(ui-gallery): suppress config watcher during diag perf` (commit `5b5d3fe3`)
+
+Why:
+- The v5 baseline (`05cd5691`) predates several diagnostics/runtime changes; it is still useful as a regression signal,
+  but we must keep timer-driven background work out of gate runs (the earlier pointer-move probe already showed how
+  a dev-only polling timer can dominate tails when it lines up with an interaction).
+
+Gate run (v5 baseline; repeat=7; `ui-gallery-steady`; `sort=time`):
+- Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json`
+- Run dir (before watcher suppression): `target/fret-diag-perf/ui-gallery-steady.gap-check.1770279063/`
+- Result: gate failed (failures=4)
+  - `ui-gallery-window-resize-stress-steady`: one run hit `top_total_time_us=19447` (thr `17201`)
+    - Worst bundle: `target/fret-diag-perf/ui-gallery-steady.gap-check.1770279063/1770279097844-ui-gallery-window-resize-stress-steady/bundle.json`
+    - Attribution: dispatch contained `dispatch_post_dispatch_snapshot_time_us~2810us` (timer-aligned noise).
+  - `ui-gallery-menubar-keyboard-nav-steady`: consistent `top_total_time_us~3.0ms` across runs (thr `2642us`)
+    - Worst bundle: `target/fret-diag-perf/ui-gallery-steady.gap-check.1770279063/1770279078981-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Fix:
+- Suppress the ui-gallery config watcher when running under diagnostics (detect `FRET_DIAG_DIR`), unless explicitly
+  forced via `FRET_UI_GALLERY_ENABLE_CONFIG_WATCHER=1`:
+  - Commit: `5b5d3fe3`
+
+Re-run (v5 baseline; repeat=7):
+- Run dir: `target/fret-diag-perf/ui-gallery-steady.gap-check.after-suppress-watcher.1770279883/`
+- Result: gate failed (failures=1)
+  - Only remaining failure: `ui-gallery-menubar-keyboard-nav-steady` max `2941us` (thr `2642us`).
+
+Baseline update (macOS M4 v6; repeat=7):
+- New baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v6.json` (generated at commit `5b5d3fe3`)
+- Run dir: `target/fret-diag-perf/ui-gallery-steady.macos-m4.v6.1770280087/`
+- Note: the v6 baseline includes pointer-move maxima per script in addition to `top_total/layout/solve` thresholds.
+
+Gate check (v6 baseline; repeat=3):
+- `target/fret-diag-perf/ui-gallery-steady.macos-m4.v6.check.1770280162/` showed a resize outlier (`top_total_time_us=21780`)
+  and failed; immediate re-run passed:
+  - `target/fret-diag-perf/ui-gallery-steady.macos-m4.v6.check2.1770280248/` (passed; worst `top_total_time_us=13293`)
+  - Takeaway: `ui-gallery-window-resize-stress-steady` can still be flaky at low repeat counts; prefer repeat=7 for
+    contract checks, and keep investigating rare solve/layout outliers (text measure cache / intrinsic probes).

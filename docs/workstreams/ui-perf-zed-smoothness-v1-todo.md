@@ -38,6 +38,9 @@ Conventions:
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v5.json` (see perf log entry).
     - Switches perf protocol to `FRET_DIAG_SCRIPT_AUTO_DUMP=0` to avoid per-step bundle dumps dominating I/O.
     - Supersedes v4 for perf gating; keep v4 only if you explicitly want “auto dump on” behavior for debugging.
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v6.json` (see perf log entry).
+    - Includes pointer-move maxima in the baseline rows (newer perf protocol) and reflects the current steady-state
+      costs of the menubar script after recent diagnostics/runtime changes.
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
 - [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
