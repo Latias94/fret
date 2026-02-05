@@ -278,6 +278,7 @@ ColumnDef keys referenced by upstream feature implementations:
   - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`.
   - Covered: `row.getPinnedIndex()`-equivalent visible ordering (`row_pinning.pinned_index` in fixture snapshots).
+    - Snapshots: `pinning_keep_true_multi_pinned_index_page_0`, `pinning_keep_false_multi_pinned_index_page_0`.
   - Covered: `enableRowPinning: (row) => boolean` predicate (fixture marker `__enableRowPinning=odd_ids`).
   - Hardened gate coverage: pinning fixtures now also assert the “full derived snapshot surface”
     (core/filtered/sorted/expanded/paginated models, selection/expanding flags, and column sizing totals + start/after offsets),

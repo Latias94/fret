@@ -179,6 +179,8 @@ type SnapshotId =
   | "pagination_override_get_pagination_row_model_pre_pagination"
   | "pinning_keep_true_page_0"
   | "pinning_keep_false_page_0"
+  | "pinning_keep_true_multi_pinned_index_page_0"
+  | "pinning_keep_false_multi_pinned_index_page_0"
   | "pinning_keep_true_sorted_page_0"
   | "pinning_keep_false_sorted_page_0"
   | "pinning_keep_true_filter_excludes_pinned"
@@ -4407,6 +4409,22 @@ function snapshotColumnPinning(
         "pinning_keep_false_page_0",
         { enableRowPinning: true, keepPinnedRows: false },
         baseState,
+      ),
+      mk(
+        "pinning_keep_true_multi_pinned_index_page_0",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          pagination: { pageIndex: 0, pageSize: 1 },
+          rowPinning: { top: ["2", "3"], bottom: ["4", "5"] },
+        },
+      ),
+      mk(
+        "pinning_keep_false_multi_pinned_index_page_0",
+        { enableRowPinning: true, keepPinnedRows: false },
+        {
+          pagination: { pageIndex: 0, pageSize: 1 },
+          rowPinning: { top: ["2", "3"], bottom: ["4", "5"] },
+        },
       ),
       mk(
         "pinning_keep_true_sorted_page_0",
