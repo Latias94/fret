@@ -424,6 +424,10 @@ TODO:
 - [ ] Pick the first “editor-class” migration target:
   - Option A: VirtualList visible window derivation in prepaint (ADR 0190 alignment).
   - Option B: Code view visible-line window derivation in prepaint (code editor feel).
+- [ ] Reduce editor-class per-frame scene construction when scrolling/animating.
+  - Baseline hotspot: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` can be dominated by
+    `paint_widget_hotspots kind=Canvas` (see perf log entry 2026-02-05 15:43:55).
+  - Goal: translate/replay cached ranges where possible instead of re-emitting large display lists each frame.
 - [ ] Ensure cache-root reuse remains stable under steady scroll/pan.
 - [ ] Add a “window boundary crossing” script that fails if it triggers full rerender too often.
 
@@ -431,6 +435,7 @@ Perf acceptance:
 
 - [ ] `ui-gallery-virtual-list-torture.json`: steady scroll should avoid cache-root rerender in most frames.
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
+- [ ] `ui-gallery-code-editor-torture-autoscroll-steady.json`: reduce Canvas paint hotspot and keep Tier B progress tracked.
 
 ### M5: Text pipeline stabilization (editor-ready)
 
