@@ -248,7 +248,7 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 ### Message
 
-- [ ] AIEL-MVP1-chat-040 Replace `Message(text)` with a composition surface (container + content + actions slots).
+- [x] AIEL-MVP1-chat-040 Replace `Message(text)` with a composition surface (container + content + actions slots).
 - [x] AIEL-MVP1-chat-043 Port `message.tsx` action surfaces (`MessageActions`, `MessageAction` with optional tooltip).
 - [ ] AIEL-MVP1-chat-041 Implement branch selector outcomes (optional; only if there is a consumer).
 - [ ] AIEL-MVP1-chat-042 Add per-role chrome tokens (avoid hard-coded theme string keys in component code).

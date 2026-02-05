@@ -163,8 +163,10 @@ Fret mapping (planned):
 
 Implementation notes (current):
 
-- `MessageActions` and `MessageAction` exist in `fret-ui-ai` and are used by UI Gallery as a
-  tooltip-gated example.
+- `Message`, `MessageContent`, `MessageActions`, and `MessageAction` exist in `fret-ui-ai`.
+- `MessageParts` now renders via `Message` + `MessageContent` so transcripts align with the same
+  decomposition.
+- UI Gallery includes a tooltip-gated example action (`ui-gallery-ai-chat-action-copy`).
 
 ### `tool.tsx` (Tool call disclosure)
 
