@@ -4536,6 +4536,7 @@ function snapshotColumnPinning(
         expect: {
           ...base,
           column_pinning: snapshotColumnPinning(table),
+          cells: snapshotCells(table),
         },
       }
     }
@@ -4559,6 +4560,7 @@ function snapshotColumnPinning(
         expect: {
           ...expect,
           column_pinning: snapshotColumnPinning(table),
+          cells: snapshotCells(table),
         },
       }
     }

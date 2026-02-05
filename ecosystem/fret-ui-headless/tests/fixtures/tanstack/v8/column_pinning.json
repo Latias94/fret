@@ -141,6 +141,54 @@
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [],
+            "center": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -254,6 +302,54 @@
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [],
+            "center": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -367,6 +463,54 @@
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [],
+            "center": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -578,6 +722,55 @@
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": true
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [],
+            "center": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              }
+            ],
+            "right": [
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ]
+          }
         }
       }
     },
@@ -780,6 +973,55 @@
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              }
+            ],
+            "center": [
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -983,6 +1225,55 @@
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              }
+            ],
+            "center": [
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -1186,6 +1477,55 @@
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              }
+            ],
+            "center": [
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -1386,6 +1726,54 @@
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [],
+            "center": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -1602,6 +1990,55 @@
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              }
+            ],
+            "center": [
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     },
@@ -1815,6 +2252,54 @@
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": false
+        },
+        "cells": {
+          "1": {
+            "all": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "visible": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "left": [],
+            "center": [
+              {
+                "id": "1_a",
+                "column_id": "a"
+              },
+              {
+                "id": "1_b",
+                "column_id": "b"
+              },
+              {
+                "id": "1_c",
+                "column_id": "c"
+              }
+            ],
+            "right": []
+          }
         }
       }
     }

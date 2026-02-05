@@ -37,6 +37,21 @@ struct RowModelSnapshot {
     flat: Vec<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct CellSnapshot {
+    id: String,
+    column_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct RowCellsSnapshot {
+    all: Vec<CellSnapshot>,
+    visible: Vec<CellSnapshot>,
+    left: Vec<CellSnapshot>,
+    center: Vec<CellSnapshot>,
+    right: Vec<CellSnapshot>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 struct ColumnSizingExpect {
     total_size: f32,
@@ -108,6 +123,8 @@ struct FixtureExpect {
     #[serde(default)]
     after: Option<ColumnAfterExpect>,
     #[serde(default)]
+    cells: Option<BTreeMap<String, RowCellsSnapshot>>,
+    #[serde(default)]
     column_pinning: Option<ColumnPinningExpect>,
     #[serde(default)]
     next_state: Option<serde_json::Value>,
@@ -178,6 +195,20 @@ fn parse_expected_pin_position(position: Option<&str>) -> Option<ColumnPinPositi
         Some("left") => Some(ColumnPinPosition::Left),
         Some("right") => Some(ColumnPinPosition::Right),
         Some(other) => panic!("invalid expected pin position: {other}"),
+    }
+}
+
+fn cells_to_jsonish(cells: fret_ui_headless::table::RowCellsSnapshot) -> RowCellsSnapshot {
+    let conv = |c: fret_ui_headless::table::CellSnapshot| CellSnapshot {
+        id: c.id.as_ref().to_string(),
+        column_id: c.column_id.as_ref().to_string(),
+    };
+    RowCellsSnapshot {
+        all: cells.all.into_iter().map(conv).collect(),
+        visible: cells.visible.into_iter().map(conv).collect(),
+        left: cells.left.into_iter().map(conv).collect(),
+        center: cells.center.into_iter().map(conv).collect(),
+        right: cells.right.into_iter().map(conv).collect(),
     }
 }
 
@@ -305,6 +336,23 @@ fn tanstack_v8_column_pinning_parity() {
             .state(state)
             .options(options)
             .build();
+
+        if let Some(expected_cells) = snap.expect.cells.as_ref() {
+            for (row_id, expected) in expected_cells {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                let got = table.row_cells(row_key).expect("row cells");
+                let got = cells_to_jsonish(got);
+                assert_eq!(
+                    got, *expected,
+                    "snapshot {} cells[{}] mismatch",
+                    snap.id, row_id
+                );
+            }
+        }
 
         let core = snapshot_row_model(table.core_row_model());
         let filtered = snapshot_row_model(table.filtered_row_model());

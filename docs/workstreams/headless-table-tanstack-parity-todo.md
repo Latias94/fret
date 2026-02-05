@@ -393,6 +393,9 @@ ColumnDef keys referenced by upstream feature implementations:
   - Hardened gate coverage: column pinning fixtures now also assert derived row models, selection/expanding flags,
     and column sizing totals + start/after offsets under pinning state.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
+  - Hardened gate coverage: column pinning fixtures now also assert per-row pinned cell splits
+    (`getLeftVisibleCells`/`getCenterVisibleCells`/`getRightVisibleCells`).
+    - Evidence: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` (`expect.cells`)
 - [x] HTP-colpin-020 Align `resetColumnPinning(defaultState?)` semantics.
   - Parity-gated:
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`
