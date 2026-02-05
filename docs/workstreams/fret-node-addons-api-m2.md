@@ -106,3 +106,5 @@ Planned additions (M2):
 
 - Background style updates do not rebuild derived geometry:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
+- Controls overlay supports B-layer command injection:
+  `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`

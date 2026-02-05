@@ -18,8 +18,9 @@ use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::commands::CMD_NODE_GRAPH_ZOOM_IN;
 use crate::ui::{
-    NodeGraphControlsOverlay, NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
-    NodeGraphMiniMapOverlay, NodeGraphStyle,
+    NodeGraphControlsBindings, NodeGraphControlsCommandBinding, NodeGraphControlsOverlay,
+    NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
+    NodeGraphStyle,
 };
 
 use super::{NullServices, TestUiHostImpl};
@@ -318,6 +319,87 @@ fn controls_overlay_keyboard_navigation_and_activation_dispatches_command_and_re
         ui.focus(),
         Some(underlay),
         "expected activation to request focus to the canvas node"
+    );
+}
+
+#[test]
+fn controls_overlay_supports_command_binding_overrides_for_b_layer_wiring() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut bindings = NodeGraphControlsBindings::default();
+    bindings.toggle_connection_mode = NodeGraphControlsCommandBinding::Command(CommandId::from(
+        "node_graph.custom.toggle_connection_mode",
+    ));
+    bindings.zoom_in =
+        NodeGraphControlsCommandBinding::Command(CommandId::from("node_graph.custom.zoom_in"));
+
+    let controls =
+        NodeGraphControlsOverlay::new(underlay, view, test_style()).with_bindings(bindings);
+    let controls_node = ui.create_node_retained(controls);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, controls_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(controls_node));
+    assert_eq!(ui.focus(), Some(controls_node));
+
+    // Default active button is the first one (toggle connection mode).
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Enter,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        host.effects.iter().any(|e| matches!(
+            e,
+            Effect::Command { command, .. }
+                if *command == CommandId::from("node_graph.custom.toggle_connection_mode")
+        )),
+        "expected override binding to dispatch custom toggle command"
+    );
+
+    // Activation returns focus to the canvas node; refocus the overlay for the next activation.
+    ui.set_focus(Some(controls_node));
+
+    // ArrowDown selects ZoomIn, then Enter activates it.
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Enter,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        host.effects.iter().any(|e| matches!(
+            e,
+            Effect::Command { command, .. } if *command == CommandId::from("node_graph.custom.zoom_in")
+        )),
+        "expected override binding to dispatch custom zoom-in command"
     );
 }
 

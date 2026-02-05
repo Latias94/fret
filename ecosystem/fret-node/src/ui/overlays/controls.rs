@@ -17,6 +17,44 @@ use crate::ui::commands::{
 
 use super::OverlayPlacement;
 
+/// Command dispatch override for a controls overlay action.
+#[derive(Debug, Clone, PartialEq)]
+pub enum NodeGraphControlsCommandBinding {
+    /// Uses the overlay's built-in command mapping.
+    Default,
+    /// Disables the action (no command dispatch).
+    Disabled,
+    /// Dispatches a custom command when the action is activated.
+    Command(CommandId),
+}
+
+/// B-layer wiring knobs for the controls overlay.
+///
+/// This is intentionally policy-light: it only affects what gets dispatched on activation, and does
+/// not change layout, hit-testing, or focus behavior.
+#[derive(Debug, Clone)]
+pub struct NodeGraphControlsBindings {
+    pub toggle_connection_mode: NodeGraphControlsCommandBinding,
+    pub zoom_in: NodeGraphControlsCommandBinding,
+    pub zoom_out: NodeGraphControlsCommandBinding,
+    pub frame_all: NodeGraphControlsCommandBinding,
+    pub frame_selection: NodeGraphControlsCommandBinding,
+    pub reset_view: NodeGraphControlsCommandBinding,
+}
+
+impl Default for NodeGraphControlsBindings {
+    fn default() -> Self {
+        Self {
+            toggle_connection_mode: NodeGraphControlsCommandBinding::Default,
+            zoom_in: NodeGraphControlsCommandBinding::Default,
+            zoom_out: NodeGraphControlsCommandBinding::Default,
+            frame_all: NodeGraphControlsCommandBinding::Default,
+            frame_selection: NodeGraphControlsCommandBinding::Default,
+            reset_view: NodeGraphControlsCommandBinding::Default,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ControlsButton {
     ToggleConnectionMode,
@@ -36,6 +74,7 @@ pub struct NodeGraphControlsOverlay {
     canvas_node: fret_core::NodeId,
     view_state: Model<NodeGraphViewState>,
     style: NodeGraphStyle,
+    bindings: NodeGraphControlsBindings,
     hovered: Option<ControlsButton>,
     pressed: Option<ControlsButton>,
     keyboard_active: Option<ControlsButton>,
@@ -53,12 +92,18 @@ impl NodeGraphControlsOverlay {
             canvas_node,
             view_state,
             style,
+            bindings: NodeGraphControlsBindings::default(),
             hovered: None,
             pressed: None,
             keyboard_active: None,
             text_blobs: Vec::new(),
             placement: OverlayPlacement::FloatingInCanvas,
         }
+    }
+
+    pub fn with_bindings(mut self, bindings: NodeGraphControlsBindings) -> Self {
+        self.bindings = bindings;
+        self
     }
 
     /// Switches to "panel bounds" mode for `NodeGraphPanel` composition.
@@ -138,19 +183,38 @@ impl NodeGraphControlsOverlay {
         None
     }
 
+    fn binding_for(&self, btn: ControlsButton) -> &NodeGraphControlsCommandBinding {
+        match btn {
+            ControlsButton::ToggleConnectionMode => &self.bindings.toggle_connection_mode,
+            ControlsButton::ZoomIn => &self.bindings.zoom_in,
+            ControlsButton::ZoomOut => &self.bindings.zoom_out,
+            ControlsButton::FrameAll => &self.bindings.frame_all,
+            ControlsButton::FrameSelection => &self.bindings.frame_selection,
+            ControlsButton::ResetView => &self.bindings.reset_view,
+        }
+    }
+
     fn dispatch_button<H: UiHost>(&self, cx: &mut EventCx<'_, H>, btn: ControlsButton) {
         cx.request_focus(self.canvas_node);
-        let id = match btn {
-            ControlsButton::ToggleConnectionMode => {
-                CommandId::from(CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE)
-            }
-            ControlsButton::ZoomIn => CommandId::from(CMD_NODE_GRAPH_ZOOM_IN),
-            ControlsButton::ZoomOut => CommandId::from(CMD_NODE_GRAPH_ZOOM_OUT),
-            ControlsButton::FrameAll => CommandId::from(CMD_NODE_GRAPH_FRAME_ALL),
-            ControlsButton::FrameSelection => CommandId::from(CMD_NODE_GRAPH_FRAME_SELECTION),
-            ControlsButton::ResetView => CommandId::from(CMD_NODE_GRAPH_RESET_VIEW),
+
+        let id = match self.binding_for(btn) {
+            NodeGraphControlsCommandBinding::Disabled => None,
+            NodeGraphControlsCommandBinding::Command(id) => Some(id.clone()),
+            NodeGraphControlsCommandBinding::Default => Some(match btn {
+                ControlsButton::ToggleConnectionMode => {
+                    CommandId::from(CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE)
+                }
+                ControlsButton::ZoomIn => CommandId::from(CMD_NODE_GRAPH_ZOOM_IN),
+                ControlsButton::ZoomOut => CommandId::from(CMD_NODE_GRAPH_ZOOM_OUT),
+                ControlsButton::FrameAll => CommandId::from(CMD_NODE_GRAPH_FRAME_ALL),
+                ControlsButton::FrameSelection => CommandId::from(CMD_NODE_GRAPH_FRAME_SELECTION),
+                ControlsButton::ResetView => CommandId::from(CMD_NODE_GRAPH_RESET_VIEW),
+            }),
         };
-        cx.dispatch_command(id);
+
+        if let Some(id) = id {
+            cx.dispatch_command(id);
+        }
         cx.request_redraw();
     }
 
