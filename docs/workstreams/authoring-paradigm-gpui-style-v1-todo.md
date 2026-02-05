@@ -73,10 +73,10 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Add a small `DepsBuilder` helper:
+- `[x]` Add a small `DepsBuilder` helper:
   - `deps.model_rev(&Model<T>)` / `deps.global_token::<T>()` / batch variants.
-- `[ ]` Add keyed selector sugar (`use_selector_keyed(key, ...)`) to avoid hook-like misuse in loops.
-- `[ ]` Add debug diagnostics for common misuse:
+- `[x]` Add keyed selector sugar (`use_selector_keyed(key, ...)`) to avoid hook-like misuse in loops.
+- `[x]` Add debug diagnostics for common misuse:
   - called in unstable order,
   - deps closure does not observe what it encodes.
 
