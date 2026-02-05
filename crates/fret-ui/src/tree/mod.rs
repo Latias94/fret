@@ -931,6 +931,7 @@ pub struct UiDebugWidgetMeasureHotspot {
 pub struct UiDebugPaintWidgetHotspot {
     pub node: NodeId,
     pub element: Option<GlobalElementId>,
+    pub element_kind: Option<&'static str>,
     pub widget_type: &'static str,
     pub inclusive_time: Duration,
     pub exclusive_time: Duration,

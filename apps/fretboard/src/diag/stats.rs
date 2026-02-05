@@ -390,6 +390,7 @@ pub(super) struct BundleStatsSnapshotRow {
 pub(super) struct BundleStatsPaintWidgetHotspot {
     pub(super) node: u64,
     pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
     pub(super) widget_type: Option<String>,
     pub(super) paint_time_us: u64,
     pub(super) inclusive_time_us: u64,
@@ -732,11 +733,12 @@ impl BundleStatsReport {
                     .take(3)
                     .map(|h| {
                         let mut s = format!(
-                            "us={} ops={}/{} node={} type={}",
+                            "us={} ops={}/{} node={} kind={} type={}",
                             h.paint_time_us,
                             h.exclusive_scene_ops_delta,
                             h.inclusive_scene_ops_delta,
                             h.node,
+                            h.element_kind.as_deref().unwrap_or("?"),
                             h.widget_type.as_deref().unwrap_or("?"),
                         );
                         if let Some(test_id) = h.test_id.as_deref()
@@ -2013,6 +2015,13 @@ impl BundleStatsReport {
                         h_obj.insert(
                             "element".to_string(),
                             h.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_kind".to_string(),
+                            h.element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
                         );
                         h_obj.insert(
                             "widget_type".to_string(),
@@ -6048,6 +6057,10 @@ fn snapshot_paint_widget_hotspots(
         .map(|h| BundleStatsPaintWidgetHotspot {
             node: h.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
             element: h.get("element").and_then(|v| v.as_u64()),
+            element_kind: h
+                .get("element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
             widget_type: h
                 .get("widget_type")
                 .and_then(|v| v.as_str())

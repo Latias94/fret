@@ -562,9 +562,14 @@ impl<H: UiHost> UiTree<H> {
             }
 
             let element = self.nodes.get(node).and_then(|n| n.element);
+            let element_kind = self.window.and_then(|window| {
+                crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|record| record.instance.kind_name())
+            });
             let record = UiDebugPaintWidgetHotspot {
                 node,
                 element,
+                element_kind,
                 widget_type,
                 inclusive_time,
                 exclusive_time,

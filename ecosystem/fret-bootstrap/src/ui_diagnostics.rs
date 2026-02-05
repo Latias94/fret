@@ -5752,6 +5752,8 @@ pub struct UiPaintWidgetHotspotV1 {
     pub node: u64,
     #[serde(default)]
     pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
     pub widget_type: String,
     pub paint_time_us: u64,
     #[serde(default)]
@@ -5767,6 +5769,7 @@ impl UiPaintWidgetHotspotV1 {
         Self {
             node: h.node.data().as_ffi(),
             element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
             widget_type: h.widget_type.to_string(),
             paint_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
