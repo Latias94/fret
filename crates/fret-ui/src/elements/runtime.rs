@@ -770,33 +770,32 @@ impl WindowElementState {
 
     pub(crate) fn retain_nodes(&mut self, f: impl FnMut(&GlobalElementId, &mut NodeEntry) -> bool) {
         self.nodes.retain(f);
-        let frame_id = self.prepared_frame;
-        let is_live_this_frame =
-            |id: GlobalElementId, nodes: &HashMap<GlobalElementId, NodeEntry>| {
-                nodes
-                    .get(&id)
-                    .is_some_and(|entry| entry.last_seen_frame == frame_id)
-            };
         if let Some(selection) = self.active_text_selection
             && !self.nodes.contains_key(&selection.element)
         {
             self.active_text_selection = None;
         }
-        if self
-            .hovered_pressable
-            .is_some_and(|id| !is_live_this_frame(id, &self.nodes))
+    }
+
+    pub(crate) fn clear_stale_interaction_targets_for_frame(&mut self, frame_id: FrameId) {
+        let is_live_this_frame = |id: GlobalElementId| {
+            self.nodes
+                .get(&id)
+                .is_some_and(|entry| entry.last_seen_frame == frame_id)
+        };
+
+        if let Some(id) = self.hovered_pressable
+            && !is_live_this_frame(id)
         {
             self.hovered_pressable = None;
         }
-        if self
-            .pressed_pressable
-            .is_some_and(|id| !is_live_this_frame(id, &self.nodes))
+        if let Some(id) = self.pressed_pressable
+            && !is_live_this_frame(id)
         {
             self.pressed_pressable = None;
         }
-        if self
-            .hovered_hover_region
-            .is_some_and(|id| !is_live_this_frame(id, &self.nodes))
+        if let Some(id) = self.hovered_hover_region
+            && !is_live_this_frame(id)
         {
             self.hovered_hover_region = None;
         }
