@@ -266,7 +266,7 @@ Non-goals:
           - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
             (`material3-select-trigger-error`).
 
-- [ ] Autocomplete (outlined + filled) MVP surface.
+- [x] Autocomplete (outlined + filled) MVP surface.
   - Goal: provide an editable trigger with a listbox overlay using Material Web autocomplete tokens,
     aligned with Compose exposed dropdown menus at the outcome level.
   - Subtasks:
@@ -290,8 +290,14 @@ Non-goals:
         - [x] Overlay sizing parity with `Select` (match-anchor-width + clamp height, collision padding).
         - [x] A11y: `ComboBox` input + `ListBox` overlay, with `controls_element` + `labelled_by_element`.
         - [x] Keyboard: ArrowDown/ArrowUp open + active item, Enter selects, Escape dismisses.
-        - [ ] Gallery page + dialog-embedded probe (avoid clipping regressions).
-        - [ ] Headless golden suites (visual regression gates across schemes/scales).
+        - [x] Gallery page + dialog-embedded probe (avoid clipping regressions).
+          - Evidence:
+            - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_AUTOCOMPLETE`)
+            - `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_autocomplete`)
+        - [x] Headless golden suites (visual regression gates across schemes/scales).
+          - Evidence:
+            - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_autocomplete_suite_goldens_v1`)
+            - `goldens/material3-headless/v1/material3-autocomplete.scale1_0.light.tonal_spot.json` (representative; full matrix is generated).
   - References:
     - Material Web tokens:
       `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-autocomplete.scss`,
