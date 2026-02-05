@@ -235,6 +235,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) hit_test_bounds_tree_misses: u32,
     pub(super) hit_test_bounds_tree_hits: u32,
     pub(super) hit_test_bounds_tree_candidate_rejected: u32,
+    pub(super) hit_test_cached_path_time_us: u64,
+    pub(super) hit_test_bounds_tree_query_time_us: u64,
+    pub(super) hit_test_candidate_self_only_time_us: u64,
+    pub(super) hit_test_fallback_traversal_time_us: u64,
     pub(super) total_time_us: u64,
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
@@ -1151,6 +1155,22 @@ impl BundleStatsReport {
                 obj.insert(
                     "hit_test_bounds_tree_candidate_rejected".to_string(),
                     Value::from(row.hit_test_bounds_tree_candidate_rejected),
+                );
+                obj.insert(
+                    "hit_test_cached_path_time_us".to_string(),
+                    Value::from(row.hit_test_cached_path_time_us),
+                );
+                obj.insert(
+                    "hit_test_bounds_tree_query_time_us".to_string(),
+                    Value::from(row.hit_test_bounds_tree_query_time_us),
+                );
+                obj.insert(
+                    "hit_test_candidate_self_only_time_us".to_string(),
+                    Value::from(row.hit_test_candidate_self_only_time_us),
+                );
+                obj.insert(
+                    "hit_test_fallback_traversal_time_us".to_string(),
+                    Value::from(row.hit_test_fallback_traversal_time_us),
                 );
                 obj.insert("total_time_us".to_string(), Value::from(row.total_time_us));
                 obj.insert(
@@ -4165,6 +4185,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0)
                 .min(u32::MAX as u64)
                 as u32;
+            let hit_test_cached_path_time_us = stats
+                .and_then(|m| m.get("hit_test_cached_path_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let hit_test_bounds_tree_query_time_us = stats
+                .and_then(|m| m.get("hit_test_bounds_tree_query_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let hit_test_candidate_self_only_time_us = stats
+                .and_then(|m| m.get("hit_test_candidate_self_only_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let hit_test_fallback_traversal_time_us = stats
+                .and_then(|m| m.get("hit_test_fallback_traversal_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let total_time_us = layout_time_us
                 .saturating_add(prepaint_time_us)
                 .saturating_add(paint_time_us);
@@ -4720,6 +4756,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 hit_test_bounds_tree_misses,
                 hit_test_bounds_tree_hits,
                 hit_test_bounds_tree_candidate_rejected,
+                hit_test_cached_path_time_us,
+                hit_test_bounds_tree_query_time_us,
+                hit_test_candidate_self_only_time_us,
+                hit_test_fallback_traversal_time_us,
                 total_time_us,
                 layout_nodes_performed,
                 paint_nodes_performed,

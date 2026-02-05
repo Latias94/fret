@@ -6183,6 +6183,14 @@ pub struct UiFrameStatsV1 {
     pub hit_test_path_cache_hits: u32,
     #[serde(default)]
     pub hit_test_path_cache_misses: u32,
+    #[serde(default)]
+    pub hit_test_cached_path_time_us: u64,
+    #[serde(default)]
+    pub hit_test_bounds_tree_query_time_us: u64,
+    #[serde(default)]
+    pub hit_test_candidate_self_only_time_us: u64,
+    #[serde(default)]
+    pub hit_test_fallback_traversal_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6462,6 +6470,14 @@ impl UiFrameStatsV1 {
             hit_test_bounds_tree_nodes_pushed: stats.hit_test_bounds_tree_nodes_pushed,
             hit_test_path_cache_hits: stats.hit_test_path_cache_hits,
             hit_test_path_cache_misses: stats.hit_test_path_cache_misses,
+            hit_test_cached_path_time_us: stats.hit_test_cached_path_time.as_micros() as u64,
+            hit_test_bounds_tree_query_time_us: stats.hit_test_bounds_tree_query_time.as_micros()
+                as u64,
+            hit_test_candidate_self_only_time_us: stats
+                .hit_test_candidate_self_only_time
+                .as_micros() as u64,
+            hit_test_fallback_traversal_time_us: stats.hit_test_fallback_traversal_time.as_micros()
+                as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
             prepaint_nodes_visited: stats.prepaint_nodes_visited,

@@ -228,6 +228,14 @@ pub struct UiDebugFrameStats {
     pub hit_test_path_cache_hits: u32,
     /// Number of hit-test queries that fell back to bounds-tree or full traversal (cache miss).
     pub hit_test_path_cache_misses: u32,
+    /// Total wall time spent attempting the cached-path hit-test fast path in the current frame.
+    pub hit_test_cached_path_time: Duration,
+    /// Total wall time spent querying the bounds-tree index in the current frame.
+    pub hit_test_bounds_tree_query_time: Duration,
+    /// Total wall time spent validating bounds-tree candidates (`hit_test_node_self_only`) in the current frame.
+    pub hit_test_candidate_self_only_time: Duration,
+    /// Total wall time spent in full traversal fallback hit-testing in the current frame.
+    pub hit_test_fallback_traversal_time: Duration,
     pub layout_time: Duration,
     pub layout_collect_roots_time: Duration,
     pub layout_invalidate_scroll_handle_bindings_time: Duration,
@@ -1871,6 +1879,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.hit_test_bounds_tree_nodes_pushed = 0;
         self.debug_stats.hit_test_path_cache_hits = 0;
         self.debug_stats.hit_test_path_cache_misses = 0;
+        self.debug_stats.hit_test_cached_path_time = Duration::default();
+        self.debug_stats.hit_test_bounds_tree_query_time = Duration::default();
+        self.debug_stats.hit_test_candidate_self_only_time = Duration::default();
+        self.debug_stats.hit_test_fallback_traversal_time = Duration::default();
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();
