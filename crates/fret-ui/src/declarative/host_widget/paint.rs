@@ -333,7 +333,12 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
+                    let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    if let Some(prepare_started) = prepare_started {
+                        cx.tree
+                            .debug_record_paint_text_prepare(prepare_started.elapsed());
+                    }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -400,7 +405,12 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
+                    let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    if let Some(prepare_started) = prepare_started {
+                        cx.tree
+                            .debug_record_paint_text_prepare(prepare_started.elapsed());
+                    }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
@@ -468,7 +478,12 @@ impl ElementHostWidget {
                     if let Some(blob) = self.text_cache.blob.take() {
                         cx.services.text().release(blob);
                     }
+                    let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
+                    if let Some(prepare_started) = prepare_started {
+                        cx.tree
+                            .debug_record_paint_text_prepare(prepare_started.elapsed());
+                    }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
                     self.text_cache.prepared_scale_factor_bits = Some(scale_bits);

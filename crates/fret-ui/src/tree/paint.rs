@@ -44,6 +44,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_host_widget_observed_globals_items = 0;
             self.debug_stats.paint_host_widget_instance_lookup_time = Duration::default();
             self.debug_stats.paint_host_widget_instance_lookup_calls = 0;
+            self.debug_stats.paint_text_prepare_time = Duration::default();
+            self.debug_stats.paint_text_prepare_calls = 0;
             self.debug_paint_widget_exclusive_started = None;
             self.debug_stats.paint_input_context_time = Duration::default();
             self.debug_stats.paint_scroll_handle_invalidation_time = Duration::default();

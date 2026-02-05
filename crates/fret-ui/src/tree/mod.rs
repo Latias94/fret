@@ -335,6 +335,10 @@ pub struct UiDebugFrameStats {
     pub paint_host_widget_instance_lookup_time: Duration,
     /// Number of `ElementInstance` lookups performed inside `ElementHostWidget::paint_impl`.
     pub paint_host_widget_instance_lookup_calls: u32,
+    /// Total wall time spent preparing text blobs (`TextSystem::prepare`) during `Widget::paint`.
+    pub paint_text_prepare_time: Duration,
+    /// Number of text blob preparations performed during `Widget::paint`.
+    pub paint_text_prepare_calls: u32,
     pub paint_input_context_time: Duration,
     pub paint_scroll_handle_invalidation_time: Duration,
     pub paint_collect_roots_time: Duration,
@@ -2212,6 +2216,18 @@ impl<H: UiHost> UiTree<H> {
             .debug_stats
             .paint_host_widget_instance_lookup_calls
             .saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_paint_text_prepare(&mut self, elapsed: Duration) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_text_prepare_time = self
+            .debug_stats
+            .paint_text_prepare_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_text_prepare_calls =
+            self.debug_stats.paint_text_prepare_calls.saturating_add(1);
     }
 
     pub(crate) fn debug_record_hover_edge_pressable(&mut self) {
