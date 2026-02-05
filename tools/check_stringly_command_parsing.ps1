@@ -34,13 +34,20 @@ $script:HadErrors = $false
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $roots = @(
     "apps/fret-examples/src",
-    "apps/fretboard/src/scaffold"
+    "apps/fretboard/src/scaffold",
+    "apps/fret-ui-gallery/src"
 )
 
-$rule = @{
-    Rule    = "no-command-strip-prefix-parsing"
-    Pattern = "command\.as_str\(\)\.strip_prefix\("
-}
+$rules = @(
+    @{
+        Rule    = "no-command-strip-prefix-parsing"
+        Pattern = "command\.as_str\(\)\.strip_prefix\("
+    },
+    @{
+        Rule    = "no-command-cmd-prefix-strip-prefix-parsing"
+        Pattern = "strip_prefix\((?:crate::commands::)?CMD_[A-Z0-9_]+_PREFIX\)"
+    }
+)
 
 $rootPaths = @()
 foreach ($root in $roots) {
@@ -51,9 +58,11 @@ $files = Get-ChildItem -Path $rootPaths -Recurse -Filter *.rs -File
 foreach ($file in $files) {
     $rel = Normalize-RepoPath -RepoRoot $repoRoot -Path $file.FullName
 
-    $matches = Select-String -Path $file.FullName -Pattern $rule.Pattern -AllMatches
-    foreach ($match in $matches) {
-        Write-Violation -Rule $rule.Rule -Path $rel -LineNumber $match.LineNumber -Line $match.Line
+    foreach ($rule in $rules) {
+        $matches = Select-String -Path $file.FullName -Pattern $rule.Pattern -AllMatches -CaseSensitive
+        foreach ($match in $matches) {
+            Write-Violation -Rule $rule.Rule -Path $rel -LineNumber $match.LineNumber -Line $match.Line
+        }
     }
 }
 
@@ -62,4 +71,3 @@ if ($script:HadErrors) {
 }
 
 Write-Host "Stringly command parsing check passed."
-

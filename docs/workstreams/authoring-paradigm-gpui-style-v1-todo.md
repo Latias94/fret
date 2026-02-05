@@ -141,11 +141,14 @@ Exit criteria:
 
 Tasks:
 
-- `[~]` Migrate remaining stringly command parsing patterns in demos/templates.
-  - Evidence: `apps/fret-examples/src/components_gallery.rs`
-  - Evidence: `apps/fret-examples/src/table_demo.rs`
+- `[x]` Migrate remaining stringly command parsing patterns in demos/templates.
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs`
 - `[~]` Migrate additional ad-hoc async caches in ecosystem crates to `fret-query`.
   - Evidence: `ecosystem/fret-markdown/src/mathjax_svg_support.rs`
 - `[x]` Add a lint-style checklist or CI grep gate for `"strip_prefix(\"...\""` patterns in demos.
   - Evidence: `.github/workflows/consistency-checks.yml`
   - Evidence: `tools/check_stringly_command_parsing.ps1`
+- `[ ]` Document a view-cache-safe pattern for dynamic command routing.
+  - Motivation: `MessageRouter` is per-frame and view-cache reuse can skip subtree re-builds.
+  - Goal: a recommended stable `CommandId` → message lookup for cached subtrees.
