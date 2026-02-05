@@ -11,6 +11,7 @@ mod message_response;
 mod message_toolbar;
 mod prompt_input;
 mod sources_block;
+mod tool;
 mod tool_call_block;
 
 pub use ai_chat::*;
@@ -26,4 +27,5 @@ pub use message_response::*;
 pub use message_toolbar::*;
 pub use prompt_input::*;
 pub use sources_block::*;
+pub use tool::*;
 pub use tool_call_block::*;
