@@ -114,7 +114,7 @@ pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
-pub use calendar::Calendar;
+pub use calendar::{Calendar, CalendarCaptionLayout};
 pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
