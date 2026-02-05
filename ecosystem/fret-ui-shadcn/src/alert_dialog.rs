@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    RenderTransformProps, SemanticsProps, SizeStyle,
+    RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -379,15 +379,13 @@ impl AlertDialogContent {
 
         let (labelled_by_element, described_by_element) =
             crate::a11y_modal::modal_relations_for_current_scope(cx.app);
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::AlertDialog,
-                labelled_by_element,
-                described_by_element,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
-        )
+
+        container.attach_semantics(SemanticsDecoration {
+            role: Some(SemanticsRole::AlertDialog),
+            labelled_by_element,
+            described_by_element,
+            ..Default::default()
+        })
     }
 }
 

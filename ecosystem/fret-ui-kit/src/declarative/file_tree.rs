@@ -3,7 +3,9 @@ use std::sync::Arc;
 
 use fret_core::{Color, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, LayoutStyle, Length, PressableA11y, PressableProps};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, Length, PressableA11y, PressableProps, SemanticsDecoration,
+};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -310,12 +312,11 @@ where
         row,
     );
 
-    let mut semantics = fret_ui::element::SemanticsProps::default();
-    semantics.role = fret_core::SemanticsRole::List;
-    semantics.layout = layout;
-    semantics.test_id = props.debug_root_test_id.clone();
-
-    let list = cx.semantics(semantics, |_cx| vec![list]);
+    let list = list.attach_semantics(SemanticsDecoration {
+        role: Some(fret_core::SemanticsRole::List),
+        test_id: props.debug_root_test_id.clone(),
+        ..Default::default()
+    });
 
     // Keep a cache root boundary so the file-tree surface can be adopted as a panel-level unit.
     // Consumers can still wrap this in their own cache roots if needed.
