@@ -4,9 +4,11 @@
 //! - Token-driven chrome via `md.comp.(outlined|filled)-text-field.*`.
 //! - Hover/focus/error/disabled outcomes via theme tokens (best-effort).
 
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, Edges, NodeId, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, HoverRegionProps, Length, MainAlign, Overflow,
@@ -22,6 +24,7 @@ use fret_ui_kit::{
 use crate::foundation::floating_label;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
+use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -29,6 +32,13 @@ pub enum TextFieldVariant {
     #[default]
     Outlined,
     Filled,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum TextFieldTokenNamespace {
+    #[default]
+    TextField,
+    Autocomplete,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -184,6 +194,12 @@ pub struct TextField {
     error: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    a11y_role: Option<SemanticsRole>,
+    active_descendant: Option<NodeId>,
+    controls_element: Option<u64>,
+    expanded: Option<bool>,
+    input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    token_namespace: TextFieldTokenNamespace,
 }
 
 impl std::fmt::Debug for TextField {
@@ -198,6 +214,8 @@ impl std::fmt::Debug for TextField {
             .field("error", &self.error)
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
+            .field("a11y_role", &self.a11y_role)
+            .field("token_namespace", &self.token_namespace)
             .finish()
     }
 }
@@ -215,11 +233,22 @@ impl TextField {
             error: false,
             a11y_label: None,
             test_id: None,
+            a11y_role: None,
+            active_descendant: None,
+            controls_element: None,
+            expanded: None,
+            input_id_out: None,
+            token_namespace: TextFieldTokenNamespace::TextField,
         }
     }
 
     pub fn variant(mut self, variant: TextFieldVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub(crate) fn token_namespace(mut self, namespace: TextFieldTokenNamespace) -> Self {
+        self.token_namespace = namespace;
         self
     }
 
@@ -263,12 +292,45 @@ impl TextField {
         self
     }
 
+    pub fn a11y_role(mut self, role: SemanticsRole) -> Self {
+        self.a11y_role = Some(role);
+        self
+    }
+
+    pub(crate) fn active_descendant(mut self, node: Option<NodeId>) -> Self {
+        self.active_descendant = node;
+        self
+    }
+
+    pub(crate) fn controls_element(mut self, element: Option<u64>) -> Self {
+        self.controls_element = element;
+        self
+    }
+
+    pub(crate) fn expanded(mut self, expanded: Option<bool>) -> Self {
+        self.expanded = expanded;
+        self
+    }
+
+    pub(crate) fn input_id_out(mut self, out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
+        self.input_id_out = Some(out);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
 
             let variant = self.variant;
-            let height = text_field_tokens::container_height(&theme, variant);
+            let token_namespace = self.token_namespace;
+            let height = match token_namespace {
+                TextFieldTokenNamespace::TextField => {
+                    text_field_tokens::container_height(&theme, variant)
+                }
+                TextFieldTokenNamespace::Autocomplete => {
+                    autocomplete_tokens::text_field_container_height(&theme, variant)
+                }
+            };
 
             let mut hover_layout = fret_ui::element::LayoutStyle::default();
             hover_layout.size.width = Length::Fill;
@@ -285,12 +347,17 @@ impl TextField {
             let style_override = self.style;
             let disabled = self.disabled;
             let error = self.error;
+            let a11y_role = self.a11y_role;
+            let active_descendant = self.active_descendant;
+            let controls_element = self.controls_element;
+            let expanded = self.expanded;
             let a11y_label = self
                 .a11y_label
                 .clone()
                 .or_else(|| label.clone())
                 .or_else(|| placeholder.clone());
             let test_id = self.test_id.clone();
+            let input_id_out = self.input_id_out.clone();
 
             cx.hover_region(hover, move |cx, hovered| {
                 let theme = Theme::global(&*cx.app).clone();
@@ -353,14 +420,28 @@ impl TextField {
                                 focused = cx.is_focused_element(id);
                                 states = text_field_widget_states(cx, hovered, focused, disabled);
 
-                                let mut chrome = text_field_tokens::text_input_style(
-                                    &theme,
-                                    variant_for_children,
-                                    focused,
-                                    hovered,
-                                    disabled,
-                                    error,
-                                );
+                                let mut chrome = match token_namespace {
+                                    TextFieldTokenNamespace::TextField => {
+                                        text_field_tokens::text_input_style(
+                                            &theme,
+                                            variant_for_children,
+                                            focused,
+                                            hovered,
+                                            disabled,
+                                            error,
+                                        )
+                                    }
+                                    TextFieldTokenNamespace::Autocomplete => {
+                                        autocomplete_tokens::text_input_style(
+                                            &theme,
+                                            variant_for_children,
+                                            focused,
+                                            hovered,
+                                            disabled,
+                                            error,
+                                        )
+                                    }
+                                };
                                 apply_text_field_input_overrides(
                                     &theme,
                                     states,
@@ -544,9 +625,13 @@ impl TextField {
                                 props.layout.size.width = Length::Fill;
                                 props.layout.size.height = Length::Fill;
                                 props.a11y_label = a11y_label.clone();
-                                props.a11y_role = Some(SemanticsRole::TextField);
+                                props.a11y_role =
+                                    Some(a11y_role.unwrap_or(SemanticsRole::TextField));
                                 props.test_id = test_id.clone();
                                 props.placeholder = placeholder.clone();
+                                props.active_descendant = active_descendant;
+                                props.controls_element = controls_element;
+                                props.expanded = expanded;
                                 props.chrome = chrome;
                                 props.text_style =
                                     crate::foundation::context::inherited_text_style(cx)
@@ -558,6 +643,9 @@ impl TextField {
 
                                 props
                             });
+                            if let Some(out) = input_id_out.as_ref() {
+                                out.set(Some(input_id));
+                            }
 
                             // Keep subtree shape stable across hover transitions (ADR 0181).
                             // We always include the overlay node, but only paint when `state_layer`

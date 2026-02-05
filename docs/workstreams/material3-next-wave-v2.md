@@ -280,13 +280,18 @@ Non-goals:
       - Evidence:
         - `crates/fret-ui/src/element.rs`
         - `crates/fret-ui/src/declarative/host_widget/semantics.rs`
-    - [ ] Implement `Autocomplete` component in `ecosystem/fret-ui-material3` (visual + interaction).
+    - [x] Implement `Autocomplete` component in `ecosystem/fret-ui-material3` (visual + interaction).
+      - Evidence:
+        - `ecosystem/fret-ui-material3/src/autocomplete.rs`
+        - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextFieldTokenNamespace::Autocomplete` + combobox semantics knobs)
+        - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_autocomplete_semantics_v1`)
       - Requirements (v1):
-        - Outlined + filled variants (token-driven defaults only; no non-Material fallbacks).
-        - Overlay sizing parity with `Select` (match-anchor-width + clamp height, collision padding).
-        - A11y: `ComboBox` trigger + `ListBox` overlay, with `controls_element` + `labelled_by_element`.
-        - Keyboard: ArrowDown/ArrowUp open, Escape dismiss + focus restore, roving in listbox.
-        - Headless suites + gallery page + at least one dialog-embedded probe (avoid clipping regressions).
+        - [x] Outlined + filled variants (token-driven defaults only; no non-Material fallbacks).
+        - [x] Overlay sizing parity with `Select` (match-anchor-width + clamp height, collision padding).
+        - [x] A11y: `ComboBox` input + `ListBox` overlay, with `controls_element` + `labelled_by_element`.
+        - [x] Keyboard: ArrowDown/ArrowUp open + active item, Enter selects, Escape dismisses.
+        - [ ] Gallery page + dialog-embedded probe (avoid clipping regressions).
+        - [ ] Headless golden suites (visual regression gates across schemes/scales).
   - References:
     - Material Web tokens:
       `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-autocomplete.scss`,

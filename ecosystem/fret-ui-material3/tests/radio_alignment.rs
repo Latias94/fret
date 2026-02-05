@@ -8344,6 +8344,176 @@ fn material3_headless_overlays_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_autocomplete_semantics_v1() {
+    use fret_core::SemanticsRole;
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Autocomplete, AutocompleteItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let model = app.models_mut().insert(String::new());
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let ac = Autocomplete::new(model.clone())
+                    .items(items.clone())
+                    .a11y_label("autocomplete")
+                    .test_id("material3-autocomplete")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), ac)]
+            })
+        };
+
+    // Frame 1: build stable input id + bounds.
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let input_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-autocomplete")).then_some(node.id)
+            })
+        })
+        .expect("expected material3-autocomplete input node in semantics snapshot");
+
+    ui.set_focus(Some(input_node));
+
+    // Frame 2: focus visible to the widget.
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    // Open via keyboard.
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    // Frame 3/4: overlay created, then relationships stabilize (controls/active-descendant).
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected autocomplete popover overlay to be open after ArrowDown"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete"))
+        .expect("combobox input node");
+    assert_eq!(input.role, SemanticsRole::ComboBox);
+    assert!(
+        input.flags.expanded,
+        "combobox input should report expanded=true while open"
+    );
+
+    let list = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-listbox"))
+        .expect("listbox node");
+    assert!(
+        input.controls.iter().any(|id| *id == list.id),
+        "combobox input should control the listbox"
+    );
+    assert!(
+        list.labelled_by.iter().any(|id| *id == input.id),
+        "listbox should be labelled by the combobox input"
+    );
+
+    let active = input
+        .active_descendant
+        .expect("active_descendant should be set");
+    let active_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == active)
+        .expect("active_descendant should reference a node in the snapshot");
+    assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
+
+    // Typing still works while the overlay is open.
+    ui.set_focus(Some(input.id));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::TextInput("a".to_string()),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete"))
+        .expect("combobox input node after typing");
+    assert_eq!(input.value.as_deref(), Some("a"));
+}
+
+#[test]
 fn material3_headless_menu_dialog_style_suite_goldens_v1() {
     use fret_core::{Color, Corners};
     use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, Length, MainAlign};
