@@ -224,6 +224,10 @@ pub struct UiDebugFrameStats {
     pub hit_test_bounds_tree_nodes_visited: u32,
     /// Total bounds-tree nodes pushed to the search stack across all queries in the current frame.
     pub hit_test_bounds_tree_nodes_pushed: u32,
+    /// Number of hit-test queries that reused the cached path (no bounds-tree query needed).
+    pub hit_test_path_cache_hits: u32,
+    /// Number of hit-test queries that fell back to bounds-tree or full traversal (cache miss).
+    pub hit_test_path_cache_misses: u32,
     pub layout_time: Duration,
     pub layout_collect_roots_time: Duration,
     pub layout_invalidate_scroll_handle_bindings_time: Duration,
@@ -1865,6 +1869,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.hit_test_bounds_tree_candidate_rejected = 0;
         self.debug_stats.hit_test_bounds_tree_nodes_visited = 0;
         self.debug_stats.hit_test_bounds_tree_nodes_pushed = 0;
+        self.debug_stats.hit_test_path_cache_hits = 0;
+        self.debug_stats.hit_test_path_cache_misses = 0;
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();

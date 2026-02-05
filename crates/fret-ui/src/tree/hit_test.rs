@@ -24,10 +24,20 @@ impl<H: UiHost> UiTree<H> {
                         && let Some(hit) =
                             self.try_hit_test_along_cached_path(&cache.path, position)
                     {
+                        if self.debug_enabled {
+                            self.debug_stats.hit_test_path_cache_hits =
+                                self.debug_stats.hit_test_path_cache_hits.saturating_add(1);
+                        }
                         self.hit_test_path_cache = Some(cache);
                         return Some(hit);
                     }
 
+                    if self.debug_enabled {
+                        self.debug_stats.hit_test_path_cache_misses = self
+                            .debug_stats
+                            .hit_test_path_cache_misses
+                            .saturating_add(1);
+                    }
                     let hit = self.hit_test_layer_bounds_tree_or_fallback(root, position);
                     self.update_hit_test_path_cache(root, hit);
                     return hit;
