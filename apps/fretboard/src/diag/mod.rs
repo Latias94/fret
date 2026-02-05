@@ -1331,7 +1331,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
-                pack_defaults.2,
+                pack_defaults.2 || check_pixels_changed_test_id.is_some(),
                 timeout_ms,
                 poll_ms,
             )?;
@@ -1615,7 +1615,7 @@ See: `docs/tracy.md`.\n";
                 &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
-                pack_defaults.2,
+                pack_defaults.2 || check_pixels_changed_test_id.is_some(),
                 timeout_ms,
                 poll_ms,
             )?;
@@ -2718,6 +2718,13 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
+            let suite_wants_screenshots = pack_include_screenshots
+                || check_pixels_changed_test_id.is_some()
+                || (check_pixels_changed_test_id.is_none()
+                    && scripts
+                        .iter()
+                        .any(|src| ui_gallery_script_requires_pixels_changed_gate(src)));
+
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
                 maybe_launch_demo(
@@ -2727,7 +2734,7 @@ See: `docs/tracy.md`.\n";
                     &resolved_out_dir,
                     &resolved_ready_path,
                     &resolved_exit_path,
-                    false,
+                    suite_wants_screenshots,
                     timeout_ms,
                     poll_ms,
                 )?
@@ -2743,7 +2750,7 @@ See: `docs/tracy.md`.\n";
                         &resolved_out_dir,
                         &resolved_ready_path,
                         &resolved_exit_path,
-                        false,
+                        suite_wants_screenshots,
                         timeout_ms,
                         poll_ms,
                     )?;
@@ -2978,6 +2985,10 @@ See: `docs/tracy.md`.\n";
                         ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
                             .then_some(1u64)
                             .filter(|_| check_windowed_rows_offset_changes_min.is_none());
+                    let suite_pixels_changed_test_id =
+                        ui_gallery_script_requires_pixels_changed_gate(&src)
+                            .then_some("ui-gallery-code-editor-torture-root")
+                            .filter(|_| check_pixels_changed_test_id.is_none());
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
                     let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
@@ -3037,7 +3048,9 @@ See: `docs/tracy.md`.\n";
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
-                        check_pixels_changed_test_id.as_deref(),
+                        check_pixels_changed_test_id
+                            .as_deref()
+                            .or(suite_pixels_changed_test_id),
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -5371,7 +5384,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 17] {
+fn ui_gallery_suite_scripts() -> [&'static str; 18] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -5390,6 +5403,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 17] {
         "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
     ]
 }
 
@@ -5496,7 +5510,22 @@ fn ui_gallery_script_requires_windowed_rows_offset_changes_gate(script: &Path) -
         return false;
     };
 
-    matches!(name, "ui-gallery-code-editor-torture-scroll-stability.json")
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-scroll-stability.json"
+            | "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_pixels_changed_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"
+    )
 }
 
 #[derive(Debug, Clone)]

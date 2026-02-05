@@ -2454,6 +2454,7 @@ fn preview_code_editor_mvp(
                                 .on_click(CMD_CODE_EDITOR_DUMP_TAFFY)
                                 .into_element(cx),
                             shadcn::Switch::new(soft_wrap_switch.clone())
+                                .test_id("ui-gallery-code-editor-mvp-soft-wrap")
                                 .a11y_label("Toggle soft wrap at 80 columns")
                                 .into_element(cx),
                             cx.text(if soft_wrap_enabled {
@@ -2848,6 +2849,7 @@ fn preview_code_editor_torture(
                                 .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
                                 .into_element(cx),
                             shadcn::Switch::new(soft_wrap.clone())
+                                .test_id("ui-gallery-code-editor-torture-soft-wrap")
                                 .a11y_label("Toggle soft wrap at 80 columns")
                                 .into_element(cx),
                             cx.text(if soft_wrap_enabled {
