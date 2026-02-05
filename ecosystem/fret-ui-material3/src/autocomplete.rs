@@ -14,7 +14,9 @@ use fret_core::{
     TextSpan, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::action::{ActionCx, UiActionHost};
+use fret_ui::action::{
+    ActionCx, OnPressablePointerDown, PointerDownCx, PressablePointerDownResult, UiActionHost,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, PressableA11y,
     PressableProps, ScrollProps, SemanticsProps, StyledTextProps, TextProps,
@@ -107,6 +109,8 @@ pub struct Autocomplete {
     set_query_on_select: bool,
     on_select: Option<OnAutocompleteSelect>,
     input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    show_trailing_dropdown_icon: bool,
+    trailing_dropdown_icon_a11y_label: Option<Arc<str>>,
     disabled: bool,
     error: bool,
     label: Option<Arc<str>>,
@@ -142,6 +146,8 @@ impl Autocomplete {
             set_query_on_select: true,
             on_select: None,
             input_id_out: None,
+            show_trailing_dropdown_icon: false,
+            trailing_dropdown_icon_a11y_label: None,
             disabled: false,
             error: false,
             label: None,
@@ -184,6 +190,16 @@ impl Autocomplete {
 
     pub fn input_id_out(mut self, input_id_out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
         self.input_id_out = Some(input_id_out);
+        self
+    }
+
+    pub fn trailing_dropdown_icon(mut self, show: bool) -> Self {
+        self.show_trailing_dropdown_icon = show;
+        self
+    }
+
+    pub fn trailing_dropdown_icon_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.trailing_dropdown_icon_a11y_label = Some(label.into());
         self
     }
 
@@ -234,6 +250,7 @@ struct AutocompleteRuntimeModels {
     active_index: Model<Option<usize>>,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     input_element_id: Rc<Cell<Option<GlobalElementId>>>,
+    field_element_id: Rc<Cell<Option<GlobalElementId>>>,
     listbox_element_id: Rc<Cell<Option<GlobalElementId>>>,
     option_elements: Rc<RefCell<Vec<GlobalElementId>>>,
     scroll_viewport_id: Rc<Cell<Option<GlobalElementId>>>,
@@ -258,6 +275,7 @@ fn autocomplete_runtime_models<H: UiHost>(
         active_index: cx.app.models_mut().insert(None),
         scroll_handle: fret_ui::scroll::ScrollHandle::default(),
         input_element_id: Rc::new(Cell::new(None)),
+        field_element_id: Rc::new(Cell::new(None)),
         listbox_element_id: Rc::new(Cell::new(None)),
         option_elements: Rc::new(RefCell::new(Vec::new())),
         scroll_viewport_id: Rc::new(Cell::new(None)),
@@ -474,7 +492,9 @@ fn autocomplete_into_element<H: UiHost>(
         let controls_element = runtime.listbox_element_id.get().map(|id| id.0);
 
         let input_id_out = runtime.input_element_id.clone();
-        let trigger = TextField::new(autocomplete.query.clone())
+        let field_id_out = runtime.field_element_id.clone();
+
+        let mut text_field = TextField::new(autocomplete.query.clone())
             .variant(autocomplete.variant.as_text_field_variant())
             .token_namespace(TextFieldTokenNamespace::Autocomplete)
             .label_opt(autocomplete.label.clone())
@@ -489,7 +509,53 @@ fn autocomplete_into_element<H: UiHost>(
             .controls_element(controls_element)
             .expanded(Some(open_now))
             .input_id_out(input_id_out.clone())
-            .into_element(cx);
+            .field_id_out(field_id_out.clone());
+
+        if autocomplete.show_trailing_dropdown_icon {
+            let open = runtime.open.clone();
+            let suppress_open = runtime.suppress_open.clone();
+            let active_index = runtime.active_index.clone();
+            let items = filtered_items.clone();
+            let selected_value = selected_value.clone();
+
+            let on_pointer_down: OnPressablePointerDown = Arc::new(
+                move |host, action_cx: ActionCx, _down: PointerDownCx| {
+                    let open_now = host.models_mut().get_copied(&open).unwrap_or(false);
+
+                    if open_now {
+                        let _ = host.models_mut().update(&open, |v| *v = false);
+                        let _ = host.models_mut().update(&suppress_open, |v| *v = true);
+                        host.request_redraw(action_cx.window);
+                        return PressablePointerDownResult::Continue;
+                    }
+
+                    let _ = host.models_mut().update(&suppress_open, |v| *v = false);
+                    let _ = host.models_mut().update(&open, |v| *v = true);
+
+                    let idx = selected_value.as_ref().and_then(|selected| {
+                        items.iter().position(|it| it.value.as_ref() == selected.as_ref())
+                    });
+                    let idx = idx.or_else(|| first_enabled(&items)).unwrap_or(0);
+                    let _ = host.models_mut().update(&active_index, |v| *v = Some(idx));
+
+                    host.request_redraw(action_cx.window);
+                    PressablePointerDownResult::Continue
+                },
+            );
+
+            let icon_label = autocomplete
+                .trailing_dropdown_icon_a11y_label
+                .clone()
+                .unwrap_or_else(|| Arc::<str>::from("Toggle menu"));
+
+            text_field = text_field
+                .trailing_icon(fret_icons::ids::ui::CHEVRON_DOWN)
+                .trailing_icon_a11y_label(icon_label)
+                .trailing_icon_rotation_progress(if open_now { 1.0 } else { 0.0 })
+                .on_trailing_icon_pointer_down(on_pointer_down);
+        }
+
+        let trigger = text_field.into_element(cx);
 
         let Some(input_id) = runtime.input_element_id.get() else {
             return trigger;
@@ -625,6 +691,9 @@ fn autocomplete_into_element<H: UiHost>(
             request.root_name = Some(format!("material3.autocomplete.{}", input_id.0));
             request.close_on_window_focus_lost = true;
             request.close_on_window_resize = true;
+            if let Some(field_id) = runtime.field_element_id.get() {
+                request.dismissable_branches.push(field_id);
+            }
 
             OverlayController::request(cx, request);
 

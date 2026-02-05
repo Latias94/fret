@@ -216,6 +216,7 @@ fn exposed_dropdown_into_element<H: UiHost>(
             .variant(exposed.variant)
             .open_on_focus(exposed.open_on_focus)
             .set_query_on_select(true)
+            .trailing_dropdown_icon(true)
             .input_id_out(input_id_out)
             .disabled(exposed.disabled)
             .error(exposed.error);

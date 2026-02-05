@@ -8930,6 +8930,138 @@ fn material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1() 
 }
 
 #[test]
+fn material3_exposed_dropdown_trailing_icon_toggles_overlay_v1() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{AutocompleteItem, ExposedDropdown};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let selected_value = app.models_mut().insert(None::<Arc<str>>);
+    let query = app.models_mut().insert(String::new());
+    let query_for_render = query.clone();
+
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let exposed = ExposedDropdown::new(selected_value.clone())
+                    .query(query_for_render.clone())
+                    .items(items.clone())
+                    .a11y_label("exposed dropdown")
+                    .test_id("material3-exposed-dropdown")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), exposed)]
+            })
+        };
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let icon_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-exposed-dropdown-trailing-icon"))
+                    .then_some(node.id)
+            })
+        })
+        .expect("expected trailing icon node in semantics snapshot");
+
+    let icon_bounds = ui
+        .debug_node_visual_bounds(icon_node)
+        .expect("expected trailing icon bounds");
+    let click_at = Point::new(
+        Px(icon_bounds.origin.x.0 + icon_bounds.size.width.0 * 0.5),
+        Px(icon_bounds.origin.y.0 + icon_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected popover overlay to be open after clicking the trailing icon"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        !stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected popover overlay to be closed after clicking the trailing icon again"
+    );
+}
+
+#[test]
 fn material3_headless_autocomplete_suite_goldens_v1() {
     use fret_ui::element::{FlexProps, Length};
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};

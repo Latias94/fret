@@ -20,7 +20,10 @@
     },
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-material3-exposed-dropdown" }
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-exposed-dropdown-trailing-icon"
+      }
     },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
@@ -74,7 +77,33 @@
     },
 
     { "type": "capture_bundle", "label": "ui-gallery-material3-exposed-dropdown-filtering" },
-    { "type": "capture_screenshot", "label": "ui-gallery-material3-exposed-dropdown-filtering" }
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-material3-exposed-dropdown-filtering-open"
+    },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-exposed-dropdown-trailing-icon"
+      }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-exposed-dropdown-listbox"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-material3-exposed-dropdown-filtering-closed"
+    }
   ]
 }
-

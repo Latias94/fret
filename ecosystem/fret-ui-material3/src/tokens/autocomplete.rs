@@ -65,6 +65,125 @@ pub(crate) fn text_input_style(
     }
 }
 
+pub(crate) fn trailing_icon_size(theme: &Theme, variant: TextFieldVariant) -> Px {
+    let key = match variant {
+        TextFieldVariant::Outlined => "md.comp.outlined-autocomplete.text-field.trailing-icon.size",
+        TextFieldVariant::Filled => "md.comp.filled-autocomplete.text-field.trailing-icon.size",
+    };
+    theme.metric_by_key(key).unwrap_or(Px(24.0))
+}
+
+pub(crate) fn trailing_icon_color(
+    theme: &Theme,
+    variant: TextFieldVariant,
+    hovered: bool,
+    disabled: bool,
+    error: bool,
+    focused: bool,
+) -> (Color, f32) {
+    let (color_key, opacity_key) = if disabled {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.disabled.trailing-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.disabled.trailing-icon.color"
+                }
+            },
+            Some(match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.disabled.trailing-icon.opacity"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.disabled.trailing-icon.opacity"
+                }
+            }),
+        )
+    } else if error && focused {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.error.focus.trailing-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.error.focus.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error && hovered {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.error.hover.trailing-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.error.hover.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    } else if error {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.error.trailing-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.error.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    } else if focused {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.focus.trailing-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.focus.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    } else if hovered {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.hover.trailing-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.hover.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    } else {
+        (
+            match variant {
+                TextFieldVariant::Outlined => {
+                    "md.comp.outlined-autocomplete.text-field.trailing-icon.color"
+                }
+                TextFieldVariant::Filled => {
+                    "md.comp.filled-autocomplete.text-field.trailing-icon.color"
+                }
+            },
+            None,
+        )
+    };
+
+    let color = theme
+        .color_by_key(color_key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+    let opacity = opacity_key
+        .and_then(|k| theme.number_by_key(k))
+        .unwrap_or(1.0);
+    (color, opacity)
+}
+
 fn outlined_text_input_style(
     theme: &Theme,
     focused: bool,
