@@ -197,6 +197,32 @@ impl MenuBar {
         Self { menus: Vec::new() }
     }
 
+    /// Normalize the menu structure for display across menu surfaces.
+    ///
+    /// This is a best-effort "shape cleanup" pass intended to prevent drift between:
+    /// - OS menubars (runner mappings),
+    /// - in-window menubars (overlay renderers),
+    /// - other menu-like surfaces that derive from `MenuBar`.
+    ///
+    /// Current normalization rules:
+    /// - remove leading separators,
+    /// - collapse duplicate separators,
+    /// - remove trailing separators,
+    /// - recursively drop empty submenus (after normalizing their children).
+    ///
+    /// Note: this does **not** apply enable/disable gating; that is handled by
+    /// `WindowCommandGatingSnapshot` and surface-specific policies.
+    pub fn normalize(&mut self) {
+        for menu in &mut self.menus {
+            normalize_menu_items(&mut menu.items);
+        }
+    }
+
+    pub fn normalized(mut self) -> Self {
+        self.normalize();
+        self
+    }
+
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, MenuBarError> {
         let version: MenuBarVersionOnly =
             serde_json::from_slice(bytes).map_err(|source| MenuBarError::ParseFailed { source })?;
@@ -262,6 +288,45 @@ impl MenuBar {
 
         Ok(MenuBar { menus })
     }
+}
+
+fn normalize_menu_items(items: &mut Vec<MenuItem>) {
+    let mut out: Vec<MenuItem> = Vec::with_capacity(items.len());
+    let mut last_was_separator = false;
+
+    for item in std::mem::take(items) {
+        match item {
+            MenuItem::Separator => {
+                if out.is_empty() || last_was_separator {
+                    continue;
+                }
+                out.push(MenuItem::Separator);
+                last_was_separator = true;
+            }
+            MenuItem::Submenu {
+                title,
+                when,
+                mut items,
+            } => {
+                normalize_menu_items(&mut items);
+                if items.is_empty() {
+                    continue;
+                }
+                out.push(MenuItem::Submenu { title, when, items });
+                last_was_separator = false;
+            }
+            other => {
+                out.push(other);
+                last_was_separator = false;
+            }
+        }
+    }
+
+    while matches!(out.last(), Some(MenuItem::Separator)) {
+        out.pop();
+    }
+
+    *items = out;
 }
 
 impl MenuBarConfig {
@@ -1247,6 +1312,88 @@ mod tests {
                 ],
             }],
         }
+    }
+
+    #[test]
+    fn normalize_removes_leading_trailing_and_duplicate_separators() {
+        let mut bar = MenuBar {
+            menus: vec![Menu {
+                title: Arc::from("File"),
+                role: None,
+                items: vec![
+                    MenuItem::Separator,
+                    MenuItem::Separator,
+                    MenuItem::Command {
+                        command: CommandId::new("app.open"),
+                        when: None,
+                    },
+                    MenuItem::Separator,
+                    MenuItem::Separator,
+                    MenuItem::SystemMenu {
+                        title: Arc::from("Services"),
+                        menu_type: SystemMenuType::Services,
+                    },
+                    MenuItem::Separator,
+                ],
+            }],
+        };
+
+        bar.normalize();
+
+        assert_eq!(bar.menus.len(), 1);
+        assert!(matches!(
+            bar.menus[0].items.as_slice(),
+            [
+                MenuItem::Command { .. },
+                MenuItem::Separator,
+                MenuItem::SystemMenu { .. }
+            ]
+        ));
+    }
+
+    #[test]
+    fn normalize_drops_empty_submenus_recursively() {
+        let mut bar = MenuBar {
+            menus: vec![Menu {
+                title: Arc::from("File"),
+                role: None,
+                items: vec![
+                    MenuItem::Submenu {
+                        title: Arc::from("Empty"),
+                        when: None,
+                        items: vec![MenuItem::Separator, MenuItem::Separator],
+                    },
+                    MenuItem::Submenu {
+                        title: Arc::from("NonEmpty"),
+                        when: None,
+                        items: vec![
+                            MenuItem::Submenu {
+                                title: Arc::from("NestedEmpty"),
+                                when: None,
+                                items: vec![MenuItem::Separator],
+                            },
+                            MenuItem::Command {
+                                command: CommandId::new("app.open"),
+                                when: None,
+                            },
+                        ],
+                    },
+                ],
+            }],
+        };
+
+        bar.normalize();
+
+        let items = &bar.menus[0].items;
+        assert_eq!(items.len(), 1);
+        let MenuItem::Submenu { title, items, .. } = &items[0] else {
+            panic!("expected submenu");
+        };
+        assert_eq!(title.as_ref(), "NonEmpty");
+        assert!(items.iter().all(|i| !matches!(
+            i,
+            MenuItem::Submenu { title, .. } if title.as_ref() == "NestedEmpty"
+        )));
     }
 
     #[test]
