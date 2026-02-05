@@ -339,6 +339,15 @@ impl ElementHostWidget {
                     || overflow_changed
                     || width_changed
                     || font_stack_changed;
+                let reasons_mask = (blob_missing as u16)
+                    | ((scale_changed as u16) << 1)
+                    | ((text_changed as u16) << 2)
+                    | ((false as u16) << 3)
+                    | ((style_changed as u16) << 4)
+                    | ((wrap_changed as u16) << 5)
+                    | ((overflow_changed as u16) << 6)
+                    | ((width_changed as u16) << 7)
+                    | ((font_stack_changed as u16) << 8);
 
                 if needs_prepare && cx.tree.debug_enabled() {
                     cx.tree.debug_record_paint_text_prepare_reasons(
@@ -361,8 +370,17 @@ impl ElementHostWidget {
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     if let Some(prepare_started) = prepare_started {
-                        cx.tree
-                            .debug_record_paint_text_prepare(prepare_started.elapsed());
+                        let elapsed = prepare_started.elapsed();
+                        cx.tree.debug_record_paint_text_prepare(elapsed);
+                        cx.tree.debug_record_paint_text_prepare_hotspot(
+                            cx.node,
+                            Some(self.element),
+                            "Text",
+                            props.text.len().min(u32::MAX as usize) as u32,
+                            constraints,
+                            reasons_mask,
+                            elapsed,
+                        );
                     }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
@@ -436,6 +454,15 @@ impl ElementHostWidget {
                     || overflow_changed
                     || width_changed
                     || font_stack_changed;
+                let reasons_mask = (blob_missing as u16)
+                    | ((scale_changed as u16) << 1)
+                    | ((false as u16) << 2)
+                    | ((rich_changed as u16) << 3)
+                    | ((style_changed as u16) << 4)
+                    | ((wrap_changed as u16) << 5)
+                    | ((overflow_changed as u16) << 6)
+                    | ((width_changed as u16) << 7)
+                    | ((font_stack_changed as u16) << 8);
 
                 if needs_prepare && cx.tree.debug_enabled() {
                     cx.tree.debug_record_paint_text_prepare_reasons(
@@ -458,8 +485,17 @@ impl ElementHostWidget {
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     if let Some(prepare_started) = prepare_started {
-                        cx.tree
-                            .debug_record_paint_text_prepare(prepare_started.elapsed());
+                        let elapsed = prepare_started.elapsed();
+                        cx.tree.debug_record_paint_text_prepare(elapsed);
+                        cx.tree.debug_record_paint_text_prepare_hotspot(
+                            cx.node,
+                            Some(self.element),
+                            "StyledText",
+                            props.rich.text.len().min(u32::MAX as usize) as u32,
+                            constraints,
+                            reasons_mask,
+                            elapsed,
+                        );
                     }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);
@@ -534,6 +570,15 @@ impl ElementHostWidget {
                     || overflow_changed
                     || width_changed
                     || font_stack_changed;
+                let reasons_mask = (blob_missing as u16)
+                    | ((scale_changed as u16) << 1)
+                    | ((false as u16) << 2)
+                    | ((rich_changed as u16) << 3)
+                    | ((style_changed as u16) << 4)
+                    | ((wrap_changed as u16) << 5)
+                    | ((overflow_changed as u16) << 6)
+                    | ((width_changed as u16) << 7)
+                    | ((font_stack_changed as u16) << 8);
 
                 if needs_prepare && cx.tree.debug_enabled() {
                     cx.tree.debug_record_paint_text_prepare_reasons(
@@ -556,8 +601,17 @@ impl ElementHostWidget {
                     let prepare_started = cx.tree.debug_enabled().then(Instant::now);
                     let (blob, metrics) = cx.services.text().prepare(&input, constraints);
                     if let Some(prepare_started) = prepare_started {
-                        cx.tree
-                            .debug_record_paint_text_prepare(prepare_started.elapsed());
+                        let elapsed = prepare_started.elapsed();
+                        cx.tree.debug_record_paint_text_prepare(elapsed);
+                        cx.tree.debug_record_paint_text_prepare_hotspot(
+                            cx.node,
+                            Some(self.element),
+                            "SelectableText",
+                            props.rich.text.len().min(u32::MAX as usize) as u32,
+                            constraints,
+                            reasons_mask,
+                            elapsed,
+                        );
                     }
                     self.text_cache.blob = Some(blob);
                     self.text_cache.metrics = Some(metrics);

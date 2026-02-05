@@ -4114,6 +4114,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub paint_widget_hotspots: Vec<UiPaintWidgetHotspotV1>,
     #[serde(default)]
+    pub paint_text_prepare_hotspots: Vec<UiPaintTextPrepareHotspotV1>,
+    #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
     ///
@@ -4261,6 +4263,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_paint_widget_hotspots()
                 .iter()
                 .map(UiPaintWidgetHotspotV1::from_hotspot)
+                .collect(),
+            paint_text_prepare_hotspots: ui
+                .debug_paint_text_prepare_hotspots()
+                .iter()
+                .map(UiPaintTextPrepareHotspotV1::from_hotspot)
                 .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
@@ -5775,6 +5782,59 @@ impl UiPaintWidgetHotspotV1 {
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_scene_ops_delta: h.inclusive_scene_ops_delta,
             exclusive_scene_ops_delta: h.exclusive_scene_ops_delta,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPaintTextPrepareHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    pub prepare_time_us: u64,
+    pub text_len: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_width: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wrap: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overflow: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scale_factor: Option<f32>,
+    #[serde(default)]
+    pub reasons_mask: u16,
+}
+
+impl UiPaintTextPrepareHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugPaintTextPrepareHotspot) -> Self {
+        fn wrap_as_str(wrap: fret_core::TextWrap) -> &'static str {
+            match wrap {
+                fret_core::TextWrap::None => "none",
+                fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::Grapheme => "grapheme",
+            }
+        }
+
+        fn overflow_as_str(overflow: fret_core::TextOverflow) -> &'static str {
+            match overflow {
+                fret_core::TextOverflow::Clip => "clip",
+                fret_core::TextOverflow::Ellipsis => "ellipsis",
+            }
+        }
+
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            element_kind: Some(h.element_kind.to_string()),
+            prepare_time_us: h.prepare_time.as_micros().min(u64::MAX as u128) as u64,
+            text_len: h.text_len,
+            max_width: h.constraints.max_width.map(|v| v.0),
+            wrap: Some(wrap_as_str(h.constraints.wrap).to_string()),
+            overflow: Some(overflow_as_str(h.constraints.overflow).to_string()),
+            scale_factor: Some(h.constraints.scale_factor),
+            reasons_mask: h.reasons_mask,
         }
     }
 }

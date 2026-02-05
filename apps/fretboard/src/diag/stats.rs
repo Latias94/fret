@@ -391,6 +391,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
     pub(super) paint_widget_hotspots: Vec<BundleStatsPaintWidgetHotspot>,
+    pub(super) paint_text_prepare_hotspots: Vec<BundleStatsPaintTextPrepareHotspot>,
     pub(super) model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
@@ -407,6 +408,22 @@ pub(super) struct BundleStatsPaintWidgetHotspot {
     pub(super) inclusive_time_us: u64,
     pub(super) inclusive_scene_ops_delta: u32,
     pub(super) exclusive_scene_ops_delta: u32,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsPaintTextPrepareHotspot {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) prepare_time_us: u64,
+    pub(super) text_len: u32,
+    pub(super) max_width: Option<f32>,
+    pub(super) wrap: Option<String>,
+    pub(super) overflow: Option<String>,
+    pub(super) scale_factor: Option<f32>,
+    pub(super) reasons_mask: u16,
     pub(super) role: Option<String>,
     pub(super) test_id: Option<String>,
 }
@@ -767,6 +784,43 @@ impl BundleStatsReport {
                         row.paint_text_prepare_reason_font_stack_changed,
                     );
                 }
+            }
+            if !row.paint_text_prepare_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .paint_text_prepare_hotspots
+                    .iter()
+                    .take(3)
+                    .map(|h| {
+                        let mut s = format!(
+                            "us={} node={} kind={} len={} max_width={} wrap={} overflow={} reasons={}",
+                            h.prepare_time_us,
+                            h.node,
+                            h.element_kind.as_deref().unwrap_or("?"),
+                            h.text_len,
+                            h.max_width
+                                .map(|v| format!("{:.1}", v))
+                                .unwrap_or_else(|| "?".to_string()),
+                            h.wrap.as_deref().unwrap_or("?"),
+                            h.overflow.as_deref().unwrap_or("?"),
+                            format_text_prepare_reasons(h.reasons_mask),
+                        );
+                        if let Some(test_id) = h.test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            s.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = h.role.as_deref()
+                            && !role.is_empty()
+                        {
+                            s.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(el) = h.element {
+                            s.push_str(&format!(" element={el}"));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    paint_text_prepare_hotspots: {}", items.join(" | "));
             }
             if !row.paint_widget_hotspots.is_empty() {
                 let items: Vec<String> = row
@@ -2143,6 +2197,63 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_widget_hotspots".to_string(),
                     Value::Array(paint_widget_hotspots),
+                );
+
+                let paint_text_prepare_hotspots = row
+                    .paint_text_prepare_hotspots
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("node".to_string(), Value::from(h.node));
+                        h_obj.insert(
+                            "element".to_string(),
+                            h.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "element_kind".to_string(),
+                            h.element_kind
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "prepare_time_us".to_string(),
+                            Value::from(h.prepare_time_us),
+                        );
+                        h_obj.insert("text_len".to_string(), Value::from(h.text_len));
+                        h_obj.insert(
+                            "max_width".to_string(),
+                            h.max_width.map(|v| Value::from(v)).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "wrap".to_string(),
+                            h.wrap.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "overflow".to_string(),
+                            h.overflow.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "scale_factor".to_string(),
+                            h.scale_factor
+                                .map(|v| Value::from(v))
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert("reasons_mask".to_string(), Value::from(h.reasons_mask));
+                        h_obj.insert(
+                            "role".to_string(),
+                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "test_id".to_string(),
+                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "paint_text_prepare_hotspots".to_string(),
+                    Value::Array(paint_text_prepare_hotspots),
                 );
 
                 let model_change_hotspots = row
@@ -5407,6 +5518,7 @@ pub(super) fn bundle_stats_from_json_with_options(
             ) = snapshot_cache_root_stats(s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
             let paint_widget_hotspots = snapshot_paint_widget_hotspots(s, 3);
+            let paint_text_prepare_hotspots = snapshot_paint_text_prepare_hotspots(s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
             let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
@@ -5657,6 +5769,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_contained_relayout_cache_roots,
                 top_layout_engine_solves,
                 paint_widget_hotspots,
+                paint_text_prepare_hotspots,
                 model_change_hotspots,
                 model_change_unobserved,
                 global_change_hotspots,
@@ -6251,6 +6364,118 @@ fn snapshot_paint_widget_hotspots(
         item.test_id = test_id;
     }
 
+    out
+}
+
+fn snapshot_paint_text_prepare_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsPaintTextPrepareHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("paint_text_prepare_hotspots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if hotspots.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+
+    let mut out: Vec<BundleStatsPaintTextPrepareHotspot> = hotspots
+        .iter()
+        .take(max.max(1))
+        .map(|h| BundleStatsPaintTextPrepareHotspot {
+            node: h.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+            element: h.get("element").and_then(|v| v.as_u64()),
+            element_kind: h
+                .get("element_kind")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            prepare_time_us: h
+                .get("prepare_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            text_len: h
+                .get("text_len")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            max_width: h
+                .get("max_width")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32),
+            wrap: h
+                .get("wrap")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            overflow: h
+                .get("overflow")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            scale_factor: h
+                .get("scale_factor")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32),
+            reasons_mask: h
+                .get("reasons_mask")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u16::MAX as u64) as u16,
+            role: None,
+            test_id: None,
+        })
+        .collect();
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
+        item.role = role;
+        item.test_id = test_id;
+    }
+
+    out
+}
+
+fn format_text_prepare_reasons(mask: u16) -> String {
+    let mut out = String::new();
+    let mut push = |name: &str| {
+        if !out.is_empty() {
+            out.push('|');
+        }
+        out.push_str(name);
+    };
+    if mask & (1 << 0) != 0 {
+        push("blob");
+    }
+    if mask & (1 << 1) != 0 {
+        push("scale");
+    }
+    if mask & (1 << 2) != 0 {
+        push("text");
+    }
+    if mask & (1 << 3) != 0 {
+        push("rich");
+    }
+    if mask & (1 << 4) != 0 {
+        push("style");
+    }
+    if mask & (1 << 5) != 0 {
+        push("wrap");
+    }
+    if mask & (1 << 6) != 0 {
+        push("overflow");
+    }
+    if mask & (1 << 7) != 0 {
+        push("width");
+    }
+    if mask & (1 << 8) != 0 {
+        push("font");
+    }
+    if out.is_empty() {
+        out.push('0');
+    }
     out
 }
 

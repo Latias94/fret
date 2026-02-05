@@ -962,6 +962,17 @@ pub struct UiDebugPaintWidgetHotspot {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct UiDebugPaintTextPrepareHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub element_kind: &'static str,
+    pub text_len: u32,
+    pub constraints: TextConstraints,
+    pub reasons_mask: u16,
+    pub prepare_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
 struct DebugLayoutStackFrame {
     child_inclusive_time: Duration,
 }
@@ -1373,6 +1384,7 @@ pub struct UiTree<H: UiHost> {
     debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
     debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
     debug_paint_widget_hotspots: Vec<UiDebugPaintWidgetHotspot>,
+    debug_paint_text_prepare_hotspots: Vec<UiDebugPaintTextPrepareHotspot>,
     debug_paint_stack: Vec<DebugPaintStackFrame>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
@@ -1799,6 +1811,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_widget_measure_hotspots: Vec::new(),
             debug_widget_measure_stack: Vec::new(),
             debug_paint_widget_hotspots: Vec::new(),
+            debug_paint_text_prepare_hotspots: Vec::new(),
             debug_paint_stack: Vec::new(),
             debug_measure_children: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
@@ -2134,6 +2147,7 @@ impl<H: UiHost> UiTree<H> {
         #[cfg(feature = "diagnostics")]
         self.debug_removed_subtrees.clear();
         self.debug_paint_widget_hotspots.clear();
+        self.debug_paint_text_prepare_hotspots.clear();
         self.debug_paint_stack.clear();
         #[cfg(feature = "diagnostics")]
         {
@@ -2246,6 +2260,41 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(elapsed);
         self.debug_stats.paint_text_prepare_calls =
             self.debug_stats.paint_text_prepare_calls.saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_paint_text_prepare_hotspot(
+        &mut self,
+        node: NodeId,
+        element: Option<GlobalElementId>,
+        element_kind: &'static str,
+        text_len: u32,
+        constraints: TextConstraints,
+        reasons_mask: u16,
+        prepare_time: Duration,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        const MAX_PREPARE_HOTSPOTS: usize = 16;
+        let record = UiDebugPaintTextPrepareHotspot {
+            node,
+            element,
+            element_kind,
+            text_len,
+            constraints,
+            reasons_mask,
+            prepare_time,
+        };
+        let idx = self
+            .debug_paint_text_prepare_hotspots
+            .iter()
+            .position(|h| h.prepare_time < record.prepare_time)
+            .unwrap_or(self.debug_paint_text_prepare_hotspots.len());
+        self.debug_paint_text_prepare_hotspots.insert(idx, record);
+        if self.debug_paint_text_prepare_hotspots.len() > MAX_PREPARE_HOTSPOTS {
+            self.debug_paint_text_prepare_hotspots
+                .truncate(MAX_PREPARE_HOTSPOTS);
+        }
     }
 
     pub(crate) fn debug_record_paint_text_prepare_reasons(
@@ -2753,6 +2802,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_paint_widget_hotspots.as_slice()
+    }
+
+    pub fn debug_paint_text_prepare_hotspots(&self) -> &[UiDebugPaintTextPrepareHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_paint_text_prepare_hotspots.as_slice()
     }
 
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
