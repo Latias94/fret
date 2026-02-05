@@ -2555,7 +2555,7 @@ struct DemoHelpOverlay {
 impl DemoHelpOverlay {
     const PAD_PX: f32 = 10.0;
     const WIDTH_PX: f32 = 360.0;
-    const HEIGHT_PX: f32 = 176.0;
+    const HEIGHT_PX: f32 = 196.0;
 
     fn new(style: NodeGraphStyle, toggles: Arc<NodeGraphDemoOverlayToggles>) -> Self {
         Self {
@@ -2628,6 +2628,7 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
 
         let mut lines: Vec<String> = vec![
             "NodeGraph demo (built-ins):".to_string(),
+            "• Tip: drag nodes by the header (title bar)".to_string(),
             "• Controls + MiniMap overlays (panel or floating)".to_string(),
             "• NodeToolbar + EdgeToolbar overlays (selection-driven)".to_string(),
             "• Background patterns: Cmd/Ctrl+B".to_string(),

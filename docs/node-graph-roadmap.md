@@ -157,7 +157,7 @@ Legend:
 - [x] Implement minimap overlay consuming derived geometry.
 - [x] Implement canvas controls (zoom/fit/reset) and bind to commands.
 - [x] Implement auto-pan during connect/drag near edges.
-- [ ] Add "drag handle tooltip/help" in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
+- [x] Add "drag handle tooltip/help" in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
 
 ### Medium-term
 
