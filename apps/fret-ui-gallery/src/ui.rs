@@ -91,18 +91,13 @@ pub(crate) fn sidebar_view(
 
     let query_input = {
         let nav_query = nav_query.clone();
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(Arc::<str>::from("ui-gallery-nav-search")),
-                ..Default::default()
-            },
-            move |cx| {
-                [shadcn::Input::new(nav_query.clone())
-                    .a11y_label("Search components")
-                    .placeholder("Search (id / tag)")
-                    .into_element(cx)]
-            },
-        )
+        shadcn::Input::new(nav_query.clone())
+            .a11y_label("Search components")
+            .placeholder("Search (id / tag)")
+            .into_element(cx)
+            .attach_semantics(
+                fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-nav-search"),
+            )
     };
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
@@ -193,12 +188,8 @@ pub(crate) fn sidebar_view(
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         };
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(Arc::<str>::from("ui-gallery-nav-scroll")),
-                ..Default::default()
-            },
-            move |_cx| [nav_scroll],
+        nav_scroll.attach_semantics(
+            fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-nav-scroll"),
         )
     };
 
@@ -544,33 +535,22 @@ pub(crate) fn content_view(
         })
     };
 
-    let content = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            test_id: Some(Arc::<str>::from("ui-gallery-content-scroll")),
-            ..Default::default()
-        },
-        move |_cx| [content_inner],
+    let content = content_inner.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-content-scroll"),
     );
 
     cx.named("ui_gallery.content_view_root", |cx| {
-        cx.semantics(
-            fret_ui::element::SemanticsProps {
-                test_id: Some(page_test_id),
-                ..Default::default()
-            },
-            move |cx| {
-                [cx.container(
-                    decl_style::container_props(
-                        theme,
-                        ChromeRefinement::default()
-                            .bg(ColorRef::Color(theme.color_required("background")))
-                            .p(Space::N6),
-                        LayoutRefinement::default().w_full().h_full(),
-                    ),
-                    |_cx| [content],
-                )]
-            },
+        cx.container(
+            decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .bg(ColorRef::Color(theme.color_required("background")))
+                    .p(Space::N6),
+                LayoutRefinement::default().w_full().h_full(),
+            ),
+            |_cx| [content],
         )
+        .attach_semantics(fret_ui::element::SemanticsDecoration::default().test_id(page_test_id))
     })
 }
 
@@ -1059,13 +1039,10 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             ]
         },
     );
-    let grid = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-grid")),
-            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-grid")),
-            ..Default::default()
-        },
-        move |_cx| [grid],
+    let grid = grid.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .label("Debug:ui-gallery:intro:preview-grid")
+            .test_id("ui-gallery-intro-preview-grid"),
     );
 
     let note = {
@@ -1081,13 +1058,10 @@ fn preview_intro(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElem
             vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.").into_element(cx)]
         })
     };
-    let note = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            label: Some(Arc::<str>::from("Debug:ui-gallery:intro:preview-note")),
-            test_id: Some(Arc::<str>::from("ui-gallery-intro-preview-note")),
-            ..Default::default()
-        },
-        move |_cx| [note],
+    let note = note.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .label("Debug:ui-gallery:intro:preview-note")
+            .test_id("ui-gallery-intro-preview-note"),
     );
 
     vec![grid, note]
@@ -2000,13 +1974,10 @@ fn preview_virtual_list_torture(
             )
         };
 
-        let list = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: fret_core::SemanticsRole::List,
-                test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-root")),
-                ..Default::default()
-            },
-            |_cx| [list],
+        let list = list.attach_semantics(
+            fret_ui::element::SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::List)
+                .test_id("ui-gallery-virtual-list-root"),
         );
 
         vec![list]
@@ -2020,13 +1991,10 @@ fn preview_virtual_list_torture(
         |_cx| vec![header, list],
     );
 
-    let root = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-virtual-list-torture-root")),
-            ..Default::default()
-        },
-        |_cx| [root],
+    let root = root.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-virtual-list-torture-root"),
     );
 
     vec![root]
@@ -2118,13 +2086,10 @@ fn preview_ui_kit_list_torture(
         ]
     });
 
-    let list = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::List,
-            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-root")),
-            ..Default::default()
-        },
-        |_cx| [list],
+    let list = list.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::List)
+            .test_id("ui-gallery-ui-kit-list-root"),
     );
 
     let root = stack::vstack(
@@ -2135,13 +2100,10 @@ fn preview_ui_kit_list_torture(
         |_cx| vec![header, list],
     );
 
-    let root = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-ui-kit-list-torture-root")),
-            ..Default::default()
-        },
-        |_cx| [root],
+    let root = root.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-ui-kit-list-torture-root"),
     );
 
     vec![root]
@@ -2200,13 +2162,10 @@ fn preview_code_view_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -
         .max_height(Px(420.0));
     let block = block.into_element(cx);
 
-    let block = cx.semantics(
-        fret_ui::element::SemanticsProps {
-            role: fret_core::SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("ui-gallery-code-view-root")),
-            ..Default::default()
-        },
-        |_cx| vec![block],
+    let block = block.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-code-view-root"),
     );
 
     vec![header, block]
