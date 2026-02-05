@@ -2274,6 +2274,8 @@ See: `docs/tracy.md`.\n";
                 rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull";
             let is_ui_gallery_node_graph_cull_window_shifts_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull-window-shifts";
+            let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = rest.len() == 1
+                && rest[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
             let is_ui_gallery_chart_torture_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-chart-torture";
             let is_ui_gallery_vlist_window_boundary_suite =
@@ -2523,6 +2525,20 @@ See: `docs/tracy.md`.\n";
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -2815,6 +2831,7 @@ See: `docs/tracy.md`.\n";
                     || is_ui_gallery_canvas_cull_suite
                     || is_ui_gallery_node_graph_cull_suite
                     || is_ui_gallery_node_graph_cull_window_shifts_suite
+                    || is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
                     || is_ui_gallery_chart_torture_suite
                     || is_ui_gallery_ai_transcript_retained_suite)
             {
@@ -3084,6 +3101,10 @@ See: `docs/tracy.md`.\n";
                             .then_some(1u64)
                             .or_else(|| is_ui_gallery_node_graph_cull_suite.then_some(0u64))
                             .filter(|_| check_node_graph_cull_window_shifts_min.is_none());
+                    let suite_node_graph_cull_window_shifts_max =
+                        is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
+                            .then_some(0u64)
+                            .filter(|_| check_node_graph_cull_window_shifts_max.is_none());
                     let suite_vlist_window_shifts_have_prepaint_actions =
                         vlist_window_boundary_suite
                             && !check_vlist_window_shifts_have_prepaint_actions;
@@ -3185,7 +3206,8 @@ See: `docs/tracy.md`.\n";
                             .or(suite_chart_sampling_window_shifts_min),
                         check_node_graph_cull_window_shifts_min
                             .or(suite_node_graph_cull_window_shifts_min),
-                        check_node_graph_cull_window_shifts_max,
+                        check_node_graph_cull_window_shifts_max
+                            .or(suite_node_graph_cull_window_shifts_max),
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max

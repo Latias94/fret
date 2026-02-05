@@ -1262,12 +1262,14 @@ topics (if/when we implement them):
     - UI debug: add `node_graph_cull_window_shift` prepaint action + `node_graph_cull_window_key` payload, exported into diagnostics bundles.
       - `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::NodeGraphCullWindowShift`)
       - `crates/fret-ui/src/widget.rs` (`PrepaintCx::debug_record_node_graph_cull_window_shift`)
-      - `ecosystem/fret-node/src/ui/canvas/widget.rs` (`Widget::prepaint` records the window key)
+      - `ecosystem/fret-node/src/ui/canvas/widget.rs` (`Widget::prepaint` records shifts when the window key changes)
       - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiPrepaintActionKindV1::NodeGraphCullWindowShift`)
     - Recommended gate: `--check-drag-cache-root-paint-only ui-gallery-node-graph-cull-root` (warmup >= 5).
     - Optional diagnostics gate: `--check-node-graph-cull-window-shifts-min <n>` (evidence: `check.node_graph_cull_window_shifts_min.json`).
     - Window-shift torture script: `tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json` (large pan crosses window boundaries).
     - Suite: `fretboard diag suite ui-gallery-node-graph-cull-window-shifts` (defaults: view-cache + shell + screenshots; gate `--check-node-graph-cull-window-shifts-min 1`; warmup=5).
+    - No-shift small-pan torture script: `tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json` (small pans stay within a single window).
+    - Suite: `fretboard diag suite ui-gallery-node-graph-cull-window-no-shifts-small-pan` (defaults: view-cache + shell + screenshots; gate `--check-node-graph-cull-window-shifts-max 0`; warmup=5).
     - Optional diagnostics gate: `--check-node-graph-cull-window-shifts-max <n>` (evidence: `check.node_graph_cull_window_shifts_max.json`).
     - Evidence bundle (cache+shell, release): `target/fret-diag-node-graph-cull-torture/1770256423358-ui-gallery-node-graph-cull-pan-zoom/bundle.json`
 - [x] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.

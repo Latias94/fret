@@ -984,9 +984,16 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             .add_i32(tile_y);
         let next_key = b.finish();
 
-        if self.last_cull_window_key != Some(next_key) {
-            cx.debug_record_node_graph_cull_window_shift(next_key);
-            self.last_cull_window_key = Some(next_key);
+        match self.last_cull_window_key {
+            None => {
+                // Initialize the baseline key without counting it as a "shift".
+                self.last_cull_window_key = Some(next_key);
+            }
+            Some(prev_key) if prev_key != next_key => {
+                cx.debug_record_node_graph_cull_window_shift(next_key);
+                self.last_cull_window_key = Some(next_key);
+            }
+            _ => {}
         }
     }
 
