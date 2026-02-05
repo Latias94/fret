@@ -68,7 +68,7 @@ Exit criteria:
 - [x] IMUI2-api-011 Update `ImUi` to implement the writer contract.
 - [x] IMUI2-api-016 Add `UiWriter` extension helpers for core widgets (so third-party widgets can accept `&mut impl UiWriter`):
   - `button`, `checkbox_model`, `text`, `separator`.
-  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`UiWriterImUiExt`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt`, `ResponseExt`).
 - [x] IMUI2-eco-013 Update official ecosystem `imui` adapters to accept `UiWriter` (no concrete `ImUi` coupling).
 - [x] IMUI2-eco-014 Decouple official ecosystem `imui` feature gates from `fret-imui` (depend on `UiWriter` only).
   - Evidence: `ecosystem/fret-markdown/Cargo.toml`, `ecosystem/fret-code-view/Cargo.toml`, `ecosystem/fret-docking/Cargo.toml`, `ecosystem/fret-node/Cargo.toml`.
@@ -130,7 +130,7 @@ Exit criteria:
 - v2 surface is the only supported `imui` authoring API in-tree.
 - Docs and workstreams reflect the new reality.
 
-- [x] IMUI2-api-050 Remove v1 `imui` widget methods from `ImUi` (use `UiWriterImUiExt` instead).
-  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`UiWriterImUiExt` is the widget surface; `ImUi` no longer defines `button/text/separator/checkbox_model`).
+- [x] IMUI2-api-050 Remove v1 `imui` widget methods from `ImUi` (use an ecosystem facade extension trait instead).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`fret-imui` stays minimal; widget helpers live in `fret-ui-kit`'s `imui` feature).
 - [x] IMUI2-docs-051 Update workstream docs and demos to point to v2.
   - Evidence: `docs/workstreams/imui-authoring-facade-v2.md`, `docs/workstreams/imui-authoring-facade-v1.md`, `apps/fret-examples/src/imui_hello_demo.rs`.
