@@ -15,6 +15,7 @@ type CaseId =
   | "pinning"
   | "pinning_tree"
   | "column_pinning"
+  | "faceting"
   | "column_sizing"
   | "column_resizing_group_headers"
   | "state_shapes"
@@ -799,6 +800,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "pinning" &&
         v !== "pinning_tree" &&
         v !== "column_pinning" &&
+        v !== "faceting" &&
         v !== "column_sizing" &&
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
@@ -818,7 +820,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1100,6 +1102,29 @@ async function main(): Promise<void> {
         id: "mem_mb",
         accessorFn: (row: DemoProcessRow) => row.mem_mb,
         sortingFn: sortNumber,
+      },
+    ]
+  } else if (case_id === "faceting") {
+    const demo: DemoProcessRow[] = [
+      { id: 1, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
+      { id: 2, name: "Asset Cache", status: "Idle", cpu: 0, mem_mb: 128 },
+      { id: 3, name: "Indexer", status: "Running", cpu: 38, mem_mb: 860 },
+      { id: 4, name: "Spellcheck", status: "Disabled", cpu: 0, mem_mb: 0 },
+      { id: 5, name: "Language Server", status: "Running", cpu: 7, mem_mb: 512 },
+    ]
+
+    data = demo
+
+    columns = [
+      {
+        id: "status",
+        accessorFn: (row: DemoProcessRow) => row.status,
+        filterFn: filterContainsAsciiCI,
+      },
+      {
+        id: "cpu",
+        accessorFn: (row: DemoProcessRow) => row.cpu,
+        filterFn: "inNumberRange",
       },
     ]
   } else if (case_id === "grouping") {
@@ -1683,6 +1708,13 @@ async function main(): Promise<void> {
       state: currentState,
       getCoreRowModel: tableCore.getCoreRowModel(),
       getFilteredRowModel: tableCore.getFilteredRowModel(),
+      ...(case_id === "faceting"
+        ? {
+            getFacetedRowModel: tableCore.getFacetedRowModel(),
+            getFacetedUniqueValues: tableCore.getFacetedUniqueValues(),
+            getFacetedMinMaxValues: tableCore.getFacetedMinMaxValues(),
+          }
+        : {}),
       ...(case_id === "grouping" || case_id === "grouping_aggregation_fns"
         ? {
             getGroupedRowModel:
@@ -2090,6 +2122,39 @@ function snapshotRowPinning(table: any): NonNullable<FixtureSnapshot["expect"]["
     is_some_rows_pinned: Boolean(table.getIsSomeRowsPinned?.()),
     is_some_top_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("top")),
     is_some_bottom_rows_pinned: Boolean(table.getIsSomeRowsPinned?.("bottom")),
+  }
+}
+
+function snapshotFaceting(table: any, column_id: string): {
+  row_model: NonNullable<FixtureSnapshot["expect"]["core"]>
+  unique_values: Record<string, number>
+  min_max: [number, number] | null
+} {
+  const col = table.getColumn?.(column_id)
+  if (!col) {
+    throw new Error(`Unknown column in faceting snapshot: ${column_id}`)
+  }
+
+  if (typeof col.getFacetedRowModel !== "function") {
+    throw new Error("Faceting APIs are not available on this column instance")
+  }
+
+  const faceted = col.getFacetedRowModel?.()
+  const unique = col.getFacetedUniqueValues?.()
+  const minmax = col.getFacetedMinMaxValues?.()
+
+  const unique_values: Record<string, number> = {}
+  for (const [k, v] of unique?.entries?.() ?? []) {
+    unique_values[String(k)] = Number(v)
+  }
+
+  return {
+    row_model: snapshotRowModel(faceted),
+    unique_values,
+    min_max:
+      Array.isArray(minmax) && minmax.length === 2
+        ? [Number(minmax[0]), Number(minmax[1])]
+        : null,
   }
 }
 
@@ -4622,6 +4687,46 @@ function snapshotColumnPinning(
         { initialState: { columnPinning: { left: ["a"], right: [] } } },
         { columnPinning: { left: [], right: ["c"] } },
         [{ type: "resetColumnPinning", default_state: true }],
+      ),
+    ]
+  } else if (case_id === "faceting") {
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const base = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...base,
+          faceting: {
+            cpu: snapshotFaceting(table, "cpu"),
+          },
+        },
+      }
+    }
+
+    snapshots = [
+      mk("faceting_baseline", {}, {}),
+      mk(
+        "faceting_cpu_own_filter_ignored",
+        {},
+        { columnFilters: [{ id: "cpu", value: [12, 12] }] },
+      ),
+      mk(
+        "faceting_cpu_other_filter_applied",
+        {},
+        {
+          columnFilters: [
+            { id: "status", value: "Running" },
+            { id: "cpu", value: [12, 12] },
+          ],
+        },
+      ),
+      mk(
+        "faceting_manual_filtering_bypasses",
+        { manualFiltering: true },
+        { columnFilters: [{ id: "status", value: "Running" }] },
       ),
     ]
   } else if (case_id === "sort_undefined") {
