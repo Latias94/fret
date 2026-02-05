@@ -1,4 +1,5 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::test_id::attach_test_id;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -306,19 +307,7 @@ where
                     );
                     viewport_id_out.set(Some(scroll.id));
 
-                    let scroll = cx.semantics(
-                        SemanticsProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.height = Length::Fill;
-                                layout
-                            },
-                            test_id: Some(Arc::from("select-scroll-viewport")),
-                            ..Default::default()
-                        },
-                        |_cx| vec![scroll],
-                    );
+                    let scroll = attach_test_id(scroll, Arc::from("select-scroll-viewport"));
 
                     if let Some(active_element) = active_element_ref.get() {
                         let scroll_active_nearest = |cx: &mut ElementContext<'_, H>| {

@@ -32,9 +32,9 @@ pub struct MessageRouter<M> {
 }
 
 impl<M> MessageRouter<M> {
-    fn new(prefix: String) -> Self {
+    pub fn new(prefix: impl Into<String>) -> Self {
         Self {
-            prefix,
+            prefix: prefix.into(),
             next: 0,
             by_key: HashMap::new(),
         }
@@ -56,7 +56,11 @@ impl<M> MessageRouter<M> {
         CommandId::new(key)
     }
 
-    fn try_take(&mut self, command: &CommandId) -> Option<M> {
+    /// Resolve and remove a previously allocated message binding.
+    ///
+    /// This is intended for routing `CommandId` back to typed messages in a driver hook.
+    /// If `command` is not present in the current map, returns `None`.
+    pub fn try_take(&mut self, command: &CommandId) -> Option<M> {
         self.by_key.remove(command.as_str())
     }
 }
@@ -283,4 +287,26 @@ pub fn run_with_hooks<P: Program>(
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run<P: Program>(root_name: &'static str) -> Result<()> {
     run_with_hooks::<P>(root_name, |d| d)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn message_router_allocates_unique_commands_and_routes() {
+        let mut router = MessageRouter::new("test.");
+
+        let c1 = router.cmd(1u32);
+        let c2 = router.cmd(2u32);
+        assert_ne!(c1, c2);
+
+        assert_eq!(router.try_take(&c1), Some(1u32));
+        assert_eq!(router.try_take(&c1), None);
+        assert_eq!(router.try_take(&c2), Some(2u32));
+
+        router.clear();
+        let c3 = router.cmd(3u32);
+        assert_eq!(router.try_take(&c3), Some(3u32));
+    }
 }

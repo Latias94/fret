@@ -1188,6 +1188,131 @@ impl Theme {
             self.revision = self.revision.saturating_add(1);
         }
     }
+
+    /// Apply a `ThemeConfig` as a patch layered on top of the current theme.
+    ///
+    /// Unlike [`Self::apply_config`], this does **not** reset any existing token tables. This is
+    /// the intended API for app-level overrides (e.g. "compact editor" metric tweaks) layered on
+    /// top of an ecosystem preset (e.g. shadcn New York).
+    ///
+    /// This updates the `configured_*` tracking sets by adding the keys present in `cfg` and
+    /// increments the theme revision when the effective token tables change.
+    pub fn apply_config_patch(&mut self, cfg: &ThemeConfig) {
+        assert_no_legacy_theme_keys(cfg);
+
+        let mut changed = false;
+
+        fn key_trim(k: &str) -> Option<&str> {
+            let k = k.trim();
+            (!k.is_empty()).then_some(k)
+        }
+
+        for (k, v) in &cfg.colors {
+            let Some(key) = key_trim(k) else {
+                continue;
+            };
+            self.configured_colors.insert(key.to_string());
+            let Some(c) = parse_color_to_linear(v) else {
+                continue;
+            };
+            match self.extra_colors.get(key).copied() {
+                Some(prev) if prev == c => {}
+                _ => {
+                    self.extra_colors.insert(key.to_string(), c);
+                    changed = true;
+                }
+            }
+        }
+
+        for (k, v) in &cfg.metrics {
+            let Some(key) = key_trim(k) else {
+                continue;
+            };
+            self.configured_metrics.insert(key.to_string());
+            let px = Px(*v);
+            match self.extra_metrics.get(key).copied() {
+                Some(prev) if prev == px => {}
+                _ => {
+                    self.extra_metrics.insert(key.to_string(), px);
+                    changed = true;
+                }
+            }
+        }
+
+        for (k, v) in &cfg.corners {
+            let Some(key) = key_trim(k) else {
+                continue;
+            };
+            self.configured_corners.insert(key.to_string());
+            match self.extra_corners.get(key).copied() {
+                Some(prev) if prev == *v => {}
+                _ => {
+                    self.extra_corners.insert(key.to_string(), *v);
+                    changed = true;
+                }
+            }
+        }
+
+        for (k, v) in &cfg.numbers {
+            let Some(key) = key_trim(k) else {
+                continue;
+            };
+            self.configured_numbers.insert(key.to_string());
+            match self.extra_numbers.get(key).copied() {
+                Some(prev) if (prev - *v).abs() < 1e-6 => {}
+                _ => {
+                    self.extra_numbers.insert(key.to_string(), *v);
+                    changed = true;
+                }
+            }
+        }
+
+        for (k, v) in &cfg.durations_ms {
+            let Some(key) = key_trim(k) else {
+                continue;
+            };
+            self.configured_durations_ms.insert(key.to_string());
+            match self.extra_durations_ms.get(key).copied() {
+                Some(prev) if prev == *v => {}
+                _ => {
+                    self.extra_durations_ms.insert(key.to_string(), *v);
+                    changed = true;
+                }
+            }
+        }
+
+        for (k, v) in &cfg.easings {
+            let Some(key) = key_trim(k) else {
+                continue;
+            };
+            self.configured_easings.insert(key.to_string());
+            match self.extra_easings.get(key).copied() {
+                Some(prev) if prev == *v => {}
+                _ => {
+                    self.extra_easings.insert(key.to_string(), *v);
+                    changed = true;
+                }
+            }
+        }
+
+        for (k, v) in &cfg.text_styles {
+            let Some(key) = key_trim(k) else {
+                continue;
+            };
+            self.configured_text_styles.insert(key.to_string());
+            match self.extra_text_styles.get(key) {
+                Some(prev) if prev == v => {}
+                _ => {
+                    self.extra_text_styles.insert(key.to_string(), v.clone());
+                    changed = true;
+                }
+            }
+        }
+
+        if changed {
+            self.revision = self.revision.saturating_add(1);
+        }
+    }
 }
 
 fn default_theme() -> &'static Theme {
@@ -1822,5 +1947,43 @@ mod tests {
             Some(0.08)
         );
         assert!(theme.revision() > before);
+    }
+
+    #[test]
+    fn apply_config_patch_preserves_existing_extra_colors() {
+        let mut theme = Theme::global(&crate::test_host::TestHost::default()).clone();
+
+        theme.extend_tokens_from_config(&ThemeConfig {
+            name: "Base".to_string(),
+            colors: HashMap::from([("primary".to_string(), "#ff0000".to_string())]),
+            ..ThemeConfig::default()
+        });
+        assert_eq!(
+            theme.color_by_key("primary"),
+            Some(fret_core::Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            })
+        );
+
+        theme.apply_config_patch(&ThemeConfig {
+            name: "Patch".to_string(),
+            metrics: HashMap::from([("metric.padding.sm".to_string(), 7.0)]),
+            ..ThemeConfig::default()
+        });
+
+        assert_eq!(
+            theme.color_by_key("primary"),
+            Some(fret_core::Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }),
+            "expected shadcn-style palette tokens to remain intact after metric patches"
+        );
+        assert_eq!(theme.metric_by_key("metric.padding.sm"), Some(Px(7.0)));
     }
 }
