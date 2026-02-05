@@ -228,6 +228,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_time_us: u64,
     pub(super) paint_record_visual_bounds_time_us: u64,
     pub(super) paint_record_visual_bounds_calls: u32,
+    pub(super) paint_cache_key_time_us: u64,
+    pub(super) paint_cache_hit_check_time_us: u64,
+    pub(super) paint_widget_time_us: u64,
+    pub(super) paint_observation_record_time_us: u64,
     pub(super) paint_input_context_time_us: u64,
     pub(super) paint_scroll_handle_invalidation_time_us: u64,
     pub(super) paint_collect_roots_time_us: u64,
@@ -672,6 +676,19 @@ impl BundleStatsReport {
                     row.paint_collect_roots_time_us,
                     row.paint_publish_text_input_snapshot_time_us,
                     row.paint_collapse_observations_time_us
+                );
+            }
+            if row.paint_cache_key_time_us > 0
+                || row.paint_cache_hit_check_time_us > 0
+                || row.paint_widget_time_us > 0
+                || row.paint_observation_record_time_us > 0
+            {
+                println!(
+                    "    paint_node.us(cache_key/hit_check/widget/obs_record)={}/{}/{}/{}",
+                    row.paint_cache_key_time_us,
+                    row.paint_cache_hit_check_time_us,
+                    row.paint_widget_time_us,
+                    row.paint_observation_record_time_us
                 );
             }
             if !row.top_invalidation_walks.is_empty() {
@@ -1425,6 +1442,22 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_record_visual_bounds_calls".to_string(),
                     Value::from(row.paint_record_visual_bounds_calls),
+                );
+                obj.insert(
+                    "paint_cache_key_time_us".to_string(),
+                    Value::from(row.paint_cache_key_time_us),
+                );
+                obj.insert(
+                    "paint_cache_hit_check_time_us".to_string(),
+                    Value::from(row.paint_cache_hit_check_time_us),
+                );
+                obj.insert(
+                    "paint_widget_time_us".to_string(),
+                    Value::from(row.paint_widget_time_us),
+                );
+                obj.insert(
+                    "paint_observation_record_time_us".to_string(),
+                    Value::from(row.paint_observation_record_time_us),
                 );
                 obj.insert(
                     "paint_input_context_time_us".to_string(),
@@ -4362,6 +4395,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let paint_cache_key_time_us = stats
+                .and_then(|m| m.get("paint_cache_key_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_cache_hit_check_time_us = stats
+                .and_then(|m| m.get("paint_cache_hit_check_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_widget_time_us = stats
+                .and_then(|m| m.get("paint_widget_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_observation_record_time_us = stats
+                .and_then(|m| m.get("paint_observation_record_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let paint_input_context_time_us = stats
                 .and_then(|m| m.get("paint_input_context_time_us"))
                 .and_then(|v| v.as_u64())
@@ -5121,6 +5170,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_time_us,
                 paint_record_visual_bounds_time_us,
                 paint_record_visual_bounds_calls,
+                paint_cache_key_time_us,
+                paint_cache_hit_check_time_us,
+                paint_widget_time_us,
+                paint_observation_record_time_us,
                 paint_input_context_time_us,
                 paint_scroll_handle_invalidation_time_us,
                 paint_collect_roots_time_us,

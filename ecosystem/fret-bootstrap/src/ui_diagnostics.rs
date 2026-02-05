@@ -6162,6 +6162,14 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub paint_record_visual_bounds_calls: u32,
     #[serde(default)]
+    pub paint_cache_key_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_hit_check_time_us: u64,
+    #[serde(default)]
+    pub paint_widget_time_us: u64,
+    #[serde(default)]
+    pub paint_observation_record_time_us: u64,
+    #[serde(default)]
     pub paint_input_context_time_us: u64,
     #[serde(default)]
     pub paint_scroll_handle_invalidation_time_us: u64,
@@ -6536,6 +6544,11 @@ impl UiFrameStatsV1 {
             paint_record_visual_bounds_time_us: stats.paint_record_visual_bounds_time.as_micros()
                 as u64,
             paint_record_visual_bounds_calls: stats.paint_record_visual_bounds_calls,
+            paint_cache_key_time_us: stats.paint_cache_key_time.as_micros() as u64,
+            paint_cache_hit_check_time_us: stats.paint_cache_hit_check_time.as_micros() as u64,
+            paint_widget_time_us: stats.paint_widget_time.as_micros() as u64,
+            paint_observation_record_time_us: stats.paint_observation_record_time.as_micros()
+                as u64,
             paint_input_context_time_us: stats.paint_input_context_time.as_micros() as u64,
             paint_scroll_handle_invalidation_time_us: stats
                 .paint_scroll_handle_invalidation_time

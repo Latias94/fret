@@ -25,6 +25,11 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_cache_bounds_translated_nodes = 0;
             self.debug_stats.paint_record_visual_bounds_time = Duration::default();
             self.debug_stats.paint_record_visual_bounds_calls = 0;
+            self.debug_stats.paint_cache_key_time = Duration::default();
+            self.debug_stats.paint_cache_hit_check_time = Duration::default();
+            self.debug_stats.paint_widget_time = Duration::default();
+            self.debug_stats.paint_observation_record_time = Duration::default();
+            self.debug_paint_widget_exclusive_started = None;
             self.debug_stats.paint_input_context_time = Duration::default();
             self.debug_stats.paint_scroll_handle_invalidation_time = Duration::default();
             self.debug_stats.paint_collect_roots_time = Duration::default();
@@ -284,6 +289,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let key_started = self.debug_enabled.then(Instant::now);
         let theme_revision = Theme::global(&*app).revision();
         let children_render_transform = self.node_children_render_transform(node);
         let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
@@ -292,8 +298,15 @@ impl<H: UiHost> UiTree<H> {
             && self.node_render_transform(node).is_none()
             && (!self.view_cache_active()
                 || self.nodes.get(node).is_some_and(|n| n.view_cache.enabled));
+        if let Some(key_started) = key_started {
+            self.debug_stats.paint_cache_key_time = self
+                .debug_stats
+                .paint_cache_key_time
+                .saturating_add(key_started.elapsed());
+        }
 
         if cache_enabled && !invalidated {
+            let hit_check_started = self.debug_enabled.then(Instant::now);
             if let Some(prev) = prev_cache
                 && prev.generation == self.paint_cache.source_generation
                 && prev.key == key
@@ -305,6 +318,12 @@ impl<H: UiHost> UiTree<H> {
                         bounds.origin.x - prev.origin.x,
                         bounds.origin.y - prev.origin.y,
                     );
+                    if let Some(hit_check_started) = hit_check_started {
+                        self.debug_stats.paint_cache_hit_check_time = self
+                            .debug_stats
+                            .paint_cache_hit_check_time
+                            .saturating_add(hit_check_started.elapsed());
+                    }
                     let replay_span = if tracing::enabled!(tracing::Level::TRACE) {
                         tracing::trace_span!(
                             "fret.ui.paint_cache.replay",
@@ -412,6 +431,12 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
             self.paint_cache.misses = self.paint_cache.misses.saturating_add(1);
+            if let Some(hit_check_started) = hit_check_started {
+                self.debug_stats.paint_cache_hit_check_time = self
+                    .debug_stats
+                    .paint_cache_hit_check_time
+                    .saturating_add(hit_check_started.elapsed());
+            }
         }
 
         // Clear the "dirty" flag before invoking widget paint so that paint-triggered invalidations
@@ -477,7 +502,9 @@ impl<H: UiHost> UiTree<H> {
                 false
             };
 
+            cx.tree.debug_paint_widget_exclusive_resume();
             widget.paint(&mut cx);
+            let _ = cx.tree.debug_paint_widget_exclusive_pause();
 
             if pushed_transform {
                 cx.scene.push(SceneOp::PopTransform);
@@ -485,9 +512,16 @@ impl<H: UiHost> UiTree<H> {
         });
         let end = scene.ops_len();
 
+        let obs_started = self.debug_enabled.then(Instant::now);
         self.observed_in_paint.record(node, observations.as_slice());
         self.observed_globals_in_paint
             .record(node, global_observations.as_slice());
+        if let Some(obs_started) = obs_started {
+            self.debug_stats.paint_observation_record_time = self
+                .debug_stats
+                .paint_observation_record_time
+                .saturating_add(obs_started.elapsed());
+        }
         if let Some(n) = self.nodes.get_mut(node) {
             if cache_enabled {
                 n.paint_cache = Some(PaintCacheEntry {

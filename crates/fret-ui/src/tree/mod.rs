@@ -315,6 +315,14 @@ pub struct UiDebugFrameStats {
     pub paint_time: Duration,
     pub paint_record_visual_bounds_time: Duration,
     pub paint_record_visual_bounds_calls: u32,
+    /// Total wall time spent computing paint-cache keys and paint-cache enablement checks.
+    pub paint_cache_key_time: Duration,
+    /// Total wall time spent checking paint-cache hit eligibility (excluding replay itself).
+    pub paint_cache_hit_check_time: Duration,
+    /// Total wall time spent executing `Widget::paint()` (including push/pop transforms).
+    pub paint_widget_time: Duration,
+    /// Total wall time spent recording paint observations (`observed_in_paint` + globals).
+    pub paint_observation_record_time: Duration,
     pub paint_input_context_time: Duration,
     pub paint_scroll_handle_invalidation_time: Duration,
     pub paint_collect_roots_time: Duration,
@@ -1306,6 +1314,7 @@ pub struct UiTree<H: UiHost> {
     debug_view_cache_roots: Vec<DebugViewCacheRootRecord>,
     debug_view_cache_contained_relayout_roots: Vec<NodeId>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
+    debug_paint_widget_exclusive_started: Option<Instant>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
     debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
     debug_layout_stack: Vec<DebugLayoutStackFrame>,
@@ -1729,6 +1738,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_view_cache_roots: Vec::new(),
             debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
+            debug_paint_widget_exclusive_started: None,
             debug_layout_engine_solves: Vec::new(),
             debug_layout_hotspots: Vec::new(),
             debug_layout_stack: Vec::new(),
@@ -2092,6 +2102,30 @@ impl<H: UiHost> UiTree<H> {
                 detail,
             });
         }
+    }
+
+    pub(crate) fn debug_paint_widget_exclusive_resume(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        if self.debug_paint_widget_exclusive_started.is_some() {
+            return;
+        }
+        self.debug_paint_widget_exclusive_started = Some(Instant::now());
+    }
+
+    pub(crate) fn debug_paint_widget_exclusive_pause(&mut self) -> bool {
+        if !self.debug_enabled {
+            return false;
+        }
+        let Some(started) = self.debug_paint_widget_exclusive_started.take() else {
+            return false;
+        };
+        self.debug_stats.paint_widget_time = self
+            .debug_stats
+            .paint_widget_time
+            .saturating_add(started.elapsed());
+        true
     }
 
     pub(crate) fn debug_record_hover_edge_pressable(&mut self) {

@@ -678,6 +678,7 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
     }
 
     pub fn paint(&mut self, child: NodeId, bounds: Rect) {
+        let was_widget_timer_running = self.tree.debug_paint_widget_exclusive_pause();
         let child_transform = self.children_render_transform;
         if let Some(transform) = child_transform {
             self.scene
@@ -700,6 +701,9 @@ impl<'a, H: UiHost> PaintCx<'a, H> {
 
         if child_transform.is_some() {
             self.scene.push(fret_core::SceneOp::PopTransform);
+        }
+        if was_widget_timer_running {
+            self.tree.debug_paint_widget_exclusive_resume();
         }
     }
 
