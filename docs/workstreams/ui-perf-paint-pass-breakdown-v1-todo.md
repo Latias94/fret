@@ -22,11 +22,18 @@ Conventions:
 
 - [x] Export coarse paint-cache attribution (replay time, bounds translation time, element visual-bounds recording time).
   - Evidence: `feat(diag): add paint pass breakdown metrics` (commit `f2bee87a`).
-- [ ] Add paint-phase micro timers (see workstream doc section 1):
-  - traversal overhead vs widget paint overhead vs observation bookkeeping,
+- [x] Add initial paint-phase micro timers for “paint-all” plumbing (see workstream doc section 1):
   - window snapshot plumbing performed during paint,
-  - layer root enumeration.
-- [ ] Update `fretboard diag stats` to print these paint micro timers in the top-frame line.
+  - scroll-handle invalidation before paint-cache replay,
+  - layer root enumeration,
+  - paint observation collapse after paint.
+  - Evidence: `feat(diag): add paint micro-breakdown timers` (commit `b20a1280`).
+- [ ] Add paint-phase micro timers for the remaining dominant candidates:
+  - per-node traversal overhead on stable frames (cache hit vs miss),
+  - widget `paint()` time,
+  - observation bookkeeping (recording/merging observed globals/models during paint).
+- [x] Update `fretboard diag stats` + `--json` output to include the initial paint micro timers.
+  - Evidence: `feat(diag): add paint micro-breakdown timers` (commit `b20a1280`).
 - [ ] Record at least 3 “stable but paint-heavy” evidence bundles (menubar, overlay torture, chrome torture) and
   summarize the dominant paint sub-slice for each.
 
@@ -45,4 +52,3 @@ Conventions:
   - per-view paint replay that bypasses per-node traversal on stable frames, or
   - renderer-friendly replay primitives (encoded display list chunks).
 - [ ] Add a gate that fails when stable-frame paint cost regresses on chrome/menus (Tier B candidate).
-

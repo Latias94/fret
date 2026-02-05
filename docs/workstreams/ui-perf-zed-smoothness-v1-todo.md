@@ -81,6 +81,12 @@ Conventions:
     `paint_record_visual_bounds_calls`.
   - Implemented by `feat(diag): add paint pass breakdown metrics` (commit `f2bee87a`).
   - Tracking: `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`
+- [x] Export initial paint micro-breakdown timers (paint-all plumbing).
+  - Adds: `paint_input_context_time_us`, `paint_scroll_handle_invalidation_time_us`,
+    `paint_collect_roots_time_us`, `paint_publish_text_input_snapshot_time_us`,
+    `paint_collapse_observations_time_us`.
+  - Implemented by `feat(diag): add paint micro-breakdown timers` (commit `b20a1280`).
+  - Tracking: `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`
 - [ ] Keep `diag perf` runs comparable by splitting “gate checks” vs “deep profiling”:
   - Gate check (CPU regressions): keep `FRET_DIAG_RENDERER_PERF` off (avoid instrumentation overhead).
   - Deep profiling (churn / GPU triage): turn `FRET_DIAG_RENDERER_PERF=1` on and record churn tables in the log.

@@ -3464,3 +3464,50 @@ Takeaway:
 - The remaining paint cost likely comes from other paint-phase work (per-node traversal overhead, widget paint costs,
   observation bookkeeping, or window snapshot plumbing). Next step: add paint micro timers to explain this slice
   (tracked in `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`).
+
+## 2026-02-05 18:28:00 (commit `b20a1280`)
+
+Change:
+- Add initial paint micro-breakdown timers (paint-all plumbing) and export them into bundles + `fretboard diag stats`:
+  - `paint_input_context_time_us`
+  - `paint_scroll_handle_invalidation_time_us`
+  - `paint_collect_roots_time_us`
+  - `paint_publish_text_input_snapshot_time_us`
+  - `paint_collapse_observations_time_us`
+
+Why:
+- The menubar steady probe still shows ~2.6ms `paint_time_us` with view-cache reuse and near-free paint-cache replay.
+  We needed to prove/disprove that “paint-all plumbing” was the culprit before instrumenting per-node traversal.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-b20a1280.micro.1770287305/`
+- Command (repeat=7; `sort=time`):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --dir target/fret-diag-perf/menubar-kbd-nav.after-b20a1280.micro.1770287305 \
+  --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+- `top_total_time_us`: p50 ~3386, p95 ~3776, max 3776
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-b20a1280.micro.1770287305/1770287306932-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+  - `paint_time_us=2693`
+  - `paint_cache_replayed_ops=453`
+  - `paint_cache_replay_time_us=6`
+  - `paint_cache_bounds_translate_time_us=0` (`paint_cache_bounds_translated_nodes=0`)
+  - `paint_record_visual_bounds_time_us=15` (`paint_record_visual_bounds_calls=155`)
+  - `paint_breakdown.us(input_ctx/scroll_inv/collect_roots/text_snapshot/collapse)=0/0/0/0/46`
+
+Takeaway:
+- The paint-all “plumbing” micro timers are not where the ~2.6ms paint slice goes for this probe.
+- Next: instrument per-node paint traversal and widget paint (cache hit vs miss) to explain the remaining slice
+  (tracked in `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`).
