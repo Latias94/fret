@@ -1314,7 +1314,7 @@ dependencies = [
  "fret-authoring",
  "fret-code-view",
  "fret-core",
- "fret-executor",
+ "fret-query",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
