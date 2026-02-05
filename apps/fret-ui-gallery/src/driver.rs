@@ -19,7 +19,7 @@ use fret_runtime::{
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
@@ -1775,13 +1775,10 @@ impl UiGalleryDriver {
                         .bottom(status_bar)
                         .into_element(cx);
 
-                    let panel = cx.semantics(
-                        SemanticsProps {
-                            role: SemanticsRole::Panel,
-                            label: Some(Arc::from("fret-ui-gallery")),
-                            ..Default::default()
-                        },
-                        |_cx| vec![frame],
+                    let panel = frame.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Panel)
+                            .label("fret-ui-gallery"),
                     );
                     if let Some(handle) = menubar_handle.borrow().clone() {
                         let group_active = handle.group_active.clone();
