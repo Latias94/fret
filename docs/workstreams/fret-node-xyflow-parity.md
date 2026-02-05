@@ -136,7 +136,7 @@ Headless / substrate ergonomics:
 - [x] A crisp “controlled mode” cookbook (store-driven vs external Graph/ViewState) with examples.
 
 Built-in add-ons:
-- [~] Background variants parity (dots / cross) + per-editor theming.
+- [x] Background variants parity (dots / cross) + per-editor theming.
 - [~] First-class NodeToolbar / EdgeToolbar primitives (overlay positioning + hit-testing discipline).
 - [x] “Custom edge” Stage 2 (custom path builders) with a stable contract.
 
@@ -257,11 +257,13 @@ Deliverables:
 - Clear hit-testing and focus rules for overlays (no accidental canvas input stealing).
 
 Work items:
-- [~] Background variants parity:
+- [x] Background variants parity:
   - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
   - Current fret-node: grid rendering (major/minor) in `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
   - Done: dot + cross variants (`NodeGraphStyle.grid_pattern` + sizes)
-  - TODO: per-editor theme token plumbing.
+  - Done: per-editor theme token plumbing + explicit background overrides.
+    - Contract: `docs/node-graph-addons-theming.md`
+    - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
 - [x] NodeToolbar primitive:
   - XyFlow reference: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
   - Implementation direction: window-space overlay positioned from derived geometry
