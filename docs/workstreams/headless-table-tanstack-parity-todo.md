@@ -329,7 +329,7 @@ ColumnDef keys referenced by upstream feature implementations:
   - Covered: `pageCount`/`rowCount`/page bounds derived from `getPrePaginationRowModel()` under
     `paginateExpandedRows` true/false (fixture asserts `page_count`, `row_count`, `can_next_page`,
     `page_options`).
-- [~] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
+- [x] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
   - Done (parity-gated): `getSelectedRowModel` / `getFilteredSelectedRowModel` / `getGroupedSelectedRowModel` equivalents,
     plus basic toggle behaviors for flat rows (including `enableMultiRowSelection=false` clearing semantics).
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection.json`
@@ -339,8 +339,12 @@ ColumnDef keys referenced by upstream feature implementations:
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`
     - Covered: `enableSubRowSelection=false` prevents child selection propagation.
-  - Remaining: per-row function options (`enableRowSelection`/`enableSubRowSelection` as functions) parity.
-- [~] HTP-sel-020 Align option gates and hooks:
+  - Covered: per-row function options (`enableRowSelection` / `enableSubRowSelection` / `enableMultiRowSelection` as functions).
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection.json`
+      (snapshots: `selection_enable_row_selection_fn_odd_ids_*`)
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json`
+      (snapshots: `selection_tree_enable_*`)
+- [x] HTP-sel-020 Align option gates and hooks:
   - `enableRowSelection`, `enableMultiRowSelection`, `enableSubRowSelection`, `enableGroupingRowSelection`,
   - `onRowSelectionChange`.
   - Done (partial): table-level boolean gates (`enableRowSelection`, `enableMultiRowSelection`, `enableSubRowSelection`) are parsed from TanStack options and applied by state transitions.
@@ -349,7 +353,14 @@ ColumnDef keys referenced by upstream feature implementations:
   - Done (parity-gated): controlled-hook noop semantics (`onRowSelectionChange` ignores updater).
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json` (snapshot: `selection_tree_action_toggle_on_row_selection_change_noop_ignores`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`
-  - Remaining: per-row function options parity.
+  - Done (parity-gated): per-row function options (`enableRowSelection` / `enableSubRowSelection` / `enableMultiRowSelection` as functions).
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`TableBuilder::enable_*_row_selection_by`)
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_selection.rs` (TanStack `mutateRowIsSelected`-aligned)
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection.json`
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/selection_tree.json`
+    - Parity gates:
+      - `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_parity.rs`
+      - `ecosystem/fret-ui-headless/tests/tanstack_v8_selection_tree_parity.rs`
 - [x] HTP-colpin-010 Align column pinning option gates and hooks:
   - `enablePinning`, `enableColumnPinning`, `onColumnPinningChange`.
   - Parity-gated (option gates + state transition outcomes): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` +

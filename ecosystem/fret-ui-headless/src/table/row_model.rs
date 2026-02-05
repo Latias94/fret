@@ -111,6 +111,9 @@ pub struct TableBuilder<'a, TData> {
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     enable_row_pinning: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    enable_row_selection: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    enable_multi_row_selection: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    enable_sub_row_selection: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_can_expand: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_is_row_expanded: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
@@ -135,6 +138,9 @@ impl<'a, TData> TableBuilder<'a, TData> {
             global_filter_fn: super::FilteringFnSpec::Auto,
             get_column_can_global_filter: None,
             enable_row_pinning: None,
+            enable_row_selection: None,
+            enable_multi_row_selection: None,
+            enable_sub_row_selection: None,
             get_row_can_expand: None,
             get_is_row_expanded: None,
             get_row_key: None,
@@ -304,6 +310,30 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// TanStack-aligned: configure `options.enableRowSelection` as a per-row predicate.
+    pub fn enable_row_selection_by(mut self, f: impl Fn(RowKey, &TData) -> bool + 'static) -> Self {
+        self.enable_row_selection = Some(Arc::new(f));
+        self
+    }
+
+    /// TanStack-aligned: configure `options.enableMultiRowSelection` as a per-row predicate.
+    pub fn enable_multi_row_selection_by(
+        mut self,
+        f: impl Fn(RowKey, &TData) -> bool + 'static,
+    ) -> Self {
+        self.enable_multi_row_selection = Some(Arc::new(f));
+        self
+    }
+
+    /// TanStack-aligned: configure `options.enableSubRowSelection` as a per-row predicate.
+    pub fn enable_sub_row_selection_by(
+        mut self,
+        f: impl Fn(RowKey, &TData) -> bool + 'static,
+    ) -> Self {
+        self.enable_sub_row_selection = Some(Arc::new(f));
+        self
+    }
+
     /// TanStack-aligned: configure `options.getRowCanExpand` as a per-row predicate.
     pub fn get_row_can_expand_by(mut self, f: impl Fn(RowKey, &TData) -> bool + 'static) -> Self {
         self.get_row_can_expand = Some(Arc::new(f));
@@ -382,6 +412,9 @@ pub struct Table<'a, TData> {
     global_filter_fn: super::FilteringFnSpec,
     get_column_can_global_filter: Option<Arc<dyn Fn(&super::ColumnDef<TData>, &TData) -> bool>>,
     enable_row_pinning: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    enable_row_selection: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    enable_multi_row_selection: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
+    enable_sub_row_selection: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_can_expand: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_is_row_expanded: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: GetRowKeyFn<'a, TData>,
@@ -483,6 +516,9 @@ impl<'a, TData> Table<'a, TData> {
             global_filter_fn: builder.global_filter_fn,
             get_column_can_global_filter: builder.get_column_can_global_filter,
             enable_row_pinning: builder.enable_row_pinning,
+            enable_row_selection: builder.enable_row_selection,
+            enable_multi_row_selection: builder.enable_multi_row_selection,
+            enable_sub_row_selection: builder.enable_sub_row_selection,
             get_row_can_expand: builder.get_row_can_expand,
             get_is_row_expanded: builder.get_is_row_expanded,
             get_row_key,
@@ -2211,15 +2247,50 @@ impl<'a, TData> Table<'a, TData> {
         super::is_row_selected(row_key, &self.state.row_selection)
     }
 
+    fn row_can_select_for_row(&self, row_key: RowKey, row: &Row<'a, TData>) -> bool {
+        if let Some(enable_row_selection) = self.enable_row_selection.as_ref() {
+            return enable_row_selection(row_key, row.original);
+        }
+        self.options.enable_row_selection
+    }
+
+    fn row_can_multi_select_for_row(&self, row_key: RowKey, row: &Row<'a, TData>) -> bool {
+        if let Some(enable_multi_row_selection) = self.enable_multi_row_selection.as_ref() {
+            return enable_multi_row_selection(row_key, row.original);
+        }
+        self.options.enable_multi_row_selection
+    }
+
+    fn row_can_select_sub_rows_for_row(&self, row_key: RowKey, row: &Row<'a, TData>) -> bool {
+        if let Some(enable_sub_row_selection) = self.enable_sub_row_selection.as_ref() {
+            return enable_sub_row_selection(row_key, row.original);
+        }
+        self.options.enable_sub_row_selection
+    }
+
     pub fn row_is_some_selected(&self, row_key: RowKey) -> bool {
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
         self.core_row_model().row_by_key(row_key).is_some_and(|i| {
-            super::row_is_some_selected(self.core_row_model(), &self.state.row_selection, i)
+            super::row_is_some_selected(
+                self.core_row_model(),
+                &self.state.row_selection,
+                i,
+                &can_select,
+            )
         })
     }
 
     pub fn row_is_all_sub_rows_selected(&self, row_key: RowKey) -> bool {
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
         self.core_row_model().row_by_key(row_key).is_some_and(|i| {
-            super::row_is_all_sub_rows_selected(self.core_row_model(), &self.state.row_selection, i)
+            super::row_is_all_sub_rows_selected(
+                self.core_row_model(),
+                &self.state.row_selection,
+                i,
+                &can_select,
+            )
         })
     }
 
@@ -2229,23 +2300,32 @@ impl<'a, TData> Table<'a, TData> {
         value: Option<bool>,
         select_children: bool,
     ) -> super::RowSelectionState {
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
+        let can_multi =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_multi_select_for_row(row_key, row);
+        let can_sub = |row_key: RowKey, row: &Row<'a, TData>| {
+            self.row_can_select_sub_rows_for_row(row_key, row)
+        };
         super::toggle_row_selected(
             self.core_row_model(),
             &self.state.row_selection,
             row_key,
             value,
             select_children,
-            self.options.enable_row_selection,
-            self.options.enable_multi_row_selection,
-            self.options.enable_sub_row_selection,
+            &can_select,
+            &can_multi,
+            &can_sub,
         )
     }
 
     pub fn is_all_rows_selected(&self) -> bool {
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
         super::is_all_rows_selected(
             self.filtered_row_model(),
             &self.state.row_selection,
-            self.options.enable_row_selection,
+            &can_select,
         )
     }
 
@@ -2254,18 +2334,19 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn is_all_page_rows_selected(&self) -> bool {
-        super::is_all_page_rows_selected(
-            self.row_model(),
-            &self.state.row_selection,
-            self.options.enable_row_selection,
-        )
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
+        super::is_all_page_rows_selected(self.row_model(), &self.state.row_selection, &can_select)
     }
 
     pub fn is_some_page_rows_selected(&self) -> bool {
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
         super::is_some_page_rows_selected(
             self.row_model(),
+            self.core_row_model(),
             &self.state.row_selection,
-            self.options.enable_row_selection,
+            &can_select,
         )
     }
 
@@ -2286,20 +2367,32 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn toggled_all_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
         super::toggle_all_rows_selected(
             self.filtered_row_model(),
             &self.state.row_selection,
             value,
-            self.options.enable_row_selection,
+            &can_select,
         )
     }
 
     pub fn toggled_all_page_rows_selected(&self, value: Option<bool>) -> super::RowSelectionState {
+        let can_select =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
+        let can_multi =
+            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_multi_select_for_row(row_key, row);
+        let can_sub = |row_key: RowKey, row: &Row<'a, TData>| {
+            self.row_can_select_sub_rows_for_row(row_key, row)
+        };
         super::toggle_all_page_rows_selected(
             self.row_model(),
+            self.core_row_model(),
             &self.state.row_selection,
             value,
-            self.options.enable_row_selection,
+            &can_select,
+            &can_multi,
+            &can_sub,
         )
     }
 

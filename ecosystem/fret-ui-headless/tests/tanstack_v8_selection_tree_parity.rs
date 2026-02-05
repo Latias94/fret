@@ -150,6 +150,19 @@ fn tanstack_v8_selection_tree_parity() {
             .get("__onRowSelectionChange")
             .and_then(|v| v.as_str());
 
+        let enable_row_selection_mode = snap
+            .options
+            .get("__enableRowSelection")
+            .and_then(|v| v.as_str());
+        let enable_multi_row_selection_mode = snap
+            .options
+            .get("__enableMultiRowSelection")
+            .and_then(|v| v.as_str());
+        let enable_sub_row_selection_mode = snap
+            .options
+            .get("__enableSubRowSelection")
+            .and_then(|v| v.as_str());
+
         let tanstack_options =
             TanStackTableOptions::from_json(&snap.options).expect("tanstack options");
         let options = tanstack_options.to_table_options();
@@ -158,7 +171,7 @@ fn tanstack_v8_selection_tree_parity() {
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
         for action in &snap.actions {
-            let table = Table::builder(&data)
+            let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
                 .get_sub_rows(|row, _idx| {
@@ -169,8 +182,27 @@ fn tanstack_v8_selection_tree_parity() {
                     }
                 })
                 .state(state.clone())
-                .options(options)
-                .build();
+                .options(options);
+
+            if enable_row_selection_mode == Some("odd_ids") {
+                builder = builder.enable_row_selection_by(|row_key, _row| row_key.0 % 2 == 1);
+            } else if enable_row_selection_mode == Some("except_11") {
+                builder = builder.enable_row_selection_by(|row_key, _row| row_key.0 != 11);
+            } else if enable_row_selection_mode == Some("always_false") {
+                builder = builder.enable_row_selection_by(|_row_key, _row| false);
+            }
+
+            if enable_multi_row_selection_mode == Some("always_false") {
+                builder = builder.enable_multi_row_selection_by(|_row_key, _row| false);
+            }
+
+            if enable_sub_row_selection_mode == Some("disable_root_1") {
+                builder = builder.enable_sub_row_selection_by(|row_key, _row| row_key.0 != 1);
+            } else if enable_sub_row_selection_mode == Some("always_false") {
+                builder = builder.enable_sub_row_selection_by(|_row_key, _row| false);
+            }
+
+            let table = builder.build();
 
             if on_row_selection_change_mode == Some("noop") {
                 continue;
@@ -217,8 +249,29 @@ fn tanstack_v8_selection_tree_parity() {
                 }
             })
             .state(state)
-            .options(options)
-            .build();
+            .options(options);
+
+        let mut builder = table;
+
+        if enable_row_selection_mode == Some("odd_ids") {
+            builder = builder.enable_row_selection_by(|row_key, _row| row_key.0 % 2 == 1);
+        } else if enable_row_selection_mode == Some("except_11") {
+            builder = builder.enable_row_selection_by(|row_key, _row| row_key.0 != 11);
+        } else if enable_row_selection_mode == Some("always_false") {
+            builder = builder.enable_row_selection_by(|_row_key, _row| false);
+        }
+
+        if enable_multi_row_selection_mode == Some("always_false") {
+            builder = builder.enable_multi_row_selection_by(|_row_key, _row| false);
+        }
+
+        if enable_sub_row_selection_mode == Some("disable_root_1") {
+            builder = builder.enable_sub_row_selection_by(|row_key, _row| row_key.0 != 1);
+        } else if enable_sub_row_selection_mode == Some("always_false") {
+            builder = builder.enable_sub_row_selection_by(|_row_key, _row| false);
+        }
+
+        let table = builder.build();
 
         let core = snapshot_row_model(table.core_row_model());
         let filtered = snapshot_row_model(table.filtered_row_model());

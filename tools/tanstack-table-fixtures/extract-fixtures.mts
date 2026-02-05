@@ -121,6 +121,9 @@ type SnapshotId =
   | "selection_toggle_row_multi_disabled_keeps_latest"
   | "selection_toggle_all_rows_disabled_noop"
   | "selection_toggle_all_page_rows_respects_pagination"
+  | "selection_enable_row_selection_fn_odd_ids_toggle_all_rows_selects_selectable"
+  | "selection_enable_row_selection_fn_odd_ids_toggle_row_unselectable_noop"
+  | "selection_enable_row_selection_fn_odd_ids_toggle_all_page_rows_selects_selectable"
   | "selection_tree_baseline"
   | "selection_tree_state_child_selected_marks_parent_some_selected"
   | "selection_tree_state_all_children_selected_marks_parent_all_sub_rows_selected"
@@ -129,6 +132,9 @@ type SnapshotId =
   | "selection_tree_action_toggle_root_enable_sub_row_selection_false_only_root"
   | "selection_tree_action_toggle_root_enable_multi_row_selection_false_clears_previous"
   | "selection_tree_action_toggle_on_row_selection_change_noop_ignores"
+  | "selection_tree_enable_row_selection_fn_except_11_root_all_sub_rows_selected"
+  | "selection_tree_enable_sub_row_selection_fn_disable_root_1_only_root"
+  | "selection_tree_enable_multi_row_selection_fn_always_false_clears_previous"
   | "expanding_baseline"
   | "expanding_enable_expanding_false_disables_can_expand"
   | "expanding_hook_get_row_can_expand_overrides_enable_expanding_false"
@@ -297,6 +303,12 @@ type TanStackOptions = {
   __getPaginationRowModel?: "pre_pagination"
   // Fixture-only: inject `enableRowPinning` as a deterministic per-row predicate.
   __enableRowPinning?: "odd_ids"
+  // Fixture-only: inject `enableRowSelection` as a deterministic per-row predicate.
+  __enableRowSelection?: "odd_ids" | "except_11" | "always_false"
+  // Fixture-only: inject `enableSubRowSelection` as a deterministic per-row predicate.
+  __enableSubRowSelection?: "disable_root_1" | "always_false"
+  // Fixture-only: inject `enableMultiRowSelection` as a deterministic per-row predicate.
+  __enableMultiRowSelection?: "always_false"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
   sortingFnsMode?: "custom_text"
   // Fixture-only: when set, the generator injects a deterministic `options.filterFns` map.
@@ -1511,9 +1523,27 @@ async function main(): Promise<void> {
       enableSortingRemoval: options.enableSortingRemoval ?? true,
       enableMultiRemove: options.enableMultiRemove ?? true,
       sortDescFirst: options.sortDescFirst,
-      enableRowSelection: options.enableRowSelection ?? true,
-      enableMultiRowSelection: options.enableMultiRowSelection ?? true,
-      enableSubRowSelection: options.enableSubRowSelection ?? true,
+      enableRowSelection:
+        options.__enableRowSelection === "odd_ids"
+          ? (row: any) => {
+              const id = Number.parseInt(String(row?.id ?? ""), 10)
+              return Number.isFinite(id) ? id % 2 === 1 : false
+            }
+          : options.__enableRowSelection === "except_11"
+            ? (row: any) => String(row?.id ?? "") !== "11"
+            : options.__enableRowSelection === "always_false"
+              ? (_row: any) => false
+              : options.enableRowSelection ?? true,
+      enableMultiRowSelection:
+        options.__enableMultiRowSelection === "always_false"
+          ? (_row: any) => false
+          : options.enableMultiRowSelection ?? true,
+      enableSubRowSelection:
+        options.__enableSubRowSelection === "disable_root_1"
+          ? (row: any) => String(row?.id ?? "") !== "1"
+          : options.__enableSubRowSelection === "always_false"
+            ? (_row: any) => false
+            : options.enableSubRowSelection ?? true,
       enableColumnResizing: options.enableColumnResizing ?? true,
       enableHiding: options.enableHiding ?? true,
       enableRowPinning:
@@ -3075,6 +3105,35 @@ function snapshotColumnPinning(
           { type: "toggleAllPageRowsSelected" },
         ]),
       },
+      {
+        id: "selection_enable_row_selection_fn_odd_ids_toggle_all_rows_selects_selectable",
+        options: { ...base, __enableRowSelection: "odd_ids" },
+        state: {},
+        actions: [{ type: "toggleAllRowsSelected" }],
+        expect: snapshotForActions({ ...base, __enableRowSelection: "odd_ids" }, {}, [
+          { type: "toggleAllRowsSelected" },
+        ]),
+      },
+      {
+        id: "selection_enable_row_selection_fn_odd_ids_toggle_row_unselectable_noop",
+        options: { ...base, __enableRowSelection: "odd_ids" },
+        state: {},
+        actions: [{ type: "toggleRowSelected", row_id: "2" }],
+        expect: snapshotForActions({ ...base, __enableRowSelection: "odd_ids" }, {}, [
+          { type: "toggleRowSelected", row_id: "2" },
+        ]),
+      },
+      {
+        id: "selection_enable_row_selection_fn_odd_ids_toggle_all_page_rows_selects_selectable",
+        options: { ...base, __enableRowSelection: "odd_ids" },
+        state: { pagination: { pageIndex: 0, pageSize: 2 } },
+        actions: [{ type: "toggleAllPageRowsSelected" }],
+        expect: snapshotForActions(
+          { ...base, __enableRowSelection: "odd_ids" },
+          { pagination: { pageIndex: 0, pageSize: 2 } },
+          [{ type: "toggleAllPageRowsSelected" }],
+        ),
+      },
     ]
   } else if (case_id === "selection_tree") {
     const base = defaultOptions
@@ -3152,6 +3211,24 @@ function snapshotColumnPinning(
         "selection_tree_action_toggle_on_row_selection_change_noop_ignores",
         { ...base, __onRowSelectionChange: "noop" },
         {},
+        [{ type: "toggleRowSelected", row_id: "1" }],
+      ),
+      mkActions(
+        "selection_tree_enable_row_selection_fn_except_11_root_all_sub_rows_selected",
+        { ...base, __enableRowSelection: "except_11" },
+        {},
+        [{ type: "toggleRowSelected", row_id: "1" }],
+      ),
+      mkActions(
+        "selection_tree_enable_sub_row_selection_fn_disable_root_1_only_root",
+        { ...base, __enableSubRowSelection: "disable_root_1" },
+        {},
+        [{ type: "toggleRowSelected", row_id: "1" }],
+      ),
+      mkActions(
+        "selection_tree_enable_multi_row_selection_fn_always_false_clears_previous",
+        { ...base, __enableMultiRowSelection: "always_false" },
+        { rowSelection: { "2": true } },
         [{ type: "toggleRowSelected", row_id: "1" }],
       ),
     ]

@@ -241,4 +241,4 @@ Fixture schema (v0; evolving, but kept stable for tests):
 - Use the TODO tracker: `docs/workstreams/headless-table-tanstack-parity-todo.md`
 - Start with M1/M2 (types + state), then lock parity by fixtures before large refactors.
 
-Current focus (2026-02-05): M6 — Selection per-row function options parity (remaining `HTP-sel-010` / `HTP-sel-020`).
+Current focus (2026-02-05): M2 — Reset API parity sweep (remaining `reset*` surfaces + `initialState` semantics).
