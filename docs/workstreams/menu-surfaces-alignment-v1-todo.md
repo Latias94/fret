@@ -83,10 +83,20 @@ Exit criteria:
   - Evidence: `crates/fret-ui/src/tree/dispatch.rs` (`handle_alt_menu_bar_activation`)
   - Evidence: `crates/fret-ui/src/tree/tests/alt_menu_bar_activation.rs` (nextest coverage)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (publishes `WindowMenuBarFocusService` for in-window menubar)
-- [ ] MENU-MVP1-kbd-021 Implement mnemonic strategy (underlined letter + Alt+Key) or explicitly defer with rationale.
+- [x] MENU-MVP1-kbd-021 Implement mnemonic strategy (underlined letter + Alt+Key) or explicitly defer with rationale.
+  - Decision (defer): we intentionally do **not** ship heuristics like “first letter of menu title”.
+    Without a source-of-truth for mnemonics (localization, collisions, author overrides),
+    heuristics create unstable UX and regressions across downstream apps.
+  - Next: add an explicit mnemonic/access-key field at the menu model or config layer
+    (`menubar.json`), then implement:
+    - underlined letter rendering (presentation), and
+    - Alt+Key routing (policy) for Windows/Linux in-window menubars.
 - [x] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (test `escape_unwinds_submenu_then_menu_and_restores_focus`)
-- [ ] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.
+- [x] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/trigger.rs` (`wire_open_on_shift_f10`)
+  - Evidence: `ecosystem/fret-ui-shadcn/src/context_menu.rs` (wires Shift+F10)
+  - Evidence: `tools/diag-scripts/ui-gallery-context-menu-shift-f10.json`
 - [x] MENU-MVP1-parity-024 Switch open menus on hover (Zed/Godot-style `switch_on_hover`) with a small delay.
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`DEFAULT_HOVER_SWITCH_DELAY`, hover switch timer)
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-hover-switch.json`
