@@ -1266,6 +1266,9 @@ topics (if/when we implement them):
       - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiPrepaintActionKindV1::NodeGraphCullWindowShift`)
     - Recommended gate: `--check-drag-cache-root-paint-only ui-gallery-node-graph-cull-root` (warmup >= 5).
     - Optional diagnostics gate: `--check-node-graph-cull-window-shifts-min <n>` (evidence: `check.node_graph_cull_window_shifts_min.json`).
+    - Window-shift torture script: `tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json` (large pan crosses window boundaries).
+    - Suite: `fretboard diag suite ui-gallery-node-graph-cull-window-shifts` (defaults: view-cache + shell + screenshots; gate `--check-node-graph-cull-window-shifts-min 1`; warmup=5).
+    - Optional diagnostics gate: `--check-node-graph-cull-window-shifts-max <n>` (evidence: `check.node_graph_cull_window_shifts_max.json`).
     - Evidence bundle (cache+shell, release): `target/fret-diag-node-graph-cull-torture/1770256423358-ui-gallery-node-graph-cull-pan-zoom/bundle.json`
 - [x] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:

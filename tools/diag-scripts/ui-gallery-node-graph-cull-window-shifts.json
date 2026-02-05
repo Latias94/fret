@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "node graph cull" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-node-graph-cull-torture" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-node-graph-cull-torture" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-node-graph-cull-root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-node-graph-cull-window-shifts-before"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-node-graph-cull-window-shifts-before"
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-node-graph-cull-root" }
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-node-graph-cull-root" },
+      "button": "middle",
+      "delta_x": 3200.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-node-graph-cull-root" },
+      "button": "middle",
+      "delta_x": -3200.0,
+      "delta_y": 0.0,
+      "steps": 24
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-node-graph-cull-window-shifts-after"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-node-graph-cull-window-shifts-after"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-node-graph-cull-window-shifts" }
+  ]
+}
+
