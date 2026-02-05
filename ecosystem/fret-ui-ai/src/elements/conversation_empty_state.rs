@@ -9,6 +9,7 @@ use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::Card;
 
 #[derive(Clone)]
+/// A centered empty-state card for transcript/conversation surfaces.
 pub struct ConversationEmptyState {
     title: Arc<str>,
     description: Option<Arc<str>>,

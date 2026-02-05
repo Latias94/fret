@@ -7,6 +7,7 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 
 #[derive(Clone)]
+/// A horizontal toolbar row for per-message action buttons.
 pub struct MessageToolbar {
     children: Vec<AnyElement>,
     justify: Justify,

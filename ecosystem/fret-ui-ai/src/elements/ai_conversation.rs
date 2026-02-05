@@ -10,6 +10,17 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use crate::elements::MessageParts;
 use crate::model::{AiMessage, MessageId};
 
+/// A virtualized transcript surface that renders an `Arc<[AiMessage]>` via `MessageParts`.
+///
+/// Key properties:
+///
+/// - **Keyed identity**: messages are keyed by `AiMessage.id` (`MessageId = u64`). IDs must be
+///   stable and unique within the transcript.
+/// - **Streaming-friendly scrolling**: pass a monotonic `content_revision` that changes whenever
+///   “new content arrived” (including streaming append to the last assistant message) so the
+///   stick-to-bottom behavior can remain correct.
+/// - **Automation gates**: set `test_id_message_prefix` so per-message part selectors remain stable
+///   for `fretboard diag` scripts.
 #[derive(Clone)]
 pub struct AiConversationTranscript {
     messages: Arc<[AiMessage]>,

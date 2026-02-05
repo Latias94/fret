@@ -1,3 +1,4 @@
+mod ai_chat;
 mod ai_conversation;
 mod conversation;
 mod conversation_download;
@@ -12,6 +13,7 @@ mod prompt_input;
 mod sources_block;
 mod tool_call_block;
 
+pub use ai_chat::*;
 pub use ai_conversation::*;
 pub use conversation::*;
 pub use conversation_download::*;

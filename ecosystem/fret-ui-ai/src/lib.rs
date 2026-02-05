@@ -71,7 +71,7 @@ pub mod export;
 pub mod model;
 
 pub use elements::{
-    AiConversationTranscript, Conversation, ConversationDownload, ConversationEmptyState,
+    AiChat, AiConversationTranscript, Conversation, ConversationDownload, ConversationEmptyState,
     ConversationMessage, ConversationScrollButton, ConversationTranscript, InlineCitation, Message,
     MessageParts, MessageResponse, MessageToolbar, PromptInput, SourcesBlock, ToolCallBlock,
 };

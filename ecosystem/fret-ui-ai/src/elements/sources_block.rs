@@ -1,22 +1,31 @@
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Corners, Edges, SemanticsRole, TextOverflow, TextWrap};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, Justify, LayoutRefinement, Radius, Space};
 
-use fret_ui_shadcn::{Badge, BadgeVariant, Button, ButtonSize, ButtonVariant, Card};
+use fret_ui_shadcn::{
+    Badge, BadgeVariant, Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent,
+};
 
 use crate::model::SourceItem;
 
 #[derive(Clone)]
+/// A collapsible list view for assistant sources/references (AI Elements `sources.tsx`-style).
+///
+/// Apps still own effects. When `on_open_url` is set, link activation emits an intent with
+/// `LinkInfo { href, text }`.
 pub struct SourcesBlock {
     items: Arc<[SourceItem]>,
     title: Arc<str>,
+    default_open: bool,
     on_open_url: Option<fret_markdown::OnLinkActivate>,
     highlighted_source_id: Option<Arc<str>>,
     highlighted_source_model: Option<Model<Option<Arc<str>>>>,
@@ -31,6 +40,7 @@ impl std::fmt::Debug for SourcesBlock {
         f.debug_struct("SourcesBlock")
             .field("items_len", &self.items.len())
             .field("title", &self.title.as_ref())
+            .field("default_open", &self.default_open)
             .field("has_on_open_url", &self.on_open_url.is_some())
             .field(
                 "highlighted_source_id",
@@ -52,7 +62,8 @@ impl SourcesBlock {
     pub fn new(items: impl Into<Arc<[SourceItem]>>) -> Self {
         Self {
             items: items.into(),
-            title: Arc::<str>::from("Sources"),
+            title: Arc::<str>::from("Used sources"),
+            default_open: false,
             on_open_url: None,
             highlighted_source_id: None,
             highlighted_source_model: None,
@@ -65,6 +76,14 @@ impl SourcesBlock {
 
     pub fn title(mut self, title: impl Into<Arc<str>>) -> Self {
         self.title = title.into();
+        self
+    }
+
+    /// Sets whether the Collapsible content is open by default.
+    ///
+    /// Upstream AI Elements hides sources by default.
+    pub fn default_open(mut self, default_open: bool) -> Self {
+        self.default_open = default_open;
         self
     }
 
@@ -105,6 +124,25 @@ impl SourcesBlock {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let root_layout = decl_style::layout_style(&theme, self.layout);
+        let excerpt_color = theme.color_by_key("muted-foreground");
+
+        let highlight_bg = theme
+            .color_by_key("accent")
+            .unwrap_or_else(|| theme.color_required("muted"));
+        let highlight_padding = decl_style::space(&theme, Space::N2);
+        let highlight_radius = decl_style::radius(&theme, Radius::Md);
+        let highlight_layout =
+            decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
+
+        let trigger_test_id = self
+            .test_id_root
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}-trigger")));
+        let content_test_id = self
+            .test_id_root
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}-content")));
 
         let highlighted_source_id = self
             .highlighted_source_model
@@ -112,51 +150,21 @@ impl SourcesBlock {
             .and_then(|m| cx.get_model_cloned(m, Invalidation::Paint).unwrap_or(None))
             .or(self.highlighted_source_id);
 
-        let title = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2),
-            |cx| {
-                let label_style = TextStyle {
-                    font: Default::default(),
-                    size: theme.metric_required("font.size_sm"),
-                    weight: FontWeight::MEDIUM,
-                    slant: Default::default(),
-                    line_height: Some(theme.metric_required("font.line_height")),
-                    letter_spacing_em: None,
-                };
-
-                let label = cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: self.title.clone(),
-                    style: Some(label_style),
-                    color: theme.color_by_key("muted-foreground"),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                });
-
-                let count = Badge::new(format!("{}", self.items.len()))
-                    .variant(BadgeVariant::Secondary)
-                    .into_element(cx);
-
-                vec![label, count]
-            },
-        );
-
         let items = self.items;
+        let count = items.len();
+        let items_for_list = items.clone();
         let on_open_url = self.on_open_url;
         let row_prefix = self.test_id_row_prefix;
-        let highlighted_source_id = highlighted_source_id.clone();
+        let chrome = self.chrome;
 
         let list = stack::vstack(
             cx,
             stack::VStackProps::default()
                 .layout(LayoutRefinement::default().w_full())
                 .gap(Space::N2),
-            |cx| {
+            move |cx| {
                 let mut out = Vec::new();
-                for (index, item) in items.iter().enumerate() {
+                for (index, item) in items_for_list.iter().enumerate() {
                     let row_test_id = row_prefix
                         .clone()
                         .map(|p| Arc::<str>::from(format!("{p}{index}")));
@@ -164,6 +172,8 @@ impl SourcesBlock {
                     let is_highlighted = highlighted_source_id
                         .as_ref()
                         .is_some_and(|id| id.as_ref() == item.id.as_ref());
+
+                    let icon = decl_icon::icon(cx, IconId::new_static("lucide.book"));
 
                     let title_el: AnyElement = match (&item.url, on_open_url.clone()) {
                         (Some(url), Some(handler)) => {
@@ -176,16 +186,22 @@ impl SourcesBlock {
                                 handler(host, cx, reason, link.clone());
                             });
 
+                            let title = cx.text(item.title.clone());
                             let mut btn = Button::new(item.title.clone())
                                 .variant(ButtonVariant::Link)
                                 .size(ButtonSize::Sm)
+                                .children([icon, title])
                                 .on_activate(on_activate);
                             if let Some(id) = row_test_id.clone() {
                                 btn = btn.test_id(Arc::<str>::from(format!("{id}-link")));
                             }
                             btn.into_element(cx)
                         }
-                        _ => cx.text(item.title.clone()),
+                        _ => stack::hstack(
+                            cx,
+                            stack::HStackProps::default().gap(Space::N2),
+                            move |cx| vec![icon, cx.text(item.title.clone())],
+                        ),
                     };
 
                     let active_badge = if is_highlighted {
@@ -206,69 +222,65 @@ impl SourcesBlock {
                         None
                     };
 
-                    let title_row = if let Some(active_badge) = active_badge {
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full())
-                                .gap(Space::N2),
-                            |_cx| vec![title_el, active_badge],
-                        )
-                    } else {
-                        title_el
-                    };
+                    let row = stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N2)
+                            .justify(Justify::Between),
+                        move |_cx| {
+                            let mut row = Vec::new();
+                            row.push(title_el);
+                            if let Some(active_badge) = active_badge {
+                                row.push(active_badge);
+                            }
+                            row
+                        },
+                    );
 
                     let excerpt_el = item.excerpt.clone().map(|excerpt| {
                         cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
                             text: excerpt,
                             style: None,
-                            color: theme.color_by_key("muted-foreground"),
+                            color: excerpt_color,
                             wrap: TextWrap::Word,
                             overflow: TextOverflow::Clip,
                         })
                     });
 
-                    let row = stack::vstack(
+                    let body = stack::vstack(
                         cx,
                         stack::VStackProps::default()
                             .layout(LayoutRefinement::default().w_full())
                             .gap(Space::N1),
-                        |_cx| {
-                            let mut row = Vec::new();
-                            row.push(title_row);
+                        move |_cx| {
+                            let mut body = Vec::new();
+                            body.push(row);
                             if let Some(excerpt_el) = excerpt_el {
-                                row.push(excerpt_el);
+                                body.push(excerpt_el);
                             }
-                            row
+                            body
                         },
                     );
 
-                    let row: AnyElement = if is_highlighted {
-                        let bg = theme
-                            .color_by_key("accent")
-                            .unwrap_or_else(|| theme.color_required("muted"));
-                        let padding = decl_style::space(&theme, Space::N2);
-                        let radius = decl_style::radius(&theme, fret_ui_kit::Radius::Md);
-                        let layout =
-                            decl_style::layout_style(&theme, LayoutRefinement::default().w_full());
-
+                    let body: AnyElement = if is_highlighted {
                         cx.container(
                             ContainerProps {
-                                layout,
-                                padding: Edges::all(padding),
-                                background: Some(bg),
-                                corner_radii: Corners::all(radius),
+                                layout: highlight_layout,
+                                padding: Edges::all(highlight_padding),
+                                background: Some(highlight_bg),
+                                corner_radii: Corners::all(highlight_radius),
                                 ..Default::default()
                             },
-                            move |_cx| vec![row],
+                            move |_cx| vec![body],
                         )
                     } else {
-                        row
+                        body
                     };
 
                     let Some(test_id) = row_test_id else {
-                        out.push(row);
+                        out.push(body);
                         continue;
                     };
 
@@ -278,29 +290,82 @@ impl SourcesBlock {
                             test_id: Some(test_id),
                             ..Default::default()
                         },
-                        move |_cx| vec![row],
+                        move |_cx| vec![body],
                     ));
                 }
                 out
             },
         );
 
-        let body = stack::vstack(
+        let default_open = self.default_open;
+
+        let collapsible = Collapsible::uncontrolled(default_open).into_element_with_open_model(
             cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N3),
-            |_cx| vec![title, list],
+            move |cx, open_model, is_open| {
+                let on_activate: OnActivate = Arc::new(move |host, _cx, _reason| {
+                    let _ = host.models_mut().update(&open_model, |v| *v = !*v);
+                });
+
+                let label = cx.text(format!("Used {count} sources"));
+                let chevron_id = if is_open {
+                    IconId::new_static("lucide.chevron-up")
+                } else {
+                    IconId::new_static("lucide.chevron-down")
+                };
+                let chevron = decl_icon::icon(cx, chevron_id);
+                let row = stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .layout(LayoutRefinement::default())
+                        .gap(Space::N2),
+                    move |_cx| vec![label, chevron],
+                );
+
+                let mut btn = Button::new(format!("Used {count} sources"))
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Sm)
+                    .children([row])
+                    .on_activate(on_activate)
+                    .refine_layout(LayoutRefinement::default());
+                if let Some(test_id) = trigger_test_id.clone() {
+                    btn = btn.test_id(test_id);
+                }
+                btn.into_element(cx)
+            },
+            move |cx| {
+                let content = CollapsibleContent::new(vec![list.clone()])
+                    .refine_style(ChromeRefinement::default().p(Space::N2).pt(Space::N3))
+                    .refine_style(chrome.clone())
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx);
+
+                let Some(test_id) = content_test_id.clone() else {
+                    return content;
+                };
+                cx.semantics(
+                    SemanticsProps {
+                        role: SemanticsRole::Group,
+                        test_id: Some(test_id),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![content],
+                )
+            },
         );
 
-        let card = Card::new(vec![body])
-            .refine_layout(self.layout)
-            .refine_style(self.chrome);
-
-        let card = card.into_element(cx);
+        let root = cx.container(
+            ContainerProps {
+                layout: root_layout,
+                padding: Edges::all(fret_core::Px(0.0)),
+                background: None,
+                corner_radii: Corners::all(fret_core::Px(0.0)),
+                ..Default::default()
+            },
+            move |_cx| vec![collapsible],
+        );
 
         let Some(test_id) = self.test_id_root else {
-            return card;
+            return root;
         };
 
         cx.semantics(
@@ -309,7 +374,7 @@ impl SourcesBlock {
                 test_id: Some(test_id),
                 ..Default::default()
             },
-            move |_cx| vec![card],
+            move |_cx| vec![root],
         )
     }
 }

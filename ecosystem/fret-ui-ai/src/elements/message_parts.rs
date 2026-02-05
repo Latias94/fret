@@ -13,6 +13,10 @@ use crate::elements::{InlineCitation, MessageResponse, SourcesBlock, ToolCallBlo
 use crate::model::{MessagePart, MessageRole};
 
 #[derive(Clone)]
+/// Renders a list of `MessagePart` items into a role-colored message bubble.
+///
+/// This is the “rich message” path: markdown, tool calls, sources, and inline citations are all
+/// expressed as parts. Prefer this over `Message` when you are aligning to AI Elements behavior.
 pub struct MessageParts {
     role: MessageRole,
     parts: Arc<[MessagePart]>,
@@ -84,6 +88,11 @@ impl MessageParts {
                 model
             }
         };
+
+        let sources_for_citations = self.parts.iter().find_map(|part| match part {
+            MessagePart::Sources(items) => Some(items.clone()),
+            _ => None,
+        });
 
         fn role_bg_key(role: MessageRole) -> &'static str {
             match role {
@@ -252,8 +261,14 @@ impl MessageParts {
                                     let mut out = Vec::new();
                                     for (citation_index, item) in items.iter().enumerate() {
                                         let mut citation = InlineCitation::new(item.label.clone())
-                                            .source_id(item.source_id.clone())
+                                            .source_ids(item.source_ids.clone())
                                             .select_source_model(selected_source_id.clone());
+                                        if let Some(sources) = sources_for_citations.clone() {
+                                            citation = citation.sources(sources);
+                                        }
+                                        if let Some(handler) = on_link_activate.clone() {
+                                            citation = citation.on_open_url(handler);
+                                        }
 
                                         if let Some(prefix) = test_id_prefix.clone() {
                                             citation = citation.test_id(Arc::<str>::from(format!(

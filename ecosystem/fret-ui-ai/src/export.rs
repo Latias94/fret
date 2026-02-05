@@ -83,9 +83,16 @@ pub fn messages_to_markdown(messages: &[AiMessage]) -> String {
                     for item in items.iter() {
                         out.push_str("- ");
                         out.push_str(item.label.as_ref());
-                        out.push_str(" → `");
-                        out.push_str(item.source_id.as_ref());
-                        out.push_str("`\n");
+                        out.push_str(" → ");
+                        for (idx, id) in item.source_ids.iter().enumerate() {
+                            if idx > 0 {
+                                out.push_str(", ");
+                            }
+                            out.push('`');
+                            out.push_str(id.as_ref());
+                            out.push('`');
+                        }
+                        out.push('\n');
                     }
                     out.push('\n');
                 }

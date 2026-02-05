@@ -45,6 +45,9 @@ fn payload_to_markdown(payload: &ToolCallPayload) -> Arc<str> {
 }
 
 #[derive(Clone)]
+/// A collapsible tool call block (input/output + lifecycle chrome).
+///
+/// This is intended to be rendered as a `MessagePart::ToolCall` inside `MessageParts`.
 pub struct ToolCallBlock {
     call: ToolCall,
     default_open: bool,

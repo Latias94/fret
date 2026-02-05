@@ -14,6 +14,9 @@ use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, ScrollArea};
 use crate::model::MessageId;
 use crate::{Message, MessageRole};
 
+/// A minimal message record used by `ConversationTranscript`.
+///
+/// Prefer `AiMessage` + `AiConversationTranscript` when you need rich parts (markdown/tool calls).
 #[derive(Debug, Clone)]
 pub struct ConversationMessage {
     pub id: MessageId,
@@ -31,6 +34,10 @@ impl ConversationMessage {
     }
 }
 
+/// A virtualized transcript surface for `ConversationMessage`.
+///
+/// This is a lightweight, text-only transcript used by UI Gallery harnesses. For richer AI chat
+/// surfaces, prefer `AiConversationTranscript`.
 #[derive(Debug, Clone)]
 pub struct ConversationTranscript {
     messages: Arc<[ConversationMessage]>,
@@ -345,6 +352,9 @@ impl ConversationTranscript {
     }
 }
 
+/// A scrollable “conversation” container that manages stick-to-bottom behavior for arbitrary children.
+///
+/// This is a generic composition helper (often used to wrap a transcript + overlays).
 #[derive(Debug, Clone)]
 pub struct Conversation {
     children: Vec<AnyElement>,

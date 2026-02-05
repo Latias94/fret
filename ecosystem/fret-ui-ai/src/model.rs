@@ -64,14 +64,24 @@ impl SourceItem {
 /// An inline citation reference (typically rendered near assistant output).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CitationItem {
-    pub source_id: Arc<str>,
+    /// Source identifiers referenced by this citation.
+    ///
+    /// Upstream AI Elements supports multiple sources per inline citation.
+    pub source_ids: Arc<[Arc<str>]>,
     pub label: Arc<str>,
 }
 
 impl CitationItem {
     pub fn new(source_id: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
         Self {
-            source_id: source_id.into(),
+            source_ids: vec![source_id.into()].into(),
+            label: label.into(),
+        }
+    }
+
+    pub fn from_arc(source_ids: Arc<[Arc<str>]>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            source_ids,
             label: label.into(),
         }
     }

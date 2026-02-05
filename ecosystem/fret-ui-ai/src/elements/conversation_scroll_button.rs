@@ -12,6 +12,10 @@ use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
 #[derive(Clone)]
+/// An overlay “scroll to bottom” affordance driven by a `VirtualListScrollHandle`.
+///
+/// Callers should compose this inside a `relative()` root so its absolute positioning resolves
+/// correctly.
 pub struct ConversationScrollButton {
     handle: VirtualListScrollHandle,
     threshold: Px,

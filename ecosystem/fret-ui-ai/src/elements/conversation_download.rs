@@ -8,6 +8,10 @@ use fret_ui_kit::LayoutRefinement;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
 #[derive(Clone)]
+/// A small “download/export transcript” button.
+///
+/// This component emits an intent via `on_activate`; performing the actual effect (clipboard/file IO)
+/// is app-owned.
 pub struct ConversationDownload {
     label: Arc<str>,
     disabled: bool,
