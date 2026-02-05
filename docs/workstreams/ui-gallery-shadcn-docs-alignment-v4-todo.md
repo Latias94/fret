@@ -90,7 +90,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] menubar
 - [ ] native-select
 - [ ] navigation-menu
-- [ ] pagination
+- [x] pagination — examples mirrored (Demo/Simple/Icons Only/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_pagination`, `ecosystem/fret-ui-shadcn/src/pagination.rs`)
 - [ ] popover
 - [ ] progress
 - [ ] radio-group
