@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, FontWeight, KeyCode};
+use fret_core::{Axis, Edges, KeyCode};
 use fret_kit::prelude::*;
 use fret_ui::ThemeConfig;
 use fret_ui::action::PressablePointerDownResult;
@@ -18,6 +18,7 @@ const CMD_TOGGLE_PREFIX: &str = "todo.toggle.";
 
 const TEST_ID_INPUT: &str = "todo-input";
 const TEST_ID_ADD: &str = "todo-add";
+const TEST_ID_SHORTCUTS: &str = "todo-shortcuts";
 
 fn todo_item_test_id(id: u64, suffix: &str) -> Arc<str> {
     Arc::from(format!("todo-item-{id}-{suffix}"))
@@ -271,39 +272,6 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         .into_element(cx)])
     .into_element(cx);
 
-    let kbd_px = theme
-        .metric_by_key("component.kbd.text_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_required("font.size"));
-    let kbd_line_height = theme
-        .metric_by_key("component.kbd.line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_required("font.line_height"));
-    let muted_fg = theme.color_required("muted-foreground");
-
-    let kbd_label = |cx: &mut ElementContext<'_, App>, text: &'static str| {
-        let label = ui::label(cx, text)
-            .text_size_px(kbd_px)
-            .line_height_px(kbd_line_height)
-            .font_weight(FontWeight::MEDIUM)
-            .text_color(ColorRef::Color(muted_fg))
-            .h_px(kbd_line_height)
-            .into_element(cx);
-
-        ui::container(cx, |cx| {
-            [ui::h_flex(cx, |_cx| [label])
-                .w_full()
-                .h_full()
-                .justify_center()
-                .items_center()
-                .into_element(cx)]
-        })
-        .py(Space::N0p5)
-        .h_px(Px(20.0))
-        .min_h(Px(20.0))
-        .into_element(cx)
-    };
-
     let footer = shadcn::CardFooter::new([ui::h_flex(cx, |cx| {
         let left = cx.text(format!("{active} 个进行中"));
 
@@ -319,30 +287,24 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                 .items_center()
                 .into_element(cx);
 
-            let shortcut_hint =
-                |cx: &mut ElementContext<'_, App>, kbd: &'static str, label: &'static str| {
-                    ui::h_flex(cx, |cx| {
-                        [shadcn::Kbd::new(kbd).into_element(cx), kbd_label(cx, label)]
-                    })
-                    .gap(Space::N1)
-                    .items_center()
-                    .flex_none()
-                    .into_element(cx)
-                };
-
             let help = ui::h_flex(cx, |cx| {
                 [
-                    shortcut_hint(cx, "Enter", "添加"),
-                    shortcut_hint(cx, "↑/↓", "移动"),
-                    shortcut_hint(cx, "Space", "切换完成"),
-                    shortcut_hint(cx, "Del", "删除"),
+                    shadcn::ShortcutHint::new("Enter", "添加").into_element(cx),
+                    shadcn::ShortcutHint::new("↑/↓", "移动").into_element(cx),
+                    shadcn::ShortcutHint::new("Space", "切换完成").into_element(cx),
+                    shadcn::ShortcutHint::new("Del", "删除").into_element(cx),
                 ]
             })
             .gap(Space::N2)
             .wrap()
             .justify_end()
             .items_center()
-            .into_element(cx);
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Panel)
+                    .test_id(TEST_ID_SHORTCUTS),
+            );
 
             [row, help]
         })
@@ -365,7 +327,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         .into_element(cx);
 
     let page = ui::container(cx, |cx| {
-        [ui::v_flex(cx, |cx| [card])
+        [ui::v_flex(cx, |_cx| [card])
             .w_full()
             .h_full()
             .justify_center()
