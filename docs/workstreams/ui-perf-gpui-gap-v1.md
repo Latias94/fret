@@ -95,14 +95,17 @@ Findings (macOS Apple M4; repeat=7):
 
 - With bounds-tree enabled *and cached-path skipped*, pointer-move hit testing is effectively solved for this probe:
   - `hit_test_time_us`: p50 ~3us, p95 ~3us, max ~10us (across runs).
-  - `dispatch_time_us`: p50 ~221us, p95 ~242us, max ~289us (across runs).
+  - `dispatch_time_us`: **bimodal** due to timer dispatch:
+    - Overall: p50 ~30us, p95 ~250us, max ~303us (across runs).
+    - No-timer pointer-move frames: p50 ~16us, p95 ~25us, max ~38us.
+    - Timer pointer-move frames: p50 ~241us, p95 ~254us, max ~303us.
 - Micro timer breakdown shows why this mattered:
   - Before the skip, `try_hit_test_along_cached_path` dominated hit-test time due to conservative sibling scanning.
   - Bounds-tree query time was already single-digit microseconds.
 - Dispatch micro timers are now exported to attribute the post-hit-test remainder:
   - `dispatch_widget_bubble_time_us`, `dispatch_input_context_time_us`, `dispatch_hover_update_time_us`, etc.
-  - Early finding: these explain only a small fraction of `dispatch_time_us` at microsecond granularity, suggesting the
-    remaining cost is in pointer routing / bookkeeping not yet timed (or in sub-micro segments that round down).
+  - Follow-up finding (commit `5ab4ba71`): the pointer-move “dispatch tail” is dominated by **timer event dispatch**
+    (`dispatch_timer_event_time_us`), not pointer routing.
 - Cached-path reuse remains low on the stripes sweep workload (pointer crosses many regions):
   - With bounds-tree disabled (A/B), hit testing rises to ~2ms p50 and can spike to ~4ms, and cached-path hit rate is
     still ~2.1%.
@@ -115,7 +118,7 @@ Implication:
 Evidence:
 
 - Perf log entries under:
-  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`, `7fa76fd5`)
+  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`, `7fa76fd5`, `5ab4ba71`)
 
 ## 1) What GPUI does that matters for smoothness
 
@@ -198,6 +201,24 @@ Fret:
 
 - Partial progress: Fret now reuses a small set of retained scratch collections for hot per-frame traversals:
   - GC reachability scratch (`HashSet<NodeId>` + `Vec<NodeId>`) in declarative mount/GC
+
+### Gap B: Timer scheduling contracts (avoid timer work on interactive frames)
+
+GPUI:
+
+- Has a tight “frame boundary” model (draw/build happens in a bounded window scope). The executor/event loop is
+  designed around coalescing and doing minimal work per tick to maintain smoothness.
+
+Fret:
+
+- Pointer-move frames can include timer event dispatch, and the timer work can dominate per-frame dispatch time.
+- Evidence (stripes pointer-move probe, commit `5ab4ba71`): timer pointer-move frames spend ~220–230us in
+  `dispatch_timer_event_time_us` p50, while pointer routing itself is ~10–40us.
+
+Implication:
+
+- To reach Zed feel, “timer work” must either be (a) coalesced into frames where it is expected, (b) made cheap enough
+  to be effectively free, or (c) moved off the critical input path (defer/batch/background where possible).
   - Semantics snapshot traversal scratch (`HashSet<NodeId>` + `Vec<(NodeId, Transform2D)>`)
   - Evidence: `perf(fret-ui): reuse GC/semantics scratch via frame arena` (commit `3d6e2431`).
 - Partial progress: reduce per-frame heap churn during declarative element ID derivation by removing

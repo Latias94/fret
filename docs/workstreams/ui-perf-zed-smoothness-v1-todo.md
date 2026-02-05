@@ -266,10 +266,22 @@ Correctness acceptance:
     - Wired into: `fretboard diag stats --json` (so a worst bundle can be inspected without manual JSON digging).
     - Implemented by `feat(diag): break down dispatch timing` (commit `7fa76fd5`).
     - Evidence: perf log entry for commit `7fa76fd5`.
-  - [ ] Close the dispatch accounting gap on pointer-move by timing pointer routing/bookkeeping.
-    - Add a coarse timer for the pointer-specific dispatch block (to explain the remaining ~200us not covered by the
-      first breakdown timers at microsecond granularity).
-    - Deliverable: a perf log entry showing the new timer explains most of `dispatch_time_us` for the probe.
+  - [x] Attribute dispatch time by dispatched event class (pointer vs timer vs other).
+    - Exports (per-frame, accumulated across the frame’s dispatch work):
+      - `dispatch_pointer_events`, `dispatch_pointer_event_time_us`
+      - `dispatch_timer_events`, `dispatch_timer_event_time_us`
+      - `dispatch_other_events`, `dispatch_other_event_time_us`
+    - Wired into: `fretboard diag stats --json` (bundle triage without manual JSON digging).
+    - Implemented by `feat(diag): attribute dispatch time by event class` (commit `5ab4ba71`).
+    - Evidence: perf log entry for commit `5ab4ba71`.
+  - [ ] Reduce timer-driven dispatch work during pointer-move workloads.
+    - Why: In the stripes pointer-move probe, the “dispatch gap” is primarily **timer event dispatch** (not pointer
+      routing). On the worst pointer-move frame, `dispatch_timer_event_time_us` accounts for ~95%+ of `dispatch_time_us`.
+    - Deliverable: a perf log entry showing pointer-move timer frames collapse toward the no-timer baseline.
+    - Subtasks:
+      - Identify the top timer sources (which services/widgets schedule them) and whether they are avoidable for hover-only moves.
+      - Coalesce or defer timers so they do not fire on alternating pointer-move frames (or at least do near-zero work).
+      - Add a “no timer dispatch during pointer-move” guard for harness workloads where appropriate (debug-only if needed).
   - A/B experiments:
     - [x] Run the pointer-move gate with `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and record:
       - `hit_test_time_us` distribution, and

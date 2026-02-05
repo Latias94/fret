@@ -2992,3 +2992,165 @@ Takeaway:
 Bundles:
 - Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-dispatch-breakdown-7fa76fd5/`
 - Worst-by-dispatch (also worst-by-hit): `target/fret-diag-perf/2026-02-05-pointer-move-r7-dispatch-breakdown-7fa76fd5/1770256617791-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+Errata (2026-02-05):
+- The pointer-move frame distribution for this probe is **bimodal**: half the frames are “no timer dispatch” and
+  half are “timer dispatch” frames. With nearest-rank percentiles, this means `dispatch_time_us` p50 is closer to
+  the no-timer baseline (≈ 20–40us), while p95 reflects the timer frames (≈ 240–260us).
+- The original p50 number above (~221us) was computed from a timer-heavy subset and is not the nearest-rank p50 over
+  *all* pointer-move frames. A follow-up attribution in commit `5ab4ba71` confirms the timer/other split explicitly.
+
+## 2026-02-05 12:21:00 (commit `95806541`)
+
+Change:
+- feat(diag): time synthetic hover observer dispatch
+
+Why:
+- Verify whether synthetic hover observers account for the remaining pointer-move dispatch tail after `8bc15eda`.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-synth-observer-timer-95806541 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- `dispatch_synth_hover_observer_time_us`: p50 ~1, p95 ~1, max (across runs) 11
+
+Takeaway:
+- Synthetic hover observer dispatch is not a meaningful contributor to pointer-move dispatch time for this probe.
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-synth-observer-timer-95806541/`
+
+## 2026-02-05 12:21:10 (commit `72e24f51`)
+
+Change:
+- feat(diag): time pointer-move layer observers
+
+Why:
+- Verify whether post-dispatch pointer-move observers (layer observers) are responsible for the remaining dispatch cost.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-pointer-move-observers-timer-72e24f51-v2 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- `dispatch_pointer_move_layer_observers_time_us`: p50 ~0, p95 ~0, max (across runs) 4
+
+Takeaway:
+- Pointer-move layer observers are not a meaningful contributor to pointer-move dispatch time for this probe.
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-pointer-move-observers-timer-72e24f51-v2/`
+
+## 2026-02-05 12:21:20 (commit `51ad7cc9`)
+
+Change:
+- feat(diag): time post-dispatch snapshot and cursor effects
+
+Why:
+- Verify whether post-dispatch snapshots and cursor effects account for the remaining pointer-move dispatch tail.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-post-dispatch-snapshot-timers-51ad7cc9 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- `dispatch_cursor_effect_time_us`: p50 ~0, p95 ~0, max (across runs) 0
+- `dispatch_post_dispatch_snapshot_time_us`: p50 ~0, p95 ~1, max (across runs) 2
+
+Takeaway:
+- Cursor effects and post-dispatch snapshots are not meaningful contributors to pointer-move dispatch time for this probe.
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-post-dispatch-snapshot-timers-51ad7cc9/`
+
+## 2026-02-05 12:21:30 (commit `5ab4ba71`)
+
+Change:
+- feat(diag): attribute dispatch time by event class
+
+Why:
+- `dispatch_events` can be > 1 on pointer-move frames, but the bundle event log only captures injected events
+  (e.g. `pointer.move`). We need to attribute dispatch time by **what kinds of events** were actually dispatched
+  during the frame to explain the remaining dispatch tail.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- Overall pointer-move distribution (bimodal due to timer dispatch):
+  - `dispatch_time_us`: p50 ~30, p95 ~250, max (across runs) 303
+  - `hit_test_time_us`: p50 ~3, p95 ~5, max (across runs) 12
+- Pointer-move frames *without* timer dispatch (96/192 frames per run):
+  - `dispatch_time_us`: p50 ~16, p95 ~25, max 38
+  - `dispatch_pointer_event_time_us`: p50 ~16, p95 ~25, max 38
+- Pointer-move frames *with* timer dispatch (96/192 frames per run):
+  - `dispatch_time_us`: p50 ~241, p95 ~254, max 303
+  - `dispatch_timer_event_time_us`: p50 ~223, p95 ~232, max 288
+  - `dispatch_pointer_event_time_us`: p50 ~17, p95 ~25, max 36
+
+Key attribution example (worst pointer-move dispatch frame in the worst run):
+```sh
+cargo run -p fretboard -- diag stats \
+  target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71/1770264315951-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json \
+  --sort dispatch --top 50 --json \
+  | jq '. as $r | ($r.pointer_move.max_dispatch_at + {max_dispatch_time_us: $r.pointer_move.max_dispatch_time_us}) as $m | {pointer_move_max: $m, row: ($r.top[] | select(.frame_id==$m.frame_id and .tick_id==$m.tick_id and .window==$m.window) | {dispatch_time_us, dispatch_events, dispatch_pointer_events, dispatch_timer_events, dispatch_pointer_event_time_us, dispatch_timer_event_time_us})}'
+```
+
+Takeaway:
+- The pointer-move “dispatch tail” for this probe is dominated by **timer event dispatch**.
+- Pointer routing itself is already cheap in the no-timer baseline (~10–40us).
+- Next: identify and eliminate/defang the timers that fire on alternating pointer-move frames.
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71/`
+- Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71/1770264315951-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
