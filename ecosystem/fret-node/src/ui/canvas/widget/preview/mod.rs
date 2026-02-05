@@ -43,3 +43,29 @@ pub(super) fn extend_ports_for_nodes(
         }
     }
 }
+
+pub(super) fn moved_nodes_and_next_positions(
+    current_positions: &HashMap<GraphNodeId, CanvasPoint>,
+    nodes: &[(GraphNodeId, CanvasPoint)],
+) -> Option<(
+    Vec<(GraphNodeId, CanvasPoint, CanvasPoint)>,
+    HashMap<GraphNodeId, CanvasPoint>,
+)> {
+    let mut moved_nodes: Vec<(GraphNodeId, CanvasPoint, CanvasPoint)> = Vec::new();
+    for (id, pos) in nodes {
+        let prev = current_positions.get(id).copied().unwrap_or_default();
+        if prev != *pos {
+            moved_nodes.push((*id, prev, *pos));
+        }
+    }
+    if moved_nodes.is_empty() {
+        return None;
+    }
+
+    let mut next_positions = current_positions.clone();
+    for (id, _prev, next) in &moved_nodes {
+        next_positions.insert(*id, *next);
+    }
+
+    Some((moved_nodes, next_positions))
+}

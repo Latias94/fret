@@ -134,17 +134,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let graph_model = self.graph.clone();
         self.geometry
             .drag_preview_outputs_for_rev(preview_rev, |meta, geom_mut, index_mut| {
-                let mut moved_nodes: Vec<(GraphNodeId, CanvasPoint, CanvasPoint)> = Vec::new();
-                let mut next_positions: HashMap<GraphNodeId, CanvasPoint> =
-                    meta.node_positions.clone();
-
-                for (id, pos) in nodes {
-                    let prev = meta.node_positions.get(id).copied().unwrap_or_default();
-                    if prev != *pos {
-                        moved_nodes.push((*id, prev, *pos));
-                        next_positions.insert(*id, *pos);
-                    }
-                }
+                let Some((moved_nodes, next_positions)) =
+                    super::moved_nodes_and_next_positions(meta.node_positions, nodes)
+                else {
+                    return;
+                };
 
                 if !moved_nodes.is_empty() {
                     for (id, prev, next) in &moved_nodes {
