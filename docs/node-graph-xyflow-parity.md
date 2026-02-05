@@ -246,19 +246,23 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 0.4 Batteries-included add-ons (Controls / MiniMap / Background / Panels)
 
-- [~] **MiniMap**
+- [x] **MiniMap**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/MiniMap/MiniMap.tsx`
-  - fret-node: overlay exists; needs polish and API stabilization for B-layer consumption
+  - fret-node: `NodeGraphMiniMapOverlay` (derived-internals driven) + B-layer navigation wiring via `NodeGraphViewQueue`
   - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
-- [~] **Controls**
+- [x] **Controls**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Controls/Controls.tsx`
-  - fret-node: overlay exists; needs a B-layer integration story (store/actions + theming + composition)
+  - fret-node: `NodeGraphControlsOverlay` + command binding injection (`NodeGraphControlsBindings`)
   - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
-- [~] **Background**
+- [x] **Background**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
-  - fret-node: grid patterns exist (lines/dots/cross); theming + configuration parity still TBD
+  - fret-node: grid patterns (`Lines` / `Dots` / `Cross`) + explicit theme/token plumbing contract
+  - Contract: `docs/node-graph-addons-theming.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
 
 - [x] **NodeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
@@ -268,12 +272,13 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
   - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays/toolbars.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals/snapshot.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
 
-- [~] **Panels / toolbars / overlays composition API**
+- [x] **Panels / toolbars / overlays composition API**
   - XyFlow: `<Panel />` composition patterns
   - fret-node:
     - `NodeGraphPanel` provides window-space anchored overlay composition: `ecosystem/fret-node/src/ui/panel.rs`
     - `NodeGraphControlsOverlay::in_panel_bounds` + `NodeGraphMiniMapOverlay::in_panel_bounds` support panel-based placement
     - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`
 
 ---
 
@@ -821,23 +826,23 @@ canonical data flow and invalidation boundaries:
 
 ## 8.1 Controls panel
 
-- [~] **Controls (zoom/fit/lock)**
+- [x] **Controls (zoom/fit/lock)**
   - XyFlow: `additional-components/Controls/Controls.tsx`
   - fret-node: `NodeGraphControlsOverlay` (zoom/fit/reset + Strict/Loose toggle)
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
 ## 8.2 Minimap
 
-- [~] **Minimap navigation and styling**
+- [x] **Minimap navigation and styling**
   - XyFlow: `MiniMap.tsx` + `@xyflow/system` `XYMinimap` (`packages/system/src/xyminimap/index.ts`)
   - fret-node: `NodeGraphMiniMapOverlay` consumes `NodeGraphInternalsStore` and view state
-  - TODO:
-    - keyboard focus/a11y baseline
-    - click-to-pan vs drag-to-pan parity
-    - inverse pan option
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
 ## 8.3 Background patterns
 
-- [~] **Grid background patterns (lines/dots/cross)**
+- [x] **Grid background patterns (lines/dots/cross)**
   - XyFlow: `additional-components/Background/Background.tsx` (dots/lines/cross patterns)
   - fret-node:
     - renderer: `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
@@ -847,8 +852,8 @@ canonical data flow and invalidation boundaries:
       - `NodeGraphStyle.grid_dot_size`
       - `NodeGraphStyle.grid_cross_size`
       - see: `ecosystem/fret-node/src/ui/style.rs`
-  - TODO:
-    - per-editor styling via theme tokens (plumb theme metrics/colors into the new fields)
+  - Contract: `docs/node-graph-addons-theming.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
 
 ## 8.4 Viewport portals and window-space overlays
 
