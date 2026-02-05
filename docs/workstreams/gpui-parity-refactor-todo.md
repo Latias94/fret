@@ -1236,7 +1236,7 @@ topics (if/when we implement them):
       - Windowed (`FRET_UI_GALLERY_CODE_VIEW_WINDOWED=1`): `target/fret-diag/1769092702700-ui-gallery-code-view-scroll-refresh/bundle.json`
         - `diag stats` time sum (us): total=4976556 layout=4533404 paint=438751
       - Both pass stale-paint verification: `cargo run -p fretboard -- diag stats <bundle.json> --check-stale-paint ui-gallery-code-view-root`
-- [~] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
+- [x] GPUI-MVP5-eco-004 Identify “canvas/node graph culling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-node/src/*` (node graph viewport culling, edges/handles).
     - `ecosystem/fret-canvas/src/*` (large canvas surfaces).
