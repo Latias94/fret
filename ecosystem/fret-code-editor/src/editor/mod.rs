@@ -432,6 +432,14 @@ impl CodeEditorHandle {
         f(&st.buffer)
     }
 
+    pub fn can_undo(&self) -> bool {
+        self.state.borrow().undo.can_undo()
+    }
+
+    pub fn can_redo(&self) -> bool {
+        self.state.borrow().undo.can_redo()
+    }
+
     /// v1 soft-wrap seam.
     ///
     /// This controls the view-layer `DisplayMap` and therefore affects:

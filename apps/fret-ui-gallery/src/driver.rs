@@ -212,6 +212,17 @@ impl UiGalleryDriver {
             },
         );
 
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(handle) = app
+                .global::<UiGalleryCodeEditorHandlesStore>()
+                .and_then(|store| store.per_window.get(&window).cloned())
+            {
+                edit_can_undo |= handle.can_undo();
+                edit_can_redo |= handle.can_redo();
+            }
+        }
+
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
             svc.set_snapshot(
                 window,
@@ -1051,6 +1062,8 @@ impl UiGalleryDriver {
     ) {
         OverlayController::begin_frame(app, window);
         let bisect = ui_gallery_bisect_flags();
+
+        Self::sync_undo_availability(app, window, &state.undo_doc);
 
         let availability = app
             .global::<WindowCommandAvailabilityService>()
