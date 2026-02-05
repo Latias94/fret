@@ -2852,6 +2852,7 @@ See: `docs/tracy.md`.\n";
                     || retained_vlist_keep_alive_reuse_min_for_script.is_some()
                     || retained_vlist_keep_alive_budget_for_script.is_some()
                     || vlist_window_shifts_non_retained_max_for_script.is_some()
+                    || ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
                     || ui_gallery_script_requires_retained_vlist_reconcile_gate(&src);
 
                 let is_gc_liveness_script =
@@ -2973,6 +2974,10 @@ See: `docs/tracy.md`.\n";
                     let suite_vlist_policy_key_stable = components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate
                         && !check_vlist_policy_key_stable;
+                    let suite_windowed_rows_offset_changes_min =
+                        ui_gallery_script_requires_windowed_rows_offset_changes_gate(&src)
+                            .then_some(1u64)
+                            .filter(|_| check_windowed_rows_offset_changes_min.is_none());
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
                     let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
@@ -3055,7 +3060,8 @@ See: `docs/tracy.md`.\n";
                         check_vlist_window_shifts_escape_max
                             .or(suite_vlist_window_shifts_escape_max),
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
-                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_min
+                            .or(suite_windowed_rows_offset_changes_min),
                         check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
@@ -5365,7 +5371,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 16] {
+fn ui_gallery_suite_scripts() -> [&'static str; 17] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -5383,6 +5389,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 16] {
         "tools/diag-scripts/ui-gallery-table-smoke.json",
         "tools/diag-scripts/ui-gallery-data-table-smoke.json",
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
     ]
 }
 
@@ -5482,6 +5489,14 @@ fn ui_gallery_script_requires_viewport_input_gate(script: &Path) -> bool {
     // Viewport input forwarding is only expected in scripts that explicitly exercise viewport
     // panels / docking viewport tooling scenarios.
     name.contains("viewport") || name.contains("dock")
+}
+
+fn ui_gallery_script_requires_windowed_rows_offset_changes_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(name, "ui-gallery-code-editor-torture-scroll-stability.json")
 }
 
 #[derive(Debug, Clone)]
