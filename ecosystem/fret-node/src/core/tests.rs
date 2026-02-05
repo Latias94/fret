@@ -4,6 +4,7 @@ use crate::core::{
     resolve_import_closure, validate_graph,
 };
 use crate::core::{CanvasSize, GraphValidationError, GroupId};
+use crate::core::{SUBGRAPH_NODE_KIND, validate_subgraph_targets_are_imported};
 
 fn make_node(kind: &str) -> Node {
     Node {
@@ -256,5 +257,27 @@ fn import_closure_rejects_cycles_with_stable_path() {
         GraphImportError::Cycle {
             cycle: vec![a, b, c, a]
         }
+    );
+}
+
+#[test]
+fn subgraph_nodes_must_reference_declared_imports() {
+    let mut graph = Graph::default();
+
+    let node_id = NodeId::new();
+    let mut node = make_node(SUBGRAPH_NODE_KIND);
+    let imported = GraphId::from_u128(2);
+    node.data = serde_json::json!({ "graph_id": imported });
+    graph.nodes.insert(node_id, node);
+
+    assert!(
+        validate_subgraph_targets_are_imported(&graph).is_err(),
+        "expected missing import to be rejected"
+    );
+
+    graph.imports.insert(imported, GraphImport::default());
+    assert!(
+        validate_subgraph_targets_are_imported(&graph).is_ok(),
+        "expected declared import to satisfy binding"
     );
 }

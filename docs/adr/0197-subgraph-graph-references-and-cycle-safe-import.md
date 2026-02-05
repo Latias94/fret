@@ -90,6 +90,23 @@ Open question (tracked in ADR 0135):
 
 - whether node graph assets should also carry an app-level GUID alongside `GraphId`.
 
+### 4) Subgraph nodes reference imports (they do not declare them)
+
+We reserve a node kind for subgraph nodes:
+
+- `SUBGRAPH_NODE_KIND = "fret.subgraph"`
+
+Contract:
+
+- A subgraph node's `Node.data` must be a JSON object with a `graph_id` string (UUID).
+- The referenced `graph_id` **must be declared** in `Graph.imports`.
+
+Rationale:
+
+- `Graph.imports` remains the explicit dependency declaration (contract-level).
+- Subgraph nodes are a consumer of that contract; this avoids implicit dependency inference from
+  arbitrary domain payloads while still enabling domain UX ("subgraph nodes") to be standardized.
+
 ## Consequences
 
 - Graph dependency semantics are explicit, deterministic, and testable.
@@ -101,4 +118,5 @@ Open question (tracked in ADR 0135):
 - Unit tests:
   - `ecosystem/fret-node/src/core/imports.rs`
   - `ecosystem/fret-node/src/core/tests.rs` (import closure tests)
-
+  - `ecosystem/fret-node/src/core/subgraph.rs`
+  - `ecosystem/fret-node/src/core/tests.rs` (subgraph binding tests)
