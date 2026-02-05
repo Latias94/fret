@@ -28,7 +28,8 @@ Tasks:
 
 - `[x]` Draft ADR for the authoring paradigm and first-party state helpers.
   - Evidence: `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
-- `[ ]` Review + accept ADR (flip status to Accepted once locked).
+- `[x]` Review + accept ADR (flip status to Accepted once locked).
+  - Evidence: `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 - `[x]` Add `fret-authoring` state adapters for authoring frontends:
   - `UiWriterQueryExt` (feature: `fret-authoring/query`)
   - `UiWriterSelectorExt` (feature: `fret-authoring/selector`)

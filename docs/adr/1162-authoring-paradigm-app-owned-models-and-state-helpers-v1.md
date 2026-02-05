@@ -1,6 +1,6 @@
 # ADR 1162: Authoring Paradigm (App-Owned Models) and State Helpers (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
