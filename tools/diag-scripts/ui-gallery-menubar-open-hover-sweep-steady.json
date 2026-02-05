@@ -28,6 +28,8 @@
 
     { "type": "wait_frames", "n": 2 },
     { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "reset_diagnostics" },
 
     {
       "type": "move_pointer_sweep",
@@ -46,4 +48,3 @@
     { "type": "wait_frames", "n": 2 }
   ]
 }
-
