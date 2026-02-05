@@ -36,6 +36,7 @@ mod draw_order_invalidation_conformance;
 mod edge_drag_conformance;
 mod edge_hit_width_conformance;
 mod edge_insert_conformance;
+mod edge_label_style_override_conformance;
 mod edge_marker_tangent_fallback_conformance;
 mod edge_types_invalidation_conformance;
 mod edit_command_availability_conformance;

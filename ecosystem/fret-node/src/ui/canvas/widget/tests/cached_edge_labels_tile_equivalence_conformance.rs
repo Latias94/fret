@@ -116,8 +116,7 @@ fn extract_edge_label_ops(scene: &Scene, style: &NodeGraphStyle) -> Vec<(Rect, P
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != style.context_menu_background || border_color != style.context_menu_border
-        {
+        if background != style.edge_label_background || border_color != style.edge_label_border {
             continue;
         }
         let SceneOp::Text { origin, .. } = ops[ix + 1] else {
@@ -219,9 +218,10 @@ fn capture_edge_label_for_bounds(bounds: Rect) -> (Rect, Point, usize) {
     let base_mid = Point::new(Px(0.5 * (from.x.0 + to.x.0)), Px(0.5 * (from.y.0 + to.y.0)));
     let d = Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0));
     let normal = crate::ui::canvas::route_math::normal_from_tangent(d);
+    let offset = canvas.style.edge_label_offset;
     let base_anchor = Point::new(
-        Px(base_mid.x.0 + normal.x.0 * 10.0),
-        Px(base_mid.y.0 + normal.y.0 * 10.0),
+        Px(base_mid.x.0 + normal.x.0 * offset),
+        Px(base_mid.y.0 + normal.y.0 * offset),
     );
     let expected_anchor = Point::new(base_anchor.x, Px(base_anchor.y.0 + dy.0));
     let expected_text_origin = Point::new(

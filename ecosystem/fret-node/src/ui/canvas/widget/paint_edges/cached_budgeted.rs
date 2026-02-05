@@ -111,11 +111,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         start_edge: usize,
         budget: &mut WorkBudget,
     ) -> (usize, bool) {
-        let pad_screen = 6.0;
-        let corner_screen = 8.0;
-        let offset_screen = 10.0;
+        let pad_screen = self.style.edge_label_padding;
+        let corner_screen = self.style.edge_label_corner_radius;
+        let offset_screen = self.style.edge_label_offset;
+        let max_width_screen = self.style.edge_label_max_width;
+        let border_width_screen = self.style.edge_label_border_width;
 
-        let mut edge_text_style = self.style.context_menu_text_style.clone();
+        let mut edge_text_style = self.style.edge_label_text_style.clone();
         edge_text_style.size = Px(edge_text_style.size.0 / zoom);
         if let Some(lh) = edge_text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -166,7 +168,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 Px(pos.y.0 + normal.y.0 * off),
             );
 
-            let max_w = 220.0 / z;
+            let max_w = max_width_screen.max(0.0) / z;
             let constraints = TextConstraints {
                 max_width: Some(Px(max_w)),
                 wrap: TextWrap::None,
@@ -188,7 +190,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 continue;
             };
 
-            let pad = pad_screen / z;
+            let pad = pad_screen.max(0.0) / z;
             let w = metrics.size.width.0.max(0.0);
             let h = metrics.size.height.0.max(0.0);
             let rect = Rect::new(
@@ -199,13 +201,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 Size::new(Px(w + 2.0 * pad), Px(h + 2.0 * pad)),
             );
 
+            let border_color = edge.hint.color.unwrap_or(self.style.edge_label_border);
+            let border_w = border_width_screen.max(0.0) / z;
             scene.push(SceneOp::Quad {
                 order: DrawOrder(2),
                 rect,
-                background: self.style.context_menu_background,
-                border: Edges::all(Px(1.0 / z)),
-                border_color: self.style.context_menu_border,
-                corner_radii: Corners::all(Px(corner_screen / z)),
+                background: self.style.edge_label_background,
+                border: Edges::all(Px(border_w)),
+                border_color,
+                corner_radii: Corners::all(Px(corner_screen.max(0.0) / z)),
             });
 
             let text_x = Px(rect.origin.x.0 + pad);
@@ -214,7 +218,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(text_x, text_y),
                 text: blob,
-                color: self.style.context_menu_text,
+                color: self.style.edge_label_text,
             });
         }
 

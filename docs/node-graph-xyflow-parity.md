@@ -707,9 +707,11 @@ canonical data flow and invalidation boundaries:
   - XyFlow: `interactionWidth` on edges (`components/EdgeWrapper/index.tsx`)
   - fret-node: `edge_interaction_width` in `NodeGraphStyle`
 
-- [~] **Edge labels**
+- [x] **Edge labels**
   - XyFlow: `EdgeLabelRenderer` component
-  - fret-node: presenter can provide `EdgeRenderHint.label`; labels render on the canvas near the edge midpoint (not interactive yet)
+  - fret-node: presenter can provide `EdgeRenderHint.label`; labels render on the canvas near the edge midpoint (non-interactive)
+    - per-edge label border override: `EdgeRenderHint.color`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_style_override_conformance.rs`
 
 ## 6.2 Edge selection and context menus
 
