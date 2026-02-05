@@ -135,6 +135,9 @@ impl MessageParts {
                         if let Some(handler) = on_link_activate.clone() {
                             response = response.on_link_activate(handler);
                         }
+                        if let Some(prefix) = test_id_prefix.clone() {
+                            response = response.test_id_prefix(prefix);
+                        }
                         let el = response.into_element(cx);
                         let Some(test_id) = part_id else {
                             out.push(el);

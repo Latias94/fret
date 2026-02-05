@@ -11524,7 +11524,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                     2,
                     ui_ai::MessageRole::Assistant,
                     [ui_ai::MessagePart::Markdown(Arc::<str>::from(
-                        "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.",
+                        "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.\n\n```rust\nfn demo() {\n    println!(\"hello from code fence\");\n}\n```",
                     ))],
                 ),
             ]);
