@@ -3321,3 +3321,58 @@ Takeaway:
 Bundles:
 - Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-harness-skip-config-watcher-dirty-21c14e33/`
 - Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-harness-skip-config-watcher-dirty-21c14e33/1770272814649-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 15:59:00 (commit `1293364f`, built on `e978fe85`)
+
+Change:
+- `perf(ui-gallery): add hit-test torture redraw knob`
+  - New env: `FRET_UI_GALLERY_HIT_TEST_TORTURE_REDRAW_ON_MOVE=1`
+  - Goal: keep pointer-move probes deterministic when the torture surface itself is paint-stable.
+
+Why:
+- `e978fe85` reintroduced a way to *force-enable* the ui-gallery config watcher in harness runs
+  (`FRET_UI_GALLERY_ENABLE_CONFIG_WATCHER=1`) so we can reproduce and measure timer-driven behavior on demand.
+- The earlier log entries showed that config watcher polling could dominate pointer-move dispatch tail latency.
+  This entry re-checks whether that tail still exists on current `main`.
+
+Commands (macOS Apple M4, repeat=7, `sort=dispatch`):
+```sh
+cargo build -p fret-ui-gallery --release
+
+# Baseline: harness-only hit-test torture, config watcher suppressed by default.
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-config-watcher-off \
+  --timeout-ms 180000 --repeat 7 --sort dispatch --top 15 --json \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_UI_GALLERY_HIT_TEST_TORTURE_REDRAW_ON_MOVE=1 \
+  --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=2000 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+
+# Forced: enable the config watcher poller even in harness-only mode.
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-config-watcher-on \
+  --timeout-ms 180000 --repeat 7 --sort dispatch --top 15 --json \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_UI_GALLERY_HIT_TEST_TORTURE_REDRAW_ON_MOVE=1 \
+  --env FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE=2000 \
+  --env FRET_UI_GALLERY_ENABLE_CONFIG_WATCHER=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+
+- Config watcher **off**:
+  - `pointer_move_max_dispatch_time_us`: p50 ~14us, p95 ~16us, max 16us
+  - `pointer_move_max_hit_test_time_us`: p50 ~2us, p95 ~2us, max 2us
+  - `pointer_move_snapshots_with_global_changes`: p95 ~0
+- Config watcher **forced on**:
+  - `pointer_move_max_dispatch_time_us`: p50 ~14us, p95 ~16us, max 16us
+  - `pointer_move_max_hit_test_time_us`: p50 ~2us, p95 ~2us, max 2us
+  - `pointer_move_snapshots_with_global_changes`: p95 ~0
+
+Takeaway:
+- On current `main`, forcing the ui-gallery config watcher back on does **not** reintroduce a measurable pointer-move
+  dispatch tail for this probe. This suggests the earlier timer-driven hitch mechanism has been eliminated or reduced
+  to “noise floor” for this workload.
