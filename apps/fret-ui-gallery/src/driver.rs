@@ -2240,9 +2240,10 @@ pub fn run() -> anyhow::Result<()> {
     // To intentionally reproduce timer-driven behavior in harness runs, set
     // `FRET_UI_GALLERY_ENABLE_CONFIG_WATCHER=1`.
     let harness_only = std::env::var_os("FRET_UI_GALLERY_HARNESS_ONLY").is_some();
+    let diag_enabled = std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
     let force_enable =
         std::env::var_os("FRET_UI_GALLERY_ENABLE_CONFIG_WATCHER").is_some_and(|v| !v.is_empty());
-    if !harness_only || force_enable {
+    if (!harness_only && !diag_enabled) || force_enable {
         builder = builder.with_config_files_watcher(Duration::from_millis(500));
     }
 
