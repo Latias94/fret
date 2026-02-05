@@ -162,6 +162,7 @@ mod tests {
     };
     use fret_ui::declarative::render_root;
     use fret_ui::{ElementContext, UiTree};
+    use fret_ui_kit::OverlayController;
     use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 
     #[derive(Default)]
@@ -472,7 +473,9 @@ mod tests {
         root_name: &str,
         render: impl FnOnce(&mut ElementContext<'_, TestHost>) -> crate::Elements,
     ) -> fret_core::NodeId {
+        OverlayController::begin_frame(app, window);
         let root = render_root(ui, app, services, window, bounds, root_name, render);
+        OverlayController::render(ui, app, services, window, bounds);
         ui.layout_all(app, services, bounds, 1.0);
         root
     }
@@ -822,6 +825,92 @@ mod tests {
         );
         assert!(!requested.get());
         assert!(!secondary_clicked.get());
+    }
+
+    #[test]
+    fn context_menu_popup_opens_on_right_click_and_closes_on_outside_click() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = Rc::new(Cell::new(false));
+        let open_out = open.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
+                        ui.text("Menu");
+                    }));
+                })
+            },
+        );
+        assert!(!open.get());
+
+        let at = first_child_point(&ui, root);
+        right_click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
+                        ui.text("Menu");
+                    }));
+                })
+            },
+        );
+        assert!(open.get());
+
+        click_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            Point::new(Px(230.0), Px(110.0)),
+        );
+
+        app.advance_frame();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
+                        ui.text("Menu");
+                    }));
+                })
+            },
+        );
+        assert!(!open.get());
     }
 
     #[test]

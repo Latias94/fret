@@ -6,6 +6,7 @@
 //! - `fret-ui-kit` can optionally provide bridges that allow `UiBuilder<T>` patch vocabulary to be
 //!   used from immediate-style control flow.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_authoring::Response;
@@ -21,6 +22,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::UiBuilder;
+use crate::primitives::popper;
+use crate::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::{UiIntoElement, UiPatchTarget};
 
 /// A value that can be rendered into a declarative element within an `ElementContext`.
@@ -142,9 +145,11 @@ pub struct DragResponse {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ResponseExt {
     pub core: Response,
+    pub id: Option<GlobalElementId>,
     pub secondary_clicked: bool,
     pub double_clicked: bool,
     pub context_menu_requested: bool,
+    pub context_menu_anchor: Option<Point>,
     pub drag: DragResponse,
 }
 
@@ -167,6 +172,10 @@ impl ResponseExt {
 
     pub fn context_menu_requested(self) -> bool {
         self.context_menu_requested
+    }
+
+    pub fn context_menu_anchor(self) -> Option<Point> {
+        self.context_menu_anchor
     }
 
     pub fn drag_started(self) -> bool {
@@ -193,6 +202,77 @@ impl ResponseExt {
 #[derive(Debug, Default)]
 struct DragReportState {
     last_position: Option<Point>,
+}
+
+#[derive(Default)]
+struct ImUiContextMenuAnchorStore {
+    by_element: HashMap<GlobalElementId, fret_runtime::Model<Option<Point>>>,
+}
+
+fn context_menu_anchor_model_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+) -> fret_runtime::Model<Option<Point>> {
+    cx.app
+        .with_global_mut_untracked(ImUiContextMenuAnchorStore::default, |st, app| {
+            st.by_element
+                .entry(id)
+                .or_insert_with(|| app.models_mut().insert(None::<Point>))
+                .clone()
+        })
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PopupMenuOptions {
+    pub placement: popper::PopperContentPlacement,
+    pub estimated_size: Size,
+    pub modal: bool,
+}
+
+impl Default for PopupMenuOptions {
+    fn default() -> Self {
+        Self {
+            placement: popper::PopperContentPlacement::new(
+                popper::LayoutDirection::Ltr,
+                popper::Side::Bottom,
+                popper::Align::Start,
+                Px(4.0),
+            ),
+            estimated_size: Size::new(Px(160.0), Px(120.0)),
+            modal: true,
+        }
+    }
+}
+
+#[derive(Clone)]
+struct PopupStoreState {
+    open: fret_runtime::Model<bool>,
+    anchor: fret_runtime::Model<Option<fret_core::Rect>>,
+    panel_id: Option<GlobalElementId>,
+}
+
+#[derive(Default)]
+struct ImUiPopupStore {
+    by_id: HashMap<GlobalElementId, PopupStoreState>,
+}
+
+fn with_popup_store_for_id<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    id: &str,
+    f: impl FnOnce(&mut PopupStoreState) -> R,
+) -> R {
+    let store_key = format!("fret-ui-kit.imui.popup.store.{id}");
+    let store_id = cx.named(store_key.as_str(), |cx| cx.root_id());
+
+    cx.app
+        .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
+            let entry = st.by_id.entry(store_id).or_insert_with(|| PopupStoreState {
+                open: app.models_mut().insert(false),
+                anchor: app.models_mut().insert(None::<fret_core::Rect>),
+                panel_id: None,
+            });
+            f(entry)
+        })
 }
 
 const fn fnv1a64(bytes: &[u8]) -> u64 {
@@ -460,6 +540,178 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         self.add(element);
     }
 
+    /// Returns the internal open model for a named popup scope.
+    ///
+    /// This is intended to support ImGui-like `OpenPopup` / `BeginPopup` splits without forcing
+    /// callers to allocate a dedicated `Model<bool>` per popup.
+    fn popup_open_model(&mut self, id: &str) -> fret_runtime::Model<bool> {
+        self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st| st.open.clone()))
+    }
+
+    fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
+        self.with_cx_mut(|cx| {
+            let (open, anchor_model) =
+                with_popup_store_for_id(cx, id, |st| (st.open.clone(), st.anchor.clone()));
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&anchor_model, |v| *v = Some(anchor));
+            let _ = cx.app.models_mut().update(&open, |v| *v = true);
+            cx.app.request_redraw(cx.window);
+        });
+    }
+
+    fn close_popup(&mut self, id: &str) {
+        self.with_cx_mut(|cx| {
+            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let _ = cx.app.models_mut().update(&open, |v| *v = false);
+            cx.app.request_redraw(cx.window);
+        });
+    }
+
+    fn begin_popup_menu(
+        &mut self,
+        id: &str,
+        trigger: Option<GlobalElementId>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.begin_popup_menu_ex(id, trigger, PopupMenuOptions::default(), f)
+    }
+
+    fn begin_popup_menu_ex(
+        &mut self,
+        id: &str,
+        trigger: Option<GlobalElementId>,
+        options: PopupMenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.with_cx_mut(|cx| {
+            let (open, anchor_model, panel_id) = with_popup_store_for_id(cx, id, |st| {
+                (st.open.clone(), st.anchor.clone(), st.panel_id)
+            });
+            let is_open = cx
+                .read_model(&open, fret_ui::Invalidation::Paint, |_app, v| *v)
+                .unwrap_or(false);
+            if !is_open {
+                return false;
+            }
+
+            let anchor = cx
+                .read_model(&anchor_model, fret_ui::Invalidation::Paint, |_app, v| *v)
+                .unwrap_or(None);
+            let Some(anchor) = anchor else {
+                return false;
+            };
+
+            let overlay_key = format!("fret-ui-kit.imui.popup.overlay.{id}");
+            let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
+
+            let root_name = OverlayController::popover_root_name(overlay_id);
+            let desired = panel_id
+                .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size))
+                .unwrap_or(options.estimated_size);
+
+            let layout =
+                popper::popper_content_layout_sized(cx.bounds, anchor, desired, options.placement);
+
+            let (popover, border) = {
+                let theme = fret_ui::Theme::global(&*cx.app);
+                (
+                    theme.color_required("popover"),
+                    theme.color_required("border"),
+                )
+            };
+
+            let mut build = Some(f);
+            let panel = cx.with_root_name(root_name.as_str(), |cx| {
+                cx.named("fret-ui-kit.imui.popup.panel", |cx| {
+                    let mut semantics = fret_ui::element::SemanticsProps::default();
+                    semantics.role = SemanticsRole::Menu;
+                    semantics.layout = LayoutStyle {
+                        position: PositionStyle::Absolute,
+                        inset: InsetStyle {
+                            left: Some(layout.rect.origin.x),
+                            top: Some(layout.rect.origin.y),
+                            ..Default::default()
+                        },
+                        overflow: Overflow::Visible,
+                        ..Default::default()
+                    };
+
+                    let menu = cx.semantics_with_id(semantics, move |cx, _id| {
+                        let mut panel_props = ContainerProps::default();
+                        panel_props.background = Some(popover);
+                        panel_props.border = Edges::all(Px(1.0));
+                        panel_props.border_color = Some(border);
+                        panel_props.corner_radii = Corners::all(Px(6.0));
+                        panel_props.padding = Edges::all(Px(6.0));
+
+                        vec![cx.container(panel_props, move |cx| {
+                            let mut col = ColumnProps::default();
+                            col.gap = Px(2.0);
+                            col.layout.size.width = Length::Auto;
+                            col.layout.size.height = Length::Auto;
+                            vec![cx.column(col, move |cx| {
+                                let mut out: Vec<AnyElement> = Vec::new();
+                                let mut ui = ImUiFacade { cx, out: &mut out };
+                                if let Some(f) = build.take() {
+                                    f(&mut ui);
+                                }
+                                out
+                            })]
+                        })]
+                    });
+                    with_popup_store_for_id(cx, id, |st| st.panel_id = Some(menu.id));
+                    menu
+                })
+            });
+
+            let trigger_id = trigger.unwrap_or(overlay_id);
+            let mut req = OverlayRequest::dismissible_popover(
+                overlay_id,
+                trigger_id,
+                open.clone(),
+                OverlayPresence::instant(true),
+                vec![panel],
+            );
+            req.root_name = Some(root_name);
+            req.consume_outside_pointer_events = options.modal;
+            req.disable_outside_pointer_events = options.modal;
+            OverlayController::request(cx, req);
+
+            true
+        })
+    }
+
+    fn begin_popup_context_menu(
+        &mut self,
+        id: &str,
+        trigger: ResponseExt,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.begin_popup_context_menu_ex(id, trigger, PopupMenuOptions::default(), f)
+    }
+
+    fn begin_popup_context_menu_ex(
+        &mut self,
+        id: &str,
+        trigger: ResponseExt,
+        options: PopupMenuOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        if trigger.context_menu_requested() {
+            let anchor = trigger
+                .context_menu_anchor()
+                .map(|p| fret_core::Rect::new(p, Size::new(Px(1.0), Px(1.0))))
+                .or(trigger.core.rect);
+            if let Some(anchor) = anchor {
+                self.open_popup_at(id, anchor);
+            }
+        }
+
+        self.begin_popup_menu_ex(id, trigger.id, options, f)
+    }
+
     fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
         let label = label.into();
         let mut response = ResponseExt::default();
@@ -477,6 +729,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
                 cx.key_clear_on_key_down_for(id);
+
+                let context_anchor_model = context_menu_anchor_model_for(cx, id);
+                let context_anchor_model_for_report = context_anchor_model.clone();
 
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
@@ -563,6 +818,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     }
 
                     if up.is_click && up.button == fret_core::MouseButton::Right {
+                        let _ =
+                            host.update_model(&context_anchor_model, |v| *v = Some(up.position));
                         host.record_transient_event(acx, KEY_SECONDARY_CLICKED);
                         host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
                         host.notify(acx);
@@ -583,11 +840,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
                 response.core.focused = state.focused;
+                response.id = Some(id);
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
                 response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
                 response.context_menu_requested =
                     cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
+                response.context_menu_anchor = cx
+                    .read_model(
+                        &context_anchor_model_for_report,
+                        fret_ui::Invalidation::Paint,
+                        |_app, v| *v,
+                    )
+                    .unwrap_or(None);
                 response.drag.started = cx.take_transient_for(id, KEY_DRAG_STARTED);
                 response.drag.stopped = cx.take_transient_for(id, KEY_DRAG_STOPPED);
                 response.drag.dragging = false;
@@ -656,6 +921,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.pressable_clear_on_pointer_move();
                 cx.pressable_clear_on_pointer_up();
                 cx.key_clear_on_key_down_for(id);
+
+                let context_anchor_model = context_menu_anchor_model_for(cx, id);
+                let context_anchor_model_for_report = context_anchor_model.clone();
 
                 let model = model.clone();
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
@@ -744,6 +1012,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     }
 
                     if up.is_click && up.button == MouseButton::Right {
+                        let _ =
+                            host.update_model(&context_anchor_model, |v| *v = Some(up.position));
                         host.record_transient_event(acx, KEY_SECONDARY_CLICKED);
                         host.record_transient_event(acx, KEY_CONTEXT_MENU_REQUESTED);
                         host.notify(acx);
@@ -761,11 +1031,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.hovered = state.hovered;
                 response.core.pressed = state.pressed;
                 response.core.focused = state.focused;
+                response.id = Some(id);
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
                 response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
                 response.context_menu_requested =
                     cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
+                response.context_menu_anchor = cx
+                    .read_model(
+                        &context_anchor_model_for_report,
+                        fret_ui::Invalidation::Paint,
+                        |_app, v| *v,
+                    )
+                    .unwrap_or(None);
                 response.drag.started = cx.take_transient_for(id, KEY_DRAG_STARTED);
                 response.drag.stopped = cx.take_transient_for(id, KEY_DRAG_STOPPED);
                 response.drag.dragging = false;
