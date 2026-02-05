@@ -163,7 +163,7 @@ Legend:
 
 - [x] Clipboard copy/paste for selection with `GraphFragment` + deterministic paste offset.
 - [x] Edge label rendering + per-edge style overrides.
-- [~] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
+- [x] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
 - [x] Reroute node + edge split UX (double-click reroute; Alt+double-click and Alt-drag open insert picker).
 - [x] Interaction presets (XyFlow vs ShaderGraph) as kit helpers (`NodeGraphInteractionPreset`).
 - [x] Keyboard nudge ops.

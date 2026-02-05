@@ -702,7 +702,7 @@ canonical data flow and invalidation boundaries:
 - [~] **Edge types (bezier/step/smooth) and markers**
   - XyFlow: edge types in React package; system provides geometry helpers
   - fret-node: presenter hint supports `EdgeRouteKind::{bezier, straight, step}` and end markers (`EdgeMarkerKind::Arrow`); other marker styles remain TODO
-    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_size_zoom_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_step_tangent_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_tangent_fallback_conformance.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_size_zoom_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_step_tangent_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_bezier_tangent_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_tangent_fallback_conformance.rs`
 
 - [~] **Interaction width**
   - XyFlow: `interactionWidth` on edges (`components/EdgeWrapper/index.tsx`)
