@@ -24,6 +24,8 @@ This audit compares Fret’s shadcn-aligned `Slider` against the upstream shadcn
 - Pass: Thumb defaults to `size-4` (16px) via `component.slider.thumb_size`.
 - Pass: Layout height follows the track; the thumb is allowed to overflow without being clipped
   (overflow-visible semantics), matching the DOM implementation.
+- Pass: Thumb stays visually in-bounds at the edges (Radix `getThumbInBoundsOffset` outcome), so the
+  center-aligned thumb does not underflow/overflow the track at `t=0` / `t=1`.
 
 ### Semantics
 
@@ -34,6 +36,7 @@ This audit compares Fret’s shadcn-aligned `Slider` against the upstream shadcn
 - `cargo test -p fret-ui-shadcn --lib slider`
 - Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   (`web_vs_fret_layout_slider_demo_geometry`).
+- Web layout gate (thumb insets): `cargo nextest run -p fret-ui-shadcn -E "test(web_vs_fret_layout_field_slider_thumb_insets_match_web)"`
 
 ## Follow-ups (recommended)
 

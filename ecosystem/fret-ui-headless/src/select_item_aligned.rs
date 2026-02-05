@@ -142,7 +142,16 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
     let min_height = Px((selected_item_half_h.0 * 10.0).min(full_content_h.0));
 
     let top_edge_to_trigger_mid = Px(midpoint_y(inputs.trigger).0 - margin.0 - window_top.0);
-    let trigger_mid_to_bottom_edge = Px(available_height.0 - top_edge_to_trigger_mid.0);
+    // Radix constrains `maxHeight` to `window.innerHeight - CONTENT_MARGIN*2`, but when that would
+    // fall below the `minHeight` (5 rows) it can overflow the collision boundary and still clamp
+    // the origin to the top edge. Model this by relaxing the effective max height in that case.
+    let max_height = if available_height.0 < min_height.0 {
+        inputs.window.size.height
+    } else {
+        available_height
+    };
+
+    let trigger_mid_to_bottom_edge = Px(max_height.0 - top_edge_to_trigger_mid.0);
 
     let content_top_to_item_mid =
         Px(inputs.content_border_top.0 + inputs.content_padding_top.0 + selected_item_mid_offset.0);
@@ -174,8 +183,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
                 + inputs.content_border_bottom.0,
         ));
         let height = Px(
-            (content_top_to_item_mid.0 + clamped_trigger_mid_to_bottom_edge.0)
-                .min(available_height.0),
+            (content_top_to_item_mid.0 + clamped_trigger_mid_to_bottom_edge.0).min(max_height.0),
         );
         let height = Px(height.0.min(full_content_h.0));
 
@@ -188,7 +196,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             min_width,
             height,
             min_height: Px(min_height.0.min(height.0)),
-            max_height: available_height,
+            max_height,
             scroll_to_y: None,
         }
     } else {
@@ -210,8 +218,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
                 + selected_item_half_h.0,
         ));
         let height = Px(
-            (clamped_top_edge_to_trigger_mid.0 + item_mid_to_content_bottom.0)
-                .min(available_height.0),
+            (clamped_top_edge_to_trigger_mid.0 + item_mid_to_content_bottom.0).min(max_height.0),
         );
         let height = Px(height.0.min(full_content_h.0));
 
@@ -227,7 +234,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             min_width,
             height,
             min_height: Px(min_height.0.min(height.0)),
-            max_height: available_height,
+            max_height,
             scroll_to_y: Some(scroll_to),
         }
     }

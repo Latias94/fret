@@ -3,8 +3,8 @@ use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
-    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, SvgFit, TextOverflow, TextStyle,
-    TextWrap, UvRect, ViewportFit,
+    ImageId, NodeId, Px, Rect, RenderTargetId, SemanticsRole, Size, SvgFit, TextOverflow,
+    TextStyle, TextWrap, UvRect, ViewportFit,
 };
 use fret_runtime::{CommandId, Model};
 use std::sync::Arc;
@@ -19,11 +19,31 @@ pub struct AnyElement {
     pub id: GlobalElementId,
     pub kind: ElementKind,
     pub children: Vec<AnyElement>,
+    /// Layout-transparent semantics overrides applied when producing semantics snapshots.
+    pub semantics_decoration: Option<SemanticsDecoration>,
 }
 
 impl AnyElement {
     pub fn new(id: GlobalElementId, kind: ElementKind, children: Vec<AnyElement>) -> Self {
-        Self { id, kind, children }
+        Self {
+            id,
+            kind,
+            children,
+            semantics_decoration: None,
+        }
+    }
+
+    /// Attach layout-transparent semantics metadata to this element (ADR 1161).
+    ///
+    /// Prefer this over wrapping a subtree in `Semantics` when you only need to stamp
+    /// `test_id` / `label` / `role` / `value` for diagnostics or UI automation, since `Semantics`
+    /// introduces a real layout node.
+    pub fn attach_semantics(mut self, decoration: SemanticsDecoration) -> Self {
+        self.semantics_decoration = Some(match self.semantics_decoration.take() {
+            Some(existing) => existing.merge(decoration),
+            None => decoration,
+        });
+        self
     }
 }
 
@@ -88,6 +108,9 @@ pub enum ElementKind {
     Image(ImageProps),
     /// A declarative, leaf canvas element for custom scene emission (ADR 0156).
     Canvas(CanvasProps),
+    /// Unstable bridge element for hosting a retained subtree under declarative mount.
+    #[cfg(feature = "unstable-retained-bridge")]
+    RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
     /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0125).
     ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),
@@ -124,11 +147,22 @@ pub struct PointerRegionProps {
 }
 
 /// A focusable event region that participates in text input / IME routing.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TextInputRegionProps {
     pub layout: LayoutStyle,
     pub enabled: bool,
     pub text_boundary_mode_override: Option<fret_runtime::TextBoundaryMode>,
+    /// Optional accessibility label for this text input region.
+    pub a11y_label: Option<Arc<str>>,
+    /// Optional accessibility value text for this text input region.
+    ///
+    /// When present, selection and composition ranges are interpreted as UTF-8 byte offsets within
+    /// this value (ADR 0071).
+    pub a11y_value: Option<Arc<str>>,
+    /// Optional selection range (anchor, focus) in UTF-8 byte offsets within `a11y_value`.
+    pub a11y_text_selection: Option<(u32, u32)>,
+    /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
+    pub a11y_text_composition: Option<(u32, u32)>,
 }
 
 /// An internal drag event listener region primitive.
@@ -164,6 +198,10 @@ impl Default for TextInputRegionProps {
             layout: LayoutStyle::default(),
             enabled: true,
             text_boundary_mode_override: None,
+            a11y_label: None,
+            a11y_value: None,
+            a11y_text_selection: None,
+            a11y_text_composition: None,
         }
     }
 }
@@ -346,10 +384,124 @@ impl Default for ContainerProps {
     }
 }
 
+/// Layout-transparent semantics overrides attached to an existing element (ADR 1161).
+///
+/// This is primarily intended for diagnostics and UI automation (`test_id`) and for restricted
+/// a11y stamping on typed elements without introducing a layout wrapper.
+#[derive(Debug, Default, Clone)]
+pub struct SemanticsDecoration {
+    pub role: Option<SemanticsRole>,
+    pub label: Option<Arc<str>>,
+    /// Debug/test-only identifier for deterministic automation.
+    ///
+    /// This MUST NOT be mapped into platform accessibility name/label fields by default.
+    pub test_id: Option<Arc<str>>,
+    pub value: Option<Arc<str>>,
+    pub disabled: Option<bool>,
+    pub selected: Option<bool>,
+    pub expanded: Option<bool>,
+    /// Tri-state checked override (Some(None) clears; Some(Some(v)) sets to v).
+    pub checked: Option<Option<bool>>,
+    /// Declarative-only: element ID of the active descendant for composite widgets.
+    pub active_descendant_element: Option<u64>,
+    /// Declarative-only: element ID of a node which labels this node (`aria-labelledby`).
+    pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this node (`aria-describedby`).
+    pub described_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which this node controls (`aria-controls`).
+    pub controls_element: Option<u64>,
+}
+
+impl SemanticsDecoration {
+    /// Merges two decorations, with `other` taking precedence.
+    pub fn merge(self, other: Self) -> Self {
+        Self {
+            role: other.role.or(self.role),
+            label: other.label.or(self.label),
+            test_id: other.test_id.or(self.test_id),
+            value: other.value.or(self.value),
+            disabled: other.disabled.or(self.disabled),
+            selected: other.selected.or(self.selected),
+            expanded: other.expanded.or(self.expanded),
+            checked: other.checked.or(self.checked),
+            active_descendant_element: other
+                .active_descendant_element
+                .or(self.active_descendant_element),
+            labelled_by_element: other.labelled_by_element.or(self.labelled_by_element),
+            described_by_element: other.described_by_element.or(self.described_by_element),
+            controls_element: other.controls_element.or(self.controls_element),
+        }
+    }
+
+    pub fn role(mut self, role: SemanticsRole) -> Self {
+        self.role = Some(role);
+        self
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = Some(value.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn selected(mut self, selected: bool) -> Self {
+        self.selected = Some(selected);
+        self
+    }
+
+    pub fn expanded(mut self, expanded: bool) -> Self {
+        self.expanded = Some(expanded);
+        self
+    }
+
+    pub fn checked(mut self, checked: Option<bool>) -> Self {
+        self.checked = Some(checked);
+        self
+    }
+
+    pub fn active_descendant_element(mut self, element: u64) -> Self {
+        self.active_descendant_element = Some(element);
+        self
+    }
+
+    pub fn labelled_by_element(mut self, element: u64) -> Self {
+        self.labelled_by_element = Some(element);
+        self
+    }
+
+    pub fn described_by_element(mut self, element: u64) -> Self {
+        self.described_by_element = Some(element);
+        self
+    }
+
+    pub fn controls_element(mut self, element: u64) -> Self {
+        self.controls_element = Some(element);
+        self
+    }
+}
+
 /// A transparent semantics wrapper for structuring the accessibility tree.
 ///
 /// This is intentionally input-transparent (hit-test passes through) and paint-transparent: it
 /// only contributes layout and semantics.
+///
+/// Note: `Semantics` is a real layout wrapper. Do not use it only to stamp `test_id` / labels for
+/// UI automation; prefer `AnyElement::attach_semantics` (`SemanticsDecoration`) to avoid subtle
+/// layout regressions.
 #[derive(Debug, Clone)]
 pub struct SemanticsProps {
     pub layout: LayoutStyle,
@@ -617,7 +769,7 @@ impl Default for AnchoredProps {
 ///
 /// This is renderer-friendly: runtimes can approximate blur by drawing multiple expanded quads with
 /// alpha falloff (ADR 0060) until we have a true blur pipeline.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowLayerStyle {
     pub color: Color,
     pub offset_x: Px,
@@ -632,7 +784,7 @@ pub struct ShadowLayerStyle {
 ///
 /// Many Tailwind/shadcn recipes are multi-layer shadows (e.g. `shadow-md`), so we support up to two
 /// layers without forcing heap allocation (keeps `ContainerProps` `Copy`).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowStyle {
     pub primary: ShadowLayerStyle,
     pub secondary: Option<ShadowLayerStyle>,
@@ -780,7 +932,7 @@ pub enum RingPlacement {
 ///
 /// This is intentionally small and renderer-friendly: it maps to one or two `SceneOp::Quad`
 /// operations.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RingStyle {
     pub placement: RingPlacement,
     pub width: Px,
@@ -942,6 +1094,12 @@ pub struct TextInputProps {
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which this text input controls.
+    ///
+    /// This is an authoring convenience for relationships like `aria-controls` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub controls_element: Option<u64>,
     pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
@@ -961,6 +1119,7 @@ impl TextInputProps {
             test_id: None,
             placeholder: None,
             active_descendant: None,
+            controls_element: None,
             expanded: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
@@ -984,6 +1143,7 @@ impl std::fmt::Debug for TextInputProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)
@@ -1419,6 +1579,12 @@ pub struct VirtualListProps {
     pub measure_mode: VirtualListMeasureMode,
     pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
+    /// Number of off-window items that a retained virtual-list host may keep alive for reuse.
+    ///
+    /// This is primarily consumed by retained/windowed host implementations (ADR 0192) so window
+    /// shifts can reuse previously-mounted item subtrees without forcing the parent cache root to
+    /// rerender.
+    pub keep_alive: usize,
     pub scroll_margin: Px,
     pub gap: Px,
     pub scroll_handle: crate::scroll::VirtualListScrollHandle,
@@ -1465,6 +1631,7 @@ pub struct VirtualListOptions {
     pub measure_mode: VirtualListMeasureMode,
     pub key_cache: VirtualListKeyCacheMode,
     pub overscan: usize,
+    pub keep_alive: usize,
     pub scroll_margin: Px,
     pub gap: Px,
     pub known_row_height_at: Option<Arc<dyn Fn(usize) -> Px + Send + Sync>>,
@@ -1479,10 +1646,16 @@ impl VirtualListOptions {
             measure_mode: VirtualListMeasureMode::Measured,
             key_cache: VirtualListKeyCacheMode::AllKeys,
             overscan,
+            keep_alive: 0,
             scroll_margin: Px(0.0),
             gap: Px(0.0),
             known_row_height_at: None,
         }
+    }
+
+    pub fn keep_alive(mut self, keep_alive: usize) -> Self {
+        self.keep_alive = keep_alive;
+        self
     }
 
     pub fn fixed(estimate_row_height: Px, overscan: usize) -> Self {
@@ -1513,6 +1686,7 @@ impl std::fmt::Debug for VirtualListOptions {
             .field("measure_mode", &self.measure_mode)
             .field("key_cache", &self.key_cache)
             .field("overscan", &self.overscan)
+            .field("keep_alive", &self.keep_alive)
             .field("scroll_margin", &self.scroll_margin)
             .field("gap", &self.gap)
             .field("known_row_height_at", &self.known_row_height_at.is_some())
@@ -1529,6 +1703,7 @@ pub struct VirtualListState {
     pub viewport_h: Px,
     pub(crate) window_range: Option<crate::virtual_list::VirtualRange>,
     pub(crate) render_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub(crate) last_scroll_direction_forward: Option<bool>,
     pub(crate) has_final_viewport: bool,
     pub(crate) deferred_scroll_offset_hint: Option<Px>,
     pub(crate) metrics: crate::virtual_list::VirtualListMetrics,
@@ -1544,6 +1719,14 @@ pub struct ScrollProps {
     pub axis: ScrollAxis,
     pub scroll_handle: Option<crate::scroll::ScrollHandle>,
     pub intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
+    /// When true, the scroll subtree's paint output depends on the scroll offset in a
+    /// windowed/virtualized way (e.g. a single `Canvas` that only paints the visible range).
+    ///
+    /// In this mode, scroll-handle updates must be allowed to invalidate view-cache reuse so the
+    /// subtree can re-render and re-run paint handlers for the new visible window.
+    ///
+    /// This is a mechanism-only switch; policy lives in ecosystem layers.
+    pub windowed_paint: bool,
     /// When true (default), scroll containers probe their content with a very large available size
     /// along the scroll axis to measure the full scrollable extent.
     ///
@@ -1563,6 +1746,7 @@ impl Default for ScrollProps {
             axis: ScrollAxis::Y,
             scroll_handle: None,
             intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
+            windowed_paint: false,
             probe_unbounded: true,
         }
     }
@@ -1604,6 +1788,22 @@ impl ScrollAxis {
 #[derive(Debug, Default, Clone)]
 pub struct ScrollState {
     pub scroll_handle: crate::scroll::ScrollHandle,
+    pub(crate) intrinsic_measure_cache: Option<ScrollIntrinsicMeasureCache>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ScrollIntrinsicMeasureCacheKey {
+    pub avail_w: u64,
+    pub avail_h: u64,
+    pub axis: u8,
+    pub probe_unbounded: bool,
+    pub scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ScrollIntrinsicMeasureCache {
+    pub key: ScrollIntrinsicMeasureCacheKey,
+    pub max_child: Size,
 }
 
 #[derive(Debug, Clone, Copy)]

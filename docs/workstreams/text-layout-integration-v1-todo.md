@@ -55,7 +55,7 @@ Exit criteria:
   - Evidence: `crates/fret-ui/src/declarative/host_widget/measure.rs` (helper
     `text_max_width_for_constraints`).
 - [x] Shaping output clamps `line_height` to at least font extents and respects `TextStyle.line_height`.
-  - Evidence: `crates/fret-render/src/text_v2/parley_shaper.rs` (tests:
+  - Evidence: `crates/fret-render/src/text/parley_shaper.rs` (tests:
     `clamps_line_height_to_font_extents`, `respects_explicit_line_height_override`).
 - [x] Add a focused integration test in `fret-ui` that:
   - lays out a vstack containing a multi-line text node and a following sibling
@@ -91,12 +91,12 @@ Exit criteria:
   - file paths / URLs
   - code identifiers
   - Evidence: `crates/fret-core/src/text.rs` (`TextWrap::Grapheme`),
-    `crates/fret-render/src/text_v2/wrapper.rs` (`wrap_grapheme*`).
+    `crates/fret-render/src/text/wrapper.rs` (`wrap_grapheme*`).
 - [x] Add 2–3 unit tests in `fret-render` wrapper:
   - long token without spaces
   - CJK string
   - mixed emoji + CJK
-  - Evidence: `crates/fret-render/src/text_v2/wrapper.rs` (tests:
+  - Evidence: `crates/fret-render/src/text/wrapper.rs` (tests:
     `grapheme_wrap_breaks_long_token_without_spaces`,
     `grapheme_wrap_handles_cjk_string`,
     `grapheme_wrap_does_not_split_zwj_clusters`).

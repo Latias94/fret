@@ -1,5 +1,5 @@
 use super::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Copy)]
 struct PendingInvalidation {
@@ -92,6 +92,118 @@ impl<H: UiHost> UiTree<H> {
             },
             is_hovered,
         );
+    }
+
+    fn update_hover_state_from_hit(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        hit_for_hover: Option<NodeId>,
+        hit_for_hover_region: Option<NodeId>,
+        invalidation_visited: &mut HashMap<NodeId, u8>,
+        needs_redraw: &mut bool,
+    ) {
+        let hovered_pressable: Option<crate::elements::GlobalElementId> =
+            declarative::with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let mut node = hit_for_hover;
+                while let Some(id) = node {
+                    if let Some(record) = window_frame.instances.get(&id)
+                        && matches!(record.instance, declarative::ElementInstance::Pressable(_))
+                    {
+                        return Some(record.element);
+                    }
+                    node = self.nodes.get(id).and_then(|n| n.parent);
+                }
+                None
+            });
+
+        let (prev_element, prev_node, next_element, next_node) =
+            crate::elements::update_hovered_pressable(app, window, hovered_pressable);
+        if prev_node.is_some() || next_node.is_some() {
+            *needs_redraw = true;
+            self.debug_record_hover_edge_pressable();
+            if let Some(node) = prev_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
+
+        if let Some(window) = self.window {
+            for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
+                let (Some(element), Some(node)) = (element, node) else {
+                    continue;
+                };
+                let Some(bounds) = self.node_bounds(node) else {
+                    continue;
+                };
+                crate::elements::record_bounds_for_element(app, window, element, bounds);
+            }
+        }
+
+        if let Some(element) = prev_element
+            && prev_node.is_some()
+        {
+            Self::run_pressable_hover_hook(app, window, element, false);
+        }
+        if let Some(element) = next_element
+            && next_node.is_some()
+        {
+            Self::run_pressable_hover_hook(app, window, element, true);
+        }
+
+        let hovered_hover_region: Option<crate::elements::GlobalElementId> =
+            declarative::with_window_frame(app, window, |window_frame| {
+                let window_frame = window_frame?;
+                let mut node = hit_for_hover_region;
+                while let Some(id) = node {
+                    if let Some(record) = window_frame.instances.get(&id)
+                        && matches!(
+                            record.instance,
+                            declarative::ElementInstance::HoverRegion(_)
+                        )
+                    {
+                        return Some(record.element);
+                    }
+                    node = self.nodes.get(id).and_then(|n| n.parent);
+                }
+                None
+            });
+
+        let (_prev_element, prev_node, _next_element, next_node) =
+            crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
+        if prev_node.is_some() || next_node.is_some() {
+            *needs_redraw = true;
+            self.debug_record_hover_edge_hover_region();
+            if let Some(node) = prev_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+            if let Some(node) = next_node {
+                self.mark_invalidation_dedup_with_source(
+                    node,
+                    Invalidation::Paint,
+                    invalidation_visited,
+                    UiDebugInvalidationSource::Hover,
+                );
+            }
+        }
     }
 
     fn invalidation_rank(inv: Invalidation) -> u8 {
@@ -441,7 +553,10 @@ impl<H: UiHost> UiTree<H> {
         if self.focus == Some(requested_focus) {
             return false;
         }
-        if !self.node_in_any_layer(requested_focus, active_roots) {
+        // Focus gating should be resilient to temporarily-broken parent pointers under retained /
+        // view-cache-reused subtrees. Use reachability from active layer roots via child edges as
+        // the authoritative layer membership check.
+        if !self.is_reachable_from_any_root_via_children(requested_focus, active_roots) {
             return false;
         }
 
@@ -449,6 +564,39 @@ impl<H: UiHost> UiTree<H> {
             return true;
         };
         self.is_descendant(trap_root, requested_focus)
+    }
+
+    fn is_reachable_from_any_root_via_children(&self, target: NodeId, roots: &[NodeId]) -> bool {
+        if roots.is_empty() {
+            return false;
+        }
+        if roots.iter().any(|&root| root == target) {
+            return true;
+        }
+
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = Vec::new();
+        for &root in roots {
+            if visited.insert(root) {
+                stack.push(root);
+            }
+        }
+
+        while let Some(node) = stack.pop() {
+            let Some(entry) = self.nodes.get(node) else {
+                continue;
+            };
+            for &child in &entry.children {
+                if child == target {
+                    return true;
+                }
+                if visited.insert(child) {
+                    stack.push(child);
+                }
+            }
+        }
+
+        false
     }
 
     fn dispatch_event_to_node_chain(
@@ -483,6 +631,7 @@ impl<H: UiHost> UiTree<H> {
                     requested_focus,
                     requested_capture,
                     notify_requested,
+                    notify_requested_location,
                     stop_propagation,
                 ) = self.with_widget_mut(node_id, |widget, tree| {
                     let (children, bounds) = tree
@@ -509,6 +658,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture: None,
                         requested_cursor: None,
                         notify_requested: false,
+                        notify_requested_location: None,
                         stop_propagation: false,
                     };
                     widget.event(&mut cx, &event_for_node);
@@ -517,6 +667,7 @@ impl<H: UiHost> UiTree<H> {
                         cx.requested_focus,
                         cx.requested_capture,
                         cx.notify_requested,
+                        cx.notify_requested_location,
                         cx.stop_propagation,
                     )
                 });
@@ -540,6 +691,11 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    self.debug_record_notify_request(
+                        app.frame_id(),
+                        node_id,
+                        notify_requested_location,
+                    );
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
                         node_id,
@@ -614,6 +770,7 @@ impl<H: UiHost> UiTree<H> {
                 requested_focus,
                 requested_capture,
                 notify_requested,
+                notify_requested_location,
                 stop_propagation,
                 parent,
             ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -641,6 +798,7 @@ impl<H: UiHost> UiTree<H> {
                     requested_capture: None,
                     requested_cursor: None,
                     notify_requested: false,
+                    notify_requested_location: None,
                     stop_propagation: false,
                 };
                 widget.event(&mut cx, event);
@@ -649,6 +807,7 @@ impl<H: UiHost> UiTree<H> {
                     cx.requested_focus,
                     cx.requested_capture,
                     cx.notify_requested,
+                    cx.notify_requested_location,
                     cx.stop_propagation,
                     parent,
                 )
@@ -673,6 +832,11 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                self.debug_record_notify_request(
+                    app.frame_id(),
+                    node_id,
+                    notify_requested_location,
+                );
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     node_id,
@@ -754,6 +918,16 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        // Keep wheel routing and hover detection in sync with out-of-band scroll handle mutations
+        // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
+        // hit-testing.
+        if matches!(event, Event::Pointer(_)) {
+            self.invalidate_scroll_handle_bindings_for_changed_handles(
+                app,
+                crate::layout_pass::LayoutPassKind::Final,
+            );
+        }
+
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
         let (active_layers, barrier_root) = self.active_input_layers();
@@ -801,7 +975,7 @@ impl<H: UiHost> UiTree<H> {
             self.focus = None;
         }
 
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
@@ -1312,111 +1486,14 @@ impl<H: UiHost> UiTree<H> {
             };
 
             if hover_capable {
-                let hovered_pressable: Option<crate::elements::GlobalElementId> =
-                    declarative::with_window_frame(app, window, |window_frame| {
-                        let window_frame = window_frame?;
-                        let mut node = hit_for_hover;
-                        while let Some(id) = node {
-                            if let Some(record) = window_frame.instances.get(&id)
-                                && matches!(
-                                    record.instance,
-                                    declarative::ElementInstance::Pressable(_)
-                                )
-                            {
-                                return Some(record.element);
-                            }
-                            node = self.nodes.get(id).and_then(|n| n.parent);
-                        }
-                        None
-                    });
-
-                let (prev_element, prev_node, next_element, next_node) =
-                    crate::elements::update_hovered_pressable(app, window, hovered_pressable);
-                if prev_node.is_some() || next_node.is_some() {
-                    needs_redraw = true;
-                    self.debug_record_hover_edge_pressable();
-                    if let Some(node) = prev_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                    if let Some(node) = next_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                }
-
-                if let Some(window) = self.window {
-                    for (element, node) in [(prev_element, prev_node), (next_element, next_node)] {
-                        let (Some(element), Some(node)) = (element, node) else {
-                            continue;
-                        };
-                        let Some(bounds) = self.node_bounds(node) else {
-                            continue;
-                        };
-                        crate::elements::record_bounds_for_element(app, window, element, bounds);
-                    }
-                }
-
-                if let Some(element) = prev_element
-                    && prev_node.is_some()
-                {
-                    Self::run_pressable_hover_hook(app, window, element, false);
-                }
-
-                if let Some(element) = next_element
-                    && next_node.is_some()
-                {
-                    Self::run_pressable_hover_hook(app, window, element, true);
-                }
-
-                let hovered_hover_region: Option<crate::elements::GlobalElementId> =
-                    declarative::with_window_frame(app, window, |window_frame| {
-                        let window_frame = window_frame?;
-                        let mut node = hit;
-                        while let Some(id) = node {
-                            if let Some(record) = window_frame.instances.get(&id)
-                                && matches!(
-                                    record.instance,
-                                    declarative::ElementInstance::HoverRegion(_)
-                                )
-                            {
-                                return Some(record.element);
-                            }
-                            node = self.nodes.get(id).and_then(|n| n.parent);
-                        }
-                        None
-                    });
-
-                let (_prev_element, prev_node, _next_element, next_node) =
-                    crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
-                if prev_node.is_some() || next_node.is_some() {
-                    needs_redraw = true;
-                    self.debug_record_hover_edge_hover_region();
-                    if let Some(node) = prev_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                    if let Some(node) = next_node {
-                        self.mark_invalidation_dedup_with_source(
-                            node,
-                            Invalidation::Paint,
-                            &mut invalidation_visited,
-                            UiDebugInvalidationSource::Hover,
-                        );
-                    }
-                }
+                self.update_hover_state_from_hit(
+                    app,
+                    window,
+                    hit_for_hover,
+                    hit,
+                    &mut invalidation_visited,
+                    &mut needs_redraw,
+                );
             }
         }
 
@@ -1618,6 +1695,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture,
                         requested_cursor,
                         notify_requested,
+                        notify_requested_location,
                         stop_propagation,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
                         let (children, bounds) = tree
@@ -1644,6 +1722,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture: None,
                             requested_cursor: None,
                             notify_requested: false,
+                            notify_requested_location: None,
                             stop_propagation: false,
                         };
                         widget.event_capture(&mut cx, event_for_node);
@@ -1653,6 +1732,7 @@ impl<H: UiHost> UiTree<H> {
                             cx.requested_capture,
                             cx.requested_cursor,
                             cx.notify_requested,
+                            cx.notify_requested_location,
                             cx.stop_propagation,
                         )
                     });
@@ -1669,6 +1749,11 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        self.debug_record_notify_request(
+                            app.frame_id(),
+                            node_id,
+                            notify_requested_location,
+                        );
                         self.mark_invalidation_with_source(
                             node_id,
                             Invalidation::Paint,
@@ -1736,6 +1821,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture,
                         requested_cursor,
                         notify_requested,
+                        notify_requested_location,
                         stop_propagation,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
                         let (children, bounds) = tree
@@ -1762,6 +1848,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture: None,
                             requested_cursor: None,
                             notify_requested: false,
+                            notify_requested_location: None,
                             stop_propagation: false,
                         };
                         widget.event(&mut cx, &event_for_node);
@@ -1779,6 +1866,7 @@ impl<H: UiHost> UiTree<H> {
                             cx.requested_capture,
                             cx.requested_cursor,
                             cx.notify_requested,
+                            cx.notify_requested_location,
                             cx.stop_propagation,
                         )
                     });
@@ -1795,6 +1883,11 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        self.debug_record_notify_request(
+                            app.frame_id(),
+                            node_id,
+                            notify_requested_location,
+                        );
                         self.mark_invalidation_with_source(
                             node_id,
                             Invalidation::Paint,
@@ -1875,6 +1968,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture,
                             requested_cursor,
                             notify_requested,
+                            notify_requested_location,
                             stop_propagation,
                         ) = self.with_widget_mut(node_id, |widget, tree| {
                             let (children, bounds) = tree
@@ -1901,6 +1995,7 @@ impl<H: UiHost> UiTree<H> {
                                 requested_capture: None,
                                 requested_cursor: None,
                                 notify_requested: false,
+                                notify_requested_location: None,
                                 stop_propagation: false,
                             };
                             widget.event_capture(&mut cx, event);
@@ -1910,6 +2005,7 @@ impl<H: UiHost> UiTree<H> {
                                 cx.requested_capture,
                                 cx.requested_cursor,
                                 cx.notify_requested,
+                                cx.notify_requested_location,
                                 cx.stop_propagation,
                             )
                         });
@@ -1926,6 +2022,11 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            self.debug_record_notify_request(
+                                app.frame_id(),
+                                node_id,
+                                notify_requested_location,
+                            );
                             self.mark_invalidation_with_source(
                                 node_id,
                                 Invalidation::Paint,
@@ -1991,6 +2092,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture,
                             requested_cursor,
                             notify_requested,
+                            notify_requested_location,
                             stop_propagation,
                         ) = self.with_widget_mut(node_id, |widget, tree| {
                             let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
@@ -2019,6 +2121,7 @@ impl<H: UiHost> UiTree<H> {
                                 requested_capture: None,
                                 requested_cursor: None,
                                 notify_requested: false,
+                                notify_requested_location: None,
                                 stop_propagation: false,
                             };
                             widget.event(&mut cx, event);
@@ -2028,6 +2131,7 @@ impl<H: UiHost> UiTree<H> {
                                 cx.requested_capture,
                                 cx.requested_cursor,
                                 cx.notify_requested,
+                                cx.notify_requested_location,
                                 cx.stop_propagation,
                             )
                         });
@@ -2044,6 +2148,11 @@ impl<H: UiHost> UiTree<H> {
                             self.mark_invalidation(id, inv);
                         }
                         if notify_requested {
+                            self.debug_record_notify_request(
+                                app.frame_id(),
+                                node_id,
+                                notify_requested_location,
+                            );
                             self.mark_invalidation_with_source(
                                 node_id,
                                 Invalidation::Paint,
@@ -2105,6 +2214,7 @@ impl<H: UiHost> UiTree<H> {
                         requested_capture,
                         requested_cursor,
                         notify_requested,
+                        notify_requested_location,
                         stop_propagation,
                         parent,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
@@ -2133,6 +2243,7 @@ impl<H: UiHost> UiTree<H> {
                             requested_capture: None,
                             requested_cursor: None,
                             notify_requested: false,
+                            notify_requested_location: None,
                             stop_propagation: false,
                         };
                         widget.event(&mut cx, event);
@@ -2142,6 +2253,7 @@ impl<H: UiHost> UiTree<H> {
                             cx.requested_capture,
                             cx.requested_cursor,
                             cx.notify_requested,
+                            cx.notify_requested_location,
                             cx.stop_propagation,
                             parent,
                         )
@@ -2158,6 +2270,11 @@ impl<H: UiHost> UiTree<H> {
                         self.mark_invalidation(id, inv);
                     }
                     if notify_requested {
+                        self.debug_record_notify_request(
+                            app.frame_id(),
+                            node_id,
+                            notify_requested_location,
+                        );
                         self.mark_invalidation_with_source(
                             node_id,
                             Invalidation::Paint,
@@ -2375,6 +2492,19 @@ impl<H: UiHost> UiTree<H> {
             self.captured.remove(&pointer_id);
         }
 
+        if matches!(event, Event::PointerCancel(_))
+            && let Some(window) = self.window
+            && let Some(prev_node) = crate::elements::set_pressed_pressable(app, window, None)
+        {
+            needs_redraw = true;
+            self.mark_invalidation_dedup_with_source(
+                prev_node,
+                Invalidation::Paint,
+                &mut invalidation_visited,
+                UiDebugInvalidationSource::Other,
+            );
+        }
+
         if let Event::PointerCancel(e) = event
             && let Some(window) = self.window
             && pointer_type_supports_hover(e.pointer_type)
@@ -2429,7 +2559,7 @@ impl<H: UiHost> UiTree<H> {
                 repeat,
             } = event
         {
-            let focus_is_text_input = self.focus_is_text_input();
+            let focus_is_text_input = self.focus_is_text_input(app);
             let input_ctx_for_shortcuts = InputContext {
                 focus_is_text_input,
                 ..input_ctx.clone()
@@ -2484,6 +2614,60 @@ impl<H: UiHost> UiTree<H> {
             needs_redraw = true;
         }
 
+        if is_wheel
+            && wheel_stop_node.is_some()
+            && captured.is_none()
+            && let Some(window) = self.window
+            && let Event::Pointer(PointerEvent::Wheel {
+                position,
+                pointer_type,
+                ..
+            }) = event
+            && pointer_type_supports_hover(*pointer_type)
+        {
+            // Capture scroll-handle-driven invalidations triggered by this wheel event, including
+            // out-of-band handle mutations that were not routed through a `Scroll` widget.
+            self.invalidate_scroll_handle_bindings_for_changed_handles(
+                app,
+                crate::layout_pass::LayoutPassKind::Final,
+            );
+
+            self.hit_test_path_cache = None;
+            let hit = self.hit_test_layers_cached(hit_test_layer_roots, *position);
+
+            let mut hit_for_hover = hit;
+            if let Some((occlusion_layer, occlusion)) =
+                self.topmost_pointer_occlusion_layer(barrier_root)
+                && occlusion != PointerOcclusion::None
+            {
+                let occlusion_z = self
+                    .layer_order
+                    .iter()
+                    .position(|id| *id == occlusion_layer);
+                let hit_layer_z = hit
+                    .and_then(|hit| self.node_layer(hit))
+                    .and_then(|layer| self.layer_order.iter().position(|id| *id == layer));
+                let hit_is_below_occlusion = match (occlusion_z, hit_layer_z, hit) {
+                    (Some(oz), Some(hz), Some(_)) => hz < oz,
+                    (Some(_), None, Some(_)) => true,
+                    (Some(_), _, None) => true,
+                    _ => false,
+                };
+                if hit_is_below_occlusion {
+                    hit_for_hover = None;
+                }
+            }
+
+            self.update_hover_state_from_hit(
+                app,
+                window,
+                hit_for_hover,
+                hit,
+                &mut invalidation_visited,
+                &mut needs_redraw,
+            );
+        }
+
         if input_ctx.caps.ui.cursor_icons
             && let Some(window) = self.window
             && matches!(event, Event::Pointer(_))
@@ -2511,7 +2695,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         // Keep IME enable/disable tightly coupled to focus changes caused by the event itself.
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.set_ime_allowed(app, focus_is_text_input);
 
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
@@ -2590,8 +2774,8 @@ impl<H: UiHost> UiTree<H> {
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             for (node_id, event_for_node) in chain {
-                let (invalidations, notify_requested, _parent) =
-                    self.with_widget_mut(node_id, |widget, tree| {
+                let (invalidations, notify_requested, notify_requested_location, _parent) = self
+                    .with_widget_mut(node_id, |widget, tree| {
                         let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                         let (children, bounds) = tree
                             .nodes
@@ -2614,10 +2798,16 @@ impl<H: UiHost> UiTree<H> {
                             bounds,
                             invalidations: Vec::new(),
                             notify_requested: false,
+                            notify_requested_location: None,
                         };
                         widget.event_observer(&mut cx, &event_for_node);
 
-                        (cx.invalidations, cx.notify_requested, parent)
+                        (
+                            cx.invalidations,
+                            cx.notify_requested,
+                            cx.notify_requested_location,
+                            parent,
+                        )
                     });
 
                 if !invalidations.is_empty() || notify_requested {
@@ -2634,6 +2824,11 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if notify_requested {
+                    self.debug_record_notify_request(
+                        app.frame_id(),
+                        node_id,
+                        notify_requested_location,
+                    );
                     Self::pending_invalidation_merge(
                         &mut pending_invalidations,
                         node_id,
@@ -2652,8 +2847,8 @@ impl<H: UiHost> UiTree<H> {
 
         let mut node_id = start;
         loop {
-            let (invalidations, notify_requested, parent) =
-                self.with_widget_mut(node_id, |widget, tree| {
+            let (invalidations, notify_requested, notify_requested_location, parent) = self
+                .with_widget_mut(node_id, |widget, tree| {
                     let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let (children, bounds) = tree
                         .nodes
@@ -2676,10 +2871,16 @@ impl<H: UiHost> UiTree<H> {
                         bounds,
                         invalidations: Vec::new(),
                         notify_requested: false,
+                        notify_requested_location: None,
                     };
                     widget.event_observer(&mut cx, event);
 
-                    (cx.invalidations, cx.notify_requested, parent)
+                    (
+                        cx.invalidations,
+                        cx.notify_requested,
+                        cx.notify_requested_location,
+                        parent,
+                    )
                 });
 
             if !invalidations.is_empty() || notify_requested {
@@ -2696,6 +2897,11 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if notify_requested {
+                self.debug_record_notify_request(
+                    app.frame_id(),
+                    node_id,
+                    notify_requested_location,
+                );
                 Self::pending_invalidation_merge(
                     &mut pending_invalidations,
                     node_id,

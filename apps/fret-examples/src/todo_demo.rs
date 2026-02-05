@@ -1,12 +1,25 @@
 use std::sync::Arc;
 
+use fret_core::{Axis, Edges, KeyCode};
 use fret_kit::prelude::*;
+use fret_selector::ui::SelectorElementContextExt as _;
+use fret_ui::ThemeConfig;
+use fret_ui::action::PressablePointerDownResult;
+use fret_ui::element::{
+    CrossAlign, FlexProps, LayoutStyle, MainAlign, PressableProps, RovingFlexProps,
+    RovingFocusProps, SemanticsDecoration,
+};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::primitives::roving_focus_group;
 
 const CMD_ADD: &str = "todo.add";
-const CMD_REMOVE_PREFIX: &str = "todo.remove.";
+const CMD_CLEAR_COMPLETED: &str = "todo.clear_completed";
 
 const TEST_ID_INPUT: &str = "todo-input";
 const TEST_ID_ADD: &str = "todo-add";
+const TEST_ID_SHORTCUTS: &str = "todo-shortcuts";
+const TEST_ID_VISUAL_TOGGLE: &str = "todo-visual-toggle";
+const TEST_ID_VISUAL_PANEL: &str = "todo-visual-panel";
 
 fn todo_item_test_id(id: u64, suffix: &str) -> Arc<str> {
     Arc::from(format!("todo-item-{id}-{suffix}"))
@@ -23,6 +36,7 @@ struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
     filter: Model<Option<Arc<str>>>,
+    router: MessageRouter<TodoMsg>,
     next_id: u64,
 }
 
@@ -33,6 +47,32 @@ enum TodoFilter {
     Completed,
 }
 
+#[derive(Debug, Clone)]
+enum TodoMsg {
+    Remove(u64),
+    Toggle(u64),
+}
+
+#[derive(Clone, PartialEq)]
+struct TodoDerivedDeps {
+    todos_rev: u64,
+    done_revs: Vec<u64>,
+}
+
+#[derive(Clone)]
+struct TodoDerived {
+    rows: Arc<[TodoRowSnapshot]>,
+    completed: usize,
+    active: usize,
+}
+
+#[derive(Clone)]
+struct TodoRowSnapshot {
+    id: u64,
+    text: Arc<str>,
+    done: bool,
+}
+
 pub fn run() -> anyhow::Result<()> {
     fret_kit::app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))?
         .with_main_window("todo_demo", (560.0, 520.0))
@@ -40,15 +80,20 @@ pub fn run() -> anyhow::Result<()> {
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york_v4(
                 app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+                shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
+                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
+
+            let cfg = ThemeConfig::from_slice(include_bytes!("todo_theme_overrides.json")).expect(
+                "todo_demo theme overrides must be valid ThemeConfig JSON (see ThemeConfig)",
+            );
+            Theme::with_global_mut(app, |theme| theme.apply_config_patch(&cfg));
         })
         .run()?;
     Ok(())
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
+fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
     let done_1 = app.models_mut().insert(true);
     let done_2 = app.models_mut().insert(false);
     let done_3 = app.models_mut().insert(false);
@@ -72,16 +117,19 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
     ]);
     let draft = app.models_mut().insert(String::new());
     let filter = app.models_mut().insert(Some(Arc::from("all")));
+    let prefix = format!("todo-demo.{window:?}.");
     TodoState {
         todos,
         draft,
         filter,
+        router: MessageRouter::new(prefix),
         next_id: 4,
     }
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewElements {
     let theme = Theme::global(&*cx.app).clone();
+    st.router.clear();
 
     let filter_value = cx
         .watch_model(&st.filter)
@@ -105,85 +153,140 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
 
     let add_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::Icon)
-        .variant(shadcn::ButtonVariant::Default)
+        .variant(shadcn::ButtonVariant::Secondary)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
-        .children([icon::icon(cx, IconId::new("lucide.plus"))])
-        .into_element(cx);
-    let add_btn = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Button,
-            test_id: Some(Arc::from(TEST_ID_ADD)),
-            ..Default::default()
-        },
-        move |_cx| [add_btn],
-    );
+        .children([icon::icon_with(
+            cx,
+            IconId::new("lucide.plus"),
+            Some(Px(16.0)),
+            Some(ColorRef::Color(if add_enabled {
+                theme.color_required("secondary-foreground")
+            } else {
+                theme.color_required("muted-foreground")
+            })),
+        )])
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(TEST_ID_ADD),
+        );
 
     let input = shadcn::Input::new(st.draft.clone())
         .a11y_label("Todo")
         .placeholder("添加新任务...")
         .submit_command(CommandId::new(CMD_ADD))
-        .into_element(cx);
-    let input = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::TextField,
-            test_id: Some(Arc::from(TEST_ID_INPUT)),
-            ..Default::default()
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::TextField)
+                .test_id(TEST_ID_INPUT),
+        );
+
+    let derived = cx.use_selector(
+        |cx| {
+            let (todos_rev, done) = cx
+                .watch_model(&st.todos)
+                .layout()
+                .read(|host, todos| {
+                    let todos_rev = st.todos.revision(host).unwrap_or(0);
+                    let done = todos
+                        .iter()
+                        .map(|t| (t.done.id(), t.done.revision(host).unwrap_or(0)))
+                        .collect::<Vec<(fret_runtime::ModelId, u64)>>();
+                    (todos_rev, done)
+                })
+                .ok()
+                .unwrap_or((0, Vec::new()));
+
+            for (id, _rev) in &done {
+                cx.observe_model_id(*id, done_invalidation);
+            }
+
+            TodoDerivedDeps {
+                todos_rev,
+                done_revs: done.into_iter().map(|(_, rev)| rev).collect(),
+            }
         },
-        move |_cx| [input],
+        |cx| {
+            cx.watch_model(&st.todos)
+                .layout()
+                .read(|host, todos| {
+                    let mut rows = Vec::with_capacity(todos.len());
+                    let mut completed = 0usize;
+
+                    for t in todos {
+                        let done = host.models().get_copied(&t.done).unwrap_or(false);
+                        if done {
+                            completed += 1;
+                        }
+                        rows.push(TodoRowSnapshot {
+                            id: t.id,
+                            text: t.text.clone(),
+                            done,
+                        });
+                    }
+
+                    let active = rows.len().saturating_sub(completed);
+                    TodoDerived {
+                        rows: Arc::from(rows.into_boxed_slice()),
+                        completed,
+                        active,
+                    }
+                })
+                .ok()
+                .unwrap_or_else(|| TodoDerived {
+                    rows: Arc::from([]),
+                    completed: 0,
+                    active: 0,
+                })
+        },
     );
 
-    let todos = cx
-        .watch_model(&st.todos)
-        .layout()
-        .cloned()
-        .unwrap_or_default();
-    let mut completed = 0usize;
-    for it in &todos {
-        let is_done = cx
-            .watch_model(&it.done)
-            .invalidation(done_invalidation)
-            .copied()
-            .unwrap_or(false);
-        if is_done {
-            completed += 1;
-        }
-    }
-    let active = todos.len().saturating_sub(completed);
+    let TodoDerived {
+        rows: todos,
+        completed,
+        active,
+    } = derived;
+
+    let clear_completed_enabled = completed > 0;
 
     let header = shadcn::CardHeader::new([ui::h_flex(cx, |cx| {
         let left = ui::v_flex(cx, |cx| {
             [
                 shadcn::CardTitle::new("待办事项").into_element(cx),
-                shadcn::CardDescription::new("管理你的日常任务。").into_element(cx),
+                shadcn::CardDescription::new("用键盘更高效地管理任务。").into_element(cx),
             ]
         })
         .gap(Space::N1)
         .items_start()
         .into_element(cx);
 
-        let icon_bg = ui::container(cx, |cx| {
-            [ui::h_flex(cx, |cx| {
-                [icon::icon_with(
-                    cx,
-                    IconId::new("lucide.calendar"),
-                    Some(Px(16.0)),
-                    Some(ColorRef::Color(theme.color_required("muted-foreground"))),
-                )]
-            })
-            .w_full()
-            .h_full()
-            .justify_center()
-            .items_center()
-            .into_element(cx)]
+        let right = ui::h_flex(cx, |cx| {
+            let clear_completed_btn = shadcn::Button::new("清除已完成")
+                .size(shadcn::ButtonSize::Sm)
+                .variant(shadcn::ButtonVariant::Secondary)
+                .disabled(!clear_completed_enabled)
+                .on_click(CMD_CLEAR_COMPLETED)
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Button)
+                        .test_id("todo-clear-completed"),
+                );
+
+            let progress = shadcn::Badge::new(format!("{completed}/{total}", total = todos.len()))
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx);
+
+            [progress, clear_completed_btn]
         })
-        .bg(ColorRef::Color(theme.color_required("muted")))
-        .rounded(Radius::Full)
-        .w_px(Px(32.0))
-        .h_px(Px(32.0))
+        .gap(Space::N2)
+        .items_center()
         .into_element(cx);
 
-        [left, icon_bg]
+        [left, right]
     })
     .w_full()
     .justify_between()
@@ -212,6 +315,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                     &todos,
                     TodoFilter::All,
                     list_max_h.clone(),
+                    &mut st.router,
                 )],
             ),
             shadcn::TabsItem::new(
@@ -223,6 +327,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                     &todos,
                     TodoFilter::Active,
                     list_max_h.clone(),
+                    &mut st.router,
                 )],
             ),
             shadcn::TabsItem::new(
@@ -234,6 +339,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                     &todos,
                     TodoFilter::Completed,
                     list_max_h.clone(),
+                    &mut st.router,
                 )],
             ),
         ])
@@ -254,10 +360,36 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                 .into_element(cx)
         });
 
-        let right = ui::h_flex(cx, |_cx| completed_badge.into_iter())
+        let right = ui::v_flex(cx, |cx| {
+            let row = ui::h_flex(cx, |_cx| completed_badge.into_iter())
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx);
+
+            let help = ui::h_flex(cx, |cx| {
+                [
+                    shadcn::ShortcutHint::new("Enter", "添加").into_element(cx),
+                    shadcn::ShortcutHint::new("↑/↓", "移动").into_element(cx),
+                    shadcn::ShortcutHint::new("Space", "切换完成").into_element(cx),
+                    shadcn::ShortcutHint::new("Del", "删除").into_element(cx),
+                ]
+            })
             .gap(Space::N2)
+            .wrap()
+            .justify_end()
             .items_center()
-            .into_element(cx);
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Panel)
+                    .test_id(TEST_ID_SHORTCUTS),
+            );
+
+            [row, help]
+        })
+        .gap(Space::N2)
+        .items_end()
+        .into_element(cx);
 
         [left, right]
     })
@@ -274,56 +406,48 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         .into_element(cx);
 
     let page = ui::container(cx, |cx| {
-        [ui::v_flex(cx, |cx| {
-            [
-                card,
-                ui::raw_text(cx, "Shadcn 风格 · Fret UiAppDriver demo")
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                    .nowrap()
-                    .into_element(cx),
-            ]
-        })
-        .w_full()
-        .h_full()
-        .justify_center()
-        .items_center()
-        .gap(Space::N6)
-        .into_element(cx)]
+        [ui::v_flex(cx, |_cx| [card])
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            .gap(Space::N6)
+            .into_element(cx)]
     })
-    .bg(ColorRef::Color(theme.color_required("muted")))
+    .bg(ColorRef::Color(theme.color_required("background")))
     .p(Space::N4)
     .w_full()
     .h_full()
     .into_element(cx);
 
-    ViewElements::from([cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Panel,
-            label: Some(Arc::from("Debug:todo-demo:page")),
-            ..Default::default()
-        },
-        move |_cx| [page],
-    )])
+    ViewElements::from([page])
 }
 
 fn todo_list_panel(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
-    todos: &[TodoItem],
+    todos: &[TodoRowSnapshot],
     filter: TodoFilter,
     max_h: MetricRef,
+    router: &mut MessageRouter<TodoMsg>,
 ) -> AnyElement {
-    let filtered: Vec<(TodoItem, bool)> = todos
+    let filtered: Vec<(u64, Arc<str>, bool, CommandId, CommandId)> = todos
         .iter()
-        .cloned()
         .filter_map(|t| {
-            let done = cx.app.models().read(&t.done, |v| *v).ok().unwrap_or(false);
+            let id = t.id;
+            let done = t.done;
             let include = match filter {
                 TodoFilter::All => true,
                 TodoFilter::Active => !done,
                 TodoFilter::Completed => done,
             };
-            include.then_some((t, done))
+            if !include {
+                return None;
+            }
+
+            let toggle_cmd = router.cmd(TodoMsg::Toggle(id));
+            let remove_cmd = router.cmd(TodoMsg::Remove(id));
+            Some((id, t.text.clone(), done, toggle_cmd, remove_cmd))
         })
         .collect();
 
@@ -351,17 +475,57 @@ fn todo_list_panel(
         .into_element(cx);
     }
 
-    let rows = stack::vstack_build(
+    let disabled: Arc<[bool]> = Arc::from(vec![false; filtered.len()].into_boxed_slice());
+    let labels: Arc<[Arc<str>]> = Arc::from(
+        filtered
+            .iter()
+            .map(|(_, text, _, _, _)| text.clone())
+            .collect::<Vec<_>>()
+            .into_boxed_slice(),
+    );
+
+    let mut rows_layout = LayoutStyle::default();
+    rows_layout.size.width = Length::Fill;
+    let rows = roving_focus_group::roving_focus_group_apg(
         cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3),
-        |cx, out| {
-            out.extend(
-                filtered
-                    .iter()
-                    .map(|(t, done)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, *done))),
-            );
+        RovingFlexProps {
+            flex: FlexProps {
+                layout: rows_layout,
+                direction: Axis::Vertical,
+                gap: MetricRef::space(Space::N2).resolve(theme),
+                padding: Edges::all(Px(0.0)),
+                justify: MainAlign::Start,
+                align: CrossAlign::Start,
+                wrap: false,
+            },
+            roving: RovingFocusProps {
+                enabled: true,
+                wrap: true,
+                disabled,
+            },
+        },
+        roving_focus_group::TypeaheadPolicy::Prefix {
+            labels,
+            timeout_ticks: 30,
+        },
+        move |cx| {
+            filtered
+                .iter()
+                .map(|(id, text, done, toggle_cmd, remove_cmd)| {
+                    let text = text.clone();
+                    cx.keyed(*id, |cx| {
+                        todo_row(
+                            cx,
+                            theme,
+                            *id,
+                            text,
+                            *done,
+                            toggle_cmd.clone(),
+                            remove_cmd.clone(),
+                        )
+                    })
+                })
+                .collect::<Vec<_>>()
         },
     );
 
@@ -378,106 +542,213 @@ fn todo_list_panel(
 fn todo_row(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
-    it: &TodoItem,
+    id: u64,
+    text: Arc<str>,
     done: bool,
+    toggle_cmd: CommandId,
+    remove_cmd: CommandId,
 ) -> AnyElement {
-    let row_chrome = ChromeRefinement::default()
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_required("border")))
-        .rounded(Radius::Lg)
-        .p(Space::N3);
+    let radius = MetricRef::radius(Radius::Lg).resolve(theme);
+    let focus_ring = shadcn::decl_style::focus_ring(theme, radius);
 
-    let checkbox = shadcn::Checkbox::new(it.done.clone())
-        .a11y_label("Done")
-        .into_element(cx);
-    let checkbox = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Checkbox,
-            test_id: Some(todo_item_test_id(it.id, "done")),
-            ..Default::default()
-        },
-        move |_cx| [checkbox],
-    );
-
-    let remove_btn = shadcn::Button::new("")
-        .size(shadcn::ButtonSize::IconSm)
-        .variant(shadcn::ButtonVariant::Ghost)
-        .on_click(remove_cmd(it.id))
-        .children([icon::icon_with(
-            cx,
-            IconId::new("lucide.trash-2"),
-            Some(Px(16.0)),
-            Some(ColorRef::Color(theme.color_required("muted-foreground"))),
-        )])
-        .into_element(cx);
-    let remove_btn = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Button,
-            test_id: Some(todo_item_test_id(it.id, "remove")),
-            ..Default::default()
-        },
-        move |_cx| [remove_btn],
-    );
-
-    let mut hover = HoverRegionProps::default();
-    hover.layout.size.width = Length::Fill;
-    cx.hover_region(hover, move |cx, hovered| {
-        let bg = hovered.then(|| theme.color_required("accent"));
-
-        let mut chrome = row_chrome.clone();
-        if let Some(bg) = bg {
-            chrome = chrome.bg(ColorRef::Color(bg));
-        }
-
-        let label = todo_label_simple(cx, theme, &it.text, done, hovered);
-
-        let left = ui::h_flex(cx, |_cx| [checkbox.clone(), label])
-            .flex_1()
-            .min_w_0()
-            .gap(Space::N3)
-            .items_center()
-            .into_element(cx);
-
-        let right = cx.interactivity_gate(true, hovered, |cx| {
-            [cx.opacity(if hovered { 1.0 } else { 0.0 }, |_cx| [remove_btn.clone()])]
-        });
-
-        let row = ui::h_flex(cx, |_cx| [left, right])
-            .w_full()
-            .justify_between()
-            .items_center()
-            .into_element(cx);
-
-        [ui::container(cx, |_cx| [row])
-            .style(chrome)
-            .w_full()
-            .into_element(cx)]
-    })
-}
-
-fn todo_label_simple(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-    text: &Arc<str>,
-    done: bool,
-    hovered: bool,
-) -> AnyElement {
-    let fg = if hovered {
-        theme.color_required("accent-foreground")
-    } else if done {
-        theme.color_required("muted-foreground")
-    } else {
-        theme.color_required("foreground")
+    let border = theme.color_required("border");
+    let bg = theme.color_required("background");
+    let accent = theme.color_required("accent");
+    let bg_hover = {
+        let mut c = accent;
+        c.a = (c.a * 0.45).clamp(0.0, 1.0);
+        c
+    };
+    let bg_pressed = {
+        let mut c = accent;
+        c.a = (c.a * 0.7).clamp(0.0, 1.0);
+        c
     };
 
-    cx.text_props(TextProps {
-        layout: Default::default(),
-        text: text.clone(),
-        style: None,
-        color: Some(fg),
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-    })
+    let delete_zone_w = theme
+        .metric_by_key("component.size.md.icon_button.size")
+        .unwrap_or(Px(32.0));
+
+    let row = fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props(
+        cx,
+        move |cx, st, element_id| {
+            let remove_cmd_for_key = remove_cmd.clone();
+            cx.key_prepend_on_key_down_for(
+                element_id,
+                Arc::new(move |host, acx, down| {
+                    if matches!(down.key, KeyCode::Delete | KeyCode::Backspace) {
+                        host.dispatch_command(Some(acx.window), remove_cmd_for_key.clone());
+                        return true;
+                    }
+                    false
+                }),
+            );
+
+            cx.pressable_dispatch_command_if_enabled(toggle_cmd);
+
+            let remove_cmd_for_ptr = remove_cmd.clone();
+            cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                let bounds = host.bounds();
+                let x1 = bounds.origin.x.0 + bounds.size.width.0;
+                if down.position.x.0 >= x1 - delete_zone_w.0 {
+                    host.dispatch_command(Some(acx.window), remove_cmd_for_ptr.clone());
+                    return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                }
+                PressablePointerDownResult::Continue
+            }));
+
+            let mut a11y = fret_ui::element::PressableA11y::default();
+            a11y.role = Some(SemanticsRole::Checkbox);
+            a11y.label = Some(text.clone());
+            a11y.checked = Some(done);
+            a11y.test_id = Some(todo_item_test_id(id, "done"));
+
+            let mut pressable_layout = LayoutStyle::default();
+            pressable_layout.size.width = Length::Fill;
+            pressable_layout.size.min_height = Some(
+                theme
+                    .metric_by_key("component.size.md.button.h")
+                    .unwrap_or(Px(36.0)),
+            );
+
+            let pressable_props = PressableProps {
+                layout: pressable_layout,
+                enabled: true,
+                focus_ring: Some(focus_ring),
+                a11y,
+                ..Default::default()
+            };
+
+            let row_bg = if st.pressed {
+                bg_pressed
+            } else if st.hovered || st.focused {
+                bg_hover
+            } else {
+                bg
+            };
+
+            let chrome_props = shadcn::decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .rounded(Radius::Lg)
+                    .border_1()
+                    .border_color(ColorRef::Color(border))
+                    .bg(ColorRef::Color(row_bg))
+                    .px(Space::N3)
+                    .py(Space::N2),
+                LayoutRefinement::default(),
+            );
+
+            let children = move |cx: &mut ElementContext<'_, App>| {
+                let fg = if done {
+                    theme.color_required("muted-foreground")
+                } else {
+                    theme.color_required("foreground")
+                };
+
+                let checkbox_size = theme
+                    .metric_by_key("component.checkbox.size")
+                    .unwrap_or(Px(16.0));
+                let checkbox_bg = if done {
+                    theme.color_required("primary")
+                } else {
+                    theme.color_required("background")
+                };
+                let checkbox_border = theme
+                    .color_by_key("input")
+                    .or_else(|| theme.color_by_key("border"))
+                    .unwrap_or(border);
+                let checkbox_fg = theme.color_required("primary-foreground");
+                let checkbox_icon_size = Px((checkbox_size.0 - 4.0).max(10.0));
+                let checkbox_border = if done {
+                    theme.color_required("primary")
+                } else {
+                    checkbox_border
+                };
+
+                let indicator = ui::container(cx, |cx| {
+                    let icon = done.then(|| {
+                        icon::icon_with(
+                            cx,
+                            IconId::new("lucide.check"),
+                            Some(checkbox_icon_size),
+                            Some(ColorRef::Color(checkbox_fg)),
+                        )
+                    });
+                    [ui::h_flex(cx, |_cx| icon.into_iter())
+                        .w_full()
+                        .h_full()
+                        .justify_center()
+                        .items_center()
+                        .into_element(cx)]
+                })
+                .w_px(checkbox_size)
+                .h_px(checkbox_size)
+                .flex_shrink_0()
+                .rounded(Radius::Sm)
+                .border_1()
+                .border_color(ColorRef::Color(checkbox_border))
+                .bg(ColorRef::Color(checkbox_bg))
+                .into_element(cx);
+
+                let indicator = indicator.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Panel)
+                        .test_id(todo_item_test_id(id, "indicator")),
+                );
+
+                let label = ui::text(cx, text.clone())
+                    .flex_grow(1.0)
+                    .min_w_0()
+                    .nowrap()
+                    .truncate()
+                    .text_color(ColorRef::Color(fg))
+                    .into_element(cx);
+
+                let left = ui::h_flex(cx, |_cx| [indicator, label])
+                    .flex_grow(1.0)
+                    .min_w_0()
+                    .gap(Space::N3)
+                    .items_center()
+                    .into_element(cx);
+
+                let remove_zone = {
+                    let remove_icon = icon::icon_with(
+                        cx,
+                        IconId::new("lucide.trash"),
+                        Some(Px(16.0)),
+                        Some(ColorRef::Color(theme.color_required("muted-foreground"))),
+                    );
+
+                    ui::container(cx, |cx| {
+                        [ui::h_flex(cx, |_cx| [remove_icon])
+                            .w_full()
+                            .h_full()
+                            .justify_center()
+                            .items_center()
+                            .into_element(cx)]
+                    })
+                    .w_px(delete_zone_w)
+                    .h_full()
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Button)
+                            .test_id(todo_item_test_id(id, "remove")),
+                    )
+                };
+
+                [ui::h_flex(cx, |_cx| [left, remove_zone.into()])
+                    .w_full()
+                    .items_center()
+                    .into_element(cx)]
+            };
+
+            (pressable_props, chrome_props, children)
+        },
+    );
+
+    row
 }
 
 fn on_command(
@@ -519,20 +790,263 @@ fn on_command(
             let _ = app.models_mut().update(&state.draft, |s| s.clear());
             app.push_effect(Effect::Redraw(window));
         }
-        other => {
-            if let Some(id) = other.strip_prefix(CMD_REMOVE_PREFIX) {
-                let Ok(id) = id.parse::<u64>() else {
-                    return;
-                };
-                let _ = app.models_mut().update(&state.todos, |todos| {
-                    todos.retain(|t| t.id != id);
-                });
-                app.push_effect(Effect::Redraw(window));
+        CMD_CLEAR_COMPLETED => {
+            let snapshot = app
+                .models()
+                .read(&state.todos, |v| v.clone())
+                .ok()
+                .unwrap_or_default();
+            let keep: Vec<TodoItem> = snapshot
+                .into_iter()
+                .filter(|t| !app.models().read(&t.done, |v| *v).ok().unwrap_or(false))
+                .collect();
+            let _ = app.models_mut().update(&state.todos, |todos| *todos = keep);
+            app.push_effect(Effect::Redraw(window));
+        }
+        _ => {
+            let Some(msg) = state.router.try_take(cmd) else {
+                return;
+            };
+
+            match msg {
+                TodoMsg::Remove(id) => {
+                    let _ = app.models_mut().update(&state.todos, |todos| {
+                        todos.retain(|t| t.id != id);
+                    });
+                    app.push_effect(Effect::Redraw(window));
+                }
+                TodoMsg::Toggle(id) => {
+                    let done_model = app
+                        .models()
+                        .read(&state.todos, |todos| {
+                            todos.iter().find(|t| t.id == id).map(|t| t.done.clone())
+                        })
+                        .ok()
+                        .flatten();
+                    if let Some(done_model) = done_model {
+                        let _ = app.models_mut().update(&done_model, |v| *v = !*v);
+                        app.push_effect(Effect::Redraw(window));
+                    }
+                }
             }
         }
     }
 }
 
-fn remove_cmd(id: u64) -> CommandId {
-    CommandId::new(format!("{CMD_REMOVE_PREFIX}{id}"))
+fn todo_visual_debug_panel(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    draft_value: &str,
+    add_enabled: bool,
+) -> AnyElement {
+    let border = theme.color_required("border");
+    let muted_fg = theme.color_required("muted-foreground");
+
+    let primary = theme.color_required("primary");
+    let primary_fg = theme.color_required("primary-foreground");
+    let foreground = theme.color_required("foreground");
+    let background = theme.color_required("background");
+
+    let token_line: Arc<str> = Arc::from(format!(
+        "tokens(primary={primary:?} primary-foreground={primary_fg:?} foreground={foreground:?} background={background:?})",
+    ));
+    let draft_line: Arc<str> = Arc::from(format!(
+        "draft(len={} enabled={}) value={:?}",
+        draft_value.len(),
+        add_enabled,
+        draft_value
+    ));
+
+    shadcn::Collapsible::uncontrolled(false)
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element_with_open_model(
+            cx,
+            move |cx, open, is_open| {
+                let caret = if is_open {
+                    IconId::new("lucide.chevron-up")
+                } else {
+                    IconId::new("lucide.chevron-down")
+                };
+
+                shadcn::Button::new("视觉自检")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .toggle_model(open)
+                    .test_id(TEST_ID_VISUAL_TOGGLE)
+                    .children([icon::icon_with(
+                        cx,
+                        caret,
+                        Some(Px(16.0)),
+                        Some(ColorRef::Color(muted_fg)),
+                    )])
+                    .into_element(cx)
+            },
+            move |cx| {
+                let token_dbg = ui::raw_text(cx, token_line.clone())
+                    .text_color(ColorRef::Color(muted_fg))
+                    .into_element(cx);
+                let draft_dbg = ui::raw_text(cx, draft_line.clone())
+                    .text_color(ColorRef::Color(muted_fg))
+                    .into_element(cx);
+
+                let swatch = |cx: &mut ElementContext<'_, App>,
+                              bg: fret_core::Color,
+                              fg: fret_core::Color,
+                              label: &'static str| {
+                    ui::container(cx, |cx| {
+                        [ui::raw_text(cx, label)
+                            .text_color(ColorRef::Color(fg))
+                            .into_element(cx)]
+                    })
+                    .bg(ColorRef::Color(bg))
+                    .border_1()
+                    .border_color(ColorRef::Color(border))
+                    .rounded(Radius::Md)
+                    .px(Space::N2)
+                    .py(Space::N1)
+                    .into_element(cx)
+                };
+
+                let primary_swatch =
+                    swatch(cx, primary, primary_fg, "primary on primary-foreground");
+                let fg_swatch = swatch(cx, primary, foreground, "primary on foreground");
+
+                let icon_sample = |cx: &mut ElementContext<'_, App>,
+                                   icon_id: IconId,
+                                   color: fret_core::Color,
+                                   size: Px| {
+                    ui::container(cx, |cx| {
+                        let icon =
+                            icon::icon_with(cx, icon_id, Some(size), Some(ColorRef::Color(color)));
+                        [ui::h_flex(cx, |_cx| [icon])
+                            .w_full()
+                            .h_full()
+                            .justify_center()
+                            .items_center()
+                            .into_element(cx)]
+                    })
+                    .w_px(Px(28.0))
+                    .h_px(Px(28.0))
+                    .border_1()
+                    .border_color(ColorRef::Color(border))
+                    .rounded(Radius::Md)
+                    .into_element(cx)
+                };
+
+                let checkbox_probe =
+                    |cx: &mut ElementContext<'_, App>, done: bool, label: &'static str| {
+                        let checkbox_size = Px(16.0);
+                        let checkbox_bg = if done { primary } else { background };
+                        let checkbox_border = theme
+                            .color_by_key("input")
+                            .or_else(|| theme.color_by_key("border"))
+                            .unwrap_or(border);
+                        let checkbox_fg = primary_fg;
+
+                        let indicator = ui::container(cx, |cx| {
+                            let icon = done.then(|| {
+                                icon::icon_with(
+                                    cx,
+                                    IconId::new("lucide.check"),
+                                    Some(checkbox_size),
+                                    Some(ColorRef::Color(checkbox_fg)),
+                                )
+                            });
+                            [ui::h_flex(cx, |_cx| icon.into_iter())
+                                .w_full()
+                                .h_full()
+                                .justify_center()
+                                .items_center()
+                                .into_element(cx)]
+                        })
+                        .w_px(checkbox_size)
+                        .h_px(checkbox_size)
+                        .flex_shrink_0()
+                        .rounded(Radius::Sm)
+                        .border_1()
+                        .border_color(ColorRef::Color(checkbox_border))
+                        .bg(ColorRef::Color(checkbox_bg))
+                        .into_element(cx);
+
+                        let label = ui::text(cx, label)
+                            .nowrap()
+                            .truncate()
+                            .text_color(ColorRef::Color(foreground))
+                            .into_element(cx);
+
+                        ui::h_flex(cx, |_cx| [indicator, label])
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx)
+                    };
+
+                let content = ui::v_flex(cx, |cx| {
+                    let row1 = ui::h_flex(cx, |_cx| [token_dbg, draft_dbg])
+                        .gap(Space::N2)
+                        .w_full()
+                        .into_element(cx);
+
+                    let row2 = ui::h_flex(cx, |_cx| [primary_swatch, fg_swatch])
+                        .gap(Space::N2)
+                        .w_full()
+                        .items_center()
+                        .into_element(cx);
+
+                    let row3 = ui::h_flex(cx, |cx| {
+                        [
+                            icon_sample(cx, IconId::new("lucide.plus"), primary_fg, Px(16.0)),
+                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(16.0)),
+                            icon_sample(cx, IconId::new("lucide.check"), primary_fg, Px(16.0)),
+                            icon_sample(cx, IconId::new("lucide.check"), foreground, Px(16.0)),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .w_full()
+                    .items_center()
+                    .into_element(cx);
+
+                    let row4 = ui::h_flex(cx, |cx| {
+                        [
+                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(12.0)),
+                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(16.0)),
+                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(20.0)),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .w_full()
+                    .items_center()
+                    .into_element(cx);
+
+                    let row5 = ui::h_flex(cx, |cx| {
+                        [
+                            checkbox_probe(cx, false, "align probe"),
+                            checkbox_probe(cx, true, "align probe (checked)"),
+                        ]
+                    })
+                    .gap(Space::N3)
+                    .w_full()
+                    .items_center()
+                    .into_element(cx);
+
+                    [row1, row2, row3, row4, row5]
+                })
+                .gap(Space::N2)
+                .w_full()
+                .into_element(cx);
+
+                let panel = ui::container(cx, |_cx| [content])
+                    .border_1()
+                    .border_color(ColorRef::Color(border))
+                    .rounded(Radius::Lg)
+                    .p(Space::N3)
+                    .w_full()
+                    .into_element(cx);
+
+                panel.attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(SemanticsRole::Panel)
+                        .test_id(TEST_ID_VISUAL_PANEL),
+                )
+            },
+        )
 }

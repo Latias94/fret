@@ -1,0 +1,901 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "sort_undefined",
+  "data": [
+    {
+      "id": 1,
+      "name": "A",
+      "status": "ok",
+      "cpu": 0,
+      "mem_mb": 0,
+      "rank": 3
+    },
+    {
+      "id": 2,
+      "name": "B",
+      "status": "ok",
+      "cpu": 0,
+      "mem_mb": 0,
+      "rank": 1
+    },
+    {
+      "id": 3,
+      "name": "C",
+      "status": "ok",
+      "cpu": 0,
+      "mem_mb": 0
+    },
+    {
+      "id": 4,
+      "name": "D",
+      "status": "ok",
+      "cpu": 0,
+      "mem_mb": 0,
+      "rank": 2
+    },
+    {
+      "id": 5,
+      "name": "E",
+      "status": "ok",
+      "cpu": 0,
+      "mem_mb": 0,
+      "rank": 4
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "sort_undefined_first_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_first",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sort_undefined_last_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_last",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ],
+          "flat": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ],
+          "flat": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ],
+          "flat": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sort_undefined_1_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_1",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ],
+          "flat": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ],
+          "flat": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ],
+          "flat": [
+            "2",
+            "4",
+            "1",
+            "5",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sort_undefined_1_desc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_1",
+            "desc": true
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "3",
+            "5",
+            "1",
+            "4",
+            "2"
+          ],
+          "flat": [
+            "3",
+            "5",
+            "1",
+            "4",
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "3",
+            "5",
+            "1",
+            "4",
+            "2"
+          ],
+          "flat": [
+            "3",
+            "5",
+            "1",
+            "4",
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "3",
+            "5",
+            "1",
+            "4",
+            "2"
+          ],
+          "flat": [
+            "3",
+            "5",
+            "1",
+            "4",
+            "2"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sort_undefined_neg1_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_neg1",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sort_undefined_neg1_desc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_neg1",
+            "desc": true
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sort_undefined_false_text_asc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_false_text",
+            "desc": false
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ],
+          "flat": [
+            "3",
+            "2",
+            "4",
+            "1",
+            "5"
+          ]
+        }
+      }
+    },
+    {
+      "id": "sort_undefined_false_text_desc",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "sortDescFirst": false
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "rank_false_text",
+            "desc": true
+          }
+        ]
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ],
+          "flat": [
+            "5",
+            "1",
+            "4",
+            "2",
+            "3"
+          ]
+        }
+      }
+    }
+  ]
+}

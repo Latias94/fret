@@ -19,8 +19,8 @@ use fret_runtime::{CommandMeta, Model};
 use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps, SizeStyle,
-    TextInputProps,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, RowProps,
+    SemanticsDecoration, SizeStyle, TextInputProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
@@ -721,14 +721,11 @@ impl CommandInput {
 
                 let mut input = row;
                 if disabled {
-                    input = cx.semantics(
-                        fret_ui::element::SemanticsProps {
-                            role: SemanticsRole::Generic,
-                            disabled: true,
-                            ..Default::default()
-                        },
-                        move |_cx| vec![input],
-                    );
+                    input = input.attach_semantics(SemanticsDecoration {
+                        role: Some(SemanticsRole::Generic),
+                        disabled: Some(true),
+                        ..Default::default()
+                    });
                 }
                 vec![input]
             })
@@ -1098,128 +1095,117 @@ impl CommandList {
 
             let scroll = self.scroll.w_full().min_w_0();
 
-            cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: SemanticsRole::ListBox,
-                    ..Default::default()
+            ScrollArea::new(vec![cx.roving_flex(
+                RovingFlexProps {
+                    flex: FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.min_height = Some(Px(0.0));
+                            layout
+                        },
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0),
+                        // new-york-v4: `CommandList` uses `scroll-py-1` and is typically
+                        // wrapped in `CommandGroup` which uses `p-1`.
+                        padding: Edges::all(Px(4.0)),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    roving,
                 },
                 move |cx| {
-                    vec![
-                        ScrollArea::new(vec![cx.roving_flex(
-                            RovingFlexProps {
-                                flex: FlexProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Fill;
-                                        layout.size.min_height = Some(Px(0.0));
-                                        layout
+                    cx.roving_nav_apg();
+                    let mut out = Vec::with_capacity(items.len());
+
+                    for (idx, item) in items.into_iter().enumerate() {
+                        let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
+                        let focusable = tab_stop.is_some_and(|i| i == idx);
+
+                        let query_for_row = query_for_render.clone();
+                        let value_key = item.value.clone();
+                        let label = item.label.clone();
+                        let command = item.command;
+                        let on_select = item.on_select.clone();
+                        let children = item.children;
+                        let text_style = text_style.clone();
+
+                        out.push(cx.keyed(value_key, |cx| {
+                            cx.pressable(
+                                PressableProps {
+                                    layout: item_layout,
+                                    enabled,
+                                    focusable,
+                                    focus_ring: Some(ring),
+                                    a11y: PressableA11y {
+                                        role: Some(SemanticsRole::ListBoxOption),
+                                        label: Some(label.clone()),
+                                        ..Default::default()
                                     },
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: Px(0.0),
-                                    // new-york-v4: `CommandList` uses `scroll-py-1` and is typically
-                                    // wrapped in `CommandGroup` which uses `p-1`.
-                                    padding: Edges::all(Px(4.0)),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
                                     ..Default::default()
                                 },
-                                roving,
-                            },
-                            move |cx| {
-                                cx.roving_nav_apg();
-                                let mut out = Vec::with_capacity(items.len());
+                                move |cx, st| {
+                                    cx.pressable_dispatch_command_if_enabled_opt(command);
+                                    if let Some(on_select) = on_select.clone() {
+                                        cx.pressable_add_on_activate(on_select);
+                                    }
+                                    let hovered = st.hovered && !st.pressed;
+                                    let pressed = st.pressed;
 
-                                for (idx, item) in items.into_iter().enumerate() {
-                                    let enabled = !disabled_flags.get(idx).copied().unwrap_or(true);
-                                    let focusable = tab_stop.is_some_and(|i| i == idx);
+                                    let bg = (hovered || pressed).then_some(bg_hover);
+                                    let props = ContainerProps {
+                                        layout: LayoutStyle::default(),
+                                        padding: Edges {
+                                            top: pad_y,
+                                            right: pad_x,
+                                            bottom: pad_y,
+                                            left: pad_x,
+                                        },
+                                        background: bg,
+                                        shadow: None,
+                                        border: Edges::all(Px(0.0)),
+                                        border_color: None,
+                                        corner_radii: Corners::all(radius),
+                                        ..Default::default()
+                                    };
 
-                                    let query_for_row = query_for_render.clone();
-                                    let value_key = item.value.clone();
-                                    let label = item.label.clone();
-                                    let command = item.command;
-                                    let on_select = item.on_select.clone();
-                                    let children = item.children;
-                                    let text_style = text_style.clone();
-
-                                    out.push(cx.keyed(value_key, |cx| {
-                                        cx.pressable(
-                                            PressableProps {
-                                                layout: item_layout,
-                                                enabled,
-                                                focusable,
-                                                focus_ring: Some(ring),
-                                                a11y: PressableA11y {
-                                                    role: Some(SemanticsRole::ListBoxOption),
-                                                    label: Some(label.clone()),
-                                                    ..Default::default()
-                                                },
-                                                ..Default::default()
+                                    vec![cx.container(props, move |cx| {
+                                        vec![cx.row(
+                                            RowProps {
+                                                layout: LayoutStyle::default(),
+                                                gap: row_gap,
+                                                padding: Edges::all(Px(0.0)),
+                                                justify: MainAlign::Start,
+                                                align: CrossAlign::Center,
                                             },
-                                            move |cx, st| {
-                                                cx.pressable_dispatch_command_if_enabled_opt(
-                                                    command,
-                                                );
-                                                if let Some(on_select) = on_select.clone() {
-                                                    cx.pressable_add_on_activate(on_select);
-                                                }
-                                                let hovered = st.hovered && !st.pressed;
-                                                let pressed = st.pressed;
-
-                                                let bg = (hovered || pressed).then_some(bg_hover);
-                                                let props = ContainerProps {
-                                                    layout: LayoutStyle::default(),
-                                                    padding: Edges {
-                                                        top: pad_y,
-                                                        right: pad_x,
-                                                        bottom: pad_y,
-                                                        left: pad_x,
-                                                    },
-                                                    background: bg,
-                                                    shadow: None,
-                                                    border: Edges::all(Px(0.0)),
-                                                    border_color: None,
-                                                    corner_radii: Corners::all(radius),
-                                                    ..Default::default()
-                                                };
-
-                                                vec![cx.container(props, move |cx| {
-                                                    vec![cx.row(
-                                                        RowProps {
-                                                            layout: LayoutStyle::default(),
-                                                            gap: row_gap,
-                                                            padding: Edges::all(Px(0.0)),
-                                                            justify: MainAlign::Start,
-                                                            align: CrossAlign::Center,
-                                                        },
-                                                        move |cx| {
-                                                            if children.is_empty() {
-                                                                vec![cmdk_highlighted_label(
-                                                                    cx,
-                                                                    label.clone(),
-                                                                    query_for_row.as_ref(),
-                                                                    fg,
-                                                                    text_style.clone(),
-                                                                )]
-                                                            } else {
-                                                                children
-                                                            }
-                                                        },
+                                            move |cx| {
+                                                if children.is_empty() {
+                                                    vec![cmdk_highlighted_label(
+                                                        cx,
+                                                        label.clone(),
+                                                        query_for_row.as_ref(),
+                                                        fg,
+                                                        text_style.clone(),
                                                     )]
-                                                })]
+                                                } else {
+                                                    children
+                                                }
                                             },
-                                        )
-                                    }));
-                                }
+                                        )]
+                                    })]
+                                },
+                            )
+                        }));
+                    }
 
-                                out
-                            },
-                        )])
-                        .refine_layout(scroll)
-                        .into_element(cx),
-                    ]
+                    out
                 },
-            )
+            )])
+            .refine_layout(scroll)
+            .into_element(cx)
+            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::ListBox))
         })
     }
 }
@@ -2257,69 +2243,63 @@ impl CommandPalette {
 
             if disabled {
                 input = cx.opacity(0.5, move |_cx| vec![input]);
-                input = cx.semantics(
-                    fret_ui::element::SemanticsProps {
-                        role: SemanticsRole::Generic,
-                        disabled: true,
-                        ..Default::default()
-                    },
-                    move |_cx| vec![input],
-                );
+                input = input.attach_semantics(SemanticsDecoration {
+                    role: Some(SemanticsRole::Generic),
+                    disabled: Some(true),
+                    ..Default::default()
+                });
             }
 
             let scroll_layout = self.scroll.w_full().min_w_0();
-            let list = cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    role: SemanticsRole::ListBox,
-                    labelled_by_element: list_labelled_by,
-                    ..Default::default()
-                },
-                move |cx| {
-                    if row_ids.is_empty() {
-                        let empty = self.empty_text;
-                        return vec![CommandEmpty::new(empty).into_element(cx)];
-                    }
-
-                    let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
-                    let scroll_area = ScrollArea::new(vec![cx.flex(
-                        FlexProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size.width = Length::Fill;
-                                layout.size.min_height = Some(Px(0.0));
-                                layout
-                            },
-                            direction: fret_core::Axis::Vertical,
-                            gap: Px(0.0),
-                            padding: Edges {
-                                top: group_pad_y,
-                                right: group_pad_x,
-                                bottom: group_pad_y,
-                                left: group_pad_x,
-                            },
-                            justify: MainAlign::Start,
-                            align: CrossAlign::Stretch,
-                            wrap: false,
-                            ..Default::default()
+            let list = if row_ids.is_empty() {
+                let empty = self.empty_text;
+                CommandEmpty::new(empty).into_element(cx)
+            } else {
+                let scroll_handle = cx.with_state(ScrollHandle::default, |h| h.clone());
+                let scroll_area = ScrollArea::new(vec![cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.min_height = Some(Px(0.0));
+                            layout
                         },
-                        move |_cx| rows,
-                    )])
-                    .scroll_handle(scroll_handle.clone())
-                    .refine_layout(scroll_layout.clone())
-                    .into_element(cx);
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0),
+                        padding: Edges {
+                            top: group_pad_y,
+                            right: group_pad_x,
+                            bottom: group_pad_y,
+                            left: group_pad_x,
+                        },
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Stretch,
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    move |_cx| rows,
+                )])
+                .scroll_handle(scroll_handle.clone())
+                .refine_layout(scroll_layout.clone())
+                .into_element(cx);
 
-                    if let Some(active_row_element) = active_row_element {
-                        let _ = active_desc::scroll_active_element_into_view_y(
-                            cx,
-                            &scroll_handle,
-                            scroll_area.id,
-                            active_row_element,
-                        );
-                    }
+                if let Some(active_row_element) = active_row_element {
+                    let _ = active_desc::scroll_active_element_into_view_y(
+                        cx,
+                        &scroll_handle,
+                        scroll_area.id,
+                        active_row_element,
+                    );
+                }
 
-                    vec![scroll_area]
-                },
-            );
+                scroll_area
+            };
+
+            let list = list.attach_semantics(SemanticsDecoration {
+                role: Some(SemanticsRole::ListBox),
+                labelled_by_element: list_labelled_by,
+                ..Default::default()
+            });
 
             Command::new(vec![cx.container(wrapper, move |_cx| vec![input]), list])
                 .refine_style(self.chrome)
@@ -3420,12 +3400,84 @@ mod tests {
         ui.set_focus(Some(input));
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let beta_bounds = snap
+        let beta = snap
             .nodes
             .iter()
             .find(|n| n.role == SemanticsRole::ListBoxOption && n.label.as_deref() == Some("Beta"))
-            .map(|n| n.bounds)
             .expect("Beta row bounds");
+        let beta_id = beta.id;
+        let beta_bounds = beta.bounds;
+
+        let debug = std::env::var("FRET_DEBUG_CMDK_HOVER").is_ok();
+        if debug {
+            let pos = Point::new(
+                Px(beta_bounds.origin.x.0 + 1.0),
+                Px(beta_bounds.origin.y.0 + 1.0),
+            );
+            eprintln!("cmdk hover debug: beta_bounds={beta_bounds:?} pos={pos:?}");
+            let window_id = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Window)
+                .map(|n| n.id);
+            let window_bounds = window_id.and_then(|id| ui.debug_node_bounds(id));
+            let beta_ui_bounds = ui.debug_node_bounds(beta_id);
+            eprintln!("cmdk hover debug: window_id={window_id:?} window_bounds={window_bounds:?}");
+            eprintln!("cmdk hover debug: beta_id={beta_id:?} beta_ui_bounds={beta_ui_bounds:?}");
+            let input_ui_bounds = ui.debug_node_bounds(input);
+            if let Some(input_ui_bounds) = input_ui_bounds {
+                let input_pos = Point::new(
+                    Px(input_ui_bounds.origin.x.0 + 1.0),
+                    Px(input_ui_bounds.origin.y.0 + 1.0),
+                );
+                eprintln!(
+                    "cmdk hover debug: input={input:?} input_ui_bounds={input_ui_bounds:?} input_hit_test={:?}",
+                    ui.debug_hit_test(input_pos)
+                );
+                let mut input_chain: Vec<NodeId> = Vec::new();
+                let mut current = Some(input);
+                for _ in 0..32 {
+                    let Some(id) = current else {
+                        break;
+                    };
+                    input_chain.push(id);
+                    current = ui.node_parent(id);
+                }
+                eprintln!("cmdk hover debug: input parent chain={input_chain:?}");
+            } else {
+                eprintln!("cmdk hover debug: input={input:?} input_ui_bounds=None");
+            }
+            let mut chain: Vec<NodeId> = Vec::new();
+            let mut current = Some(beta_id);
+            for _ in 0..32 {
+                let Some(id) = current else {
+                    break;
+                };
+                chain.push(id);
+                current = ui.node_parent(id);
+            }
+            eprintln!("cmdk hover debug: beta parent chain={chain:?}");
+            for id in &chain {
+                let bounds = ui.debug_node_bounds(*id);
+                let contains = bounds.is_some_and(|b| b.contains(pos));
+                let kind = ui.debug_declarative_instance_kind(&mut app, window, *id);
+                let measured = ui.debug_node_measured_size(*id);
+                let role = snap.nodes.iter().find(|n| n.id == *id).map(|n| n.role);
+                let label = snap
+                    .nodes
+                    .iter()
+                    .find(|n| n.id == *id)
+                    .and_then(|n| n.label.clone());
+                eprintln!(
+                    "cmdk hover debug: chain node={id:?} kind={kind:?} measured={measured:?} role={role:?} label={label:?} bounds={bounds:?} contains_pos={contains}"
+                );
+            }
+            eprintln!(
+                "cmdk hover debug: layers={:?}",
+                ui.debug_layers_in_paint_order()
+            );
+            eprintln!("cmdk hover debug: hit_test={:?}", ui.debug_hit_test(pos));
+        }
 
         ui.dispatch_event(
             &mut app,
@@ -3452,6 +3504,24 @@ mod tests {
             items,
         );
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        if debug {
+            let pos = Point::new(
+                Px(beta_bounds.origin.x.0 + 1.0),
+                Px(beta_bounds.origin.y.0 + 1.0),
+            );
+            let hit = ui.debug_hit_test(pos).hit;
+            let hit_label = hit.and_then(|id| {
+                snap.nodes
+                    .iter()
+                    .find(|n| n.id == id)
+                    .and_then(|n| n.label.clone())
+            });
+            let hit_role =
+                hit.and_then(|id| snap.nodes.iter().find(|n| n.id == id).map(|n| n.role));
+            eprintln!(
+                "cmdk hover debug: post-render hit={hit:?} role={hit_role:?} label={hit_label:?}"
+            );
+        }
 
         let focus = snap.focus.expect("focus");
         assert_eq!(focus, input, "focus should remain on the input node");

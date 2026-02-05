@@ -1,0 +1,60 @@
+# Agent skills (repo-local)
+
+This directory contains agent skill folders (`SKILL.md`, optional `references/`) maintained in the Fret repo so the team can share consistent debugging + parity workflows.
+
+Most agents load skills from a *project-local* or *user-local* skills directory. Install by copying the skill folders from this repo into your agent's expected location.
+
+## Install (examples)
+
+Project-local (recommended):
+
+- Claude Code: copy skill folders into `<project>/.claude/skills/`
+- Codex CLI: copy skill folders into `<project>/.agents/skills/`, or use the global location below
+
+Install scripts (recommended for consistency):
+
+- PowerShell (Windows): `powershell -ExecutionPolicy Bypass -File .\\.agents\\skills\\install.ps1 -Agent claude -Force`
+- Bash (macOS/Linux): `./.agents/skills/install.sh --agent claude-code --force`
+
+Global (user-local):
+
+- Codex CLI: copy skill folders into `%USERPROFILE%\.agents\skills\`
+- Claude Code: copy skill folders into `%USERPROFILE%\.claude\skills\`
+
+PowerShell example (copy all Fret skills into a project for Claude Code):
+
+```powershell
+New-Item -ItemType Directory -Force .\.claude\skills | Out-Null
+Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
+```
+
+## Notes on upstream references
+
+- Skills point to **public upstream docs and source URLs** by default.
+- Some developer checkouts may include optional pinned snapshots under `repo-ref/` for quick local diffs; this folder is not necessarily present on GitHub checkouts of this repo.
+
+## Skill map (what to use when)
+
+- Make the UI look good: `fret-ui-ux-guidelines` + `fret-design-system-styles` + `fret-shadcn-app-recipes`
+- App architecture + side effects (persistence, background work): `fret-app-architecture-and-effects`
+- Align behavior with shadcn/Radix: `fret-shadcn-source-alignment` (then add invariant tests + `fretboard diag` repros)
+- Debug UI regressions: `fret-diag-workflow` (capture bundle/screenshot, script repro, turn into a gate)
+- Build complex editor shells: `fret-docking-and-viewports` + `fret-commands-and-keymap` + overlay/layout skills as needed
+
+## Skills
+
+- `fret-component-authoring`: Declarative component authoring in `fret-ui` + `fret-ui-kit` (identity, element-local state, model observation, `ui()` builder surface).
+- `fret-action-hooks`: Component-owned interaction policy (press/dismiss/roving/typeahead/timers) via runtime action hooks (ADR 0074).
+- `fret-app-architecture-and-effects`: App-level structure (Models + Commands + Effects) and runner-owned concurrency (Dispatcher + Inbox) for persistence/background work.
+- `fret-design-system-styles`: Apply a cohesive visual style via shadcn presets + `ThemeConfig` token overrides (density/radius/shadows/rings).
+- `fret-ui-ux-guidelines`: App-level UX + visual hierarchy playbook (spacing rhythm, editor shell patterns, polish) that composes with token/theming skills.
+- `fret-commands-and-keymap`: Commands/menus/palette + `keymap.json` (focus-aware routing, `when` gating, platform bindings).
+- `fret-text-input-and-ime`: Text input + IME composition contracts (caret geometry feedback, command-vs-text arbitration, a11y semantics).
+- `fret-scroll-and-virtualization`: Scrolling + virtualized large lists (stable item keys, measurement modes, scroll-to-item).
+- `fret-layout-and-style`: Token-driven layout + styling (`LayoutRefinement`, `ChromeRefinement`, `UiBuilder`) and common overflow/clipping patterns.
+- `fret-overlays-and-focus`: Overlay orchestration + Radix-aligned dismiss/focus behavior (`OverlayController`, placement/anchoring).
+- `fret-animation-and-scheduling`: Runner-owned scheduling, continuous frames leases, and transition/presence helpers (RAF/timers).
+- `fret-docking-and-viewports`: Docking/multi-window/viewport concepts and conformance harness entry points.
+- `fret-diag-workflow`: Use `fretboard diag` + `tools/diag-scripts/*.json` to reproduce UI issues, capture bundles/screenshots, triage regressions, and turn bugs into stable repro gates.
+- `fret-shadcn-source-alignment`: Align Fret components with upstream shadcn/ui v4 + Radix docs + source (optional local pinned snapshots under `repo-ref/`) and add targeted tests/scripts to prevent regressions even when web goldens are incomplete.
+- `fret-shadcn-app-recipes`: Build good-looking apps with `fret-ui-shadcn` by translating shadcn/Tailwind mental models into Fret patterns, and pairing recipes with tests + `fretboard diag` scripts to avoid regressions.

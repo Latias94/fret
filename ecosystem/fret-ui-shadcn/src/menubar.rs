@@ -41,6 +41,12 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn is_dark_background(theme: &Theme) -> bool {
+    let bg = theme.color_required("background");
+    let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
+    luma < 0.5
+}
+
 fn estimate_text_width(text: &str, font_size: Px) -> Px {
     // Heuristic: our menu panel sizing needs a deterministic width before layout, but the
     // declarative menu rows use flex-1 labels. We approximate the max-content width from the text
@@ -1470,7 +1476,14 @@ impl MenubarMenuEntries {
                         let radius_sm = MetricRef::radius(Radius::Sm).resolve(&theme);
                         let item_ring = decl_style::focus_ring(&theme, radius_sm);
                         let destructive_fg = theme.color_required("destructive");
-                        let destructive_bg = alpha_mul(destructive_fg, 0.12);
+                        let destructive_bg_alpha = if is_dark_background(&theme) { 0.20 } else { 0.10 };
+                        let destructive_bg = theme
+                            .color_by_key(if destructive_bg_alpha >= 0.2 {
+                                "destructive/20"
+                            } else {
+                                "destructive/10"
+                            })
+                            .unwrap_or_else(|| alpha_mul(destructive_fg, destructive_bg_alpha));
 
                         let panel_chrome = crate::ui_builder_ext::surfaces::menu_style_chrome();
                         let submenu_chrome =
@@ -4053,6 +4066,282 @@ mod tests {
         assert_ne!(
             focus, file_node,
             "pointer-open should focus menu content/roving container rather than keeping trigger focus"
+        );
+    }
+
+    #[test]
+    fn menubar_pointer_hover_hit_test_targets_menu_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file_pos = center(menu_trigger_bounds(&snap0, "File"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        assert!(menu_trigger_expanded(&snap1, "File"));
+
+        let new_item = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New"))
+            .expect("New menu item");
+        let new_pos = center(new_item.bounds);
+
+        let hover_changes_before = ui.debug_stats().hover_pressable_target_changes;
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: new_pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let hover_changes_after = ui.debug_stats().hover_pressable_target_changes;
+        assert!(
+            hover_changes_after > hover_changes_before,
+            "expected hover edge after pointer move: before={hover_changes_before} after={hover_changes_after}"
+        );
+
+        // Hover state must persist across renders. If the hovered pressable's element identity
+        // changes between frames, the runtime will clear the hover target during GC and the next
+        // pointer move will re-trigger a hover edge.
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap_after_render = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        assert!(
+            menu_trigger_expanded(&snap_after_render, "File"),
+            "expected File menu to remain open across frames"
+        );
+        let new_item_after_render = snap_after_render
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New"))
+            .expect("New menu item after render");
+        assert_eq!(
+            new_item_after_render.id, new_item.id,
+            "expected menu item identity to be stable across frames"
+        );
+        let hover_changes_after_render = ui.debug_stats().hover_pressable_target_changes;
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: new_pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        let hover_changes_after_repeat_move = ui.debug_stats().hover_pressable_target_changes;
+        assert_eq!(
+            hover_changes_after_repeat_move, hover_changes_after_render,
+            "expected repeated pointer move in a new frame to keep the same hovered pressable: before={hover_changes_after_render} after={hover_changes_after_repeat_move}"
+        );
+
+        let hit = ui.debug_hit_test(new_pos);
+        let hit_node = hit.hit;
+        let hit_kind =
+            hit_node.and_then(|node| ui.debug_declarative_instance_kind(&mut app, window, node));
+        let new_kind = ui.debug_declarative_instance_kind(&mut app, window, new_item.id);
+        let hit_layer = hit_node.and_then(|node| ui.node_layer(node));
+        let new_layer = ui.node_layer(new_item.id);
+        let hit_path_kinds: Vec<&'static str> = hit_node
+            .map(|node| ui.debug_node_path(node))
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|node| ui.debug_declarative_instance_kind(&mut app, window, node))
+            .collect();
+
+        if std::env::var_os("FRET_DEBUG_MENUBAR_HIT_PATH").is_some() {
+            let hit_path = hit_node
+                .map(|node| ui.debug_node_path(node))
+                .unwrap_or_default();
+            eprintln!("menubar hit-test debug: position={new_pos:?}");
+            eprintln!(
+                "  hit={hit_node:?} kind={hit_kind:?} layer={hit_layer:?} active_layer_roots={:?} barrier_root={:?}",
+                hit.active_layer_roots, hit.barrier_root
+            );
+            eprintln!(
+                "  new_item={:?} kind={new_kind:?} layer={new_layer:?}",
+                new_item.id
+            );
+            eprintln!("  hit_path:");
+            for node in hit_path {
+                let kind = ui.debug_declarative_instance_kind(&mut app, window, node);
+                eprintln!("    {node:?} kind={kind:?} layer={:?}", ui.node_layer(node));
+            }
+        }
+
+        assert!(
+            hit_node.is_some_and(|node| node == new_item.id || ui.is_descendant(new_item.id, node)),
+            "expected hit-test at {new_pos:?} to land within menu item 'New' (node={:?} kind={new_kind:?} layer={new_layer:?}); got hit={hit_node:?} kind={hit_kind:?} layer={hit_layer:?} path_kinds={hit_path_kinds:?}",
+            new_item.id,
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn menubar_hover_highlights_menu_item_background() {
+        fn overlap_area(a: Rect, b: Rect) -> f32 {
+            let ax0 = a.origin.x.0;
+            let ay0 = a.origin.y.0;
+            let ax1 = ax0 + a.size.width.0;
+            let ay1 = ay0 + a.size.height.0;
+
+            let bx0 = b.origin.x.0;
+            let by0 = b.origin.y.0;
+            let bx1 = bx0 + b.size.width.0;
+            let by1 = by0 + b.size.height.0;
+
+            let x0 = ax0.max(bx0);
+            let y0 = ay0.max(by0);
+            let x1 = ax1.min(bx1);
+            let y1 = ay1.min(by1);
+
+            let w = (x1 - x0).max(0.0);
+            let h = (y1 - y0).max(0.0);
+            w * h
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let file_pos = center(menu_trigger_bounds(&snap0, "File"));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: file_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        assert!(menu_trigger_expanded(&snap1, "File"));
+
+        let new_item = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New"))
+            .expect("New menu item");
+        let new_pos = center(new_item.bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: new_pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, window, bounds);
+
+        let theme = Theme::global(&app).clone();
+        let expected_bg = theme.color_required("accent");
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let mut best: Option<(Rect, fret_core::Color, f32)> = None;
+        for op in scene.ops() {
+            let fret_core::SceneOp::Quad {
+                rect, background, ..
+            } = op
+            else {
+                continue;
+            };
+            if background.a <= 0.01 {
+                continue;
+            }
+            let score = overlap_area(*rect, new_item.bounds);
+            if score <= 0.0 {
+                continue;
+            }
+            if best.is_none_or(|(_, _, best_score)| score > best_score) {
+                best = Some((*rect, *background, score));
+            }
+        }
+        let (_, bg, _) = best.expect("hovered menu item background quad");
+
+        let tol = 0.03;
+        assert!(
+            (bg.r - expected_bg.r).abs() <= tol
+                && (bg.g - expected_bg.g).abs() <= tol
+                && (bg.b - expected_bg.b).abs() <= tol,
+            "expected hover background close to accent={expected_bg:?}, got={bg:?}"
         );
     }
 

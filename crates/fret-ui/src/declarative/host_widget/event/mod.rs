@@ -56,7 +56,7 @@ impl ElementHostWidget {
         };
 
         let is_text_input = matches!(
-            instance,
+            &instance,
             ElementInstance::TextInput(_)
                 | ElementInstance::TextArea(_)
                 | ElementInstance::TextInputRegion(_)
@@ -73,6 +73,20 @@ impl ElementHostWidget {
         } = event
             && cx.focus == Some(cx.node)
             && !is_text_input
+            && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
+        {
+            return;
+        }
+
+        // Text input widgets may stop propagation for navigation keys (ArrowUp/ArrowDown, etc.).
+        // Give component-owned key hooks a chance to intercept before the widget consumes them.
+        if let Event::KeyDown {
+            key,
+            modifiers,
+            repeat,
+        } = event
+            && cx.focus == Some(cx.node)
+            && is_text_input
             && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
         {
             return;
@@ -131,17 +145,6 @@ impl ElementHostWidget {
             }
             _ => {}
         }
-
-        if is_text_input
-            && !cx.stop_propagation
-            && let Event::KeyDown {
-                key,
-                modifiers,
-                repeat,
-            } = event
-            && cx.focus == Some(cx.node)
-            && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
-        {}
     }
 
     pub(super) fn event_observer_impl<H: UiHost>(

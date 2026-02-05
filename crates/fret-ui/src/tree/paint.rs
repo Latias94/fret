@@ -27,7 +27,7 @@ impl<H: UiHost> UiTree<H> {
 
         // Keep IME enabled state in sync even if focus is set programmatically and no input event
         // has been dispatched yet (ADR 0012).
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         self.set_ime_allowed(app, focus_is_text_input);
         let (active_layers, barrier_root) = self.active_input_layers();
         let _ = active_layers;
@@ -249,6 +249,28 @@ impl<H: UiHost> UiTree<H> {
                         bounds.origin.x - prev.origin.x,
                         bounds.origin.y - prev.origin.y,
                     );
+                    let delta_visual = if let Some(window) = self.window
+                        && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
+                        && let Some(prev_visual) =
+                            crate::elements::with_window_state(app, window, |st| {
+                                st.last_visual_bounds(element)
+                            }) {
+                        let current_visual = rect_aabb_transformed(bounds, current_transform);
+                        let size_dx =
+                            (current_visual.size.width.0 - prev_visual.size.width.0).abs();
+                        let size_dy =
+                            (current_visual.size.height.0 - prev_visual.size.height.0).abs();
+                        if size_dx <= 0.01 && size_dy <= 0.01 {
+                            Point::new(
+                                current_visual.origin.x - prev_visual.origin.x,
+                                current_visual.origin.y - prev_visual.origin.y,
+                            )
+                        } else {
+                            Point::new(Px(0.0), Px(0.0))
+                        }
+                    } else {
+                        Point::new(Px(0.0), Px(0.0))
+                    };
                     let replay_span = if tracing::enabled!(tracing::Level::TRACE) {
                         tracing::trace_span!(
                             "fret.ui.paint_cache.replay",
@@ -313,6 +335,56 @@ impl<H: UiHost> UiTree<H> {
                             {
                                 crate::elements::record_bounds_for_element(
                                     app, window, element, n.bounds,
+                                );
+                            }
+                            for &child in &n.children {
+                                stack.push(child);
+                            }
+                        }
+                    }
+                    if delta_visual.x.0 != 0.0 || delta_visual.y.0 != 0.0 {
+                        // Paint-cache replay can run under a different accumulated transform than
+                        // the previous frame (e.g. scroll containers apply a children-only render
+                        // transform). Without visiting descendants, their last-frame visual bounds
+                        // would remain stale even while the subtree is rendered under the updated
+                        // transform. Translate descendant visual bounds by the same delta so
+                        // anchored overlays and hit-tested geometry stay consistent.
+                        let window = self.window;
+                        let mut stack: Vec<NodeId> = Vec::new();
+                        let mut i = 0usize;
+                        loop {
+                            let child = self
+                                .nodes
+                                .get(node)
+                                .and_then(|n| n.children.get(i))
+                                .copied();
+                            let Some(child) = child else {
+                                break;
+                            };
+                            stack.push(child);
+                            i += 1;
+                        }
+
+                        while let Some(id) = stack.pop() {
+                            let Some(n) = self.nodes.get(id) else {
+                                continue;
+                            };
+                            if let Some(window) = window
+                                && let Some(element) = n.element
+                                && let Some(prev_visual) =
+                                    crate::elements::with_window_state(app, window, |st| {
+                                        st.last_visual_bounds(element)
+                                    })
+                            {
+                                let visual = Rect::new(
+                                    Point::new(
+                                        prev_visual.origin.x + delta_visual.x,
+                                        prev_visual.origin.y + delta_visual.y,
+                                    ),
+                                    prev_visual.size,
+                                );
+                                crate::elements::record_visual_bounds_for_element(
+                                    app, window, element, visual,
                                 );
                             }
                             for &child in &n.children {

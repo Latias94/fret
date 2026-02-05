@@ -17,7 +17,7 @@ use fret_runtime::{
     ModelCreatedDebugInfo, ModelId, Platform, PlatformCapabilities, TickId,
 };
 use slotmap::{Key, SlotMap};
-use std::any::TypeId;
+use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 use std::mem::MaybeUninit;
 use std::slice;
@@ -48,6 +48,18 @@ fn type_id_sort_key(id: TypeId) -> u64 {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     id.hash(&mut hasher);
     hasher.finish()
+}
+
+fn record_layout_invalidation_transition(count: &mut u32, before: bool, after: bool) {
+    if before == after {
+        return;
+    }
+    if after {
+        *count = count.saturating_add(1);
+    } else {
+        debug_assert!(*count > 0);
+        *count = count.saturating_sub(1);
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -96,6 +108,21 @@ struct ViewCacheFlags {
     layout_definite: bool,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct NodeMeasureCacheKey {
+    known_w_bits: Option<u32>,
+    known_h_bits: Option<u32>,
+    avail_w: (u8, u32),
+    avail_h: (u8, u32),
+    scale_bits: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct NodeMeasureCache {
+    key: NodeMeasureCacheKey,
+    size: Size,
+}
+
 struct Node<H: UiHost> {
     widget: Option<Box<dyn Widget<H>>>,
     element: Option<GlobalElementId>,
@@ -103,9 +130,11 @@ struct Node<H: UiHost> {
     children: Vec<NodeId>,
     bounds: Rect,
     measured_size: Size,
+    measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
     paint_cache: Option<PaintCacheEntry>,
     interaction_cache: Option<prepaint::InteractionCacheEntry>,
+    prepaint_outputs: PrepaintOutputs,
     prepaint_hit_test: Option<PrepaintHitTestCache>,
     view_cache: ViewCacheFlags,
     view_cache_needs_rerender: bool,
@@ -129,6 +158,46 @@ struct PrepaintHitTestCache {
     can_scroll_descendant_into_view: bool,
 }
 
+#[derive(Default)]
+struct PrepaintOutputs {
+    key: Option<PaintCacheKey>,
+    values: Vec<(TypeId, Box<dyn Any>)>,
+}
+
+impl PrepaintOutputs {
+    fn begin_frame(&mut self, key: PaintCacheKey) {
+        if self.key != Some(key) {
+            self.key = Some(key);
+            self.values.clear();
+        }
+    }
+
+    fn set<T: Any>(&mut self, value: T) {
+        let ty = TypeId::of::<T>();
+        if let Some((_, existing)) = self.values.iter_mut().find(|(id, _)| *id == ty) {
+            *existing = Box::new(value);
+            return;
+        }
+        self.values.push((ty, Box::new(value)));
+    }
+
+    fn get<T: Any>(&self) -> Option<&T> {
+        let ty = TypeId::of::<T>();
+        self.values
+            .iter()
+            .find(|(id, _)| *id == ty)
+            .and_then(|(_, value)| value.downcast_ref::<T>())
+    }
+
+    fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
+        let ty = TypeId::of::<T>();
+        self.values
+            .iter_mut()
+            .find(|(id, _)| *id == ty)
+            .and_then(|(_, value)| value.downcast_mut::<T>())
+    }
+}
+
 impl<H: UiHost> Node<H> {
     fn new(widget: impl Widget<H> + 'static) -> Self {
         Self {
@@ -138,6 +207,7 @@ impl<H: UiHost> Node<H> {
             children: Vec::new(),
             bounds: Rect::default(),
             measured_size: Size::default(),
+            measure_cache: None,
             invalidation: InvalidationFlags {
                 layout: true,
                 paint: true,
@@ -145,6 +215,7 @@ impl<H: UiHost> Node<H> {
             },
             paint_cache: None,
             interaction_cache: None,
+            prepaint_outputs: PrepaintOutputs::default(),
             prepaint_hit_test: None,
             view_cache: ViewCacheFlags::default(),
             view_cache_needs_rerender: false,
@@ -165,6 +236,12 @@ impl<H: UiHost> Node<H> {
 pub struct UiDebugFrameStats {
     pub frame_id: FrameId,
     pub layout_time: Duration,
+    pub layout_roots_time: Duration,
+    pub layout_barrier_relayouts_time: Duration,
+    pub layout_view_cache_time: Duration,
+    pub layout_semantics_refresh_time: Duration,
+    pub layout_focus_repair_time: Duration,
+    pub layout_deferred_cleanup_time: Duration,
     pub prepaint_time: Duration,
     pub paint_time: Duration,
     pub layout_nodes_visited: u32,
@@ -190,6 +267,8 @@ pub struct UiDebugFrameStats {
     /// barriers (scroll/virtualization/splits/...) register viewport roots or explicitly solve
     /// their child roots.
     pub layout_engine_widget_fallback_solves: u64,
+    pub layout_fast_path_taken: bool,
+    pub layout_invalidations_count: u32,
     /// Unique nodes observed as invalidation roots for model changes during the current frame.
     pub model_change_invalidation_roots: u32,
     /// Count of changed models consumed for propagation during the current frame.
@@ -262,6 +341,10 @@ pub struct UiDebugFrameStats {
     /// How many VirtualList visible-range checks requested a refresh (range delta outside the
     /// currently mounted span).
     pub virtual_list_visible_range_refreshes: u32,
+    /// How many VirtualList window shifts were observed during the current frame.
+    pub virtual_list_window_shifts_total: u32,
+    /// How many VirtualList window shifts required a non-retained cache-root rerender.
+    pub virtual_list_window_shifts_non_retained: u32,
     /// How many retained VirtualList hosts were reconciled (attach/detach without rerendering the
     /// parent view-cache root).
     pub retained_virtual_list_reconciles: u32,
@@ -334,6 +417,10 @@ pub enum UiDebugInvalidationDetail {
     ScrollHandleHitTestOnly,
     ScrollHandleLayout,
     ScrollHandleWindowUpdate,
+    ScrollHandleScrollToItemWindowUpdate,
+    ScrollHandleViewportResizeWindowUpdate,
+    ScrollHandleItemsRevisionWindowUpdate,
+    ScrollHandlePrefetchWindowUpdate,
     FocusVisiblePolicy,
     InputModalityPolicy,
     AnimationFrameRequest,
@@ -362,6 +449,16 @@ impl UiDebugInvalidationDetail {
             Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
             Self::ScrollHandleLayout => Some("scroll_handle_layout"),
             Self::ScrollHandleWindowUpdate => Some("scroll_handle_window_update"),
+            Self::ScrollHandleScrollToItemWindowUpdate => {
+                Some("scroll_handle_scroll_to_item_window_update")
+            }
+            Self::ScrollHandleViewportResizeWindowUpdate => {
+                Some("scroll_handle_viewport_resize_window_update")
+            }
+            Self::ScrollHandleItemsRevisionWindowUpdate => {
+                Some("scroll_handle_items_revision_window_update")
+            }
+            Self::ScrollHandlePrefetchWindowUpdate => Some("scroll_handle_prefetch_window_update"),
             Self::FocusVisiblePolicy => Some("focus_visible_policy"),
             Self::InputModalityPolicy => Some("input_modality_policy"),
             Self::AnimationFrameRequest => Some("animation_frame_request"),
@@ -375,6 +472,16 @@ pub struct UiDebugDirtyView {
     pub element: Option<GlobalElementId>,
     pub source: UiDebugInvalidationSource,
     pub detail: UiDebugInvalidationDetail,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugNotifyRequest {
+    pub frame_id: FrameId,
+    pub caller_node: NodeId,
+    pub target_view: ViewId,
+    pub file: &'static str,
+    pub line: u32,
+    pub column: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -464,6 +571,29 @@ pub enum UiDebugVirtualListWindowSource {
     Prepaint,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugVirtualListWindowShiftKind {
+    None,
+    Prefetch,
+    Escape,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugVirtualListWindowShiftReason {
+    ScrollOffset,
+    ViewportResize,
+    ItemsRevision,
+    ScrollToItem,
+    InputsChange,
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugVirtualListWindowShiftApplyMode {
+    RetainedReconcile,
+    NonRetainedRerender,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugVirtualListWindow {
     pub source: UiDebugVirtualListWindowSource,
@@ -476,27 +606,57 @@ pub struct UiDebugVirtualListWindow {
     pub prev_items_revision: u64,
     pub measure_mode: crate::element::VirtualListMeasureMode,
     pub overscan: usize,
+    pub estimate_row_height: Px,
+    pub gap: Px,
+    pub scroll_margin: Px,
     pub viewport: Px,
     pub prev_viewport: Px,
     pub offset: Px,
     pub prev_offset: Px,
+    pub content_extent: Px,
+    pub policy_key: u64,
+    pub inputs_key: u64,
     pub window_range: Option<crate::virtual_list::VirtualRange>,
     pub prev_window_range: Option<crate::virtual_list::VirtualRange>,
     pub render_window_range: Option<crate::virtual_list::VirtualRange>,
     pub deferred_scroll_to_item: bool,
     pub deferred_scroll_consumed: bool,
     pub window_mismatch: bool,
+    pub window_shift_kind: UiDebugVirtualListWindowShiftKind,
+    pub window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
+    pub window_shift_apply_mode: Option<UiDebugVirtualListWindowShiftApplyMode>,
+    pub window_shift_invalidation_detail: Option<UiDebugInvalidationDetail>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugRetainedVirtualListReconcileKind {
+    Prefetch,
+    Escape,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct UiDebugRetainedVirtualListReconcile {
     pub node: NodeId,
     pub element: GlobalElementId,
+    pub reconcile_kind: UiDebugRetainedVirtualListReconcileKind,
+    /// Wall-clock time spent reconciling this retained host (including mounting/unmounting items).
+    pub reconcile_time_us: u32,
     pub prev_items: u32,
     pub next_items: u32,
     pub preserved_items: u32,
     pub attached_items: u32,
     pub detached_items: u32,
+    /// Keep-alive bucket size before this reconcile (after loading element-local state).
+    pub keep_alive_pool_len_before: u32,
+    /// Number of items that were re-attached from the retained keep-alive bucket instead of being
+    /// mounted from scratch.
+    pub reused_from_keep_alive_items: u32,
+    /// Number of detached items that were retained in the keep-alive bucket after the reconcile.
+    pub kept_alive_items: u32,
+    /// Number of items evicted from the keep-alive bucket due to budget.
+    pub evicted_keep_alive_items: u32,
+    /// Keep-alive bucket size after this reconcile (after applying detach/evict updates).
+    pub keep_alive_pool_len_after: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -504,6 +664,7 @@ pub enum UiDebugPrepaintActionKind {
     Invalidate,
     RequestRedraw,
     RequestAnimationFrame,
+    VirtualListWindowShift,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -512,7 +673,25 @@ pub struct UiDebugPrepaintAction {
     pub target: Option<NodeId>,
     pub kind: UiDebugPrepaintActionKind,
     pub invalidation: Option<Invalidation>,
+    pub element: Option<GlobalElementId>,
+    pub virtual_list_window_shift_kind: Option<UiDebugVirtualListWindowShiftKind>,
+    pub virtual_list_window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
     pub frame_id: FrameId,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugVirtualListWindowShiftSample {
+    pub frame_id: FrameId,
+    pub source: UiDebugVirtualListWindowSource,
+    pub node: NodeId,
+    pub element: GlobalElementId,
+    pub window_shift_kind: UiDebugVirtualListWindowShiftKind,
+    pub window_shift_reason: UiDebugVirtualListWindowShiftReason,
+    pub window_shift_apply_mode: UiDebugVirtualListWindowShiftApplyMode,
+    pub window_shift_invalidation_detail: Option<UiDebugInvalidationDetail>,
+    pub prev_window_range: Option<crate::virtual_list::VirtualRange>,
+    pub window_range: Option<crate::virtual_list::VirtualRange>,
+    pub render_window_range: Option<crate::virtual_list::VirtualRange>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -600,6 +779,10 @@ pub struct UiDebugRemoveSubtreeFrameContext {
     pub parent_frame_children_contains_root: Option<bool>,
     pub root_frame_instance_present: bool,
     pub root_frame_children_len: Option<u32>,
+    /// Whether this subtree root is reachable from the window's liveness roots when considering
+    /// the authoritative retained edges used for GC (ie. the union of `UiTree` and `WindowFrame`
+    /// child edges when available).
+    pub root_reachable_from_layer_roots: bool,
     pub root_reachable_from_view_cache_roots: Option<bool>,
     pub liveness_layer_roots_len: u32,
     pub view_cache_reuse_roots_len: u32,
@@ -708,6 +891,34 @@ pub struct UiDebugLayoutEngineSolve {
     pub measure_cache_hits: u64,
     pub measure_time: Duration,
     pub top_measures: Vec<UiDebugLayoutEngineMeasureHotspot>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugLayoutHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+}
+
+#[derive(Debug, Clone)]
+pub struct UiDebugWidgetMeasureHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugLayoutStackFrame {
+    child_inclusive_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugWidgetMeasureStackFrame {
+    child_inclusive_time: Duration,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1008,8 +1219,12 @@ pub struct UiTree<H: UiHost> {
     observed_globals_in_layout: GlobalObservationIndex,
     observed_globals_in_paint: GlobalObservationIndex,
     measure_stack: Vec<MeasureStackKey>,
+    measure_cache_this_frame: HashMap<MeasureStackKey, Size>,
     measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics,
     layout_engine: crate::layout_engine::TaffyLayoutEngine,
+    layout_invalidations_count: u32,
+    last_layout_bounds: Option<Rect>,
+    last_layout_scale_factor: Option<f32>,
     viewport_roots: Vec<(NodeId, Rect)>,
     pending_barrier_relayouts: Vec<NodeId>,
 
@@ -1019,6 +1234,10 @@ pub struct UiTree<H: UiHost> {
     debug_view_cache_contained_relayout_roots: Vec<NodeId>,
     debug_paint_cache_replays: HashMap<NodeId, u32>,
     debug_layout_engine_solves: Vec<UiDebugLayoutEngineSolve>,
+    debug_layout_hotspots: Vec<UiDebugLayoutHotspot>,
+    debug_layout_stack: Vec<DebugLayoutStackFrame>,
+    debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
+    debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
     debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
@@ -1029,7 +1248,10 @@ pub struct UiTree<H: UiHost> {
     debug_hover_declarative_invalidations:
         HashMap<NodeId, UiDebugHoverDeclarativeInvalidationCounts>,
     debug_dirty_views: Vec<UiDebugDirtyView>,
+    #[cfg(feature = "diagnostics")]
+    debug_notify_requests: Vec<UiDebugNotifyRequest>,
     debug_virtual_list_windows: Vec<UiDebugVirtualListWindow>,
+    debug_virtual_list_window_shift_samples: Vec<UiDebugVirtualListWindowShiftSample>,
     debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
     debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
@@ -1070,7 +1292,273 @@ pub struct UiTree<H: UiHost> {
 
     semantics: Option<Arc<SemanticsSnapshot>>,
     semantics_requested: bool,
+    layout_node_profile: Option<LayoutNodeProfileState>,
+    measure_node_profile: Option<MeasureNodeProfileState>,
     deferred_cleanup: Vec<Box<dyn Widget<H>>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutNodeProfileEntry {
+    node: NodeId,
+    pass_kind: crate::layout_pass::LayoutPassKind,
+    bounds: Rect,
+    elapsed_total: Duration,
+    elapsed_self: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LayoutNodeProfileConfig {
+    top_n: usize,
+    min_elapsed: Duration,
+}
+
+impl LayoutNodeProfileConfig {
+    fn from_env() -> Option<Self> {
+        let enabled = std::env::var("FRET_LAYOUT_NODE_PROFILE")
+            .ok()
+            .is_some_and(|v| v == "1");
+        if !enabled {
+            return None;
+        }
+
+        let top_n = std::env::var("FRET_LAYOUT_NODE_PROFILE_TOP")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(16)
+            .max(1)
+            .min(128);
+
+        let min_us = std::env::var("FRET_LAYOUT_NODE_PROFILE_MIN_US")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(500);
+
+        Some(Self {
+            top_n,
+            min_elapsed: Duration::from_micros(min_us),
+        })
+    }
+}
+
+#[derive(Debug)]
+struct LayoutNodeProfileState {
+    config: LayoutNodeProfileConfig,
+    frame_id: FrameId,
+    entries: Vec<LayoutNodeProfileEntry>,
+    stack: Vec<LayoutNodeProfileStackEntry>,
+    total_self_time: Duration,
+    nodes_profiled: u64,
+}
+
+impl LayoutNodeProfileState {
+    fn new(config: LayoutNodeProfileConfig, frame_id: FrameId) -> Self {
+        Self {
+            config,
+            frame_id,
+            entries: Vec::new(),
+            stack: Vec::new(),
+            total_self_time: Duration::default(),
+            nodes_profiled: 0,
+        }
+    }
+
+    fn enter(&mut self, node: NodeId, pass_kind: crate::layout_pass::LayoutPassKind, bounds: Rect) {
+        self.stack.push(LayoutNodeProfileStackEntry {
+            node,
+            pass_kind,
+            bounds,
+            started: std::time::Instant::now(),
+            child_time: Duration::default(),
+        });
+    }
+
+    fn exit(&mut self, node: NodeId) {
+        let Some(entry) = self.stack.pop() else {
+            return;
+        };
+        if entry.node != node {
+            // Best-effort: avoid poisoning the layout pass if the stack gets out of sync.
+            self.stack.clear();
+            return;
+        }
+
+        let elapsed_total = entry.started.elapsed();
+        let elapsed_self = elapsed_total.saturating_sub(entry.child_time);
+        self.total_self_time = self.total_self_time.saturating_add(elapsed_self);
+        self.nodes_profiled = self.nodes_profiled.saturating_add(1);
+
+        if let Some(parent) = self.stack.last_mut() {
+            parent.child_time = parent.child_time.saturating_add(elapsed_total);
+        }
+
+        self.record(LayoutNodeProfileEntry {
+            node: entry.node,
+            pass_kind: entry.pass_kind,
+            bounds: entry.bounds,
+            elapsed_total,
+            elapsed_self,
+        });
+    }
+
+    fn record(&mut self, entry: LayoutNodeProfileEntry) {
+        if entry.elapsed_self < self.config.min_elapsed {
+            return;
+        }
+
+        // Keep a stable, small "top N" list; N is tiny (default 16), so O(N) insertion is fine.
+        let mut inserted = false;
+        for i in 0..self.entries.len() {
+            if entry.elapsed_self > self.entries[i].elapsed_self {
+                self.entries.insert(i, entry);
+                inserted = true;
+                break;
+            }
+        }
+        if !inserted {
+            self.entries.push(entry);
+        }
+        if self.entries.len() > self.config.top_n {
+            self.entries.truncate(self.config.top_n);
+        }
+    }
+}
+
+#[derive(Debug)]
+struct LayoutNodeProfileStackEntry {
+    node: NodeId,
+    pass_kind: crate::layout_pass::LayoutPassKind,
+    bounds: Rect,
+    started: std::time::Instant,
+    child_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MeasureNodeProfileEntry {
+    node: NodeId,
+    constraints: crate::layout_constraints::LayoutConstraints,
+    elapsed_total: Duration,
+    elapsed_self: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MeasureNodeProfileConfig {
+    top_n: usize,
+    min_elapsed: Duration,
+}
+
+impl MeasureNodeProfileConfig {
+    fn from_env() -> Option<Self> {
+        let enabled = std::env::var("FRET_MEASURE_NODE_PROFILE")
+            .ok()
+            .is_some_and(|v| v == "1");
+        if !enabled {
+            return None;
+        }
+
+        let top_n = std::env::var("FRET_MEASURE_NODE_PROFILE_TOP")
+            .ok()
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(16)
+            .max(1)
+            .min(128);
+
+        let min_us = std::env::var("FRET_MEASURE_NODE_PROFILE_MIN_US")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+            .unwrap_or(500);
+
+        Some(Self {
+            top_n,
+            min_elapsed: Duration::from_micros(min_us),
+        })
+    }
+}
+
+#[derive(Debug)]
+struct MeasureNodeProfileState {
+    config: MeasureNodeProfileConfig,
+    frame_id: FrameId,
+    entries: Vec<MeasureNodeProfileEntry>,
+    stack: Vec<MeasureNodeProfileStackEntry>,
+    total_self_time: Duration,
+    nodes_profiled: u64,
+}
+
+impl MeasureNodeProfileState {
+    fn new(config: MeasureNodeProfileConfig, frame_id: FrameId) -> Self {
+        Self {
+            config,
+            frame_id,
+            entries: Vec::new(),
+            stack: Vec::new(),
+            total_self_time: Duration::default(),
+            nodes_profiled: 0,
+        }
+    }
+
+    fn enter(&mut self, node: NodeId, constraints: crate::layout_constraints::LayoutConstraints) {
+        self.stack.push(MeasureNodeProfileStackEntry {
+            node,
+            constraints,
+            started: std::time::Instant::now(),
+            child_time: Duration::default(),
+        });
+    }
+
+    fn exit(&mut self, node: NodeId) {
+        let Some(entry) = self.stack.pop() else {
+            return;
+        };
+        if entry.node != node {
+            self.stack.clear();
+            return;
+        }
+
+        let elapsed_total = entry.started.elapsed();
+        let elapsed_self = elapsed_total.saturating_sub(entry.child_time);
+        self.total_self_time = self.total_self_time.saturating_add(elapsed_self);
+        self.nodes_profiled = self.nodes_profiled.saturating_add(1);
+
+        if let Some(parent) = self.stack.last_mut() {
+            parent.child_time = parent.child_time.saturating_add(elapsed_total);
+        }
+
+        self.record(MeasureNodeProfileEntry {
+            node: entry.node,
+            constraints: entry.constraints,
+            elapsed_total,
+            elapsed_self,
+        });
+    }
+
+    fn record(&mut self, entry: MeasureNodeProfileEntry) {
+        if entry.elapsed_total < self.config.min_elapsed {
+            return;
+        }
+
+        let mut inserted = false;
+        for i in 0..self.entries.len() {
+            if entry.elapsed_total > self.entries[i].elapsed_total {
+                self.entries.insert(i, entry);
+                inserted = true;
+                break;
+            }
+        }
+        if !inserted {
+            self.entries.push(entry);
+        }
+        if self.entries.len() > self.config.top_n {
+            self.entries.truncate(self.config.top_n);
+        }
+    }
+}
+
+#[derive(Debug)]
+struct MeasureNodeProfileStackEntry {
+    node: NodeId,
+    constraints: crate::layout_constraints::LayoutConstraints,
+    started: std::time::Instant,
+    child_time: Duration,
 }
 
 #[derive(Clone)]
@@ -1108,8 +1596,12 @@ impl<H: UiHost> Default for UiTree<H> {
             observed_globals_in_layout: GlobalObservationIndex::default(),
             observed_globals_in_paint: GlobalObservationIndex::default(),
             measure_stack: Vec::new(),
+            measure_cache_this_frame: HashMap::new(),
             measure_reentrancy_diagnostics: MeasureReentrancyDiagnostics::default(),
             layout_engine: crate::layout_engine::TaffyLayoutEngine::default(),
+            layout_invalidations_count: 0,
+            last_layout_bounds: None,
+            last_layout_scale_factor: None,
             viewport_roots: Vec::new(),
             pending_barrier_relayouts: Vec::new(),
             debug_enabled: false,
@@ -1118,6 +1610,10 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_view_cache_contained_relayout_roots: Vec::new(),
             debug_paint_cache_replays: HashMap::new(),
             debug_layout_engine_solves: Vec::new(),
+            debug_layout_hotspots: Vec::new(),
+            debug_layout_stack: Vec::new(),
+            debug_widget_measure_hotspots: Vec::new(),
+            debug_widget_measure_stack: Vec::new(),
             debug_measure_children: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
             debug_model_change_hotspots: Vec::new(),
@@ -1127,7 +1623,10 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_hover_edge_this_frame: false,
             debug_hover_declarative_invalidations: HashMap::new(),
             debug_dirty_views: Vec::new(),
+            #[cfg(feature = "diagnostics")]
+            debug_notify_requests: Vec::new(),
             debug_virtual_list_windows: Vec::new(),
+            debug_virtual_list_window_shift_samples: Vec::new(),
             debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
             debug_prepaint_actions: Vec::new(),
@@ -1163,6 +1662,8 @@ impl<H: UiHost> Default for UiTree<H> {
             propagation_visited: HashMap::new(),
             semantics: None,
             semantics_requested: false,
+            layout_node_profile: None,
+            measure_node_profile: None,
             deferred_cleanup: Vec::new(),
         }
     }
@@ -1201,7 +1702,7 @@ impl MeasureReentrancyDiagnostics {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct MeasureStackKey {
     node: NodeId,
     known_w_bits: Option<u32>,
@@ -1212,6 +1713,28 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn begin_prepaint_outputs_for_node(&mut self, node: NodeId, key: PaintCacheKey) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.prepaint_outputs.begin_frame(key);
+    }
+
+    pub(crate) fn set_prepaint_output<T: Any>(&mut self, node: NodeId, value: T) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.prepaint_outputs.set(value);
+    }
+
+    pub(crate) fn prepaint_output<T: Any>(&self, node: NodeId) -> Option<&T> {
+        self.nodes.get(node)?.prepaint_outputs.get::<T>()
+    }
+
+    pub(crate) fn prepaint_output_mut<T: Any>(&mut self, node: NodeId) -> Option<&mut T> {
+        self.nodes.get_mut(node)?.prepaint_outputs.get_mut::<T>()
+    }
+
     #[cfg(feature = "diagnostics")]
     fn debug_sample_child_elements_head(
         &self,
@@ -1239,6 +1762,10 @@ impl<H: UiHost> UiTree<H> {
                 detail,
                 UiDebugInvalidationDetail::ScrollHandleLayout
                     | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                    | UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                    | UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+                    | UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+                    | UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
             ))
     }
 
@@ -1273,6 +1800,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         self.debug_stats.frame_id = frame_id;
+        self.debug_stats.layout_roots_time = Duration::default();
+        self.debug_stats.layout_barrier_relayouts_time = Duration::default();
+        self.debug_stats.layout_view_cache_time = Duration::default();
+        self.debug_stats.layout_semantics_refresh_time = Duration::default();
+        self.debug_stats.layout_focus_repair_time = Duration::default();
+        self.debug_stats.layout_deferred_cleanup_time = Duration::default();
         self.debug_stats.model_change_invalidation_roots = 0;
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;
@@ -1307,6 +1840,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.barrier_relayouts_performed = 0;
         self.debug_stats.virtual_list_visible_range_checks = 0;
         self.debug_stats.virtual_list_visible_range_refreshes = 0;
+        self.debug_stats.virtual_list_window_shifts_total = 0;
+        self.debug_stats.virtual_list_window_shifts_non_retained = 0;
         self.debug_stats.retained_virtual_list_reconciles = 0;
         self.debug_stats.retained_virtual_list_attached_items = 0;
         self.debug_stats.retained_virtual_list_detached_items = 0;
@@ -1315,6 +1850,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_view_cache_contained_relayout_roots.clear();
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
+        self.debug_layout_hotspots.clear();
+        self.debug_layout_stack.clear();
+        self.debug_widget_measure_hotspots.clear();
+        self.debug_widget_measure_stack.clear();
         self.debug_measure_children.clear();
         self.debug_invalidation_walks.clear();
         self.debug_model_change_hotspots.clear();
@@ -1324,7 +1863,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_hover_edge_this_frame = false;
         self.debug_hover_declarative_invalidations.clear();
         self.debug_dirty_views.clear();
+        #[cfg(feature = "diagnostics")]
+        self.debug_notify_requests.clear();
         self.debug_virtual_list_windows.clear();
+        self.debug_virtual_list_window_shift_samples.clear();
         self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
         self.debug_prepaint_actions.clear();
@@ -1519,6 +2061,47 @@ impl<H: UiHost> UiTree<H> {
         if !self.debug_enabled {
             return;
         }
+        if record.window_shift_kind != UiDebugVirtualListWindowShiftKind::None {
+            self.debug_stats.virtual_list_window_shifts_total = self
+                .debug_stats
+                .virtual_list_window_shifts_total
+                .saturating_add(1);
+            if record.window_shift_apply_mode
+                == Some(UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender)
+            {
+                self.debug_stats.virtual_list_window_shifts_non_retained = self
+                    .debug_stats
+                    .virtual_list_window_shifts_non_retained
+                    .saturating_add(1);
+            }
+        }
+
+        if record.window_shift_apply_mode
+            == Some(UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender)
+            && record.window_shift_kind != UiDebugVirtualListWindowShiftKind::None
+            && let Some(reason) = record.window_shift_reason
+        {
+            // Keep bundles bounded: window shifts can occur frequently during scroll.
+            const MAX_SAMPLES: usize = 64;
+            if self.debug_virtual_list_window_shift_samples.len() < MAX_SAMPLES {
+                self.debug_virtual_list_window_shift_samples.push(
+                    UiDebugVirtualListWindowShiftSample {
+                        frame_id: self.debug_stats.frame_id,
+                        source: record.source,
+                        node: record.node,
+                        element: record.element,
+                        window_shift_kind: record.window_shift_kind,
+                        window_shift_reason: reason,
+                        window_shift_apply_mode:
+                            UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender,
+                        window_shift_invalidation_detail: record.window_shift_invalidation_detail,
+                        prev_window_range: record.prev_window_range,
+                        window_range: record.window_range,
+                        render_window_range: record.render_window_range,
+                    },
+                );
+            }
+        }
         // Keep bundles bounded: real apps can have many virtual surfaces.
         const MAX_RECORDS: usize = 256;
         if self.debug_virtual_list_windows.len() >= MAX_RECORDS {
@@ -1660,6 +2243,48 @@ impl<H: UiHost> UiTree<H> {
         self.debug_overlay_policy_decisions.as_slice()
     }
 
+    pub(crate) fn debug_record_notify_request(
+        &mut self,
+        frame_id: FrameId,
+        caller_node: NodeId,
+        location: Option<crate::widget::UiSourceLocation>,
+    ) {
+        #[cfg(feature = "diagnostics")]
+        {
+            if !self.debug_enabled {
+                return;
+            }
+
+            let Some(location) = location else {
+                return;
+            };
+
+            // Mirror the v1 notify routing: the default target is the nearest view-cache root,
+            // falling back to the caller node when no cache boundary exists.
+            let target = self
+                .nearest_view_cache_root(caller_node)
+                .unwrap_or(caller_node);
+
+            if self.debug_notify_requests.len() >= 256 {
+                return;
+            }
+
+            self.debug_notify_requests.push(UiDebugNotifyRequest {
+                frame_id,
+                caller_node,
+                target_view: ViewId(target),
+                file: location.file,
+                line: location.line,
+                column: location.column,
+            });
+        }
+
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            let _ = (frame_id, caller_node, location);
+        }
+    }
+
     #[track_caller]
     pub fn debug_record_overlay_policy_decision(
         &mut self,
@@ -1731,6 +2356,20 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_layout_engine_solves.as_slice()
+    }
+
+    pub fn debug_layout_hotspots(&self) -> &[UiDebugLayoutHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_layout_hotspots.as_slice()
+    }
+
+    pub fn debug_widget_measure_hotspots(&self) -> &[UiDebugWidgetMeasureHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_widget_measure_hotspots.as_slice()
     }
 
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
@@ -1978,6 +2617,17 @@ impl<H: UiHost> UiTree<H> {
         self.debug_enabled
     }
 
+    pub(crate) fn node_layout_invalidated(&self, node: NodeId) -> bool {
+        self.nodes
+            .get(node)
+            .map(|n| n.invalidation.layout)
+            .unwrap_or(false)
+    }
+
+    pub(crate) fn node_measured_size(&self, node: NodeId) -> Option<Size> {
+        self.nodes.get(node).map(|n| n.measured_size)
+    }
+
     pub fn debug_stats(&self) -> UiDebugFrameStats {
         self.debug_stats
     }
@@ -2037,11 +2687,35 @@ impl<H: UiHost> UiTree<H> {
         self.debug_dirty_views.as_slice()
     }
 
+    pub fn debug_notify_requests(&self) -> &[UiDebugNotifyRequest] {
+        #[cfg(feature = "diagnostics")]
+        {
+            if !self.debug_enabled {
+                return &[];
+            }
+            return self.debug_notify_requests.as_slice();
+        }
+
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            &[]
+        }
+    }
+
     pub fn debug_virtual_list_windows(&self) -> &[UiDebugVirtualListWindow] {
         if !self.debug_enabled {
             return &[];
         }
         self.debug_virtual_list_windows.as_slice()
+    }
+
+    pub fn debug_virtual_list_window_shift_samples(
+        &self,
+    ) -> &[UiDebugVirtualListWindowShiftSample] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_virtual_list_window_shift_samples.as_slice()
     }
 
     pub fn debug_retained_virtual_list_reconciles(&self) -> &[UiDebugRetainedVirtualListReconcile] {
@@ -2260,7 +2934,13 @@ impl<H: UiHost> UiTree<H> {
             let Some(n) = self.nodes.get_mut(id) else {
                 continue;
             };
+            let layout_before = n.invalidation.layout;
             n.invalidation.mark(Invalidation::Layout);
+            record_layout_invalidation_transition(
+                &mut self.layout_invalidations_count,
+                layout_before,
+                n.invalidation.layout,
+            );
             for &child in &n.children {
                 stack.push(child);
             }
@@ -2538,7 +3218,9 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
-        self.nodes.insert(Node::new(widget))
+        let id = self.nodes.insert(Node::new(widget));
+        self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        id
     }
 
     #[cfg(test)]
@@ -2547,7 +3229,40 @@ impl<H: UiHost> UiTree<H> {
         element: GlobalElementId,
         widget: impl Widget<H> + 'static,
     ) -> NodeId {
-        self.nodes.insert(Node::new_for_element(element, widget))
+        let id = self.nodes.insert(Node::new_for_element(element, widget));
+        self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        id
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_clear_node_invalidations(&mut self, node: NodeId) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        let layout_before = n.invalidation.layout;
+        n.invalidation.clear();
+        record_layout_invalidation_transition(
+            &mut self.layout_invalidations_count,
+            layout_before,
+            n.invalidation.layout,
+        );
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_layout_invalidation(&mut self, node: NodeId, value: bool) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        let layout_before = n.invalidation.layout;
+        n.invalidation.layout = value;
+        if value {
+            n.invalidation.paint = true;
+        }
+        record_layout_invalidation_transition(
+            &mut self.layout_invalidations_count,
+            layout_before,
+            n.invalidation.layout,
+        );
     }
 
     pub fn set_root(&mut self, root: NodeId) {
@@ -2561,6 +3276,9 @@ impl<H: UiHost> UiTree<H> {
         if let Some(node) = self.nodes.get_mut(parent) {
             node.children.push(child);
             node.invalidation.hit_test = true;
+            if !node.invalidation.layout {
+                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+            }
             node.invalidation.layout = true;
             node.invalidation.paint = true;
         }
@@ -2657,6 +3375,9 @@ impl<H: UiHost> UiTree<H> {
         if let Some(n) = self.nodes.get_mut(parent) {
             n.children = children;
             n.invalidation.hit_test = true;
+            if !n.invalidation.layout {
+                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+            }
             n.invalidation.layout = true;
             n.invalidation.paint = true;
             propagate = true;
@@ -2768,6 +3489,9 @@ impl<H: UiHost> UiTree<H> {
         if let Some(n) = self.nodes.get_mut(parent) {
             n.children = children;
             n.invalidation.hit_test = true;
+            if !n.invalidation.layout {
+                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+            }
             n.invalidation.layout = true;
             n.invalidation.paint = true;
             propagate = true;
@@ -2897,6 +3621,9 @@ impl<H: UiHost> UiTree<H> {
         if let Some(n) = self.nodes.get_mut(parent) {
             n.children = children;
             n.invalidation.hit_test = true;
+            if !n.invalidation.layout {
+                self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+            }
             n.invalidation.layout = true;
             n.invalidation.paint = true;
         }
@@ -2982,8 +3709,6 @@ impl<H: UiHost> UiTree<H> {
             let root_layer = self.node_layer(root);
             let root_layer_visible =
                 root_layer.and_then(|layer| self.layers.get(layer).map(|l| l.visible));
-            let reachable_from_layer_roots =
-                pre_exists && self.debug_is_reachable_from_layer_roots(root);
             let root_children_len = self
                 .nodes
                 .get(root)
@@ -2997,6 +3722,11 @@ impl<H: UiHost> UiTree<H> {
             let root_parent_children_contains_root =
                 root_parent.and_then(|p| self.nodes.get(p).map(|n| n.children.contains(&root)));
             let frame_context = self.debug_remove_subtree_frame_context.remove(&root);
+            let reachable_from_layer_roots = pre_exists
+                && frame_context
+                    .as_ref()
+                    .map(|ctx| ctx.root_reachable_from_layer_roots)
+                    .unwrap_or_else(|| self.debug_is_reachable_from_layer_roots(root));
             let mut root_path: [u64; 16] = [0u64; 16];
             let mut root_path_nodes: [Option<NodeId>; 16] = [None; 16];
             let mut root_path_len: u8 = 0;
@@ -3311,6 +4041,7 @@ impl<H: UiHost> UiTree<H> {
             let Some(n) = self.nodes.get(node) else {
                 continue;
             };
+            let layout_invalidated = n.invalidation.layout;
 
             if !children_pushed {
                 let children = n.children.clone();
@@ -3334,6 +4065,13 @@ impl<H: UiHost> UiTree<H> {
             self.captured.retain(|_, n| *n != node);
 
             self.cleanup_node_resources(services, node);
+            if layout_invalidated {
+                record_layout_invalidation_transition(
+                    &mut self.layout_invalidations_count,
+                    true,
+                    false,
+                );
+            }
             self.nodes.remove(node);
             self.observed_in_layout.remove_node(node);
             self.observed_in_paint.remove_node(node);
@@ -3401,6 +4139,22 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).and_then(|n| n.parent)
     }
 
+    pub fn debug_node_measured_size(&self, node: NodeId) -> Option<Size> {
+        self.nodes.get(node).map(|n| n.measured_size)
+    }
+
+    /// Debug helper for mapping a `NodeId` back to the declarative `ElementInstance` kind (when
+    /// the node is driven by the declarative renderer).
+    pub fn debug_declarative_instance_kind(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+    ) -> Option<&'static str> {
+        crate::declarative::element_record_for_node(app, window, node)
+            .map(|record| record.instance.kind_name())
+    }
+
     pub fn first_focusable_ancestor_including_declarative(
         &self,
         app: &mut H,
@@ -3415,6 +4169,7 @@ impl<H: UiHost> UiTree<H> {
                 match &record.instance {
                     crate::declarative::ElementInstance::TextInput(_) => true,
                     crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::TextInputRegion(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
                     _ => false,
                 }
@@ -3483,6 +4238,7 @@ impl<H: UiHost> UiTree<H> {
                 let focusable = match &record.instance {
                     crate::declarative::ElementInstance::TextInput(_) => true,
                     crate::declarative::ElementInstance::TextArea(_) => true,
+                    crate::declarative::ElementInstance::TextInputRegion(_) => true,
                     crate::declarative::ElementInstance::Pressable(p) => p.enabled && p.focusable,
                     _ => false,
                 };
@@ -3833,10 +4589,22 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn focus_is_text_input(&mut self) -> bool {
+    fn focus_is_text_input(&mut self, app: &mut H) -> bool {
         let Some(focus) = self.focus else {
             return false;
         };
+
+        if let Some(window) = self.window
+            && let Some(record) = crate::declarative::element_record_for_node(app, window, focus)
+        {
+            return matches!(
+                &record.instance,
+                crate::declarative::ElementInstance::TextInput(_)
+                    | crate::declarative::ElementInstance::TextArea(_)
+                    | crate::declarative::ElementInstance::TextInputRegion(_)
+            );
+        }
+
         if self
             .nodes
             .get(focus)
@@ -3855,7 +4623,7 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
         query: &fret_runtime::PlatformTextInputQuery,
     ) -> fret_runtime::PlatformTextInputQueryResult {
-        let focus_is_text_input = self.focus_is_text_input();
+        let focus_is_text_input = self.focus_is_text_input(app);
         if !focus_is_text_input {
             return match query {
                 fret_runtime::PlatformTextInputQuery::SelectedTextRange
@@ -3958,7 +4726,7 @@ impl<H: UiHost> UiTree<H> {
         range: fret_runtime::Utf16Range,
         text: &str,
     ) -> bool {
-        if !self.focus_is_text_input() {
+        if !self.focus_is_text_input(app) {
             return false;
         }
         let Some(focus) = self.focus else {
@@ -3993,7 +4761,7 @@ impl<H: UiHost> UiTree<H> {
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
     ) -> bool {
-        if !self.focus_is_text_input() {
+        if !self.focus_is_text_input(app) {
             return false;
         }
         let Some(focus) = self.focus else {
@@ -4288,7 +5056,13 @@ impl<H: UiHost> UiTree<H> {
             let mut did_stop = false;
             let mut mark_dirty = false;
             if let Some(n) = self.nodes.get_mut(id) {
+                let layout_before = n.invalidation.layout;
                 n.invalidation.mark(inv);
+                record_layout_invalidation_transition(
+                    &mut self.layout_invalidations_count,
+                    layout_before,
+                    n.invalidation.layout,
+                );
                 let can_truncate_at_cache_root = inv == Invalidation::Paint
                     || (n.view_cache.contained_layout
                         && n.view_cache.layout_definite
@@ -4354,7 +5128,13 @@ impl<H: UiHost> UiTree<H> {
                 if let Some(n) = self.nodes.get_mut(id)
                     && n.view_cache.enabled
                 {
+                    let layout_before = n.invalidation.layout;
                     n.invalidation.mark(inv);
+                    record_layout_invalidation_transition(
+                        &mut self.layout_invalidations_count,
+                        layout_before,
+                        n.invalidation.layout,
+                    );
                     if Self::invalidation_marks_view_dirty(source, inv, detail) {
                         n.view_cache_needs_rerender = true;
                         mark_dirty = true;
@@ -4432,7 +5212,13 @@ impl<H: UiHost> UiTree<H> {
             let mut mark_dirty = false;
             if let Some(n) = self.nodes.get_mut(id) {
                 if source == UiDebugInvalidationSource::Notify || (already & needed) != needed {
+                    let layout_before = n.invalidation.layout;
                     n.invalidation.mark(inv);
+                    record_layout_invalidation_transition(
+                        &mut self.layout_invalidations_count,
+                        layout_before,
+                        n.invalidation.layout,
+                    );
                     visited.insert(id, already | needed);
                 }
 
@@ -4500,7 +5286,13 @@ impl<H: UiHost> UiTree<H> {
                             mark_dirty = true;
                         }
                         if (already & needed) != needed {
+                            let layout_before = n.invalidation.layout;
                             n.invalidation.mark(inv);
+                            record_layout_invalidation_transition(
+                                &mut self.layout_invalidations_count,
+                                layout_before,
+                                n.invalidation.layout,
+                            );
                         }
                     }
                     if mark_dirty {
@@ -4964,6 +5756,14 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
+        let profile_semantics =
+            std::env::var_os("FRET_SEMANTICS_PROFILE").is_some_and(|v| !v.is_empty() && v != "0");
+        let profile_started = profile_semantics.then(Instant::now);
+        let mut t_element_id_map: Option<Duration> = None;
+        let mut t_window_frame_children: Option<Duration> = None;
+        let mut t_traversal: Option<Duration> = None;
+        let mut t_relations: Option<Duration> = None;
+
         let base_root = self
             .base_layer
             .and_then(|id| self.layers.get(id).map(|l| l.root));
@@ -4977,19 +5777,32 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let element_id_map: HashMap<u64, NodeId> =
-            crate::declarative::frame::element_id_map_for_window(app, window);
+        let element_id_map = {
+            let started = profile_semantics.then(Instant::now);
+            let out = crate::declarative::frame::element_id_map_for_window(app, window);
+            if let Some(started) = started {
+                t_element_id_map = Some(started.elapsed());
+            }
+            out
+        };
 
         // View-cache reuse can legitimately skip re-setting `UiTree` child edges for cached
         // subtrees. `WindowFrame` retains the authoritative element-tree edges, so semantics
         // traversal should treat the union as the effective child list (mirrors GC reachability
         // bookkeeping). Only pay the cost when view-cache reuse can occur.
-        let window_frame_children: HashMap<NodeId, Vec<NodeId>> = if self.view_cache_active() {
-            crate::declarative::with_window_frame(app, window, |window_frame| {
-                window_frame.map(|w| w.children.clone()).unwrap_or_default()
-            })
-        } else {
-            HashMap::new()
+        let window_frame_children: HashMap<NodeId, Arc<[NodeId]>> = {
+            let started = profile_semantics.then(Instant::now);
+            let out = if self.view_cache_active() {
+                crate::declarative::with_window_frame(app, window, |window_frame| {
+                    window_frame.map(|w| w.children.clone()).unwrap_or_default()
+                })
+            } else {
+                HashMap::new()
+            };
+            if let Some(started) = started {
+                t_window_frame_children = Some(started.elapsed());
+            }
+            out
         };
 
         let mut barrier_index: Option<usize> = None;
@@ -5026,6 +5839,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut nodes: Vec<SemanticsNode> = Vec::with_capacity(self.nodes.len());
 
+        let traversal_started = profile_semantics.then(Instant::now);
         for root in roots.iter().map(|r| r.root) {
             let mut visited: HashSet<NodeId> = HashSet::new();
             // Stack entries carry the transform that maps this node's local bounds into
@@ -5086,10 +5900,12 @@ impl<H: UiHost> UiTree<H> {
                     let ui_children = node.children.clone();
                     let children = match window_frame_children.get(&id) {
                         None => ui_children,
-                        Some(frame_children) if ui_children.is_empty() => frame_children.clone(),
+                        Some(frame_children) if ui_children.is_empty() => {
+                            frame_children.as_ref().to_vec()
+                        }
                         Some(frame_children) => {
                             let mut out = ui_children;
-                            for &child in frame_children {
+                            for &child in frame_children.iter() {
                                 if !out.contains(&child) {
                                     out.push(child);
                                 }
@@ -5158,7 +5974,7 @@ impl<H: UiHost> UiTree<H> {
                         app,
                         node: id,
                         window: Some(window),
-                        element_id_map: Some(&element_id_map),
+                        element_id_map: Some(element_id_map.as_ref()),
                         bounds,
                         children: children.as_slice(),
                         focus,
@@ -5222,11 +6038,15 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
+        if let Some(started) = traversal_started {
+            t_traversal = Some(started.elapsed());
+        }
 
         // Normalize relation edges: for some composite widgets, authoring only sets `labelled_by`
         // (e.g. TabPanel -> Tab) but the platform-facing semantics want the controller to also
         // advertise `controls` (e.g. Tab -> TabPanel). We derive that edge for the subset of
         // role pairs where this bidirectional link is expected.
+        let relations_started = profile_semantics.then(Instant::now);
         let mut index_by_id: HashMap<NodeId, usize> = HashMap::with_capacity(nodes.len());
         for (idx, node) in nodes.iter().enumerate() {
             index_by_id.insert(node.id, idx);
@@ -5257,7 +6077,11 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         }
+        if let Some(started) = relations_started {
+            t_relations = Some(started.elapsed());
+        }
 
+        let nodes_len = nodes.len();
         self.semantics = Some(Arc::new(SemanticsSnapshot {
             window,
             roots,
@@ -5270,6 +6094,21 @@ impl<H: UiHost> UiTree<H> {
 
         if let Some(snapshot) = self.semantics.as_deref() {
             semantics::validate_semantics_if_enabled(snapshot);
+        }
+
+        if let Some(started) = profile_started {
+            let total = started.elapsed();
+            tracing::info!(
+                window = ?window,
+                view_cache_active = self.view_cache_active(),
+                nodes = nodes_len,
+                total_ms = total.as_millis(),
+                element_id_map_ms = t_element_id_map.map(|d| d.as_millis()),
+                window_frame_children_ms = t_window_frame_children.map(|d| d.as_millis()),
+                traversal_ms = t_traversal.map(|d| d.as_millis()),
+                relations_ms = t_relations.map(|d| d.as_millis()),
+                "semantics snapshot built"
+            );
         }
     }
 

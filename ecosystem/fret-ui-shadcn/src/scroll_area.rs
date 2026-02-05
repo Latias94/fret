@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, SemanticsRole};
 use fret_ui::element::AnyElement;
 use fret_ui::element::ContainerProps;
 use fret_ui::element::HoverRegionProps;
@@ -15,7 +15,7 @@ use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
 use fret_ui::element::ScrollbarStyle;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
@@ -292,12 +292,28 @@ impl ScrollAreaRoot {
             if matches!(layout.size.width, Length::Auto) {
                 layout.size.width = Length::Fill;
             }
+            // Radix/shadcn ScrollArea roots typically behave like `size: 100%` containers. When the
+            // author provides a `max-height` (cmdk-style lists), we keep `height: auto` so the root
+            // can shrink-wrap the content up to the cap.
+            if matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_none() {
+                layout.size.height = Length::Fill;
+            }
             layout.size.min_width.get_or_insert(Px(0.0));
             layout.size.min_height.get_or_insert(Px(0.0));
+            let shrinkwrap_height_via_max_h =
+                matches!(layout.size.height, Length::Auto) && layout.size.max_height.is_some();
             vec![cx.stack_props(StackProps { layout }, move |cx| {
                 let mut scroll_layout = LayoutStyle::default();
                 scroll_layout.size.width = Length::Fill;
-                scroll_layout.size.height = Length::Fill;
+                // When the root is shrink-wrapped via `max-height` (cmdk-style
+                // `max-h-[...] overflow-y-auto`), avoid `Fill` (percent sizing) on the viewport.
+                // Percent heights under an auto-height containing block resolve to 0 in layout
+                // engines like Taffy, which breaks hit-testing and hover-driven selection.
+                scroll_layout.size.height = if shrinkwrap_height_via_max_h {
+                    Length::Auto
+                } else {
+                    Length::Fill
+                };
                 scroll_layout.size.min_width = Some(Px(0.0));
                 scroll_layout.size.min_height = Some(Px(0.0));
                 scroll_layout.overflow = Overflow::Clip;
@@ -307,27 +323,23 @@ impl ScrollAreaRoot {
                         layout: scroll_layout,
                         axis,
                         scroll_handle: Some(handle.clone()),
+                        windowed_paint: false,
                         probe_unbounded: viewport_probe_unbounded,
                         intrinsic_measure_mode,
                     },
-                    move |cx| match viewport_test_id {
-                        Some(test_id) => {
-                            let wrapped = cx.semantics(
-                                SemanticsProps {
-                                    role: fret_core::SemanticsRole::Group,
-                                    test_id: Some(test_id),
-                                    ..Default::default()
-                                },
-                                move |_cx| viewport_children,
-                            );
-                            vec![wrapped]
-                        }
-                        None => viewport_children,
-                    },
+                    move |_cx| viewport_children,
                 );
 
                 let scroll_id = scroll.id;
-                let mut children = vec![scroll];
+                let viewport = match viewport_test_id {
+                    Some(test_id) => scroll.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Group)
+                            .test_id(test_id),
+                    ),
+                    None => scroll,
+                };
+                let mut children = vec![viewport];
 
                 let thumb = shadcn_scrollbar_thumb(&theme);
                 let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);

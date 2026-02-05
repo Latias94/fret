@@ -9,7 +9,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, MarginEdge, MarginEdges, PointerRegionProps,
-    RenderTransformProps, SemanticsProps, SizeStyle,
+    RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -292,13 +292,7 @@ impl DrawerContent {
             )]
         });
 
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Dialog,
-                ..Default::default()
-            },
-            move |_cx| vec![content],
-        )
+        content.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Dialog))
     }
 }
 

@@ -45,6 +45,10 @@ impl Args {
             "md.sys.shape.".to_string(),
             // MVP component prefixes we actively align today.
             "md.comp.button.".to_string(),
+            "md.comp.badge.".to_string(),
+            "md.comp.fab".to_string(),
+            "md.comp.extended-fab".to_string(),
+            "md.comp.outlined-segmented-button.".to_string(),
             "md.comp.radio-button.".to_string(),
             "md.comp.checkbox.".to_string(),
             "md.comp.switch.".to_string(),
@@ -58,10 +62,21 @@ impl Args {
             "md.comp.plain-tooltip.".to_string(),
             "md.comp.rich-tooltip.".to_string(),
             "md.comp.snackbar.".to_string(),
+            "md.comp.top-app-bar.small.".to_string(),
+            "md.comp.top-app-bar.small.centered.".to_string(),
+            "md.comp.top-app-bar.medium.".to_string(),
+            "md.comp.top-app-bar.large.".to_string(),
+            "md.comp.sheet.bottom.".to_string(),
+            "md.comp.date-picker.docked.".to_string(),
+            "md.comp.date-picker.modal.".to_string(),
+            "md.comp.time-picker.".to_string(),
+            "md.comp.time-input.".to_string(),
             "md.comp.outlined-text-field.".to_string(),
             "md.comp.filled-text-field.".to_string(),
             "md.comp.outlined-select.".to_string(),
             "md.comp.filled-select.".to_string(),
+            "md.comp.outlined-autocomplete.".to_string(),
+            "md.comp.filled-autocomplete.".to_string(),
             "md.comp.dialog.".to_string(),
             "md.comp.full-screen-dialog.".to_string(),
             "md.comp.divider.".to_string(),
@@ -312,6 +327,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn generate_output(args: &Args) -> Result<String, Box<dyn std::error::Error>> {
     let parsed = parse_sass_dir(&args.sass_dir)?;
     let selected = select_tokens(&parsed, &args.prefixes);
+    if args.debug {
+        let selected_autocomplete = selected
+            .iter()
+            .filter(|def| def.token_key.contains("autocomplete"))
+            .count();
+        eprintln!(
+            "import: parsed_tokens={} selected_tokens={} selected_autocomplete={}",
+            parsed.by_token.len(),
+            selected.len(),
+            selected_autocomplete
+        );
+    }
 
     let resolved = resolve_all(selected, &parsed)?;
     let out_rs = emit_rust(&resolved, &args.sass_dir);
@@ -567,6 +594,41 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
     );
     emit_inject_comp_scalars(
         &mut out,
+        "inject_comp_badge_scalars",
+        "md.comp.badge.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.badge."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_fab_scalars",
+        "md.comp.fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_extended_fab_scalars",
+        "md.comp.extended-fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.extended-fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_outlined_segmented_button_scalars",
+        "md.comp.outlined-segmented-button.",
+        defs.iter()
+            .filter(|d| {
+                d.token_key
+                    .starts_with("md.comp.outlined-segmented-button.")
+            })
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
         "inject_comp_radio_button_scalars",
         "md.comp.radio-button.",
         defs.iter()
@@ -797,6 +859,54 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
             .filter(|d| d.token_key.starts_with("md.comp.filled-select."))
             .collect::<Vec<_>>(),
     );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_outlined_autocomplete_scalars",
+        "md.comp.outlined-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-autocomplete."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_filled_autocomplete_scalars",
+        "md.comp.filled-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-autocomplete."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_date_picker_docked_scalars",
+        "md.comp.date-picker.docked.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.docked."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_date_picker_modal_scalars",
+        "md.comp.date-picker.modal.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.modal."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_time_picker_scalars",
+        "md.comp.time-picker.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-picker."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_scalars(
+        &mut out,
+        "inject_comp_time_input_scalars",
+        "md.comp.time-input.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-input."))
+            .collect::<Vec<_>>(),
+    );
 
     emit_copy_color_helper(&mut out);
     emit_inject_comp_color_aliases(
@@ -805,6 +915,41 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.button.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.button."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_badge_colors_from_sys",
+        "md.comp.badge.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.badge."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_fab_colors_from_sys",
+        "md.comp.fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_extended_fab_colors_from_sys",
+        "md.comp.extended-fab.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.extended-fab."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_outlined_segmented_button_colors_from_sys",
+        "md.comp.outlined-segmented-button.",
+        defs.iter()
+            .filter(|d| {
+                d.token_key
+                    .starts_with("md.comp.outlined-segmented-button.")
+            })
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_color_aliases(
@@ -941,6 +1086,54 @@ fn emit_rust(defs: &[TokenDef], sass_dir: &Path) -> String {
         "md.comp.filled-select.",
         defs.iter()
             .filter(|d| d.token_key.starts_with("md.comp.filled-select."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_outlined_autocomplete_colors_from_sys",
+        "md.comp.outlined-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.outlined-autocomplete."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_filled_autocomplete_colors_from_sys",
+        "md.comp.filled-autocomplete.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.filled-autocomplete."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_date_picker_docked_colors_from_sys",
+        "md.comp.date-picker.docked.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.docked."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_date_picker_modal_colors_from_sys",
+        "md.comp.date-picker.modal.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.date-picker.modal."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_time_picker_colors_from_sys",
+        "md.comp.time-picker.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-picker."))
+            .collect::<Vec<_>>(),
+    );
+    emit_inject_comp_color_aliases(
+        &mut out,
+        "inject_comp_time_input_colors_from_sys",
+        "md.comp.time-input.",
+        defs.iter()
+            .filter(|d| d.token_key.starts_with("md.comp.time-input."))
             .collect::<Vec<_>>(),
     );
     emit_inject_comp_color_aliases(

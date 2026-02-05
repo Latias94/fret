@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{Corners, Edges, Px, SemanticsRole};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    SemanticsProps, SizeStyle, SpacerProps,
+    SemanticsDecoration, SizeStyle, SpacerProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
@@ -12,17 +12,14 @@ use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 fn wrap_panel_semantics<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
+    _cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
     child: AnyElement,
 ) -> AnyElement {
-    cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Panel,
-            label: Some(label),
-            ..Default::default()
-        },
-        move |_cx| vec![child],
+    child.attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Panel)
+            .label(label),
     )
 }
 
@@ -36,6 +33,47 @@ pub enum ChartTooltipIndicator {
 impl Default for ChartTooltipIndicator {
     fn default() -> Self {
         Self::Dot
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    #[test]
+    fn chart_panel_semantics_stamps_role_without_layout_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let child = cx.text("X");
+            wrap_panel_semantics(cx, Arc::from("Panel"), child)
+        });
+
+        assert!(
+            !matches!(element.kind, ElementKind::Semantics(_)),
+            "expected chart panel wrappers to avoid `Semantics` wrappers; use `attach_semantics` instead"
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Panel)
+        );
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.label.as_deref()),
+            Some("Panel")
+        );
     }
 }
 

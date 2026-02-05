@@ -39,6 +39,12 @@ pub struct WindowElementDiagnosticsSnapshot {
     pub view_cache_reuse_roots: Vec<GlobalElementId>,
     pub view_cache_reuse_root_element_counts: Vec<(GlobalElementId, u32)>,
     pub view_cache_reuse_root_element_samples: Vec<ViewCacheReuseRootElementsSample>,
+    /// Detached-but-retained node roots kept alive by retained virtual surfaces (ADR 0192).
+    ///
+    /// This is part of the window's explicit liveness root set under view-cache reuse (ADR 0191).
+    pub retained_keep_alive_roots_len: u32,
+    pub retained_keep_alive_roots_head: Vec<NodeId>,
+    pub retained_keep_alive_roots_tail: Vec<NodeId>,
     pub node_entry_root_overwrites: Vec<NodeEntryRootOverwrite>,
 }
 
@@ -141,7 +147,9 @@ pub struct WindowElementState {
     view_cache_transitioned_reuse_roots: HashSet<GlobalElementId>,
     view_cache_stack: Vec<GlobalElementId>,
     raf_notify_roots: HashSet<GlobalElementId>,
-    pub(super) pending_retained_virtual_list_reconciles: HashSet<GlobalElementId>,
+    pub(super) pending_retained_virtual_list_reconciles:
+        HashMap<GlobalElementId, crate::tree::UiDebugRetainedVirtualListReconcileKind>,
+    retained_virtual_list_keep_alive_roots: HashSet<NodeId>,
     prepared_frame: FrameId,
     #[cfg(any(test, feature = "diagnostics"))]
     strict_ownership: bool,
@@ -152,6 +160,7 @@ pub struct WindowElementState {
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
+    transient_events: HashMap<(GlobalElementId, u64), FrameId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
@@ -212,6 +221,9 @@ impl WindowElementState {
 
         self.advance_element_state_buffers(lag_frames);
 
+        let cutoff = frame_id.0.saturating_sub(1);
+        self.transient_events
+            .retain(|_, recorded| recorded.0 >= cutoff);
         self.raf_notify_roots.clear();
         self.view_cache_key_mismatch_roots.clear();
 
@@ -274,6 +286,29 @@ impl WindowElementState {
             self.debug_node_entry_root_overwrites
                 .retain(|r| r.frame_id.0 >= cutoff);
         }
+    }
+
+    pub(crate) fn retained_virtual_list_keep_alive_roots(
+        &self,
+    ) -> impl Iterator<Item = NodeId> + '_ {
+        self.retained_virtual_list_keep_alive_roots.iter().copied()
+    }
+
+    pub(crate) fn add_retained_virtual_list_keep_alive_root(&mut self, node: NodeId) {
+        self.retained_virtual_list_keep_alive_roots.insert(node);
+    }
+
+    pub(crate) fn remove_retained_virtual_list_keep_alive_root(&mut self, node: NodeId) {
+        self.retained_virtual_list_keep_alive_roots.remove(&node);
+    }
+
+    pub(crate) fn record_transient_event(&mut self, element: GlobalElementId, key: u64) {
+        self.transient_events
+            .insert((element, key), self.prepared_frame);
+    }
+
+    pub(crate) fn take_transient_event(&mut self, element: GlobalElementId, key: u64) -> bool {
+        self.transient_events.remove(&(element, key)).is_some()
     }
 
     fn advance_element_state_buffers(&mut self, lag_frames: u64) {
@@ -374,12 +409,31 @@ impl WindowElementState {
         Some(out)
     }
 
-    pub(crate) fn mark_retained_virtual_list_needs_reconcile(&mut self, element: GlobalElementId) {
+    pub(crate) fn mark_retained_virtual_list_needs_reconcile(
+        &mut self,
+        element: GlobalElementId,
+        kind: crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    ) {
         self.pending_retained_virtual_list_reconciles
-            .insert(element);
+            .entry(element)
+            .and_modify(|existing| {
+                // "Escape" is correctness-critical; if both are scheduled in the same tick, keep the
+                // stronger reason so downstream diagnostics/gates remain explainable.
+                if *existing == crate::tree::UiDebugRetainedVirtualListReconcileKind::Prefetch
+                    && kind == crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape
+                {
+                    *existing = kind;
+                }
+            })
+            .or_insert(kind);
     }
 
-    pub(crate) fn take_retained_virtual_list_reconciles(&mut self) -> Vec<GlobalElementId> {
+    pub(crate) fn take_retained_virtual_list_reconciles(
+        &mut self,
+    ) -> Vec<(
+        GlobalElementId,
+        crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    )> {
         self.pending_retained_virtual_list_reconciles
             .drain()
             .collect()
@@ -723,6 +777,30 @@ impl WindowElementState {
         }
     }
 
+    pub(crate) fn clear_stale_interaction_targets_for_frame(&mut self, frame_id: FrameId) {
+        let is_live_this_frame = |id: GlobalElementId| {
+            self.nodes
+                .get(&id)
+                .is_some_and(|entry| entry.last_seen_frame == frame_id)
+        };
+
+        if let Some(id) = self.hovered_pressable
+            && !is_live_this_frame(id)
+        {
+            self.hovered_pressable = None;
+        }
+        if let Some(id) = self.pressed_pressable
+            && !is_live_this_frame(id)
+        {
+            self.pressed_pressable = None;
+        }
+        if let Some(id) = self.hovered_hover_region
+            && !is_live_this_frame(id)
+        {
+            self.hovered_hover_region = None;
+        }
+    }
+
     pub(crate) fn set_root_bounds(&mut self, root: GlobalElementId, bounds: Rect) {
         self.root_bounds.insert(root, bounds);
     }
@@ -841,6 +919,35 @@ impl WindowElementState {
                 })
                 .collect();
 
+        const KEEP_ALIVE_ROOT_SAMPLE: usize = 16;
+        let mut retained_keep_alive_roots: Vec<NodeId> = self
+            .retained_virtual_list_keep_alive_roots
+            .iter()
+            .copied()
+            .collect();
+        retained_keep_alive_roots.sort_by_key(|n| n.data().as_ffi());
+        let retained_keep_alive_roots_len =
+            retained_keep_alive_roots.len().min(u32::MAX as usize) as u32;
+        let retained_keep_alive_roots_head: Vec<NodeId> = retained_keep_alive_roots
+            .iter()
+            .take(KEEP_ALIVE_ROOT_SAMPLE)
+            .copied()
+            .collect();
+        let retained_keep_alive_roots_tail: Vec<NodeId> =
+            if retained_keep_alive_roots.len() > KEEP_ALIVE_ROOT_SAMPLE {
+                retained_keep_alive_roots
+                    .iter()
+                    .skip(
+                        retained_keep_alive_roots
+                            .len()
+                            .saturating_sub(KEEP_ALIVE_ROOT_SAMPLE),
+                    )
+                    .copied()
+                    .collect()
+            } else {
+                Vec::new()
+            };
+
         WindowElementDiagnosticsSnapshot {
             focused_element: self.focused_element,
             focused_element_node: node_for(self.focused_element),
@@ -886,6 +993,9 @@ impl WindowElementState {
             view_cache_reuse_roots,
             view_cache_reuse_root_element_counts,
             view_cache_reuse_root_element_samples,
+            retained_keep_alive_roots_len,
+            retained_keep_alive_roots_head,
+            retained_keep_alive_roots_tail,
             node_entry_root_overwrites: self.debug_node_entry_root_overwrites.clone(),
         }
     }
@@ -1039,6 +1149,46 @@ impl DebugIdentitySegment {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn transient_events_survive_one_frame_and_clear_on_read() {
+        let mut state = WindowElementState::default();
+        let element = GlobalElementId(123);
+        let key = 0xDEAD_BEEF;
+
+        state.prepare_for_frame(FrameId(1), 0);
+        state.record_transient_event(element, key);
+
+        // A transient event should be observable in the next prepared frame, since input can
+        // arrive between frames.
+        state.prepare_for_frame(FrameId(2), 0);
+        assert!(state.take_transient_event(element, key));
+        assert!(!state.take_transient_event(element, key));
+    }
+
+    #[test]
+    fn transient_events_prune_after_two_frames_if_not_consumed() {
+        let mut state = WindowElementState::default();
+        let element = GlobalElementId(123);
+        let key = 0xDEAD_BEEF;
+
+        state.prepare_for_frame(FrameId(10), 0);
+        state.record_transient_event(element, key);
+
+        // Kept for one additional frame to allow delivery on the next render.
+        state.prepare_for_frame(FrameId(11), 0);
+        assert!(state.take_transient_event(element, key));
+
+        // If we record and never consume, it should not survive beyond the next-next frame.
+        state.record_transient_event(element, key);
+        state.prepare_for_frame(FrameId(12), 0);
+        assert!(state.take_transient_event(element, key));
+
+        state.record_transient_event(element, key);
+        state.prepare_for_frame(FrameId(13), 0);
+        state.prepare_for_frame(FrameId(14), 0);
+        assert!(!state.take_transient_event(element, key));
+    }
 
     #[test]
     #[should_panic(expected = "ownership root overwrite detected")]

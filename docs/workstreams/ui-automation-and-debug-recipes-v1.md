@@ -30,6 +30,26 @@ Examples of target bugs:
 - overlay barriers that block underlay input unexpectedly,
 - heavy layout hot spots (e.g. Taffy measure/solve dominated frames).
 
+User-facing performance concerns this workstream should explicitly answer:
+
+- **CPU utilization**: avoid “mysterious background work” (unnecessary redraws, polling loops, runaway invalidation).
+- **Memory footprint**: keep native apps lightweight (no browser runtime), and produce evidence for regressions.
+- **Redraw efficiency**: settle “immediate-mode overdraw” debates with measurable signals (paint/cache reuse/invalidation),
+  not philosophy.
+
+Practical perf triage recipe we should keep tightening (especially for “resize feels laggy” reports):
+
+- First, enable redraw hitch logging to split the frame into `prepare` / `render` / `record` / `present` and determine
+  whether the hitch is CPU-side UI work or GPU/present/surface behavior (see `docs/debugging-playbook.md`).
+- If `render_ms` dominates, capture a bundle during the problematic interaction and use `fretboard diag stats --sort time`
+  to attribute the slowest snapshots to `layout` vs `paint` (and to `layout_engine_solve_time_us` when relevant).
+- If `layout_time_us` is large but `layout_engine_solve_time_us` is small, enable `FRET_LAYOUT_NODE_PROFILE=1` to
+  attribute time to individual widget `layout()` calls (e.g. identify intrinsic-measure dominated nodes like scroll
+  containers).
+- If a `Scroll` node dominates, enable `FRET_SCROLL_LAYOUT_PROFILE=1` and (when needed) `FRET_MEASURE_NODE_PROFILE=1` to
+  see whether the hitch is dominated by “probe-unbounded” intrinsic measurement (e.g. `avail_h=MaxContent`) vs final
+  child layout.
+
 ## Existing foundation (what we should build on)
 
 Fret already has most of the primitives needed for a “test-engine-like” workflow:
@@ -43,6 +63,40 @@ Fret already has most of the primitives needed for a “test-engine-like” work
 - “Stale paint” detection based on semantics bounds vs scene fingerprint: `apps/fretboard/src/diag.rs` (`--check-stale-paint`)
 
 This workstream should *not* replace those pieces; it should unify and extend them.
+
+## Known gaps (as of 2026-01-30)
+
+This section is a quick “what’s real today vs what we want in v1” checklist.
+
+- **`diag repro` is not yet the full unified runner.**
+  - `fretboard diag repro <script|suite>` exists as a convenience wrapper.
+  - It writes `FRET_DIAG_DIR/repro.summary.json` and packs `FRET_DIAG_DIR/repro.zip`.
+  - It writes `FRET_DIAG_DIR/evidence.index.json` as a lightweight index of the key artifacts/checks/resources for AI/CI.
+  - For suites, it packs **multiple** bundles under stable zip prefixes (and includes script sources under `_root/scripts/`).
+  - It can best-effort request RenderDoc autocapture (`--with renderdoc`) and attempt post-capture exports via
+    `fret-renderdoc dump` into `FRET_DIAG_DIR/renderdoc/inspect/` (and includes those artifacts in `repro.zip`).
+  - Tracy support is still partial: `--with tracy` enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy`
+    for `cargo run` launches, but capture export still requires the Tracy UI (no automated `tracy-capture` integration yet).
+  - The machine summary is still evolving (it is not yet a stabilized CI gate format).
+- **Screenshot capture remains split into two modes.**
+  - `FRET_DIAG_SCREENSHOT=1` writes `frame.bmp` during bundle dumps (dump-triggered, bundle-scoped).
+  - `FRET_DIAG_SCREENSHOTS=1` enables the on-demand PNG protocol used by script steps like `capture_screenshot`.
+  - These are intentionally separate today, but the UX and documentation should keep them unambiguous.
+- **High-level intent actions exist (Script schema v2), but are still early.**
+  - In addition to the low-level v1 steps (`click`, `drag_pointer`, `wheel`, `wait_until`, ...), schema v2 adds intent steps:
+    `ensure_visible`, `scroll_into_view`, `type_text_into`, `menu_select`, `drag_to`, `set_slider_value`.
+  - Example script: `tools/diag-scripts/ui-gallery-slider-set-value.json` (requires the UI gallery slider test ids).
+- **Repaint checks remain best-effort, but are now automation-friendly.**
+  - In addition to stale paint / stale scene checks, `--check-semantics-changed-repainted` can flag “semantics changed but
+    paint did not” when `semantics_fingerprint` changes without a `scene_fingerprint` change, and it can emit a structured
+    evidence file via `--dump-semantics-changed-repainted-json`.
+  - For “expected pixels must change” assertions, `--check-pixels-changed <test_id>` can hash the screenshot region inside
+    the target semantics bounds and gate on first-vs-last changes (writes `check.pixels_changed.json` to `FRET_DIAG_DIR`).
+- **Tracy / RenderDoc are only partially integrated.**
+  - `--with renderdoc` wires env vars for autocapture, attempts `fret-renderdoc dump` post-run (best-effort, requires
+    RenderDoc installed), and includes `.rdc` + dump JSON/PNG in `repro.zip`.
+  - `--with tracy` enables `FRET_TRACY=1` and can auto-inject `--features fret-bootstrap/tracy` for `cargo run` launches, but
+    capture export still requires the Tracy UI (no automated `tracy-capture` integration yet).
 
 ## Goals (v1)
 
@@ -133,11 +187,15 @@ The goal is: when a repaint bug happens, we can answer “why didn’t we repain
 Checks to standardize (CLI gates + bundle evidence):
 
 - **Semantics moved but scene fingerprint didn’t** (already: `--check-stale-paint`).
-- **Semantics changed but scene fingerprint didn’t** (new):
+- **Semantics changed but scene fingerprint didn’t** (tooling: `--check-semantics-changed-repainted`):
   - requires a `semantics_fingerprint` per snapshot (core hook).
+  - optional: `--dump-semantics-changed-repainted-json` writes `check.semantics_changed_repainted.json` next to
+    `bundle.json` for machine-readable evidence (AI/CI triage).
 - **Expected-to-change region didn’t repaint** (new, screenshot-backed optional):
-  - request a screenshot at step boundaries,
-  - compute a region hash inside the target bounds and assert it changed.
+  - tooling: `--check-pixels-changed <test_id>`
+  - requires `capture_screenshot` steps (and screenshots enabled),
+  - computes a region hash inside the target semantics bounds and asserts it changed,
+  - writes `check.pixels_changed.json` to `FRET_DIAG_DIR` for AI/CI triage.
 - **Invalidation accounting** (new optional):
   - when an action should cause layout or paint, assert we saw a matching invalidation walk/source/category.
 
@@ -147,6 +205,12 @@ This is intentionally “best effort” but must produce actionable artifacts, n
 
 Standardize the perf surface so tools can query it uniformly:
 
+- Why this matters (user-facing concerns we should keep in scope for v1):
+  - **CPU cost** (layout / text / hit-test / scene building) is often the primary source of “UI feels laggy”.
+  - **Memory footprint** should stay lightweight (no implicit “browser runtime” tax).
+  - **Redraw efficiency** should be measurable: the framework should not “over-redraw” without evidence (debates about
+    immediate-mode vs retained-mode should be grounded in invalidation + cache reuse metrics, not anecdotes).
+
 - per snapshot:
   - `layout_time_us`, `paint_time_us`, `total_time_us` (already in stats),
   - `layout_engine_solves` + top measures (already exported),
@@ -155,6 +219,38 @@ Standardize the perf surface so tools can query it uniformly:
 - per bundle:
   - worst-N frames by `time` and by `invalidation`,
   - stable “hotspot labels” (prefer `test_id`, else element path).
+
+Tooling gates (CI/automation):
+
+- `fretboard diag perf` supports threshold gating on the per-run “top frame” timings:
+  - `--max-top-total-us <n>`
+  - `--max-top-layout-us <n>`
+  - `--max-top-solve-us <n>` (layout-engine solve time)
+- When any threshold is set, it writes `check.perf_thresholds.json` to `FRET_DIAG_DIR` and exits non-zero on failure.
+- For maintainable CI configs, tooling can also read/write a small baseline file:
+  - `--perf-baseline-out <path> --perf-baseline-headroom-pct <n>` writes a `kind=perf_baseline` JSON file,
+  - `--perf-baseline <path>` loads thresholds per script and gates accordingly.
+
+Notes (current status):
+
+- **Process-level resource footprint** is captured (best-effort) via `resource.footprint.json` and referenced from
+  `repro.summary.json`. `diag repro` can also gate on these values:
+  - `--max-working-set-bytes <n>`
+  - `--max-peak-working-set-bytes <n>`
+  - `--max-cpu-avg-percent-total-cores <pct>`
+  When any threshold is set, it writes `check.resource_footprint.json` and exits non-zero on failure.
+  On Windows this uses native APIs; on non-Windows platforms it uses lightweight sampling (via `sysinfo`) while waiting
+  for the demo to exit (CPU sampling is cadence-sensitive).
+  - Note: when `diag repro` launches via `cargo run ...`, the captured PID may be the `cargo` wrapper process rather than
+    the final app process. For accurate footprint numbers, prefer launching a built binary directly (until we add a
+    “resolve child process” mode).
+- **Redraw hitch gating** is supported for “resize feels laggy” style regressions:
+  - `--check-redraw-hitches-max-total-ms <n>` writes `check.redraw_hitches.json` and exits non-zero on failure.
+  - When enabled, `diag repro` also defaults `FRET_REDRAW_HITCH_LOG_PATH=redraw_hitches.log` so the raw log is written
+    into `FRET_DIAG_DIR` and gets packed into `repro.zip`.
+- **Redraw-efficiency gates** now include an “idle should not paint” trailing-streak gate
+  (`--check-idle-no-paint-min <n>`; evidence: `check.idle_no_paint.json`) and a “view cache reuse should be stable”
+  trailing-streak gate (`--check-view-cache-reuse-stable-min <n>`; evidence: `check.view_cache_reuse_stable.json`).
 
 Future (optional, gated):
 
@@ -192,4 +288,3 @@ These must remain feature-gated and must not turn `fret-ui` into a policy layer.
 - Bundles + scripts details: `docs/ui-diagnostics-and-scripted-tests.md`
 - Tracy correlation: `docs/tracy.md`
 - RenderDoc inspection: `docs/renderdoc-inspection.md`
-

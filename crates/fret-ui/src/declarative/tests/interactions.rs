@@ -1,6 +1,7 @@
 #![allow(clippy::arc_with_non_send_sync)]
 
 use super::*;
+use fret_runtime::GlobalsHost as _;
 use std::sync::Arc;
 
 fn attributed_plain(text: &str) -> fret_core::AttributedText {
@@ -885,6 +886,220 @@ fn selectable_text_double_and_triple_click_select() {
 }
 
 #[test]
+fn selectable_text_double_click_respects_window_text_boundary_mode_under_render_transform() {
+    fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> (usize, usize) {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let rich = attributed_plain("can't");
+
+        let transform = Transform2D::translation(Point::new(Px(40.0), Px(10.0)));
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "selectable-text-double-click-boundary-mode-transform",
+            |cx| vec![cx.render_transform(transform, |cx| vec![cx.selectable_text(rich.clone())])],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let transform_node = ui.children(root)[0];
+        let selectable_node = ui.children(transform_node)[0];
+        let record =
+            crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+                .expect("selectable record");
+        let element = record.element;
+
+        let selectable_bounds = ui
+            .debug_node_bounds(selectable_node)
+            .expect("selectable bounds");
+        let pos = Point::new(
+            Px(selectable_bounds.origin.x.0 + 40.0 + 5.0),
+            Px(selectable_bounds.origin.y.0 + 10.0 + 5.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 2,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        crate::elements::with_element_state(
+            &mut app,
+            window,
+            element,
+            crate::element::SelectableTextState::default,
+            |state| (state.selection_anchor, state.caret),
+        )
+    }
+
+    assert_eq!(
+        selection_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        (0, 5),
+        "UnicodeWord should select the whole word"
+    );
+    assert_eq!(
+        selection_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        (0, 3),
+        "Identifier should stop at the apostrophe"
+    );
+}
+
+#[test]
+fn selectable_text_double_click_respects_window_text_boundary_mode_under_scroll_offset() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+    app.with_global_mut_untracked(
+        fret_runtime::WindowTextBoundaryModeService::default,
+        |svc, _app| {
+            svc.set_base_mode(
+                AppWindowId::default(),
+                fret_runtime::TextBoundaryMode::Identifier,
+            );
+        },
+    );
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(140.0), Px(50.0)));
+    let mut services = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "selectable-text-double-click-boundary-mode-scroll",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            let mut out: Vec<AnyElement> = Vec::new();
+                            for _ in 0..40 {
+                                let mut row_layout = crate::element::LayoutStyle::default();
+                                row_layout.size.height = Length::Px(Px(18.0));
+                                out.push(cx.container(
+                                    crate::element::ContainerProps {
+                                        layout: row_layout,
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cx.text("filler")],
+                                ));
+                            }
+                            out.push(cx.selectable_text(attributed_plain("can't")));
+                            out
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Force the selectable text into view via an imperative scroll offset.
+    //
+    // Note: scroll is applied via a render transform, so `debug_node_bounds` reports the layout
+    // bounds in content space. We must subtract the scroll offset to get a screen-space click
+    // position.
+    scroll_handle.set_offset(Point::new(Px(0.0), Px(100_000.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let selectable_node = *ui
+        .children(column_node)
+        .last()
+        .expect("expected selectable text as last child");
+
+    let selectable_bounds = ui
+        .debug_node_bounds(selectable_node)
+        .expect("selectable bounds");
+    let scroll_offset = scroll_handle.offset();
+    let pos = Point::new(
+        Px(selectable_bounds.origin.x.0 + 5.0),
+        Px(selectable_bounds.origin.y.0 - scroll_offset.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let record =
+        crate::declarative::frame::element_record_for_node(&mut app, window, selectable_node)
+            .expect("selectable record");
+    let (a, b) = crate::elements::with_element_state(
+        &mut app,
+        window,
+        record.element,
+        crate::element::SelectableTextState::default,
+        |state| (state.selection_anchor, state.caret),
+    );
+
+    assert_eq!(
+        (a, b),
+        (0, 3),
+        "Identifier mode should stop at the apostrophe"
+    );
+}
+
+#[test]
 fn selectable_text_pointer_down_requests_focus() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -1633,6 +1848,72 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
 }
 
 #[test]
+fn text_input_key_hooks_can_intercept_navigation_keys() {
+    use fret_core::{Event, KeyCode, Modifiers};
+
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+    let opened = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let opened_for_hook = opened.clone();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-key-hooks-intercept",
+        move |cx| {
+            vec![cx.text_input_with_id_props(|cx, id| {
+                let opened = opened_for_hook.clone();
+                cx.key_add_on_key_down_for(
+                    id,
+                    Arc::new(move |host, action_cx, down| {
+                        if down.key != KeyCode::ArrowDown {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&opened, |v| *v = true);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+                crate::element::TextInputProps::new(model.clone())
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        app.models().get_copied(&opened).unwrap_or(false),
+        "expected key hook to run for focused text input"
+    );
+}
+
+#[test]
 fn text_input_middle_click_pastes_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
@@ -1895,6 +2176,540 @@ fn text_input_supports_edit_select_all_and_copy() {
             |e| matches!(e, fret_runtime::Effect::ClipboardSetText { text } if text == "hello")
         ),
         "expected edit.copy to emit ClipboardSetText for the selected text"
+    );
+}
+
+#[test]
+fn text_input_double_click_respects_window_text_boundary_mode_under_render_transform() {
+    fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> Option<(u32, u32)> {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(60.0)));
+        let mut services = FakeTextService::default();
+
+        let transform = Transform2D::translation(Point::new(Px(40.0), Px(10.0)));
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-input-double-click-boundary-mode-transform",
+            |cx| {
+                vec![cx.render_transform(transform, |cx| {
+                    let mut props = crate::element::TextInputProps::new(model.clone());
+                    props.layout.size.width = Length::Px(Px(120.0));
+                    props.layout.size.height = Length::Px(Px(32.0));
+                    vec![cx.text_input(props)]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let transform_node = ui.children(root)[0];
+        let input_node = ui.children(transform_node)[0];
+        let input_bounds = ui
+            .debug_node_visual_bounds(input_node)
+            .expect("input bounds");
+        let pos = Point::new(
+            Px(input_bounds.origin.x.0 + 5.0),
+            Px(input_bounds.origin.y.0 + 5.0),
+        );
+        assert_eq!(
+            ui.debug_hit_test(pos).hit,
+            Some(input_node),
+            "expected the translated hit-test position to target the text input"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert_eq!(ui.focus(), Some(input_node));
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 2,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert_eq!(ui.focus(), Some(input_node));
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        snapshot.selection_utf16
+    }
+
+    assert_eq!(
+        selection_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        Some((0, 5)),
+        "UnicodeWord should select the whole word"
+    );
+    assert_eq!(
+        selection_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        Some((0, 3)),
+        "Identifier should stop at the apostrophe"
+    );
+}
+
+#[test]
+fn text_input_double_click_respects_window_text_boundary_mode_under_scroll_offset() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+    app.with_global_mut_untracked(
+        fret_runtime::WindowTextBoundaryModeService::default,
+        |svc, _app| {
+            svc.set_base_mode(
+                AppWindowId::default(),
+                fret_runtime::TextBoundaryMode::Identifier,
+            );
+        },
+    );
+
+    let model = app.models_mut().insert("can't".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-double-click-boundary-mode-scroll",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            let mut out: Vec<AnyElement> = Vec::new();
+                            for _ in 0..40 {
+                                let mut row_layout = crate::element::LayoutStyle::default();
+                                row_layout.size.height = Length::Px(Px(18.0));
+                                out.push(cx.container(
+                                    crate::element::ContainerProps {
+                                        layout: row_layout,
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cx.text("filler")],
+                                ));
+                            }
+
+                            let mut props = crate::element::TextInputProps::new(model.clone());
+                            props.layout.size.width = Length::Px(Px(120.0));
+                            props.layout.size.height = Length::Px(Px(32.0));
+                            out.push(cx.text_input(props));
+
+                            out
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let input_node = *ui
+        .children(column_node)
+        .last()
+        .expect("expected input as last child");
+    let input_bounds = ui.debug_node_bounds(input_node).expect("input bounds");
+
+    scroll_handle.set_offset(Point::new(Px(0.0), input_bounds.origin.y));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let input_bounds = ui
+        .debug_node_visual_bounds(input_node)
+        .expect("input bounds after scroll");
+    let pos = Point::new(
+        Px(input_bounds.origin.x.0 + 5.0),
+        Px(input_bounds.origin.y.0 + 5.0),
+    );
+    assert_eq!(
+        ui.debug_hit_test(pos).hit,
+        Some(input_node),
+        "expected the scrolled hit-test position to target the text input"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(input_node));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    let selection_utf16 = snapshot.selection_utf16;
+
+    assert_eq!(
+        selection_utf16,
+        Some((0, 3)),
+        "Identifier mode should stop at the apostrophe"
+    );
+}
+
+#[test]
+fn text_area_double_click_respects_window_text_boundary_mode_under_render_transform() {
+    fn selection_for_mode(mode: fret_runtime::TextBoundaryMode) -> Option<(u32, u32)> {
+        let mut app = TestHost::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+        app.with_global_mut_untracked(
+            fret_runtime::WindowTextBoundaryModeService::default,
+            |svc, _app| {
+                svc.set_base_mode(AppWindowId::default(), mode);
+            },
+        );
+
+        let model = app.models_mut().insert("can't".to_string());
+
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(220.0), Px(120.0)),
+        );
+        let mut services = FakeTextService::default();
+
+        let transform = Transform2D::translation(Point::new(Px(30.0), Px(10.0)));
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "text-area-double-click-boundary-mode-transform",
+            |cx| {
+                vec![cx.render_transform(transform, |cx| {
+                    let mut props = crate::element::TextAreaProps::new(model.clone());
+                    props.layout.size.width = Length::Px(Px(160.0));
+                    props.layout.size.height = Length::Px(Px(80.0));
+                    vec![cx.text_area(props)]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let transform_node = ui.children(root)[0];
+        let area_node = ui.children(transform_node)[0];
+        let area_bounds = ui.debug_node_visual_bounds(area_node).expect("area bounds");
+        let pos = Point::new(
+            Px(area_bounds.origin.x.0 + 5.0),
+            Px(area_bounds.origin.y.0 + 5.0),
+        );
+        assert_eq!(
+            ui.debug_hit_test(pos).hit,
+            Some(area_node),
+            "expected the translated hit-test position to target the text area"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert_eq!(ui.focus(), Some(area_node));
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                position: pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 2,
+                pointer_id: fret_core::PointerId(0),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        assert_eq!(ui.focus(), Some(area_node));
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let snapshot = app
+            .global::<fret_runtime::WindowTextInputSnapshotService>()
+            .and_then(|svc| svc.snapshot(window))
+            .cloned()
+            .expect("expected a window text input snapshot");
+        assert!(snapshot.focus_is_text_input);
+        snapshot.selection_utf16
+    }
+
+    assert_eq!(
+        selection_for_mode(fret_runtime::TextBoundaryMode::UnicodeWord),
+        Some((0, 5)),
+        "UnicodeWord should select the whole word"
+    );
+    assert_eq!(
+        selection_for_mode(fret_runtime::TextBoundaryMode::Identifier),
+        Some((0, 3)),
+        "Identifier should stop at the apostrophe"
+    );
+}
+
+#[test]
+fn text_area_double_click_respects_window_text_boundary_mode_under_scroll_offset() {
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+    app.with_global_mut_untracked(
+        fret_runtime::WindowTextBoundaryModeService::default,
+        |svc, _app| {
+            svc.set_base_mode(
+                AppWindowId::default(),
+                fret_runtime::TextBoundaryMode::Identifier,
+            );
+        },
+    );
+
+    let model = app.models_mut().insert("can't".to_string());
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(220.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-area-double-click-boundary-mode-scroll",
+        |cx| {
+            let mut scroll_layout = crate::element::LayoutStyle::default();
+            scroll_layout.size.width = Length::Fill;
+            scroll_layout.size.height = Length::Fill;
+            scroll_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: scroll_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(scroll_handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            let mut out: Vec<AnyElement> = Vec::new();
+                            for _ in 0..40 {
+                                let mut row_layout = crate::element::LayoutStyle::default();
+                                row_layout.size.height = Length::Px(Px(18.0));
+                                out.push(cx.container(
+                                    crate::element::ContainerProps {
+                                        layout: row_layout,
+                                        ..Default::default()
+                                    },
+                                    |cx| vec![cx.text("filler")],
+                                ));
+                            }
+
+                            let mut props = crate::element::TextAreaProps::new(model.clone());
+                            props.layout.size.width = Length::Px(Px(160.0));
+                            props.layout.size.height = Length::Px(Px(80.0));
+                            out.push(cx.text_area(props));
+
+                            out
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let scroll_node = ui.children(root)[0];
+    let column_node = ui.children(scroll_node)[0];
+    let area_node = *ui
+        .children(column_node)
+        .last()
+        .expect("expected area as last child");
+    let area_bounds = ui.debug_node_bounds(area_node).expect("area bounds");
+
+    scroll_handle.set_offset(Point::new(Px(0.0), area_bounds.origin.y));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let area_bounds = ui
+        .debug_node_visual_bounds(area_node)
+        .expect("area bounds after scroll");
+    let pos = Point::new(
+        Px(area_bounds.origin.x.0 + 5.0),
+        Px(area_bounds.origin.y.0 + 5.0),
+    );
+    assert_eq!(
+        ui.debug_hit_test(pos).hit,
+        Some(area_node),
+        "expected the scrolled hit-test position to target the text area"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 2,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(ui.focus(), Some(area_node));
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    let snapshot = app
+        .global::<fret_runtime::WindowTextInputSnapshotService>()
+        .and_then(|svc| svc.snapshot(window))
+        .cloned()
+        .expect("expected a window text input snapshot");
+    assert!(snapshot.focus_is_text_input);
+    let selection_utf16 = snapshot.selection_utf16;
+
+    assert_eq!(
+        selection_utf16,
+        Some((0, 3)),
+        "Identifier mode should stop at the apostrophe"
     );
 }
 
@@ -2358,6 +3173,280 @@ fn pressable_on_activate_hook_runs_on_pointer_activation() {
 }
 
 #[test]
+fn pressable_clears_pressed_and_releases_capture_on_move_without_buttons() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let pressable_element_id_cell: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let pressable_element_id_cell_for_render = pressable_element_id_cell.clone();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clear-pressed-on-move-without-buttons",
+        move |cx| {
+            let pressable_element_id_cell = pressable_element_id_cell_for_render.clone();
+            vec![cx.pressable_with_id(
+                crate::element::PressableProps::default(),
+                move |cx, _state, id| {
+                    pressable_element_id_cell.set(Some(id));
+                    vec![cx.text("pressable")]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pressable_node = ui.children(root)[0];
+    let pressable_element_id = pressable_element_id_cell
+        .get()
+        .expect("missing pressable element id");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let inside = Point::new(
+        Px(pressable_bounds.origin.x.0 + 1.0),
+        Px(pressable_bounds.origin.y.0 + 1.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.captured_for(fret_core::PointerId(0)),
+        Some(pressable_node)
+    );
+    assert!(
+        crate::elements::is_pressed_pressable(&mut app, window, pressable_element_id),
+        "expected pressable to set pressed state on pointer down"
+    );
+
+    // Simulate a runner/platform edge case: we never receive `PointerEvent::Up`, but we do observe
+    // that no buttons are pressed anymore.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(inside.x.0 + 10.0), inside.y),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(fret_core::PointerId(0)), None);
+    assert!(!crate::elements::is_pressed_pressable(
+        &mut app,
+        window,
+        pressable_element_id
+    ));
+}
+
+#[test]
+fn pressable_clears_pressed_state_on_pointer_cancel() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let pressable_element_id_cell: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let pressable_element_id_cell_for_render = pressable_element_id_cell.clone();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clear-pressed-on-pointer-cancel",
+        move |cx| {
+            let pressable_element_id_cell = pressable_element_id_cell_for_render.clone();
+            vec![cx.pressable_with_id(
+                crate::element::PressableProps::default(),
+                move |cx, _state, id| {
+                    pressable_element_id_cell.set(Some(id));
+                    vec![cx.text("pressable")]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pressable_node = ui.children(root)[0];
+    let pressable_element_id = pressable_element_id_cell
+        .get()
+        .expect("missing pressable element id");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let inside = Point::new(
+        Px(pressable_bounds.origin.x.0 + 1.0),
+        Px(pressable_bounds.origin.y.0 + 1.0),
+    );
+
+    let pointer_id = fret_core::PointerId(0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(pointer_id), Some(pressable_node));
+    assert!(crate::elements::is_pressed_pressable(
+        &mut app,
+        window,
+        pressable_element_id
+    ));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id,
+            position: Some(inside),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(pointer_id), None);
+    assert!(!crate::elements::is_pressed_pressable(
+        &mut app,
+        window,
+        pressable_element_id
+    ));
+}
+
+#[test]
+fn pressable_clears_pressed_state_when_element_is_removed() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let pressable_element_id_cell: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let pressable_element_id_cell_for_render = pressable_element_id_cell.clone();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clear-pressed-on-unmount",
+        move |cx| {
+            let pressable_element_id_cell = pressable_element_id_cell_for_render.clone();
+            vec![cx.pressable_with_id(
+                crate::element::PressableProps::default(),
+                move |cx, _state, id| {
+                    pressable_element_id_cell.set(Some(id));
+                    vec![cx.text("pressable")]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pressable_node = ui.children(root)[0];
+    let pressable_element_id = pressable_element_id_cell
+        .get()
+        .expect("missing pressable element id");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let inside = Point::new(
+        Px(pressable_bounds.origin.x.0 + 1.0),
+        Px(pressable_bounds.origin.y.0 + 1.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        crate::elements::is_pressed_pressable(&mut app, window, pressable_element_id),
+        "expected pressable to be pressed after pointer down"
+    );
+
+    // Drop the pressable element without sending pointer up/cancel events (e.g. overlay closes).
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clear-pressed-on-unmount",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert!(
+        !crate::elements::is_pressed_pressable(&mut app, window, pressable_element_id),
+        "expected pressed state to clear when the element is removed"
+    );
+}
+
+#[test]
 fn pressable_on_hover_change_hook_runs_on_pointer_move() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -2431,6 +3520,117 @@ fn pressable_on_hover_change_hook_runs_on_pointer_move() {
     );
 
     assert_eq!(app.models().get_copied(&hovered), Some(false));
+}
+
+#[test]
+fn pressable_on_hover_change_hook_runs_after_wheel_scroll_without_pointer_move() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let hovered = app.models_mut().insert(None::<u32>);
+    let handle = crate::scroll::ScrollHandle::default();
+    let item_h = Px(20.0);
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-hover-after-wheel-scroll",
+        |cx| {
+            let scroll = cx.scroll(
+                crate::element::ScrollProps {
+                    layout: {
+                        let mut layout = crate::element::LayoutStyle::default();
+                        layout.size.width = crate::element::Length::Fill;
+                        layout.size.height = crate::element::Length::Fill;
+                        layout.overflow = crate::element::Overflow::Clip;
+                        layout
+                    },
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(handle.clone()),
+                    ..Default::default()
+                },
+                |cx| {
+                    vec![cx.column(crate::element::ColumnProps::default(), |cx| {
+                        (0..20)
+                            .map(|idx| {
+                                let hovered = hovered.clone();
+                                cx.keyed(idx, move |cx| {
+                                    cx.pressable(
+                                        crate::element::PressableProps {
+                                            layout: {
+                                                let mut layout =
+                                                    crate::element::LayoutStyle::default();
+                                                layout.size.width = crate::element::Length::Fill;
+                                                layout.size.height =
+                                                    crate::element::Length::Px(item_h);
+                                                layout
+                                            },
+                                            ..Default::default()
+                                        },
+                                        move |cx, _state| {
+                                            cx.pressable_on_hover_change(Arc::new(
+                                                move |host, _cx, is_hovered| {
+                                                    if !is_hovered {
+                                                        return;
+                                                    }
+                                                    let _ = host
+                                                        .models_mut()
+                                                        .update(&hovered, |v: &mut Option<u32>| {
+                                                            *v = Some(idx as u32)
+                                                        });
+                                                },
+                                            ));
+                                            vec![cx.text(format!("Item {idx}"))]
+                                        },
+                                    )
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                    })]
+                },
+            );
+            vec![scroll]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(app.models().get_copied(&hovered), Some(None));
+
+    let position = Point::new(Px(10.0), Px(10.0));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position,
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&hovered), Some(Some(0)));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            pointer_id: fret_core::PointerId(0),
+            position,
+            delta: Point::new(Px(0.0), Px(-20.0)),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(app.models().get_copied(&hovered), Some(Some(1)));
 }
 
 #[test]
@@ -3061,4 +4261,72 @@ fn pressable_semantics_checked_is_exposed() {
 
     assert_eq!(node.flags.checked, Some(true));
     assert!(node.actions.invoke, "expected checkbox to be invokable");
+}
+
+#[test]
+fn text_input_semantics_controls_element_is_exposed() {
+    use std::cell::Cell;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-input-controls",
+        |cx| {
+            let listbox_id_out: Cell<Option<crate::elements::GlobalElementId>> = Cell::new(None);
+            let listbox = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::ListBox,
+                    test_id: Some(Arc::from("listbox")),
+                    ..Default::default()
+                },
+                |_cx, id| {
+                    listbox_id_out.set(Some(id));
+                    Vec::new()
+                },
+            );
+
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.test_id = Some(Arc::from("combo"));
+            props.a11y_role = Some(fret_core::SemanticsRole::ComboBox);
+            props.controls_element = listbox_id_out.get().map(|id| id.0);
+
+            vec![cx.text_input(props), listbox]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let combo = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("combo"))
+        .expect("expected combobox semantics node");
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("listbox"))
+        .expect("expected listbox semantics node");
+
+    assert!(
+        combo.controls.contains(&listbox.id),
+        "expected combobox to control the listbox"
+    );
 }

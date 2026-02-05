@@ -1,4 +1,7 @@
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
+
+use fret_core::NodeId;
 
 use crate::element::AnyElement;
 use crate::elements::ElementContext;
@@ -19,4 +22,10 @@ pub(crate) struct RetainedVirtualListHostCallbacks<H: UiHost> {
     pub key_at: RetainedVirtualListKeyAtFn,
     pub row: RetainedVirtualListRowFn<H>,
     pub range_extractor: RetainedVirtualListRangeExtractor,
+}
+
+#[derive(Default)]
+pub(crate) struct RetainedVirtualListKeepAliveState {
+    pub by_key: HashMap<ItemKey, NodeId>,
+    pub order: VecDeque<ItemKey>,
 }

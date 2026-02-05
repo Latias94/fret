@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-slider" },
+      "delta_x": 0.0,
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 2.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-slider" } },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-slider-single" },
+      "within_window": true,
+      "padding_px": 2.0,
+      "timeout_frames": 300
+    },
+    {
+      "type": "set_slider_value",
+      "target": { "kind": "test_id", "id": "ui-gallery-slider-single" },
+      "value": 80.0,
+      "min": 0.0,
+      "max": 100.0,
+      "epsilon": 0.5,
+      "timeout_frames": 240,
+      "drag_steps": 8
+    },
+    { "type": "capture_bundle", "label": "after-set-slider" }
+  ]
+}

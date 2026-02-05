@@ -609,11 +609,50 @@ fn build_flow_subtree_impl<H: UiHost>(
                 );
             }
         }
-        Some(
-            ElementInstance::Scroll(_)
-            | ElementInstance::VirtualList(_)
-            | ElementInstance::ResizablePanelGroup(_),
-        ) => {
+        Some(ElementInstance::Scroll(_)) => {
+            let layout_style = layout_style_for_node(app, window, node);
+            let mut style = style_for_item_in_parent(
+                app,
+                window,
+                sf,
+                parent_kind,
+                node,
+                Display::Block,
+                root_override_size,
+            );
+            let mut measured = true;
+
+            let has_definite_size =
+                !matches!(layout_style.size.width, crate::element::Length::Auto)
+                    && !matches!(layout_style.size.height, crate::element::Length::Auto);
+            if has_definite_size || layout_style.flex.grow > 0.0 {
+                // Barrier elements like Scroll/VirtualList frequently participate in flex layouts
+                // as "fill the remaining space" items. When `flex-basis` is `Auto`, Taffy uses the
+                // item's intrinsic size, which triggers our (potentially expensive) widget-level
+                // measurement even though the final size is dominated by `flex-grow`.
+                //
+                // Prefer `flex-basis: 0` so the flex distribution is determined by grow factors
+                // and the parent can size the barrier without invoking intrinsic measurement.
+                if matches!(parent_kind, ParentLayoutKind::Flex { .. })
+                    && matches!(layout_style.flex.basis, crate::element::Length::Auto)
+                {
+                    style.flex_basis = Dimension::length(0.0);
+                }
+                measured = false;
+            }
+            engine.set_style(node, style);
+            engine.set_children(node, &[]);
+            engine.set_measured(node, measured);
+
+            // Barriers are explicit layout systems and must not couple their children into the
+            // parent's flow solve, but we still want the engine to retain stable identity for the
+            // mounted subtree across frames (GPUI-aligned request/build phase).
+            let children = tree.children(node).to_vec();
+            for child in children {
+                build_flow_subtree(engine, app, tree, window, sf, ParentLayoutKind::Root, child);
+            }
+        }
+        Some(ElementInstance::VirtualList(_) | ElementInstance::ResizablePanelGroup(_)) => {
             let style = style_for_item_in_parent(
                 app,
                 window,

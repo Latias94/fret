@@ -1,14 +1,16 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
-use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, SvgId, UiServices};
-use fret_executor::Inbox;
+use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, UiServices};
+use fret_kit::prelude::MessageRouter;
 use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
 use fret_markdown as markdown;
-use fret_runtime::DispatcherHandle;
+use fret_query::ui::QueryElementContextExt as _;
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus};
 use fret_runtime::Model;
+use fret_selector::ui::SelectorElementContextExt as _;
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ImageProps, LayoutStyle, Length, PressableProps, SvgIconProps, TextProps,
@@ -16,12 +18,19 @@ use fret_ui::element::{
 use fret_ui::{Invalidation, Theme, ThemeConfig, UiTree};
 use fret_ui_assets::{image_asset_state, svg_asset_state};
 use fret_ui_kit::declarative::GlobalWatchExt as _;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{ColorRef, Space, ui};
 use fret_ui_shadcn as shadcn;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 
-const CMD_TOGGLE_CODE_BLOCK_EXPAND_PREFIX: &str = "markdown_demo.code_block.toggle_expand:";
+#[derive(Debug, Clone)]
+enum Msg {
+    ToggleCodeBlockExpand(markdown::BlockId),
+}
 
 struct MarkdownDemoWindowState {
     ui: UiTree<App>,
@@ -29,96 +38,40 @@ struct MarkdownDemoWindowState {
     wrap_code: Model<bool>,
     cap_code_height: Model<bool>,
     expanded_code_blocks: Model<HashSet<markdown::BlockId>>,
+    router: Rc<RefCell<MessageRouter<Msg>>>,
 }
 
-#[derive(Debug, Clone)]
-enum RemoteImageState {
-    Loading,
-    ReadyRaster {
+#[derive(Debug)]
+enum RemoteImageData {
+    Raster {
         width: u32,
         height: u32,
         rgba: Arc<[u8]>,
     },
-    ReadySvg {
+    Svg {
         bytes: Arc<[u8]>,
-        svg: Option<SvgId>,
     },
-    Error(Arc<str>),
 }
 
-struct RemoteImageCache {
-    states: HashMap<Arc<str>, RemoteImageState>,
-    inbox: Inbox<(Arc<str>, Result<RemoteImageState, Arc<str>>)>,
+fn remote_image_key(url: &Arc<str>) -> QueryKey<RemoteImageData> {
+    QueryKey::new("fret-examples.markdown_demo.remote_image.v1", url)
 }
 
-impl Default for RemoteImageCache {
-    fn default() -> Self {
-        Self {
-            states: HashMap::new(),
-            inbox: Inbox::new(Default::default()),
-        }
-    }
-}
-
-impl RemoteImageCache {
-    fn poll_completed(&mut self) -> bool {
-        let mut changed = false;
-        for (url, result) in self.inbox.drain() {
-            changed = true;
-            match result {
-                Ok(state) => {
-                    self.states.insert(url, state);
-                }
-                Err(err) => {
-                    self.states.insert(url, RemoteImageState::Error(err));
-                }
-            }
-        }
-        changed
-    }
-
-    fn ensure_svgs_registered(&mut self, host: &mut App, services: &mut dyn UiServices) -> bool {
-        let mut changed = false;
-        for state in self.states.values_mut() {
-            let RemoteImageState::ReadySvg { bytes, svg } = state else {
-                continue;
-            };
-            if svg.is_some() {
-                continue;
-            }
-            let (_key, id) = svg_asset_state::use_svg_bytes_cached(host, services, bytes);
-            *svg = Some(id);
-            changed = true;
-        }
-        changed
-    }
-
-    fn ensure_fetch_started(&mut self, dispatcher: &DispatcherHandle, url: Arc<str>) {
-        if self.states.contains_key(&url) {
-            return;
-        }
-        self.states.insert(url.clone(), RemoteImageState::Loading);
-
-        let sender = self.inbox.sender();
-        let exec = fret_executor::Executors::new(dispatcher.clone());
-        exec.spawn_background_to_inbox(None, sender, move |_| {
-            let result = download_remote_image(&url);
-            (url, result)
-        })
-        .detach();
-    }
-
-    fn get(&self, url: &str) -> Option<&RemoteImageState> {
-        self.states.get(url)
+fn remote_image_policy() -> QueryPolicy {
+    QueryPolicy {
+        stale_time: Duration::from_secs(60),
+        cache_time: Duration::from_secs(5 * 60),
+        keep_previous_data_while_loading: true,
+        ..Default::default()
     }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn download_remote_image(url: &str) -> Result<RemoteImageState, Arc<str>> {
+fn download_remote_image(url: &str) -> Result<RemoteImageData, QueryError> {
     use std::io::Read as _;
 
     if !(url.starts_with("http://") || url.starts_with("https://")) {
-        return Err(Arc::<str>::from(
+        return Err(QueryError::permanent(
             "only http/https are supported in this demo",
         ));
     }
@@ -127,11 +80,11 @@ fn download_remote_image(url: &str) -> Result<RemoteImageState, Arc<str>> {
         .set("User-Agent", "fret-markdown-demo")
         .set("Accept", "image/*")
         .call()
-        .map_err(|e| Arc::<str>::from(format!("request failed: {e}")))?;
+        .map_err(|e| QueryError::transient(format!("request failed: {e}")))?;
 
     let status = response.status();
     if !(200..=299).contains(&status) {
-        return Err(Arc::<str>::from(format!("http status {status}")));
+        return Err(QueryError::permanent(format!("http status {status}")));
     }
 
     let content_type = response
@@ -155,29 +108,28 @@ fn download_remote_image(url: &str) -> Result<RemoteImageState, Arc<str>> {
         }
         bytes.extend_from_slice(&buf[..n]);
         if bytes.len() > max_bytes {
-            return Err(Arc::<str>::from("image too large (>4MiB)"));
+            return Err(QueryError::permanent("image too large (>4MiB)"));
         }
     }
 
     if is_svg {
-        return Ok(RemoteImageState::ReadySvg {
+        return Ok(RemoteImageData::Svg {
             bytes: Arc::<[u8]>::from(bytes),
-            svg: None,
         });
     }
 
     let image = image::load_from_memory(&bytes)
-        .map_err(|e| Arc::<str>::from(format!("decode failed: {e}")))?;
+        .map_err(|e| QueryError::permanent(format!("decode failed: {e}")))?;
     let rgba = image.to_rgba8();
     let (w, h) = rgba.dimensions();
 
     let pixel_budget = 8_000_000u64;
     let px = (w as u64) * (h as u64);
     if px > pixel_budget {
-        return Err(Arc::<str>::from("decoded image too large"));
+        return Err(QueryError::permanent("decoded image too large"));
     }
 
-    Ok(RemoteImageState::ReadyRaster {
+    Ok(RemoteImageData::Raster {
         width: w,
         height: h,
         rgba: Arc::<[u8]>::from(rgba.into_raw()),
@@ -185,8 +137,8 @@ fn download_remote_image(url: &str) -> Result<RemoteImageState, Arc<str>> {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn download_remote_image(_url: &str) -> Result<RemoteImageState, Arc<str>> {
-    Err(Arc::<str>::from(
+fn download_remote_image(_url: &str) -> Result<RemoteImageData, QueryError> {
+    Err(QueryError::permanent(
         "remote images are not supported on wasm demo",
     ))
 }
@@ -204,6 +156,8 @@ impl MarkdownDemoDriver {
         let wrap_code = app.models_mut().insert(false);
         let cap_code_height = app.models_mut().insert(true);
         let expanded_code_blocks = app.models_mut().insert(HashSet::new());
+        let prefix = format!("markdown-demo.{window:?}.");
+        let router = Rc::new(RefCell::new(MessageRouter::new(prefix)));
 
         let markdown: Arc<str> = Arc::from(
             r##"# Markdown Demo
@@ -304,6 +258,7 @@ $$
             wrap_code,
             cap_code_height,
             expanded_code_blocks,
+            router,
         }
     }
 
@@ -317,15 +272,9 @@ $$
         wrap_code: Model<bool>,
         cap_code_height: Model<bool>,
         expanded_code_blocks: Model<HashSet<markdown::BlockId>>,
+        router: Rc<RefCell<MessageRouter<Msg>>>,
     ) {
-        let cache_changed = app.with_global_mut(RemoteImageCache::default, |cache, app| {
-            let mut changed = cache.poll_completed();
-            changed |= cache.ensure_svgs_registered(app, services);
-            changed
-        });
-        if cache_changed {
-            app.request_redraw(window);
-        }
+        router.borrow_mut().clear();
 
         let demo_svg_bytes = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="0" y="0" width="64" height="64" rx="12" fill="#111827"/><path d="M20 44 L32 20 L44 44 Z" fill="#60A5FA"/></svg>"##;
         let (_demo_svg_key, demo_svg) =
@@ -363,6 +312,7 @@ $$
             }));
 
             let expanded_for_actions = expanded_code_blocks.clone();
+            let router_for_actions = router.clone();
             components.code_block_actions = Some(Arc::new(move |cx, info| {
                 cx.observe_model(&expanded_for_actions, Invalidation::Layout);
                 let expanded = cx
@@ -373,10 +323,9 @@ $$
                     .unwrap_or(false);
 
                 let label = if expanded { "Collapse" } else { "Expand" };
-                let cmd = CommandId::new(format!(
-                    "{CMD_TOGGLE_CODE_BLOCK_EXPAND_PREFIX}{}",
-                    info.id.0
-                ));
+                let cmd = router_for_actions
+                    .borrow_mut()
+                    .cmd(Msg::ToggleCodeBlockExpand(info.id));
 
                 shadcn::Button::new(label)
                     .variant(shadcn::ButtonVariant::Ghost)
@@ -404,26 +353,28 @@ $$
             };
 
             if info.src.starts_with("http://") || info.src.starts_with("https://") {
+                let url = info.src.clone();
+                let key = remote_image_key(&url);
+                let policy = remote_image_policy();
+                let handle = cx.use_query(key, policy, move |_token| {
+                    download_remote_image(url.as_ref())
+                });
                 let state = cx
-                    .app
-                    .with_global_mut(RemoteImageCache::default, |cache, app| {
-                        let dispatcher = app
-                            .global::<DispatcherHandle>()
-                            .expect("runner should install DispatcherHandle")
-                            .clone();
-                        cache.ensure_fetch_started(&dispatcher, info.src.clone());
-                        cache.get(&info.src).cloned()
-                    });
+                    .watch_model(handle.model())
+                    .layout()
+                    .cloned()
+                    .unwrap_or_else(|| QueryState::<RemoteImageData>::default());
 
-                let Some(state) = state else {
-                    return spinner_box(cx);
-                };
-
-                match state {
-                    RemoteImageState::Loading => {
+                match state.status {
+                    QueryStatus::Idle | QueryStatus::Loading => {
                         return spinner_box(cx);
                     }
-                    RemoteImageState::Error(msg) => {
+                    QueryStatus::Error => {
+                        let msg = state
+                            .error
+                            .as_ref()
+                            .map(|e| e.to_string())
+                            .unwrap_or_else(|| String::from("unknown error"));
                         return render_image_placeholder(
                             cx,
                             &theme,
@@ -434,38 +385,44 @@ $$
                             },
                         );
                     }
-                    RemoteImageState::ReadySvg { svg: Some(svg), .. } => {
-                        let mut props = SvgIconProps::new(fret_ui::SvgSource::Id(svg));
-                        props.layout = size;
-                        props.fit = SvgFit::Contain;
-                        props.color = theme.color_required("foreground");
-                        return cx.svg_icon_props(props);
-                    }
-                    RemoteImageState::ReadySvg { svg: None, .. } => {
-                        return spinner_box(cx);
-                    }
-                    RemoteImageState::ReadyRaster {
-                        width,
-                        height,
-                        rgba,
-                    } => {
-                        let (key, image, status) = image_asset_state::use_rgba8_image_state(
-                            cx.app,
-                            cx.window,
-                            width,
-                            height,
-                            rgba.as_ref(),
-                            ImageColorSpace::Srgb,
-                        );
-                        let _ = key;
-                        let _ = status;
+                    QueryStatus::Success => {
+                        let Some(data) = state.data.as_ref() else {
+                            return spinner_box(cx);
+                        };
 
-                        if let Some(image) = image {
-                            let mut props = ImageProps::new(image);
-                            props.layout = size;
-                            return cx.image_props(props);
+                        match data.as_ref() {
+                            RemoteImageData::Svg { bytes } => {
+                                let mut props =
+                                    SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes.clone()));
+                                props.layout = size;
+                                props.fit = SvgFit::Contain;
+                                props.color = theme.color_required("foreground");
+                                return cx.svg_icon_props(props);
+                            }
+                            RemoteImageData::Raster {
+                                width,
+                                height,
+                                rgba,
+                            } => {
+                                let (key, image, status) = image_asset_state::use_rgba8_image_state(
+                                    cx.app,
+                                    cx.window,
+                                    *width,
+                                    *height,
+                                    rgba.as_ref(),
+                                    ImageColorSpace::Srgb,
+                                );
+                                let _ = key;
+                                let _ = status;
+
+                                if let Some(image) = image {
+                                    let mut props = ImageProps::new(image);
+                                    props.layout = size;
+                                    return cx.image_props(props);
+                                }
+                                return spinner_box(cx);
+                            }
                         }
-                        return spinner_box(cx);
                     }
                 }
             }
@@ -528,6 +485,20 @@ $$
                     cx.observe_model(&cap_code_height, Invalidation::Layout);
                     let cap_enabled = cx.app.models().get_copied(&cap_code_height).unwrap_or(true);
 
+                    let expanded_count = cx.use_selector(
+                        |cx| {
+                            cx.observe_model(&expanded_code_blocks, Invalidation::Layout);
+                            cx.app.models().revision(&expanded_code_blocks).unwrap_or(0)
+                        },
+                        |cx| {
+                            cx.app
+                                .models()
+                                .read(&expanded_code_blocks, |set| set.len())
+                                .ok()
+                                .unwrap_or(0)
+                        },
+                    );
+
                     let toggles = ui::h_flex(cx, |cx| {
                         [
                             cx.text(format!("wrap code: {}", if enabled { "on" } else { "off" })),
@@ -541,6 +512,7 @@ $$
                             shadcn::Switch::new(cap_code_height.clone())
                                 .a11y_label("Cap code block height")
                                 .into_element(cx),
+                            cx.text(format!("expanded code blocks: {expanded_count}")),
                         ]
                     })
                     .gap(Space::N3)
@@ -584,10 +556,6 @@ $$
                 ]
             });
         ui.set_root(root);
-        if cache_changed {
-            ui.invalidate(root, Invalidation::Layout);
-            ui.invalidate(root, Invalidation::Paint);
-        }
     }
 }
 
@@ -702,20 +670,18 @@ impl WinitAppDriver for MarkdownDemoDriver {
         if state.ui.dispatch_command(app, services, &command) {
             return;
         }
-        if let Some(id) = command
-            .as_str()
-            .strip_prefix(CMD_TOGGLE_CODE_BLOCK_EXPAND_PREFIX)
-        {
-            if let Ok(id) = id.parse::<u64>() {
-                let id = markdown::BlockId(id);
-                let _ = app.models_mut().update(&state.expanded_code_blocks, |set| {
-                    if set.contains(&id) {
-                        set.remove(&id);
-                    } else {
-                        set.insert(id);
-                    }
-                });
-                app.push_effect(Effect::Redraw(window));
+        if let Some(msg) = state.router.borrow_mut().try_take(&command) {
+            match msg {
+                Msg::ToggleCodeBlockExpand(id) => {
+                    let _ = app.models_mut().update(&state.expanded_code_blocks, |set| {
+                        if set.contains(&id) {
+                            set.remove(&id);
+                        } else {
+                            set.insert(id);
+                        }
+                    });
+                    app.push_effect(Effect::Redraw(window));
+                }
             }
             return;
         }
@@ -759,6 +725,7 @@ impl WinitAppDriver for MarkdownDemoDriver {
             state.wrap_code.clone(),
             state.cap_code_height.clone(),
             state.expanded_code_blocks.clone(),
+            state.router.clone(),
         );
 
         state.ui.request_semantics_snapshot();

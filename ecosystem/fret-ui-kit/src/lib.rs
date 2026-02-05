@@ -14,6 +14,8 @@ pub mod declarative;
 pub mod dnd;
 mod edges4;
 pub mod headless;
+#[cfg(feature = "imui")]
+pub mod imui;
 pub mod overlay;
 pub mod overlay_controller;
 pub mod primitives;
@@ -78,6 +80,12 @@ pub mod prelude {
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
     pub use crate::declarative::{stack, style};
     pub use crate::ui;
+
+    #[cfg(feature = "imui")]
+    pub use crate::imui::UiWriterUiKitExt as _;
+
+    #[cfg(feature = "imui")]
+    pub use crate::imui::UiWriterImUiFacadeExt as _;
 
     #[cfg(feature = "icons")]
     pub use crate::declarative::icon;

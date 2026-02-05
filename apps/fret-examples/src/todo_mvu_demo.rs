@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_kit::prelude::*;
+use fret_ui::element::SemanticsDecoration;
 
 const TEST_ID_INPUT: &str = "todo-mvu-input";
 const TEST_ID_ADD: &str = "todo-mvu-add";
@@ -170,13 +171,10 @@ impl MvuProgram for TodoMvuProgram {
             .on_click(msg.cmd(Msg::Add))
             .children([icon::icon(cx, IconId::new("lucide.plus"))])
             .into_element(cx);
-        let add_btn = cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Button,
-                test_id: Some(Arc::from(TEST_ID_ADD)),
-                ..Default::default()
-            },
-            move |_cx| [add_btn],
+        let add_btn = add_btn.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(TEST_ID_ADD),
         );
 
         let input = shadcn::Input::new(st.draft.clone())
@@ -184,13 +182,10 @@ impl MvuProgram for TodoMvuProgram {
             .placeholder("添加新任务...")
             .submit_command(msg.cmd(Msg::Add))
             .into_element(cx);
-        let input = cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::TextField,
-                test_id: Some(Arc::from(TEST_ID_INPUT)),
-                ..Default::default()
-            },
-            move |_cx| [input],
+        let input = input.attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::TextField)
+                .test_id(TEST_ID_INPUT),
         );
 
         let todos = cx
@@ -350,37 +345,26 @@ impl MvuProgram for TodoMvuProgram {
             .into_element(cx);
 
         let page = ui::container(cx, |cx| {
-            [ui::v_flex(cx, |cx| {
-                [
-                    card,
-                    ui::raw_text(cx, "MVU demo · typed messages via MessageRouter")
-                        .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                        .nowrap()
-                        .into_element(cx),
-                ]
-            })
-            .w_full()
-            .h_full()
-            .justify_center()
-            .items_center()
-            .gap(Space::N6)
-            .into_element(cx)]
+            [ui::v_flex(cx, |_cx| [card])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+                .gap(Space::N6)
+                .into_element(cx)]
         })
         .bg(ColorRef::Color(theme.color_required("muted")))
         .p(Space::N4)
         .w_full()
         .h_full()
-        .into_element(cx);
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Panel)
+                .test_id("todo-mvu-page"),
+        );
 
-        vec![cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Debug:todo-mvu-demo:page")),
-                ..Default::default()
-            },
-            move |_cx| [page],
-        )]
-        .into()
+        vec![page].into()
     }
 }
 
@@ -461,13 +445,10 @@ fn todo_row(
         .p(Space::N3);
 
     let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
-    let checkbox = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Checkbox,
-            test_id: Some(todo_item_test_id(item.id, "done")),
-            ..Default::default()
-        },
-        move |_cx| [checkbox],
+    let checkbox = checkbox.attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Checkbox)
+            .test_id(todo_item_test_id(item.id, "done")),
     );
 
     let fg = if done {
@@ -475,14 +456,13 @@ fn todo_row(
     } else {
         theme.color_required("foreground")
     };
-    let text = cx.text_props(TextProps {
-        layout: Default::default(),
-        text: item.text.clone(),
-        style: None,
-        color: Some(fg),
-        wrap: fret_core::TextWrap::None,
-        overflow: fret_core::TextOverflow::Clip,
-    });
+    let text = ui::raw_text(cx, item.text.clone())
+        .text_color(ColorRef::Color(fg))
+        .nowrap()
+        .overflow(TextOverflow::Clip)
+        .flex_1()
+        .min_w_0()
+        .into_element(cx);
 
     let remove_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::IconSm)
@@ -490,18 +470,15 @@ fn todo_row(
         .on_click(remove_cmd)
         .children([icon::icon_with(
             cx,
-            IconId::new("lucide.trash-2"),
+            IconId::new("lucide.trash"),
             Some(Px(16.0)),
             Some(ColorRef::Color(theme.color_required("muted-foreground"))),
         )])
         .into_element(cx);
-    let remove_btn = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Button,
-            test_id: Some(todo_item_test_id(item.id, "remove")),
-            ..Default::default()
-        },
-        move |_cx| [remove_btn],
+    let remove_btn = remove_btn.attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Button)
+            .test_id(todo_item_test_id(item.id, "remove")),
     );
 
     let done_badge = done.then(|| {
@@ -517,18 +494,13 @@ fn todo_row(
     })
     .items_center()
     .into_element(cx);
-
-    let row = cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::ListItem,
-            test_id: Some(todo_item_test_id(item.id, "row")),
-            ..Default::default()
-        },
-        move |_cx| [row],
-    );
-
     ui::container(cx, move |_cx| [row])
         .style(row_chrome)
         .w_full()
         .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::ListItem)
+                .test_id(todo_item_test_id(item.id, "row")),
+        )
 }
