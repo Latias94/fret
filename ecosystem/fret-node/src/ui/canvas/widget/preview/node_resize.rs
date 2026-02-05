@@ -124,10 +124,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             node_id,
                             prev_rect,
                             next_rect,
-                            meta.node_ports
-                                .get(&node_id)
-                                .map(|v| v.as_slice())
-                                .unwrap_or(&[]),
+                            super::ports_for_node(meta.node_ports, node_id),
                         );
                     }
 
@@ -135,22 +132,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         geom_mut,
                         index_mut,
                         snapshot.zoom,
-                        meta.node_ports
-                            .get(&node_id)
-                            .map(|v| v.as_slice())
-                            .unwrap_or(&[]),
+                        super::ports_for_node(meta.node_ports, node_id),
                         |edge_ids| {
-                            graph_model
-                                .read_ref(host, |g| {
-                                    edge_ids
-                                        .iter()
-                                        .filter_map(|edge_id| {
-                                            g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
-                                        })
-                                        .collect::<Vec<_>>()
-                                })
-                                .ok()
-                                .unwrap_or_default()
+                            super::resolve_edge_endpoints_from_model(host, &graph_model, edge_ids)
                         },
                     );
                 }
