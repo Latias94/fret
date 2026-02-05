@@ -13,4 +13,6 @@ pub enum CursorIcon {
     Text,
     ColResize,
     RowResize,
+    NwseResize,
+    NeswResize,
 }
