@@ -53,7 +53,7 @@ layout. This workstream is about making that the default across ecosystem code.
   - Target: `ecosystem/fret-ui-shadcn` (and optionally `fret-ui-kit`).
   - Outcome: call sites become a one-liner and all IDs follow the same naming scheme.
   - Evidence: `ecosystem/fret-ui-shadcn/src/test_id.rs`
-- [ ] SDC-tool-020 Add an audit recipe (rg patterns) and “exceptions list” section below.
+- [x] SDC-tool-020 Add an audit recipe (rg patterns) and “exceptions list” section below.
   - Outcome: quick repo-wide scans can be done without guesswork.
 
 ### M1 — shadcn: remove “test_id-only Semantics wrappers”
@@ -69,7 +69,8 @@ layout. This workstream is about making that the default across ecosystem code.
   - Evidence: `ecosystem/fret-ui-shadcn/src/card.rs`
 - [x] SDC-shadcn-110 DataGrid: migrate header/body cell stamps to decorators where possible.
   - Evidence: `ecosystem/fret-ui-shadcn/src/data_grid.rs`, `ecosystem/fret-ui-shadcn/tests/data_grid_layout.rs`
-- [ ] SDC-shadcn-120 Form/Field: migrate any “label-only” wrappers used for targeting.
+- [x] SDC-shadcn-120 Form/Field: migrate any “role-only” wrappers used for structure to decorators.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/field.rs`
 
 ### M2 — Tests: converge on `test_id` selectors
 

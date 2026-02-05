@@ -33,6 +33,11 @@ impl AnyElement {
         }
     }
 
+    /// Attach layout-transparent semantics metadata to this element (ADR 1161).
+    ///
+    /// Prefer this over wrapping a subtree in `Semantics` when you only need to stamp
+    /// `test_id` / `label` / `role` / `value` for diagnostics or UI automation, since `Semantics`
+    /// introduces a real layout node.
     pub fn attach_semantics(mut self, decoration: SemanticsDecoration) -> Self {
         self.semantics_decoration = Some(match self.semantics_decoration.take() {
             Some(existing) => existing.merge(decoration),
@@ -493,6 +498,10 @@ impl SemanticsDecoration {
 ///
 /// This is intentionally input-transparent (hit-test passes through) and paint-transparent: it
 /// only contributes layout and semantics.
+///
+/// Note: `Semantics` is a real layout wrapper. Do not use it only to stamp `test_id` / labels for
+/// UI automation; prefer `AnyElement::attach_semantics` (`SemanticsDecoration`) to avoid subtle
+/// layout regressions.
 #[derive(Debug, Clone)]
 pub struct SemanticsProps {
     pub layout: LayoutStyle,
