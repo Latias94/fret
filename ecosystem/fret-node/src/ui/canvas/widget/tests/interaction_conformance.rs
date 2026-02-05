@@ -3099,6 +3099,118 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
 }
 
 #[test]
+fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_wire_reconnect_drag() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
+        kind: WireDragKind::Reconnect {
+            edge,
+            endpoint: EdgeEndpoint::From,
+            fixed: to,
+        },
+        pos: Point::new(Px(40.0), Px(10.0)),
+    });
+    assert!(canvas.interaction.wire_drag.is_some());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    // Simulate a missed `PointerEvent::Up`: Move arrives with no left button held.
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(40.0), Px(10.0)),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        canvas.interaction.wire_drag.is_none(),
+        "expected the inferred-up path to end the active reconnect drag"
+    );
+    let edge_still_exists = canvas
+        .graph
+        .read_ref(cx.app, |g| g.edges.contains_key(&edge))
+        .unwrap_or(false);
+    assert!(edge_still_exists);
+    assert_eq!(canvas.history.undo_len(), 0);
+}
+
+#[test]
+fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_new_wire_drag() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let mut canvas = NodeGraphCanvas::new(graph, view);
+    canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
+        kind: WireDragKind::New {
+            from,
+            bundle: Vec::new(),
+        },
+        pos: Point::new(Px(700.0), Px(500.0)),
+    });
+    assert!(canvas.interaction.wire_drag.is_some());
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    // Simulate a missed `PointerEvent::Up`: Move arrives with no left button held.
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(700.0), Px(500.0)),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        canvas.interaction.wire_drag.is_none(),
+        "expected the inferred-up path to end the active connect drag"
+    );
+    assert!(
+        canvas.interaction.suspended_wire_drag.is_some(),
+        "expected a connect drag drop on empty to suspend and open the insert-node picker"
+    );
+    assert!(
+        canvas.interaction.searcher.is_some(),
+        "expected inferred-up behavior to flow through the canonical wire-drag pointer-up path"
+    );
+    assert_eq!(canvas.history.undo_len(), 0);
+}
+
+#[test]
 fn right_click_cancels_wire_drag_and_opens_context_menu() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();

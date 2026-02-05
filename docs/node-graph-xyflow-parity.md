@@ -738,7 +738,7 @@ canonical data flow and invalidation boundaries:
   - TODO: parity knobs:
     - cancel behavior:
       - [x] Escape / focus loss cancels active reconnect/connect drags: `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`
-      - [~] outside press / pointer-capture loss:
+      - [x] outside press / pointer-capture loss:
         - inferred from `PointerEvent::Move.buttons` when an expected "up" is missed: `ecosystem/fret-node/src/ui/canvas/widget.rs`
         - right click cancels active gestures before opening the context menu: `ecosystem/fret-node/src/ui/canvas/widget.rs`
         - [x] platform pointer-left maps to `Event::PointerCancel` and clears capture:
