@@ -127,8 +127,10 @@ Tasks:
 
 - `[x]` Add a doc: “Integrating tokio/reqwest” (background fetch → inbox → model update).
   - Evidence: `docs/integrating-tokio-and-reqwest.md`
-- `[ ]` Add a doc: “Integrating persistence (sqlite/sqlx)” with driver-boundary apply.
-- `[ ]` Document a recommended service injection/override pattern for ecosystem crates.
+- `[x]` Add a doc: “Integrating persistence (sqlite/sqlx)” with driver-boundary apply.
+  - Evidence: `docs/integrating-sqlite-and-sqlx.md`
+- `[x]` Document a recommended service injection/override pattern for ecosystem crates.
+  - Evidence: `docs/service-injection-and-overrides.md`
 
 ## Milestone M6 — Adoption + cleanup
 
