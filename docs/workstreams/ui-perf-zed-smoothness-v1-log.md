@@ -3154,3 +3154,80 @@ Takeaway:
 Bundles:
 - Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71/`
 - Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-event-class-breakdown-5ab4ba71/1770264315951-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 15:10:00 (commit `5690e068`)
+
+Change:
+- perf(fret-ui): skip timer broadcast for targeted timers
+
+Why:
+- If the timer token has a recorded element target, broadcasting the same timer event across all timer-enabled layers
+  should be unnecessary. This change makes the targeted routing path return early (no fallback broadcast).
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-skip-timer-broadcast-5690e068 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- `dispatch_time_us`: p50 ~31, p95 ~250, max (across runs) 277
+- `dispatch_timer_event_time_us`: p50 ~0, p95 ~229, max (across runs) 253
+
+Takeaway:
+- This does not materially change p95 for the probe (timer frames remain expensive), but it reduces the run-level max.
+- Next: attribute whether the expensive timer frames are targeted or fallback broadcasts (and measure broadcast work).
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-skip-timer-broadcast-5690e068/`
+- Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-skip-timer-broadcast-5690e068/1770266641499-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 16:40:00 (commit `7c40fcd3`)
+
+Change:
+- perf(fret-ui): avoid bubbling targeted timer events
+
+Why:
+- Hypothesis: the timer dispatch tail might come from bubbling a `Event::Timer` through a deep ancestor chain even when
+  only the target element cares about the token.
+- This change dispatches targeted timer events to the target element only (no bubbling).
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-target-only-7c40fcd3 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; pointer-move frames; nearest-rank percentiles):
+- `dispatch_time_us`: p50 ~31, p95 ~252, max (across runs) 503
+- `dispatch_timer_event_time_us`: p50 ~0, p95 ~231, max (across runs) 479
+
+Takeaway:
+- This does not improve the probe’s p95 and introduces a large run-level max outlier (likely timer-related).
+- This suggests the dominant timer cost is not simply “ancestor bubbling”, or that the probe is still hitting the
+  fallback broadcast path for a timer token that has no element target.
+- Next: add explicit counters for targeted-vs-broadcast timer routing and measure the broadcast loop (layers visited).
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-target-only-7c40fcd3/`
+- Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-timer-target-only-7c40fcd3/1770267697192-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`

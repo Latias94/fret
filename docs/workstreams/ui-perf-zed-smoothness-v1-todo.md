@@ -279,6 +279,9 @@ Correctness acceptance:
       routing). On the worst pointer-move frame, `dispatch_timer_event_time_us` accounts for ~95%+ of `dispatch_time_us`.
     - Deliverable: a perf log entry showing pointer-move timer frames collapse toward the no-timer baseline.
     - Subtasks:
+      - Add attribution for timer routing mode:
+        - Count targeted timer dispatches (token has a recorded element target) vs fallback broadcasts.
+        - For broadcasts, count layers visited and time spent in the broadcast loop.
       - Identify the top timer sources (which services/widgets schedule them) and whether they are avoidable for hover-only moves.
       - Coalesce or defer timers so they do not fire on alternating pointer-move frames (or at least do near-zero work).
       - Add a “no timer dispatch during pointer-move” guard for harness workloads where appropriate (debug-only if needed).
