@@ -11,17 +11,21 @@ use fret_ui_kit::{LayoutRefinement, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, ScrollArea};
 
-use crate::{Message, MessageRole};
+use crate::model::MessageId;
+use crate::{Message, MessageContent, MessageRole};
 
+/// A minimal message record used by `ConversationTranscript`.
+///
+/// Prefer `AiMessage` + `AiConversationTranscript` when you need rich parts (markdown/tool calls).
 #[derive(Debug, Clone)]
 pub struct ConversationMessage {
-    pub id: u64,
+    pub id: MessageId,
     pub role: MessageRole,
     pub text: Arc<str>,
 }
 
 impl ConversationMessage {
-    pub fn new(id: u64, role: MessageRole, text: impl Into<Arc<str>>) -> Self {
+    pub fn new(id: MessageId, role: MessageRole, text: impl Into<Arc<str>>) -> Self {
         Self {
             id,
             role,
@@ -30,6 +34,10 @@ impl ConversationMessage {
     }
 }
 
+/// A virtualized transcript surface for `ConversationMessage`.
+///
+/// This is a lightweight, text-only transcript used by UI Gallery harnesses. For richer AI chat
+/// surfaces, prefer `AiConversationTranscript`.
 #[derive(Debug, Clone)]
 pub struct ConversationTranscript {
     messages: Arc<[ConversationMessage]>,
@@ -199,7 +207,9 @@ impl ConversationTranscript {
                     return cx.text("");
                 };
 
-                let bubble = Message::new(msg.role, msg.text.clone()).into_element(cx);
+                let content =
+                    MessageContent::new(msg.role, [cx.text(msg.text.clone())]).into_element(cx);
+                let bubble = Message::new(msg.role, [content]).into_element(cx);
                 let Some(prefix) = prefix.clone() else {
                     return bubble;
                 };
@@ -218,7 +228,13 @@ impl ConversationTranscript {
 
         let mut options = fret_ui::element::VirtualListOptions::new(Px(64.0), 8);
         options.items_revision = revision;
-        options.gap = decl_style::space(&theme, content_gap);
+        options.gap = if content_gap == Space::N8 {
+            theme
+                .metric_by_key("fret.ai.conversation.gap")
+                .unwrap_or_else(|| decl_style::space(&theme, content_gap))
+        } else {
+            decl_style::space(&theme, content_gap)
+        };
 
         let list_layout = LayoutStyle {
             size: fret_ui::element::SizeStyle {
@@ -239,7 +255,13 @@ impl ConversationTranscript {
             row,
         );
 
-        let padding_px = decl_style::space(&theme, content_padding);
+        let padding_px = if content_padding == Space::N4 {
+            theme
+                .metric_by_key("fret.ai.conversation.padding")
+                .unwrap_or_else(|| decl_style::space(&theme, content_padding))
+        } else {
+            decl_style::space(&theme, content_padding)
+        };
         let list = cx.container(
             ContainerProps {
                 layout: LayoutStyle {
@@ -301,6 +323,12 @@ impl ConversationTranscript {
                             .right(Space::N0)
                             .bottom(Space::N4),
                     );
+                    let mut overlay_layout = overlay_layout;
+                    if let Some(bottom) =
+                        theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
+                    {
+                        overlay_layout.inset.bottom = Some(bottom);
+                    }
 
                     let button_for_row = button.clone();
                     out.push(cx.container(
@@ -326,6 +354,9 @@ impl ConversationTranscript {
     }
 }
 
+/// A scrollable “conversation” container that manages stick-to-bottom behavior for arbitrary children.
+///
+/// This is a generic composition helper (often used to wrap a transcript + overlays).
 #[derive(Debug, Clone)]
 pub struct Conversation {
     children: Vec<AnyElement>,
@@ -460,7 +491,13 @@ impl Conversation {
         let content_padding = self.content_padding;
         let content_gap = self.content_gap;
         let children = self.children;
-        let padding_px = decl_style::space(&theme, content_padding);
+        let padding_px = if content_padding == Space::N4 {
+            theme
+                .metric_by_key("fret.ai.conversation.padding")
+                .unwrap_or_else(|| decl_style::space(&theme, content_padding))
+        } else {
+            decl_style::space(&theme, content_padding)
+        };
         let content = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
@@ -516,6 +553,12 @@ impl Conversation {
                             .right(Space::N0)
                             .bottom(Space::N4),
                     );
+                    let mut overlay_layout = overlay_layout;
+                    if let Some(bottom) =
+                        theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
+                    {
+                        overlay_layout.inset.bottom = Some(bottom);
+                    }
 
                     let button_for_row = button.clone();
                     out.push(cx.container(

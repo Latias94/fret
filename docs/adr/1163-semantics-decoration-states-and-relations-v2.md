@@ -1,4 +1,4 @@
-# ADR 1162: Semantics Decorations (v2) — states and relations
+# ADR 1163: Semantics Decorations (v2) — states and relations
 
 Status: Proposed
 
@@ -74,4 +74,3 @@ Extend `SemanticsDecoration` to support:
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0117-trigger-composition-and-no-slot-aschild.md`
 - `docs/adr/0174-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
-

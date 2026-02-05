@@ -7,7 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, Length,
-    OpacityProps, Overflow, SemanticsProps, VisualTransformProps,
+    OpacityProps, Overflow, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -689,14 +689,11 @@ impl PopoverContent {
             children,
         );
 
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Panel,
-                label,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
-        )
+        container.attach_semantics(SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label,
+            ..Default::default()
+        })
     }
 }
 

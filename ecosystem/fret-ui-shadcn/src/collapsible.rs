@@ -2,9 +2,11 @@
 
 use std::sync::Arc;
 
+use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, LayoutStyle, OpacityProps, PressableProps, StackProps,
+    AnyElement, ContainerProps, ElementKind, LayoutStyle, OpacityProps, PressableProps,
+    SemanticsDecoration, StackProps,
 };
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -197,10 +199,12 @@ impl Collapsible {
             let wrapper = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
             let root = cx.container(wrapper, move |_cx| vec![stack]);
 
-            cx.semantics(
-                radix_collapsible::collapsible_root_semantics(disabled, is_open),
-                move |_cx| vec![root],
-            )
+            root.attach_semantics(SemanticsDecoration {
+                role: Some(SemanticsRole::Generic),
+                disabled: Some(disabled),
+                expanded: Some(is_open),
+                ..Default::default()
+            })
         })
     }
 }
