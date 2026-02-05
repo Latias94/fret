@@ -476,8 +476,20 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.paint_nodes_performed.saturating_add(1);
         }
 
+        let widget_started = self.debug_enabled.then(Instant::now);
+        let mut widget_type: &'static str = "<unknown>";
+        if self.debug_enabled {
+            self.debug_paint_stack.push(DebugPaintStackFrame {
+                child_inclusive_time: Duration::default(),
+                child_inclusive_scene_ops_delta: 0,
+            });
+        }
+
         let start = scene.ops_len();
         self.with_widget_mut(node, |widget, tree| {
+            if tree.debug_enabled {
+                widget_type = widget.debug_type_name();
+            }
             let children_render_transform = widget
                 .children_render_transform(bounds)
                 .filter(|t| t.inverse().is_some());
@@ -522,6 +534,48 @@ impl<H: UiHost> UiTree<H> {
             }
         });
         let end = scene.ops_len();
+
+        if let Some(widget_started) = widget_started {
+            const MAX_PAINT_WIDGET_HOTSPOTS: usize = 16;
+            let inclusive_time = widget_started.elapsed();
+            let inclusive_scene_ops_delta = end.saturating_sub(start).min(u32::MAX as usize) as u32;
+            let (child_inclusive_time, child_inclusive_scene_ops_delta) = self
+                .debug_paint_stack
+                .pop()
+                .map(|f| (f.child_inclusive_time, f.child_inclusive_scene_ops_delta))
+                .unwrap_or_default();
+            let exclusive_time = inclusive_time.saturating_sub(child_inclusive_time);
+            let exclusive_scene_ops_delta =
+                inclusive_scene_ops_delta.saturating_sub(child_inclusive_scene_ops_delta);
+
+            if let Some(parent) = self.debug_paint_stack.last_mut() {
+                parent.child_inclusive_time += inclusive_time;
+                parent.child_inclusive_scene_ops_delta = parent
+                    .child_inclusive_scene_ops_delta
+                    .saturating_add(inclusive_scene_ops_delta);
+            }
+
+            let element = self.nodes.get(node).and_then(|n| n.element);
+            let record = UiDebugPaintWidgetHotspot {
+                node,
+                element,
+                widget_type,
+                inclusive_time,
+                exclusive_time,
+                inclusive_scene_ops_delta,
+                exclusive_scene_ops_delta,
+            };
+            let idx = self
+                .debug_paint_widget_hotspots
+                .iter()
+                .position(|h| h.exclusive_time < record.exclusive_time)
+                .unwrap_or(self.debug_paint_widget_hotspots.len());
+            self.debug_paint_widget_hotspots.insert(idx, record);
+            if self.debug_paint_widget_hotspots.len() > MAX_PAINT_WIDGET_HOTSPOTS {
+                self.debug_paint_widget_hotspots
+                    .truncate(MAX_PAINT_WIDGET_HOTSPOTS);
+            }
+        }
 
         let obs_started = self.debug_enabled.then(Instant::now);
         self.observed_in_paint.record(node, observations.as_slice());

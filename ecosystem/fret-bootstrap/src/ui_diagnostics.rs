@@ -4112,6 +4112,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
     #[serde(default)]
+    pub paint_widget_hotspots: Vec<UiPaintWidgetHotspotV1>,
+    #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
     ///
@@ -4254,6 +4256,11 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_widget_measure_hotspots()
                 .iter()
                 .map(UiWidgetMeasureHotspotV1::from_hotspot)
+                .collect(),
+            paint_widget_hotspots: ui
+                .debug_paint_widget_hotspots()
+                .iter()
+                .map(UiPaintWidgetHotspotV1::from_hotspot)
                 .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
@@ -5736,6 +5743,35 @@ impl UiWidgetMeasureHotspotV1 {
             widget_type: h.widget_type.to_string(),
             measure_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
             inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPaintWidgetHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    pub widget_type: String,
+    pub paint_time_us: u64,
+    #[serde(default)]
+    pub inclusive_time_us: u64,
+    #[serde(default)]
+    pub inclusive_scene_ops_delta: u32,
+    #[serde(default)]
+    pub exclusive_scene_ops_delta: u32,
+}
+
+impl UiPaintWidgetHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugPaintWidgetHotspot) -> Self {
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            widget_type: h.widget_type.to_string(),
+            paint_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_scene_ops_delta: h.inclusive_scene_ops_delta,
+            exclusive_scene_ops_delta: h.exclusive_scene_ops_delta,
         }
     }
 }

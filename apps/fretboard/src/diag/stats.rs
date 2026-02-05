@@ -373,10 +373,24 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) top_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_contained_relayout_cache_roots: Vec<BundleStatsCacheRoot>,
     pub(super) top_layout_engine_solves: Vec<BundleStatsLayoutEngineSolve>,
+    pub(super) paint_widget_hotspots: Vec<BundleStatsPaintWidgetHotspot>,
     pub(super) model_change_hotspots: Vec<BundleStatsModelChangeHotspot>,
     pub(super) model_change_unobserved: Vec<BundleStatsModelChangeUnobserved>,
     pub(super) global_change_hotspots: Vec<BundleStatsGlobalChangeHotspot>,
     pub(super) global_change_unobserved: Vec<BundleStatsGlobalChangeUnobserved>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsPaintWidgetHotspot {
+    pub(super) node: u64,
+    pub(super) element: Option<u64>,
+    pub(super) widget_type: Option<String>,
+    pub(super) paint_time_us: u64,
+    pub(super) inclusive_time_us: u64,
+    pub(super) inclusive_scene_ops_delta: u32,
+    pub(super) exclusive_scene_ops_delta: u32,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -690,6 +704,38 @@ impl BundleStatsReport {
                     row.paint_widget_time_us,
                     row.paint_observation_record_time_us
                 );
+            }
+            if !row.paint_widget_hotspots.is_empty() {
+                let items: Vec<String> = row
+                    .paint_widget_hotspots
+                    .iter()
+                    .take(3)
+                    .map(|h| {
+                        let mut s = format!(
+                            "us={} ops={}/{} node={} type={}",
+                            h.paint_time_us,
+                            h.exclusive_scene_ops_delta,
+                            h.inclusive_scene_ops_delta,
+                            h.node,
+                            h.widget_type.as_deref().unwrap_or("?"),
+                        );
+                        if let Some(test_id) = h.test_id.as_deref()
+                            && !test_id.is_empty()
+                        {
+                            s.push_str(&format!(" test_id={test_id}"));
+                        }
+                        if let Some(role) = h.role.as_deref()
+                            && !role.is_empty()
+                        {
+                            s.push_str(&format!(" role={role}"));
+                        }
+                        if let Some(el) = h.element {
+                            s.push_str(&format!(" element={el}"));
+                        }
+                        s
+                    })
+                    .collect();
+                println!("    paint_widget_hotspots: {}", items.join(" | "));
             }
             if !row.top_invalidation_walks.is_empty() {
                 let items: Vec<String> = row
@@ -1912,6 +1958,52 @@ impl BundleStatsReport {
                 obj.insert(
                     "top_layout_engine_solves".to_string(),
                     Value::Array(top_layout_engine_solves),
+                );
+
+                let paint_widget_hotspots = row
+                    .paint_widget_hotspots
+                    .iter()
+                    .map(|h| {
+                        let mut h_obj = Map::new();
+                        h_obj.insert("node".to_string(), Value::from(h.node));
+                        h_obj.insert(
+                            "element".to_string(),
+                            h.element.map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "widget_type".to_string(),
+                            h.widget_type
+                                .clone()
+                                .map(Value::from)
+                                .unwrap_or(Value::Null),
+                        );
+                        h_obj.insert("paint_time_us".to_string(), Value::from(h.paint_time_us));
+                        h_obj.insert(
+                            "inclusive_time_us".to_string(),
+                            Value::from(h.inclusive_time_us),
+                        );
+                        h_obj.insert(
+                            "inclusive_scene_ops_delta".to_string(),
+                            Value::from(h.inclusive_scene_ops_delta),
+                        );
+                        h_obj.insert(
+                            "exclusive_scene_ops_delta".to_string(),
+                            Value::from(h.exclusive_scene_ops_delta),
+                        );
+                        h_obj.insert(
+                            "role".to_string(),
+                            h.role.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        h_obj.insert(
+                            "test_id".to_string(),
+                            h.test_id.clone().map(Value::from).unwrap_or(Value::Null),
+                        );
+                        Value::Object(h_obj)
+                    })
+                    .collect::<Vec<_>>();
+                obj.insert(
+                    "paint_widget_hotspots".to_string(),
+                    Value::Array(paint_widget_hotspots),
                 );
 
                 let model_change_hotspots = row
@@ -5082,6 +5174,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_contained_relayout_cache_roots,
             ) = snapshot_cache_root_stats(s, 3);
             let top_layout_engine_solves = snapshot_layout_engine_solves(s, 3);
+            let paint_widget_hotspots = snapshot_paint_widget_hotspots(s, 3);
             let model_change_hotspots = snapshot_model_change_hotspots(s, 3);
             let model_change_unobserved = snapshot_model_change_unobserved(s, 3);
             let global_change_hotspots = snapshot_global_change_hotspots(s, 3);
@@ -5314,6 +5407,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 top_cache_roots,
                 top_contained_relayout_cache_roots,
                 top_layout_engine_solves,
+                paint_widget_hotspots,
                 model_change_hotspots,
                 model_change_unobserved,
                 global_change_hotspots,
@@ -5849,6 +5943,62 @@ pub(super) fn check_report_for_hover_layout_invalidations(
         "hover-attributed declarative layout invalidations detected (max_per_frame={} allowed={max_allowed}).{}",
         report.max_hover_layout_invalidations, extra
     ))
+}
+
+fn snapshot_paint_widget_hotspots(
+    snapshot: &serde_json::Value,
+    max: usize,
+) -> Vec<BundleStatsPaintWidgetHotspot> {
+    let hotspots = snapshot
+        .get("debug")
+        .and_then(|v| v.get("paint_widget_hotspots"))
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    if hotspots.is_empty() {
+        return Vec::new();
+    }
+
+    let semantics_index = SemanticsIndex::from_snapshot(snapshot);
+
+    let mut out: Vec<BundleStatsPaintWidgetHotspot> = hotspots
+        .iter()
+        .take(max.max(1))
+        .map(|h| BundleStatsPaintWidgetHotspot {
+            node: h.get("node").and_then(|v| v.as_u64()).unwrap_or(0),
+            element: h.get("element").and_then(|v| v.as_u64()),
+            widget_type: h
+                .get("widget_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            paint_time_us: h.get("paint_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
+            inclusive_time_us: h
+                .get("inclusive_time_us")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0),
+            inclusive_scene_ops_delta: h
+                .get("inclusive_scene_ops_delta")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            exclusive_scene_ops_delta: h
+                .get("exclusive_scene_ops_delta")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32,
+            role: None,
+            test_id: None,
+        })
+        .collect();
+
+    for item in &mut out {
+        let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(item.node);
+        item.role = role;
+        item.test_id = test_id;
+    }
+
+    out
 }
 
 fn snapshot_layout_engine_solves(

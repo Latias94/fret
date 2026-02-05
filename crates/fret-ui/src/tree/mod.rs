@@ -915,6 +915,17 @@ pub struct UiDebugWidgetMeasureHotspot {
     pub exclusive_time: Duration,
 }
 
+#[derive(Debug, Clone)]
+pub struct UiDebugPaintWidgetHotspot {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub widget_type: &'static str,
+    pub inclusive_time: Duration,
+    pub exclusive_time: Duration,
+    pub inclusive_scene_ops_delta: u32,
+    pub exclusive_scene_ops_delta: u32,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct DebugLayoutStackFrame {
     child_inclusive_time: Duration,
@@ -923,6 +934,12 @@ struct DebugLayoutStackFrame {
 #[derive(Debug, Clone, Copy)]
 struct DebugWidgetMeasureStackFrame {
     child_inclusive_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct DebugPaintStackFrame {
+    child_inclusive_time: Duration,
+    child_inclusive_scene_ops_delta: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1320,6 +1337,8 @@ pub struct UiTree<H: UiHost> {
     debug_layout_stack: Vec<DebugLayoutStackFrame>,
     debug_widget_measure_hotspots: Vec<UiDebugWidgetMeasureHotspot>,
     debug_widget_measure_stack: Vec<DebugWidgetMeasureStackFrame>,
+    debug_paint_widget_hotspots: Vec<UiDebugPaintWidgetHotspot>,
+    debug_paint_stack: Vec<DebugPaintStackFrame>,
     debug_measure_children: HashMap<NodeId, HashMap<NodeId, DebugMeasureChildRecord>>,
     debug_invalidation_walks: Vec<UiDebugInvalidationWalk>,
     debug_model_change_hotspots: Vec<UiDebugModelChangeHotspot>,
@@ -1744,6 +1763,8 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_layout_stack: Vec::new(),
             debug_widget_measure_hotspots: Vec::new(),
             debug_widget_measure_stack: Vec::new(),
+            debug_paint_widget_hotspots: Vec::new(),
+            debug_paint_stack: Vec::new(),
             debug_measure_children: HashMap::new(),
             debug_invalidation_walks: Vec::new(),
             debug_model_change_hotspots: Vec::new(),
@@ -2077,6 +2098,8 @@ impl<H: UiHost> UiTree<H> {
         self.debug_remove_subtree_frame_context.clear();
         #[cfg(feature = "diagnostics")]
         self.debug_removed_subtrees.clear();
+        self.debug_paint_widget_hotspots.clear();
+        self.debug_paint_stack.clear();
         #[cfg(feature = "diagnostics")]
         {
             self.debug_reachable_from_layer_roots = None;
@@ -2554,6 +2577,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_widget_measure_hotspots.as_slice()
+    }
+
+    pub fn debug_paint_widget_hotspots(&self) -> &[UiDebugPaintWidgetHotspot] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_paint_widget_hotspots.as_slice()
     }
 
     pub(crate) fn node_bounds(&self, node: NodeId) -> Option<Rect> {
