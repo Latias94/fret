@@ -405,6 +405,8 @@ ColumnDef keys referenced by upstream feature implementations:
   - Covered: controlled-hook noop semantics (`onColumnVisibilityChange` ignores updater).
     - Fixture snapshots: `visord_toggle_column_a_off_on_column_visibility_change_noop_ignores`
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnVisibilityChange`)
+  - Covered: pinning × visibility × ordering × sizing interactions (derived pinned leaf sets + `column_start`/`column_after`).
+    - Fixture snapshots: `visord_pinning_left_a_right_c_*`
 - [x] HTP-colord-010 Align column ordering hook:
   - `onColumnOrderChange` (state transition outcomes + derived leaf order).
   - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +

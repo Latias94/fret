@@ -370,6 +370,1322 @@
       }
     },
     {
+      "id": "visord_pinning_left_a_right_c",
+      "options": {
+        "enableHiding": true
+      },
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a"
+          ],
+          "right": [
+            "c"
+          ]
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 175,
+          "left_total_size": 100,
+          "center_total_size": 50,
+          "right_total_size": 25
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 100,
+            "c": 150
+          },
+          "left": {
+            "a": 0,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": 0,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 75,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": 0,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": 0,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "core_model": {
+          "column_tree": [
+            {
+              "id": "a",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "b",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "c",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            }
+          ],
+          "leaf_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "b",
+              "c"
+            ],
+            "left_visible": [
+              "a"
+            ],
+            "center_visible": [
+              "b"
+            ],
+            "right_visible": [
+              "c"
+            ]
+          },
+          "header_groups": [
+            {
+              "id": "0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "a",
+                  "column_id": "a",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                },
+                {
+                  "id": "b",
+                  "column_id": "b",
+                  "depth": 1,
+                  "index": 1,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                },
+                {
+                  "id": "c",
+                  "column_id": "c",
+                  "depth": 1,
+                  "index": 2,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "left_header_groups": [
+            {
+              "id": "left_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "a",
+                  "column_id": "a",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "center_header_groups": [
+            {
+              "id": "center_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "b",
+                  "column_id": "b",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "right_header_groups": [
+            {
+              "id": "right_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "c",
+                  "column_id": "c",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "rows": {
+            "core": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            },
+            "row_model": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            }
+          },
+          "cells": {
+            "1": {
+              "all": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                },
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                },
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ],
+              "visible": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                },
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                },
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ],
+              "left": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                }
+              ],
+              "center": [
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                }
+              ],
+              "right": [
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "visord_pinning_left_a_right_c_hide_left",
+      "options": {
+        "enableHiding": true
+      },
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a"
+          ],
+          "right": [
+            "c"
+          ]
+        },
+        "columnVisibility": {
+          "a": false
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 75,
+          "left_total_size": 0,
+          "center_total_size": 50,
+          "right_total_size": 25
+        },
+        "column_start": {
+          "all": {
+            "a": 50,
+            "b": 0,
+            "c": 50
+          },
+          "left": {
+            "a": 0,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": 0,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 75,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": 0,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": 0,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "core_model": {
+          "column_tree": [
+            {
+              "id": "a",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "b",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "c",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            }
+          ],
+          "leaf_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "b",
+              "c"
+            ],
+            "left_visible": [],
+            "center_visible": [
+              "b"
+            ],
+            "right_visible": [
+              "c"
+            ]
+          },
+          "header_groups": [
+            {
+              "id": "0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "b",
+                  "column_id": "b",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                },
+                {
+                  "id": "c",
+                  "column_id": "c",
+                  "depth": 1,
+                  "index": 1,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "left_header_groups": [
+            {
+              "id": "left_0",
+              "depth": 0,
+              "headers": []
+            }
+          ],
+          "center_header_groups": [
+            {
+              "id": "center_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "b",
+                  "column_id": "b",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "right_header_groups": [
+            {
+              "id": "right_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "c",
+                  "column_id": "c",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "rows": {
+            "core": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            },
+            "row_model": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            }
+          },
+          "cells": {
+            "1": {
+              "all": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                },
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                },
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ],
+              "visible": [
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                },
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ],
+              "left": [],
+              "center": [
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                }
+              ],
+              "right": [
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "visord_pinning_left_a_right_c_hide_center_and_resize_left",
+      "options": {
+        "enableHiding": true
+      },
+      "state": {
+        "columnPinning": {
+          "left": [
+            "a"
+          ],
+          "right": [
+            "c"
+          ]
+        },
+        "columnVisibility": {
+          "b": false
+        },
+        "columnSizing": {
+          "a": 120
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 145,
+          "left_total_size": 120,
+          "center_total_size": 0,
+          "right_total_size": 25
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 120,
+            "c": 120
+          },
+          "left": {
+            "a": 0,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": 0,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 25,
+            "b": 145,
+            "c": 0
+          },
+          "left": {
+            "a": 0,
+            "b": null,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": 0,
+            "c": null
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": 0
+          }
+        },
+        "core_model": {
+          "column_tree": [
+            {
+              "id": "a",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "b",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "c",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            }
+          ],
+          "leaf_columns": {
+            "all": [
+              "a",
+              "b",
+              "c"
+            ],
+            "visible": [
+              "a",
+              "c"
+            ],
+            "left_visible": [
+              "a"
+            ],
+            "center_visible": [],
+            "right_visible": [
+              "c"
+            ]
+          },
+          "header_groups": [
+            {
+              "id": "0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "a",
+                  "column_id": "a",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                },
+                {
+                  "id": "c",
+                  "column_id": "c",
+                  "depth": 1,
+                  "index": 1,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "left_header_groups": [
+            {
+              "id": "left_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "a",
+                  "column_id": "a",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "center_header_groups": [
+            {
+              "id": "center_0",
+              "depth": 0,
+              "headers": []
+            }
+          ],
+          "right_header_groups": [
+            {
+              "id": "right_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "c",
+                  "column_id": "c",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "rows": {
+            "core": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            },
+            "row_model": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            }
+          },
+          "cells": {
+            "1": {
+              "all": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                },
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                },
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ],
+              "visible": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                },
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ],
+              "left": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                }
+              ],
+              "center": [],
+              "right": [
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "visord_pinning_left_a_right_c_order_and_hide_right",
+      "options": {
+        "enableHiding": true
+      },
+      "state": {
+        "columnOrder": [
+          "c",
+          "a",
+          "b"
+        ],
+        "columnPinning": {
+          "left": [
+            "a"
+          ],
+          "right": [
+            "c"
+          ]
+        },
+        "columnVisibility": {
+          "c": false
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 150,
+          "left_total_size": 100,
+          "center_total_size": 50,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "c": 100,
+            "a": 0,
+            "b": 100
+          },
+          "left": {
+            "c": null,
+            "a": 0,
+            "b": null
+          },
+          "center": {
+            "c": null,
+            "a": null,
+            "b": 0
+          },
+          "right": {
+            "c": 0,
+            "a": null,
+            "b": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "c": 150,
+            "a": 50,
+            "b": 0
+          },
+          "left": {
+            "c": null,
+            "a": 0,
+            "b": null
+          },
+          "center": {
+            "c": null,
+            "a": null,
+            "b": 0
+          },
+          "right": {
+            "c": 0,
+            "a": null,
+            "b": null
+          }
+        },
+        "core_model": {
+          "column_tree": [
+            {
+              "id": "a",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "b",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            },
+            {
+              "id": "c",
+              "depth": 0,
+              "parent_id": null,
+              "child_ids": []
+            }
+          ],
+          "leaf_columns": {
+            "all": [
+              "c",
+              "a",
+              "b"
+            ],
+            "visible": [
+              "a",
+              "b"
+            ],
+            "left_visible": [
+              "a"
+            ],
+            "center_visible": [
+              "b"
+            ],
+            "right_visible": []
+          },
+          "header_groups": [
+            {
+              "id": "0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "a",
+                  "column_id": "a",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                },
+                {
+                  "id": "b",
+                  "column_id": "b",
+                  "depth": 1,
+                  "index": 1,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "left_header_groups": [
+            {
+              "id": "left_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "a",
+                  "column_id": "a",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "center_header_groups": [
+            {
+              "id": "center_0",
+              "depth": 0,
+              "headers": [
+                {
+                  "id": "b",
+                  "column_id": "b",
+                  "depth": 1,
+                  "index": 0,
+                  "is_placeholder": false,
+                  "placeholder_id": null,
+                  "col_span": 1,
+                  "row_span": 0,
+                  "sub_header_ids": []
+                }
+              ]
+            }
+          ],
+          "right_header_groups": [
+            {
+              "id": "right_0",
+              "depth": 0,
+              "headers": []
+            }
+          ],
+          "rows": {
+            "core": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            },
+            "row_model": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            }
+          },
+          "cells": {
+            "1": {
+              "all": [
+                {
+                  "id": "1_c",
+                  "column_id": "c"
+                },
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                },
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                }
+              ],
+              "visible": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                },
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                }
+              ],
+              "left": [
+                {
+                  "id": "1_a",
+                  "column_id": "a"
+                }
+              ],
+              "center": [
+                {
+                  "id": "1_b",
+                  "column_id": "b"
+                }
+              ],
+              "right": []
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "visord_toggle_column_a_off",
       "options": {
         "enableHiding": true

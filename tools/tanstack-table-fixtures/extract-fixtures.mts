@@ -3900,6 +3900,23 @@ function snapshotColumnPinning(
 
     snapshots = [
       mk("visord_baseline", base, {}),
+      mk("visord_pinning_left_a_right_c", base, {
+        columnPinning: { left: ["a"], right: ["c"] },
+      }),
+      mk("visord_pinning_left_a_right_c_hide_left", base, {
+        columnPinning: { left: ["a"], right: ["c"] },
+        columnVisibility: { a: false },
+      }),
+      mk("visord_pinning_left_a_right_c_hide_center_and_resize_left", base, {
+        columnPinning: { left: ["a"], right: ["c"] },
+        columnVisibility: { b: false },
+        columnSizing: { a: 120 },
+      }),
+      mk("visord_pinning_left_a_right_c_order_and_hide_right", base, {
+        columnOrder: ["c", "a", "b"],
+        columnPinning: { left: ["a"], right: ["c"] },
+        columnVisibility: { c: false },
+      }),
       mkActions("visord_toggle_column_a_off", base, {}, [
         { type: "toggleColumnVisibility", column_id: "a", value: false },
       ]),
