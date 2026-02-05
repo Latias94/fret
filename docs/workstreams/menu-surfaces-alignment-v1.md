@@ -50,7 +50,7 @@ This workstream locks down the “menu surfaces should agree” outcomes without
 
 ## 2) Reference models (what “good” looks like)
 
-Local snapshots we can audit:
+Local snapshots we can audit (optional; not tracked in git — see `.gitignore:/repo-ref`):
 
 - Zed (GPUI)
   - OS menubars (`App::set_menus`) and client-side application menus for non-macOS.
@@ -58,6 +58,7 @@ Local snapshots we can audit:
   - Evidence: `repo-ref/zed/crates/title_bar/src/application_menu.rs` (hover switches open menu)
 - Godot
   - Embedded `MenuBar` that can prefer a global/native menu bar when supported.
+  - Has explicit “switch on hover” behavior (`set_switch_on_hover`).
   - Evidence: `repo-ref/godot/scene/gui/menu_bar.cpp` (`set_prefer_global_menu`, hover/pressed state)
 - Radix Menubar/Menu (behavioral outcomes)
   - We align outcomes via `ecosystem/fret-ui-kit::primitives::menu` / `menubar`.
@@ -184,3 +185,57 @@ High-level intent:
   milestone minimal and outcome-driven.
 - **Dynamic menus**: “Recent” and “Window list” are easy to implement badly (unstable IDs, rebuild
   churn). We should define ID stability and update frequency early.
+
+---
+
+## 8) Gap analysis (vs Zed / Godot) + recommended refactors
+
+This is intentionally “fearless refactor” oriented: prefer outcomes + regression gates over
+incremental tweaks.
+
+### 8.1 Pointer UX gaps (menubar as a surface, not a row of buttons)
+
+- **Hover switching while a menu is already open**
+  - Zed: hovering another menubar trigger while a menu is deployed switches the open menu.
+  - Godot: explicit `switch_on_hover` behavior exists for `MenuBar`.
+  - Fret target outcome: when any top-level menu is open, pointer hover over a sibling trigger
+    switches menus (with a short delay to prevent accidental switches during fast cursor travel).
+
+- **Submenu “grace intent” (diagonal travel)**
+  - Radix-style menus tolerate diagonal pointer movement toward a submenu without closing.
+  - Fret target outcome: introduce a small grace region / timer so submenus don’t collapse while the
+    pointer moves from parent item → submenu.
+
+### 8.2 Keyboard UX gaps (editor-grade expectations)
+
+- **Mnemonics**
+  - Today we have Alt activation to focus the menubar (Windows/Linux). We still need a mnemonic
+    strategy (underlined letters, Alt+Key behavior, localization story), or an explicit deferral with
+    rationale.
+
+- **Menu key / Shift+F10**
+  - Align “open context menu” behavior with in-window menus so keyboard users have a predictable
+    path even without F10/Alt patterns.
+
+### 8.3 Contract and layering gaps (avoid drift)
+
+- **Normalization single source of truth**
+  - Ensure separator trimming + empty submenu dropping is centralized (data-only if possible) so OS
+    mapping and in-window overlays cannot diverge.
+
+- **Gating single source of truth**
+  - Every surface should consume `WindowCommandGatingSnapshot` (or a helper that is explicitly a
+    snapshot), so “enabled/disabled” parity is guaranteed.
+
+- **Stable shortcut labels**
+  - Keep shortcut labels stable via `Keymap::display_shortcut_for_command_sequence`; do not
+    accidentally make labels depend on live focus context (this feels “jittery” in menus).
+
+### 8.4 Dynamic menus (common editor patterns)
+
+- **Recent**
+  - Needs stable IDs + update strategy; avoid rebuild churn and focus loss.
+
+- **Window list**
+  - Multi-window editors need a “Window” list that reflects open windows/tabs; align with
+    `MenuRole::Window` semantics where possible.

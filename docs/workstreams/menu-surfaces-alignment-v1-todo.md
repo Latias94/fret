@@ -84,8 +84,11 @@ Exit criteria:
   - Evidence: `crates/fret-ui/src/tree/tests/alt_menu_bar_activation.rs` (nextest coverage)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (publishes `WindowMenuBarFocusService` for in-window menubar)
 - [ ] MENU-MVP1-kbd-021 Implement mnemonic strategy (underlined letter + Alt+Key) or explicitly defer with rationale.
-- [ ] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
+- [x] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
+  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (test `escape_unwinds_submenu_then_menu_and_restores_focus`)
 - [ ] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.
+- [ ] MENU-MVP1-parity-024 Switch open menus on hover (Zed/Godot-style `switch_on_hover`) with a small delay.
+- [ ] MENU-MVP1-parity-025 Implement submenu “grace intent” (diagonal pointer travel tolerance); cover via `MENU-MVP4-test-052`.
 
 ---
 
