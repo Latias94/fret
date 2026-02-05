@@ -114,6 +114,7 @@ pub(crate) const PAGE_DATA_TABLE_TORTURE: &str = "data_table_torture";
 pub(crate) const PAGE_TREE_TORTURE: &str = "tree_torture";
 pub(crate) const PAGE_TABLE_RETAINED_TORTURE: &str = "table_retained_torture";
 pub(crate) const PAGE_AI_TRANSCRIPT_TORTURE: &str = "ai_transcript_torture";
+pub(crate) const PAGE_AI_CHAT_DEMO: &str = "ai_chat_demo";
 pub(crate) const PAGE_INSPECTOR_TORTURE: &str = "inspector_torture";
 pub(crate) const PAGE_FILE_TREE_TORTURE: &str = "file_tree_torture";
 pub(crate) const PAGE_BUTTON: &str = "button";
@@ -234,6 +235,7 @@ pub(crate) const CMD_NAV_TABLE_RETAINED_TORTURE: &str =
     "ui_gallery.nav.select.table_retained_torture";
 pub(crate) const CMD_NAV_AI_TRANSCRIPT_TORTURE: &str =
     "ui_gallery.nav.select.ai_transcript_torture";
+pub(crate) const CMD_NAV_AI_CHAT_DEMO: &str = "ui_gallery.nav.select.ai_chat_demo";
 pub(crate) const CMD_NAV_INSPECTOR_TORTURE: &str = "ui_gallery.nav.select.inspector_torture";
 pub(crate) const CMD_NAV_FILE_TREE_TORTURE: &str = "ui_gallery.nav.select.file_tree_torture";
 pub(crate) const CMD_NAV_BUTTON: &str = "ui_gallery.nav.select.button";
@@ -715,6 +717,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_AI_TRANSCRIPT_TORTURE,
                 docs::USAGE_AI_TRANSCRIPT_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_AI_CHAT_DEMO,
+                "AI Chat (Demo)",
+                "AI Chat / Conversation + PromptInput Demo",
+                "fret-ui-ai (chat surfaces)",
+                CMD_NAV_AI_CHAT_DEMO,
+                &[
+                    "ai",
+                    "chat",
+                    "conversation",
+                    "prompt",
+                    "input",
+                    "interaction",
+                    "demo",
+                ],
+                docs::DOC_AI_CHAT_DEMO,
+                docs::USAGE_AI_CHAT_DEMO,
             ),
             PageSpec::new(
                 PAGE_INSPECTOR_TORTURE,

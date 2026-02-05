@@ -17260,46 +17260,37 @@ fn web_vs_fret_layout_field_group_geometry() {
         let tasks_push: Model<bool> = cx.app.models_mut().insert(false);
         let tasks_email: Model<bool> = cx.app.models_mut().insert(false);
 
-        let responses_label = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
+        let responses_label = fret_ui_shadcn::FieldLabel::new("Responses")
+            .into_element(cx)
+            .attach_semantics(fret_ui::element::SemanticsDecoration {
+                role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:responses:label")),
                 ..Default::default()
-            },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Responses").into_element(cx)],
-        );
-        let responses_desc = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:responses:desc")),
-                ..Default::default()
-            },
-            move |cx| {
-                vec![fret_ui_shadcn::FieldDescription::new(
-                    "Get notified when ChatGPT responds to requests that take time, like research or image generation.",
-                )
-                .into_element(cx)]
-            },
-        );
-        let responses_row = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:responses:row")),
-                ..Default::default()
-            },
-            move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(responses_push)
-                    .disabled(true)
-                    .a11y_label("push")
-                    .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
-                vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                ]
-            },
-        );
+            });
+        let responses_desc = fret_ui_shadcn::FieldDescription::new(
+            "Get notified when ChatGPT responds to requests that take time, like research or image generation.",
+        )
+        .into_element(cx)
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:responses:desc")),
+            ..Default::default()
+        });
+        let responses_row = {
+            let checkbox = fret_ui_shadcn::Checkbox::new(responses_push)
+                .disabled(true)
+                .a11y_label("push")
+                .into_element(cx);
+            let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
+            fret_ui_shadcn::Field::new(vec![checkbox, label])
+                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                .into_element(cx)
+        }
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:responses:row")),
+            ..Default::default()
+        });
         let responses_checkbox_group = fret_ui_shadcn::FieldGroup::new(vec![responses_row])
             .checkbox_group()
             .into_element(cx);
@@ -17310,65 +17301,50 @@ fn web_vs_fret_layout_field_group_geometry() {
         ])
         .into_element(cx);
 
-        let tasks_label = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
+        let tasks_label = fret_ui_shadcn::FieldLabel::new("Tasks")
+            .into_element(cx)
+            .attach_semantics(fret_ui::element::SemanticsDecoration {
+                role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:tasks:label")),
                 ..Default::default()
-            },
-            move |cx| vec![fret_ui_shadcn::FieldLabel::new("Tasks").into_element(cx)],
-        );
-        let tasks_desc = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:tasks:desc")),
-                ..Default::default()
-            },
-            move |cx| {
-                vec![
-                    fret_ui_shadcn::FieldDescription::new(
-                        "Get notified when tasks you've created have updates. Manage tasks",
-                    )
-                    .into_element(cx),
-                ]
-            },
-        );
-        let tasks_row_push = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:tasks:push-row")),
-                ..Default::default()
-            },
-            move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(tasks_push)
-                    .a11y_label("push-tasks")
-                    .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
-                vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                ]
-            },
-        );
-        let tasks_row_email = cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
-                label: Some(Arc::from("Golden:field-group:tasks:email-row")),
-                ..Default::default()
-            },
-            move |cx| {
-                let checkbox = fret_ui_shadcn::Checkbox::new(tasks_email)
-                    .a11y_label("email-tasks")
-                    .into_element(cx);
-                let label = fret_ui_shadcn::FieldLabel::new("Email notifications").into_element(cx);
-                vec![
-                    fret_ui_shadcn::Field::new(vec![checkbox, label])
-                        .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
-                        .into_element(cx),
-                ]
-            },
-        );
+            });
+        let tasks_desc = fret_ui_shadcn::FieldDescription::new(
+            "Get notified when tasks you've created have updates. Manage tasks",
+        )
+        .into_element(cx)
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:tasks:desc")),
+            ..Default::default()
+        });
+        let tasks_row_push = {
+            let checkbox = fret_ui_shadcn::Checkbox::new(tasks_push)
+                .a11y_label("push-tasks")
+                .into_element(cx);
+            let label = fret_ui_shadcn::FieldLabel::new("Push notifications").into_element(cx);
+            fret_ui_shadcn::Field::new(vec![checkbox, label])
+                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                .into_element(cx)
+        }
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:tasks:push-row")),
+            ..Default::default()
+        });
+        let tasks_row_email = {
+            let checkbox = fret_ui_shadcn::Checkbox::new(tasks_email)
+                .a11y_label("email-tasks")
+                .into_element(cx);
+            let label = fret_ui_shadcn::FieldLabel::new("Email notifications").into_element(cx);
+            fret_ui_shadcn::Field::new(vec![checkbox, label])
+                .orientation(fret_ui_shadcn::FieldOrientation::Horizontal)
+                .into_element(cx)
+        }
+        .attach_semantics(fret_ui::element::SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label: Some(Arc::from("Golden:field-group:tasks:email-row")),
+            ..Default::default()
+        });
         let tasks_checkbox_group =
             fret_ui_shadcn::FieldGroup::new(vec![tasks_row_push, tasks_row_email])
                 .checkbox_group()
@@ -17394,14 +17370,13 @@ fn web_vs_fret_layout_field_group_geometry() {
             move |_cx| vec![group],
         );
 
-        vec![cx.semantics(
-            fret_ui::element::SemanticsProps {
-                role: SemanticsRole::Panel,
+        vec![
+            root.attach_semantics(fret_ui::element::SemanticsDecoration {
+                role: Some(SemanticsRole::Panel),
                 label: Some(Arc::from("Golden:field-group:root")),
                 ..Default::default()
-            },
-            move |_cx| vec![root],
-        )]
+            }),
+        ]
     });
 
     let root = find_semantics(&snap, SemanticsRole::Panel, Some("Golden:field-group:root"))

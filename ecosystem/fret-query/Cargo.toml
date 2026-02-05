@@ -12,6 +12,8 @@ documentation.workspace = true
 [features]
 default = ["ui"]
 ui = ["dep:fret-ui"]
+tokio = ["fret-executor/tokio"]
+wasm = ["fret-executor/wasm"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
@@ -22,4 +24,4 @@ tracing.workspace = true
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
-
+pollster.workspace = true

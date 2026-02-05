@@ -97,13 +97,19 @@ Goal: TanStack Query-like ergonomics adapted to Fret’s execution constraints:
 Implementation:
 
 - `ecosystem/fret-query`
-  - core: `QueryClient::{use_query,invalidate,gc}`
-  - UI sugar: `fret_query::ui::QueryElementContextExt::use_query(...)`
+  - core: `QueryClient::{use_query,use_query_async,use_query_async_local,invalidate,gc}`
+  - UI sugar:
+    - `fret_query::ui::QueryElementContextExt::use_query(...)`
+    - `fret_query::ui::QueryElementContextExt::use_query_async(...)`
+    - `fret_query::ui::QueryElementContextExt::use_query_async_local(...)`
+  - async fetch requires installing a `FutureSpawnerHandle` global (tokio/wasm spawners); see
+    `docs/integrating-tokio-and-reqwest.md`
 
 Open adoption work:
 
 - migrate “hand-rolled async caches” in ecosystem crates to `fret-query` (starting with demos)
-- define a consistent keying story (`QueryKey::new(namespace, key_hash)`)
+- define a consistent keying story (`QueryKey::new(namespace, &key)`); see
+  `docs/query-key-conventions.md`
 
 ## Typed message routing (remove string parsing in demos/templates)
 
