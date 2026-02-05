@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ffi::c_void;
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
@@ -254,6 +255,43 @@ fn to_wide(s: &str) -> Vec<u16> {
 }
 
 #[cfg(target_os = "windows")]
+fn windows_menu_title_with_mnemonic<'a>(title: &'a str, mnemonic: Option<char>) -> Cow<'a, str> {
+    let mut inserted = false;
+    let mut needs_escape = false;
+
+    let mut out: String = String::with_capacity(title.len().saturating_add(1));
+    for ch in title.chars() {
+        if ch == '&' {
+            needs_escape = true;
+            out.push('&');
+            out.push('&');
+            continue;
+        }
+
+        if let Some(mnemonic) = mnemonic {
+            let is_match = if mnemonic.is_ascii() && ch.is_ascii() {
+                ch.eq_ignore_ascii_case(&mnemonic)
+            } else {
+                ch == mnemonic
+            };
+
+            if !inserted && is_match {
+                inserted = true;
+                out.push('&');
+            }
+        }
+
+        out.push(ch);
+    }
+
+    if inserted || needs_escape {
+        Cow::Owned(out)
+    } else {
+        Cow::Borrowed(title)
+    }
+}
+
+#[cfg(target_os = "windows")]
 pub(crate) struct WindowsMenuBar {
     pub(crate) handle: HMENU,
 }
@@ -424,13 +462,47 @@ fn build_menu_bar(
             );
         }
 
-        let title = to_wide(&menu.title);
+        let title = windows_menu_title_with_mnemonic(&menu.title, menu.mnemonic);
+        let title = to_wide(title.as_ref());
         unsafe {
             let _ = AppendMenuW(root, MF_POPUP, popup as usize, title.as_ptr());
         }
     }
 
     Some((WindowsMenuBar { handle: root }, defs_by_id))
+}
+
+#[cfg(all(test, target_os = "windows"))]
+mod tests {
+    use super::windows_menu_title_with_mnemonic;
+
+    #[test]
+    fn windows_menu_title_inserts_ampersand_for_mnemonic() {
+        assert_eq!(
+            windows_menu_title_with_mnemonic("File", Some('f')).as_ref(),
+            "&File"
+        );
+        assert_eq!(
+            windows_menu_title_with_mnemonic("File", Some('i')).as_ref(),
+            "F&ile"
+        );
+        assert_eq!(
+            windows_menu_title_with_mnemonic("View", Some('w')).as_ref(),
+            "Vie&w"
+        );
+    }
+
+    #[test]
+    fn windows_menu_title_escapes_existing_ampersands() {
+        assert_eq!(
+            windows_menu_title_with_mnemonic("R&D", None).as_ref(),
+            "R&&D"
+        );
+        assert_eq!(
+            windows_menu_title_with_mnemonic("R&D", Some('d')).as_ref(),
+            "R&&&D"
+        );
+    }
 }
 
 #[cfg(target_os = "windows")]

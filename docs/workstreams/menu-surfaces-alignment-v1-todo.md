@@ -94,6 +94,7 @@ Exit criteria:
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`open_on_alt_mnemonic`)
   - Evidence: `ecosystem/fret-kit/src/workspace_shell.rs` (installs Alt+mnemonic key handler)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (installs Alt+mnemonic key handler; adds Gallery mnemonic)
+  - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` (maps mnemonics to Win32 `&` labels for OS menubar)
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-alt-mnemonic.json`
 - [x] MENU-MVP1-kbd-026 Render mnemonic underlines for in-window menubar triggers (presentation).
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`attributed_title_with_mnemonic_underline`, trigger label rendering)

@@ -209,9 +209,13 @@ incremental tweaks.
 ### 8.2 Keyboard UX gaps (editor-grade expectations)
 
 - **Mnemonics**
-  - Today we have Alt activation to focus the menubar (Windows/Linux). We still need a mnemonic
-    strategy (underlined letters, Alt+Key behavior, localization story), or an explicit deferral with
-    rationale.
+  - Implemented an explicit mnemonic strategy for top-level in-window menubars (Windows/Linux):
+    - Data model: `Menu.mnemonic: Option<char>` (and `menubar.json` v2 support)
+    - Keyboard: `Alt+Key` opens/switches the corresponding top-level menu
+    - Presentation: underline the mnemonic character for menubar triggers while the menubar is
+      active/focused (ecosystem-owned rendering)
+  - Important constraint: no “first letter” heuristics — mnemonics must come from a
+    source-of-truth to avoid localization/collision regressions.
 
 - **Menu key / Shift+F10**
   - Align “open context menu” behavior with in-window menus so keyboard users have a predictable
