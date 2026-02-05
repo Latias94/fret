@@ -28,6 +28,9 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::floating_label;
+use crate::foundation::indication::{
+    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+};
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::autocomplete as autocomplete_tokens;
@@ -816,6 +819,10 @@ impl TextField {
                                 let pressed_opacity = theme
                                     .number_by_key("md.sys.state.pressed.state-layer-opacity")
                                     .unwrap_or(0.1);
+                                let ripple_base_opacity = pressed_opacity;
+                                let config = material_pressable_indication_config(&theme, None);
+                                let corner_radii = Corners::all(Px(24.0));
+                                let state_layer_color = alpha_mul(color, opacity);
 
                                 let mut layout = fret_ui::element::LayoutStyle::default();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -851,30 +858,51 @@ impl TextField {
                                             ));
                                         }
 
-                                        let state_layer = if enabled && state.pressed {
-                                            Some(alpha_mul(color, pressed_opacity))
-                                        } else if enabled && state.hovered {
-                                            Some(alpha_mul(color, hover_opacity))
-                                        } else {
-                                            None
-                                        };
+                                        let pressable_id = cx.root_id();
+                                        let now_frame = cx.frame_id.0;
 
-                                        let state_layer = {
-                                            let mut props = ContainerProps::default();
-                                            props.layout.size.width = Length::Fill;
-                                            props.layout.size.height = Length::Fill;
-                                            props.background = state_layer;
-                                            props.corner_radii = Corners::all(Px(24.0));
-                                            cx.container(props, |_cx| Vec::new())
-                                        };
+                                        let mut props = PointerRegionProps::default();
+                                        props.enabled = enabled;
+                                        props.layout.size.width = Length::Fill;
+                                        props.layout.size.height = Length::Fill;
 
-                                        let mut row = FlexProps::default();
-                                        row.direction = Axis::Horizontal;
-                                        row.justify = MainAlign::Center;
-                                        row.align = CrossAlign::Center;
-                                        row.layout.size.width = Length::Fill;
-                                        row.layout.size.height = Length::Fill;
-                                        vec![state_layer, cx.flex(row, move |_cx| vec![icon_el])]
+                                        vec![cx.pointer_region(props, move |cx| {
+                                            cx.pointer_region_on_pointer_down(Arc::new(
+                                                |_host, _cx, _down| false,
+                                            ));
+
+                                            let pressed = enabled && state.pressed;
+                                            let hovered = enabled && state.hovered;
+                                            let state_layer_target = if pressed {
+                                                pressed_opacity
+                                            } else if hovered {
+                                                hover_opacity
+                                            } else {
+                                                0.0
+                                            };
+
+                                            let overlay = material_ink_layer_for_pressable(
+                                                cx,
+                                                pressable_id,
+                                                now_frame,
+                                                corner_radii,
+                                                RippleClip::Bounded,
+                                                state_layer_color,
+                                                pressed,
+                                                state_layer_target,
+                                                ripple_base_opacity,
+                                                config,
+                                                false,
+                                            );
+
+                                            let mut row = FlexProps::default();
+                                            row.direction = Axis::Horizontal;
+                                            row.justify = MainAlign::Center;
+                                            row.align = CrossAlign::Center;
+                                            row.layout.size.width = Length::Fill;
+                                            row.layout.size.height = Length::Fill;
+                                            vec![overlay, cx.flex(row, move |_cx| vec![icon_el])]
+                                        })]
                                     },
                                 )
                             });
