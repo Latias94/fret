@@ -244,6 +244,23 @@ impl Default for PopupMenuOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct MenuItemOptions {
+    pub enabled: bool,
+    pub close_popup: Option<fret_runtime::Model<bool>>,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for MenuItemOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            close_popup: None,
+            test_id: None,
+        }
+    }
+}
+
 #[derive(Clone)]
 struct PopupStoreState {
     open: fret_runtime::Model<bool>,
@@ -253,7 +270,7 @@ struct PopupStoreState {
 
 #[derive(Default)]
 struct ImUiPopupStore {
-    by_id: HashMap<GlobalElementId, PopupStoreState>,
+    by_id: HashMap<Arc<str>, PopupStoreState>,
 }
 
 fn with_popup_store_for_id<H: UiHost, R>(
@@ -261,12 +278,14 @@ fn with_popup_store_for_id<H: UiHost, R>(
     id: &str,
     f: impl FnOnce(&mut PopupStoreState) -> R,
 ) -> R {
-    let store_key = format!("fret-ui-kit.imui.popup.store.{id}");
-    let store_id = cx.named(store_key.as_str(), |cx| cx.root_id());
-
     cx.app
         .with_global_mut_untracked(ImUiPopupStore::default, |st, app| {
-            let entry = st.by_id.entry(store_id).or_insert_with(|| PopupStoreState {
+            if let Some(existing) = st.by_id.get_mut(id) {
+                return f(existing);
+            }
+
+            let key: Arc<str> = Arc::from(id);
+            let entry = st.by_id.entry(key).or_insert_with(|| PopupStoreState {
                 open: app.models_mut().insert(false),
                 anchor: app.models_mut().insert(None::<fret_core::Rect>),
                 panel_id: None,
@@ -627,6 +646,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 cx.named("fret-ui-kit.imui.popup.panel", |cx| {
                     let mut semantics = fret_ui::element::SemanticsProps::default();
                     semantics.role = SemanticsRole::Menu;
+                    semantics.test_id = Some(Arc::from(format!("imui-popup-{id}")));
                     semantics.layout = LayoutStyle {
                         position: PositionStyle::Absolute,
                         inset: InsetStyle {
@@ -681,6 +701,122 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
             true
         })
+    }
+
+    fn menu_separator(&mut self) {
+        self.separator();
+    }
+
+    fn menu_item(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
+        self.menu_item_ex(label, MenuItemOptions::default())
+    }
+
+    fn menu_item_close(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.menu_item_ex(
+            label,
+            MenuItemOptions {
+                close_popup: Some(open.clone()),
+                ..Default::default()
+            },
+        )
+    }
+
+    fn menu_item_close_popup(&mut self, popup_id: &str, label: impl Into<Arc<str>>) -> ResponseExt {
+        let open = self.popup_open_model(popup_id);
+        self.menu_item_close(label, &open)
+    }
+
+    fn menu_item_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let mut response = ResponseExt::default();
+
+        let element = self.with_cx_mut(|cx| {
+            let mut stack = fret_ui::element::StackProps::default();
+            stack.layout.size.width = Length::Fill;
+            stack.layout.size.height = Length::Auto;
+
+            let mut panel = ContainerProps::default();
+            panel.layout.size.width = Length::Fill;
+            panel.layout.size.height = Length::Auto;
+            panel.padding = Edges {
+                left: Px(8.0),
+                right: Px(8.0),
+                top: Px(4.0),
+                bottom: Px(4.0),
+            };
+
+            let close_popup = options.close_popup.clone();
+            let test_id = options.test_id.clone();
+            let enabled = options.enabled;
+            let label_for_visuals = label.clone();
+
+            cx.stack_props(stack, |cx| {
+                let visuals =
+                    cx.container(panel, move |cx| vec![cx.text(label_for_visuals.clone())]);
+
+                let mut props = PressableProps::default();
+                props.enabled = enabled;
+                props.focusable = enabled;
+                props.layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)),
+                        bottom: Some(Px(0.0)),
+                    },
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                };
+                props.a11y = PressableA11y {
+                    role: Some(SemanticsRole::MenuItem),
+                    label: Some(label.clone()),
+                    test_id,
+                    ..Default::default()
+                };
+
+                let pressable = cx.pressable_with_id(props, |cx, state, id| {
+                    cx.pressable_clear_on_pointer_down();
+                    cx.pressable_clear_on_pointer_up();
+                    cx.key_clear_on_key_down_for(id);
+
+                    let close_popup = close_popup.clone();
+                    cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                        if let Some(open) = close_popup.as_ref() {
+                            let _ = host.update_model(open, |v| *v = false);
+                        }
+                        host.record_transient_event(acx, KEY_CLICKED);
+                        host.notify(acx);
+                    }));
+
+                    response.core.hovered = state.hovered;
+                    response.core.pressed = state.pressed;
+                    response.core.focused = state.focused;
+                    response.id = Some(id);
+                    response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
+                    response.core.rect = cx.last_bounds_for_element(id);
+
+                    Vec::<AnyElement>::new()
+                });
+
+                vec![visuals, pressable]
+            })
+        });
+
+        self.add(element);
+        response
     }
 
     fn begin_popup_context_menu(
