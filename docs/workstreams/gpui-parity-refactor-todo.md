@@ -1255,6 +1255,12 @@ topics (if/when we implement them):
     - UI Gallery harness: `PAGE_CANVAS_CULL_TORTURE` with root test id `ui-gallery-canvas-cull-root` (pan/zoom canvas + viewport culling baseline).
     - Script: `tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json` (middle-drag + wheel).
     - Evidence bundle (cache+shell, release): `target/fret-diag-canvas-cull-torture/1769162100494-ui-gallery-canvas-cull-pan-zoom/bundle.json`
+  - Progress (v2):
+    - UI Gallery harness: `PAGE_NODE_GRAPH_CULL_TORTURE` with root test id `ui-gallery-node-graph-cull-root` (retained `fret-node` stress scene).
+    - Script: `tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json` (middle-drag + wheel).
+    - Suite: `fretboard diag suite ui-gallery-node-graph-cull` (defaults: view-cache + shell + screenshots).
+    - Recommended gate: `--check-drag-cache-root-paint-only ui-gallery-node-graph-cull-root` (warmup >= 5).
+    - Evidence bundle (cache+shell, release): `target/fret-diag-node-graph-cull-torture/1770256423358-ui-gallery-node-graph-cull-pan-zoom/bundle.json`
 - [~] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-chart/src/*` (timeseries/table-driven plots).
