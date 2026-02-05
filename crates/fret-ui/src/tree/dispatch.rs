@@ -1501,6 +1501,7 @@ impl<H: UiHost> UiTree<H> {
             };
 
             if hover_capable {
+                let started = self.debug_enabled.then(Instant::now);
                 self.update_hover_state_from_hit(
                     app,
                     window,
@@ -1509,6 +1510,9 @@ impl<H: UiHost> UiTree<H> {
                     invalidation_visited,
                     &mut needs_redraw,
                 );
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_hover_update_time += started.elapsed();
+                }
             }
         }
 

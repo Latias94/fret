@@ -236,6 +236,8 @@ pub struct UiDebugFrameStats {
     pub hit_test_candidate_self_only_time: Duration,
     /// Total wall time spent in full traversal fallback hit-testing in the current frame.
     pub hit_test_fallback_traversal_time: Duration,
+    /// Total wall time spent updating hover state from pointer hit-testing in the current frame.
+    pub dispatch_hover_update_time: Duration,
     pub layout_time: Duration,
     pub layout_collect_roots_time: Duration,
     pub layout_invalidate_scroll_handle_bindings_time: Duration,
@@ -1883,6 +1885,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.hit_test_bounds_tree_query_time = Duration::default();
         self.debug_stats.hit_test_candidate_self_only_time = Duration::default();
         self.debug_stats.hit_test_fallback_traversal_time = Duration::default();
+        self.debug_stats.dispatch_hover_update_time = Duration::default();
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();

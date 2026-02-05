@@ -6191,6 +6191,8 @@ pub struct UiFrameStatsV1 {
     pub hit_test_candidate_self_only_time_us: u64,
     #[serde(default)]
     pub hit_test_fallback_traversal_time_us: u64,
+    #[serde(default)]
+    pub dispatch_hover_update_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6478,6 +6480,7 @@ impl UiFrameStatsV1 {
                 .as_micros() as u64,
             hit_test_fallback_traversal_time_us: stats.hit_test_fallback_traversal_time.as_micros()
                 as u64,
+            dispatch_hover_update_time_us: stats.dispatch_hover_update_time.as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
             prepaint_nodes_visited: stats.prepaint_nodes_visited,
