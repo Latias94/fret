@@ -43,6 +43,14 @@
     },
     { "type": "wait_frames", "n": 5 },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-root" }
     },
@@ -55,25 +63,45 @@
       "type": "capture_screenshot",
       "label": "ui-gallery-code-editor-torture-soft-wrap-editing-before"
     },
-    { "type": "type_text", "text": " hello_soft_wrap" },
-    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "type_text_into",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor"
+      },
+      "text": " abc",
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 2 },
     { "type": "press_key", "key": "backspace" },
     { "type": "press_key", "key": "backspace" },
     { "type": "press_key", "key": "backspace" },
     { "type": "wait_frames", "n": 2 },
     {
+      "type": "type_text_into",
+      "target": {
+        "kind": "role_and_name",
+        "role": "text_field",
+        "name": "Code editor"
+      },
+      "text": " hello_soft_wrap_marker",
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 5 },
+    {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-root" }
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" }
     },
     {
       "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-root" },
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" },
       "delta_y": -480.0
     },
     { "type": "wait_frames", "n": 5 },
     {
       "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-root" },
+      "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" },
       "delta_y": 480.0
     },
     { "type": "wait_frames", "n": 15 },

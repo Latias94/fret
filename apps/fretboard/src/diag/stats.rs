@@ -7409,6 +7409,140 @@ pub(super) fn check_bundle_for_notify_hotspot_file_max_json(
     Ok(())
 }
 
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_marker_present(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_marker_present_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_marker_present_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut ui_gallery_snapshots: u64 = 0;
+    let mut any_marker_present = false;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let marker_present = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("marker_present"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            if marker_present {
+                any_marker_present = true;
+            }
+
+            let text_len_bytes = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("text_len_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("caret"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let anchor = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("selection"))
+                .and_then(|v| v.get("anchor"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "marker_present": marker_present,
+                "text_len_bytes": text_len_bytes,
+                "selection": { "anchor": anchor, "caret": caret },
+            }));
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_torture_marker_present.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_marker_present",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "any_marker_present": any_marker_present,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor marker gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if any_marker_present {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor marker gate failed (expected code_editor.torture.marker_present=true after warmup)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 fn unescape_json_pointer_token(raw: &str) -> String {
     let mut out = String::with_capacity(raw.len());
     let mut it = raw.chars();

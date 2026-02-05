@@ -31,10 +31,10 @@ use stats::{
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
-    check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
-    check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
-    check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
-    check_bundle_for_vlist_visible_range_refreshes_max,
+    check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_torture_marker_present,
+    check_bundle_for_view_cache_reuse_min, check_bundle_for_view_cache_reuse_stable_min,
+    check_bundle_for_viewport_capture_min, check_bundle_for_viewport_input_min,
+    check_bundle_for_vlist_policy_key_stable, check_bundle_for_vlist_visible_range_refreshes_max,
     check_bundle_for_vlist_visible_range_refreshes_min,
     check_bundle_for_vlist_window_shifts_explainable,
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
@@ -105,6 +105,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_scene_test_id: Option<String> = None;
     let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_pixels_changed_test_id: Option<String> = None;
+    let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
@@ -522,6 +523,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --check-pixels-changed".to_string());
                 };
                 check_pixels_changed_test_id = Some(v);
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-marker-present" => {
+                check_ui_gallery_code_editor_torture_marker_present = true;
                 i += 1;
             }
             "--check-semantics-changed-repainted" => {
@@ -1363,6 +1368,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1412,6 +1418,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -1711,6 +1718,7 @@ See: `docs/tracy.md`.\n";
                         || check_stale_scene_test_id.is_some()
                         || check_idle_no_paint_min.is_some()
                         || check_pixels_changed_test_id.is_some()
+                        || check_ui_gallery_code_editor_torture_marker_present
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1758,6 +1766,7 @@ See: `docs/tracy.md`.\n";
                             check_stale_scene_test_id.as_deref(),
                             check_stale_scene_eps,
                             check_pixels_changed_test_id.as_deref(),
+                            check_ui_gallery_code_editor_torture_marker_present,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
@@ -2835,6 +2844,7 @@ See: `docs/tracy.md`.\n";
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -2989,6 +2999,9 @@ See: `docs/tracy.md`.\n";
                         ui_gallery_script_requires_pixels_changed_gate(&src)
                             .then_some("ui-gallery-code-editor-torture-root")
                             .filter(|_| check_pixels_changed_test_id.is_none());
+                    let suite_ui_gallery_code_editor_torture_marker_present =
+                        ui_gallery_script_requires_code_editor_torture_marker_present_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_marker_present;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
                     let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
@@ -3051,6 +3064,8 @@ See: `docs/tracy.md`.\n";
                         check_pixels_changed_test_id
                             .as_deref()
                             .or(suite_pixels_changed_test_id),
+                        check_ui_gallery_code_editor_torture_marker_present
+                            || suite_ui_gallery_code_editor_torture_marker_present,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -5528,6 +5543,17 @@ fn ui_gallery_script_requires_pixels_changed_gate(script: &Path) -> bool {
     )
 }
 
+fn ui_gallery_script_requires_code_editor_torture_marker_present_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"
+    )
+}
+
 #[derive(Debug, Clone)]
 struct ResolvedScriptPaths {
     out_dir: PathBuf,
@@ -5716,6 +5742,7 @@ fn apply_post_run_checks(
     check_stale_scene_test_id: Option<&str>,
     check_stale_scene_eps: f32,
     check_pixels_changed_test_id: Option<&str>,
+    check_ui_gallery_code_editor_torture_marker_present: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
@@ -5759,6 +5786,9 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_pixels_changed_test_id {
         check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_marker_present {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_present(bundle_path, warmup_frames)?;
     }
     if check_semantics_changed_repainted {
         check_bundle_for_semantics_changed_repainted(
