@@ -2679,7 +2679,11 @@ impl<H: UiHost> UiTree<H> {
             let icon = cursor_choice
                 .or(cursor_query_choice)
                 .unwrap_or(fret_core::CursorIcon::Default);
+            let started = self.debug_enabled.then(Instant::now);
             app.push_effect(Effect::CursorSetIcon { window, icon });
+            if let Some(started) = started {
+                self.debug_stats.dispatch_cursor_effect_time += started.elapsed();
+            }
         }
 
         if needs_redraw {
@@ -2708,6 +2712,7 @@ impl<H: UiHost> UiTree<H> {
 
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
         // see the latest focus/modal state without waiting for the next paint pass.
+        let started = self.debug_enabled.then(Instant::now);
         if let Some(window) = self.window {
             let (_active_layers, barrier_root) = self.active_input_layers();
             let caps = app
@@ -2779,6 +2784,9 @@ impl<H: UiHost> UiTree<H> {
             if should_publish_action_availability {
                 self.publish_window_command_action_availability_snapshot(app, &input_ctx);
             }
+        }
+        if let Some(started) = started {
+            self.debug_stats.dispatch_post_dispatch_snapshot_time += started.elapsed();
         }
     }
 

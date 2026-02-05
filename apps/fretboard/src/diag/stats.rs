@@ -238,6 +238,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) dispatch_cursor_query_time_us: u64,
     pub(super) dispatch_pointer_move_layer_observers_time_us: u64,
     pub(super) dispatch_synth_hover_observer_time_us: u64,
+    pub(super) dispatch_cursor_effect_time_us: u64,
+    pub(super) dispatch_post_dispatch_snapshot_time_us: u64,
     pub(super) dispatch_events: u32,
     pub(super) hit_test_queries: u32,
     pub(super) hit_test_bounds_tree_queries: u32,
@@ -1177,6 +1179,14 @@ impl BundleStatsReport {
                 obj.insert(
                     "dispatch_synth_hover_observer_time_us".to_string(),
                     Value::from(row.dispatch_synth_hover_observer_time_us),
+                );
+                obj.insert(
+                    "dispatch_cursor_effect_time_us".to_string(),
+                    Value::from(row.dispatch_cursor_effect_time_us),
+                );
+                obj.insert(
+                    "dispatch_post_dispatch_snapshot_time_us".to_string(),
+                    Value::from(row.dispatch_post_dispatch_snapshot_time_us),
                 );
                 obj.insert(
                     "dispatch_events".to_string(),
@@ -4239,6 +4249,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("dispatch_synth_hover_observer_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let dispatch_cursor_effect_time_us = stats
+                .and_then(|m| m.get("dispatch_cursor_effect_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_post_dispatch_snapshot_time_us = stats
+                .and_then(|m| m.get("dispatch_post_dispatch_snapshot_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let dispatch_events = stats
                 .and_then(|m| m.get("dispatch_events"))
                 .and_then(|v| v.as_u64())
@@ -4849,6 +4867,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 dispatch_cursor_query_time_us,
                 dispatch_pointer_move_layer_observers_time_us,
                 dispatch_synth_hover_observer_time_us,
+                dispatch_cursor_effect_time_us,
+                dispatch_post_dispatch_snapshot_time_us,
                 dispatch_events,
                 hit_test_queries,
                 hit_test_bounds_tree_queries,

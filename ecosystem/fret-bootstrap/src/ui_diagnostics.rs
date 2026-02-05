@@ -6211,6 +6211,10 @@ pub struct UiFrameStatsV1 {
     pub dispatch_pointer_move_layer_observers_time_us: u64,
     #[serde(default)]
     pub dispatch_synth_hover_observer_time_us: u64,
+    #[serde(default)]
+    pub dispatch_cursor_effect_time_us: u64,
+    #[serde(default)]
+    pub dispatch_post_dispatch_snapshot_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6514,6 +6518,10 @@ impl UiFrameStatsV1 {
                 .as_micros() as u64,
             dispatch_synth_hover_observer_time_us: stats
                 .dispatch_synth_hover_observer_time
+                .as_micros() as u64,
+            dispatch_cursor_effect_time_us: stats.dispatch_cursor_effect_time.as_micros() as u64,
+            dispatch_post_dispatch_snapshot_time_us: stats
+                .dispatch_post_dispatch_snapshot_time
                 .as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
