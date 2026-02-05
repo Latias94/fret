@@ -8,6 +8,12 @@ struct PendingInvalidation {
     detail: UiDebugInvalidationDetail,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DispatchChainMode {
+    Bubble,
+    SelfOnly,
+}
+
 impl<H: UiHost> UiTree<H> {
     fn event_is_scroll_like(event: &Event) -> bool {
         // Wheel-only for now (trackpad pan / inertial scrolling can be added later as explicit
@@ -573,6 +579,7 @@ impl<H: UiHost> UiTree<H> {
         event: &Event,
         needs_redraw: &mut bool,
         invalidation_visited: &mut impl InvalidationVisited,
+        mode: DispatchChainMode,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
@@ -712,6 +719,14 @@ impl<H: UiHost> UiTree<H> {
                     );
                     return true;
                 }
+
+                if matches!(mode, DispatchChainMode::SelfOnly) {
+                    self.apply_pending_invalidations(
+                        std::mem::take(&mut pending_invalidations),
+                        invalidation_visited,
+                    );
+                    return false;
+                }
             }
             self.apply_pending_invalidations(
                 std::mem::take(&mut pending_invalidations),
@@ -843,6 +858,9 @@ impl<H: UiHost> UiTree<H> {
                 return true;
             }
 
+            if matches!(mode, DispatchChainMode::SelfOnly) {
+                break;
+            }
             node_id = match parent {
                 Some(parent) => parent,
                 None => break,
@@ -1224,6 +1242,7 @@ impl<H: UiHost> UiTree<H> {
                     event,
                     &mut needs_redraw,
                     invalidation_visited,
+                    DispatchChainMode::SelfOnly,
                 );
                 if needs_redraw {
                     self.request_redraw_coalesced(app);
@@ -1248,6 +1267,7 @@ impl<H: UiHost> UiTree<H> {
                     event,
                     &mut needs_redraw,
                     invalidation_visited,
+                    DispatchChainMode::Bubble,
                 );
                 if stopped {
                     if needs_redraw {
