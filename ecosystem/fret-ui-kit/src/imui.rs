@@ -247,6 +247,21 @@ enum FloatWindowResizeHandle {
     BottomRight,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct FloatingWindowResizeOptions {
+    pub min_size: Size,
+    pub max_size: Option<Size>,
+}
+
+impl Default for FloatingWindowResizeOptions {
+    fn default() -> Self {
+        Self {
+            min_size: Size::new(Px(120.0), Px(72.0)),
+            max_size: None,
+        }
+    }
+}
+
 const FLOAT_WINDOW_RESIZE_KIND_BASE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.resize.v1");
 
 fn float_window_resize_kind_for_element(
@@ -814,7 +829,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_position: Point,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        self.floating_window_impl(id, title.into(), None, initial_position, None, f);
+        self.floating_window_impl(id, title.into(), None, initial_position, None, None, f);
     }
 
     /// Render a floating window controlled by an `open` model (ImGui-style `bool* p_open`).
@@ -828,7 +843,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_position: Point,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        self.floating_window_impl(id, title.into(), Some(open), initial_position, None, f);
+        self.floating_window_impl(
+            id,
+            title.into(),
+            Some(open),
+            initial_position,
+            None,
+            None,
+            f,
+        );
     }
 
     /// Render a resizable in-window floating window with a fixed initial size.
@@ -842,12 +865,32 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_size: Size,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
+        self.floating_window_resizable_ex(
+            id,
+            title,
+            initial_position,
+            initial_size,
+            FloatingWindowResizeOptions::default(),
+            f,
+        );
+    }
+
+    fn floating_window_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
         self.floating_window_impl(
             id,
             title.into(),
             None,
             initial_position,
             Some(initial_size),
+            Some(resize),
             f,
         );
     }
@@ -862,12 +905,34 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_size: Size,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
+        self.floating_window_open_resizable_ex(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            FloatingWindowResizeOptions::default(),
+            f,
+        );
+    }
+
+    fn floating_window_open_resizable_ex(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        initial_size: Size,
+        resize: FloatingWindowResizeOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
         self.floating_window_impl(
             id,
             title.into(),
             Some(open),
             initial_position,
             Some(initial_size),
+            Some(resize),
             f,
         );
     }
@@ -879,6 +944,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         open: Option<&fret_runtime::Model<bool>>,
         initial_position: Point,
         initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
         if let Some(open) = open {
@@ -990,6 +1056,28 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         )),
                     },
                     |st| {
+                        let resize_cfg = resize.unwrap_or_default();
+                        let min = resize_cfg.min_size;
+                        let max = resize_cfg.max_size;
+                        let clamp_width = |value: f32| -> Px {
+                            let mut out = value.max(min.width.0);
+                            if let Some(max) = max {
+                                out = out.min(max.width.0);
+                            }
+                            Px(out)
+                        };
+                        let clamp_height = |value: f32| -> Px {
+                            let mut out = value.max(min.height.0);
+                            if let Some(max) = max {
+                                out = out.min(max.height.0);
+                            }
+                            Px(out)
+                        };
+
+                        if resizable {
+                            st.size.width = clamp_width(st.size.width.0);
+                            st.size.height = clamp_height(st.size.height.0);
+                        }
                         if let Some((dragging, current, start)) = drag_snapshot {
                             if dragging {
                                 let prev = st.last_drag_position.unwrap_or(start);
@@ -1007,38 +1095,31 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let prev = st.last_resize_position.unwrap_or(start);
                                 let delta = point_sub(current, prev);
 
-                                let min = Size::new(Px(120.0), Px(72.0));
                                 match handle {
                                     FloatWindowResizeHandle::Left => {
                                         let right = Px(st.position.x.0 + st.size.width.0);
-                                        let width =
-                                            Px((st.size.width.0 - delta.x.0).max(min.width.0));
+                                        let width = clamp_width(st.size.width.0 - delta.x.0);
                                         st.size.width = width;
                                         st.position.x = Px(right.0 - width.0);
                                     }
                                     FloatWindowResizeHandle::Right => {
-                                        st.size.width =
-                                            Px((st.size.width.0 + delta.x.0).max(min.width.0));
+                                        st.size.width = clamp_width(st.size.width.0 + delta.x.0);
                                     }
                                     FloatWindowResizeHandle::Top => {
                                         let bottom = Px(st.position.y.0 + st.size.height.0);
-                                        let height =
-                                            Px((st.size.height.0 - delta.y.0).max(min.height.0));
+                                        let height = clamp_height(st.size.height.0 - delta.y.0);
                                         st.size.height = height;
                                         st.position.y = Px(bottom.0 - height.0);
                                     }
                                     FloatWindowResizeHandle::Bottom => {
-                                        st.size.height =
-                                            Px((st.size.height.0 + delta.y.0).max(min.height.0));
+                                        st.size.height = clamp_height(st.size.height.0 + delta.y.0);
                                     }
                                     FloatWindowResizeHandle::TopLeft => {
                                         let right = Px(st.position.x.0 + st.size.width.0);
                                         let bottom = Px(st.position.y.0 + st.size.height.0);
 
-                                        let width =
-                                            Px((st.size.width.0 - delta.x.0).max(min.width.0));
-                                        let height =
-                                            Px((st.size.height.0 - delta.y.0).max(min.height.0));
+                                        let width = clamp_width(st.size.width.0 - delta.x.0);
+                                        let height = clamp_height(st.size.height.0 - delta.y.0);
                                         st.size.width = width;
                                         st.size.height = height;
                                         st.position.x = Px(right.0 - width.0);
@@ -1046,27 +1127,21 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                     }
                                     FloatWindowResizeHandle::TopRight => {
                                         let bottom = Px(st.position.y.0 + st.size.height.0);
-                                        st.size.width =
-                                            Px((st.size.width.0 + delta.x.0).max(min.width.0));
-                                        let height =
-                                            Px((st.size.height.0 - delta.y.0).max(min.height.0));
+                                        st.size.width = clamp_width(st.size.width.0 + delta.x.0);
+                                        let height = clamp_height(st.size.height.0 - delta.y.0);
                                         st.size.height = height;
                                         st.position.y = Px(bottom.0 - height.0);
                                     }
                                     FloatWindowResizeHandle::BottomLeft => {
                                         let right = Px(st.position.x.0 + st.size.width.0);
-                                        let width =
-                                            Px((st.size.width.0 - delta.x.0).max(min.width.0));
+                                        let width = clamp_width(st.size.width.0 - delta.x.0);
                                         st.size.width = width;
                                         st.position.x = Px(right.0 - width.0);
-                                        st.size.height =
-                                            Px((st.size.height.0 + delta.y.0).max(min.height.0));
+                                        st.size.height = clamp_height(st.size.height.0 + delta.y.0);
                                     }
                                     FloatWindowResizeHandle::BottomRight => {
-                                        st.size.width =
-                                            Px((st.size.width.0 + delta.x.0).max(min.width.0));
-                                        st.size.height =
-                                            Px((st.size.height.0 + delta.y.0).max(min.height.0));
+                                        st.size.width = clamp_width(st.size.width.0 + delta.x.0);
+                                        st.size.height = clamp_height(st.size.height.0 + delta.y.0);
                                     }
                                 }
 
@@ -1415,7 +1490,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 };
                                 layout.size.width = Length::Px(Px(10.0));
                                 layout.size.height = Length::Px(Px(10.0));
-                                (CursorIcon::ColResize, layout)
+                                (CursorIcon::NwseResize, layout)
                             }
                             FloatWindowResizeHandle::TopRight => {
                                 let mut layout = LayoutStyle::default();
@@ -1427,7 +1502,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 };
                                 layout.size.width = Length::Px(Px(10.0));
                                 layout.size.height = Length::Px(Px(10.0));
-                                (CursorIcon::ColResize, layout)
+                                (CursorIcon::NeswResize, layout)
                             }
                             FloatWindowResizeHandle::BottomLeft => {
                                 let mut layout = LayoutStyle::default();
@@ -1439,7 +1514,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 };
                                 layout.size.width = Length::Px(Px(10.0));
                                 layout.size.height = Length::Px(Px(10.0));
-                                (CursorIcon::ColResize, layout)
+                                (CursorIcon::NeswResize, layout)
                             }
                             FloatWindowResizeHandle::BottomRight => {
                                 let mut layout = LayoutStyle::default();
@@ -1451,7 +1526,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 };
                                 layout.size.width = Length::Px(Px(10.0));
                                 layout.size.height = Length::Px(Px(10.0));
-                                (CursorIcon::ColResize, layout)
+                                (CursorIcon::NwseResize, layout)
                             }
                         };
 
