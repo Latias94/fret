@@ -4017,6 +4017,12 @@ Results:
 - Interpretation: still not a per-frame churn pattern (a single late “first visible paint” can slip past the script reset).
   The script now includes an extra warmup + reset to reduce this flakiness for future runs.
 
+Follow-up (same commit, updated script shape):
+- Bundle (with an additional warmup sweep before the measured sweep):
+  - `target/fret-diag-codex-rerun-menubar-sweep-v3/1770313661905-script-step-0016-press_key/bundle.json`
+- Still observed `paint_text_prepare_calls=sum=1`, suggesting the remaining prepare may be gated by a delayed hover policy
+  (e.g. tooltip/intent) rather than purely “first paint after open”.
+
 Rerun probes:
 - Script: `tools/diag-scripts/ui-gallery-menubar-reopen-after-close.json`
 - Bundle:
