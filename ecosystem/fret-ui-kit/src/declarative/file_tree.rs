@@ -279,9 +279,7 @@ where
                             .gap(Space::N2)
                             .items_center(),
                         |cx| {
-                            let icon = crate::ui::text(cx, icon)
-                                .flex_shrink_0()
-                                .into_element(cx);
+                            let icon = crate::ui::text(cx, icon).flex_shrink_0().into_element(cx);
                             let label = crate::ui::text(cx, entry.label.as_ref())
                                 .flex_1()
                                 .min_w_0()

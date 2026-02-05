@@ -577,6 +577,7 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 element: None,
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         self.tree.invalidate_with_detail(
@@ -604,6 +605,7 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 element: None,
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         let Some(window) = self.window else {
@@ -627,6 +629,7 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
                 element: None,
                 virtual_list_window_shift_kind: None,
                 virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: None,
                 frame_id: self.app.frame_id(),
             });
         // Ensure animation-frame requests trigger a paint pass even when paint caching is enabled.
@@ -640,6 +643,25 @@ impl<'a, H: UiHost> PrepaintCx<'a, H> {
             return;
         };
         self.app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    /// Records a debug-only "sampling window shift" prepaint action.
+    ///
+    /// This is intended for ecosystem canvases (charts/plots) that maintain an explicit sampling
+    /// window contract and want to expose a stable output key in diagnostics bundles.
+    pub fn debug_record_chart_sampling_window_shift(&mut self, sampling_window_key: u64) {
+        self.tree
+            .debug_record_prepaint_action(crate::tree::UiDebugPrepaintAction {
+                node: self.node,
+                target: None,
+                kind: crate::tree::UiDebugPrepaintActionKind::ChartSamplingWindowShift,
+                invalidation: None,
+                element: None,
+                virtual_list_window_shift_kind: None,
+                virtual_list_window_shift_reason: None,
+                chart_sampling_window_key: Some(sampling_window_key),
+                frame_id: self.app.frame_id(),
+            });
     }
 }
 

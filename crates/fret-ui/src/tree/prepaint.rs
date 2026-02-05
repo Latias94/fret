@@ -483,6 +483,7 @@ impl<H: UiHost> UiTree<H> {
                     element: Some(inputs.element),
                     virtual_list_window_shift_kind: Some(update.window_shift_kind),
                     virtual_list_window_shift_reason: window_shift_reason,
+                    chart_sampling_window_key: None,
                     frame_id: app.frame_id(),
                 });
             }

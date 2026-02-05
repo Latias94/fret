@@ -1261,7 +1261,7 @@ topics (if/when we implement them):
     - Suite: `fretboard diag suite ui-gallery-node-graph-cull` (defaults: view-cache + shell + screenshots).
     - Recommended gate: `--check-drag-cache-root-paint-only ui-gallery-node-graph-cull-root` (warmup >= 5).
     - Evidence bundle (cache+shell, release): `target/fret-diag-node-graph-cull-torture/1770256423358-ui-gallery-node-graph-cull-pan-zoom/bundle.json`
-- [~] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
+- [x] GPUI-MVP5-eco-005 Identify “chart/plot sampling” surfaces that should be prepaint-windowed.
   - Candidates:
     - `ecosystem/fret-chart/src/*` (timeseries/table-driven plots).
     - `ecosystem/fret-plot3d/src/*` (3D sampling + culling surfaces).
@@ -1280,6 +1280,14 @@ topics (if/when we implement them):
     - Script: `tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json` (drag + wheel).
     - Evidence bundle (cache+shell, release): `target/fret-diag-chart-torture/1769159171953-ui-gallery-chart-torture-pan-zoom/bundle.json`
     - Infrastructure: add `drag_pointer` to UI diagnostics steps (`ecosystem/fret-bootstrap/src/ui_diagnostics.rs`).
+  - Progress (v2):
+    - UI debug: add `chart_sampling_window_shift` prepaint action + `chart_sampling_window_key` payload, exported into diagnostics bundles.
+      - `crates/fret-ui/src/tree/mod.rs` (`UiDebugPrepaintActionKind::ChartSamplingWindowShift`)
+      - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiPrepaintActionKindV1::ChartSamplingWindowShift`)
+    - UI Gallery harness now hosts retained `fret_chart::ChartCanvas` and makes it a manual view-cache root so `Widget::prepaint` can emit sampling-window diagnostics.
+    - Gate: builtin suite `fretboard diag suite ui-gallery-chart-torture` defaults to `--check-chart-sampling-window-shifts-min 1` and `--warmup-frames 5`.
+    - Evidence bundle (cache+shell, local): `target/fret-diag-chart-torture-sampling5/1770266558145-ui-gallery-chart-torture-pan-zoom-after/bundle.json`
+      - Gate evidence: `target/fret-diag-chart-torture-sampling5/check.chart_sampling_window_shifts_min.json`
 - [x] GPUI-MVP5-eco-006 Identify “paint-only chrome” surfaces that should not force rerender.
   - Candidates: caret/selection layers, hover/focus rings, drag/drop indicators, scrollbars, overlay arrows/anchors.
   - Done when: we have a first migration target (one component) with a regression harness that proves no cache-root rerender is needed for the effect.

@@ -665,6 +665,7 @@ pub enum UiDebugPrepaintActionKind {
     RequestRedraw,
     RequestAnimationFrame,
     VirtualListWindowShift,
+    ChartSamplingWindowShift,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -676,6 +677,7 @@ pub struct UiDebugPrepaintAction {
     pub element: Option<GlobalElementId>,
     pub virtual_list_window_shift_kind: Option<UiDebugVirtualListWindowShiftKind>,
     pub virtual_list_window_shift_reason: Option<UiDebugVirtualListWindowShiftReason>,
+    pub chart_sampling_window_key: Option<u64>,
     pub frame_id: FrameId,
 }
 

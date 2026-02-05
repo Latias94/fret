@@ -1453,9 +1453,11 @@ mod tests {
             bounds,
             "shadcn-slider-updates-model-on-pointer-down",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1515,9 +1517,11 @@ mod tests {
             bounds,
             "shadcn-slider-updates-closest-thumb-when-multi-value",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1579,12 +1583,14 @@ mod tests {
             bounds,
             "shadcn-slider-respects-min-steps-between-thumbs",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .step(1.0)
-                    .min_steps_between_thumbs(5)
-                    .style(SliderStyle::default())
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .step(1.0)
+                        .min_steps_between_thumbs(5)
+                        .style(SliderStyle::default())
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1651,9 +1657,11 @@ mod tests {
             bounds,
             "shadcn-slider-does-not-jump-when-pointer-down-on-thumb",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1709,10 +1717,12 @@ mod tests {
             bounds,
             "shadcn-slider-range-bounds-horizontal",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .test_id("slider")
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .test_id("slider")
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1758,11 +1768,13 @@ mod tests {
             bounds,
             "shadcn-slider-range-bounds-vertical",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .orientation(radix_slider::SliderOrientation::Vertical)
-                    .test_id("slider")
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .test_id("slider")
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1813,13 +1825,15 @@ mod tests {
             "shadcn-slider-on-value-commit-pointer",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1904,13 +1918,15 @@ mod tests {
             "shadcn-slider-on-value-commit-key",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1968,14 +1984,16 @@ mod tests {
             "shadcn-slider-rtl-key-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .dir(radix_direction::LayoutDirection::Rtl)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .dir(radix_direction::LayoutDirection::Rtl)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2033,14 +2051,16 @@ mod tests {
             "shadcn-slider-inverted-horizontal-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .inverted(true)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .inverted(true)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2139,15 +2159,17 @@ mod tests {
             "shadcn-slider-inverted-vertical-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .orientation(radix_slider::SliderOrientation::Vertical)
-                    .inverted(true)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .inverted(true)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2246,14 +2268,16 @@ mod tests {
             "shadcn-slider-vertical-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .orientation(radix_slider::SliderOrientation::Vertical)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

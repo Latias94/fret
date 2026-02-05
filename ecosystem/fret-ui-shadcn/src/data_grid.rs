@@ -19,7 +19,7 @@ use fret_ui::element::{
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::grid_viewport::{
-    compute_grid_viewport_2d, default_range_extractor, GridAxisMetrics,
+    GridAxisMetrics, compute_grid_viewport_2d, default_range_extractor,
 };
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;

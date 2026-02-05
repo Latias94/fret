@@ -22,7 +22,8 @@ use gates::{
 };
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
+    apply_pick_to_script, bundle_stats_from_path,
+    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
     check_bundle_for_layout_fast_path_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
@@ -111,6 +112,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
+    let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
     let mut check_vlist_window_shifts_explainable: bool = false;
@@ -640,6 +642,18 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-prepaint-actions-min".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-chart-sampling-window-shifts-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-chart-sampling-window-shifts-min".to_string()
+                    );
+                };
+                check_chart_sampling_window_shifts_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-chart-sampling-window-shifts-min".to_string()
+                })?);
                 i += 1;
             }
             "--check-drag-cache-root-paint-only" => {
@@ -1340,6 +1354,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
@@ -1389,6 +1404,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_wheel_scroll_test_id.as_deref(),
                         check_wheel_scroll_hit_changes_test_id.as_deref(),
                         check_prepaint_actions_min,
+                        check_chart_sampling_window_shifts_min,
                         check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
                         check_vlist_window_shifts_explainable,
@@ -1685,6 +1701,7 @@ See: `docs/tracy.md`.\n";
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
                         || check_prepaint_actions_min.is_some()
+                        || check_chart_sampling_window_shifts_min.is_some()
                         || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
                         || check_vlist_window_shifts_explainable
@@ -1732,6 +1749,7 @@ See: `docs/tracy.md`.\n";
                             check_wheel_scroll_test_id.as_deref(),
                             check_wheel_scroll_hit_changes_test_id.as_deref(),
                             check_prepaint_actions_min,
+                            check_chart_sampling_window_shifts_min,
                             check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
                             check_vlist_window_shifts_explainable,
@@ -2733,6 +2751,16 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
+            if warmup_frames == 0
+                && (is_ui_gallery_vlist_window_boundary_suite
+                    || is_ui_gallery_vlist_window_boundary_retained_suite
+                    || is_ui_gallery_canvas_cull_suite
+                    || is_ui_gallery_node_graph_cull_suite
+                    || is_ui_gallery_chart_torture_suite)
+            {
+                warmup_frames = 5;
+            }
+
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
                 maybe_launch_demo(
@@ -2972,6 +3000,9 @@ See: `docs/tracy.md`.\n";
                     let suite_prepaint_actions_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_prepaint_actions_min.is_none());
+                    let suite_chart_sampling_window_shifts_min = is_ui_gallery_chart_torture_suite
+                        .then_some(1u64)
+                        .filter(|_| check_chart_sampling_window_shifts_min.is_none());
                     let suite_vlist_window_shifts_have_prepaint_actions =
                         vlist_window_boundary_suite
                             && !check_vlist_window_shifts_have_prepaint_actions;
@@ -3068,6 +3099,8 @@ See: `docs/tracy.md`.\n";
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
+                        check_chart_sampling_window_shifts_min
+                            .or(suite_chart_sampling_window_shifts_min),
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
@@ -5703,6 +5736,7 @@ fn apply_post_run_checks(
     check_wheel_scroll_test_id: Option<&str>,
     check_wheel_scroll_hit_changes_test_id: Option<&str>,
     check_prepaint_actions_min: Option<u64>,
+    check_chart_sampling_window_shifts_min: Option<u64>,
     check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
     check_vlist_window_shifts_explainable: bool,
@@ -5755,6 +5789,14 @@ fn apply_post_run_checks(
     }
     if let Some(min) = check_prepaint_actions_min {
         check_bundle_for_prepaint_actions_min(bundle_path, out_dir, min, warmup_frames)?;
+    }
+    if let Some(min) = check_chart_sampling_window_shifts_min {
+        check_bundle_for_chart_sampling_window_shifts_min(
+            bundle_path,
+            out_dir,
+            min,
+            warmup_frames,
+        )?;
     }
     if let Some(min_total_refreshes) = check_vlist_visible_range_refreshes_min {
         check_bundle_for_vlist_visible_range_refreshes_min(
@@ -8307,6 +8349,88 @@ mod tests {
         assert_eq!(
             evidence.get("kind").and_then(|v| v.as_str()),
             Some("prepaint_actions_min")
+        );
+    }
+
+    #[test]
+    fn chart_sampling_window_shifts_min_accepts_matching_action() {
+        let out_dir = tmp_out_dir("chart_sampling_window_shifts_min_ok");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": [{
+                            "node": 10,
+                            "kind": "chart_sampling_window_shift",
+                            "chart_sampling_window_key": 123
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_chart_sampling_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
+            .expect("expected gate to accept chart sampling action");
+
+        let evidence_path = bundle_dir.join("check.chart_sampling_window_shifts_min.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected chart sampling window shifts evidence JSON to be written"
+        );
+    }
+
+    #[test]
+    fn chart_sampling_window_shifts_min_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("chart_sampling_window_shifts_min_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": []
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_chart_sampling_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
+                .unwrap_err();
+        assert!(err.contains("chart sampling window shift"));
+
+        let evidence_path = bundle_dir.join("check.chart_sampling_window_shifts_min.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected chart sampling window shifts evidence JSON to be written"
+        );
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("chart_sampling_window_shifts_min")
         );
     }
 

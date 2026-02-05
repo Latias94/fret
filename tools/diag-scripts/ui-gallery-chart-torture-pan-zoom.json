@@ -1,6 +1,33 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+    },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": { "ctrl": true }
+    },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "chart torture" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-chart-torture" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-nav-chart-torture" }
@@ -8,19 +35,10 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-chart-torture" }
-      },
-      "timeout_frames": 60
-    },
-    { "type": "press_key", "key": "enter" },
-    {
-      "type": "wait_until",
-      "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-chart-torture-root" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 30 },
     {

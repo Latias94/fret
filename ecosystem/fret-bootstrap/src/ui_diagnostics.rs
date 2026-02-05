@@ -4873,6 +4873,7 @@ pub enum UiPrepaintActionKindV1 {
     RequestRedraw,
     RequestAnimationFrame,
     VirtualListWindowShift,
+    ChartSamplingWindowShift,
 }
 
 impl UiPrepaintActionKindV1 {
@@ -4885,6 +4886,9 @@ impl UiPrepaintActionKindV1 {
             }
             fret_ui::tree::UiDebugPrepaintActionKind::VirtualListWindowShift => {
                 Self::VirtualListWindowShift
+            }
+            fret_ui::tree::UiDebugPrepaintActionKind::ChartSamplingWindowShift => {
+                Self::ChartSamplingWindowShift
             }
         }
     }
@@ -4904,6 +4908,8 @@ pub struct UiPrepaintActionV1 {
     pub virtual_list_window_shift_kind: Option<UiVirtualListWindowShiftKindV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub virtual_list_window_shift_reason: Option<UiVirtualListWindowShiftReasonV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chart_sampling_window_key: Option<u64>,
     #[serde(default)]
     pub frame_id: u64,
 }
@@ -4929,6 +4935,7 @@ impl UiPrepaintActionV1 {
             virtual_list_window_shift_reason: action
                 .virtual_list_window_shift_reason
                 .map(UiVirtualListWindowShiftReasonV1::from_reason),
+            chart_sampling_window_key: action.chart_sampling_window_key,
             frame_id: action.frame_id.0,
         }
     }
