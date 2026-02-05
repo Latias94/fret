@@ -1175,6 +1175,7 @@ impl MenubarMenuEntries {
                     trigger_id,
                     open.clone(),
                     enabled,
+                    None,
                 );
 
                 let mut trigger_layout = LayoutStyle::default();
@@ -3757,6 +3758,8 @@ mod tests {
 
     #[test]
     fn menubar_hover_switches_open_menu() {
+        use fret_runtime::Effect;
+
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -3820,7 +3823,25 @@ mod tests {
             }),
         );
 
-        // Frame 2: switching begins (the hovered menu opens in the same frame).
+        // Hover switching is timer-driven (small delay) to avoid accidental flicker while the
+        // pointer travels across triggers.
+        let effects = app.flush_effects();
+        let switch_timer = effects.iter().find_map(|e| match e {
+            Effect::SetTimer { token, .. } => Some(*token),
+            _ => None,
+        });
+        let Some(switch_timer) = switch_timer else {
+            panic!("expected hover-switch SetTimer effect; effects={effects:?}");
+        };
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer {
+                token: switch_timer,
+            },
+        );
+
+        // Frame 2: after the timer fires, the hovered menu opens.
         render_frame(&mut ui, &mut app, &mut services, window, bounds);
         let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(menu_trigger_expanded(snap2, "Edit"));
