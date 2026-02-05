@@ -34,6 +34,9 @@ Conventions:
   - exclusive widget `paint()` time (pauses while painting children),
   - observation recording time (`observed_in_paint` + globals).
   - Evidence: `feat(diag): add paint node breakdown timers` (commit `c512be81`).
+- [x] Export top-N widget paint hotspots (exclusive time) so `paint_widget_time_us` is attributable.
+  - Evidence: `feat(diag): export paint widget hotspots` (commit `e1132c95`).
+  - Evidence bundle: `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/.../bundle.json`
 - [ ] Add paint-phase micro timers for the remaining dominant candidates:
   - per-node traversal overhead on stable frames (excluding widget code),
   - observation merging/collapse costs beyond the already-timed “collapse observations” step.
@@ -45,6 +48,11 @@ Conventions:
 ### P1: Reduce stable-frame paint overhead (first real win)
 
 - [ ] Pick one evidence bundle where paint is dominated by a single sub-slice and fix it.
+- [ ] Remove per-frame allocations in the `ElementHostWidget` paint path.
+  - Hypothesis: element-runtime observation accessors clone per-element dependency vectors each frame.
+  - Candidate fix: replace `elements::{observed_models_for_element, observed_globals_for_element}` returning `Vec<_>`
+    with a zero-allocation iterator/closure API, and update host-widget layout/measure/paint to use it.
+  - Evidence target: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-05 20:03 (commit `e1132c95`).
 - [ ] Validate against `ui-gallery-steady` baseline (repeat=7) and record delta in the perf log.
 - [ ] Ensure view-cache correctness remains unchanged:
   - `cargo test -p fret-ui` (or nextest equivalent) remains green,

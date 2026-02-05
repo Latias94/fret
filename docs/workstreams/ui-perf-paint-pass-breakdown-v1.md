@@ -147,6 +147,35 @@ Interpretation:
 - This strongly suggests that “view-cache reuse” does not currently provide a “skip most widget paint” fast path for
   stable frames; only a small number of paint-cache roots are replaying ops, while most nodes still run `Widget::paint()`.
 
+### 2.1 Evidence: widget paint hotspots point at `ElementHostWidget`
+
+Commit: `e1132c95` (`feat(diag): export paint widget hotspots`)
+
+Probe:
+
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/`
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/1770292982106-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+
+- `paint_time_us=2592`
+- `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2487/12`
+- `paint_widget_hotspots` (top 3):
+  - `us=1117 type=fret_ui::declarative::host_widget::ElementHostWidget ops(excl/incl)=1/1`
+  - `us=942  type=fret_ui::declarative::host_widget::ElementHostWidget ops(excl/incl)=1/1`
+  - `us=373  type=fret_ui::declarative::host_widget::ElementHostWidget ops(excl/incl)=1/1`
+
+Interpretation:
+
+- The stable-frame paint cost is not distributed across “many small widgets”; it is dominated by a few host-widget
+  nodes.
+- The ops deltas (`1/1`) suggest the cost is not scene construction, but CPU bookkeeping in the host-widget paint path.
+- The most likely culprit is element-runtime observation access that currently clones per-element dependency vectors
+  (`elements::{observed_models_for_element, observed_globals_for_element}`), causing per-frame allocations on stable
+  frames.
+
 ---
 
 ## 3) What we need to measure next (paint-phase micro timers)

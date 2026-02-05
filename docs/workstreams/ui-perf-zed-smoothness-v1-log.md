@@ -3599,3 +3599,49 @@ Takeaway:
   but did **not** materially reduce `paint_widget_time_us` or `paint_time_us` on this probe.
 - Next: identify which nodes still dominate `paint_widget_time_us` (need per-node paint hotspots or cache-disabled
   reason counters) and evaluate higher-level caching boundaries.
+
+## 2026-02-05 20:03:00 (commit `e1132c95`)
+
+Change:
+- Export paint widget hotspots into diag bundles and surface them in `fretboard diag stats`:
+  - `debug.paint_widget_hotspots[]` (top-N by exclusive widget paint time)
+  - Includes `widget_type`, `exclusive_time_us`, `inclusive_time_us`, and `scene_ops_delta` (exclusive + inclusive)
+
+Why:
+- `paint_widget_time_us` dominates the menubar steady paint slice, but we needed to know which widgets are actually
+  responsible before attempting more aggressive caching/refactors.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/`
+- Command (repeat=7; `sort=time`):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --dir target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980 \
+  --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (worst frame; `fretboard diag stats --sort time --top 1`):
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/1770292982106-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown:
+  - `paint_time_us=2592`
+  - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2487/12`
+  - `paint_widget_hotspots` (top 3):
+    - `us=1117 type=fret_ui::declarative::host_widget::ElementHostWidget ops(excl/incl)=1/1`
+    - `us=942  type=fret_ui::declarative::host_widget::ElementHostWidget ops(excl/incl)=1/1`
+    - `us=373  type=fret_ui::declarative::host_widget::ElementHostWidget ops(excl/incl)=1/1`
+  - Top-3 sum: ~2432us (~98% of `paint_widget_time_us=2487`).
+
+Takeaway:
+- Stable-frame widget paint time is extremely concentrated in a few `ElementHostWidget` nodes.
+- The ops deltas (`1/1`) suggest the cost is not scene encoding, but CPU bookkeeping inside the host-widget paint path
+  (likely element-runtime observation access and/or instance lookup).
+- Next: remove per-frame allocation/clone in element-runtime observation accessors
+  (`elements::{observed_models_for_element, observed_globals_for_element}` or equivalent) and re-run this probe.

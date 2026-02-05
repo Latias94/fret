@@ -330,15 +330,28 @@ Evidence:
   - `paint_cache_replay_time_us`
   - `paint_cache_bounds_translate_time_us` / `paint_cache_bounds_translated_nodes`
   - `paint_record_visual_bounds_time_us` / `paint_record_visual_bounds_calls`
+- Added paint-node micro timers in `feat(diag): add paint node breakdown timers` (commit `c512be81`):
+  - `paint_cache_key_time_us`
+  - `paint_cache_hit_check_time_us`
+  - `paint_widget_time_us` (exclusive; pauses while painting children)
+  - `paint_observation_record_time_us`
+- Added top-N widget paint hotspots in `feat(diag): export paint widget hotspots` (commit `e1132c95`):
+  - `debug.paint_widget_hotspots[]` (exclusive time + widget type + scene ops delta)
 - On `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json` (repeat=7), the worst frame shows:
   - `paint_time_us ~2.6ms`,
   - while `paint_cache_replay_time_us` is single-digit microseconds and bounds translation is ~0us.
+- With widget hotspots enabled, the same probe shows `paint_widget_time_us` is almost entirely concentrated in a few
+  `fret_ui::declarative::host_widget::ElementHostWidget` nodes (top-3 sum ~98% of the widget paint slice), and those
+  nodes have `ops(excl/incl)=1/1` (suggesting CPU bookkeeping dominates, not scene encoding).
+  - Evidence run: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-05 20:03 (commit `e1132c95`).
 
 Implication:
 
-- The remaining paint cost is dominated by other work (per-node traversal overhead, widget paint overhead,
-  observation bookkeeping, window snapshot plumbing, etc.).
-- We need paint micro timers to make the top frame explainable without a sampling profiler.
+- Stable-frame paint cost is now attributable:
+  - the remaining slice is dominated by a small number of host-widget paint calls, not “many tiny widgets”.
+- This points at a GPUI gap: stable frames should avoid **per-frame allocations** and should reuse observation edges
+  (or at least access them without cloning).
+- Next likely win: remove per-frame `Vec` clones in element-runtime observation accessors and re-run the probe.
 
 Tracking:
 
