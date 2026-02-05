@@ -43,7 +43,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 return (geom, index);
             }
         } else {
-            self.geometry.drag_preview = None;
+            self.geometry.clear_drag_preview();
         }
 
         (geom, index)

@@ -119,10 +119,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let zoom = snapshot.zoom;
         let params = self.spatial_index_params(snapshot);
         let index_key = Self::spatial_index_key(snapshot, geom_key, params.pad_screen_px);
-        if self.geometry.index_key != Some(index_key) {
-            self.geometry.index_key = Some(index_key);
-            self.geometry.drag_preview = None;
-
+        if self.geometry.ensure_index_key(index_key) {
             let style = self.style.clone();
             let edge_types = self.edge_types.as_ref();
             let presenter: &dyn NodeGraphPresenter = &*self.presenter;

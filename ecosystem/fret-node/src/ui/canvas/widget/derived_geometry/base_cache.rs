@@ -66,11 +66,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         snapshot: &ViewSnapshot,
         geom_key: GeometryCacheKey,
     ) -> Arc<CanvasGeometry> {
-        if self.geometry.geom_key != Some(geom_key) {
-            self.geometry.geom_key = Some(geom_key);
-            self.geometry.index_key = None;
-            self.geometry.drag_preview = None;
-
+        if self.geometry.ensure_geom_key(geom_key) {
             let zoom = snapshot.zoom;
             let node_origin = snapshot.interaction.node_origin.normalized();
             let style = self.style.clone();

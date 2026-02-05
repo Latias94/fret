@@ -575,6 +575,37 @@ pub(crate) struct GeometryCache {
     pub(crate) drag_preview: Option<DragPreviewCache>,
 }
 
+impl GeometryCache {
+    pub(crate) fn clear_drag_preview(&mut self) {
+        self.drag_preview = None;
+    }
+
+    /// Ensures the cache is keyed for the given geometry base.
+    ///
+    /// Returns `true` when the key changed and callers should rebuild geometry-dependent caches.
+    pub(crate) fn ensure_geom_key(&mut self, geom_key: GeometryCacheKey) -> bool {
+        if self.geom_key == Some(geom_key) {
+            return false;
+        }
+        self.geom_key = Some(geom_key);
+        self.index_key = None;
+        self.clear_drag_preview();
+        true
+    }
+
+    /// Ensures the cache is keyed for the given spatial index configuration.
+    ///
+    /// Returns `true` when the key changed and callers should rebuild the spatial index.
+    pub(crate) fn ensure_index_key(&mut self, index_key: SpatialIndexCacheKey) -> bool {
+        if self.index_key == Some(index_key) {
+            return false;
+        }
+        self.index_key = Some(index_key);
+        self.clear_drag_preview();
+        true
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DragPreviewKind {
     NodeDrag,
