@@ -183,4 +183,7 @@ Legend:
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
-- [ ] Deterministic graph diff/patch set for collaboration.
+- [~] Deterministic graph diff/patch set for collaboration.
+  - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+  - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
+  - Tests: `ecosystem/fret-node/src/ops/tests.rs`

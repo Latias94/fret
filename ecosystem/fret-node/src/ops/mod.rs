@@ -2,6 +2,7 @@
 
 mod apply;
 mod build;
+mod diff;
 mod fragment;
 mod history;
 mod normalize;
@@ -17,6 +18,7 @@ use crate::types::TypeDesc;
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
 pub use build::GraphOpBuilderExt;
+pub use diff::graph_diff;
 pub use fragment::{GraphFragment, IdRemapSeed, IdRemapper, PasteTuning};
 pub use history::{DEFAULT_HISTORY_LIMIT, GraphHistory, invert_transaction};
 pub(crate) use normalize::normalize_transaction;

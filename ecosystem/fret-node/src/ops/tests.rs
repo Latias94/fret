@@ -5,7 +5,7 @@ use crate::core::{
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
-    IdRemapSeed, IdRemapper, PasteTuning, apply_transaction, invert_transaction,
+    IdRemapSeed, IdRemapper, PasteTuning, apply_transaction, graph_diff, invert_transaction,
 };
 use crate::types::TypeDesc;
 use uuid::Uuid;
@@ -791,4 +791,63 @@ fn graph_import_ops_roundtrip_through_normalize_and_invert() {
     let inverse = invert_transaction(&tx);
     apply_transaction(&mut graph, &inverse).expect("apply inverse");
     assert_eq!(serde_json::to_value(&graph).unwrap(), baseline);
+}
+
+#[test]
+fn graph_diff_is_deterministic_and_roundtrips() {
+    let mut from = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    from.nodes.insert(a, make_node("core.a"));
+    from.nodes.insert(b, make_node("core.b"));
+
+    let imported = GraphId::from_u128(10);
+    from.imports.insert(imported, GraphImport::default());
+
+    let symbol_id = SymbolId::from_u128(1);
+    from.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "S".to_string(),
+            ty: None,
+            default_value: None,
+            meta: serde_json::Value::Null,
+        },
+    );
+
+    let mut to = from.clone();
+    to.imports.insert(
+        imported,
+        GraphImport {
+            alias: Some("stdlib".to_string()),
+        },
+    );
+    to.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "T".to_string(),
+            ty: Some(TypeDesc::Int),
+            default_value: Some(serde_json::json!(123)),
+            meta: serde_json::json!({ "k": 1 }),
+        },
+    );
+    if let Some(node) = to.nodes.get_mut(&a) {
+        node.pos.x = 42.0;
+    }
+
+    let tx1 = graph_diff(&from, &to);
+    let tx2 = graph_diff(&from, &to);
+    assert_eq!(
+        serde_json::to_string(&tx1.ops).unwrap(),
+        serde_json::to_string(&tx2.ops).unwrap(),
+        "diff must be deterministic"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx1).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
 }
