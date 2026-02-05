@@ -9,11 +9,14 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, KeyCode, Px, SemanticsRole, Size, TextOverflow, TextWrap};
+use fret_core::{
+    AttributedText, Axis, Edges, FontWeight, KeyCode, Px, SemanticsRole, Size, TextOverflow,
+    TextSpan, TextWrap,
+};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow, PressableA11y,
-    PressableProps, ScrollProps, SemanticsProps, TextProps,
+    PressableProps, ScrollProps, SemanticsProps, StyledTextProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::overlay_placement::{Align, Side};
@@ -83,6 +86,7 @@ pub struct Autocomplete {
     model: Model<String>,
     items: Arc<[AutocompleteItem]>,
     variant: AutocompleteVariant,
+    open_on_focus: bool,
     disabled: bool,
     error: bool,
     label: Option<Arc<str>>,
@@ -113,6 +117,7 @@ impl Autocomplete {
             model,
             items: Arc::from([]),
             variant: AutocompleteVariant::default(),
+            open_on_focus: true,
             disabled: false,
             error: false,
             label: None,
@@ -130,6 +135,11 @@ impl Autocomplete {
 
     pub fn variant(mut self, variant: AutocompleteVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    pub fn open_on_focus(mut self, open_on_focus: bool) -> Self {
+        self.open_on_focus = open_on_focus;
         self
     }
 
@@ -216,6 +226,7 @@ fn autocomplete_runtime_models<H: UiHost>(
 #[derive(Default)]
 struct AutocompleteFrameState {
     last_query: String,
+    was_focused_input: bool,
 }
 
 fn first_enabled(items: &[AutocompleteItem]) -> Option<usize> {
@@ -241,6 +252,62 @@ fn next_enabled(items: &[AutocompleteItem], start: usize, forward: bool) -> Opti
     None
 }
 
+fn filter_items(query: &str, items: &Arc<[AutocompleteItem]>) -> Arc<[AutocompleteItem]> {
+    let query = query.trim();
+    if query.is_empty() {
+        return Arc::clone(items);
+    }
+
+    let query_lower = query.to_ascii_lowercase();
+    let mut out: Vec<AutocompleteItem> = Vec::new();
+    for item in items.iter() {
+        let label = item.label.as_ref();
+        let value = item.value.as_ref();
+        if label.to_ascii_lowercase().contains(&query_lower)
+            || value.to_ascii_lowercase().contains(&query_lower)
+        {
+            out.push(item.clone());
+        }
+    }
+    Arc::from(out)
+}
+
+fn sanitize_test_id_suffix(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    for ch in raw.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+            out.push(ch.to_ascii_lowercase());
+        } else {
+            out.push('-');
+        }
+    }
+    while out.contains("--") {
+        out = out.replace("--", "-");
+    }
+    out.trim_matches('-').to_string()
+}
+
+fn find_ascii_case_insensitive_match(label: &str, query: &str) -> Option<(usize, usize)> {
+    let query = query.trim();
+    if query.is_empty() || !label.is_ascii() || !query.is_ascii() {
+        return None;
+    }
+
+    let label_lower = label.to_ascii_lowercase();
+    let query_lower = query.to_ascii_lowercase();
+    let start = label_lower.find(&query_lower)?;
+    let end = start.saturating_add(query_lower.len());
+    if start <= label.len()
+        && end <= label.len()
+        && label.is_char_boundary(start)
+        && label.is_char_boundary(end)
+    {
+        Some((start, end))
+    } else {
+        None
+    }
+}
+
 fn autocomplete_into_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     autocomplete: Autocomplete,
@@ -263,35 +330,45 @@ fn autocomplete_into_element<H: UiHost>(
             .get_model_cloned(&autocomplete.model, Invalidation::Layout)
             .unwrap_or_default();
 
+        let filtered_items = filter_items(&query, &autocomplete.items);
+
         let focused_input = runtime
             .input_element_id
             .get()
             .is_some_and(|id| cx.is_focused_element(id));
 
-        let query_changed = cx.with_state(AutocompleteFrameState::default, |st| {
+        let (query_changed, focus_gained) = cx.with_state(AutocompleteFrameState::default, |st| {
             let changed = st.last_query != query;
             if changed {
                 st.last_query = query.clone();
             }
-            changed
+            let focus_gained = focused_input && !st.was_focused_input;
+            st.was_focused_input = focused_input;
+            (changed, focus_gained)
         });
 
         if query_changed && suppress_open {
             let _ = cx.app.models_mut().update(&runtime.suppress_open, |v| *v = false);
         }
 
-        if !autocomplete.disabled && focused_input && query_changed && !suppress_open && !autocomplete.items.is_empty() {
+        let should_open = !autocomplete.disabled
+            && focused_input
+            && !suppress_open
+            && !filtered_items.is_empty()
+            && (query_changed || (autocomplete.open_on_focus && focus_gained));
+        let opened_due_to_focus = autocomplete.open_on_focus && focus_gained && !query_changed;
+        if should_open {
             if !open_now {
                 let _ = cx.app.models_mut().update(&runtime.open, |v| *v = true);
                 cx.app.request_redraw(cx.window);
             }
-            if active_index.is_none() {
-                let idx = first_enabled(&autocomplete.items).unwrap_or(0);
+            if (active_index.is_none() && !opened_due_to_focus) || query_changed {
+                let idx = first_enabled(&filtered_items).unwrap_or(0);
                 let _ = cx.app.models_mut().update(&runtime.active_index, |v| *v = Some(idx));
             }
         }
 
-        if open_now && autocomplete.items.is_empty() {
+        if open_now && filtered_items.is_empty() {
             let _ = cx.app.models_mut().update(&runtime.open, |v| *v = false);
         }
 
@@ -351,7 +428,7 @@ fn autocomplete_into_element<H: UiHost>(
             runtime.open.clone(),
             runtime.suppress_open.clone(),
             runtime.active_index.clone(),
-            autocomplete.items.clone(),
+            filtered_items.clone(),
             autocomplete.disabled,
         );
 
@@ -367,7 +444,7 @@ fn autocomplete_into_element<H: UiHost>(
             let vertical_padding = Px(8.0);
             let desired_width = anchor.size.width;
             let desired_height = Px(
-                (item_height.0 * (autocomplete.items.len().min(6).max(1) as f32))
+                (item_height.0 * (filtered_items.len().min(6).max(1) as f32))
                     + vertical_padding.0 * 2.0,
             );
             let desired = Size::new(desired_width, desired_height);
@@ -398,13 +475,15 @@ fn autocomplete_into_element<H: UiHost>(
                     let option_elements_out = runtime.option_elements.clone();
                     let scroll_viewport_id_out = runtime.scroll_viewport_id.clone();
                     let open = runtime.open.clone();
+                    let suppress_open = runtime.suppress_open.clone();
                     let active_index = runtime.active_index.clone();
                     let scroll_handle = runtime.scroll_handle.clone();
-                    let items = autocomplete.items.clone();
+                    let items = filtered_items.clone();
                     let variant = autocomplete.variant;
                     let a11y_label = autocomplete.a11y_label.clone();
                     let test_id = autocomplete.test_id.clone();
                     let disabled = autocomplete.disabled;
+                    let query = Arc::<str>::from(query.clone());
 
                     move |cx| {
                         vec![autocomplete_listbox_panel(
@@ -414,8 +493,10 @@ fn autocomplete_into_element<H: UiHost>(
                             labelled_by,
                             a11y_label.clone(),
                             test_id.clone(),
+                            query.clone(),
                             disabled,
                             open.clone(),
+                            suppress_open.clone(),
                             active_index.clone(),
                             scroll_handle.clone(),
                             items.clone(),
@@ -555,11 +636,12 @@ fn install_input_key_handlers<H: UiHost>(
                     return true;
                 }
 
-                let value = item.value.clone();
+                let label = item.label.clone();
                 let _ = host
                     .models_mut()
-                    .update(&model, |v| *v = value.as_ref().to_string());
+                    .update(&model, |v| *v = label.as_ref().to_string());
                 let _ = host.models_mut().update(&open, |v| *v = false);
+                let _ = host.models_mut().update(&suppress_open, |v| *v = true);
                 host.request_redraw(action_cx.window);
                 true
             }
@@ -581,8 +663,10 @@ fn autocomplete_listbox_panel<H: UiHost>(
     labelled_by_element: Option<u64>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    query: Arc<str>,
     disabled: bool,
     open: Model<bool>,
+    suppress_open: Model<bool>,
     active_index: Model<Option<usize>>,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     items: Arc<[AutocompleteItem]>,
@@ -671,10 +755,21 @@ fn autocomplete_listbox_panel<H: UiHost>(
                         let item_disabled = disabled || item.disabled;
                         let selected = active_now == Some(idx);
                         let label_style = label_style.clone();
+                        let query = query.clone();
+                        let option_test_id = item.test_id.clone().or_else(|| {
+                            test_id.as_ref().map(|parent| {
+                                Arc::<str>::from(format!(
+                                    "{}-option-{}",
+                                    parent,
+                                    sanitize_test_id_suffix(item.value.as_ref())
+                                ))
+                            })
+                        });
 
                         let open_for_select = open.clone();
+                        let suppress_open_for_select = suppress_open.clone();
                         let model_for_select = model.clone();
-                        let value_for_select = item.value.clone();
+                        let label_for_select = item.label.clone();
                         let active_for_hover = active_index.clone();
                         let option_elements_out = option_elements_out.clone();
 
@@ -696,15 +791,19 @@ fn autocomplete_listbox_panel<H: UiHost>(
                             }
 
                             let open_for_select = open_for_select.clone();
+                            let suppress_open_for_select = suppress_open_for_select.clone();
                             let enabled_for_select = enabled;
                             cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
                                 if !enabled_for_select {
                                     return;
                                 }
                                 let _ = host.models_mut().update(&model_for_select, |v| {
-                                    *v = value_for_select.as_ref().to_string();
+                                    *v = label_for_select.as_ref().to_string();
                                 });
                                 let _ = host.models_mut().update(&open_for_select, |v| *v = false);
+                                let _ = host
+                                    .models_mut()
+                                    .update(&suppress_open_for_select, |v| *v = true);
                                 host.request_redraw(action_cx.window);
                             }));
 
@@ -713,6 +812,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
                             let a11y = PressableA11y {
                                 role: Some(SemanticsRole::ListBoxOption),
                                 label: Some(item.label.clone()),
+                                test_id: option_test_id.clone(),
                                 selected,
                                 ..Default::default()
                             }
@@ -733,14 +833,44 @@ fn autocomplete_listbox_panel<H: UiHost>(
                             let mut text_layout = fret_ui::element::LayoutStyle::default();
                             text_layout.size.width = Length::Fill;
 
-                            let text = cx.text_props(TextProps {
-                                layout: text_layout,
-                                text: item.label.clone(),
-                                wrap: TextWrap::None,
-                                overflow: TextOverflow::Ellipsis,
-                                style: Some(label_style),
-                                color: Some(label_color),
-                            });
+                            let text = if let Some((start, end)) =
+                                find_ascii_case_insensitive_match(item.label.as_ref(), query.as_ref())
+                            {
+                                let label = item.label.as_ref();
+                                let mut spans: Vec<TextSpan> = Vec::new();
+                                if start > 0 {
+                                    spans.push(TextSpan::new(start));
+                                }
+                                if end > start {
+                                    let mut span = TextSpan::new(end.saturating_sub(start));
+                                    span.shaping = span.shaping.with_weight(FontWeight::SEMIBOLD);
+                                    spans.push(span);
+                                }
+                                if end < label.len() {
+                                    spans.push(TextSpan::new(label.len().saturating_sub(end)));
+                                }
+                                let rich = AttributedText::new(
+                                    item.label.clone(),
+                                    Arc::<[TextSpan]>::from(spans),
+                                );
+                                cx.styled_text_props(StyledTextProps {
+                                    layout: text_layout,
+                                    rich,
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Ellipsis,
+                                    style: Some(label_style),
+                                    color: Some(label_color),
+                                })
+                            } else {
+                                cx.text_props(TextProps {
+                                    layout: text_layout,
+                                    text: item.label.clone(),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Ellipsis,
+                                    style: Some(label_style),
+                                    color: Some(label_color),
+                                })
+                            };
 
                             let mut child_layout = fret_ui::element::LayoutStyle::default();
                             child_layout.size.width = Length::Fill;
