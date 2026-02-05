@@ -22,9 +22,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let rebuild = self
             .geometry
-            .drag_preview
-            .as_ref()
-            .is_none_or(|cache| cache.kind != kind || cache.base_index_key != base_index_key);
+            .drag_preview_rebuild_needed(kind, base_index_key);
         if rebuild {
             let node_ports = self
                 .graph
@@ -121,7 +119,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 },
             );
 
-            self.geometry.drag_preview = Some(DragPreviewCache {
+            self.geometry.set_drag_preview(DragPreviewCache {
                 kind,
                 base_index_key,
                 preview_rev,

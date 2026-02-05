@@ -604,6 +604,20 @@ impl GeometryCache {
         self.clear_drag_preview();
         true
     }
+
+    pub(crate) fn drag_preview_rebuild_needed(
+        &self,
+        kind: DragPreviewKind,
+        base_index_key: SpatialIndexCacheKey,
+    ) -> bool {
+        self.drag_preview
+            .as_ref()
+            .is_none_or(|cache| cache.kind != kind || cache.base_index_key != base_index_key)
+    }
+
+    pub(crate) fn set_drag_preview(&mut self, cache: DragPreviewCache) {
+        self.drag_preview = Some(cache);
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
