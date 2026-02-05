@@ -3553,3 +3553,49 @@ Results (us; `--sort time`):
 Takeaway:
 - For this stable workload, paint is dominated by exclusive widget paint code (`paint_widget_time_us`), not paint-cache
   replay/key checks, and not paint-all plumbing.
+
+## 2026-02-05 19:25:00 (commit `f3078d25`)
+
+Change:
+- Add an experimental knob to relax the paint-cache view-cache gating:
+  - Env: `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING=1`
+  - Effect: when view-cache is active, allow paint-cache candidates beyond view-cache roots.
+
+Why:
+- `paint_widget_time_us` dominates the menubar steady paint slice. We wanted a quick A/B to see whether broadening
+  the paint-cache eligibility surface reduces widget paint overhead on stable frames.
+
+Probe (A/B):
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Baseline (no relax knob): see 2026-02-05 19:11 (commit `c512be81`).
+- Relaxed run:
+  - Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-relax-paint-cache.1770290717/`
+  - Command (repeat=7; `sort=time`):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --dir target/fret-diag-perf/menubar-kbd-nav.after-relax-paint-cache.1770290717 \
+  --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; relaxed run; `--sort time`):
+- `top_total_time_us`: p50 ~3438, p95 ~3718, max 3718
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-relax-paint-cache.1770290717/1770290719459-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown:
+  - `paint_time_us=2610`
+  - `paint_nodes_performed=30` (baseline was 153)
+  - `paint_cache_hits=12` (`paint_cache_replayed_ops=500`)
+  - `paint_widget_time_us=2540`
+
+Takeaway:
+- Relaxing the view-cache gating increased paint-cache hits and reduced the number of widgets that run `paint()`,
+  but did **not** materially reduce `paint_widget_time_us` or `paint_time_us` on this probe.
+- Next: identify which nodes still dominate `paint_widget_time_us` (need per-node paint hotspots or cache-disabled
+  reason counters) and evaluate higher-level caching boundaries.

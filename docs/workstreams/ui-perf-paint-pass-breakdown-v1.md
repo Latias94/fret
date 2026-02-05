@@ -178,6 +178,21 @@ Acceptance:
 
 Once the hotspot is confirmed, likely solutions fall into two buckets:
 
+### 4.1 A/B: broaden paint-cache eligibility (experimental)
+
+Commit: `f3078d25` adds an env-gated knob:
+
+- `FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING=1`
+
+Initial A/B on the menubar steady probe did not materially improve `paint_time_us` (see perf log entry), even though
+it increased paint-cache hits and reduced `paint_nodes_performed`.
+
+Implication:
+
+- Stable-frame paint is likely dominated by a small set of “high-level” widgets that still run `paint()`.
+- Next: add per-node paint hotspots (or cache-disabled reason counters) to identify why those widgets cannot be cached
+  (render transforms, invalidation behavior, key instability, etc.).
+
 ### 2.1 Reduce per-node overhead on stable frames
 
 If paint is dominated by “walking down to cache roots”, consider:

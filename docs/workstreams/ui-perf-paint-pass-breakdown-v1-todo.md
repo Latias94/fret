@@ -57,3 +57,10 @@ Conventions:
   - per-view paint replay that bypasses per-node traversal on stable frames, or
   - renderer-friendly replay primitives (encoded display list chunks).
 - [ ] Add a gate that fails when stable-frame paint cost regresses on chrome/menus (Tier B candidate).
+
+## Notes / experiments
+
+- [x] A/B: relax paint-cache view-cache gating (`FRET_UI_PAINT_CACHE_RELAX_VIEW_CACHE_GATING=1`).
+  - Result: increased paint-cache hits and reduced `paint_nodes_performed`, but did not materially improve
+    `paint_widget_time_us` on the menubar steady probe.
+  - Evidence: perf log entry 2026-02-05 19:25 (commit `f3078d25`).
