@@ -62,7 +62,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] breadcrumb
 - [~] button (page examples re-ordered + expanded; still validating interactions)
 - [x] button-group — examples mirrored (`apps/fret-ui-gallery/src/ui.rs::preview_button_group`)
-- [~] calendar — Basic/Range/Booked/Custom Cell Size/Week Numbers mirrored; missing caption dropdown, presets, time picker, RTL (`apps/fret-ui-gallery/src/ui.rs::preview_calendar`)
+- [x] calendar — examples mirrored (Basic/Range/Month+Year selector/Presets/Date+Time/Booked/Custom Cell Size/Week Numbers/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_calendar`, `ecosystem/fret-ui-shadcn/src/calendar.rs`)
 - [x] card — examples mirrored + size/action slots (`apps/fret-ui-gallery/src/ui.rs::preview_card`, `ecosystem/fret-ui-shadcn/src/card.rs`)
 - [ ] carousel
 - [ ] chart
