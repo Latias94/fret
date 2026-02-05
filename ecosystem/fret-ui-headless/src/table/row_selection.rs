@@ -224,25 +224,47 @@ pub fn toggle_row_selected<'a, TData>(
         return next;
     };
 
-    let mut stack: Vec<RowIndex> = Vec::new();
-    stack.push(row_index);
-
-    while let Some(i) = stack.pop() {
-        let Some(r) = row_model.row(i) else {
-            continue;
+    fn mutate_children<'a, TData>(
+        row_model: &RowModel<'a, TData>,
+        selection: &mut RowSelectionState,
+        row: RowIndex,
+        value: bool,
+        enable_multi_row_selection: bool,
+    ) {
+        let Some(r) = row_model.row(row) else {
+            return;
         };
         for &child in &r.sub_rows {
             let Some(child_row) = row_model.row(child) else {
                 continue;
             };
             if value {
-                next.insert(child_row.key);
+                // TanStack parity: when `enableMultiRowSelection=false`, each recursive
+                // `mutateRowIsSelected` call clears selection before inserting.
+                if !enable_multi_row_selection {
+                    selection.clear();
+                }
+                selection.insert(child_row.key);
             } else {
-                next.remove(&child_row.key);
+                selection.remove(&child_row.key);
             }
-            stack.push(child);
+            mutate_children(
+                row_model,
+                selection,
+                child,
+                value,
+                enable_multi_row_selection,
+            );
         }
     }
+
+    mutate_children(
+        row_model,
+        &mut next,
+        row_index,
+        value,
+        enable_multi_row_selection,
+    );
 
     next
 }

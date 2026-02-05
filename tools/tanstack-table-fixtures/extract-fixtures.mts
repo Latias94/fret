@@ -18,6 +18,7 @@ type CaseId =
   | "column_resizing_group_headers"
   | "state_shapes"
   | "selection"
+  | "selection_tree"
   | "expanding"
   | "grouping"
   | "grouping_aggregation_fns"
@@ -120,6 +121,14 @@ type SnapshotId =
   | "selection_toggle_row_multi_disabled_keeps_latest"
   | "selection_toggle_all_rows_disabled_noop"
   | "selection_toggle_all_page_rows_respects_pagination"
+  | "selection_tree_baseline"
+  | "selection_tree_state_child_selected_marks_parent_some_selected"
+  | "selection_tree_state_all_children_selected_marks_parent_all_sub_rows_selected"
+  | "selection_tree_action_toggle_root_selects_children_default"
+  | "selection_tree_action_toggle_root_select_children_false_only_root"
+  | "selection_tree_action_toggle_root_enable_sub_row_selection_false_only_root"
+  | "selection_tree_action_toggle_root_enable_multi_row_selection_false_clears_previous"
+  | "selection_tree_action_toggle_on_row_selection_change_noop_ignores"
   | "expanding_baseline"
   | "expanding_enable_expanding_false_disables_can_expand"
   | "expanding_hook_get_row_can_expand_overrides_enable_expanding_false"
@@ -292,9 +301,16 @@ type TanStackOptions = {
   __onColumnSizingInfoChange?: "noop"
   __onExpandedChange?: "noop"
   __onPaginationChange?: "noop"
+  __onRowSelectionChange?: "noop"
 }
 
 type RowModelSnapshot = { root: string[]; flat: string[] }
+
+type RowSelectionDetail = {
+  is_selected: Record<string, boolean>
+  is_some_selected: Record<string, boolean>
+  is_all_sub_rows_selected: Record<string, boolean>
+}
 
 type FixtureSnapshot = {
   id: SnapshotId
@@ -320,6 +336,7 @@ type FixtureSnapshot = {
     is_some_rows_selected?: boolean
     is_all_page_rows_selected?: boolean
     is_some_page_rows_selected?: boolean
+    row_selection_detail?: RowSelectionDetail
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
@@ -711,6 +728,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "column_resizing_group_headers" &&
         v !== "state_shapes" &&
         v !== "selection" &&
+        v !== "selection_tree" &&
         v !== "expanding" &&
         v !== "grouping" &&
         v !== "grouping_aggregation_fns" &&
@@ -725,7 +743,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding|grouping|grouping_aggregation_fns|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
     )
   }
   return { out, case_id }
@@ -788,6 +806,29 @@ function snapshotRowModel(model: any): RowModelSnapshot {
   const root = (model.rows ?? []).map((r: any) => String(r.id))
   const flat = (model.flatRows ?? []).map((r: any) => String(r.id))
   return { root, flat }
+}
+
+function snapshotRowSelectionDetail(table: any, rowIds: string[]): RowSelectionDetail {
+  const out: RowSelectionDetail = {
+    is_selected: {},
+    is_some_selected: {},
+    is_all_sub_rows_selected: {},
+  }
+
+  for (const id of rowIds) {
+    const row = table.getRow?.(id, true)
+    if (!row) {
+      out.is_selected[id] = false
+      out.is_some_selected[id] = false
+      out.is_all_sub_rows_selected[id] = false
+      continue
+    }
+    out.is_selected[id] = Boolean(row.getIsSelected?.())
+    out.is_some_selected[id] = Boolean(row.getIsSomeSelected?.())
+    out.is_all_sub_rows_selected[id] = Boolean(row.getIsAllSubRowsSelected?.())
+  }
+
+  return out
 }
 
 function getGitHeadCommit(dir: string): { commit?: string; commit_short?: string } {
@@ -1036,7 +1077,7 @@ async function main(): Promise<void> {
     ]
     data = rows
     columns = [{ id: "value", accessorFn: (row: any) => row.value }]
-  } else if (case_id === "expanding" || case_id === "pinning_tree") {
+  } else if (case_id === "expanding" || case_id === "pinning_tree" || case_id === "selection_tree") {
     const tree: DemoProcessRow[] = [
       {
         id: 1,
@@ -1591,6 +1632,9 @@ async function main(): Promise<void> {
         currentState.rowPinning = next ?? { top: [], bottom: [] }
       },
       onRowSelectionChange: (updater: any) => {
+        if (options.__onRowSelectionChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.rowSelection) : updater
         currentState.rowSelection = next ?? {}
@@ -2995,6 +3039,85 @@ function snapshotColumnPinning(
           { type: "toggleAllPageRowsSelected" },
         ]),
       },
+    ]
+  } else if (case_id === "selection_tree") {
+    const base = defaultOptions
+    const rowIds = ["1", "11", "12", "121", "2", "3", "31", "4"]
+
+    const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
+      const baseSnap = snapshotForState(options, state)
+      const { table } = buildTable(options, state)
+      return {
+        id,
+        options,
+        state,
+        expect: {
+          ...baseSnap,
+          row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+        },
+      }
+    }
+
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      const { table } = buildTable(options, expect.next_state)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect: {
+          ...expect,
+          row_selection_detail: snapshotRowSelectionDetail(table, rowIds),
+        },
+      }
+    }
+
+    snapshots = [
+      mk("selection_tree_baseline", base, {}),
+      mk("selection_tree_state_child_selected_marks_parent_some_selected", base, {
+        rowSelection: { "11": true },
+      }),
+      mk(
+        "selection_tree_state_all_children_selected_marks_parent_all_sub_rows_selected",
+        base,
+        { rowSelection: { "11": true, "12": true, "121": true } },
+      ),
+      mkActions("selection_tree_action_toggle_root_selects_children_default", base, {}, [
+        { type: "toggleRowSelected", row_id: "1" },
+      ]),
+      mkActions(
+        "selection_tree_action_toggle_root_select_children_false_only_root",
+        base,
+        {},
+        [{ type: "toggleRowSelected", row_id: "1", select_children: false }],
+      ),
+      mkActions(
+        "selection_tree_action_toggle_root_enable_sub_row_selection_false_only_root",
+        { ...base, enableSubRowSelection: false },
+        {},
+        [{ type: "toggleRowSelected", row_id: "1" }],
+      ),
+      mkActions(
+        "selection_tree_action_toggle_root_enable_multi_row_selection_false_clears_previous",
+        { ...base, enableMultiRowSelection: false },
+        { rowSelection: { "2": true } },
+        [{ type: "toggleRowSelected", row_id: "1" }],
+      ),
+      mkActions(
+        "selection_tree_action_toggle_on_row_selection_change_noop_ignores",
+        { ...base, __onRowSelectionChange: "noop" },
+        {},
+        [{ type: "toggleRowSelected", row_id: "1" }],
+      ),
     ]
   } else if (case_id === "expanding") {
     const base = defaultOptions
