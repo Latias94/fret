@@ -28,10 +28,15 @@ Conventions:
   - layer root enumeration,
   - paint observation collapse after paint.
   - Evidence: `feat(diag): add paint micro-breakdown timers` (commit `b20a1280`).
+- [x] Add paint-phase micro timers for paint-node breakdown:
+  - paint-cache key computation,
+  - paint-cache hit-check time (excluding replay),
+  - exclusive widget `paint()` time (pauses while painting children),
+  - observation recording time (`observed_in_paint` + globals).
+  - Evidence: `feat(diag): add paint node breakdown timers` (commit `c512be81`).
 - [ ] Add paint-phase micro timers for the remaining dominant candidates:
-  - per-node traversal overhead on stable frames (cache hit vs miss),
-  - widget `paint()` time,
-  - observation bookkeeping (recording/merging observed globals/models during paint).
+  - per-node traversal overhead on stable frames (excluding widget code),
+  - observation merging/collapse costs beyond the already-timed “collapse observations” step.
 - [x] Update `fretboard diag stats` + `--json` output to include the initial paint micro timers.
   - Evidence: `feat(diag): add paint micro-breakdown timers` (commit `b20a1280`).
 - [ ] Record at least 3 “stable but paint-heavy” evidence bundles (menubar, overlay torture, chrome torture) and

@@ -3511,3 +3511,45 @@ Takeaway:
 - The paint-all “plumbing” micro timers are not where the ~2.6ms paint slice goes for this probe.
 - Next: instrument per-node paint traversal and widget paint (cache hit vs miss) to explain the remaining slice
   (tracked in `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`).
+
+## 2026-02-05 19:11:00 (commit `c512be81`)
+
+Change:
+- Add paint node breakdown timers and export them into bundles + `fretboard diag stats`:
+  - `paint_cache_key_time_us`
+  - `paint_cache_hit_check_time_us`
+  - `paint_widget_time_us` (exclusive; pauses while painting children)
+  - `paint_observation_record_time_us`
+
+Why:
+- The menubar steady probe still shows ~2.6ms `paint_time_us` with view-cache reuse. We needed to confirm whether the
+  remaining slice is “widget paint” vs paint-cache bookkeeping vs observation recording.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882/`
+- Command (repeat=7; `sort=time`):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --dir target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882 \
+  --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+- `top_total_time_us`: p50 ~3568, p95 ~3734, max 3734
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882/1770289882739-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+  - `paint_time_us=2655`
+  - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2555/11`
+  - `paint_breakdown.us(input_ctx/scroll_inv/collect_roots/text_snapshot/collapse)=0/0/0/0/43`
+
+Takeaway:
+- For this stable workload, paint is dominated by exclusive widget paint code (`paint_widget_time_us`), not paint-cache
+  replay/key checks, and not paint-all plumbing.

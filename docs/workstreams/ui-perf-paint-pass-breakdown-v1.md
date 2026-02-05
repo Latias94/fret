@@ -108,7 +108,48 @@ Interpretation:
 
 ---
 
-## 2) What we need to measure next (paint-phase micro timers)
+## 2) Evidence: stable-frame paint is dominated by widget paint code
+
+Commit: `c512be81` (`feat(diag): add paint node breakdown timers`)
+
+Probe:
+
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882/`
+- Command (repeat=7; `sort=time`):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --dir target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882 \
+  --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Worst bundle:
+
+- `target/fret-diag-perf/menubar-kbd-nav.after-c512be81.1770289882/1770289882739-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+
+- `paint_time_us=2655`
+- `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2555/11`
+- `paint_breakdown.us(input_ctx/scroll_inv/collect_roots/text_snapshot/collapse)=0/0/0/0/43`
+
+Interpretation:
+
+- For this stable workload, the paint pass is overwhelmingly dominated by **widget paint code**:
+  - `paint_widget_time_us` is an **exclusive** timer that pauses when painting child subtrees (so it does not double
+    count recursion through `PaintCx::paint()`).
+- This strongly suggests that “view-cache reuse” does not currently provide a “skip most widget paint” fast path for
+  stable frames; only a small number of paint-cache roots are replaying ops, while most nodes still run `Widget::paint()`.
+
+---
+
+## 3) What we need to measure next (paint-phase micro timers)
 
 Add paint-phase sub-timers to diagnostics so the worst frame is explainable without a sampling profiler:
 
@@ -133,7 +174,7 @@ Acceptance:
 
 ---
 
-## 3) Likely refactor directions (fearless)
+## 4) Likely refactor directions (fearless)
 
 Once the hotspot is confirmed, likely solutions fall into two buckets:
 
