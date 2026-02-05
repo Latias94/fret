@@ -11487,14 +11487,14 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     #[derive(Debug, Clone)]
     struct PendingReply {
         assistant_id: u64,
-        final_text: Arc<str>,
+        final_parts: Arc<[ui_ai::MessagePart]>,
         frames_left: u8,
     }
 
     #[derive(Default)]
     struct ChatModels {
         prompt: Option<Model<String>>,
-        messages: Option<Model<Arc<[ui_ai::ConversationMessage]>>>,
+        messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
         loading: Option<Model<bool>>,
         pending: Option<Model<Option<PendingReply>>>,
         next_id: Option<Model<u64>>,
@@ -11514,12 +11514,18 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     let messages = match messages {
         Some(model) => model,
         None => {
-            let initial: Arc<[ui_ai::ConversationMessage]> = Arc::from(vec![
-                ui_ai::ConversationMessage::new(1, ui_ai::MessageRole::User, "Hello!"),
-                ui_ai::ConversationMessage::new(
+            let initial: Arc<[ui_ai::AiMessage]> = Arc::from(vec![
+                ui_ai::AiMessage::new(
+                    1,
+                    ui_ai::MessageRole::User,
+                    [ui_ai::MessagePart::Text(Arc::<str>::from("Hello!"))],
+                ),
+                ui_ai::AiMessage::new(
                     2,
                     ui_ai::MessageRole::Assistant,
-                    "This is a small demo for PromptInput + transcript append.",
+                    [ui_ai::MessagePart::Markdown(Arc::<str>::from(
+                        "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.",
+                    ))],
                 ),
             ]);
             let model = cx.app.models_mut().insert(initial);
@@ -11576,12 +11582,12 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 });
             } else {
                 let assistant_id = pending_state.assistant_id;
-                let final_text = pending_state.final_text.clone();
+                let final_parts = pending_state.final_parts.clone();
 
                 let _ = cx.app.models_mut().update(&messages, |list| {
                     let mut vec = list.as_ref().to_vec();
                     if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
-                        msg.text = final_text;
+                        msg.parts = final_parts;
                     }
                     *list = vec.into();
                 });
@@ -11625,21 +11631,55 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 .ok()
                 .unwrap_or(0);
 
-            let final_text: Arc<str> = Arc::from(format!(
-                "Echo: {text}\n\n(assistant reply is delayed a few frames to exercise loading/stop)"
-            ));
+            let tool_call = ui_ai::ToolCall::new("toolcall-0", "search")
+                .state(ui_ai::ToolCallState::Running)
+                .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "query": text,
+                    "k": 3
+                })));
+
+            let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
+                ui_ai::SourceItem::new("src-0", "Example source A")
+                    .url("https://example.com/a")
+                    .excerpt("A short excerpt used for truncation and wrapping tests."),
+                ui_ai::SourceItem::new("src-1", "Example source B")
+                    .url("https://example.com/b")
+                    .excerpt("Another excerpt: this should wrap and remain readable."),
+            ]);
+
+            let final_parts: Arc<[ui_ai::MessagePart]> = Arc::from(vec![
+                ui_ai::MessagePart::Markdown(Arc::from(format!(
+                    "Echo: **{text}**\n\n(assistant reply is delayed a few frames to exercise loading/stop)"
+                ))),
+                ui_ai::MessagePart::ToolCall(
+                    tool_call
+                        .clone()
+                        .state(ui_ai::ToolCallState::Succeeded)
+                        .output(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                            "results": [
+                                {"title": "A", "score": 0.9},
+                                {"title": "B", "score": 0.8}
+                            ]
+                        }))),
+                ),
+                ui_ai::MessagePart::Sources(sources.clone()),
+            ]);
 
             let _ = host.models_mut().update(&messages, |list| {
                 let mut vec = list.as_ref().to_vec();
-                vec.push(ui_ai::ConversationMessage::new(
+                vec.push(ui_ai::AiMessage::new(
                     user_id,
                     ui_ai::MessageRole::User,
-                    Arc::<str>::from(text),
+                    [ui_ai::MessagePart::Text(Arc::<str>::from(text))],
                 ));
-                vec.push(ui_ai::ConversationMessage::new(
+                vec.push(ui_ai::AiMessage::new(
                     assistant_id,
                     ui_ai::MessageRole::Assistant,
-                    Arc::<str>::from("Thinking…"),
+                    [
+                        ui_ai::MessagePart::Markdown(Arc::<str>::from("Thinking…")),
+                        ui_ai::MessagePart::ToolCall(tool_call),
+                        ui_ai::MessagePart::Sources(sources),
+                    ],
                 ));
                 *list = vec.into();
             });
@@ -11647,7 +11687,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
             let _ = host.models_mut().update(&pending, |v| {
                 *v = Some(PendingReply {
                     assistant_id,
-                    final_text,
+                    final_parts,
                     frames_left: 20,
                 })
             });
@@ -11704,11 +11744,10 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
     );
 
     let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
-    let transcript = ui_ai::ConversationTranscript::from_arc(messages_value.clone())
+    let transcript = ui_ai::AiConversationTranscript::from_arc(messages_value.clone())
         .content_revision(revision)
         .scroll_handle(scroll_handle)
         .stick_to_bottom(true)
-        .show_scroll_to_bottom_button(true)
         .debug_root_test_id("ui-gallery-ai-chat-transcript-root")
         .debug_row_test_id_prefix("ui-gallery-ai-chat-transcript-row-")
         .into_element(cx);
