@@ -1216,7 +1216,7 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(window) = self.window
                 && let Some(node) = crate::elements::timer_target_node(app, window, *token)
             {
-                let stopped = self.dispatch_event_to_node_chain(
+                let _stopped = self.dispatch_event_to_node_chain(
                     app,
                     services,
                     &input_ctx,
@@ -1225,12 +1225,10 @@ impl<H: UiHost> UiTree<H> {
                     &mut needs_redraw,
                     invalidation_visited,
                 );
-                if stopped {
-                    if needs_redraw {
-                        self.request_redraw_coalesced(app);
-                    }
-                    return;
+                if needs_redraw {
+                    self.request_redraw_coalesced(app);
                 }
+                return;
             }
 
             self.rebuild_visible_layers_scratch();
