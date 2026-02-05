@@ -143,6 +143,42 @@ Fret mapping:
   - content: `${root}-content`
   - rows: `${msg_prefix}source-row-{part_index}-{row_index}`
 
+### `message.tsx` (message container + content + actions)
+
+Upstream behavior:
+
+- `Message` is a role-aware layout wrapper (user messages align right and use a different chrome).
+- `MessageContent` defines the “bubble” styling for user messages and a plain flow for assistant messages.
+- `MessageActions` / `MessageAction` standardize per-message icon buttons and optional tooltips.
+- Optional “branching” surfaces exist (`MessageBranch*`) for multi-variant assistant messages.
+
+Fret mapping (planned):
+
+- Keep `MessageParts` as the “content router” for markdown/tool/sources/citations.
+- Add a `Message` composition surface that matches upstream decomposition:
+  - `Message` (role-aware row wrapper),
+  - `MessageContent` (bubble chrome),
+  - `MessageActions` + `MessageAction` (tooltip-ready shadcn icon buttons).
+- Branch selector: only implement once there is an app consumer; keep the contract in docs first.
+
+### `tool.tsx` (Tool call disclosure)
+
+Upstream behavior:
+
+- A tool call is a `Collapsible` with:
+  - a header trigger (`ToolHeader`) showing a wrench icon, a derived title, and a status badge,
+  - a content panel (`ToolContent`) with “Parameters” and “Result/Error” sections,
+  - JSON-like payloads rendered as code blocks.
+
+Fret mapping:
+
+- `Tool` / `ToolHeader` / `ToolContent` / `ToolInput` / `ToolOutput` live in `fret-ui-ai` as
+  shadcn-aligned building blocks.
+- `ToolCallBlock` remains the model-specific convenience wrapper rendered by `MessageParts`.
+- Stable selectors remain mandatory:
+  - root: `${msg_prefix}toolcall-{part_index}`
+  - trigger: `${msg_prefix}toolcall-trigger-{part_index}`
+
 ### `inline-citation.tsx` (HoverCard + pager)
 
 Upstream behavior:

@@ -45,9 +45,9 @@ Status legend:
 | `conversation` | Prototype | `fret-ui-ai` | Parts-based transcript exists (`AiConversationTranscript`) + empty state + download button + scroll affordance; `AiChat` provides a default composition shell. |
 | `message` | Prototype | `fret-ui-ai` | `MessageParts` + `MessageResponse` exist (markdown + tool calls + sources/citations); richer action slots pending. |
 | `prompt-input` | Prototype | `fret-ui-ai` | MVP exists (send/stop/disabled/loading + `test_id`). |
-| `tool` | Prototype | `fret-ui-ai` | Tool call block exists (collapsible + state chrome); richer payload views pending. |
-| `sources` | Prototype | `fret-ui-ai` | List exists; needs Collapsible parity (`Used N sources`) and link/icon layout alignment. |
-| `inline-citation` | Prototype | `fret-ui-ai` | Click-to-highlight is gated; needs HoverCard + pager parity and multi-source citation model. |
+| `tool` | Prototype | `fret-ui-ai` | `Tool` + `ToolCallBlock` follow `tool.tsx` header/content outcomes (wrench + status badge + parameter/result sections); keep iterating on payload views and styling parity. |
+| `sources` | Prototype | `fret-ui-ai` | Collapsible parity (`Used N sources`) is implemented; keep iterating on styling and payload richness (excerpt/link affordances). |
+| `inline-citation` | Prototype | `fret-ui-ai` | HoverCard pager + multi-source citations are implemented; keep iterating on styling polish and interaction parity. |
 | `reasoning` | Not started | `fret-ui-ai` | Only if apps need it. |
 | `suggestion` | Not started | `fret-ui-ai` | Optional. |
 | `queue` | Not started | `fret-ui-ai` | Optional. |
@@ -241,9 +241,15 @@ Keep this list in sync with the pinned upstream commit recorded in
 - [~] AIEL-MVP1-chat-023 Add “scroll-to-bottom” button styling parity (rounded, outline, dark-mode background).
 - [ ] AIEL-MVP1-chat-024 Define selection/search contracts for long transcripts (defer implementation if needed, but write the contract).
 
+### Tool calls
+
+- [x] AIEL-MVP1-tool-100 Align `tool.tsx` disclosure outcomes (header + status badge + sections).
+  - Targets: `Tool`, `ToolHeader`, `ToolContent`, `ToolInput`, `ToolOutput`, `ToolCallBlock`.
+
 ### Message
 
 - [ ] AIEL-MVP1-chat-040 Replace `Message(text)` with a composition surface (container + content + actions slots).
+- [ ] AIEL-MVP1-chat-043 Port `message.tsx` action surfaces (`MessageActions`, `MessageAction` with optional tooltip).
 - [ ] AIEL-MVP1-chat-041 Implement branch selector outcomes (optional; only if there is a consumer).
 - [ ] AIEL-MVP1-chat-042 Add per-role chrome tokens (avoid hard-coded theme string keys in component code).
 
