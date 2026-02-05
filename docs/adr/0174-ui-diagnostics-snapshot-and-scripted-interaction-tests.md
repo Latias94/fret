@@ -119,6 +119,11 @@ Minimum required fields (v1):
 - `layout_time_us: u64`, `paint_time_us: u64`
 - `layout_engine_solves: u64`, `layout_engine_solve_time_us: u64`
 - `paint_cache_hits: u32`, `paint_cache_misses: u32`, `paint_cache_replayed_ops: u32`
+- Optional (recommended): paint-phase text preparation attribution (to explain tail latency hitches):
+  - `paint_text_prepare_time_us: u64`, `paint_text_prepare_calls: u32`
+  - Per-reason counters (e.g. blob missing, width/style/wrap changes).
+  - `paint_text_prepare_hotspots: Vec<...>` (top-N per frame) including node/element ids and text constraints so
+    “first appearance” spikes can be distinguished from cross-frame cache churn.
 - `reason_hints: Vec<UiWorkReasonV1>` (model/global/timer/raf/input/engine)
   - Optional (recommended): a coarse **layout phase breakdown** to make “layout time” actionable in perf bundles:
     - `layout_collect_roots_time_us`
