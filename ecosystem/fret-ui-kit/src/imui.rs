@@ -237,8 +237,13 @@ fn float_window_drag_kind_for_element(element: GlobalElementId) -> fret_runtime:
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FloatWindowResizeHandle {
+    Left,
     Right,
+    Top,
     Bottom,
+    TopLeft,
+    TopRight,
+    BottomLeft,
     BottomRight,
 }
 
@@ -249,9 +254,14 @@ fn float_window_resize_kind_for_element(
     handle: FloatWindowResizeHandle,
 ) -> fret_runtime::DragKindId {
     let handle_tag = match handle {
-        FloatWindowResizeHandle::Right => 1,
-        FloatWindowResizeHandle::Bottom => 2,
-        FloatWindowResizeHandle::BottomRight => 3,
+        FloatWindowResizeHandle::Left => 1,
+        FloatWindowResizeHandle::Right => 2,
+        FloatWindowResizeHandle::Top => 3,
+        FloatWindowResizeHandle::Bottom => 4,
+        FloatWindowResizeHandle::TopLeft => 5,
+        FloatWindowResizeHandle::TopRight => 6,
+        FloatWindowResizeHandle::BottomLeft => 7,
+        FloatWindowResizeHandle::BottomRight => 8,
     };
     fret_runtime::DragKindId(
         FLOAT_WINDOW_RESIZE_KIND_BASE ^ element.0.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ handle_tag,
@@ -297,8 +307,13 @@ struct FloatWindowState {
     window_test_id: Arc<str>,
     title_bar_test_id: Arc<str>,
     close_button_test_id: Arc<str>,
+    resize_left_test_id: Arc<str>,
     resize_right_test_id: Arc<str>,
+    resize_top_test_id: Arc<str>,
     resize_bottom_test_id: Arc<str>,
+    resize_top_left_test_id: Arc<str>,
+    resize_top_right_test_id: Arc<str>,
+    resize_bottom_left_test_id: Arc<str>,
     resize_corner_test_id: Arc<str>,
 }
 
@@ -901,8 +916,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let resizable = initial_size.is_some();
                 let resize_snapshot = if resizable {
                     [
+                        FloatWindowResizeHandle::Left,
                         FloatWindowResizeHandle::Right,
+                        FloatWindowResizeHandle::Top,
                         FloatWindowResizeHandle::Bottom,
+                        FloatWindowResizeHandle::TopLeft,
+                        FloatWindowResizeHandle::TopRight,
+                        FloatWindowResizeHandle::BottomLeft,
                         FloatWindowResizeHandle::BottomRight,
                     ]
                     .into_iter()
@@ -928,8 +948,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     window_test_id,
                     title_bar_test_id,
                     close_button_test_id,
+                    resize_left_test_id,
                     resize_right_test_id,
+                    resize_top_test_id,
                     resize_bottom_test_id,
+                    resize_top_left_test_id,
+                    resize_top_right_test_id,
+                    resize_bottom_left_test_id,
                     resize_corner_test_id,
                 ) = cx.with_state_for(
                     window_id,
@@ -941,11 +966,24 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         window_test_id: Arc::from(format!("imui.float_window.window:{id}")),
                         title_bar_test_id: Arc::from(format!("imui.float_window.title_bar:{id}")),
                         close_button_test_id: Arc::from(format!("imui.float_window.close:{id}")),
+                        resize_left_test_id: Arc::from(format!(
+                            "imui.float_window.resize.left:{id}"
+                        )),
                         resize_right_test_id: Arc::from(format!(
                             "imui.float_window.resize.right:{id}"
                         )),
+                        resize_top_test_id: Arc::from(format!("imui.float_window.resize.top:{id}")),
                         resize_bottom_test_id: Arc::from(format!(
                             "imui.float_window.resize.bottom:{id}"
+                        )),
+                        resize_top_left_test_id: Arc::from(format!(
+                            "imui.float_window.resize.top_left:{id}"
+                        )),
+                        resize_top_right_test_id: Arc::from(format!(
+                            "imui.float_window.resize.top_right:{id}"
+                        )),
+                        resize_bottom_left_test_id: Arc::from(format!(
+                            "imui.float_window.resize.bottom_left:{id}"
                         )),
                         resize_corner_test_id: Arc::from(format!(
                             "imui.float_window.resize.corner:{id}"
@@ -971,11 +1009,56 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                                 let min = Size::new(Px(120.0), Px(72.0));
                                 match handle {
+                                    FloatWindowResizeHandle::Left => {
+                                        let right = Px(st.position.x.0 + st.size.width.0);
+                                        let width =
+                                            Px((st.size.width.0 - delta.x.0).max(min.width.0));
+                                        st.size.width = width;
+                                        st.position.x = Px(right.0 - width.0);
+                                    }
                                     FloatWindowResizeHandle::Right => {
                                         st.size.width =
                                             Px((st.size.width.0 + delta.x.0).max(min.width.0));
                                     }
+                                    FloatWindowResizeHandle::Top => {
+                                        let bottom = Px(st.position.y.0 + st.size.height.0);
+                                        let height =
+                                            Px((st.size.height.0 - delta.y.0).max(min.height.0));
+                                        st.size.height = height;
+                                        st.position.y = Px(bottom.0 - height.0);
+                                    }
                                     FloatWindowResizeHandle::Bottom => {
+                                        st.size.height =
+                                            Px((st.size.height.0 + delta.y.0).max(min.height.0));
+                                    }
+                                    FloatWindowResizeHandle::TopLeft => {
+                                        let right = Px(st.position.x.0 + st.size.width.0);
+                                        let bottom = Px(st.position.y.0 + st.size.height.0);
+
+                                        let width =
+                                            Px((st.size.width.0 - delta.x.0).max(min.width.0));
+                                        let height =
+                                            Px((st.size.height.0 - delta.y.0).max(min.height.0));
+                                        st.size.width = width;
+                                        st.size.height = height;
+                                        st.position.x = Px(right.0 - width.0);
+                                        st.position.y = Px(bottom.0 - height.0);
+                                    }
+                                    FloatWindowResizeHandle::TopRight => {
+                                        let bottom = Px(st.position.y.0 + st.size.height.0);
+                                        st.size.width =
+                                            Px((st.size.width.0 + delta.x.0).max(min.width.0));
+                                        let height =
+                                            Px((st.size.height.0 - delta.y.0).max(min.height.0));
+                                        st.size.height = height;
+                                        st.position.y = Px(bottom.0 - height.0);
+                                    }
+                                    FloatWindowResizeHandle::BottomLeft => {
+                                        let right = Px(st.position.x.0 + st.size.width.0);
+                                        let width =
+                                            Px((st.size.width.0 - delta.x.0).max(min.width.0));
+                                        st.size.width = width;
+                                        st.position.x = Px(right.0 - width.0);
                                         st.size.height =
                                             Px((st.size.height.0 + delta.y.0).max(min.height.0));
                                     }
@@ -1000,8 +1083,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             st.window_test_id.clone(),
                             st.title_bar_test_id.clone(),
                             st.close_button_test_id.clone(),
+                            st.resize_left_test_id.clone(),
                             st.resize_right_test_id.clone(),
+                            st.resize_top_test_id.clone(),
                             st.resize_bottom_test_id.clone(),
+                            st.resize_top_left_test_id.clone(),
+                            st.resize_top_right_test_id.clone(),
+                            st.resize_bottom_left_test_id.clone(),
                             st.resize_corner_test_id.clone(),
                         )
                     },
@@ -1265,6 +1353,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let window_id = window_id;
                     let mut resize_handle = |handle: FloatWindowResizeHandle, test_id: Arc<str>| {
                         let (cursor, layout) = match handle {
+                            FloatWindowResizeHandle::Left => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Px(Px(6.0));
+                                layout.size.height = Length::Fill;
+                                (CursorIcon::ColResize, layout)
+                            }
                             FloatWindowResizeHandle::Right => {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
@@ -1278,6 +1379,19 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 layout.size.height = Length::Fill;
                                 (CursorIcon::ColResize, layout)
                             }
+                            FloatWindowResizeHandle::Top => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Fill;
+                                layout.size.height = Length::Px(Px(6.0));
+                                (CursorIcon::RowResize, layout)
+                            }
                             FloatWindowResizeHandle::Bottom => {
                                 let mut layout = LayoutStyle::default();
                                 layout.position = PositionStyle::Absolute;
@@ -1290,6 +1404,42 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 layout.size.width = Length::Fill;
                                 layout.size.height = Length::Px(Px(6.0));
                                 (CursorIcon::RowResize, layout)
+                            }
+                            FloatWindowResizeHandle::TopLeft => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Px(Px(10.0));
+                                layout.size.height = Length::Px(Px(10.0));
+                                (CursorIcon::ColResize, layout)
+                            }
+                            FloatWindowResizeHandle::TopRight => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Px(Px(10.0));
+                                layout.size.height = Length::Px(Px(10.0));
+                                (CursorIcon::ColResize, layout)
+                            }
+                            FloatWindowResizeHandle::BottomLeft => {
+                                let mut layout = LayoutStyle::default();
+                                layout.position = PositionStyle::Absolute;
+                                layout.inset = InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                    ..Default::default()
+                                };
+                                layout.size.width = Length::Px(Px(10.0));
+                                layout.size.height = Length::Px(Px(10.0));
+                                (CursorIcon::ColResize, layout)
                             }
                             FloatWindowResizeHandle::BottomRight => {
                                 let mut layout = LayoutStyle::default();
@@ -1389,18 +1539,46 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         )
                     };
 
+                    let left =
+                        resize_handle(FloatWindowResizeHandle::Left, resize_left_test_id.clone());
                     let right =
                         resize_handle(FloatWindowResizeHandle::Right, resize_right_test_id.clone());
+                    let top =
+                        resize_handle(FloatWindowResizeHandle::Top, resize_top_test_id.clone());
                     let bottom = resize_handle(
                         FloatWindowResizeHandle::Bottom,
                         resize_bottom_test_id.clone(),
+                    );
+                    let top_left = resize_handle(
+                        FloatWindowResizeHandle::TopLeft,
+                        resize_top_left_test_id.clone(),
+                    );
+                    let top_right = resize_handle(
+                        FloatWindowResizeHandle::TopRight,
+                        resize_top_right_test_id.clone(),
+                    );
+                    let bottom_left = resize_handle(
+                        FloatWindowResizeHandle::BottomLeft,
+                        resize_bottom_left_test_id.clone(),
                     );
                     let corner = resize_handle(
                         FloatWindowResizeHandle::BottomRight,
                         resize_corner_test_id.clone(),
                     );
 
-                    vec![cx.stack(|_cx| vec![body, right, bottom, corner])]
+                    vec![cx.stack(|_cx| {
+                        vec![
+                            body,
+                            left,
+                            right,
+                            top,
+                            bottom,
+                            top_left,
+                            top_right,
+                            bottom_left,
+                            corner,
+                        ]
+                    })]
                 });
                 // `cx.container(...)` introduces a fresh scoped id; normalize the outer window element
                 // id back to the named scope id so z-order state can track windows by `window_id`.
