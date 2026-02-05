@@ -58,10 +58,7 @@ pub fn run() -> anyhow::Result<()> {
             let cfg = ThemeConfig::from_slice(include_bytes!("todo_theme_overrides.json")).expect(
                 "todo_demo theme overrides must be valid ThemeConfig JSON (see ThemeConfig)",
             );
-            // IMPORTANT: this is a *token patch* (metrics-only today). Using `apply_config` would
-            // reset the shadcn palette we just applied, which makes `primary-foreground` wrong
-            // (e.g. checkmarks become invisible on a light `primary` background).
-            Theme::with_global_mut(app, |theme| theme.extend_tokens_from_config(&cfg));
+            Theme::with_global_mut(app, |theme| theme.apply_config_patch(&cfg));
         })
         .run()?;
     Ok(())
@@ -124,14 +121,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
 
     let add_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::Icon)
-        .variant(shadcn::ButtonVariant::Default)
+        .variant(shadcn::ButtonVariant::Secondary)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
         .children([icon::icon_with(
             cx,
             IconId::new("lucide.plus"),
             Some(Px(16.0)),
-            Some(ColorRef::Color(theme.color_required("primary-foreground"))),
+            Some(ColorRef::Color(if add_enabled {
+                theme.color_required("secondary-foreground")
+            } else {
+                theme.color_required("muted-foreground")
+            })),
         )])
         .into_element(cx)
         .attach_semantics(
@@ -297,6 +298,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                 .items_center()
                 .into_element(cx)]
         })
+        .py(Space::N0p5)
         .h_px(Px(20.0))
         .min_h(Px(20.0))
         .into_element(cx)
@@ -363,21 +365,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         .into_element(cx);
 
     let page = ui::container(cx, |cx| {
-        [ui::v_flex(cx, |cx| {
-            [
-                card,
-                ui::raw_text(cx, "Shadcn 风格 · Fret UiAppDriver demo · keyboard-first")
-                    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
-                    .nowrap()
-                    .into_element(cx),
-            ]
-        })
-        .w_full()
-        .h_full()
-        .justify_center()
-        .items_center()
-        .gap(Space::N6)
-        .into_element(cx)]
+        [ui::v_flex(cx, |cx| [card])
+            .w_full()
+            .h_full()
+            .justify_center()
+            .items_center()
+            .gap(Space::N6)
+            .into_element(cx)]
     })
     .bg(ColorRef::Color(theme.color_required("background")))
     .p(Space::N4)
@@ -385,11 +379,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
     .h_full()
     .into_element(cx);
 
-    ViewElements::from([page.attach_semantics(
-        SemanticsDecoration::default()
-            .role(SemanticsRole::Panel)
-            .label("Debug:todo-demo:page"),
-    )])
+    ViewElements::from([page])
 }
 
 fn todo_list_panel(
@@ -451,11 +441,13 @@ fn todo_list_panel(
             .into_boxed_slice(),
     );
 
+    let mut rows_layout = LayoutStyle::default();
+    rows_layout.size.width = Length::Fill;
     let rows = roving_focus_group::roving_focus_group_apg(
         cx,
         RovingFlexProps {
             flex: FlexProps {
-                layout: LayoutStyle::default(),
+                layout: rows_layout,
                 direction: Axis::Vertical,
                 gap: MetricRef::space(Space::N2).resolve(theme),
                 padding: Edges::all(Px(0.0)),
@@ -609,7 +601,12 @@ fn todo_row(
                     .or_else(|| theme.color_by_key("border"))
                     .unwrap_or(border);
                 let checkbox_fg = theme.color_required("primary-foreground");
-                let checkbox_icon_size = Px((checkbox_size.0 - 2.0).max(10.0));
+                let checkbox_icon_size = Px((checkbox_size.0 - 4.0).max(10.0));
+                let checkbox_border = if done {
+                    theme.color_required("primary")
+                } else {
+                    checkbox_border
+                };
 
                 let indicator = ui::container(cx, |cx| {
                     let icon = done.then(|| {
