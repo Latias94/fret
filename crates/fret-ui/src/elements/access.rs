@@ -53,6 +53,7 @@ pub(crate) fn with_observed_models_for_element<H: UiHost, R>(
         let items = window_state
             .observed_models_next
             .get(&element)
+            .or_else(|| window_state.observed_models_rendered.get(&element))
             .map(Vec::as_slice)
             .unwrap_or(&[]);
         f(items)
@@ -69,6 +70,7 @@ pub(crate) fn with_observed_globals_for_element<H: UiHost, R>(
         let items = window_state
             .observed_globals_next
             .get(&element)
+            .or_else(|| window_state.observed_globals_rendered.get(&element))
             .map(Vec::as_slice)
             .unwrap_or(&[]);
         f(items)
