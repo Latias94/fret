@@ -5,11 +5,11 @@ use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{LayoutRefinement, Space};
 
-use fret_ui_shadcn::Card;
-
-use crate::elements::{InlineCitation, MessageResponse, SourcesBlock, ToolCallBlock};
+use crate::elements::{
+    InlineCitation, Message, MessageContent, MessageResponse, SourcesBlock, ToolCallBlock,
+};
 use crate::model::{MessagePart, MessageRole};
 
 #[derive(Clone)]
@@ -94,15 +94,6 @@ impl MessageParts {
             _ => None,
         });
 
-        fn role_bg_key(role: MessageRole) -> &'static str {
-            match role {
-                MessageRole::User => "fret.ai.message.user.bg",
-                MessageRole::Assistant => "fret.ai.message.assistant.bg",
-                MessageRole::System => "fret.ai.message.system.bg",
-                MessageRole::Tool => "fret.ai.message.tool.bg",
-            }
-        }
-
         fn role_fg_key(role: MessageRole) -> &'static str {
             match role {
                 MessageRole::User => "fret.ai.message.user.fg",
@@ -112,39 +103,10 @@ impl MessageParts {
             }
         }
 
-        let chrome = match self.role {
-            MessageRole::User => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("primary"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-            MessageRole::Assistant => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("card"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-            MessageRole::System => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("muted"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-            MessageRole::Tool => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("secondary"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-        }
-        .rounded(Radius::Lg)
-        .p(Space::N4);
-
         let fg = match self.role {
             MessageRole::User => theme
                 .color_by_key(role_fg_key(self.role))
-                .unwrap_or_else(|| theme.color_required("primary-foreground")),
+                .unwrap_or_else(|| theme.color_required("secondary-foreground")),
             _ => theme
                 .color_by_key(role_fg_key(self.role))
                 .unwrap_or_else(|| theme.color_required("foreground")),
@@ -158,7 +120,7 @@ impl MessageParts {
         let content = stack::vstack(
             cx,
             stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
+                .layout(LayoutRefinement::default().min_w_0())
                 .gap(Space::N3),
             move |cx| {
                 let mut out = Vec::new();
@@ -303,9 +265,9 @@ impl MessageParts {
             },
         );
 
-        Card::new(vec![content])
-            .refine_style(chrome)
+        let content = MessageContent::new(self.role, [content])
             .refine_layout(self.layout)
-            .into_element(cx)
+            .into_element(cx);
+        Message::new(self.role, [content]).into_element(cx)
     }
 }

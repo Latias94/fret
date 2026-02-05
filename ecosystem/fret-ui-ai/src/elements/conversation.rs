@@ -12,7 +12,7 @@ use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, ScrollArea};
 
 use crate::model::MessageId;
-use crate::{Message, MessageRole};
+use crate::{Message, MessageContent, MessageRole};
 
 /// A minimal message record used by `ConversationTranscript`.
 ///
@@ -207,7 +207,9 @@ impl ConversationTranscript {
                     return cx.text("");
                 };
 
-                let bubble = Message::new(msg.role, msg.text.clone()).into_element(cx);
+                let content =
+                    MessageContent::new(msg.role, [cx.text(msg.text.clone())]).into_element(cx);
+                let bubble = Message::new(msg.role, [content]).into_element(cx);
                 let Some(prefix) = prefix.clone() else {
                     return bubble;
                 };

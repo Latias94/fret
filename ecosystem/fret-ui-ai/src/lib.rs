@@ -73,8 +73,8 @@ pub mod model;
 pub use elements::{
     AiChat, AiConversationTranscript, Conversation, ConversationDownload, ConversationEmptyState,
     ConversationMessage, ConversationScrollButton, ConversationTranscript, InlineCitation, Message,
-    MessageAction, MessageActions, MessageParts, MessageResponse, MessageToolbar, PromptInput,
-    SourcesBlock, Tool, ToolCallBlock, ToolContent, ToolHeader, ToolInput, ToolOutput,
+    MessageAction, MessageActions, MessageContent, MessageParts, MessageResponse, MessageToolbar,
+    PromptInput, SourcesBlock, Tool, ToolCallBlock, ToolContent, ToolHeader, ToolInput, ToolOutput,
     ToolSectionTitle, ToolStatus,
 };
 pub use export::messages_to_markdown;

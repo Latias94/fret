@@ -1,42 +1,58 @@
 use std::sync::Arc;
 
-use fret_core::{FontWeight, TextOverflow, TextStyle, TextWrap};
-use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
+use fret_core::SemanticsRole;
+use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 
-use crate::MessageResponse;
 use crate::model::MessageRole;
 
-/// A minimal message bubble built on top of `fret-ui-shadcn::Card`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+/// A role-aware message wrapper aligned with AI Elements `Message` (`message.tsx`).
+///
+/// This component is layout-only: it is responsible for alignment (user → right) and spacing
+/// between message sections (content, actions, toolbars).
 pub struct Message {
-    role: MessageRole,
-    body: MessageBody,
+    from: MessageRole,
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+    gap: Space,
     layout: LayoutRefinement,
 }
 
-#[derive(Debug, Clone)]
-enum MessageBody {
-    Text(Arc<str>),
-    Markdown(Arc<str>),
+impl std::fmt::Debug for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Message")
+            .field("from", &self.from)
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_deref())
+            .field("gap", &self.gap)
+            .field("layout", &self.layout)
+            .finish()
+    }
 }
 
 impl Message {
-    pub fn new(role: MessageRole, text: impl Into<Arc<str>>) -> Self {
+    pub fn new(from: MessageRole, children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
-            role,
-            body: MessageBody::Text(text.into()),
+            from,
+            children: children.into_iter().collect(),
+            test_id: None,
+            gap: Space::N2,
             layout: LayoutRefinement::default(),
         }
     }
 
-    pub fn markdown(role: MessageRole, source: impl Into<Arc<str>>) -> Self {
-        Self {
-            role,
-            body: MessageBody::Markdown(source.into()),
-            layout: LayoutRefinement::default(),
-        }
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -45,101 +61,139 @@ impl Message {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let justify = if self.from == MessageRole::User {
+            Justify::End
+        } else {
+            Justify::Start
+        };
+
+        let gap = self.gap;
+        let children = self.children;
+        let layout = self.layout.merge(LayoutRefinement::default().w_full());
+
+        let inner = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().min_w_0())
+                .gap(gap),
+            move |_cx| children,
+        );
+
+        let row = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(layout)
+                .gap(Space::N0)
+                .justify(justify),
+            move |_cx| vec![inner],
+        );
+
+        let Some(test_id) = self.test_id else {
+            return row;
+        };
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Group,
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            move |_cx| vec![row],
+        )
+    }
+}
+
+#[derive(Clone)]
+/// Message bubble surface aligned with AI Elements `MessageContent`.
+///
+/// Upstream styles user messages as a rounded bubble (`bg-secondary px-4 py-3`) and renders
+/// assistant messages as plain flow content (no bubble by default).
+pub struct MessageContent {
+    from: MessageRole,
+    children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
+    layout: LayoutRefinement,
+    chrome: ChromeRefinement,
+}
+
+impl std::fmt::Debug for MessageContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MessageContent")
+            .field("from", &self.from)
+            .field("children_len", &self.children.len())
+            .field("test_id", &self.test_id.as_deref())
+            .field("layout", &self.layout)
+            .field("chrome", &self.chrome)
+            .finish()
+    }
+}
+
+impl MessageContent {
+    pub fn new(from: MessageRole, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            from,
+            children: children.into_iter().collect(),
+            test_id: None,
+            layout: LayoutRefinement::default(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        fn role_bg_key(role: MessageRole) -> &'static str {
-            match role {
-                MessageRole::User => "fret.ai.message.user.bg",
-                MessageRole::Assistant => "fret.ai.message.assistant.bg",
-                MessageRole::System => "fret.ai.message.system.bg",
-                MessageRole::Tool => "fret.ai.message.tool.bg",
-            }
-        }
-
-        fn role_fg_key(role: MessageRole) -> &'static str {
-            match role {
-                MessageRole::User => "fret.ai.message.user.fg",
-                MessageRole::Assistant => "fret.ai.message.assistant.fg",
-                MessageRole::System => "fret.ai.message.system.fg",
-                MessageRole::Tool => "fret.ai.message.tool.fg",
-            }
-        }
-
-        let chrome = match self.role {
-            MessageRole::User => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("primary"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-            MessageRole::Assistant => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("card"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-            MessageRole::System => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("muted"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-            MessageRole::Tool => {
-                let bg = theme
-                    .color_by_key(role_bg_key(self.role))
-                    .unwrap_or_else(|| theme.color_required("secondary"));
-                ChromeRefinement::default().bg(ColorRef::Color(bg))
-            }
-        }
-        .rounded(Radius::Lg)
-        .p(Space::N4);
-
-        let fg = match self.role {
-            MessageRole::User => theme
-                .color_by_key(role_fg_key(self.role))
-                .unwrap_or_else(|| theme.color_required("primary-foreground")),
-            _ => theme
-                .color_by_key(role_fg_key(self.role))
-                .unwrap_or_else(|| theme.color_required("foreground")),
+        let base_chrome = if self.from == MessageRole::User {
+            let bg = theme
+                .color_by_key("fret.ai.message.user.bg")
+                .unwrap_or_else(|| theme.color_required("secondary"));
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(bg))
+                .px(Space::N4)
+                .py(Space::N3)
+                .rounded(Radius::Lg)
+        } else {
+            ChromeRefinement::default()
         };
 
-        let content = match self.body {
-            MessageBody::Text(text) => {
-                let text_style = TextStyle {
-                    font: Default::default(),
-                    size: theme.metric_required("font.size"),
-                    weight: FontWeight::NORMAL,
-                    slant: Default::default(),
-                    line_height: Some(theme.metric_required("font.line_height")),
-                    letter_spacing_em: None,
-                };
+        let chrome = base_chrome.merge(self.chrome);
+        let layout = self.layout.merge(LayoutRefinement::default().min_w_0());
+        let children = self.children;
 
-                cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text,
-                    style: Some(text_style),
-                    color: Some(fg),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                })
-            }
-            MessageBody::Markdown(source) => {
-                // Markdown resolves its own text theme; keep the message chrome responsible for the
-                // bubble background/padding and let markdown handle code fences, links, etc.
-                //
-                // Note: link activation is intentionally app-owned; callers should wrap this
-                // element with a configured `MessageResponse` if they want `Effect::OpenUrl`.
-                let response = MessageResponse::new(source).into_element(cx);
-                return fret_ui_shadcn::Card::new(vec![response])
-                    .refine_style(chrome)
-                    .refine_layout(self.layout)
-                    .into_element(cx);
-            }
+        let props = decl_style::container_props(&theme, chrome, layout);
+        let content = cx.container(props, move |cx| {
+            vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2),
+                move |_cx| children,
+            )]
+        });
+
+        let Some(test_id) = self.test_id else {
+            return content;
         };
-
-        fret_ui_shadcn::Card::new(vec![content])
-            .refine_style(chrome)
-            .refine_layout(self.layout)
-            .into_element(cx)
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Group,
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            move |_cx| vec![content],
+        )
     }
 }
