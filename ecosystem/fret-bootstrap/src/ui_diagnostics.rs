@@ -8152,6 +8152,8 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {
         "escape" | "esc" => Some(KeyCode::Escape),
+        "alt" | "alt_left" => Some(KeyCode::AltLeft),
+        "alt_right" => Some(KeyCode::AltRight),
         "enter" | "return" => Some(KeyCode::Enter),
         "tab" => Some(KeyCode::Tab),
         "space" => Some(KeyCode::Space),
@@ -8349,6 +8351,13 @@ mod tests {
         assert_eq!(parse_key_code("f1"), Some(KeyCode::F1));
         assert_eq!(parse_key_code("f10"), Some(KeyCode::F10));
         assert_eq!(parse_key_code("F12"), Some(KeyCode::F12));
+    }
+
+    #[test]
+    fn parse_key_code_supports_alt_keys() {
+        assert_eq!(parse_key_code("alt"), Some(KeyCode::AltLeft));
+        assert_eq!(parse_key_code("alt_left"), Some(KeyCode::AltLeft));
+        assert_eq!(parse_key_code("alt_right"), Some(KeyCode::AltRight));
     }
 
     fn node_id(id: u64) -> NodeId {

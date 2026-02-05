@@ -1688,6 +1688,12 @@ impl UiGalleryDriver {
                         cx.app,
                         fret_app::Platform::current(),
                     );
+                    cx.app.with_global_mut(
+                        fret_runtime::WindowMenuBarFocusService::default,
+                        |svc, _app| {
+                            svc.set_present(cx.window, show_in_window_menu_bar && menu_bar.is_some());
+                        },
+                    );
                     let menubar_handle: std::cell::RefCell<Option<InWindowMenubarFocusHandle>> =
                         std::cell::RefCell::new(None);
                     let in_window_menu_bar = if show_in_window_menu_bar {
@@ -1851,13 +1857,17 @@ impl UiGalleryDriver {
                                         settings_menu_bar_os_open.clone(),
                                     )
                                     .placeholder("OS menubar")
+                                    .trigger_test_id("ui-gallery-settings-os-menubar")
                                     .items([
                                         shadcn::SelectItem::new(
                                             "auto",
                                             "Auto (Windows/macOS on; Linux/Web off)",
-                                        ),
-                                        shadcn::SelectItem::new("on", "On"),
-                                        shadcn::SelectItem::new("off", "Off"),
+                                        )
+                                        .test_id("ui-gallery-settings-os-menubar-auto"),
+                                        shadcn::SelectItem::new("on", "On")
+                                            .test_id("ui-gallery-settings-os-menubar-on"),
+                                        shadcn::SelectItem::new("off", "Off")
+                                            .test_id("ui-gallery-settings-os-menubar-off"),
                                     ])
                                     .refine_layout(LayoutRefinement::default().w_full())
                                     .into_element(cx);
@@ -1867,13 +1877,17 @@ impl UiGalleryDriver {
                                         settings_menu_bar_in_window_open.clone(),
                                     )
                                     .placeholder("In-window menubar")
+                                    .trigger_test_id("ui-gallery-settings-in-window-menubar")
                                     .items([
                                         shadcn::SelectItem::new(
                                             "auto",
                                             "Auto (Linux/Web on; Windows/macOS off)",
-                                        ),
-                                        shadcn::SelectItem::new("on", "On"),
-                                        shadcn::SelectItem::new("off", "Off"),
+                                        )
+                                        .test_id("ui-gallery-settings-in-window-menubar-auto"),
+                                        shadcn::SelectItem::new("on", "On")
+                                            .test_id("ui-gallery-settings-in-window-menubar-on"),
+                                        shadcn::SelectItem::new("off", "Off")
+                                            .test_id("ui-gallery-settings-in-window-menubar-off"),
                                     ])
                                     .refine_layout(LayoutRefinement::default().w_full())
                                     .into_element(cx);
@@ -1952,6 +1966,7 @@ impl UiGalleryDriver {
                                                 shadcn::SheetFooter::new(vec![
                                                     shadcn::Button::new("Apply (in memory)")
                                                         .variant(shadcn::ButtonVariant::Secondary)
+                                                        .test_id("ui-gallery-settings-apply")
                                                         .on_click(CMD_APP_SETTINGS_APPLY)
                                                         .into_element(cx),
                                                     shadcn::Button::new(
