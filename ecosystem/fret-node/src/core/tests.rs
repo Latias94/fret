@@ -1,7 +1,7 @@
 use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, GraphImport, GraphImportError, Node,
     NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
-    resolve_import_closure, validate_graph,
+    collect_subgraph_targets, resolve_import_closure, validate_graph,
 };
 use crate::core::{CanvasSize, GraphValidationError, GroupId};
 use crate::core::{SUBGRAPH_NODE_KIND, validate_subgraph_targets_are_imported};
@@ -280,4 +280,44 @@ fn subgraph_nodes_must_reference_declared_imports() {
         validate_subgraph_targets_are_imported(&graph).is_ok(),
         "expected declared import to satisfy binding"
     );
+}
+
+#[test]
+fn subgraph_targets_must_resolve_through_import_closure() {
+    let a = GraphId::from_u128(1);
+    let b = GraphId::from_u128(2);
+    let c = GraphId::from_u128(3);
+
+    let mut g_a = Graph::new(a);
+    g_a.imports.insert(b, GraphImport::default());
+
+    let node_id = NodeId::new();
+    let mut node = make_node(SUBGRAPH_NODE_KIND);
+    node.data = serde_json::json!({ "graph_id": b });
+    g_a.nodes.insert(node_id, node);
+
+    let mut g_b = Graph::new(b);
+    g_b.imports.insert(c, GraphImport::default());
+
+    let g_c = Graph::new(c);
+
+    let mut db = std::collections::BTreeMap::new();
+    db.insert(a, g_a);
+    db.insert(b, g_b);
+    db.insert(c, g_c);
+
+    let root = db.get(&a).expect("root graph must exist");
+
+    validate_subgraph_targets_are_imported(root).expect("targets must be declared imports");
+    let targets = collect_subgraph_targets(root).expect("collect targets");
+    assert_eq!(targets.iter().copied().collect::<Vec<_>>(), vec![b]);
+
+    let closure = resolve_import_closure(root, |id| db.get(&id)).expect("resolve closure");
+    assert_eq!(closure.order, vec![c, b]);
+    assert!(closure.contains(b));
+    assert!(closure.contains(c));
+
+    for target in targets {
+        assert!(closure.contains(target));
+    }
 }
