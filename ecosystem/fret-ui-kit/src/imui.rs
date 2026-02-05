@@ -6,7 +6,9 @@
 //! - `fret-ui-kit` can optionally provide bridges that allow `UiBuilder<T>` patch vocabulary to be
 //!   used from immediate-style control flow.
 
+use std::cell::Cell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_authoring::Response;
@@ -14,7 +16,10 @@ use fret_authoring::UiWriter;
 use fret_core::{Corners, CursorIcon, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, Size};
 use fret_runtime::DragPhase;
 use fret_ui::action::UiActionHostExt as _;
-use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
+use fret_ui::action::{
+    DismissReason, DismissRequestCx, OnDismissRequest, PressablePointerDownResult,
+    PressablePointerUpResult,
+};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
     PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps,
@@ -22,6 +27,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::UiBuilder;
+use crate::primitives::menu::root as menu_root;
 use crate::primitives::popper;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::{UiIntoElement, UiPatchTarget};
@@ -244,6 +250,21 @@ impl Default for PopupMenuOptions {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PopupModalOptions {
+    pub size: Size,
+    pub close_on_outside_press: bool,
+}
+
+impl Default for PopupModalOptions {
+    fn default() -> Self {
+        Self {
+            size: Size::new(Px(320.0), Px(200.0)),
+            close_on_outside_press: false,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct MenuItemOptions {
     pub enabled: bool,
@@ -390,15 +411,72 @@ const KEY_FLOAT_WINDOW_ACTIVATE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.a
 pub struct ImUiFacade<'cx, 'a, H: UiHost> {
     cx: &'cx mut ElementContext<'a, H>,
     out: &'cx mut Vec<AnyElement>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
 }
 
 impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
+    fn record_focusable(&mut self, id: Option<GlobalElementId>, enabled: bool) {
+        if !enabled {
+            return;
+        }
+        let Some(id) = id else {
+            return;
+        };
+        let Some(st) = self.build_focus.as_ref() else {
+            return;
+        };
+        if st.get().is_none() {
+            st.set(Some(id));
+        }
+    }
+
     pub fn cx_mut(&mut self) -> &mut ElementContext<'a, H> {
         self.cx
     }
 
     pub fn add(&mut self, element: AnyElement) {
         self.out.push(element);
+    }
+
+    pub fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::button(self, label);
+        self.record_focusable(resp.id, true);
+        resp
+    }
+
+    pub fn menu_item(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
+        self.menu_item_ex(label, MenuItemOptions::default())
+    }
+
+    pub fn menu_item_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let enabled = options.enabled;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_ex(self, label, options);
+        self.record_focusable(resp.id, enabled);
+        resp
+    }
+
+    pub fn menu_item_close(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_close(self, label, open);
+        self.record_focusable(resp.id, true);
+        resp
+    }
+
+    pub fn menu_item_close_popup(
+        &mut self,
+        popup_id: &str,
+        label: impl Into<Arc<str>>,
+    ) -> ResponseExt {
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_close_popup(self, popup_id, label);
+        self.record_focusable(resp.id, true);
+        resp
     }
 }
 
@@ -509,6 +587,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let mut ui = ImUiFacade {
                         cx,
                         out: &mut windows,
+                        build_focus: None,
                     };
                     f(&mut ui);
                 }
@@ -565,6 +644,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// callers to allocate a dedicated `Model<bool>` per popup.
     fn popup_open_model(&mut self, id: &str) -> fret_runtime::Model<bool> {
         self.with_cx_mut(|cx| with_popup_store_for_id(cx, id, |st| st.open.clone()))
+    }
+
+    fn open_popup(&mut self, id: &str) {
+        self.with_cx_mut(|cx| {
+            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let _ = cx.app.models_mut().update(&open, |v| *v = true);
+            cx.app.request_redraw(cx.window);
+        });
     }
 
     fn open_popup_at(&mut self, id: &str, anchor: fret_core::Rect) {
@@ -641,6 +728,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 )
             };
 
+            let focus_state = Rc::new(Cell::new(None::<GlobalElementId>));
+            let focus_state_for_build = focus_state.clone();
+            let mut menu_id_for_focus: Option<GlobalElementId> = None;
             let mut build = Some(f);
             let panel = cx.with_root_name(root_name.as_str(), |cx| {
                 cx.named("fret-ui-kit.imui.popup.panel", |cx| {
@@ -673,7 +763,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             col.layout.size.height = Length::Auto;
                             vec![cx.column(col, move |cx| {
                                 let mut out: Vec<AnyElement> = Vec::new();
-                                let mut ui = ImUiFacade { cx, out: &mut out };
+                                let mut ui = ImUiFacade {
+                                    cx,
+                                    out: &mut out,
+                                    build_focus: Some(focus_state_for_build.clone()),
+                                };
                                 if let Some(f) = build.take() {
                                     f(&mut ui);
                                 }
@@ -681,22 +775,206 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             })]
                         })]
                     });
+                    menu_id_for_focus = Some(menu.id);
                     with_popup_store_for_id(cx, id, |st| st.panel_id = Some(menu.id));
                     menu
                 })
             });
 
             let trigger_id = trigger.unwrap_or(overlay_id);
-            let mut req = OverlayRequest::dismissible_popover(
+            let initial_focus = menu_root::MenuInitialFocusTargets::new()
+                .keyboard_entry_focus(focus_state.get())
+                .pointer_content_focus(menu_id_for_focus);
+            let req = menu_root::dismissible_menu_request_with_modal(
+                cx,
                 overlay_id,
                 trigger_id,
                 open.clone(),
                 OverlayPresence::instant(true),
                 vec![panel],
+                root_name.clone(),
+                initial_focus,
+                None,
+                None,
+                None,
+                options.modal,
+            );
+            OverlayController::request(cx, req);
+
+            true
+        })
+    }
+
+    fn begin_popup_modal(
+        &mut self,
+        id: &str,
+        trigger: Option<GlobalElementId>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.begin_popup_modal_ex(id, trigger, PopupModalOptions::default(), f)
+    }
+
+    fn begin_popup_modal_ex(
+        &mut self,
+        id: &str,
+        trigger: Option<GlobalElementId>,
+        options: PopupModalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> bool {
+        self.with_cx_mut(|cx| {
+            let open = with_popup_store_for_id(cx, id, |st| st.open.clone());
+            let is_open = cx
+                .read_model(&open, fret_ui::Invalidation::Paint, |_app, v| *v)
+                .unwrap_or(false);
+            if !is_open {
+                return false;
+            }
+
+            let overlay_key = format!("fret-ui-kit.imui.popup_modal.overlay.{id}");
+            let overlay_id = cx.named(overlay_key.as_str(), |cx| cx.root_id());
+
+            let root_name = OverlayController::modal_root_name(overlay_id);
+
+            let (popover, border) = {
+                let theme = fret_ui::Theme::global(&*cx.app);
+                (
+                    theme.color_required("popover"),
+                    theme.color_required("border"),
+                )
+            };
+
+            let dim = fret_core::Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.4,
+            };
+
+            let size = options.size;
+            let left =
+                Px(cx.bounds.origin.x.0 + (cx.bounds.size.width.0 - size.width.0).max(0.0) * 0.5);
+            let top =
+                Px(cx.bounds.origin.y.0 + (cx.bounds.size.height.0 - size.height.0).max(0.0) * 0.5);
+
+            let close_on_outside_press = options.close_on_outside_press;
+            let open_for_dismiss = open.clone();
+            let on_dismiss_request: OnDismissRequest = Arc::new(
+                move |host, acx, req: &mut DismissRequestCx| match req.reason {
+                    DismissReason::Escape => {
+                        let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                        host.notify(acx);
+                    }
+                    DismissReason::OutsidePress { .. } if close_on_outside_press => {
+                        let _ = host.models_mut().update(&open_for_dismiss, |v| *v = false);
+                        host.notify(acx);
+                    }
+                    _ => {
+                        req.prevent_default();
+                    }
+                },
+            );
+
+            let focus_state = Rc::new(Cell::new(None::<GlobalElementId>));
+            let focus_state_for_build = focus_state.clone();
+            let mut panel_id_for_focus: Option<GlobalElementId> = None;
+            let mut build = Some(f);
+
+            let layer = cx.with_root_name(root_name.as_str(), |cx| {
+                cx.named("fret-ui-kit.imui.popup_modal.layer", |cx| {
+                    let mut stack = fret_ui::element::StackProps::default();
+                    stack.layout.position = PositionStyle::Absolute;
+                    stack.layout.inset = InsetStyle {
+                        left: Some(Px(0.0)),
+                        right: Some(Px(0.0)),
+                        top: Some(Px(0.0)),
+                        bottom: Some(Px(0.0)),
+                    };
+                    stack.layout.size.width = Length::Fill;
+                    stack.layout.size.height = Length::Fill;
+                    stack.layout.overflow = Overflow::Visible;
+
+                    cx.stack_props(stack, |cx| {
+                        let backdrop = cx.container(
+                            {
+                                let mut props = ContainerProps::default();
+                                props.layout.position = PositionStyle::Absolute;
+                                props.layout.inset = InsetStyle {
+                                    left: Some(Px(0.0)),
+                                    right: Some(Px(0.0)),
+                                    top: Some(Px(0.0)),
+                                    bottom: Some(Px(0.0)),
+                                };
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.height = Length::Fill;
+                                props.background = Some(dim);
+                                props
+                            },
+                            |_cx| Vec::<AnyElement>::new(),
+                        );
+
+                        let panel = cx.named("fret-ui-kit.imui.popup_modal.panel", |cx| {
+                            let mut semantics = fret_ui::element::SemanticsProps::default();
+                            semantics.role = SemanticsRole::Dialog;
+                            semantics.test_id = Some(Arc::from(format!("imui-popup-modal-{id}")));
+                            semantics.layout = LayoutStyle {
+                                position: PositionStyle::Absolute,
+                                inset: InsetStyle {
+                                    left: Some(left),
+                                    top: Some(top),
+                                    ..Default::default()
+                                },
+                                size: fret_ui::element::SizeStyle {
+                                    width: Length::Px(size.width),
+                                    height: Length::Px(size.height),
+                                    ..Default::default()
+                                },
+                                ..Default::default()
+                            };
+
+                            let modal = cx.semantics_with_id(semantics, move |cx, _id| {
+                                let mut panel_props = ContainerProps::default();
+                                panel_props.background = Some(popover);
+                                panel_props.border = Edges::all(Px(1.0));
+                                panel_props.border_color = Some(border);
+                                panel_props.corner_radii = Corners::all(Px(8.0));
+                                panel_props.padding = Edges::all(Px(10.0));
+                                panel_props.layout.size.width = Length::Fill;
+                                panel_props.layout.size.height = Length::Fill;
+
+                                vec![cx.container(panel_props, move |cx| {
+                                    let mut out: Vec<AnyElement> = Vec::new();
+                                    {
+                                        let mut ui = ImUiFacade {
+                                            cx,
+                                            out: &mut out,
+                                            build_focus: Some(focus_state_for_build.clone()),
+                                        };
+                                        if let Some(f) = build.take() {
+                                            f(&mut ui);
+                                        }
+                                    }
+                                    out
+                                })]
+                            });
+                            panel_id_for_focus = Some(modal.id);
+                            modal
+                        });
+
+                        vec![backdrop, panel]
+                    })
+                })
+            });
+
+            let mut req = OverlayRequest::modal(
+                overlay_id,
+                trigger,
+                open.clone(),
+                OverlayPresence::instant(true),
+                vec![layer],
             );
             req.root_name = Some(root_name);
-            req.consume_outside_pointer_events = options.modal;
-            req.disable_outside_pointer_events = options.modal;
+            req.dismissible_on_dismiss_request = Some(on_dismiss_request);
+            req.initial_focus = focus_state.get().or(panel_id_for_focus);
             OverlayController::request(cx, req);
 
             true
@@ -1825,7 +2103,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         |cx| {
                             let mut out = Vec::new();
                             {
-                                let mut ui = ImUiFacade { cx, out: &mut out };
+                                let mut ui = ImUiFacade {
+                                    cx,
+                                    out: &mut out,
+                                    build_focus: None,
+                                };
                                 f(&mut ui);
                             }
                             let mut content_col = ColumnProps::default();
