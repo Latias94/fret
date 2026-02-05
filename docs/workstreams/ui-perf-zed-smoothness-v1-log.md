@@ -3419,3 +3419,48 @@ Gate check (v6 baseline; repeat=3):
   - `target/fret-diag-perf/ui-gallery-steady.macos-m4.v6.check2.1770280248/` (passed; worst `top_total_time_us=13293`)
   - Takeaway: `ui-gallery-window-resize-stress-steady` can still be flaky at low repeat counts; prefer repeat=7 for
     contract checks, and keep investigating rare solve/layout outliers (text measure cache / intrinsic probes).
+
+## 2026-02-05 18:00:00 (commit `f2bee87a`)
+
+Change:
+- Export paint-pass breakdown metrics into diagnostics bundles and `fretboard diag stats`:
+  - `paint_cache_replay_time_us`
+  - `paint_cache_bounds_translate_time_us` / `paint_cache_bounds_translated_nodes`
+  - `paint_record_visual_bounds_time_us` / `paint_record_visual_bounds_calls`
+
+Why:
+- Several “steady-state” probes (notably the menubar script) show non-trivial `paint_time_us` even with view-cache reuse.
+  We needed to confirm whether paint-cache replay (or subtree bounds translation) was responsible.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Run dir: `target/fret-diag-perf/menubar-kbd-nav.after-f2bee87a.1770300800/`
+- Command (repeat=7; `sort=time`):
+
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --dir target/fret-diag-perf/menubar-kbd-nav.after-f2bee87a.1770300800 \
+  --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; `--sort time`):
+- `top_total_time_us`: p50 ~3504, p95 ~3740, max 3740
+- Worst bundle:
+  - `target/fret-diag-perf/menubar-kbd-nav.after-f2bee87a.1770300800/1770285619385-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+  - `paint_time_us=2669`
+  - `paint_cache_replayed_ops=453`
+  - `paint_cache_replay_time_us=6`
+  - `paint_cache_bounds_translate_time_us=0` (`paint_cache_bounds_translated_nodes=0`)
+  - `paint_record_visual_bounds_time_us=15` (`paint_record_visual_bounds_calls=155`)
+
+Takeaway:
+- For this workload, paint-cache replay and paint-cache bounds translation are **not** the hotspot.
+- The remaining paint cost likely comes from other paint-phase work (per-node traversal overhead, widget paint costs,
+  observation bookkeeping, or window snapshot plumbing). Next step: add paint micro timers to explain this slice
+  (tracked in `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`).

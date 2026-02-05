@@ -317,6 +317,34 @@ Acceptance:
 
 - Add a perf gate that fails if cache-root reuse rate drops for key scripts (scroll, hover, editor autoscroll).
 
+#### Gap C.1: Stable-frame paint overhead is still opaque (even with cache reuse)
+
+Motivation:
+
+- Several steady-state scripts still show a meaningful `paint_time_us` slice even when view-cache roots are reused
+  and paint-cache hits replay prior ops.
+
+Evidence:
+
+- Added paint-phase attribution counters in `feat(diag): add paint pass breakdown metrics` (commit `f2bee87a`):
+  - `paint_cache_replay_time_us`
+  - `paint_cache_bounds_translate_time_us` / `paint_cache_bounds_translated_nodes`
+  - `paint_record_visual_bounds_time_us` / `paint_record_visual_bounds_calls`
+- On `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json` (repeat=7), the worst frame shows:
+  - `paint_time_us ~2.6ms`,
+  - while `paint_cache_replay_time_us` is single-digit microseconds and bounds translation is ~0us.
+
+Implication:
+
+- The remaining paint cost is dominated by other work (per-node traversal overhead, widget paint overhead,
+  observation bookkeeping, window snapshot plumbing, etc.).
+- We need paint micro timers to make the top frame explainable without a sampling profiler.
+
+Tracking:
+
+- Workstream doc: `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`
+- TODO tracker: `docs/workstreams/ui-perf-paint-pass-breakdown-v1-todo.md`
+
 ### Gap D: Renderer-side batching and “glyph prep” observability
 
 GPUI:

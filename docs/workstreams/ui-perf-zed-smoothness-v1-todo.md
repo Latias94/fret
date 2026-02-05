@@ -75,6 +75,12 @@ Conventions:
     `layout_prepaint_after_layout_time_us`, `layout_skipped_engine_frame`.
   - Wire into: `fretboard diag stats --json` so a worst bundle can be inspected without manual JSON digging.
   - Implemented by `feat(diag): export layout phase breakdown` (commit `b02744a8`).
+- [x] Export initial paint-pass breakdown metrics (to disprove/confirm “paint-cache replay is the hotspot”).
+  - Adds: `paint_cache_replay_time_us`, `paint_cache_bounds_translate_time_us`,
+    `paint_cache_bounds_translated_nodes`, `paint_record_visual_bounds_time_us`,
+    `paint_record_visual_bounds_calls`.
+  - Implemented by `feat(diag): add paint pass breakdown metrics` (commit `f2bee87a`).
+  - Tracking: `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`
 - [ ] Keep `diag perf` runs comparable by splitting “gate checks” vs “deep profiling”:
   - Gate check (CPU regressions): keep `FRET_DIAG_RENDERER_PERF` off (avoid instrumentation overhead).
   - Deep profiling (churn / GPU triage): turn `FRET_DIAG_RENDERER_PERF=1` on and record churn tables in the log.
