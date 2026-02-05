@@ -131,104 +131,100 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
 
-        let Some(cache) = self.geometry.drag_preview.as_mut() else {
-            return None;
-        };
-        if cache.preview_rev != preview_rev {
-            let geom_mut = Arc::make_mut(&mut cache.geom);
-            let index_mut = Arc::make_mut(&mut cache.index);
+        let graph_model = self.graph.clone();
+        self.geometry
+            .drag_preview_outputs_for_rev(preview_rev, |meta, geom_mut, index_mut| {
+                let mut moved_nodes: Vec<(GraphNodeId, CanvasPoint, CanvasPoint)> = Vec::new();
+                let mut next_positions: HashMap<GraphNodeId, CanvasPoint> =
+                    meta.node_positions.clone();
 
-            let mut moved_nodes: Vec<(GraphNodeId, CanvasPoint, CanvasPoint)> = Vec::new();
-            let mut next_positions: HashMap<GraphNodeId, CanvasPoint> =
-                cache.node_positions.clone();
-
-            for (id, pos) in nodes {
-                let prev = cache.node_positions.get(id).copied().unwrap_or_default();
-                if prev != *pos {
-                    moved_nodes.push((*id, prev, *pos));
-                    next_positions.insert(*id, *pos);
+                for (id, pos) in nodes {
+                    let prev = meta.node_positions.get(id).copied().unwrap_or_default();
+                    if prev != *pos {
+                        moved_nodes.push((*id, prev, *pos));
+                        next_positions.insert(*id, *pos);
+                    }
                 }
-            }
 
-            if !moved_nodes.is_empty() {
-                for (id, prev, next) in &moved_nodes {
-                    let Some(node_geom) = geom_mut.nodes.get(id) else {
-                        continue;
-                    };
-                    let size_canvas = crate::core::CanvasSize {
-                        width: node_geom.rect.size.width.0,
-                        height: node_geom.rect.size.height.0,
-                    };
-                    let prev_origin = node_rect_origin_from_anchor(*prev, size_canvas, node_origin);
-                    let next_origin = node_rect_origin_from_anchor(*next, size_canvas, node_origin);
+                if !moved_nodes.is_empty() {
+                    for (id, prev, next) in &moved_nodes {
+                        let Some(node_geom) = geom_mut.nodes.get(id) else {
+                            continue;
+                        };
+                        let size_canvas = crate::core::CanvasSize {
+                            width: node_geom.rect.size.width.0,
+                            height: node_geom.rect.size.height.0,
+                        };
+                        let prev_origin =
+                            node_rect_origin_from_anchor(*prev, size_canvas, node_origin);
+                        let next_origin =
+                            node_rect_origin_from_anchor(*next, size_canvas, node_origin);
 
-                    let dx = next_origin.x - prev_origin.x;
-                    let dy = next_origin.y - prev_origin.y;
-                    if !dx.is_finite() || !dy.is_finite() {
-                        continue;
-                    }
+                        let dx = next_origin.x - prev_origin.x;
+                        let dy = next_origin.y - prev_origin.y;
+                        if !dx.is_finite() || !dy.is_finite() {
+                            continue;
+                        }
 
-                    if let Some(node_geom) = geom_mut.nodes.get_mut(id) {
-                        node_geom.rect = Rect::new(
-                            Point::new(Px(next_origin.x), Px(next_origin.y)),
-                            node_geom.rect.size,
-                        );
-                        index_mut.update_node_rect(*id, node_geom.rect);
-                        cache.node_rects.insert(*id, node_geom.rect);
-                    }
-
-                    if let Some(ports) = cache.node_ports.get(id) {
-                        for port_id in ports {
-                            let Some(handle) = geom_mut.ports.get_mut(port_id) else {
-                                continue;
-                            };
-                            handle.center =
-                                Point::new(Px(handle.center.x.0 + dx), Px(handle.center.y.0 + dy));
-                            handle.bounds = Rect::new(
-                                Point::new(
-                                    Px(handle.bounds.origin.x.0 + dx),
-                                    Px(handle.bounds.origin.y.0 + dy),
-                                ),
-                                handle.bounds.size,
+                        if let Some(node_geom) = geom_mut.nodes.get_mut(id) {
+                            node_geom.rect = Rect::new(
+                                Point::new(Px(next_origin.x), Px(next_origin.y)),
+                                node_geom.rect.size,
                             );
-                            index_mut.update_port_rect(*port_id, handle.bounds);
+                            index_mut.update_node_rect(*id, node_geom.rect);
+                            meta.node_rects.insert(*id, node_geom.rect);
+                        }
+
+                        if let Some(ports) = meta.node_ports.get(id) {
+                            for port_id in ports {
+                                let Some(handle) = geom_mut.ports.get_mut(port_id) else {
+                                    continue;
+                                };
+                                handle.center = Point::new(
+                                    Px(handle.center.x.0 + dx),
+                                    Px(handle.center.y.0 + dy),
+                                );
+                                handle.bounds = Rect::new(
+                                    Point::new(
+                                        Px(handle.bounds.origin.x.0 + dx),
+                                        Px(handle.bounds.origin.y.0 + dy),
+                                    ),
+                                    handle.bounds.size,
+                                );
+                                index_mut.update_port_rect(*port_id, handle.bounds);
+                            }
                         }
                     }
-                }
 
-                let mut affected_ports: Vec<PortId> = Vec::new();
-                for (id, _prev, _next) in &moved_nodes {
-                    if let Some(ports) = cache.node_ports.get(id) {
-                        affected_ports.extend(ports.iter().copied());
+                    let mut affected_ports: Vec<PortId> = Vec::new();
+                    for (id, _prev, _next) in &moved_nodes {
+                        if let Some(ports) = meta.node_ports.get(id) {
+                            affected_ports.extend(ports.iter().copied());
+                        }
                     }
+
+                    Self::update_edges_for_ports(
+                        geom_mut,
+                        index_mut,
+                        snapshot.zoom,
+                        &affected_ports,
+                        |edge_ids| {
+                            graph_model
+                                .read_ref(host, |g| {
+                                    edge_ids
+                                        .iter()
+                                        .filter_map(|edge_id| {
+                                            g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                        })
+                                        .collect::<Vec<_>>()
+                                })
+                                .ok()
+                                .unwrap_or_default()
+                        },
+                    );
+
+                    *meta.node_positions = next_positions;
                 }
-
-                let graph_model = self.graph.clone();
-                Self::update_edges_for_ports(
-                    geom_mut,
-                    index_mut,
-                    snapshot.zoom,
-                    &affected_ports,
-                    |edge_ids| {
-                        graph_model
-                            .read_ref(host, |g| {
-                                edge_ids
-                                    .iter()
-                                    .filter_map(|edge_id| {
-                                        g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
-                                    })
-                                    .collect::<Vec<_>>()
-                            })
-                            .ok()
-                            .unwrap_or_default()
-                    },
-                );
-
-                cache.node_positions = next_positions;
-            }
-            cache.preview_rev = preview_rev;
-        }
-
-        Some((cache.geom.clone(), cache.index.clone()))
+            })
     }
 }

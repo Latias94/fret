@@ -110,62 +110,53 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
 
-        let Some(cache) = self.geometry.drag_preview.as_mut() else {
-            return None;
-        };
-        if cache.preview_rev != preview_rev {
-            let geom_mut = Arc::make_mut(&mut cache.geom);
-            let index_mut = Arc::make_mut(&mut cache.index);
+        let graph_model = self.graph.clone();
+        self.geometry
+            .drag_preview_outputs_for_rev(preview_rev, |meta, geom_mut, index_mut| {
+                let prev_rect = meta.node_rects.get(&node_id).copied().unwrap_or(base_rect);
+                if prev_rect != next_rect {
+                    if let Some(node_geom) = geom_mut.nodes.get_mut(&node_id) {
+                        node_geom.rect = next_rect;
+                        index_mut.update_node_rect(node_id, next_rect);
+                        Self::update_ports_for_node_rect_change(
+                            geom_mut,
+                            index_mut,
+                            node_id,
+                            prev_rect,
+                            next_rect,
+                            meta.node_ports
+                                .get(&node_id)
+                                .map(|v| v.as_slice())
+                                .unwrap_or(&[]),
+                        );
+                    }
 
-            let prev_rect = cache.node_rects.get(&node_id).copied().unwrap_or(base_rect);
-            if prev_rect != next_rect {
-                if let Some(node_geom) = geom_mut.nodes.get_mut(&node_id) {
-                    node_geom.rect = next_rect;
-                    index_mut.update_node_rect(node_id, next_rect);
-                    Self::update_ports_for_node_rect_change(
+                    Self::update_edges_for_ports(
                         geom_mut,
                         index_mut,
-                        node_id,
-                        prev_rect,
-                        next_rect,
-                        cache
-                            .node_ports
+                        snapshot.zoom,
+                        meta.node_ports
                             .get(&node_id)
                             .map(|v| v.as_slice())
                             .unwrap_or(&[]),
+                        |edge_ids| {
+                            graph_model
+                                .read_ref(host, |g| {
+                                    edge_ids
+                                        .iter()
+                                        .filter_map(|edge_id| {
+                                            g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
+                                        })
+                                        .collect::<Vec<_>>()
+                                })
+                                .ok()
+                                .unwrap_or_default()
+                        },
                     );
                 }
 
-                Self::update_edges_for_ports(
-                    geom_mut,
-                    index_mut,
-                    snapshot.zoom,
-                    cache
-                        .node_ports
-                        .get(&node_id)
-                        .map(|v| v.as_slice())
-                        .unwrap_or(&[]),
-                    |edge_ids| {
-                        self.graph
-                            .read_ref(host, |g| {
-                                edge_ids
-                                    .iter()
-                                    .filter_map(|edge_id| {
-                                        g.edges.get(edge_id).map(|e| (*edge_id, e.from, e.to))
-                                    })
-                                    .collect::<Vec<_>>()
-                            })
-                            .ok()
-                            .unwrap_or_default()
-                    },
-                );
-            }
-
-            cache.node_positions.insert(node_id, pos);
-            cache.node_rects.insert(node_id, next_rect);
-            cache.preview_rev = preview_rev;
-        }
-
-        Some((cache.geom.clone(), cache.index.clone()))
+                meta.node_positions.insert(node_id, pos);
+                meta.node_rects.insert(node_id, next_rect);
+            })
     }
 }

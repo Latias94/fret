@@ -618,6 +618,36 @@ impl GeometryCache {
     pub(crate) fn set_drag_preview(&mut self, cache: DragPreviewCache) {
         self.drag_preview = Some(cache);
     }
+
+    pub(crate) fn drag_preview_outputs_for_rev(
+        &mut self,
+        preview_rev: u64,
+        update: impl FnOnce(
+            &mut DragPreviewCacheMetaMut<'_>,
+            &mut super::geometry::CanvasGeometry,
+            &mut super::spatial::CanvasSpatialIndex,
+        ),
+    ) -> Option<(
+        Arc<super::geometry::CanvasGeometry>,
+        Arc<super::spatial::CanvasSpatialIndex>,
+    )> {
+        let cache = self.drag_preview.as_mut()?;
+        if cache.preview_rev != preview_rev {
+            let node_positions = &mut cache.node_positions;
+            let node_rects = &mut cache.node_rects;
+            let node_ports = &cache.node_ports;
+            let geom_mut = Arc::make_mut(&mut cache.geom);
+            let index_mut = Arc::make_mut(&mut cache.index);
+            let mut meta = DragPreviewCacheMetaMut {
+                node_positions,
+                node_rects,
+                node_ports,
+            };
+            update(&mut meta, geom_mut, index_mut);
+            cache.preview_rev = preview_rev;
+        }
+        Some((cache.geom.clone(), cache.index.clone()))
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -637,6 +667,12 @@ pub(crate) struct DragPreviewCache {
     pub(crate) node_positions: HashMap<GraphNodeId, CanvasPoint>,
     pub(crate) node_rects: HashMap<GraphNodeId, Rect>,
     pub(crate) node_ports: HashMap<GraphNodeId, Vec<PortId>>,
+}
+
+pub(crate) struct DragPreviewCacheMetaMut<'a> {
+    pub(crate) node_positions: &'a mut HashMap<GraphNodeId, CanvasPoint>,
+    pub(crate) node_rects: &'a mut HashMap<GraphNodeId, Rect>,
+    pub(crate) node_ports: &'a HashMap<GraphNodeId, Vec<PortId>>,
 }
 
 #[derive(Debug, Clone)]
