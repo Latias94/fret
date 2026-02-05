@@ -290,6 +290,45 @@ Acceptance:
 - `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` stays within Tier B on high-end HW
   (p95 total <= 4ms, max <= 8ms), or at least closes the remaining gap.
 
+### Gap B.2: Editor-class scene construction still happens in hot paint closures (Canvas-heavy)
+
+GPUI’s “Zed feel” comes from a combination of:
+
+- explicit cached-view reuse (`AnyView::cached` + `notify` discipline), and
+- cheap scene replay primitives (`Scene::replay`) on top of that contract.
+
+Fret has paint-cache replay mechanisms at the `UiTree` level, but editor-class pages can still spend multiple
+milliseconds per frame in **CPU-side scene construction** inside `Canvas` paint closures.
+
+Evidence (current baseline; see perf log entry 2026-02-05 15:43:55, commit `5eaf5884`):
+
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+- Worst frame: `paint_time_us ~5.4ms`, dominated by a single `ElementInstance::Canvas` host widget
+  (`paint_widget_hotspots kind=Canvas us~5.1ms`, `scene ops delta ~581`).
+- Renderer costs are non-trivial but secondary on the same frame (`encode_scene_us~0.6ms`, `prepare_text_us~0.5ms`).
+
+Why this matters:
+
+- Without a retained/replay-friendly model for editor-class surfaces, we pay the full “build scene ops” cost every frame,
+  which makes Tier B (120Hz) budgets hard even when layout is cheap.
+
+What to do about it (transferable lessons from GPUI, not literal copying):
+
+1) Make **windowed content reuse** explicit for large scroll surfaces (code editor / code view):
+   - reuse per-line/per-row prepared layout + paint ranges across frames,
+   - when scrolling, prefer translating cached ranges instead of re-emitting all primitives.
+2) Introduce a retained sub-surface contract for complex paint closures:
+   - a `Canvas`-like API should be able to record a stable “display list” and replay it when inputs are unchanged,
+   - tie invalidation to explicit keys (frame-local ids are poison for perf).
+3) Treat scene ops as a budget:
+   - track ops per frame and reduce them via batching/layering.
+
+Fret reference points:
+
+- `ElementInstance::Canvas` paint path: `crates/fret-ui/src/declarative/host_widget/paint.rs`
+- Canvas resource caching (text/path/svg) exists but does not by itself eliminate per-frame scene construction:
+  `crates/fret-ui/src/canvas.rs` (`CanvasCache`, `CanvasCachePolicy`)
+
 ### Gap C: “Cached view” ergonomics and defaults
 
 GPUI:

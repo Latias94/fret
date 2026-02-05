@@ -3936,3 +3936,65 @@ target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menuba
 Results:
 - `paint_text_prepare_calls==0` across the measured sweep frames (no `paint_text_prepare_hotspots` recorded).
 - Derived pointer-move maxima: `dispatch<=20us`, `hit_test<=1us` across 25 pointer-move frames.
+
+## 2026-02-05 15:41:52 (commit `e6b1e228`)
+
+Change:
+- Add a “reopen after close” probe for the File menubar menu to validate that close/open does not drop text caches
+  inside the same session.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-reopen-after-close.json`
+- Bundle:
+  - `target/fret-diag-codex-menubar-reopen/1770306112488-script-step-0016-press_key/bundle.json`
+
+Command:
+```bash
+target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-reopen-after-close.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --warmup-frames 5 --repeat 1 --reuse-launch --sort time --json \
+  --dir target/fret-diag-codex-menubar-reopen \
+  --launch -- target/codex-perf/release/fret-ui-gallery
+```
+
+Results:
+- After the post-close `reset_diagnostics`, the second open stays at `paint_text_prepare_calls==0` (no prepare hotspots),
+  indicating the menu subtree stays live / cached across close/open.
+
+## 2026-02-05 15:43:13 (commit `5eaf5884`)
+
+Change:
+- Refresh baseline evidence for a code-view scroll probe with the new text-prepare hotspot export enabled.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-code-view-scroll-refresh-baseline.json`
+- Bundle:
+  - `target/fret-diag-codex-codeview/1770306194398-script-step-0019-press_key/bundle.json`
+
+Results:
+- Worst frame: `time.us(total/layout/prepaint/paint)=1288/1050/29/209`
+- `paint_text_prepare_calls==0` (no prepare hotspots recorded).
+
+## 2026-02-05 15:43:55 (commit `5eaf5884`)
+
+Change:
+- Refresh baseline evidence for the editor-class autoscroll torture page to find the current top CPU paint hotspot.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+- Bundle:
+  - `target/fret-diag-codex-codeeditor/1770306238481-script-step-0011-press_key/bundle.json`
+
+Worst frame (from `fretboard diag stats --sort time --top 1`):
+- `time.us(total/layout/prepaint/paint)=6340/902/26/5412`
+- `paint_widget_hotspots` dominated by `kind=Canvas`:
+  - `us=5126 ops=581/581 node=4294968005 test_id=ui-gallery-code-editor-torture-root`
+- Renderer signals on the same worst run:
+  - `top_renderer_encode_scene_us=641`
+  - `top_renderer_prepare_text_us=523`
+
+Takeaway:
+- This workload is currently bounded by CPU-side scene construction inside a `Canvas` element (not text prepares).
+  Closing the gap to GPUI/Zed here likely requires more aggressive retained/replay strategies for editor-class surfaces
+  (e.g. windowed line reuse + cheaper per-frame scene rebuild).
