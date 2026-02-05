@@ -143,7 +143,9 @@ impl MessageResponse {
                     .app
                     .models_mut()
                     .insert(std::collections::HashSet::<BlockId>::new());
-                cx.with_state(ExpandedModelState::default, |st| st.model = Some(model.clone()));
+                cx.with_state(ExpandedModelState::default, |st| {
+                    st.model = Some(model.clone())
+                });
                 model
             }
         };

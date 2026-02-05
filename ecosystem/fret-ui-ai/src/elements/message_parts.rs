@@ -130,8 +130,9 @@ impl MessageParts {
                             move |_cx| vec![el],
                         ));
                     }
-                    MessagePart::Markdown(source) => {
-                        let mut response = MessageResponse::new(source.clone());
+                    MessagePart::Markdown(md) => {
+                        let mut response =
+                            MessageResponse::new(md.text.clone()).finalized(md.finalized);
                         if let Some(handler) = on_link_activate.clone() {
                             response = response.on_link_activate(handler);
                         }

@@ -112,13 +112,46 @@ impl ToolCall {
     }
 }
 
+/// Markdown content part (used for assistant output).
+///
+/// The `finalized` flag models streaming behavior:
+///
+/// - `finalized: false` means the part may still grow via append-only updates.
+/// - `finalized: true` means the stream has ended and any deferred parsing/flush can run.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MarkdownPart {
+    pub text: Arc<str>,
+    pub finalized: bool,
+}
+
+impl MarkdownPart {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            finalized: true,
+        }
+    }
+
+    pub fn streaming(text: impl Into<Arc<str>>) -> Self {
+        Self {
+            text: text.into(),
+            finalized: false,
+        }
+    }
+
+    pub fn finalized(mut self, finalized: bool) -> Self {
+        self.finalized = finalized;
+        self
+    }
+}
+
 /// A message content part (portable, UI-oriented).
 #[derive(Debug, Clone, PartialEq)]
 pub enum MessagePart {
     /// Plain text (typically used for user messages).
     Text(Arc<str>),
     /// Markdown content (typically used for assistant messages).
-    Markdown(Arc<str>),
+    Markdown(MarkdownPart),
     /// A structured tool call (input/output + lifecycle).
     ToolCall(ToolCall),
     /// A list of sources (citations, references).
