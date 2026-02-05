@@ -225,7 +225,8 @@ struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
-    text_boundary_mode: TextBoundaryMode,
+    text_boundary_mode_override: Option<TextBoundaryMode>,
+    active_text_boundary_mode: TextBoundaryMode,
     display_wrap_cols: Option<usize>,
     display_map: DisplayMap,
     caret_preferred_x: Option<Px>,
@@ -285,7 +286,8 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
-                text_boundary_mode: TextBoundaryMode::Identifier,
+                text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
+                active_text_boundary_mode: TextBoundaryMode::Identifier,
                 display_wrap_cols: None,
                 display_map,
                 caret_preferred_x: None,
@@ -367,7 +369,11 @@ impl CodeEditorHandle {
     }
 
     pub fn text_boundary_mode(&self) -> TextBoundaryMode {
-        self.state.borrow().text_boundary_mode
+        self.state.borrow().active_text_boundary_mode
+    }
+
+    pub fn text_boundary_mode_override(&self) -> Option<TextBoundaryMode> {
+        self.state.borrow().text_boundary_mode_override
     }
 
     pub fn cache_stats(&self) -> CodeEditorCacheStats {
@@ -379,11 +385,18 @@ impl CodeEditorHandle {
     }
 
     pub fn set_text_boundary_mode(&self, mode: TextBoundaryMode) {
+        self.set_text_boundary_mode_override(Some(mode));
+    }
+
+    pub fn set_text_boundary_mode_override(&self, mode: Option<TextBoundaryMode>) {
         let mut st = self.state.borrow_mut();
-        if st.text_boundary_mode == mode {
+        if st.text_boundary_mode_override == mode {
             return;
         }
-        st.text_boundary_mode = mode;
+        st.text_boundary_mode_override = mode;
+        if let Some(mode) = mode {
+            st.active_text_boundary_mode = mode;
+        }
         st.undo_group = None;
     }
 
@@ -573,11 +586,23 @@ impl CodeEditor {
                     st.refresh_display_map();
                 }
                 let content_len = st.display_map.row_count();
-                let boundary_mode = st.text_boundary_mode;
+                let inherited_mode = cx
+                    .app
+                    .global::<fret_runtime::WindowInputContextService>()
+                    .and_then(|svc| svc.snapshot(cx.window))
+                    .map(|snapshot| snapshot.text_boundary_mode)
+                    .unwrap_or_default();
+                let boundary_mode = st
+                    .text_boundary_mode_override
+                    .unwrap_or(inherited_mode);
+                if st.active_text_boundary_mode != boundary_mode {
+                    st.active_text_boundary_mode = boundary_mode;
+                }
+                let boundary_override = st.text_boundary_mode_override;
                 let (value, selection, composition) = a11y_composed_text_window(&st);
                 (
                     content_len,
-                    boundary_mode,
+                    boundary_override,
                     Some(Arc::<str>::from(value)),
                     selection,
                     composition,
@@ -592,7 +617,7 @@ impl CodeEditor {
             let region_props = TextInputRegionProps {
                 layout: region_layout,
                 enabled: true,
-                text_boundary_mode_override: Some(boundary_mode),
+                text_boundary_mode_override: boundary_mode,
                 a11y_label: Some(Arc::clone(&a11y_label)),
                 a11y_value,
                 a11y_text_selection,

@@ -92,6 +92,25 @@ fn replace_buffer_preserves_text_boundary_mode() {
 }
 
 #[test]
+fn text_boundary_mode_override_can_be_cleared() {
+    let handle = CodeEditorHandle::new("hello");
+    assert_eq!(
+        handle.text_boundary_mode_override(),
+        Some(TextBoundaryMode::Identifier)
+    );
+
+    handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+    assert_eq!(
+        handle.text_boundary_mode_override(),
+        Some(TextBoundaryMode::UnicodeWord)
+    );
+
+    handle.set_text_boundary_mode_override(None);
+    assert_eq!(handle.text_boundary_mode_override(), None);
+    assert_eq!(handle.text_boundary_mode(), TextBoundaryMode::UnicodeWord);
+}
+
+#[test]
 fn caret_stops_hit_test_picks_nearest_stop() {
     let stops = vec![(0, Px(0.0)), (1, Px(10.0)), (2, Px(20.0)), (3, Px(30.0))];
     assert_eq!(hit_test_index_from_caret_stops(&stops, Px(-5.0)), 0);
@@ -441,7 +460,7 @@ fn pointer_down_double_click_selects_word_and_cancels_preedit() {
 
         let caret = "foo_".len();
         let (expect_start, expect_end) =
-            select_word_range_in_buffer(&st.buffer, caret, st.text_boundary_mode);
+            select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
 
         input::apply_pointer_down_selection(&mut st, 0, caret, 2, false);
 

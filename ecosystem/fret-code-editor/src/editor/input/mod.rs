@@ -96,7 +96,7 @@ pub(super) fn apply_pointer_down_selection(
     match click_count {
         2 => {
             let (start, end) =
-                select_word_range_in_buffer(&st.buffer, caret, st.text_boundary_mode);
+                select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
             st.selection = Selection {
                 anchor: start,
                 focus: end,
@@ -370,7 +370,7 @@ pub(super) fn delete_word_backward(st: &mut CodeEditorState) {
         return;
     }
 
-    let prev = move_word_left_in_buffer(&st.buffer, caret, st.text_boundary_mode).min(caret);
+    let prev = move_word_left_in_buffer(&st.buffer, caret, st.active_text_boundary_mode).min(caret);
     if prev == caret {
         return;
     }
@@ -406,7 +406,7 @@ pub(super) fn delete_word_forward(st: &mut CodeEditorState) {
     }
 
     let caret = st.selection.caret().min(st.buffer.len_bytes());
-    let next = move_word_right_in_buffer(&st.buffer, caret, st.text_boundary_mode)
+    let next = move_word_right_in_buffer(&st.buffer, caret, st.active_text_boundary_mode)
         .max(caret)
         .min(st.buffer.len_bytes());
     if next == caret {
@@ -694,7 +694,7 @@ pub(super) fn redo(st: &mut CodeEditorState) -> bool {
 }
 
 pub(super) fn move_word(st: &mut CodeEditorState, dir: i32, extend: bool) -> bool {
-    let mode = st.text_boundary_mode;
+    let mode = st.active_text_boundary_mode;
     st.undo_group = None;
     st.caret_preferred_x = None;
 
