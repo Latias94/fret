@@ -11487,15 +11487,14 @@ fn preview_ai_transcript_torture(
     ]
 }
 
-fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
     use std::sync::Arc;
 
     use fret_runtime::Model;
     use fret_ui::Invalidation;
     use fret_ui::action::OnActivate;
-    use fret_ui::scroll::VirtualListScrollHandle;
     use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{Justify, LayoutRefinement, Space};
+    use fret_ui_kit::{LayoutRefinement, Space};
 
     #[derive(Debug, Clone)]
     struct PendingReply {
@@ -11516,6 +11515,8 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         loading: Option<Model<bool>>,
         pending: Option<Model<Option<PendingReply>>>,
         next_id: Option<Model<u64>>,
+        content_revision: Option<Model<u64>>,
+        exported_md_len: Option<Model<Option<usize>>>,
     }
 
     let prompt = cx.with_state(ChatModels::default, |st| st.prompt.clone());
@@ -11584,6 +11585,30 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         }
     };
 
+    let content_revision = cx.with_state(ChatModels::default, |st| st.content_revision.clone());
+    let content_revision = match content_revision {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(ChatModels::default, |st| {
+                st.content_revision = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let exported_md_len = cx.with_state(ChatModels::default, |st| st.exported_md_len.clone());
+    let exported_md_len = match exported_md_len {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<usize>);
+            cx.with_state(ChatModels::default, |st| {
+                st.exported_md_len = Some(model.clone())
+            });
+            model
+        }
+    };
+
     let loading_value = cx
         .get_model_copied(&loading, Invalidation::Paint)
         .unwrap_or(false);
@@ -11626,6 +11651,10 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                         }
                         *list = vec.into();
                     });
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&content_revision, |v| *v = v.saturating_add(1));
                 } else {
                     let _ = cx.app.models_mut().update(&pending, |v| *v = None);
                     let _ = cx.app.models_mut().update(&loading, |v| *v = false);
@@ -11649,6 +11678,10 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                     }
                     *list = vec.into();
                 });
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&content_revision, |v| *v = v.saturating_add(1));
 
                 let _ = cx.app.models_mut().update(&pending, |v| *v = None);
                 let _ = cx.app.models_mut().update(&loading, |v| *v = false);
@@ -11662,6 +11695,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         let pending = pending.clone();
         let loading = loading.clone();
         let next_id = next_id.clone();
+        let content_revision = content_revision.clone();
         move |host, _action_cx, _reason| {
             fn chunk_for_demo(text: &str, chars_per_chunk: usize) -> Arc<[Arc<str>]> {
                 let mut out = Vec::new();
@@ -11728,7 +11762,10 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
 
             let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
                 ui_ai::CitationItem::new("src-0", "[1]"),
-                ui_ai::CitationItem::new("src-1", "[2]"),
+                ui_ai::CitationItem::from_arc(
+                    Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]),
+                    "[2]",
+                ),
             ]);
 
             let reply = format!(
@@ -11767,6 +11804,9 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 ));
                 *list = vec.into();
             });
+            let _ = host
+                .models_mut()
+                .update(&content_revision, |v| *v = v.saturating_add(1));
 
             let _ = host.models_mut().update(&pending, |v| {
                 *v = Some(PendingReply {
@@ -11788,6 +11828,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         let messages = messages.clone();
         let pending = pending.clone();
         let loading = loading.clone();
+        let content_revision = content_revision.clone();
         move |host, _action_cx, _reason| {
             let assistant_id = host
                 .models_mut()
@@ -11809,15 +11850,27 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                     .collect();
                 *list = vec.into();
             });
+            let _ = host
+                .models_mut()
+                .update(&content_revision, |v| *v = v.saturating_add(1));
         }
     });
 
-    let messages_value = cx
-        .get_model_cloned(&messages, Invalidation::Paint)
-        .unwrap_or_default();
-    let revision = cx
-        .get_model_copied(&next_id, Invalidation::Paint)
-        .unwrap_or(messages_value.len().min(u64::MAX as usize) as u64);
+    let export_markdown: OnActivate = Arc::new({
+        let messages = messages.clone();
+        let exported_md_len = exported_md_len.clone();
+        move |host, _action_cx, _reason| {
+            let messages = host.models_mut().read(&messages, Clone::clone).ok();
+            let Some(messages) = messages else {
+                return;
+            };
+
+            let md = ui_ai::messages_to_markdown(messages.as_ref());
+            let _ = host
+                .models_mut()
+                .update(&exported_md_len, |v| *v = Some(md.len()));
+        }
+    });
 
     let header = stack::vstack(
         cx,
@@ -11832,47 +11885,40 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         },
     );
 
-    let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
-    let transcript = ui_ai::AiConversationTranscript::from_arc(messages_value.clone())
-        .content_revision(revision)
-        .scroll_handle(scroll_handle)
-        .stick_to_bottom(true)
-        .test_id_message_prefix("ui-ai-msg-")
-        .debug_root_test_id("ui-gallery-ai-chat-transcript-root")
-        .debug_row_test_id_prefix("ui-gallery-ai-chat-transcript-row-")
-        .into_element(cx);
-
-    let mut transcript_container = decl_style::container_props(
-        theme,
-        ChromeRefinement::default(),
-        LayoutRefinement::default().w_full().h_px(Px(460.0)),
-    );
-    transcript_container.layout.overflow = fret_ui::element::Overflow::Clip;
-
-    let prompt = ui_ai::PromptInput::new(prompt)
-        .loading(loading_value)
+    let chat = ui_ai::AiChat::new(messages.clone(), prompt)
+        .loading_model(loading.clone())
+        .content_revision_model(content_revision.clone())
         .on_send(send)
         .on_stop(stop)
-        .test_id_root("ui-gallery-ai-chat-prompt-root")
-        .test_id_textarea("ui-gallery-ai-chat-prompt-textarea")
-        .test_id_send("ui-gallery-ai-chat-prompt-send")
-        .test_id_stop("ui-gallery-ai-chat-prompt-stop")
+        .show_download(true)
+        .on_download(export_markdown)
+        .download_test_id("ui-gallery-ai-chat-download")
+        .message_test_id_prefix("ui-ai-msg-")
+        .transcript_root_test_id("ui-gallery-ai-chat-transcript-root")
+        .transcript_row_test_id_prefix("ui-gallery-ai-chat-transcript-row-")
+        .scroll_button_test_id("ui-gallery-ai-chat-scroll-bottom")
+        .prompt_root_test_id("ui-gallery-ai-chat-prompt-root")
+        .prompt_textarea_test_id("ui-gallery-ai-chat-prompt-textarea")
+        .prompt_send_test_id("ui-gallery-ai-chat-prompt-send")
+        .prompt_stop_test_id("ui-gallery-ai-chat-prompt-stop")
+        .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(460.0)))
         .into_element(cx);
 
-    let footer = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
-            .justify(Justify::End),
-        |_cx| vec![prompt],
-    );
+    let exported_value = cx
+        .get_model_cloned(&exported_md_len, Invalidation::Paint)
+        .unwrap_or(None);
+    let exported = exported_value.map(|len| {
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-exported-md-len")),
+                ..Default::default()
+            },
+            move |cx| vec![cx.text(format!("Exported markdown: {len} chars"))],
+        )
+    });
 
-    vec![
-        header,
-        cx.container(transcript_container, |_cx| vec![transcript]),
-        footer,
-    ]
+    vec![header, chat, exported.unwrap_or_else(|| cx.text(""))]
 }
 
 fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
