@@ -3,7 +3,7 @@ use crate::core::{
     NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
     collect_subgraph_targets, resolve_import_closure, validate_graph,
 };
-use crate::core::{CanvasSize, GraphValidationError, GroupId};
+use crate::core::{CanvasSize, GraphValidationError, GroupId, validate_graph_structural};
 use crate::core::{SUBGRAPH_NODE_KIND, validate_subgraph_targets_are_imported};
 
 fn make_node(kind: &str) -> Node {
@@ -320,4 +320,36 @@ fn subgraph_targets_must_resolve_through_import_closure() {
     for target in targets {
         assert!(closure.contains(target));
     }
+}
+
+#[test]
+fn validate_graph_reports_subgraph_import_binding_errors() {
+    let mut graph = Graph::default();
+
+    let node_id = NodeId::new();
+    let mut node = make_node(SUBGRAPH_NODE_KIND);
+    let imported = GraphId::from_u128(2);
+    node.data = serde_json::json!({ "graph_id": imported });
+    graph.nodes.insert(node_id, node);
+
+    let report = validate_graph_structural(&graph);
+    assert!(report.errors.iter().any(|e| matches!(
+        e,
+        GraphValidationError::SubgraphTargetNotImported { node, graph_id }
+            if *node == node_id && *graph_id == imported
+    )));
+
+    graph.imports.insert(imported, GraphImport::default());
+    let report = validate_graph(&graph);
+    assert!(report.is_ok());
+
+    let mut bad = make_node(SUBGRAPH_NODE_KIND);
+    bad.data = serde_json::json!({});
+    let bad_id = NodeId::new();
+    graph.nodes.insert(bad_id, bad);
+    let report = validate_graph_structural(&graph);
+    assert!(report.errors.iter().any(|e| matches!(
+        e,
+        GraphValidationError::SubgraphNodeMissingGraphId { node } if *node == bad_id
+    )));
 }

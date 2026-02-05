@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::core::{EdgeId, EdgeKind, Graph, GroupId, NodeId, PortCapacity, PortId, PortKind};
+use crate::core::{
+    EdgeId, EdgeKind, Graph, GraphId, GroupId, NodeId, PortCapacity, PortId, PortKind,
+    SubgraphNodeError, subgraph_target_graph_id,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum GraphValidationError {
@@ -65,6 +68,20 @@ pub enum GraphValidationError {
         capacity: PortCapacity,
         count: usize,
     },
+
+    #[error("subgraph node missing graph_id: node={node:?}")]
+    SubgraphNodeMissingGraphId { node: NodeId },
+
+    #[error("subgraph node graph_id is not a string: node={node:?}")]
+    SubgraphNodeGraphIdNotString { node: NodeId },
+
+    #[error("subgraph node graph_id is not a valid uuid: node={node:?} value={value:?}")]
+    SubgraphNodeInvalidGraphId { node: NodeId, value: String },
+
+    #[error(
+        "subgraph node target graph is not declared in imports: node={node:?} graph_id={graph_id}"
+    )]
+    SubgraphTargetNotImported { node: NodeId, graph_id: GraphId },
 }
 
 #[derive(Debug, Default)]
@@ -163,6 +180,39 @@ pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
                         owner: port.node,
                     });
             }
+        }
+    }
+
+    for (node_id, node) in &graph.nodes {
+        match subgraph_target_graph_id(*node_id, node) {
+            Ok(Some(target)) => {
+                if !graph.imports.contains_key(&target) {
+                    report
+                        .errors
+                        .push(GraphValidationError::SubgraphTargetNotImported {
+                            node: *node_id,
+                            graph_id: target,
+                        });
+                }
+            }
+            Ok(None) => {}
+            Err(err) => match err {
+                SubgraphNodeError::MissingGraphId { node } => {
+                    report
+                        .errors
+                        .push(GraphValidationError::SubgraphNodeMissingGraphId { node });
+                }
+                SubgraphNodeError::GraphIdNotString { node } => {
+                    report
+                        .errors
+                        .push(GraphValidationError::SubgraphNodeGraphIdNotString { node });
+                }
+                SubgraphNodeError::InvalidGraphId { node, value } => {
+                    report
+                        .errors
+                        .push(GraphValidationError::SubgraphNodeInvalidGraphId { node, value });
+                }
+            },
         }
     }
 
