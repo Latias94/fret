@@ -10773,6 +10773,9 @@ fn preview_combobox(
             shadcn::ComboboxItem::new("disabled", "Disabled").disabled(true),
         ])
         .into_element(cx);
+    let combo = combo.attach_semantics(
+        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-combobox-trigger"),
+    );
 
     let selected = cx
         .app
@@ -10785,11 +10788,15 @@ fn preview_combobox(
         .get_model_cloned(&query, Invalidation::Layout)
         .unwrap_or_default();
 
-    vec![
-        combo,
-        cx.text(format!("Selected: {selected}")),
-        cx.text(format!("Query: {query_text}")),
-    ]
+    let selected_label = cx.text(format!("Selected: {selected}")).attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .test_id("ui-gallery-combobox-selected-label"),
+    );
+    let query_label = cx.text(format!("Query: {query_text}")).attach_semantics(
+        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-combobox-query-label"),
+    );
+
+    vec![combo, selected_label, query_label]
 }
 
 fn preview_date_picker(

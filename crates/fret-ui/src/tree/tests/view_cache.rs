@@ -495,6 +495,7 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
                         visible_items: Vec::new(),
                     },
                 ),
+                semantics_decoration: None,
             },
         );
     });
@@ -580,6 +581,7 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
                         probe_unbounded: true,
                     },
                 ),
+                semantics_decoration: None,
             },
         );
     });
