@@ -23,6 +23,7 @@
 
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::future::Future;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::panic::{AssertUnwindSafe, Location, catch_unwind, resume_unwind};
@@ -32,8 +33,12 @@ use std::time::Duration;
 
 use fret_core::AppWindowId;
 use fret_core::time::Instant;
-pub use fret_executor::CancellationToken;
+#[cfg(feature = "tokio")]
+pub use fret_executor::TokioSpawner;
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+pub use fret_executor::WasmSpawner;
 use fret_executor::{BackgroundTask, Executors, Inbox, InboxDrainer};
+pub use fret_executor::{CancellationToken, FutureSpawner, FutureSpawnerHandle};
 use fret_runtime::{DispatcherHandle, InboxDrainHost, InboxDrainRegistry, Model, ModelId, UiHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -342,6 +347,127 @@ impl QueryClient {
         QueryHandle { key, model }
     }
 
+    /// Use a query whose fetch function is an async future.
+    ///
+    /// This requires installing a `FutureSpawnerHandle` as a global (e.g. a tokio-backed spawner),
+    /// so `fret-query` can integrate with any async runtime without forcing one in the kernel.
+    pub fn use_query_async<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static,
+    {
+        self.ensure_registered(app);
+
+        let now = Instant::now();
+        self.gc(now);
+
+        let key_id = key.id();
+        let model = self
+            .handles
+            .get(&key_id)
+            .and_then(|any| any.downcast_ref::<Model<QueryState<T>>>().cloned())
+            .unwrap_or_else(|| {
+                let model = app.models_mut().insert(QueryState::<T>::default());
+                self.handles.insert(key_id, Box::new(model.clone()));
+                model
+            });
+
+        self.touch_entry::<T>(key, model.id(), policy.clone(), now);
+
+        let should_fetch = self.should_fetch(app, &model, key_id, now);
+        if should_fetch {
+            let spawner = app.global::<FutureSpawnerHandle>().cloned();
+            if let Some(spawner) = spawner {
+                self.start_fetch_async(
+                    app,
+                    window,
+                    key,
+                    policy,
+                    model.clone(),
+                    &*spawner,
+                    fetch,
+                    now,
+                );
+            } else {
+                let _ = app.models_mut().update(&model, |st| {
+                    st.status = QueryStatus::Error;
+                    st.error = Some(Arc::<str>::from(
+                        "missing FutureSpawnerHandle global (install an async spawner to use use_query_async)",
+                    ));
+                });
+            }
+        }
+
+        QueryHandle { key, model }
+    }
+
+    /// Use a query whose fetch function is an async `!Send` future (typically wasm).
+    pub fn use_query_async_local<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + 'static,
+    {
+        self.ensure_registered(app);
+
+        let now = Instant::now();
+        self.gc(now);
+
+        let key_id = key.id();
+        let model = self
+            .handles
+            .get(&key_id)
+            .and_then(|any| any.downcast_ref::<Model<QueryState<T>>>().cloned())
+            .unwrap_or_else(|| {
+                let model = app.models_mut().insert(QueryState::<T>::default());
+                self.handles.insert(key_id, Box::new(model.clone()));
+                model
+            });
+
+        self.touch_entry::<T>(key, model.id(), policy.clone(), now);
+
+        let should_fetch = self.should_fetch(app, &model, key_id, now);
+        if should_fetch {
+            let spawner = app.global::<FutureSpawnerHandle>().cloned();
+            if let Some(spawner) = spawner {
+                self.start_fetch_async_local(
+                    app,
+                    window,
+                    key,
+                    policy,
+                    model.clone(),
+                    &*spawner,
+                    fetch,
+                    now,
+                );
+            } else {
+                let _ = app.models_mut().update(&model, |st| {
+                    st.status = QueryStatus::Error;
+                    st.error = Some(Arc::<str>::from(
+                        "missing FutureSpawnerHandle global (install an async spawner to use use_query_async_local)",
+                    ));
+                });
+            }
+        }
+
+        QueryHandle { key, model }
+    }
+
     /// Prefetch a query into the cache.
     ///
     /// This is semantically equivalent to calling [`QueryClient::use_query`] at least once, but is
@@ -380,6 +506,72 @@ impl QueryClient {
     {
         self.invalidate(app, key);
         self.use_query(app, window, key, policy, fetch)
+    }
+
+    pub fn prefetch_async<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static,
+    {
+        self.use_query_async(app, window, key, policy, fetch)
+    }
+
+    pub fn refetch_async<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static,
+    {
+        self.invalidate(app, key);
+        self.use_query_async(app, window, key, policy, fetch)
+    }
+
+    pub fn prefetch_async_local<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + 'static,
+    {
+        self.use_query_async_local(app, window, key, policy, fetch)
+    }
+
+    pub fn refetch_async_local<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + 'static,
+    {
+        self.invalidate(app, key);
+        self.use_query_async_local(app, window, key, policy, fetch)
     }
 
     pub fn invalidate<H, T>(&mut self, _app: &mut H, key: QueryKey<T>)
@@ -571,10 +763,188 @@ impl QueryClient {
             return;
         };
 
-        if let Some(prev) = entry.inflight.take()
-            && policy.cancel_mode == QueryCancelMode::CancelInFlight
-        {
-            drop(prev);
+        if let Some(prev) = entry.inflight.take() {
+            let Inflight { task, .. } = prev;
+            match policy.cancel_mode {
+                QueryCancelMode::CancelInFlight => drop(task),
+                QueryCancelMode::KeepInFlight => task.detach(),
+            }
+        }
+
+        entry.stale = false;
+        entry.inflight = Some(Inflight {
+            id: inflight_id,
+            started_at,
+            task,
+        });
+
+        let _ = app.models_mut().update(&model, |st| {
+            st.status = QueryStatus::Loading;
+            st.inflight = Some(inflight_id);
+            st.error = None;
+            if !policy.keep_previous_data_while_loading {
+                st.data = None;
+            }
+        });
+    }
+
+    fn start_fetch_async<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        model: Model<QueryState<T>>,
+        spawner: &dyn FutureSpawner,
+        fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+        now: Instant,
+    ) where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static,
+    {
+        let key_id = key.id();
+        let model_id = model.id();
+        let inflight_id = self.runtime.next_inflight_id();
+        let sender = self.runtime.inbox.sender();
+        let started_at = now;
+
+        let task = self.runtime.exec.spawn_future_to_inbox(
+            spawner,
+            Some(window),
+            sender,
+            move |token| async move {
+                let result = fetch(token).await;
+
+                let finished_at = Instant::now();
+                let duration = finished_at.duration_since(started_at);
+                let result = match result {
+                    Ok(value) => Ok(Box::new(value) as Box<dyn Any + Send>),
+                    Err(err) => Err(err),
+                };
+
+                QueryInboxMsg {
+                    window: Some(window),
+                    key: key_id,
+                    model_id,
+                    inflight_id,
+                    apply: QueryApplyMsg {
+                        inflight_id,
+                        finished_at,
+                        duration,
+                        result,
+                    },
+                }
+            },
+        );
+
+        let mut entries = self
+            .runtime
+            .entries
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        let Some(entry) = entries.get_mut(&key_id) else {
+            return;
+        };
+
+        if let Some(prev) = entry.inflight.take() {
+            let Inflight { task, .. } = prev;
+            match policy.cancel_mode {
+                QueryCancelMode::CancelInFlight => drop(task),
+                QueryCancelMode::KeepInFlight => task.detach(),
+            }
+        }
+
+        entry.stale = false;
+        entry.inflight = Some(Inflight {
+            id: inflight_id,
+            started_at,
+            task,
+        });
+
+        let _ = app.models_mut().update(&model, |st| {
+            st.status = QueryStatus::Loading;
+            st.inflight = Some(inflight_id);
+            st.error = None;
+            if !policy.keep_previous_data_while_loading {
+                st.data = None;
+            }
+        });
+    }
+
+    fn start_fetch_async_local<H, T, Fut>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        model: Model<QueryState<T>>,
+        spawner: &dyn FutureSpawner,
+        fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+        now: Instant,
+    ) where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + 'static,
+    {
+        let key_id = key.id();
+        let model_id = model.id();
+        let inflight_id = self.runtime.next_inflight_id();
+        let sender = self.runtime.inbox.sender();
+        let started_at = now;
+
+        let Some(task) = self.runtime.exec.spawn_local_future_to_inbox(
+            spawner,
+            Some(window),
+            sender,
+            move |token| async move {
+                let result = fetch(token).await;
+
+                let finished_at = Instant::now();
+                let duration = finished_at.duration_since(started_at);
+                let result = match result {
+                    Ok(value) => Ok(Box::new(value) as Box<dyn Any + Send>),
+                    Err(err) => Err(err),
+                };
+
+                QueryInboxMsg {
+                    window: Some(window),
+                    key: key_id,
+                    model_id,
+                    inflight_id,
+                    apply: QueryApplyMsg {
+                        inflight_id,
+                        finished_at,
+                        duration,
+                        result,
+                    },
+                }
+            },
+        ) else {
+            let _ = app.models_mut().update(&model, |st| {
+                st.status = QueryStatus::Error;
+                st.error = Some(Arc::<str>::from(
+                    "FutureSpawner does not support local futures (use a wasm/local spawner or use_query_async)",
+                ));
+            });
+            return;
+        };
+
+        let mut entries = self
+            .runtime
+            .entries
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        let Some(entry) = entries.get_mut(&key_id) else {
+            return;
+        };
+
+        if let Some(prev) = entry.inflight.take() {
+            let Inflight { task, .. } = prev;
+            match policy.cancel_mode {
+                QueryCancelMode::CancelInFlight => drop(task),
+                QueryCancelMode::KeepInFlight => task.detach(),
+            }
         }
 
         entry.stale = false;
@@ -713,6 +1083,8 @@ fn stable_hash<T: Hash>(value: &T) -> u64 {
 #[cfg(feature = "ui")]
 pub mod ui {
     use super::*;
+    use std::future::Future;
+
     use fret_ui::{ElementContext, UiHost};
 
     pub trait QueryElementContextExt {
@@ -722,6 +1094,26 @@ pub mod ui {
             policy: QueryPolicy,
             fetch: impl FnOnce(CancellationToken) -> Result<T, Arc<str>> + Send + 'static,
         ) -> QueryHandle<T>;
+
+        fn use_query_async<T, Fut>(
+            &mut self,
+            key: QueryKey<T>,
+            policy: QueryPolicy,
+            fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+        ) -> QueryHandle<T>
+        where
+            T: Any + Send + Sync + 'static,
+            Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static;
+
+        fn use_query_async_local<T, Fut>(
+            &mut self,
+            key: QueryKey<T>,
+            policy: QueryPolicy,
+            fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+        ) -> QueryHandle<T>
+        where
+            T: Any + Send + Sync + 'static,
+            Fut: Future<Output = Result<T, Arc<str>>> + 'static;
     }
 
     impl<'a, H: UiHost> QueryElementContextExt for ElementContext<'a, H> {
@@ -747,14 +1139,72 @@ pub mod ui {
                 QueryHandle { key, model }
             })
         }
+
+        fn use_query_async<T, Fut>(
+            &mut self,
+            key: QueryKey<T>,
+            policy: QueryPolicy,
+            fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+        ) -> QueryHandle<T>
+        where
+            T: Any + Send + Sync + 'static,
+            Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static,
+        {
+            let window = self.window;
+            with_query_client(self.app, |client, app| {
+                client.use_query_async(app, window, key, policy, fetch)
+            })
+            .unwrap_or_else(|| {
+                let model = self.app.models_mut().insert(QueryState::<T> {
+                    status: QueryStatus::Error,
+                    data: None,
+                    error: Some(Arc::<str>::from("missing DispatcherHandle global")),
+                    inflight: None,
+                    updated_at: None,
+                    last_duration: None,
+                });
+                QueryHandle { key, model }
+            })
+        }
+
+        fn use_query_async_local<T, Fut>(
+            &mut self,
+            key: QueryKey<T>,
+            policy: QueryPolicy,
+            fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+        ) -> QueryHandle<T>
+        where
+            T: Any + Send + Sync + 'static,
+            Fut: Future<Output = Result<T, Arc<str>>> + 'static,
+        {
+            let window = self.window;
+            with_query_client(self.app, |client, app| {
+                client.use_query_async_local(app, window, key, policy, fetch)
+            })
+            .unwrap_or_else(|| {
+                let model = self.app.models_mut().insert(QueryState::<T> {
+                    status: QueryStatus::Error,
+                    data: None,
+                    error: Some(Arc::<str>::from("missing DispatcherHandle global")),
+                    inflight: None,
+                    updated_at: None,
+                    last_duration: None,
+                });
+                QueryHandle { key, model }
+            })
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::future::Future;
+    use std::pin::Pin;
+
     use fret_app::App;
     use fret_runtime::{DispatchPriority, Dispatcher, ExecCapabilities, Runnable};
+    use pollster::block_on;
 
     #[derive(Default)]
     struct TestDispatcher {
@@ -793,6 +1243,29 @@ mod tests {
         app.with_global_mut_untracked(InboxDrainRegistry::default, |registry, app| {
             registry.drain_all(app, window)
         })
+    }
+
+    #[derive(Default)]
+    struct TestSpawner {
+        send: Mutex<Vec<Pin<Box<dyn Future<Output = ()> + Send + 'static>>>>,
+    }
+
+    impl TestSpawner {
+        fn drain_send(&self) -> Vec<Pin<Box<dyn Future<Output = ()> + Send + 'static>>> {
+            let mut guard = self.send.lock().unwrap();
+            std::mem::take(&mut *guard)
+        }
+    }
+
+    impl FutureSpawner for TestSpawner {
+        fn spawn_send(&self, fut: Pin<Box<dyn Future<Output = ()> + Send + 'static>>) {
+            self.send.lock().unwrap().push(fut);
+        }
+
+        fn spawn_local(&self, fut: Pin<Box<dyn Future<Output = ()> + 'static>>) -> bool {
+            block_on(fut);
+            true
+        }
     }
 
     #[test]
@@ -848,6 +1321,69 @@ mod tests {
 
         let tasks = dispatcher.take_background();
         assert_eq!(tasks.len(), 1);
+    }
+
+    #[test]
+    fn use_query_async_fetches_and_applies() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let spawner = Arc::new(TestSpawner::default());
+        let spawner_handle: FutureSpawnerHandle = spawner.clone();
+        app.set_global::<FutureSpawnerHandle>(spawner_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test", &321u32);
+
+        let handle = with_query_client(&mut app, |client, app| {
+            client.use_query_async(
+                app,
+                window,
+                key,
+                QueryPolicy::default(),
+                |_token| async move { Ok(123u32) },
+            )
+        })
+        .unwrap();
+
+        for fut in spawner.drain_send() {
+            block_on(fut);
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
+        assert_eq!(state.status, QueryStatus::Success);
+        assert_eq!(state.data.as_deref().copied(), Some(123));
+    }
+
+    #[test]
+    fn use_query_async_local_fetches_and_applies() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let spawner = Arc::new(TestSpawner::default());
+        let spawner_handle: FutureSpawnerHandle = spawner.clone();
+        app.set_global::<FutureSpawnerHandle>(spawner_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test", &654u32);
+
+        let handle = with_query_client(&mut app, |client, app| {
+            client.use_query_async_local(app, window, key, QueryPolicy::default(), |_token| async {
+                Ok(456u32)
+            })
+        })
+        .unwrap();
+
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
+        assert_eq!(state.status, QueryStatus::Success);
+        assert_eq!(state.data.as_deref().copied(), Some(456));
     }
 
     #[test]

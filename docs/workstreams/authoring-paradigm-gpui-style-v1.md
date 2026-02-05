@@ -77,6 +77,8 @@ direct dependency.
 - Async ecosystems (tokio/reqwest/sqlx/etc.) should integrate through optional adapters:
   - run async work in the runtime of choice,
   - apply results via inbox draining and model updates.
+- For `fret-query` async fetch, install a `FutureSpawnerHandle` global; see
+  `docs/integrating-tokio-and-reqwest.md`.
 
 ## Key decision gates
 

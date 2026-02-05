@@ -1,11 +1,12 @@
 use std::any::Any;
+use std::future::Future;
 use std::sync::Arc;
 
 use fret_query::ui::QueryElementContextExt as _;
 pub use fret_query::with_query_client;
 pub use fret_query::{
-    CancellationToken, QueryCancelMode, QueryClient, QueryHandle, QueryKey, QueryPolicy,
-    QueryState, QueryStatus,
+    CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryClient,
+    QueryHandle, QueryKey, QueryPolicy, QueryState, QueryStatus,
 };
 use fret_ui::UiHost;
 
@@ -23,6 +24,26 @@ pub trait UiWriterQueryExt<H: UiHost>: UiWriter<H> {
         fetch: impl FnOnce(CancellationToken) -> Result<T, Arc<str>> + Send + 'static,
     ) -> QueryHandle<T>;
 
+    fn use_query_async<T, Fut>(
+        &mut self,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+    ) -> QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static;
+
+    fn use_query_async_local<T, Fut>(
+        &mut self,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+    ) -> QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + 'static;
+
     fn invalidate_query<T: Any + Send + Sync + 'static>(&mut self, key: QueryKey<T>);
 
     fn invalidate_query_namespace(&mut self, namespace: &'static str);
@@ -36,6 +57,32 @@ impl<H: UiHost, W: UiWriter<H> + ?Sized> UiWriterQueryExt<H> for W {
         fetch: impl FnOnce(CancellationToken) -> Result<T, Arc<str>> + Send + 'static,
     ) -> QueryHandle<T> {
         self.with_cx_mut(|cx| cx.use_query(key, policy, fetch))
+    }
+
+    fn use_query_async<T, Fut>(
+        &mut self,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + Send + 'static,
+    ) -> QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static,
+    {
+        self.with_cx_mut(|cx| cx.use_query_async(key, policy, fetch))
+    }
+
+    fn use_query_async_local<T, Fut>(
+        &mut self,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Fut + 'static,
+    ) -> QueryHandle<T>
+    where
+        T: Any + Send + Sync + 'static,
+        Fut: Future<Output = Result<T, Arc<str>>> + 'static,
+    {
+        self.with_cx_mut(|cx| cx.use_query_async_local(key, policy, fetch))
     }
 
     fn invalidate_query<T: Any + Send + Sync + 'static>(&mut self, key: QueryKey<T>) {

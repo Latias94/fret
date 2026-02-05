@@ -107,10 +107,12 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Add an ecosystem-level async adapter surface (draft shape):
+- `[x]` Add an ecosystem-level async adapter surface (draft shape):
   - `spawn_future_to_inbox(...)` for tokio and wasm (feature-gated).
-- `[ ]` Extend `fret-query` with an optional async fetch mode using the adapter.
+  - Evidence: `ecosystem/fret-executor/src/lib.rs`
+- `[x]` Extend `fret-query` with an optional async fetch mode using the adapter.
   - Must preserve driver-boundary apply and cancellation semantics.
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
 
 ## Milestone M5 — Third-party ecosystem docs
 
@@ -120,7 +122,8 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Add a doc: “Integrating tokio/reqwest” (background fetch → inbox → model update).
+- `[x]` Add a doc: “Integrating tokio/reqwest” (background fetch → inbox → model update).
+  - Evidence: `docs/integrating-tokio-and-reqwest.md`
 - `[ ]` Add a doc: “Integrating persistence (sqlite/sqlx)” with driver-boundary apply.
 - `[ ]` Document a recommended service injection/override pattern for ecosystem crates.
 
