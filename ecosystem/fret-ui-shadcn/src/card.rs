@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Px, TextWrap};
-use fret_ui::element::{AnyElement, ElementKind, SemanticsProps};
+use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -9,8 +9,21 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
+use crate::test_id::attach_test_id;
 
 const CARD_ACTION_TEST_ID: &str = "fret-ui-shadcn.card-action";
+
+fn is_card_action_marker(element: &AnyElement) -> bool {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.test_id.as_deref())
+        == Some(CARD_ACTION_TEST_ID)
+        || match &element.kind {
+            ElementKind::Semantics(props) => props.test_id.as_deref() == Some(CARD_ACTION_TEST_ID),
+            _ => false,
+        }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CardSize {
@@ -194,12 +207,7 @@ impl CardHeader {
         let mut left: Vec<AnyElement> = Vec::with_capacity(self.children.len());
 
         for child in self.children {
-            let is_action = match &child.kind {
-                ElementKind::Semantics(props) => {
-                    props.test_id.as_deref() == Some(CARD_ACTION_TEST_ID)
-                }
-                _ => false,
-            };
+            let is_action = is_card_action_marker(&child);
             if is_action && action.is_none() {
                 action = Some(child);
             } else {
@@ -260,28 +268,73 @@ impl CardAction {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let layout = decl_style::layout_style(&theme, self.layout);
-        let test_id: Arc<str> = Arc::from(CARD_ACTION_TEST_ID);
+
+        let props = decl_style::container_props(
+            &theme,
+            ChromeRefinement::default(),
+            LayoutRefinement::default().merge(self.layout),
+        );
 
         let children = self.children;
-        cx.semantics(
-            SemanticsProps {
-                layout,
-                test_id: Some(test_id),
-                ..Default::default()
-            },
-            move |cx| {
-                if children.len() <= 1 {
-                    children
-                } else {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        move |_cx| children,
-                    )]
-                }
-            },
+        let el = cx.container(props, move |cx| {
+            if children.len() <= 1 {
+                children
+            } else {
+                vec![stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |_cx| children,
+                )]
+            }
+        });
+
+        attach_test_id(el, Arc::<str>::from(CARD_ACTION_TEST_ID))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_ui::element::{ContainerProps, SemanticsDecoration, SemanticsProps};
+    use fret_ui::elements::GlobalElementId;
+
+    #[test]
+    fn card_action_marker_matches_semantics_decoration_test_id() {
+        let el = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
         )
+        .attach_semantics(SemanticsDecoration::default().test_id(CARD_ACTION_TEST_ID));
+
+        assert!(is_card_action_marker(&el));
+    }
+
+    #[test]
+    fn card_action_marker_matches_legacy_semantics_test_id() {
+        let el = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Semantics(SemanticsProps {
+                test_id: Some(Arc::<str>::from(CARD_ACTION_TEST_ID)),
+                ..Default::default()
+            }),
+            Vec::new(),
+        );
+
+        assert!(is_card_action_marker(&el));
+    }
+
+    #[test]
+    fn card_action_marker_ignores_other_test_ids() {
+        let el = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Container(ContainerProps::default()),
+            Vec::new(),
+        )
+        .attach_semantics(SemanticsDecoration::default().test_id("not-a-card-action"));
+
+        assert!(!is_card_action_marker(&el));
     }
 }
 

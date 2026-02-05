@@ -65,6 +65,8 @@ layout. This workstream is about making that the default across ecosystem code.
   - Evidence: `ecosystem/fret-ui-shadcn/src/scroll_area.rs`
 - [x] SDC-shadcn-102 Select: migrate scroll viewport `test_id` stamping to `attach_semantics`.
   - Evidence: `ecosystem/fret-ui-shadcn/src/select.rs`
+- [x] SDC-shadcn-103 Card: migrate `CardAction` stamping to `attach_semantics` (avoid `Semantics` wrappers for slots).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/card.rs`
 - [x] SDC-shadcn-110 DataGrid: migrate header/body cell stamps to decorators where possible.
   - Evidence: `ecosystem/fret-ui-shadcn/src/data_grid.rs`, `ecosystem/fret-ui-shadcn/tests/data_grid_layout.rs`
 - [ ] SDC-shadcn-120 Form/Field: migrate any “label-only” wrappers used for targeting.
