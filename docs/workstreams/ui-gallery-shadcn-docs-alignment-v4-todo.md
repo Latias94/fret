@@ -57,7 +57,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] alert
 - [ ] alert-dialog
 - [ ] aspect-ratio
-- [ ] avatar
+- [~] avatar — base demo present; still missing upstream examples (badge/group/sizes/dropdown/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_avatar`, `ecosystem/fret-ui-shadcn/src/avatar.rs`)
 - [~] badge — examples mirrored; missing upstream variants (`apps/fret-ui-gallery/src/ui.rs::preview_badge`)
 - [ ] breadcrumb
 - [~] button (page examples re-ordered + expanded; still validating interactions)
@@ -101,7 +101,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] sheet
 - [ ] sidebar
 - [ ] skeleton
-- [ ] slider
+- [~] slider — demo/range/disabled/RTL/vertical wired; still needs upstream example ordering + multiple thumbs + controlled example (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
 - [ ] sonner
 - [ ] spinner
 - [ ] switch
