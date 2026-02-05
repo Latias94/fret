@@ -231,6 +231,16 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) dispatch_pointer_event_time_us: u64,
     pub(super) dispatch_timer_events: u32,
     pub(super) dispatch_timer_event_time_us: u64,
+    pub(super) dispatch_timer_targeted_events: u32,
+    pub(super) dispatch_timer_targeted_time_us: u64,
+    pub(super) dispatch_timer_broadcast_events: u32,
+    pub(super) dispatch_timer_broadcast_time_us: u64,
+    pub(super) dispatch_timer_broadcast_layers_visited: u32,
+    pub(super) dispatch_timer_broadcast_rebuild_visible_layers_time_us: u64,
+    pub(super) dispatch_timer_broadcast_loop_time_us: u64,
+    pub(super) dispatch_timer_slowest_event_time_us: u64,
+    pub(super) dispatch_timer_slowest_token: Option<u64>,
+    pub(super) dispatch_timer_slowest_was_broadcast: bool,
     pub(super) dispatch_other_events: u32,
     pub(super) dispatch_other_event_time_us: u64,
     pub(super) hit_test_time_us: u64,
@@ -1157,6 +1167,48 @@ impl BundleStatsReport {
                 obj.insert(
                     "dispatch_timer_event_time_us".to_string(),
                     Value::from(row.dispatch_timer_event_time_us),
+                );
+                obj.insert(
+                    "dispatch_timer_targeted_events".to_string(),
+                    Value::from(row.dispatch_timer_targeted_events),
+                );
+                obj.insert(
+                    "dispatch_timer_targeted_time_us".to_string(),
+                    Value::from(row.dispatch_timer_targeted_time_us),
+                );
+                obj.insert(
+                    "dispatch_timer_broadcast_events".to_string(),
+                    Value::from(row.dispatch_timer_broadcast_events),
+                );
+                obj.insert(
+                    "dispatch_timer_broadcast_time_us".to_string(),
+                    Value::from(row.dispatch_timer_broadcast_time_us),
+                );
+                obj.insert(
+                    "dispatch_timer_broadcast_layers_visited".to_string(),
+                    Value::from(row.dispatch_timer_broadcast_layers_visited),
+                );
+                obj.insert(
+                    "dispatch_timer_broadcast_rebuild_visible_layers_time_us".to_string(),
+                    Value::from(row.dispatch_timer_broadcast_rebuild_visible_layers_time_us),
+                );
+                obj.insert(
+                    "dispatch_timer_broadcast_loop_time_us".to_string(),
+                    Value::from(row.dispatch_timer_broadcast_loop_time_us),
+                );
+                obj.insert(
+                    "dispatch_timer_slowest_event_time_us".to_string(),
+                    Value::from(row.dispatch_timer_slowest_event_time_us),
+                );
+                obj.insert(
+                    "dispatch_timer_slowest_token".to_string(),
+                    row.dispatch_timer_slowest_token
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "dispatch_timer_slowest_was_broadcast".to_string(),
+                    Value::from(row.dispatch_timer_slowest_was_broadcast),
                 );
                 obj.insert(
                     "dispatch_other_events".to_string(),
@@ -4253,6 +4305,49 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("dispatch_timer_event_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let dispatch_timer_targeted_events = stats
+                .and_then(|m| m.get("dispatch_timer_targeted_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let dispatch_timer_targeted_time_us = stats
+                .and_then(|m| m.get("dispatch_timer_targeted_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_timer_broadcast_events = stats
+                .and_then(|m| m.get("dispatch_timer_broadcast_events"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let dispatch_timer_broadcast_time_us = stats
+                .and_then(|m| m.get("dispatch_timer_broadcast_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_timer_broadcast_layers_visited = stats
+                .and_then(|m| m.get("dispatch_timer_broadcast_layers_visited"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let dispatch_timer_broadcast_rebuild_visible_layers_time_us = stats
+                .and_then(|m| m.get("dispatch_timer_broadcast_rebuild_visible_layers_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_timer_broadcast_loop_time_us = stats
+                .and_then(|m| m.get("dispatch_timer_broadcast_loop_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_timer_slowest_event_time_us = stats
+                .and_then(|m| m.get("dispatch_timer_slowest_event_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_timer_slowest_token = stats
+                .and_then(|m| m.get("dispatch_timer_slowest_token"))
+                .and_then(|v| v.as_u64());
+            let dispatch_timer_slowest_was_broadcast = stats
+                .and_then(|m| m.get("dispatch_timer_slowest_was_broadcast"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let dispatch_other_events = stats
                 .and_then(|m| m.get("dispatch_other_events"))
                 .and_then(|v| v.as_u64())
@@ -4917,6 +5012,16 @@ pub(super) fn bundle_stats_from_json_with_options(
                 dispatch_pointer_event_time_us,
                 dispatch_timer_events,
                 dispatch_timer_event_time_us,
+                dispatch_timer_targeted_events,
+                dispatch_timer_targeted_time_us,
+                dispatch_timer_broadcast_events,
+                dispatch_timer_broadcast_time_us,
+                dispatch_timer_broadcast_layers_visited,
+                dispatch_timer_broadcast_rebuild_visible_layers_time_us,
+                dispatch_timer_broadcast_loop_time_us,
+                dispatch_timer_slowest_event_time_us,
+                dispatch_timer_slowest_token,
+                dispatch_timer_slowest_was_broadcast,
                 dispatch_other_events,
                 dispatch_other_event_time_us,
                 hit_test_time_us,

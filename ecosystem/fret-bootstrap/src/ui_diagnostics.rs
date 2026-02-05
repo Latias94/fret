@@ -6168,6 +6168,26 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub dispatch_timer_event_time_us: u64,
     #[serde(default)]
+    pub dispatch_timer_targeted_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_targeted_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_layers_visited: u32,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_rebuild_visible_layers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_loop_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_slowest_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_slowest_token: Option<u64>,
+    #[serde(default)]
+    pub dispatch_timer_slowest_was_broadcast: bool,
+    #[serde(default)]
     pub dispatch_other_events: u32,
     #[serde(default)]
     pub dispatch_other_event_time_us: u64,
@@ -6498,6 +6518,24 @@ impl UiFrameStatsV1 {
             dispatch_pointer_event_time_us: stats.dispatch_pointer_event_time.as_micros() as u64,
             dispatch_timer_events: stats.dispatch_timer_events,
             dispatch_timer_event_time_us: stats.dispatch_timer_event_time.as_micros() as u64,
+            dispatch_timer_targeted_events: stats.dispatch_timer_targeted_events,
+            dispatch_timer_targeted_time_us: stats.dispatch_timer_targeted_time.as_micros() as u64,
+            dispatch_timer_broadcast_events: stats.dispatch_timer_broadcast_events,
+            dispatch_timer_broadcast_time_us: stats.dispatch_timer_broadcast_time.as_micros()
+                as u64,
+            dispatch_timer_broadcast_layers_visited: stats.dispatch_timer_broadcast_layers_visited,
+            dispatch_timer_broadcast_rebuild_visible_layers_time_us: stats
+                .dispatch_timer_broadcast_rebuild_visible_layers_time
+                .as_micros()
+                as u64,
+            dispatch_timer_broadcast_loop_time_us: stats
+                .dispatch_timer_broadcast_loop_time
+                .as_micros() as u64,
+            dispatch_timer_slowest_event_time_us: stats
+                .dispatch_timer_slowest_event_time
+                .as_micros() as u64,
+            dispatch_timer_slowest_token: stats.dispatch_timer_slowest_token.map(|t| t.0),
+            dispatch_timer_slowest_was_broadcast: stats.dispatch_timer_slowest_was_broadcast,
             dispatch_other_events: stats.dispatch_other_events,
             dispatch_other_event_time_us: stats.dispatch_other_event_time.as_micros() as u64,
             hit_test_time_us: stats.hit_test_time.as_micros() as u64,

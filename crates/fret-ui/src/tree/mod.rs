@@ -10,7 +10,7 @@ use fret_core::time::{Duration, Instant};
 use fret_core::{
     AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
     SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextConstraints,
-    Transform2D, UiServices, ViewId,
+    TimerToken, Transform2D, UiServices, ViewId,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService,
@@ -212,6 +212,26 @@ pub struct UiDebugFrameStats {
     pub dispatch_timer_events: u32,
     /// Total wall time spent dispatching timer events during the current frame.
     pub dispatch_timer_event_time: Duration,
+    /// Number of timer events that resolved to an explicit element target.
+    pub dispatch_timer_targeted_events: u32,
+    /// Wall time spent dispatching explicitly targeted timer events.
+    pub dispatch_timer_targeted_time: Duration,
+    /// Number of timer events that fell back to broadcast delivery (no element target).
+    pub dispatch_timer_broadcast_events: u32,
+    /// Wall time spent in broadcast timer delivery (including layer scanning + dispatch).
+    pub dispatch_timer_broadcast_time: Duration,
+    /// Total number of layers visited during broadcast timer delivery.
+    pub dispatch_timer_broadcast_layers_visited: u32,
+    /// Time spent rebuilding the visible-layers scratch list for broadcast timer delivery.
+    pub dispatch_timer_broadcast_rebuild_visible_layers_time: Duration,
+    /// Time spent iterating candidate layers and dispatching broadcast timers.
+    pub dispatch_timer_broadcast_loop_time: Duration,
+    /// Slowest single timer event routing time observed in the current frame.
+    pub dispatch_timer_slowest_event_time: Duration,
+    /// Token of the slowest timer event observed in the current frame (if any).
+    pub dispatch_timer_slowest_token: Option<TimerToken>,
+    /// Whether the slowest timer event used the broadcast fallback.
+    pub dispatch_timer_slowest_was_broadcast: bool,
     /// Number of non-pointer, non-timer events dispatched during the current frame.
     pub dispatch_other_events: u32,
     /// Total wall time spent dispatching non-pointer, non-timer events during the current frame.
@@ -1909,6 +1929,17 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.dispatch_pointer_event_time = Duration::default();
         self.debug_stats.dispatch_timer_events = u32::default();
         self.debug_stats.dispatch_timer_event_time = Duration::default();
+        self.debug_stats.dispatch_timer_targeted_events = u32::default();
+        self.debug_stats.dispatch_timer_targeted_time = Duration::default();
+        self.debug_stats.dispatch_timer_broadcast_events = u32::default();
+        self.debug_stats.dispatch_timer_broadcast_time = Duration::default();
+        self.debug_stats.dispatch_timer_broadcast_layers_visited = u32::default();
+        self.debug_stats
+            .dispatch_timer_broadcast_rebuild_visible_layers_time = Duration::default();
+        self.debug_stats.dispatch_timer_broadcast_loop_time = Duration::default();
+        self.debug_stats.dispatch_timer_slowest_event_time = Duration::default();
+        self.debug_stats.dispatch_timer_slowest_token = None;
+        self.debug_stats.dispatch_timer_slowest_was_broadcast = bool::default();
         self.debug_stats.dispatch_other_events = u32::default();
         self.debug_stats.dispatch_other_event_time = Duration::default();
         self.debug_stats.hit_test_time = Duration::default();

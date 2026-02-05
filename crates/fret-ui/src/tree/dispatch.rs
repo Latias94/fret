@@ -1229,11 +1229,29 @@ impl<H: UiHost> UiTree<H> {
             }
             return;
         }
-        if matches!(event, Event::Timer { .. }) {
-            if let Event::Timer { token } = event
-                && let Some(window) = self.window
-                && let Some(node) = crate::elements::timer_target_node(app, window, *token)
-            {
+        if let Event::Timer { token } = event {
+            let routing_started = self.debug_enabled.then(Instant::now);
+
+            let (timer_had_target, targeted_node) = self
+                .window
+                .map(|window| {
+                    let had_target = crate::elements::timer_has_target(app, window, *token);
+                    let node = if had_target {
+                        crate::elements::timer_target_node(app, window, *token)
+                    } else {
+                        None
+                    };
+                    (had_target, node)
+                })
+                .unwrap_or((false, None));
+            if let Some(node) = targeted_node {
+                if self.debug_enabled {
+                    self.debug_stats.dispatch_timer_targeted_events = self
+                        .debug_stats
+                        .dispatch_timer_targeted_events
+                        .saturating_add(1);
+                }
+
                 let _stopped = self.dispatch_event_to_node_chain(
                     app,
                     services,
@@ -1247,10 +1265,57 @@ impl<H: UiHost> UiTree<H> {
                 if needs_redraw {
                     self.request_redraw_coalesced(app);
                 }
+
+                if let Some(started) = routing_started {
+                    let elapsed = started.elapsed();
+                    self.debug_stats.dispatch_timer_targeted_time += elapsed;
+                    if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                        self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                        self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                        self.debug_stats.dispatch_timer_slowest_was_broadcast = false;
+                    }
+                }
+
                 return;
             }
 
+            if timer_had_target {
+                if let Some(window) = self.window {
+                    crate::elements::clear_timer_target(app, window, *token);
+                }
+                if self.debug_enabled {
+                    self.debug_stats.dispatch_timer_targeted_events = self
+                        .debug_stats
+                        .dispatch_timer_targeted_events
+                        .saturating_add(1);
+                }
+                if let Some(started) = routing_started {
+                    let elapsed = started.elapsed();
+                    self.debug_stats.dispatch_timer_targeted_time += elapsed;
+                    if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                        self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                        self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                        self.debug_stats.dispatch_timer_slowest_was_broadcast = false;
+                    }
+                }
+                return;
+            }
+
+            if self.debug_enabled {
+                self.debug_stats.dispatch_timer_broadcast_events = self
+                    .debug_stats
+                    .dispatch_timer_broadcast_events
+                    .saturating_add(1);
+            }
+
+            let started = self.debug_enabled.then(Instant::now);
             self.rebuild_visible_layers_scratch();
+            if let Some(started) = started {
+                self.debug_stats
+                    .dispatch_timer_broadcast_rebuild_visible_layers_time += started.elapsed();
+            }
+
+            let started = self.debug_enabled.then(Instant::now);
             for i in (0..self.scratch_visible_layers.len()).rev() {
                 let layer_id = self.scratch_visible_layers[i];
                 let Some(layer) = self.layers.get(layer_id) else {
@@ -1258,6 +1323,12 @@ impl<H: UiHost> UiTree<H> {
                 };
                 if !layer.wants_timer_events || !layer.visible {
                     continue;
+                }
+                if self.debug_enabled {
+                    self.debug_stats.dispatch_timer_broadcast_layers_visited = self
+                        .debug_stats
+                        .dispatch_timer_broadcast_layers_visited
+                        .saturating_add(1);
                 }
                 let stopped = self.dispatch_event_to_node_chain(
                     app,
@@ -1273,7 +1344,32 @@ impl<H: UiHost> UiTree<H> {
                     if needs_redraw {
                         self.request_redraw_coalesced(app);
                     }
+                    if let Some(started) = started {
+                        self.debug_stats.dispatch_timer_broadcast_loop_time += started.elapsed();
+                    }
+                    if let Some(started) = routing_started {
+                        let elapsed = started.elapsed();
+                        self.debug_stats.dispatch_timer_broadcast_time += elapsed;
+                        if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                            self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                            self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                            self.debug_stats.dispatch_timer_slowest_was_broadcast = true;
+                        }
+                    }
                     return;
+                }
+            }
+            if let Some(started) = started {
+                self.debug_stats.dispatch_timer_broadcast_loop_time += started.elapsed();
+            }
+
+            if let Some(started) = routing_started {
+                let elapsed = started.elapsed();
+                self.debug_stats.dispatch_timer_broadcast_time += elapsed;
+                if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                    self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                    self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                    self.debug_stats.dispatch_timer_slowest_was_broadcast = true;
                 }
             }
         }

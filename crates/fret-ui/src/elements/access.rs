@@ -101,6 +101,16 @@ pub(crate) fn clear_timer_target<H: UiHost>(app: &mut H, window: AppWindowId, to
     });
 }
 
+pub(crate) fn timer_has_target<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    token: TimerToken,
+) -> bool {
+    app.global::<ElementRuntime>()
+        .and_then(|runtime| runtime.for_window(window))
+        .is_some_and(|st| st.timer_targets.contains_key(&token))
+}
+
 pub(crate) fn timer_target_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
