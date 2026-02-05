@@ -152,6 +152,8 @@ Current status:
   grouping/expanded/rowPinning/globalFilter state shapes.
 - Reset semantics parity gates exist for pinning (`resetRowPinning` / `resetColumnPinning`), including
   `initialState` vs `state` behavior (fixtures: `pinning.json`, `column_pinning.json`).
+- A dedicated reset semantics parity gate exists for the remaining table-level reset surfaces
+  (sorting/filtering/grouping/visibility/order/rowSelection): fixture `resets.json`.
 
 Definition of done:
 

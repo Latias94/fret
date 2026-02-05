@@ -5,6 +5,7 @@ import { execSync } from "child_process"
 
 type CaseId =
   | "demo_process"
+  | "resets"
   | "pagination"
   | "sort_undefined"
   | "sorting_fns"
@@ -26,6 +27,20 @@ type CaseId =
 
 type SnapshotId =
   | "baseline"
+  | "resets_reset_sorting_restores_initial"
+  | "resets_reset_sorting_default_true_clears"
+  | "resets_reset_column_filters_restores_initial"
+  | "resets_reset_column_filters_default_true_clears"
+  | "resets_reset_global_filter_restores_initial"
+  | "resets_reset_global_filter_default_true_clears"
+  | "resets_reset_grouping_restores_initial"
+  | "resets_reset_grouping_default_true_clears"
+  | "resets_reset_column_visibility_restores_initial"
+  | "resets_reset_column_visibility_default_true_clears"
+  | "resets_reset_column_order_restores_initial"
+  | "resets_reset_column_order_default_true_clears"
+  | "resets_reset_row_selection_restores_initial"
+  | "resets_reset_row_selection_default_true_clears"
   | "sorted_cpu_desc"
   | "sorted_cpu_invert_asc"
   | "sorted_cpu_toggle_desc_first"
@@ -650,6 +665,10 @@ type FixtureAction =
       value?: boolean
     }
   | {
+      type: "resetRowSelection"
+      default_state?: boolean
+    }
+  | {
       type: "toggleRowExpanded"
       row_id: string
       value?: boolean
@@ -688,6 +707,30 @@ type FixtureAction =
     }
   | {
       type: "resetPagination"
+      default_state?: boolean
+    }
+  | {
+      type: "resetSorting"
+      default_state?: boolean
+    }
+  | {
+      type: "resetColumnFilters"
+      default_state?: boolean
+    }
+  | {
+      type: "resetGlobalFilter"
+      default_state?: boolean
+    }
+  | {
+      type: "resetGrouping"
+      default_state?: boolean
+    }
+  | {
+      type: "resetColumnVisibility"
+      default_state?: boolean
+    }
+  | {
+      type: "resetColumnOrder"
       default_state?: boolean
     }
   | {
@@ -743,6 +786,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
       const v = argv[i + 1]
       if (
         v !== "demo_process" &&
+        v !== "resets" &&
         v !== "pagination" &&
         v !== "sort_undefined" &&
         v !== "sorting_fns" &&
@@ -771,7 +815,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
     )
   }
   return { out, case_id }
@@ -991,6 +1035,7 @@ async function main(): Promise<void> {
 
   if (
     case_id === "demo_process" ||
+    case_id === "resets" ||
     case_id === "pagination" ||
     case_id === "state_shapes" ||
     case_id === "selection" ||
@@ -2431,6 +2476,13 @@ function snapshotColumnPinning(
         table.toggleAllPageRowsSelected(action.value)
         continue
       }
+      if (action.type === "resetRowSelection") {
+        if (typeof table.resetRowSelection !== "function") {
+          throw new Error("Table has no resetRowSelection")
+        }
+        table.resetRowSelection(action.default_state)
+        continue
+      }
       if (action.type === "toggleRowExpanded") {
         const row = table.getRow(action.row_id)
         if (!row) {
@@ -2504,6 +2556,48 @@ function snapshotColumnPinning(
           throw new Error("Table has no resetPagination")
         }
         table.resetPagination(action.default_state)
+        continue
+      }
+      if (action.type === "resetSorting") {
+        if (typeof table.resetSorting !== "function") {
+          throw new Error("Table has no resetSorting")
+        }
+        table.resetSorting(action.default_state)
+        continue
+      }
+      if (action.type === "resetColumnFilters") {
+        if (typeof table.resetColumnFilters !== "function") {
+          throw new Error("Table has no resetColumnFilters")
+        }
+        table.resetColumnFilters(action.default_state)
+        continue
+      }
+      if (action.type === "resetGlobalFilter") {
+        if (typeof table.resetGlobalFilter !== "function") {
+          throw new Error("Table has no resetGlobalFilter")
+        }
+        table.resetGlobalFilter(action.default_state)
+        continue
+      }
+      if (action.type === "resetGrouping") {
+        if (typeof table.resetGrouping !== "function") {
+          throw new Error("Table has no resetGrouping")
+        }
+        table.resetGrouping(action.default_state)
+        continue
+      }
+      if (action.type === "resetColumnVisibility") {
+        if (typeof table.resetColumnVisibility !== "function") {
+          throw new Error("Table has no resetColumnVisibility")
+        }
+        table.resetColumnVisibility(action.default_state)
+        continue
+      }
+      if (action.type === "resetColumnOrder") {
+        if (typeof table.resetColumnOrder !== "function") {
+          throw new Error("Table has no resetColumnOrder")
+        }
+        table.resetColumnOrder(action.default_state)
         continue
       }
       if (action.type === "toggleGrouping") {
@@ -2932,6 +3026,85 @@ function snapshotColumnPinning(
           pagination: { pageIndex: 0, pageSize: 2 },
         }),
       },
+    ]
+  } else if (case_id === "resets") {
+    const options: TanStackOptions = defaultOptions
+
+    const baseInitialState: Partial<TanStackState> = {
+      sorting: [{ id: "cpu", desc: true }],
+      columnFilters: [{ id: "status", value: "Running" }],
+      globalFilter: "Renderer",
+      grouping: ["status"],
+      rowSelection: { "1": true, "3": true },
+      columnVisibility: { cpu: false },
+      columnOrder: ["mem_mb", "name", "status", "cpu"],
+    }
+
+    const state: TanStackState = {
+      sorting: [{ id: "mem_mb", desc: false }],
+      columnFilters: [{ id: "status", value: "Idle" }],
+      globalFilter: "Idle",
+      grouping: ["name"],
+      rowSelection: { "2": true },
+      columnVisibility: { status: false },
+      columnOrder: ["name", "cpu", "status", "mem_mb"],
+    }
+
+    const mk = (id: SnapshotId, actions: FixtureAction[]) => ({
+      id,
+      options: { ...options, initialState: baseInitialState },
+      state,
+      actions,
+      expect: snapshotForActions(
+        { ...options, initialState: baseInitialState },
+        state,
+        actions,
+      ),
+    })
+
+    snapshots = [
+      mk("resets_reset_sorting_restores_initial", [
+        { type: "resetSorting", default_state: false },
+      ]),
+      mk("resets_reset_sorting_default_true_clears", [
+        { type: "resetSorting", default_state: true },
+      ]),
+      mk("resets_reset_column_filters_restores_initial", [
+        { type: "resetColumnFilters", default_state: false },
+      ]),
+      mk("resets_reset_column_filters_default_true_clears", [
+        { type: "resetColumnFilters", default_state: true },
+      ]),
+      mk("resets_reset_global_filter_restores_initial", [
+        { type: "resetGlobalFilter", default_state: false },
+      ]),
+      mk("resets_reset_global_filter_default_true_clears", [
+        { type: "resetGlobalFilter", default_state: true },
+      ]),
+      mk("resets_reset_grouping_restores_initial", [
+        { type: "resetGrouping", default_state: false },
+      ]),
+      mk("resets_reset_grouping_default_true_clears", [
+        { type: "resetGrouping", default_state: true },
+      ]),
+      mk("resets_reset_column_visibility_restores_initial", [
+        { type: "resetColumnVisibility", default_state: false },
+      ]),
+      mk("resets_reset_column_visibility_default_true_clears", [
+        { type: "resetColumnVisibility", default_state: true },
+      ]),
+      mk("resets_reset_column_order_restores_initial", [
+        { type: "resetColumnOrder", default_state: false },
+      ]),
+      mk("resets_reset_column_order_default_true_clears", [
+        { type: "resetColumnOrder", default_state: true },
+      ]),
+      mk("resets_reset_row_selection_restores_initial", [
+        { type: "resetRowSelection", default_state: false },
+      ]),
+      mk("resets_reset_row_selection_default_true_clears", [
+        { type: "resetRowSelection", default_state: true },
+      ]),
     ]
   } else if (case_id === "pagination") {
     const base = defaultOptions

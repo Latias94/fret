@@ -116,7 +116,18 @@ ColumnDef keys referenced by upstream feature implementations:
 - [x] HTP-state-021 Add fixtures that assert state-shape parity for:
   - grouping, expanded, rowPinning, and cross-feature interactions (e.g. pinning + sizing + visibility).
   - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_shapes.json`
-- [ ] HTP-state-030 Implement “resetX(defaultState?)” semantics where TanStack exposes them.
+- [x] HTP-state-030 Implement “resetX(defaultState?)” semantics where TanStack exposes them.
+  - Done (parity-gated): a dedicated reset parity fixture covering core reset surfaces:
+    `resetSorting`, `resetColumnFilters`, `resetGlobalFilter`, `resetGrouping`,
+    `resetColumnVisibility`, `resetColumnOrder`, `resetRowSelection`.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/resets.json`
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_resets_parity.rs`
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_*`)
+  - Covered elsewhere (feature-specific gates):
+    - Pagination: `resetPageIndex` / `resetPageSize` / `resetPagination` (`pagination.json`)
+    - Expanding: `resetExpanded` (`grouping.json` auto-reset gates + `Table::reset_expanded`)
+    - Column sizing: `resetColumnSizing` / `resetHeaderSizeInfo` / `column.resetSize()` (`column_sizing.json`)
+    - Pinning: `resetRowPinning` / `resetColumnPinning` (`pinning.json`, `column_pinning.json`)
 
 ---
 

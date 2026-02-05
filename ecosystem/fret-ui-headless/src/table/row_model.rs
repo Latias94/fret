@@ -1272,6 +1272,69 @@ impl<'a, TData> Table<'a, TData> {
         }
     }
 
+    /// TanStack-aligned: `table.resetRowSelection(defaultState?)`.
+    pub fn reset_row_selection(&self, default_state: bool) -> super::RowSelectionState {
+        if default_state {
+            super::RowSelectionState::default()
+        } else {
+            self.initial_state.row_selection.clone()
+        }
+    }
+
+    /// TanStack-aligned: `table.resetSorting(defaultState?)`.
+    pub fn reset_sorting(&self, default_state: bool) -> super::SortingState {
+        if default_state {
+            super::SortingState::default()
+        } else {
+            self.initial_state.sorting.clone()
+        }
+    }
+
+    /// TanStack-aligned: `table.resetColumnFilters(defaultState?)`.
+    pub fn reset_column_filters(&self, default_state: bool) -> super::ColumnFiltersState {
+        if default_state {
+            super::ColumnFiltersState::default()
+        } else {
+            self.initial_state.column_filters.clone()
+        }
+    }
+
+    /// TanStack-aligned: `table.resetGlobalFilter(defaultState?)`.
+    pub fn reset_global_filter(&self, default_state: bool) -> super::GlobalFilterState {
+        if default_state {
+            super::GlobalFilterState::default()
+        } else {
+            self.initial_state.global_filter.clone()
+        }
+    }
+
+    /// TanStack-aligned: `table.resetGrouping(defaultState?)`.
+    pub fn reset_grouping(&self, default_state: bool) -> super::GroupingState {
+        if default_state {
+            super::GroupingState::default()
+        } else {
+            self.initial_state.grouping.clone()
+        }
+    }
+
+    /// TanStack-aligned: `table.resetColumnVisibility(defaultState?)`.
+    pub fn reset_column_visibility(&self, default_state: bool) -> super::ColumnVisibilityState {
+        if default_state {
+            super::ColumnVisibilityState::default()
+        } else {
+            self.initial_state.column_visibility.clone()
+        }
+    }
+
+    /// TanStack-aligned: `table.resetColumnOrder(defaultState?)`.
+    pub fn reset_column_order(&self, default_state: bool) -> super::ColumnOrderState {
+        if default_state {
+            super::ColumnOrderState::default()
+        } else {
+            self.initial_state.column_order.clone()
+        }
+    }
+
     pub fn row_is_pinned(&self, row_key: RowKey) -> Option<super::RowPinPosition> {
         super::is_row_pinned(row_key, &self.state.row_pinning)
     }
