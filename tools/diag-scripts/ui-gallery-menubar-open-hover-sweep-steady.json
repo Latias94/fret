@@ -28,7 +28,17 @@
 
     { "type": "wait_frames", "n": 2 },
     { "type": "reset_diagnostics" },
-    { "type": "wait_frames", "n": 6 },
+
+    {
+      "type": "move_pointer_sweep",
+      "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-app-open" },
+      "delta_x": 0.0,
+      "delta_y": 160.0,
+      "steps": 24,
+      "frames_per_step": 1
+    },
+
+    { "type": "wait_frames", "n": 2 },
     { "type": "reset_diagnostics" },
 
     {
