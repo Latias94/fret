@@ -219,7 +219,13 @@ impl ConversationTranscript {
 
         let mut options = fret_ui::element::VirtualListOptions::new(Px(64.0), 8);
         options.items_revision = revision;
-        options.gap = decl_style::space(&theme, content_gap);
+        options.gap = if content_gap == Space::N8 {
+            theme
+                .metric_by_key("fret.ai.conversation.gap")
+                .unwrap_or_else(|| decl_style::space(&theme, content_gap))
+        } else {
+            decl_style::space(&theme, content_gap)
+        };
 
         let list_layout = LayoutStyle {
             size: fret_ui::element::SizeStyle {
@@ -240,7 +246,13 @@ impl ConversationTranscript {
             row,
         );
 
-        let padding_px = decl_style::space(&theme, content_padding);
+        let padding_px = if content_padding == Space::N4 {
+            theme
+                .metric_by_key("fret.ai.conversation.padding")
+                .unwrap_or_else(|| decl_style::space(&theme, content_padding))
+        } else {
+            decl_style::space(&theme, content_padding)
+        };
         let list = cx.container(
             ContainerProps {
                 layout: LayoutStyle {
@@ -302,6 +314,12 @@ impl ConversationTranscript {
                             .right(Space::N0)
                             .bottom(Space::N4),
                     );
+                    let mut overlay_layout = overlay_layout;
+                    if let Some(bottom) =
+                        theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
+                    {
+                        overlay_layout.inset.bottom = Some(bottom);
+                    }
 
                     let button_for_row = button.clone();
                     out.push(cx.container(
@@ -461,7 +479,13 @@ impl Conversation {
         let content_padding = self.content_padding;
         let content_gap = self.content_gap;
         let children = self.children;
-        let padding_px = decl_style::space(&theme, content_padding);
+        let padding_px = if content_padding == Space::N4 {
+            theme
+                .metric_by_key("fret.ai.conversation.padding")
+                .unwrap_or_else(|| decl_style::space(&theme, content_padding))
+        } else {
+            decl_style::space(&theme, content_padding)
+        };
         let content = cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
@@ -517,6 +541,12 @@ impl Conversation {
                             .right(Space::N0)
                             .bottom(Space::N4),
                     );
+                    let mut overlay_layout = overlay_layout;
+                    if let Some(bottom) =
+                        theme.metric_by_key("fret.ai.conversation.scroll_button.offset_bottom")
+                    {
+                        overlay_layout.inset.bottom = Some(bottom);
+                    }
 
                     let button_for_row = button.clone();
                     out.push(cx.container(

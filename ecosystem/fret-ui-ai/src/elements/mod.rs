@@ -1,19 +1,27 @@
 mod ai_conversation;
 mod conversation;
+mod conversation_download;
+mod conversation_empty_state;
+mod conversation_scroll_button;
 mod inline_citation;
 mod message;
 mod message_parts;
 mod message_response;
+mod message_toolbar;
 mod prompt_input;
 mod sources_block;
 mod tool_call_block;
 
 pub use ai_conversation::*;
 pub use conversation::*;
+pub use conversation_download::*;
+pub use conversation_empty_state::*;
+pub use conversation_scroll_button::*;
 pub use inline_citation::*;
 pub use message::*;
 pub use message_parts::*;
 pub use message_response::*;
+pub use message_toolbar::*;
 pub use prompt_input::*;
 pub use sources_block::*;
 pub use tool_call_block::*;

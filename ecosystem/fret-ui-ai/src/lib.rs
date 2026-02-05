@@ -6,9 +6,9 @@ pub mod elements;
 pub mod model;
 
 pub use elements::{
-    AiConversationTranscript, Conversation, ConversationMessage, ConversationTranscript,
-    InlineCitation, Message, MessageParts, MessageResponse, PromptInput, SourcesBlock,
-    ToolCallBlock,
+    AiConversationTranscript, Conversation, ConversationDownload, ConversationEmptyState,
+    ConversationMessage, ConversationScrollButton, ConversationTranscript, InlineCitation, Message,
+    MessageParts, MessageResponse, MessageToolbar, PromptInput, SourcesBlock, ToolCallBlock,
 };
 pub use model::{
     AiMessage, CitationItem, ExternalId, MarkdownPart, MessageId, MessagePart, MessageRole,

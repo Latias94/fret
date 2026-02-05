@@ -242,7 +242,13 @@ impl AiConversationTranscript {
 
         let mut options = fret_ui::element::VirtualListOptions::new(Px(96.0), 8);
         options.items_revision = revision;
-        options.gap = decl_style::space(&theme, content_gap);
+        options.gap = if content_gap == Space::N8 {
+            theme
+                .metric_by_key("fret.ai.conversation.gap")
+                .unwrap_or_else(|| decl_style::space(&theme, content_gap))
+        } else {
+            decl_style::space(&theme, content_gap)
+        };
 
         let list_layout = LayoutStyle {
             size: fret_ui::element::SizeStyle {
@@ -263,7 +269,13 @@ impl AiConversationTranscript {
             row,
         );
 
-        let padding_px = decl_style::space(&theme, content_padding);
+        let padding_px = if content_padding == Space::N4 {
+            theme
+                .metric_by_key("fret.ai.conversation.padding")
+                .unwrap_or_else(|| decl_style::space(&theme, content_padding))
+        } else {
+            decl_style::space(&theme, content_padding)
+        };
         let list = cx.container(
             ContainerProps {
                 layout: decl_style::layout_style(&theme, layout),

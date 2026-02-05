@@ -47,26 +47,60 @@ impl Message {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        fn role_bg_key(role: MessageRole) -> &'static str {
+            match role {
+                MessageRole::User => "fret.ai.message.user.bg",
+                MessageRole::Assistant => "fret.ai.message.assistant.bg",
+                MessageRole::System => "fret.ai.message.system.bg",
+                MessageRole::Tool => "fret.ai.message.tool.bg",
+            }
+        }
+
+        fn role_fg_key(role: MessageRole) -> &'static str {
+            match role {
+                MessageRole::User => "fret.ai.message.user.fg",
+                MessageRole::Assistant => "fret.ai.message.assistant.fg",
+                MessageRole::System => "fret.ai.message.system.fg",
+                MessageRole::Tool => "fret.ai.message.tool.fg",
+            }
+        }
+
         let chrome = match self.role {
             MessageRole::User => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("primary")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("primary"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
             MessageRole::Assistant => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("card")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("card"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
             MessageRole::System => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("muted")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("muted"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
             MessageRole::Tool => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("secondary")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("secondary"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
         }
         .rounded(Radius::Lg)
         .p(Space::N4);
 
         let fg = match self.role {
-            MessageRole::User => theme.color_required("primary-foreground"),
-            _ => theme.color_required("foreground"),
+            MessageRole::User => theme
+                .color_by_key(role_fg_key(self.role))
+                .unwrap_or_else(|| theme.color_required("primary-foreground")),
+            _ => theme
+                .color_by_key(role_fg_key(self.role))
+                .unwrap_or_else(|| theme.color_required("foreground")),
         };
 
         let content = match self.body {

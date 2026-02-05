@@ -4,7 +4,7 @@ use fret_core::Px;
 use fret_runtime::Model;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 
@@ -119,6 +119,8 @@ impl PromptInput {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+
         let current = cx
             .get_model_cloned(&self.model, Invalidation::Paint)
             .unwrap_or_default();
@@ -147,6 +149,14 @@ impl PromptInput {
 
         let send_disabled = self.disabled || self.loading || is_empty;
         let stop_disabled = self.disabled || !self.loading;
+
+        let textarea_min_height = if self.textarea_min_height == Px(96.0) {
+            theme
+                .metric_by_key("fret.ai.prompt_input.min_height")
+                .unwrap_or(self.textarea_min_height)
+        } else {
+            self.textarea_min_height
+        };
 
         let send_button = (!self.loading).then(|| {
             let mut btn = Button::new("Send")
@@ -195,7 +205,7 @@ impl PromptInput {
 
         let mut group = InputGroup::new(self.model)
             .textarea()
-            .textarea_min_height(self.textarea_min_height)
+            .textarea_min_height(textarea_min_height)
             .block_end(vec![actions])
             .block_end_border_top(true)
             .refine_layout(self.layout.w_full());
