@@ -11,17 +11,18 @@ use fret_ui_kit::{LayoutRefinement, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, ScrollArea};
 
+use crate::model::MessageId;
 use crate::{Message, MessageRole};
 
 #[derive(Debug, Clone)]
 pub struct ConversationMessage {
-    pub id: u64,
+    pub id: MessageId,
     pub role: MessageRole,
     pub text: Arc<str>,
 }
 
 impl ConversationMessage {
-    pub fn new(id: u64, role: MessageRole, text: impl Into<Arc<str>>) -> Self {
+    pub fn new(id: MessageId, role: MessageRole, text: impl Into<Arc<str>>) -> Self {
         Self {
             id,
             role,
