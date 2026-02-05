@@ -94,11 +94,15 @@ Current “Zed feel” probe:
 Findings (macOS Apple M4; repeat=7):
 
 - With bounds-tree enabled *and cached-path skipped*, pointer-move hit testing is effectively solved for this probe:
-  - `hit_test_time_us`: p50 ~3us, p95 ~5us, max ~10us (across runs).
-  - `dispatch_time_us`: p50 ~129us, p95 ~250us, max ~357us (across runs).
+  - `hit_test_time_us`: p50 ~3us, p95 ~3us, max ~10us (across runs).
+  - `dispatch_time_us`: p50 ~221us, p95 ~242us, max ~289us (across runs).
 - Micro timer breakdown shows why this mattered:
   - Before the skip, `try_hit_test_along_cached_path` dominated hit-test time due to conservative sibling scanning.
   - Bounds-tree query time was already single-digit microseconds.
+- Dispatch micro timers are now exported to attribute the post-hit-test remainder:
+  - `dispatch_widget_bubble_time_us`, `dispatch_input_context_time_us`, `dispatch_hover_update_time_us`, etc.
+  - Early finding: these explain only a small fraction of `dispatch_time_us` at microsecond granularity, suggesting the
+    remaining cost is in pointer routing / bookkeeping not yet timed (or in sub-micro segments that round down).
 - Cached-path reuse remains low on the stripes sweep workload (pointer crosses many regions):
   - With bounds-tree disabled (A/B), hit testing rises to ~2ms p50 and can spike to ~4ms, and cached-path hit rate is
     still ~2.1%.
@@ -111,7 +115,7 @@ Implication:
 Evidence:
 
 - Perf log entries under:
-  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`)
+  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`, `7fa76fd5`)
 
 ## 1) What GPUI does that matters for smoothness
 

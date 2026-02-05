@@ -252,6 +252,24 @@ Correctness acceptance:
   - [x] Remove cached-path overhead when bounds-tree is enabled.
     - Implemented by `perf(fret-ui): skip cached-path hit-test under bounds-tree` (commit `8bc15eda`).
     - Result: pointer-move `hit_test_time_us` p50 ~575us → ~3us on the stripes torture probe.
+  - [x] Export a coarse dispatch sub-step timing breakdown for pointer-move triage.
+    - Exports (per-frame, accumulated across the frame’s dispatch work):
+      - `dispatch_hover_update_time_us`
+      - `dispatch_scroll_handle_invalidation_time_us`
+      - `dispatch_active_layers_time_us`
+      - `dispatch_input_context_time_us`
+      - `dispatch_event_chain_build_time_us`
+      - `dispatch_widget_capture_time_us`
+      - `dispatch_widget_bubble_time_us`
+      - `dispatch_cursor_query_time_us`
+      - `dispatch_pointer_move_layer_observers_time_us`
+    - Wired into: `fretboard diag stats --json` (so a worst bundle can be inspected without manual JSON digging).
+    - Implemented by `feat(diag): break down dispatch timing` (commit `7fa76fd5`).
+    - Evidence: perf log entry for commit `7fa76fd5`.
+  - [ ] Close the dispatch accounting gap on pointer-move by timing pointer routing/bookkeeping.
+    - Add a coarse timer for the pointer-specific dispatch block (to explain the remaining ~200us not covered by the
+      first breakdown timers at microsecond granularity).
+    - Deliverable: a perf log entry showing the new timer explains most of `dispatch_time_us` for the probe.
   - A/B experiments:
     - [x] Run the pointer-move gate with `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and record:
       - `hit_test_time_us` distribution, and

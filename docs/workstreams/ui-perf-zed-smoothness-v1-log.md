@@ -2939,3 +2939,56 @@ Result:
 Takeaway:
 - Without bounds-tree, this workload is ~2ms per pointer-move frame (and can spike to ~4ms). For Tier B “Zed feel”,
   bounds-tree (or an equivalent spatial index) is mandatory.
+
+## 2026-02-05 10:08:53 (commit `7fa76fd5`)
+
+Change:
+- feat(diag): break down dispatch timing
+
+Why:
+- After `8bc15eda`, pointer-move hit testing is in the single-digit microseconds for the stripes torture probe, but the
+  remaining dispatch time still matters for Tier B “Zed feel”.
+- We need concrete, per-frame signals for **where dispatch time goes** (input bookkeeping vs routing vs widget hooks)
+  so future refactors have a measurable target.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-dispatch-breakdown-7fa76fd5 \
+  --timeout-ms 300000 --poll-ms 200 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --max-pointer-move-dispatch-us 800 \
+  --max-pointer-move-hit-test-us 100 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; 192 pointer-move frames per run):
+- Pointer-move frame costs:
+  - `dispatch_time_us`: p50 ~221, p95 ~242, max (across runs) 289
+  - `hit_test_time_us`: p50 ~3, p95 ~3, max (across runs) 10
+- Hit-test sub-steps (per frame, accumulated across hit-test queries):
+  - `hit_test_bounds_tree_query_time_us`: p50 ~2, p95 ~2, max 9
+  - `hit_test_cached_path_time_us`: p50 ~0 (skipped under bounds-tree)
+- Dispatch sub-steps (per frame):
+  - `dispatch_widget_bubble_time_us`: p50 ~3, p95 ~5, max 13
+  - `dispatch_input_context_time_us`: p50 ~1, p95 ~2, max 12
+  - `dispatch_hover_update_time_us`: p50 ~1, p95 ~2, max 11
+  - `dispatch_cursor_query_time_us`: p50 ~1, p95 ~1, max 3
+  - `dispatch_active_layers_time_us`: p50 ~0, p95 ~0, max 3
+  - `dispatch_event_chain_build_time_us`: p50 ~0 (sub-micro in this probe; rounds down)
+
+Takeaway:
+- The newly exported micro timers explain only a small fraction of the observed `dispatch_time_us`. This likely means
+  a significant part of pointer-move dispatch cost is currently in **pointer routing / bookkeeping** not covered by the
+  initial instrumentation points (or in code paths that round down to 0us at microsecond granularity).
+- Next step: add a coarse “dispatch pointer routing” timer around the pointer-specific dispatch block to close the
+  accounting gap before attempting deeper algorithmic refactors.
+
+Bundles:
+- Run dir: `target/fret-diag-perf/2026-02-05-pointer-move-r7-dispatch-breakdown-7fa76fd5/`
+- Worst-by-dispatch (also worst-by-hit): `target/fret-diag-perf/2026-02-05-pointer-move-r7-dispatch-breakdown-7fa76fd5/1770256617791-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
