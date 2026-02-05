@@ -3998,3 +3998,44 @@ Takeaway:
 - This workload is currently bounded by CPU-side scene construction inside a `Canvas` element (not text prepares).
   Closing the gap to GPUI/Zed here likely requires more aggressive retained/replay strategies for editor-class surfaces
   (e.g. windowed line reuse + cheaper per-frame scene rebuild).
+
+## 2026-02-05 17:48:00 (commit `78a7cd87`)
+
+Change:
+- Rerun a small “sanity baseline” set to verify whether earlier numbers drift (they can, due to timing and warmup).
+- Generate a fresh `ui-gallery-steady` perf baseline snapshot (`macos-m4.v7`).
+- Stabilize the menubar hover-sweep “steady” script by adding an extra post-reset warmup + reset.
+
+Rerun probes:
+- Script: `tools/diag-scripts/ui-gallery-menubar-open-hover-sweep-steady.json`
+- Bundle:
+  - `target/fret-diag-codex-rerun-menubar-sweep/1770313101809-script-step-0013-press_key/bundle.json`
+
+Results:
+- Observed `paint_text_prepare_calls=sum=1 (max=1)` in the captured bundle.
+  - Single hotspot: `kind=Text`, `text_len=167`, `prepare_time_us=325`, `reasons_mask=blob_missing|scale_changed|width_changed`.
+- Interpretation: still not a per-frame churn pattern (a single late “first visible paint” can slip past the script reset).
+  The script now includes an extra warmup + reset to reduce this flakiness for future runs.
+
+Rerun probes:
+- Script: `tools/diag-scripts/ui-gallery-menubar-reopen-after-close.json`
+- Bundle:
+  - `target/fret-diag-codex-rerun-menubar-reopen/1770313229786-script-step-0016-press_key/bundle.json`
+
+Results:
+- After the post-close `reset_diagnostics`, the second open stays at `paint_text_prepare_calls==0` (no prepare hotspots).
+
+Rerun probes:
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+- Bundle:
+  - `target/fret-diag-codex-rerun-codeeditor-autoscroll/1770313271320-script-step-0011-press_key/bundle.json`
+
+Worst frame (by `paint_time_us`):
+- `paint_time_us=5149` (`paint_widget_time_us=5113`)
+- `paint_widget_hotspots` dominated by `kind=Canvas`: `us=5096 ops=581/581`
+- Renderer signals on the same worst run: `encode_scene_us=633`, `prepare_text_us=495`
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v7.json`
+- Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - Evidence bundle: `target/fret-diag/1770313439094-ui-gallery-window-resize-stress-steady/bundle.json`
