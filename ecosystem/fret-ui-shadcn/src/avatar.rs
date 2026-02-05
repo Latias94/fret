@@ -4,10 +4,11 @@ use fret_core::{ImageId, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, ImageProps,
-    InteractivityGateProps, MainAlign, Overflow,
+    InteractivityGateProps, LayoutStyle, Length, MainAlign, Overflow, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::avatar as radix_avatar;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -140,6 +141,12 @@ impl AvatarImage {
             let image = self.source.resolve(cx);
 
             let present = image.is_some();
+            let mut gate_layout = LayoutStyle::default();
+            gate_layout.size = SizeStyle {
+                width: Length::Fill,
+                height: Length::Fill,
+                ..Default::default()
+            };
             let children = if let Some(image) = image {
                 let theme = Theme::global(&*cx.app).clone();
                 let layout = LayoutRefinement::default()
@@ -151,10 +158,16 @@ impl AvatarImage {
 
                 let wrapper = decl_style::container_props(&theme, self.chrome, layout);
                 let opacity = self.opacity.clamp(0.0, 1.0);
+                let mut image_layout = LayoutStyle::default();
+                image_layout.size = SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                };
 
                 vec![cx.container(wrapper, move |cx| {
                     vec![cx.image_props(ImageProps {
-                        layout: Default::default(),
+                        layout: image_layout,
                         image,
                         opacity,
                         uv: None,
@@ -167,6 +180,7 @@ impl AvatarImage {
             AnyElement::new(
                 id,
                 ElementKind::InteractivityGate(InteractivityGateProps {
+                    layout: gate_layout,
                     present,
                     interactive: false,
                     ..Default::default()
@@ -259,6 +273,10 @@ impl AvatarFallback {
                 cx.with_state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
                     gate.drive(now_frame, self.delay_frames, want_render)
                 });
+            scheduling::set_continuous_frames(
+                cx,
+                want_render && self.delay_frames.is_some() && !delay_ready,
+            );
 
             let present = if self.show_when_image_missing.is_some() {
                 radix_avatar::fallback_visible(status, delay_ready)
@@ -322,6 +340,14 @@ impl AvatarFallback {
             AnyElement::new(
                 id,
                 ElementKind::InteractivityGate(InteractivityGateProps {
+                    layout: LayoutStyle {
+                        size: SizeStyle {
+                            width: Length::Fill,
+                            height: Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
                     present,
                     interactive: false,
                     ..Default::default()
@@ -342,7 +368,7 @@ mod tests {
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
         TextConstraints, TextMetrics, TextService,
     };
-    use fret_runtime::FrameId;
+    use fret_runtime::{Effect, FrameId};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -506,5 +532,136 @@ mod tests {
         ui.request_semantics_snapshot();
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(!snapshot_contains_label(&snap, "JD"));
+    }
+
+    #[test]
+    fn avatar_image_uses_fill_layout_when_image_is_ready() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let image = app.models_mut().insert(Some(ImageId::default()));
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            0,
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let root = ui.base_root().expect("root");
+        let avatar = ui
+            .children(root)
+            .first()
+            .copied()
+            .expect("expected avatar element");
+        let avatar_bounds = ui.debug_node_bounds(avatar).expect("avatar bounds");
+        assert!(
+            avatar_bounds.size.width.0 > 1.0 && avatar_bounds.size.height.0 > 1.0,
+            "expected avatar to have non-zero bounds, got {avatar_bounds:?}"
+        );
+
+        let image_gate = ui
+            .children(avatar)
+            .first()
+            .copied()
+            .expect("expected image gate element");
+        let gate_bounds = ui.debug_node_bounds(image_gate).expect("image gate bounds");
+        assert!(
+            gate_bounds.size.width.0 > 1.0 && gate_bounds.size.height.0 > 1.0,
+            "expected image gate to have non-zero bounds, got {gate_bounds:?}"
+        );
+
+        let image_wrapper = ui
+            .children(image_gate)
+            .first()
+            .copied()
+            .expect("expected image wrapper element");
+        let wrapper_bounds = ui
+            .debug_node_bounds(image_wrapper)
+            .expect("image wrapper bounds");
+        assert!(
+            wrapper_bounds.size.width.0 > 1.0 && wrapper_bounds.size.height.0 > 1.0,
+            "expected image wrapper to have non-zero bounds, got {wrapper_bounds:?}"
+        );
+
+        let image_node = ui
+            .children(image_wrapper)
+            .first()
+            .copied()
+            .expect("expected image node");
+        let image_bounds = ui.debug_node_bounds(image_node).expect("image bounds");
+        assert!(
+            image_bounds.size.width.0 > 1.0 && image_bounds.size.height.0 > 1.0,
+            "expected image to have non-zero bounds, got {image_bounds:?}"
+        );
+    }
+
+    #[test]
+    fn avatar_fallback_delay_requests_animation_frames_while_pending() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let image = app.models_mut().insert(None::<ImageId>);
+
+        let mut services = FakeServices::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            10,
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "expected RequestAnimationFrame while avatar fallback delay is pending"
+        );
+
+        let _ = app
+            .models_mut()
+            .update(&image, |v| *v = Some(ImageId::default()));
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            image.clone(),
+            10,
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            !effects
+                .iter()
+                .any(|e| matches!(e, Effect::RequestAnimationFrame(w) if *w == window)),
+            "did not expect RequestAnimationFrame after avatar image becomes available"
+        );
     }
 }

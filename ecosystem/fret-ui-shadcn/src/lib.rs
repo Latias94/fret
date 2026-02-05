@@ -91,6 +91,7 @@ pub mod typography;
 pub mod app_integration;
 
 mod surface_slot;
+mod test_id;
 mod ui_builder_ext;
 mod ui_ext;
 
@@ -113,11 +114,13 @@ pub use badge::{Badge, BadgeVariant};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonSize, ButtonVariant};
 pub use button_group::{ButtonGroup, ButtonGroupItem, ButtonGroupOrientation};
-pub use calendar::Calendar;
+pub use calendar::{Calendar, CalendarCaptionLayout};
 pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
-pub use card::{Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle};
+pub use card::{
+    Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
+};
 pub use carousel::{Carousel, CarouselOrientation};
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,

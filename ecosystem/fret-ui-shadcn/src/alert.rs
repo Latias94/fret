@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{FontWeight, SemanticsRole, TextWrap};
-use fret_ui::element::{AnyElement, SemanticsProps};
+use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
@@ -100,13 +100,7 @@ fn alert_with_patch<H: UiHost>(
     );
 
     let container = shadcn_layout::container_vstack_gap(cx, props, Space::N1p5, children);
-    cx.semantics(
-        SemanticsProps {
-            role: SemanticsRole::Alert,
-            ..Default::default()
-        },
-        move |_cx| vec![container],
-    )
+    container.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Alert))
 }
 
 #[derive(Debug, Clone)]
@@ -170,5 +164,38 @@ impl AlertDescription {
             .wrap(TextWrap::Word)
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    #[test]
+    fn alert_stamps_role_without_layout_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Alert::new([cx.text("Hello")]).into_element(cx)
+        });
+
+        assert!(
+            !matches!(element.kind, ElementKind::Semantics(_)),
+            "expected Alert to avoid `Semantics` wrappers; use `attach_semantics` instead"
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Alert)
+        );
     }
 }

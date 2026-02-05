@@ -9,7 +9,11 @@ use fret_runtime::{FrameId, TickId};
 
 const CMD_ADD: &str = "todo-interop-kit.add";
 const CMD_CLEAR_DONE: &str = "todo-interop-kit.clear_done";
-const CMD_REMOVE_PREFIX: &str = "todo-interop-kit.remove.";
+
+#[derive(Debug, Clone)]
+enum Msg {
+    Remove(u64),
+}
 
 #[derive(Clone)]
 struct TodoItem {
@@ -21,6 +25,7 @@ struct TodoItem {
 struct TodoInteropKitState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
+    router: MessageRouter<Msg>,
     next_id: u64,
 
     embedded: embedded::EmbeddedViewportSurface,
@@ -100,9 +105,11 @@ fn init_window(app: &mut App, window: AppWindowId) -> TodoInteropKitState {
 
     let draft = app.models_mut().insert(String::new());
 
+    let prefix = format!("todo-interop-kit-demo.{window:?}.");
     TodoInteropKitState {
         todos,
         draft,
+        router: MessageRouter::new(prefix),
         next_id: 3,
         embedded: embedded::EmbeddedViewportSurface::new(
             wgpu::TextureFormat::Bgra8UnormSrgb,
@@ -116,6 +123,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> fret_
     let Some(models) = embedded::models(&*cx.app, cx.window) else {
         return vec![cx.text("Embedded viewport models are not installed.")].into();
     };
+    st.router.clear();
+
     cx.watch_model(&st.draft).layout().observe();
 
     let theme = Theme::global(&*cx.app).clone();
@@ -138,8 +147,9 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> fret_
         .copied()
         .unwrap_or_default();
 
+    let draft = st.draft.clone();
     let root = ui::container(cx, |cx| {
-        let left = todo_panel(cx, &theme, st, &todos);
+        let left = todo_panel(cx, &theme, draft.clone(), &todos, &mut st.router);
         let right = external_panel(cx, &st.embedded, target, clicks, last_input);
 
         [ui::h_flex(cx, move |_cx| [left, right])
@@ -161,12 +171,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoInteropKitState) -> fret_
 fn todo_panel(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
-    st: &TodoInteropKitState,
+    draft: Model<String>,
     todos: &[TodoItem],
+    router: &mut MessageRouter<Msg>,
 ) -> AnyElement {
     let header = shadcn::CardHeader::new([shadcn::CardTitle::new("Todo").into_element(cx)]);
 
-    let draft = shadcn::Input::new(st.draft.clone())
+    let draft_input = shadcn::Input::new(draft)
         .a11y_label("Todo")
         .placeholder("New task...")
         .submit_command(CommandId::new(CMD_ADD))
@@ -180,12 +191,19 @@ fn todo_panel(
         .on_click(CMD_CLEAR_DONE)
         .into_element(cx);
 
+    let rows: Vec<(TodoItem, CommandId)> = todos
+        .iter()
+        .cloned()
+        .map(|t| {
+            let remove_cmd = router.cmd(Msg::Remove(t.id));
+            (t, remove_cmd)
+        })
+        .collect();
+
     let list = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-        let mut out = Vec::new();
-        for t in todos {
-            out.push(todo_row(cx, theme, t));
-        }
-        out
+        rows.iter()
+            .map(|(t, remove_cmd)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, remove_cmd.clone())))
+            .collect::<Vec<_>>()
     });
 
     let body = shadcn::CardContent::new([
@@ -195,7 +213,7 @@ fn todo_panel(
                 .gap(Space::N2)
                 .items_center()
                 .layout(LayoutRefinement::default().w_full()),
-            move |_cx| [draft, add, clear_done],
+            move |_cx| [draft_input, add, clear_done],
         ),
         list,
     ]);
@@ -205,7 +223,12 @@ fn todo_panel(
         .into_element(cx)
 }
 
-fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) -> AnyElement {
+fn todo_row(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    item: &TodoItem,
+    remove_cmd: CommandId,
+) -> AnyElement {
     let checkbox = shadcn::Checkbox::new(item.done.clone())
         .a11y_label("Done")
         .into_element(cx);
@@ -213,7 +236,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
     let remove = shadcn::Button::new("Remove")
         .variant(shadcn::ButtonVariant::Ghost)
         .size(shadcn::ButtonSize::Sm)
-        .on_click(CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", item.id)))
+        .on_click(remove_cmd)
         .into_element(cx);
 
     let row = ui::h_flex(cx, move |_cx| [checkbox, text, remove])
@@ -316,8 +339,11 @@ fn on_command(
                 .update(&st.todos, |v| v.retain(|t| !done_ids.contains(&t.id)));
         }
         _ => {
-            if let Some(rest) = command.as_str().strip_prefix(CMD_REMOVE_PREFIX) {
-                if let Ok(id) = rest.parse::<u64>() {
+            let Some(msg) = st.router.try_take(command) else {
+                return;
+            };
+            match msg {
+                Msg::Remove(id) => {
                     let _ = app
                         .models_mut()
                         .update(&st.todos, |v| v.retain(|t| t.id != id));

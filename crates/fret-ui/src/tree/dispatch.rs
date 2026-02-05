@@ -2495,6 +2495,19 @@ impl<H: UiHost> UiTree<H> {
             self.captured.remove(&pointer_id);
         }
 
+        if matches!(event, Event::PointerCancel(_))
+            && let Some(window) = self.window
+            && let Some(prev_node) = crate::elements::set_pressed_pressable(app, window, None)
+        {
+            needs_redraw = true;
+            self.mark_invalidation_dedup_with_source(
+                prev_node,
+                Invalidation::Paint,
+                &mut invalidation_visited,
+                UiDebugInvalidationSource::Other,
+            );
+        }
+
         if let Event::PointerCancel(e) = event
             && let Some(window) = self.window
             && pointer_type_supports_hover(e.pointer_type)
