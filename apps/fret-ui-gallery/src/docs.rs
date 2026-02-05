@@ -484,6 +484,28 @@ let transcript = ConversationTranscript::new(vec![
 ```
 "#;
 
+pub(crate) const DOC_AI_CHAT_DEMO: &str = r#"
+## AI chat (demo)
+
+This page is a small, interactive demo for the `fret-ui-ai` chat surfaces:
+
+- `ConversationTranscript` for a short transcript,
+- `PromptInput` for composing + sending messages,
+- stable `test_id` anchors for automation.
+
+It exists to validate:
+
+- prompt input ergonomics (send/stop/disabled/loading),
+- transcript append behavior + stick-to-bottom eligibility,
+- a keyboard-first automation path via `fretboard diag`.
+"#;
+
+pub(crate) const USAGE_AI_CHAT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{ConversationTranscript, PromptInput};
+```
+"#;
+
 pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
 ## Inspector (torture harness)
 

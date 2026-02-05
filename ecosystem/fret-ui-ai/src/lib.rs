@@ -7,6 +7,7 @@ pub mod model;
 
 pub use elements::{
     Conversation, ConversationMessage, ConversationTranscript, Message, MessageResponse,
+    PromptInput,
 };
 pub use model::{
     AiMessage, ExternalId, MessageId, MessagePart, MessageRole, SourceItem, ToolCall,
