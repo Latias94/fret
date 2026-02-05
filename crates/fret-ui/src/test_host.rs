@@ -15,6 +15,7 @@ use fret_runtime::{FrameId, TickId};
 #[derive(Default)]
 pub(crate) struct TestHost {
     globals: HashMap<TypeId, Box<dyn Any>>,
+    global_revisions: HashMap<TypeId, u64>,
     models: ModelStore,
     commands: CommandRegistry,
     redraw: HashSet<AppWindowId>,
@@ -151,6 +152,10 @@ impl TestHost {
 impl GlobalsHost for TestHost {
     fn set_global<T: Any>(&mut self, value: T) {
         self.globals.insert(TypeId::of::<T>(), Box::new(value));
+        self.global_revisions
+            .entry(TypeId::of::<T>())
+            .and_modify(|rev| *rev = rev.saturating_add(1))
+            .or_insert(1);
     }
 
     fn global<T: Any>(&self) -> Option<&T> {
@@ -159,7 +164,70 @@ impl GlobalsHost for TestHost {
             .and_then(|v| v.downcast_ref::<T>())
     }
 
+    fn global_revision(&self, global: TypeId) -> Option<u64> {
+        self.global_revisions.get(&global).copied()
+    }
+
     fn with_global_mut<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut Self) -> R,
+    ) -> R {
+        #[derive(Debug)]
+        struct GlobalLeaseMarker;
+
+        struct Guard<T: Any> {
+            type_id: TypeId,
+            value: Option<T>,
+            globals: *mut HashMap<TypeId, Box<dyn Any>>,
+        }
+
+        impl<T: Any> Drop for Guard<T> {
+            fn drop(&mut self) {
+                let Some(value) = self.value.take() else {
+                    return;
+                };
+                unsafe {
+                    (*self.globals).insert(self.type_id, Box::new(value));
+                }
+            }
+        }
+
+        let type_id = TypeId::of::<T>();
+        let existing = self
+            .globals
+            .insert(type_id, Box::new(GlobalLeaseMarker) as Box<dyn Any>);
+
+        let existing = match existing {
+            None => None,
+            Some(v) => {
+                if v.is::<GlobalLeaseMarker>() {
+                    panic!("global already leased: {type_id:?}");
+                }
+                Some(*v.downcast::<T>().expect("global type id must match"))
+            }
+        };
+
+        let mut guard = Guard::<T> {
+            type_id,
+            value: Some(existing.unwrap_or_else(init)),
+            globals: &mut self.globals as *mut _,
+        };
+
+        let result = {
+            let value = guard.value.as_mut().expect("guard value exists");
+            f(value, self)
+        };
+
+        drop(guard);
+        self.global_revisions
+            .entry(type_id)
+            .and_modify(|rev| *rev = rev.saturating_add(1))
+            .or_insert(1);
+        result
+    }
+
+    fn with_global_mut_untracked<T: Any, R>(
         &mut self,
         init: impl FnOnce() -> T,
         f: impl FnOnce(&mut T, &mut Self) -> R,

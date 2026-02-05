@@ -89,11 +89,116 @@ impl<Deps: PartialEq, TValue> Selector<Deps, TValue> {
     }
 }
 
+/// A compact dependency signature for selector-style memoization.
+///
+/// This is intended to be used as the `Deps` type parameter for [`Selector`]. The `ui` feature
+/// provides a [`DepsBuilder`](crate::ui::DepsBuilder) that records model/global tokens while also
+/// registering the corresponding observations on the element context.
+#[derive(Clone, Default)]
+pub struct DepsSignature {
+    tokens: TokenList,
+    #[cfg(debug_assertions)]
+    pub(crate) observed_tokens: u16,
+}
+
+impl fmt::Debug for DepsSignature {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DepsSignature")
+            .field("tokens", &self.tokens.as_slice())
+            .finish()
+    }
+}
+
+impl PartialEq for DepsSignature {
+    fn eq(&self, other: &Self) -> bool {
+        self.tokens == other.tokens
+    }
+}
+
+impl Eq for DepsSignature {}
+
+impl DepsSignature {
+    pub fn is_empty(&self) -> bool {
+        self.tokens.as_slice().is_empty()
+    }
+
+    pub fn tokens(&self) -> &[u64] {
+        self.tokens.as_slice()
+    }
+
+    pub fn push_token(&mut self, token: u64) {
+        self.tokens.push(token);
+    }
+}
+
+const INLINE_TOKEN_CAP: usize = 16;
+
+#[derive(Clone)]
+enum TokenList {
+    Inline {
+        len: u8,
+        tokens: [u64; INLINE_TOKEN_CAP],
+    },
+    Heap(Vec<u64>),
+}
+
+impl Default for TokenList {
+    fn default() -> Self {
+        Self::Inline {
+            len: 0,
+            tokens: [0; INLINE_TOKEN_CAP],
+        }
+    }
+}
+
+impl fmt::Debug for TokenList {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.as_slice().iter()).finish()
+    }
+}
+
+impl PartialEq for TokenList {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl Eq for TokenList {}
+
+impl TokenList {
+    fn push(&mut self, token: u64) {
+        match self {
+            TokenList::Inline { len, tokens } => {
+                let len_usize = *len as usize;
+                if len_usize < INLINE_TOKEN_CAP {
+                    tokens[len_usize] = token;
+                    *len = (len_usize + 1) as u8;
+                    return;
+                }
+
+                let mut heap = Vec::with_capacity(INLINE_TOKEN_CAP.saturating_mul(2));
+                heap.extend_from_slice(tokens.as_slice());
+                heap.push(token);
+                *self = TokenList::Heap(heap);
+            }
+            TokenList::Heap(tokens) => tokens.push(token),
+        }
+    }
+
+    fn as_slice(&self) -> &[u64] {
+        match self {
+            TokenList::Inline { len, tokens } => &tokens[..(*len as usize)],
+            TokenList::Heap(tokens) => tokens.as_slice(),
+        }
+    }
+}
+
 #[cfg(feature = "ui")]
 pub mod ui;
 
 #[cfg(test)]
 mod tests {
+    use super::DepsSignature;
     use super::Selector;
 
     #[test]
@@ -133,5 +238,21 @@ mod tests {
 
         let b = selector.compute(1, || "b".to_string());
         assert_eq!(b, "b");
+    }
+
+    #[test]
+    fn deps_signature_compares_by_tokens() {
+        let mut a = DepsSignature::default();
+        a.push_token(1);
+        a.push_token(2);
+
+        let mut b = DepsSignature::default();
+        b.push_token(1);
+        b.push_token(2);
+
+        assert_eq!(a, b);
+
+        b.push_token(3);
+        assert_ne!(a, b);
     }
 }

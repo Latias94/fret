@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::any::{Any, TypeId};
 
 use crate::{ClipboardToken, FrameId, ImageUploadToken, TickId, TimerToken};
 use fret_core::{AppWindowId, Point, PointerId};
@@ -8,6 +8,25 @@ use crate::{CommandRegistry, DragKindId, DragSession, Effect, ModelHost, ModelId
 pub trait GlobalsHost {
     fn set_global<T: Any>(&mut self, value: T);
     fn global<T: Any>(&self) -> Option<&T>;
+
+    /// Returns a monotonically-increasing token for a global type.
+    ///
+    /// This is intended for derived-state memoization (e.g. selector deps signatures). Hosts that
+    /// track global changes should override this to return a value that changes whenever a tracked
+    /// global is updated via `set_global` / `with_global_mut`.
+    ///
+    /// The default implementation returns `None`, meaning the host does not expose global revision
+    /// tokens (callers may fall back to value hashing or manual invalidation).
+    #[inline]
+    fn global_revision(&self, global: TypeId) -> Option<u64> {
+        let _ = global;
+        None
+    }
+
+    #[inline]
+    fn global_revision_of<T: Any>(&self) -> Option<u64> {
+        self.global_revision(TypeId::of::<T>())
+    }
 
     fn with_global_mut<T: Any, R>(
         &mut self,

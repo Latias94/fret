@@ -73,10 +73,10 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Add a small `DepsBuilder` helper:
+- `[x]` Add a small `DepsBuilder` helper:
   - `deps.model_rev(&Model<T>)` / `deps.global_token::<T>()` / batch variants.
-- `[ ]` Add keyed selector sugar (`use_selector_keyed(key, ...)`) to avoid hook-like misuse in loops.
-- `[ ]` Add debug diagnostics for common misuse:
+- `[x]` Add keyed selector sugar (`use_selector_keyed(key, ...)`) to avoid hook-like misuse in loops.
+- `[x]` Add debug diagnostics for common misuse:
   - called in unstable order,
   - deps closure does not observe what it encodes.
 
@@ -89,9 +89,17 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Document and enforce query key conventions (namespace + structured key).
-- `[ ]` Add optional retry/backoff policy and error taxonomy helpers.
-- `[ ]` Add `prefetch` and explicit `refetch` APIs (TanStack Query parity subset).
+- `[x]` Document query key conventions (namespace + structured key).
+  - Evidence: `docs/query-key-conventions.md`
+- `[x]` Add debug-only guardrails for keying misuse (optional):
+  - warn on suspicious namespaces (too generic / missing version suffix),
+  - consider optional debug key labels for diagnostics.
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
+- `[x]` Add optional retry/backoff helpers and an error taxonomy.
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
+  - Evidence: `apps/fret-examples/src/query_demo.rs`
+- `[x]` Add `prefetch` and explicit `refetch` APIs (TanStack Query parity subset).
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
 
 ## Milestone M4 — Async ecosystem adapters (tokio/wasm without kernel coupling)
 
@@ -102,10 +110,12 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Add an ecosystem-level async adapter surface (draft shape):
+- `[x]` Add an ecosystem-level async adapter surface (draft shape):
   - `spawn_future_to_inbox(...)` for tokio and wasm (feature-gated).
-- `[ ]` Extend `fret-query` with an optional async fetch mode using the adapter.
+  - Evidence: `ecosystem/fret-executor/src/lib.rs`
+- `[x]` Extend `fret-query` with an optional async fetch mode using the adapter.
   - Must preserve driver-boundary apply and cancellation semantics.
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
 
 ## Milestone M5 — Third-party ecosystem docs
 
@@ -115,7 +125,8 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Add a doc: “Integrating tokio/reqwest” (background fetch → inbox → model update).
+- `[x]` Add a doc: “Integrating tokio/reqwest” (background fetch → inbox → model update).
+  - Evidence: `docs/integrating-tokio-and-reqwest.md`
 - `[ ]` Add a doc: “Integrating persistence (sqlite/sqlx)” with driver-boundary apply.
 - `[ ]` Document a recommended service injection/override pattern for ecosystem crates.
 
