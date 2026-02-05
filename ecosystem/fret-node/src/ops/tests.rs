@@ -866,6 +866,21 @@ fn graph_diff_is_deterministic_and_roundtrips() {
     }
     if let Some(node) = to.nodes.get_mut(&a) {
         node.pos.x = 42.0;
+        node.selectable = Some(false);
+        node.draggable = Some(false);
+        node.connectable = Some(false);
+        node.deletable = Some(false);
+        node.extent = Some(crate::core::NodeExtent::Rect {
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 1.0, y: 2.0 },
+                size: CanvasSize {
+                    width: 3.0,
+                    height: 4.0,
+                },
+            },
+        });
+        node.expand_parent = Some(true);
+        node.hidden = true;
     }
 
     let tx1 = graph_diff(&from, &to);
@@ -874,6 +889,31 @@ fn graph_diff_is_deterministic_and_roundtrips() {
         serde_json::to_string(&tx1.ops).unwrap(),
         serde_json::to_string(&tx2.ops).unwrap(),
         "diff must be deterministic"
+    );
+
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetNodeSelectable { id, .. } if *id == a)),
+        "diff must include node setter ops for changed fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetNodeExtent { id, .. } if *id == a)),
+        "diff must include node setter ops for changed fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetNodeHidden { id, .. } if *id == a)),
+        "diff must include node setter ops for changed fields"
+    );
+    assert!(
+        !tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveNode { id, .. } if *id == a)),
+        "diff must not use destructive node removal for soft field changes"
     );
 
     assert!(

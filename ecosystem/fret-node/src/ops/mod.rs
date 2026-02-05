@@ -13,7 +13,8 @@ use serde::{Deserialize, Serialize};
 use crate::core::EdgeReconnectable;
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, GraphId, GraphImport, Group,
-    GroupId, Node, NodeId, NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
+    GroupId, Node, NodeExtent, NodeId, NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol,
+    SymbolId,
 };
 use crate::types::TypeDesc;
 
@@ -66,11 +67,47 @@ pub enum GraphOp {
     },
     /// Sets a node kind version (for per-kind migrations).
     SetNodeKindVersion { id: NodeId, from: u32, to: u32 },
+    /// Sets a node selectable override.
+    SetNodeSelectable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a node draggable override.
+    SetNodeDraggable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a node connectable override.
+    SetNodeConnectable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a node deletable override.
+    SetNodeDeletable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
     /// Sets a node parent container (group frame).
     SetNodeParent {
         id: NodeId,
         from: Option<GroupId>,
         to: Option<GroupId>,
+    },
+    /// Sets a node extent override.
+    SetNodeExtent {
+        id: NodeId,
+        from: Option<NodeExtent>,
+        to: Option<NodeExtent>,
+    },
+    /// Sets a node expand-parent override.
+    SetNodeExpandParent {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
     },
     /// Sets a node explicit size.
     SetNodeSize {
@@ -78,6 +115,8 @@ pub enum GraphOp {
         from: Option<CanvasSize>,
         to: Option<CanvasSize>,
     },
+    /// Sets a node hidden state.
+    SetNodeHidden { id: NodeId, from: bool, to: bool },
     /// Sets a node collapsed state.
     SetNodeCollapsed { id: NodeId, from: bool, to: bool },
     /// Sets a node's port ordering.

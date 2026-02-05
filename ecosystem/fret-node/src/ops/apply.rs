@@ -114,6 +114,30 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             node.kind_version = *to;
         }
+        GraphOp::SetNodeSelectable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.selectable = *to;
+        }
+        GraphOp::SetNodeDraggable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.draggable = *to;
+        }
+        GraphOp::SetNodeConnectable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.connectable = *to;
+        }
+        GraphOp::SetNodeDeletable { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.deletable = *to;
+        }
         GraphOp::SetNodeParent { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {
                 return Err(ApplyError::MissingNode { id: *id });
@@ -128,11 +152,29 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             }
             node.parent = *to;
         }
+        GraphOp::SetNodeExtent { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.extent = *to;
+        }
+        GraphOp::SetNodeExpandParent { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.expand_parent = *to;
+        }
         GraphOp::SetNodeSize { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {
                 return Err(ApplyError::MissingNode { id: *id });
             };
             node.size = *to;
+        }
+        GraphOp::SetNodeHidden { id, to, .. } => {
+            let Some(node) = graph.nodes.get_mut(id) else {
+                return Err(ApplyError::MissingNode { id: *id });
+            };
+            node.hidden = *to;
         }
         GraphOp::SetNodeCollapsed { id, to, .. } => {
             let Some(node) = graph.nodes.get_mut(id) else {

@@ -172,12 +172,47 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             from: *to,
             to: *from,
         }],
+        GraphOp::SetNodeSelectable { id, from, to } => vec![GraphOp::SetNodeSelectable {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetNodeDraggable { id, from, to } => vec![GraphOp::SetNodeDraggable {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetNodeConnectable { id, from, to } => vec![GraphOp::SetNodeConnectable {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetNodeDeletable { id, from, to } => vec![GraphOp::SetNodeDeletable {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
         GraphOp::SetNodeParent { id, from, to } => vec![GraphOp::SetNodeParent {
             id: *id,
             from: *to,
             to: *from,
         }],
+        GraphOp::SetNodeExtent { id, from, to } => vec![GraphOp::SetNodeExtent {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetNodeExpandParent { id, from, to } => vec![GraphOp::SetNodeExpandParent {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
         GraphOp::SetNodeSize { id, from, to } => vec![GraphOp::SetNodeSize {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetNodeHidden { id, from, to } => vec![GraphOp::SetNodeHidden {
             id: *id,
             from: *to,
             to: *from,

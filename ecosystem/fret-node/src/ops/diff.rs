@@ -116,6 +116,34 @@ fn diff_nodes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
                     to: node_to.kind_version,
                 });
             }
+            if node_from.selectable != node_to.selectable {
+                tx.ops.push(GraphOp::SetNodeSelectable {
+                    id: *id,
+                    from: node_from.selectable,
+                    to: node_to.selectable,
+                });
+            }
+            if node_from.draggable != node_to.draggable {
+                tx.ops.push(GraphOp::SetNodeDraggable {
+                    id: *id,
+                    from: node_from.draggable,
+                    to: node_to.draggable,
+                });
+            }
+            if node_from.connectable != node_to.connectable {
+                tx.ops.push(GraphOp::SetNodeConnectable {
+                    id: *id,
+                    from: node_from.connectable,
+                    to: node_to.connectable,
+                });
+            }
+            if node_from.deletable != node_to.deletable {
+                tx.ops.push(GraphOp::SetNodeDeletable {
+                    id: *id,
+                    from: node_from.deletable,
+                    to: node_to.deletable,
+                });
+            }
             if node_from.pos != node_to.pos {
                 tx.ops.push(GraphOp::SetNodePos {
                     id: *id,
@@ -130,11 +158,32 @@ fn diff_nodes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
                     to: node_to.parent,
                 });
             }
+            if node_from.extent != node_to.extent {
+                tx.ops.push(GraphOp::SetNodeExtent {
+                    id: *id,
+                    from: node_from.extent,
+                    to: node_to.extent,
+                });
+            }
+            if node_from.expand_parent != node_to.expand_parent {
+                tx.ops.push(GraphOp::SetNodeExpandParent {
+                    id: *id,
+                    from: node_from.expand_parent,
+                    to: node_to.expand_parent,
+                });
+            }
             if node_from.size != node_to.size {
                 tx.ops.push(GraphOp::SetNodeSize {
                     id: *id,
                     from: node_from.size,
                     to: node_to.size,
+                });
+            }
+            if node_from.hidden != node_to.hidden {
+                tx.ops.push(GraphOp::SetNodeHidden {
+                    id: *id,
+                    from: node_from.hidden,
+                    to: node_to.hidden,
                 });
             }
             if node_from.collapsed != node_to.collapsed {
