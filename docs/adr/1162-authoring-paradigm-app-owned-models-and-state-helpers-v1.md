@@ -153,8 +153,8 @@ Tracking and adoption work is captured in:
   collisions are handled/debugged).
 - **Default policy:** `stale_time`/`cache_time` defaults, dedupe and cancel semantics, and which
   operations are “forced refetch” vs “mark stale”.
-- **Error model:** keep it as `Arc<str>` (display-only) or introduce a typed `QueryError` (kind +
-  message) to make app UX consistent without leaking backend error types into UI.
+- **Error model:** use a typed `QueryError` (kind + message) so retry/UX can be consistent without
+  leaking backend error types into UI.
 - **Async adapter story:** should `fret-query` add an optional `Future` fetch mode via ecosystem
   adapters (tokio + wasm), while preserving the driver-boundary apply contract?
 - **Instrumentation:** a minimal tracing vocabulary for query lifecycle (start/finish/cancel, cache
