@@ -65,9 +65,9 @@ pub struct TanStackTableOptions {
     pub auto_reset_expanded: Option<bool>,
     #[serde(default, rename = "manualGrouping")]
     pub manual_grouping: bool,
-    #[serde(default, rename = "paginateExpandedRows")]
+    #[serde(default = "default_true", rename = "paginateExpandedRows")]
     pub paginate_expanded_rows: bool,
-    #[serde(default, rename = "keepPinnedRows")]
+    #[serde(default = "default_true", rename = "keepPinnedRows")]
     pub keep_pinned_rows: bool,
     #[serde(default, rename = "enableRowPinning")]
     pub enable_row_pinning: Option<bool>,

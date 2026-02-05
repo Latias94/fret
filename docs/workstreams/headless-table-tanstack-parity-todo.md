@@ -279,6 +279,12 @@ ColumnDef keys referenced by upstream feature implementations:
     `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`.
   - Covered: `row.getPinnedIndex()`-equivalent visible ordering (`row_pinning.pinned_index` in fixture snapshots).
   - Covered: `enableRowPinning: (row) => boolean` predicate (fixture marker `__enableRowPinning=odd_ids`).
+  - Hardened gate coverage: pinning fixtures now also assert the “full derived snapshot surface”
+    (core/filtered/sorted/expanded/paginated models, selection/expanding flags, and column sizing totals + start/after offsets),
+    preventing drift that manifests as misaligned widths/offsets in UI consumers.
+    - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
+  - Bugfix: TanStack option defaults are `true` for `keepPinnedRows` and `paginateExpandedRows` when omitted.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_options.rs`
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
@@ -382,6 +388,9 @@ ColumnDef keys referenced by upstream feature implementations:
       (snapshot: `column_pinning_action_on_column_pinning_change_noop_ignores`)
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnPinningChange`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
+  - Hardened gate coverage: column pinning fixtures now also assert derived row models, selection/expanding flags,
+    and column sizing totals + start/after offsets under pinning state.
+    - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
 - [x] HTP-colpin-020 Align `resetColumnPinning(defaultState?)` semantics.
   - Parity-gated:
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`

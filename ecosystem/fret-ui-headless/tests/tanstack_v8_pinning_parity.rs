@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, FilteringFnSpec, RowKey, RowPinPosition, Table, TableState, TanStackTableOptions,
-    TanStackTableState, TanStackValue,
+    ColumnDef, ColumnSizingRegion, FilteringFnSpec, RowKey, RowPinPosition, Table, TableState,
+    TanStackTableOptions, TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
 
@@ -16,6 +17,36 @@ struct FixtureRow {
     status: String,
     cpu: u64,
     mem_mb: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct RowModelSnapshot {
+    root: Vec<String>,
+    flat: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ColumnSizingExpect {
+    total_size: f32,
+    left_total_size: f32,
+    center_total_size: f32,
+    right_total_size: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ColumnStartExpect {
+    all: HashMap<String, f32>,
+    left: HashMap<String, Option<f32>>,
+    center: HashMap<String, Option<f32>>,
+    right: HashMap<String, Option<f32>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ColumnAfterExpect {
+    all: HashMap<String, f32>,
+    left: HashMap<String, Option<f32>>,
+    center: HashMap<String, Option<f32>>,
+    right: HashMap<String, Option<f32>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -36,6 +67,36 @@ struct RowPinningExpect {
 
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
+    core: RowModelSnapshot,
+    filtered: RowModelSnapshot,
+    sorted: RowModelSnapshot,
+    expanded: RowModelSnapshot,
+    paginated: RowModelSnapshot,
+    row_model: RowModelSnapshot,
+    page_count: i32,
+    row_count: usize,
+    can_previous_page: bool,
+    can_next_page: bool,
+    page_options: Vec<usize>,
+    selected: RowModelSnapshot,
+    filtered_selected: RowModelSnapshot,
+    grouped_selected: RowModelSnapshot,
+    is_all_rows_selected: bool,
+    is_some_rows_selected: bool,
+    is_all_page_rows_selected: bool,
+    is_some_page_rows_selected: bool,
+    is_all_rows_expanded: bool,
+    is_some_rows_expanded: bool,
+    can_some_rows_expand: bool,
+    #[serde(rename = "column_sizing")]
+    #[serde(default)]
+    sizing: Option<ColumnSizingExpect>,
+    #[serde(rename = "column_start")]
+    #[serde(default)]
+    starts: Option<ColumnStartExpect>,
+    #[serde(rename = "column_after")]
+    #[serde(default)]
+    after: Option<ColumnAfterExpect>,
     #[serde(default)]
     row_pinning: Option<RowPinningExpect>,
     #[serde(default)]
@@ -77,6 +138,22 @@ struct Fixture {
     case_id: String,
     data: Vec<FixtureRow>,
     snapshots: Vec<FixtureSnapshot>,
+}
+
+fn snapshot_row_model<'a, TData>(
+    model: &fret_ui_headless::table::RowModel<'a, TData>,
+) -> RowModelSnapshot {
+    let root = model
+        .root_rows()
+        .iter()
+        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .collect();
+    let flat = model
+        .flat_rows()
+        .iter()
+        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .collect();
+    RowModelSnapshot { root, flat }
 }
 
 fn parse_row_pin_position(position: Option<&str>) -> Option<RowPinPosition> {
@@ -126,6 +203,26 @@ fn tanstack_v8_pinning_parity() {
             .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.cpu))
             .sorting_fn_auto()
             .filtering_fn_auto(),
+        ColumnDef::<FixtureRow>::new("cpu_desc_first")
+            .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.cpu))
+            .sorting_fn_auto()
+            .filtering_fn_auto()
+            .sort_desc_first(true),
+        ColumnDef::<FixtureRow>::new("cpu_no_multi")
+            .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.cpu))
+            .sorting_fn_auto()
+            .filtering_fn_auto()
+            .enable_multi_sort(false),
+        ColumnDef::<FixtureRow>::new("cpu_no_sort")
+            .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.cpu))
+            .sorting_fn_auto()
+            .filtering_fn_auto()
+            .enable_sorting(false),
+        ColumnDef::<FixtureRow>::new("cpu_invert")
+            .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.cpu))
+            .sorting_fn_auto()
+            .filtering_fn_auto()
+            .invert_sorting(true),
         ColumnDef::<FixtureRow>::new("mem_mb")
             .sort_value_by(|row: &FixtureRow| tanstack_value_num(row.mem_mb))
             .sorting_fn_auto()
@@ -233,6 +330,270 @@ fn tanstack_v8_pinning_parity() {
         }
 
         let table = builder.build();
+
+        let core = snapshot_row_model(table.core_row_model());
+        let filtered = snapshot_row_model(table.filtered_row_model());
+        let sorted = snapshot_row_model(table.sorted_row_model());
+        let expanded = snapshot_row_model(table.expanded_row_model());
+        let row_model = snapshot_row_model(table.row_model());
+
+        assert_eq!(
+            core.root, snap.expect.core.root,
+            "snapshot {} core root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            core.flat, snap.expect.core.flat,
+            "snapshot {} core flat mismatch",
+            snap.id
+        );
+        assert_eq!(
+            filtered.root, snap.expect.filtered.root,
+            "snapshot {} filtered root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            filtered.flat, snap.expect.filtered.flat,
+            "snapshot {} filtered flat mismatch",
+            snap.id
+        );
+        assert_eq!(
+            sorted.root, snap.expect.sorted.root,
+            "snapshot {} sorted root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            sorted.flat, snap.expect.sorted.flat,
+            "snapshot {} sorted flat mismatch",
+            snap.id
+        );
+        assert_eq!(
+            expanded.root, snap.expect.expanded.root,
+            "snapshot {} expanded root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            expanded.flat, snap.expect.expanded.flat,
+            "snapshot {} expanded flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            row_model.root, snap.expect.row_model.root,
+            "snapshot {} row_model root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            row_model.flat, snap.expect.row_model.flat,
+            "snapshot {} row_model flat mismatch",
+            snap.id
+        );
+
+        // Today `row_model()` corresponds to TanStack's `getRowModel()` (post-pagination) and
+        // matches `getPaginationRowModel()` when expansion is inactive.
+        assert_eq!(
+            row_model.root, snap.expect.paginated.root,
+            "snapshot {} paginated root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            row_model.flat, snap.expect.paginated.flat,
+            "snapshot {} paginated flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.page_count(),
+            snap.expect.page_count,
+            "snapshot {} page_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.row_count(),
+            snap.expect.row_count,
+            "snapshot {} row_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_previous_page(),
+            snap.expect.can_previous_page,
+            "snapshot {} can_previous_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_next_page(),
+            snap.expect.can_next_page,
+            "snapshot {} can_next_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.page_options(),
+            snap.expect.page_options,
+            "snapshot {} page_options mismatch",
+            snap.id
+        );
+
+        let selected = snapshot_row_model(table.selected_row_model());
+        assert_eq!(
+            selected.root, snap.expect.selected.root,
+            "snapshot {} selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            selected.flat, snap.expect.selected.flat,
+            "snapshot {} selected flat mismatch",
+            snap.id
+        );
+
+        let filtered_selected = snapshot_row_model(table.filtered_selected_row_model());
+        assert_eq!(
+            filtered_selected.root, snap.expect.filtered_selected.root,
+            "snapshot {} filtered_selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            filtered_selected.flat, snap.expect.filtered_selected.flat,
+            "snapshot {} filtered_selected flat mismatch",
+            snap.id
+        );
+
+        let grouped_selected = snapshot_row_model(table.grouped_selected_row_model());
+        assert_eq!(
+            grouped_selected.root, snap.expect.grouped_selected.root,
+            "snapshot {} grouped_selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            grouped_selected.flat, snap.expect.grouped_selected.flat,
+            "snapshot {} grouped_selected flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.is_all_rows_selected(),
+            snap.expect.is_all_rows_selected,
+            "snapshot {} is_all_rows_selected mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_some_rows_selected(),
+            snap.expect.is_some_rows_selected,
+            "snapshot {} is_some_rows_selected mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_all_page_rows_selected(),
+            snap.expect.is_all_page_rows_selected,
+            "snapshot {} is_all_page_rows_selected mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_some_page_rows_selected(),
+            snap.expect.is_some_page_rows_selected,
+            "snapshot {} is_some_page_rows_selected mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.is_all_rows_expanded(),
+            snap.expect.is_all_rows_expanded,
+            "snapshot {} is_all_rows_expanded mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_some_rows_expanded(),
+            snap.expect.is_some_rows_expanded,
+            "snapshot {} is_some_rows_expanded mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_some_rows_expand(),
+            snap.expect.can_some_rows_expand,
+            "snapshot {} can_some_rows_expand mismatch",
+            snap.id
+        );
+
+        if let Some(sizing) = snap.expect.sizing.as_ref() {
+            assert_eq!(
+                table.total_size(),
+                sizing.total_size,
+                "snapshot {} column_sizing.total_size mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.left_total_size(),
+                sizing.left_total_size,
+                "snapshot {} column_sizing.left_total_size mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.center_total_size(),
+                sizing.center_total_size,
+                "snapshot {} column_sizing.center_total_size mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.right_total_size(),
+                sizing.right_total_size,
+                "snapshot {} column_sizing.right_total_size mismatch",
+                snap.id
+            );
+        }
+
+        if let (Some(starts), Some(after)) =
+            (snap.expect.starts.as_ref(), snap.expect.after.as_ref())
+        {
+            for (col_id, expected) in &starts.all {
+                let actual = table.column_start(col_id.as_str(), ColumnSizingRegion::All);
+                assert_eq!(
+                    actual,
+                    Some(*expected),
+                    "snapshot {} column_start(all,{col_id}) mismatch",
+                    snap.id
+                );
+            }
+            for (col_id, expected) in &after.all {
+                let actual = table.column_after(col_id.as_str(), ColumnSizingRegion::All);
+                assert_eq!(
+                    actual,
+                    Some(*expected),
+                    "snapshot {} column_after(all,{col_id}) mismatch",
+                    snap.id
+                );
+            }
+
+            let starts = [
+                (ColumnSizingRegion::Left, &starts.left, "left"),
+                (ColumnSizingRegion::Center, &starts.center, "center"),
+                (ColumnSizingRegion::Right, &starts.right, "right"),
+            ];
+            for (region, by_col, label) in starts {
+                for (col_id, expected) in by_col {
+                    let actual = table.column_start(col_id.as_str(), region);
+                    assert_eq!(
+                        actual, *expected,
+                        "snapshot {} column_start({label},{col_id}) mismatch",
+                        snap.id
+                    );
+                }
+            }
+
+            let after = [
+                (ColumnSizingRegion::Left, &after.left, "left"),
+                (ColumnSizingRegion::Center, &after.center, "center"),
+                (ColumnSizingRegion::Right, &after.right, "right"),
+            ];
+            for (region, by_col, label) in after {
+                for (col_id, expected) in by_col {
+                    let actual = table.column_after(col_id.as_str(), region);
+                    assert_eq!(
+                        actual, *expected,
+                        "snapshot {} column_after({label},{col_id}) mismatch",
+                        snap.id
+                    );
+                }
+            }
+        }
 
         if let Some(expected) = snap.expect.row_pinning.as_ref() {
             let top: Vec<String> = table
