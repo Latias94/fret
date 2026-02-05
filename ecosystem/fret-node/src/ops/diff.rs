@@ -374,28 +374,11 @@ fn diff_groups(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
     for (id, group_to) in &to.groups {
         if let Some(group_from) = from.groups.get(id) {
             if group_from.color != group_to.color {
-                // No field-level color setter yet; preserve correctness with remove+add.
-                if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_group_op(from, *id) {
-                    tx.ops.push(op);
-                } else {
-                    let detached: Vec<(crate::core::NodeId, Option<crate::core::GroupId>)> = from
-                        .nodes
-                        .iter()
-                        .filter_map(|(node_id, node)| {
-                            (node.parent == Some(*id)).then_some((*node_id, Some(*id)))
-                        })
-                        .collect();
-                    tx.ops.push(GraphOp::RemoveGroup {
-                        id: *id,
-                        group: group_from.clone(),
-                        detached,
-                    });
-                }
-                tx.ops.push(GraphOp::AddGroup {
+                tx.ops.push(GraphOp::SetGroupColor {
                     id: *id,
-                    group: group_to.clone(),
+                    from: group_from.color.clone(),
+                    to: group_to.color.clone(),
                 });
-                continue;
             }
 
             if group_from.rect != group_to.rect {

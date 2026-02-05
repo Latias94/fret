@@ -91,6 +91,7 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         | GraphOp::SetNodePorts { .. }
         | GraphOp::SetNodeData { .. }
         | GraphOp::SetGroupTitle { .. }
+        | GraphOp::SetGroupColor { .. }
         | GraphOp::AddPort { .. }
         | GraphOp::RemovePort { .. }
         | GraphOp::AddEdge { .. }

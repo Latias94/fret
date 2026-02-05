@@ -801,6 +801,23 @@ fn graph_diff_is_deterministic_and_roundtrips() {
     from.nodes.insert(a, make_node("core.a"));
     from.nodes.insert(b, make_node("core.b"));
 
+    let group_id = GroupId::new();
+    from.groups.insert(
+        group_id,
+        Group {
+            title: "G".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+    from.nodes.get_mut(&a).unwrap().parent = Some(group_id);
+
     let out = PortId::from_u128(10);
     let inn = PortId::from_u128(11);
     from.ports
@@ -853,6 +870,9 @@ fn graph_diff_is_deterministic_and_roundtrips() {
             meta: serde_json::json!({ "k": 1 }),
         },
     );
+    if let Some(group) = to.groups.get_mut(&group_id) {
+        group.color = Some("red".to_string());
+    }
     if let Some(edge) = to.edges.get_mut(&edge_id) {
         edge.deletable = Some(true);
         edge.reconnectable = Some(crate::core::EdgeReconnectable::Endpoint(
@@ -914,6 +934,19 @@ fn graph_diff_is_deterministic_and_roundtrips() {
             .iter()
             .any(|op| matches!(op, GraphOp::RemoveNode { id, .. } if *id == a)),
         "diff must not use destructive node removal for soft field changes"
+    );
+
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetGroupColor { id, .. } if *id == group_id)),
+        "diff must prefer group setter ops over remove+add to preserve parent bindings"
+    );
+    assert!(
+        !tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveGroup { id, .. } if *id == group_id)),
+        "diff must not remove groups for color-only changes"
     );
 
     assert!(

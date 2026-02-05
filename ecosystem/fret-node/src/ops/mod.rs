@@ -275,6 +275,12 @@ pub enum GraphOp {
         from: String,
         to: String,
     },
+    /// Sets a group color override.
+    SetGroupColor {
+        id: GroupId,
+        from: Option<String>,
+        to: Option<String>,
+    },
 
     /// Adds a sticky note.
     AddStickyNote { id: StickyNoteId, note: StickyNote },

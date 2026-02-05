@@ -429,6 +429,12 @@ pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
             };
             group.title = to.clone();
         }
+        GraphOp::SetGroupColor { id, to, .. } => {
+            let Some(group) = graph.groups.get_mut(id) else {
+                return Err(ApplyError::MissingGroup { id: *id });
+            };
+            group.color = to.clone();
+        }
         GraphOp::AddStickyNote { id, note } => {
             if graph.sticky_notes.contains_key(id) {
                 return Err(ApplyError::StickyNoteAlreadyExists { id: *id });
