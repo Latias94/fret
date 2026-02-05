@@ -1372,6 +1372,14 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.dispatch_timer_slowest_was_broadcast = true;
                 }
             }
+
+            if needs_redraw {
+                self.request_redraw_coalesced(app);
+            }
+
+            // Timer events should not fall through into key/pointer routing, shortcut matching,
+            // cursor queries, etc. Keep timer delivery isolated and cheap.
+            return;
         }
 
         if let Event::TextInput(text) = event {
