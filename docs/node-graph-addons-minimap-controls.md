@@ -67,6 +67,9 @@ Sizing and placement are driven by `NodeGraphStyle`:
 - Controls: `controls_button_size`, `controls_gap`, `controls_margin`, `controls_padding`,
   `controls_text_style`, `controls_text`, `controls_hover_background`, `controls_active_background`
 
+For the stable theme/token plumbing contract (`Theme` → `NodeGraphStyle` / background overrides),
+see `docs/node-graph-addons-theming.md`.
+
 ## Accessibility baseline
 
 Both overlays must contribute a stable semantics surface:

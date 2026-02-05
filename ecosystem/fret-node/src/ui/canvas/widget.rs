@@ -236,6 +236,7 @@ pub struct NodeGraphCanvasWith<M> {
     callbacks: Option<Box<dyn NodeGraphCallbacks>>,
     middleware: M,
     style: NodeGraphStyle,
+    background_override: Option<NodeGraphBackgroundStyle>,
     color_mode: Option<NodeGraphColorMode>,
     color_mode_last: Option<NodeGraphColorMode>,
     color_mode_theme_rev: Option<u64>,
@@ -390,6 +391,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             callbacks: None,
             middleware,
             style: NodeGraphStyle::default(),
+            background_override: None,
             color_mode: None,
             color_mode_last: None,
             color_mode_theme_rev: None,
@@ -465,6 +467,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             callbacks: self.callbacks,
             middleware,
             style: self.style,
+            background_override: self.background_override,
             color_mode: self.color_mode,
             color_mode_last: self.color_mode_last,
             color_mode_theme_rev: self.color_mode_theme_rev,
@@ -522,6 +525,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub fn with_style(mut self, style: NodeGraphStyle) -> Self {
         self.style = style;
+        self.background_override = None;
         self.color_mode = None;
         self.color_mode_last = None;
         self.color_mode_theme_rev = None;
@@ -537,6 +541,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub fn with_background_style(mut self, background: NodeGraphBackgroundStyle) -> Self {
         self.style = self.style.with_background_style(background);
+        self.background_override = Some(background);
         // Background theming must not rebuild derived geometry; it is a paint-only concern.
         // Clear the grid cache to avoid retaining tiles for unused background variants.
         self.grid_scene_cache.clear();
@@ -583,6 +588,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         self.style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
+        if let Some(background) = self.background_override {
+            let style = std::mem::take(&mut self.style);
+            self.style = style.with_background_style(background);
+        }
         self.geometry.geom_key = None;
         self.geometry.index_key = None;
         self.geometry.drag_preview = None;
@@ -591,6 +600,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.paint_cache.clear(services);
         }
 
+        self.grid_scene_cache.clear();
         self.groups_scene_cache.clear();
         self.nodes_scene_cache.clear();
         self.edges_scene_cache.clear();

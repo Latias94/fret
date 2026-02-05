@@ -92,7 +92,7 @@ Planned additions (M2):
 - [x] Controls B-layer wiring conformance (command binding overrides; no widget peeking).
 - [x] MiniMap navigation conformance (click/drag-to-pan, deterministic mapping + view queue binding).
 - [x] Toolbars composition conformance (pointer passthrough + focus release when hidden).
-- [ ] Follow-up: per-editor theme token plumbing guidance (bridge `Theme` → `NodeGraphStyle`/`NodeGraphBackgroundStyle`).
+- [x] Follow-up: per-editor theme token plumbing guidance (bridge `Theme` → `NodeGraphStyle`/`NodeGraphBackgroundStyle`).
 
 ## Code map (likely touch points)
 
@@ -115,3 +115,7 @@ Planned additions (M2):
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 - Toolbars participate in overlay hit-testing (passthrough) and focus routing:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`
+- Theme/token plumbing guidance (explicit, policy-light):
+  `docs/node-graph-addons-theming.md`
+- Demo usage of per-editor background token overrides:
+  `apps/fret-examples/src/node_graph_demo.rs`
