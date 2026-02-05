@@ -73,6 +73,10 @@ layout. This workstream is about making that the default across ecosystem code.
   - Evidence: `ecosystem/fret-ui-shadcn/src/button_group.rs`
 - [x] SDC-shadcn-106 Chart: migrate panel role/label stamping to `attach_semantics`.
   - Evidence: `ecosystem/fret-ui-shadcn/src/chart.rs`
+- [x] SDC-shadcn-107 Carousel: migrate root/item group role + `test_id` stamping to `attach_semantics`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- [x] SDC-shadcn-108 Drawer: migrate dialog role stamping to `attach_semantics`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/drawer.rs`
 - [x] SDC-shadcn-110 DataGrid: migrate header/body cell stamps to decorators where possible.
   - Evidence: `ecosystem/fret-ui-shadcn/src/data_grid.rs`, `ecosystem/fret-ui-shadcn/tests/data_grid_layout.rs`
 - [x] SDC-shadcn-120 Form/Field: migrate any “role-only” wrappers used for structure to decorators.
@@ -87,7 +91,8 @@ layout. This workstream is about making that the default across ecosystem code.
 
 ### M3 — UI Gallery: migrate authoring patterns
 
-- [ ] SDC-gal-300 Update UI Gallery component previews to avoid `Semantics`-for-test-id patterns.
+- [~] SDC-gal-300 Update UI Gallery component previews to avoid `Semantics`-for-test-id patterns.
+  - Evidence (initial core selectors): `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-nav-search`, `ui-gallery-nav-scroll`, `ui-gallery-content-scroll`, `ui-gallery-page-*`)
 - [ ] SDC-gal-310 Add notes to the shadcn UI Gallery tracker pointing to this workstream.
 
 ---

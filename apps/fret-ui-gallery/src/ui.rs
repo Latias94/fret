@@ -9,7 +9,7 @@ use fret_core::{
 use fret_kit::prelude::ModelWatchExt as _;
 use fret_markdown as markdown;
 use fret_ui::Theme;
-use fret_ui::element::{CanvasProps, StackProps};
+use fret_ui::element::{CanvasProps, SemanticsDecoration, StackProps};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
@@ -95,9 +95,7 @@ pub(crate) fn sidebar_view(
             .a11y_label("Search components")
             .placeholder("Search (id / tag)")
             .into_element(cx)
-            .attach_semantics(
-                fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-nav-search"),
-            )
+            .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-nav-search"))
     };
 
     let mut nav_sections: Vec<AnyElement> = Vec::new();
@@ -188,9 +186,7 @@ pub(crate) fn sidebar_view(
                 .refine_layout(LayoutRefinement::default().w_full().h_full())
                 .into_element(cx)
         };
-        nav_scroll.attach_semantics(
-            fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-nav-scroll"),
-        )
+        nav_scroll.attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-nav-scroll"))
     };
 
     let container = cx.container(
@@ -535,9 +531,8 @@ pub(crate) fn content_view(
         })
     };
 
-    let content = content_inner.attach_semantics(
-        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-content-scroll"),
-    );
+    let content = content_inner
+        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-content-scroll"));
 
     cx.named("ui_gallery.content_view_root", |cx| {
         cx.container(
@@ -550,7 +545,7 @@ pub(crate) fn content_view(
             ),
             |_cx| [content],
         )
-        .attach_semantics(fret_ui::element::SemanticsDecoration::default().test_id(page_test_id))
+        .attach_semantics(SemanticsDecoration::default().test_id(page_test_id))
     })
 }
 
