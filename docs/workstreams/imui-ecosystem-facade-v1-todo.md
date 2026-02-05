@@ -117,7 +117,7 @@ Exit criteria:
 - Floating windows/areas exist as first-class outcomes in-window, aligned with ImGui-style UX.
 
 - [x] IMUIECO-overlays-030 Menu/popover/tooltip convenience wrappers built on `OverlayController`.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{open_popup_at,begin_popup_menu,begin_popup_context_menu}`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{open_popup_at,begin_popup_menu,begin_popup_context_menu,menu_item}`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_opens_on_right_click_and_closes_on_outside_click`).
 - [ ] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
   - move (drag) + z-order + focus activation,

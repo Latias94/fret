@@ -17,7 +17,7 @@ Status snapshot (2026-02-05):
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
 - The initial egui/imgui-like convenience surface is hosted in `ecosystem/fret-ui-kit` behind its `imui` feature.
 - `ResponseExt` now covers common v1 signals (secondary + double click, drag lifecycle + deltas, context-menu request + anchor).
-- A minimal menu-like popup primitive exists (`open_popup_at` + `begin_popup_menu` / `begin_popup_context_menu`), built on `OverlayController`.
+- A minimal menu-like popup primitive exists (`open_popup_at` + `begin_popup_menu` / `begin_popup_context_menu` + `menu_item`), built on `OverlayController`.
 - A minimal in-window floating window primitive exists (`floating_window` / `floating_window_open`):
   - draggable title bar + element-local position state,
   - optional ImGui-style `open` model + close button,
