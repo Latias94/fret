@@ -392,6 +392,19 @@ pub struct SemanticsDecoration {
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
     pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
+    pub disabled: Option<bool>,
+    pub selected: Option<bool>,
+    pub expanded: Option<bool>,
+    /// Tri-state checked override (Some(None) clears; Some(Some(v)) sets to v).
+    pub checked: Option<Option<bool>>,
+    /// Declarative-only: element ID of the active descendant for composite widgets.
+    pub active_descendant_element: Option<u64>,
+    /// Declarative-only: element ID of a node which labels this node (`aria-labelledby`).
+    pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this node (`aria-describedby`).
+    pub described_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which this node controls (`aria-controls`).
+    pub controls_element: Option<u64>,
 }
 
 impl SemanticsDecoration {
@@ -402,6 +415,16 @@ impl SemanticsDecoration {
             label: other.label.or(self.label),
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
+            disabled: other.disabled.or(self.disabled),
+            selected: other.selected.or(self.selected),
+            expanded: other.expanded.or(self.expanded),
+            checked: other.checked.or(self.checked),
+            active_descendant_element: other
+                .active_descendant_element
+                .or(self.active_descendant_element),
+            labelled_by_element: other.labelled_by_element.or(self.labelled_by_element),
+            described_by_element: other.described_by_element.or(self.described_by_element),
+            controls_element: other.controls_element.or(self.controls_element),
         }
     }
 
@@ -422,6 +445,46 @@ impl SemanticsDecoration {
 
     pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
         self.value = Some(value.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn selected(mut self, selected: bool) -> Self {
+        self.selected = Some(selected);
+        self
+    }
+
+    pub fn expanded(mut self, expanded: bool) -> Self {
+        self.expanded = Some(expanded);
+        self
+    }
+
+    pub fn checked(mut self, checked: Option<bool>) -> Self {
+        self.checked = Some(checked);
+        self
+    }
+
+    pub fn active_descendant_element(mut self, element: u64) -> Self {
+        self.active_descendant_element = Some(element);
+        self
+    }
+
+    pub fn labelled_by_element(mut self, element: u64) -> Self {
+        self.labelled_by_element = Some(element);
+        self
+    }
+
+    pub fn described_by_element(mut self, element: u64) -> Self {
+        self.described_by_element = Some(element);
+        self
+    }
+
+    pub fn controls_element(mut self, element: u64) -> Self {
+        self.controls_element = Some(element);
         self
     }
 }
