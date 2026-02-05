@@ -1,7 +1,7 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-04
+Last updated: 2026-02-05
 
 This document proposes an ecosystem-level “batteries included” facade built on top of Fret’s
 immediate-mode authoring surface (`imui`) that targets **egui/Dear ImGui-style ergonomics**
@@ -166,8 +166,9 @@ The wrapper approach reduces “extension trait sprawl” while keeping call sit
 
 ```rust
 fret_imui::imui_vstack(cx, |ui| {
-    let mut ui = fret_ui_kit::imui::Ui::new(ui);
-    ui.heading("Inspector");
+    use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
+
+    ui.text("Inspector");
     if ui.button("Reset").clicked() {
         // ...
     }

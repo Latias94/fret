@@ -1,7 +1,7 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1 - TODO Tracker
 
 Status: Draft
-Last updated: 2026-02-04
+Last updated: 2026-02-05
 
 This tracker covers the work described in:
 
@@ -71,7 +71,8 @@ Exit criteria:
 
 - The facade exposes a richer `Response` surface that covers the most common immediate-mode queries.
 
-- [ ] IMUIECO-resp-010 Add click variants (secondary, double click, long press where applicable).
+- [~] IMUIECO-resp-010 Add click variants (secondary, double click, long press where applicable).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt`, `UiWriterImUiFacadeExt::button`)
 - [ ] IMUIECO-resp-011 Add drag lifecycle signals (started/dragging/stopped) and useful geometry/delta fields.
 - [ ] IMUIECO-resp-012 Add context-menu request signal (right click / keyboard menu key).
 - [ ] IMUIECO-resp-013 Document “two-frame stabilization” where geometry is sourced from last-frame bounds.
@@ -84,7 +85,8 @@ Exit criteria:
 
 - Common controls are authorable in a single immediate-mode style, backed by canonical components.
 
-- [ ] IMUIECO-controls-020 Button/checkbox/toggle wrappers that return `Response` without duplicating policy.
+- [~] IMUIECO-controls-020 Button/checkbox/toggle wrappers that return `Response` without duplicating policy.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{button,checkbox_model}`)
 - [ ] IMUIECO-controls-021 Input/textarea wrappers (coordinate with the code editor ecosystem; don’t duplicate).
 - [ ] IMUIECO-controls-022 Slider/select/switch wrappers (shadcn-aligned when enabled).
 - [ ] IMUIECO-api-023 Container helpers (`horizontal`, `vertical`, `grid`, `scroll`) that prefer `UiBuilder` patch vocabulary.
