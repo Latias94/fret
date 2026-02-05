@@ -93,22 +93,25 @@ Current “Zed feel” probe:
 
 Findings (macOS Apple M4; repeat=7):
 
-- `hit_test_time_us` is measurable and relatively stable (p50 ~0.58ms, p95 ~0.78ms, max ~0.94ms across runs).
-- The bounds-tree “work” proxy stays small even at the worst pointer-move frame:
-  - Example worst-by-hit frame: `nodes_visited=12`, `nodes_pushed=12`, `bounds_tree_queries=1` with `hit_test_time_us=925`.
-- Cached-path reuse exists but is expectedly low on the stripes sweep workload:
-  - Example bundle: 4 hits / 188 misses over 192 pointer-move frames (~2.1% hit rate).
+- With bounds-tree enabled *and cached-path skipped*, pointer-move hit testing is effectively solved for this probe:
+  - `hit_test_time_us`: p50 ~3us, p95 ~5us, max ~10us (across runs).
+  - `dispatch_time_us`: p50 ~129us, p95 ~250us, max ~357us (across runs).
+- Micro timer breakdown shows why this mattered:
+  - Before the skip, `try_hit_test_along_cached_path` dominated hit-test time due to conservative sibling scanning.
+  - Bounds-tree query time was already single-digit microseconds.
+- Cached-path reuse remains low on the stripes sweep workload (pointer crosses many regions):
+  - With bounds-tree disabled (A/B), hit testing rises to ~2ms p50 and can spike to ~4ms, and cached-path hit rate is
+    still ~2.1%.
 
 Implication:
 
-- The remaining tail is not a “bounds-tree explosion” problem. Next improvements should focus on:
-  - reducing fixed per-query overhead (clip + rounded-rect hit test, transform work, widget hit-test calls), and/or
-  - adding sub-step timers so tail latency is attributable to concrete work (not just wall time).
+- For Tier B “Zed feel”, a spatial index (bounds-tree or equivalent) is mandatory, and “cached-path hit testing” should
+  not be attempted when the index is enabled (it can be slower than the index on sibling-heavy trees).
 
 Evidence:
 
 - Perf log entries under:
-  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `913ee260`, `55dd923d`)
+  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `763bf8e7`, `8bc15eda`)
 
 ## 1) What GPUI does that matters for smoothness
 

@@ -2813,3 +2813,129 @@ Interpretation:
 
 Bundles:
 - `target/fret-diag-perf/2026-02-05-pointer-move-r7-path-cache-stats-55dd923d/1770250128271-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 08:40:01 (commit `763bf8e7`)
+
+Change:
+- feat(diag): break down hit-test timing
+
+Why:
+- The pointer-move gate (stripes sweep) showed ~0.6–0.9ms `hit_test_time_us` even when the bounds-tree index was
+  enabled. This entry explains *where the time actually went*.
+
+Notes:
+
+- New hit-test micro timers were added (commit `763bf8e7`), and the repeat=7 pointer-move gate run below shows that:
+  - almost all hit-test time was spent inside `try_hit_test_along_cached_path`, and
+  - bounds-tree query + candidate validation were ~single-digit microseconds.
+- This indicates the cached-path fast path can be actively harmful on workloads with many siblings (it performs a
+  conservative sibling scan to ensure correctness).
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-hit-test-breakdown-763bf8e7 \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --timeout-ms 300000 --poll-ms 200 \
+  --max-pointer-move-dispatch-us 2000 \
+  --max-pointer-move-hit-test-us 1500 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; 192 pointer-move frames per run):
+- `hit_test_time_us`: p50 ~575.0, p95 ~792.3, max (across runs) 907
+- Sub-step median breakdown (per pointer-move frame; derived from bundle stats):
+  - `hit_test_cached_path_time_us`: p50 ~572.0, p95 ~788.3, max 903
+  - `hit_test_bounds_tree_query_time_us`: p50 ~2.0, p95 ~2.0, max 5
+  - `hit_test_candidate_self_only_time_us`: p50 ~0.0, p95 ~0.0, max 2
+  - `hit_test_fallback_traversal_time_us`: p50 ~0.0, p95 ~0.0, max 0
+
+Takeaway:
+- The bounds-tree index was *already* doing the right thing; the remaining ~0.6–0.9ms tail was the cached-path
+  attempt itself. Next step: avoid attempting cached-path hit testing when the bounds-tree is enabled.
+
+Bundles:
+- Worst-by-hit: `target/fret-diag-perf/2026-02-05-pointer-move-r7-hit-test-breakdown-763bf8e7/1770252192036-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 08:57:12 (commit `8bc15eda`)
+
+Change:
+- perf(fret-ui): skip cached-path hit-test under bounds-tree
+
+Why:
+- Cached-path hit testing was dominating `hit_test_time_us` even when bounds-tree was enabled, due to conservative
+  sibling scanning on miss. When bounds-tree is enabled for a layer, cached-path becomes redundant and costly.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-skip-cached-path-8bc15eda \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --timeout-ms 300000 --poll-ms 200 \
+  --max-pointer-move-dispatch-us 2000 \
+  --max-pointer-move-hit-test-us 1500 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; 192 pointer-move frames per run):
+- `dispatch_time_us`: p50 ~129.0, p95 ~250.0, max (across runs) 357
+- `hit_test_time_us`: p50 ~3.0, p95 ~5.0, max (across runs) 10
+- Sub-step median breakdown:
+  - `hit_test_cached_path_time_us`: p50 ~0.0 (skipped under bounds-tree)
+  - `hit_test_bounds_tree_query_time_us`: p50 ~2.0, p95 ~3.0, max 9
+  - `hit_test_candidate_self_only_time_us`: p50 ~0.0, p95 ~0.0, max 3
+
+Takeaway:
+- This closes the pointer-move hit-test hot path for the stripes torture probe: `hit_test_time_us` drops from
+  ~0.58ms → ~0.003ms (≈ 190× reduction at p50).
+- The remaining dispatch time is now dominated by non-hit-test routing + bookkeeping.
+
+Bundles:
+- Worst overall: `target/fret-diag-perf/2026-02-05-pointer-move-r7-skip-cached-path-8bc15eda/1770253131674-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 09:09:47 (commit `8bc15eda`)
+
+Change:
+- (experiment) Disable bounds-tree hit-test index to measure the fallback cost.
+
+Why:
+- This validates that the bounds-tree index is load-bearing for “Zed feel” pointer-move workloads, and it provides
+  an upper bound for how costly the full traversal path is under the same script.
+
+Command:
+```sh
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r3-bounds-tree-disabled-8bc15eda \
+  --reuse-launch --warmup-frames 5 --repeat 3 --sort time --top 15 --json \
+  --timeout-ms 300000 --poll-ms 200 \
+  --max-pointer-move-dispatch-us 2000 \
+  --max-pointer-move-hit-test-us 1500 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Result:
+- The perf gate fails (expected) because `hit_test_time_us` rises above the 1500us threshold:
+  - evidence: `target/fret-diag-perf/2026-02-05-pointer-move-r3-bounds-tree-disabled-8bc15eda/check.perf_thresholds.json`
+- Metrics (median across 3 runs; 192 pointer-move frames per run):
+  - `dispatch_time_us`: p50 ~2140.0, p95 ~2444.9, max 4362
+  - `hit_test_time_us`: p50 ~1998.0, p95 ~2256.0, max 4311
+  - `hit_test_fallback_traversal_time_us`: p50 ~1422.0, p95 ~1591.8, max 3226
+  - `hit_test_cached_path_time_us`: p50 ~570.0, p95 ~774.9, max 1082
+
+Takeaway:
+- Without bounds-tree, this workload is ~2ms per pointer-move frame (and can spike to ~4ms). For Tier B “Zed feel”,
+  bounds-tree (or an equivalent spatial index) is mandatory.

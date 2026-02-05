@@ -241,17 +241,22 @@ Correctness acceptance:
       - `top_prepaint_time_us` drops to ~0 for the probe's worst frames.
       - Pointer-move frames become paint-only with `layout_time_us ~ 0` and `prepaint_time_us ~ 0` (see perf log entry).
   - Deliverable: a new/updated script + a log entry demonstrating low `layout_time_us` while `hit_test_time_us` remains measurable.
-  - Next: split hit-test time into concrete sub-steps so the remaining ~0.9ms tail is explainable:
-    - [ ] bounds-tree query time (including stack init)
-    - [ ] candidate `hit_test_node_self_only` time (clips + rounded-rect)
-    - [ ] fallback traversal time (`hit_test_node` stack walk)
-    - [ ] widget `hit_test` call time (if any)
-    - [ ] transform work (inverse/apply point) time
-    - Output: export per-frame micro-timers under `debug.stats.hit_test_*_us` (gated behind diagnostics feature).
+  - [x] Add hit-test micro timers so tail latency is attributable to concrete work.
+    - Exports (per-frame, accumulated across hit-test queries):
+      - `hit_test_cached_path_time_us`
+      - `hit_test_bounds_tree_query_time_us`
+      - `hit_test_candidate_self_only_time_us`
+      - `hit_test_fallback_traversal_time_us`
+    - Implemented by `feat(diag): break down hit-test timing` (commit `763bf8e7`).
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries for commits `763bf8e7` and `8bc15eda`.
+  - [x] Remove cached-path overhead when bounds-tree is enabled.
+    - Implemented by `perf(fret-ui): skip cached-path hit-test under bounds-tree` (commit `8bc15eda`).
+    - Result: pointer-move `hit_test_time_us` p50 ~575us → ~3us on the stripes torture probe.
   - A/B experiments:
-    - [ ] Run the pointer-move gate with `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and record:
+    - [x] Run the pointer-move gate with `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and record:
       - `hit_test_time_us` distribution, and
       - `hit_test_path_cache_hits/misses` hit rate.
+      - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for commit `8bc15eda` (gate fails expectedly).
     - [ ] Sweep `FRET_UI_HIT_TEST_BOUNDS_TREE_MIN_RECORDS` to find the break-even point (small trees vs index build).
 
 Perf acceptance:
