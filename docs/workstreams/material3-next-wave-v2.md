@@ -294,6 +294,7 @@ Non-goals:
           - Evidence:
             - `apps/fret-ui-gallery/src/spec.rs` (`PAGE_MATERIAL3_AUTOCOMPLETE`)
             - `apps/fret-ui-gallery/src/ui.rs` (`preview_material3_autocomplete`)
+            - `tools/diag-scripts/ui-gallery-material3-autocomplete-dialog-screenshots.json`
         - [x] Headless golden suites (visual regression gates across schemes/scales).
           - Evidence:
             - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_autocomplete_suite_goldens_v1`)
