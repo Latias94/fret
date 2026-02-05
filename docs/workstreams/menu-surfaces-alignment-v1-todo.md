@@ -87,8 +87,13 @@ Exit criteria:
 - [x] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (test `escape_unwinds_submenu_then_menu_and_restores_focus`)
 - [ ] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.
-- [ ] MENU-MVP1-parity-024 Switch open menus on hover (Zed/Godot-style `switch_on_hover`) with a small delay.
-- [ ] MENU-MVP1-parity-025 Implement submenu “grace intent” (diagonal pointer travel tolerance); cover via `MENU-MVP4-test-052`.
+- [x] MENU-MVP1-parity-024 Switch open menus on hover (Zed/Godot-style `switch_on_hover`) with a small delay.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`DEFAULT_HOVER_SWITCH_DELAY`, hover switch timer)
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-hover-switch.json`
+- [x] MENU-MVP1-parity-025 Implement submenu “grace intent” (diagonal pointer travel tolerance); cover via `MENU-MVP4-test-052`.
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/sub.rs` (pointer grace intent + close-delay timers)
+  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (installs submenu pointer-move handler for menubar overlays)
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-pointer-submenu-grace-intent.json`
 
 ---
 
@@ -136,7 +141,8 @@ Exit criteria:
   - Verify stable `test_id` anchors
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-keyboard-navigation.json` (F10 focus → Window menu → Split submenu → Escape unwind)
   - Extra: `tools/diag-scripts/ui-gallery-menubar-alt-activation.json` (toggles in-window menubar on, then validates Alt activation focuses `menubar-trigger-file`)
-- [ ] MENU-MVP4-test-052 Add a diag script for pointer “submenu grace intent” (prevent accidental close when moving toward submenu).
+- [x] MENU-MVP4-test-052 Add a diag script for pointer “submenu grace intent” (prevent accidental close when moving toward submenu).
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-pointer-submenu-grace-intent.json`
 
 ---
 

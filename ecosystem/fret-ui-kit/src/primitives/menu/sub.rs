@@ -1507,6 +1507,10 @@ pub fn submenu_item_close_key_handler(
         if down.repeat {
             return false;
         }
+        if down.key == fret_core::KeyCode::Escape {
+            close_and_restore_trigger(host, acx, &models);
+            return true;
+        }
         let is_close_key = match (down.key, dir) {
             (fret_core::KeyCode::ArrowLeft, LayoutDirection::Ltr) => true,
             (fret_core::KeyCode::ArrowRight, LayoutDirection::Rtl) => true,

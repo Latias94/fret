@@ -1317,6 +1317,9 @@ impl Default for MenubarFromRuntimeOptions {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::{Point, Px, Rect, Size};
+    use fret_runtime::{CommandId, Menu, MenuBar, MenuItem};
+    use fret_ui::tree::UiTree;
 
     fn plain_item(label: &str) -> InWindowMenuItem {
         InWindowMenuItem {
@@ -1375,5 +1378,330 @@ mod tests {
             InWindowMenuEntry::Submenu(sub) => assert!(sub.trigger.keep_if_empty_submenu),
             _ => panic!("expected submenu placeholder"),
         }
+    }
+
+    #[cfg(feature = "shadcn")]
+    #[test]
+    fn escape_unwinds_submenu_then_menu_and_restores_focus() {
+        use fret_app::App;
+        use fret_runtime::Effect;
+        use fret_ui_kit::OverlayController;
+        use fret_ui_shadcn::shadcn_themes::{
+            ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4,
+        };
+
+        #[derive(Default)]
+        struct FakeServices;
+
+        impl fret_core::TextService for FakeServices {
+            fn prepare(
+                &mut self,
+                _input: &fret_core::TextInput,
+                _constraints: fret_core::TextConstraints,
+            ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+                (
+                    fret_core::TextBlobId::default(),
+                    fret_core::TextMetrics {
+                        size: Size::new(Px(10.0), Px(10.0)),
+                        baseline: Px(8.0),
+                    },
+                )
+            }
+
+            fn release(&mut self, _blob: fret_core::TextBlobId) {}
+        }
+
+        impl fret_core::PathService for FakeServices {
+            fn prepare(
+                &mut self,
+                _commands: &[fret_core::PathCommand],
+                _style: fret_core::PathStyle,
+                _constraints: fret_core::PathConstraints,
+            ) -> (fret_core::PathId, fret_core::PathMetrics) {
+                (
+                    fret_core::PathId::default(),
+                    fret_core::PathMetrics::default(),
+                )
+            }
+
+            fn release(&mut self, _path: fret_core::PathId) {}
+        }
+
+        impl fret_core::SvgService for FakeServices {
+            fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+                fret_core::SvgId::default()
+            }
+
+            fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+                true
+            }
+        }
+
+        fn bounds() -> Rect {
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(800.0), Px(600.0)),
+            )
+        }
+
+        fn menu_bar() -> MenuBar {
+            MenuBar {
+                menus: vec![Menu {
+                    title: Arc::from("Window"),
+                    role: None,
+                    items: vec![
+                        MenuItem::Submenu {
+                            title: Arc::from("Split"),
+                            when: None,
+                            items: vec![MenuItem::Command {
+                                command: CommandId::from("workspace.pane.split.right"),
+                                when: None,
+                            }],
+                        },
+                        MenuItem::Command {
+                            command: CommandId::from("test.noop"),
+                            when: None,
+                        },
+                    ],
+                }],
+            }
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: fret_core::AppWindowId,
+            bounds: Rect,
+            bar: &MenuBar,
+        ) -> fret_core::SemanticsSnapshot {
+            let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            apply_shadcn_new_york_v4(app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+            OverlayController::begin_frame(app, window);
+
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "menu",
+                |cx| {
+                    vec![menubar_from_runtime(
+                        cx,
+                        bar,
+                        MenubarFromRuntimeOptions::default(),
+                    )]
+                },
+            );
+            ui.set_root(root);
+
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+
+            ui.semantics_snapshot().expect("semantics snapshot").clone()
+        }
+
+        fn node_by_test_id<'a>(
+            snap: &'a fret_core::SemanticsSnapshot,
+            id: &str,
+        ) -> &'a fret_core::SemanticsNode {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .unwrap_or_else(|| {
+                    let available: Vec<&str> = snap
+                        .nodes
+                        .iter()
+                        .filter_map(|n| n.test_id.as_deref())
+                        .collect();
+                    panic!(
+                        "expected semantics node with test_id={id:?}; available_test_ids={available:?}"
+                    )
+                })
+        }
+
+        fn assert_focus_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) {
+            let node_id = node_by_test_id(snap, id).id;
+            assert_eq!(snap.focus, Some(node_id), "expected focus to be {id:?}");
+        }
+
+        fn assert_exists(snap: &fret_core::SemanticsSnapshot, id: &str) {
+            assert!(
+                snap.nodes.iter().any(|n| n.test_id.as_deref() == Some(id)),
+                "expected a semantics node with test_id={id:?}"
+            );
+        }
+
+        fn assert_not_exists(snap: &fret_core::SemanticsSnapshot, id: &str) {
+            assert!(
+                !snap.nodes.iter().any(|n| n.test_id.as_deref() == Some(id)),
+                "expected no semantics node with test_id={id:?}"
+            );
+        }
+
+        fn press_key(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            key: fret_core::KeyCode,
+        ) {
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::KeyDown {
+                    key,
+                    modifiers: fret_core::Modifiers::default(),
+                    repeat: false,
+                },
+            );
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::KeyUp {
+                    key,
+                    modifiers: fret_core::Modifiers::default(),
+                },
+            );
+        }
+
+        fn pointer_up(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            at: Point,
+            is_click: bool,
+        ) {
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                    pointer_id: fret_core::PointerId(0),
+                    position: at,
+                    button: fret_core::MouseButton::Left,
+                    modifiers: fret_core::Modifiers::default(),
+                    is_click,
+                    click_count: 1,
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        fn pointer_down(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            at: Point,
+        ) {
+            ui.dispatch_event(
+                app,
+                services,
+                &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                    pointer_id: fret_core::PointerId(0),
+                    position: at,
+                    button: fret_core::MouseButton::Left,
+                    modifiers: fret_core::Modifiers::default(),
+                    click_count: 1,
+                    pointer_type: fret_core::PointerType::Mouse,
+                }),
+            );
+        }
+
+        fn rect_center(r: Rect) -> Point {
+            Point::new(
+                Px(r.origin.x.0 + r.size.width.0 * 0.5),
+                Px(r.origin.y.0 + r.size.height.0 * 0.5),
+            )
+        }
+
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let bounds = bounds();
+        let bar = menu_bar();
+
+        // Open the menu by clicking the menubar trigger (pointer-up activation).
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        let window_trigger_bounds = node_by_test_id(&snap, "menubar-trigger-window").bounds;
+        let window_trigger_center = rect_center(window_trigger_bounds);
+        pointer_down(&mut ui, &mut app, &mut services, window_trigger_center);
+        pointer_up(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window_trigger_center,
+            true,
+        );
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert!(
+            node_by_test_id(&snap, "menubar-trigger-window")
+                .flags
+                .expanded,
+            "expected menubar trigger to be expanded after click"
+        );
+        assert_exists(&snap, "menubar-item-menu-window-submenu-split");
+
+        // Focus the submenu trigger item without activating it.
+        let split_trigger_bounds =
+            node_by_test_id(&snap, "menubar-item-menu-window-submenu-split").bounds;
+        let split_trigger_center = rect_center(split_trigger_bounds);
+        pointer_down(&mut ui, &mut app, &mut services, split_trigger_center);
+        pointer_up(
+            &mut ui,
+            &mut app,
+            &mut services,
+            split_trigger_center,
+            false,
+        );
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_focus_test_id(&snap, "menubar-item-menu-window-submenu-split");
+
+        // ArrowRight opens the submenu and (after focus-delay timer) focuses its first item.
+        press_key(
+            &mut ui,
+            &mut app,
+            &mut services,
+            fret_core::KeyCode::ArrowRight,
+        );
+        let _snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        let focus_timer = app
+            .flush_effects()
+            .into_iter()
+            .find_map(|e| match e {
+                Effect::SetTimer { token, after, .. } if after.is_zero() => Some(token),
+                _ => None,
+            })
+            .expect("submenu focus timer");
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: focus_timer },
+        );
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_exists(&snap, "menubar-item-workspace-pane-split-right");
+        assert_focus_test_id(&snap, "menubar-item-workspace-pane-split-right");
+
+        // Escape closes submenu and returns focus to the submenu trigger.
+        press_key(&mut ui, &mut app, &mut services, fret_core::KeyCode::Escape);
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_focus_test_id(&snap, "menubar-item-menu-window-submenu-split");
+        assert_not_exists(&snap, "menubar-item-workspace-pane-split-right");
+
+        // Escape closes menu and returns focus to the menubar trigger.
+        press_key(&mut ui, &mut app, &mut services, fret_core::KeyCode::Escape);
+        let snap = render_frame(&mut ui, &mut app, &mut services, window, bounds, &bar);
+        assert_focus_test_id(&snap, "menubar-trigger-window");
+        assert_not_exists(&snap, "menubar-item-menu-window-submenu-split");
+
+        // Avoid unused warnings if the effect buffer changes across versions.
+        let _ = app.flush_effects();
     }
 }

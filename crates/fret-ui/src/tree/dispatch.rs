@@ -1304,6 +1304,7 @@ impl<H: UiHost> UiTree<H> {
         let mut synth_pointer_move_prev_target: Option<NodeId> = None;
         let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
         let mut focus_requested = false;
+        let mut defer_escape_overlay_dismiss = false;
 
         if let Event::KeyDown {
             key: fret_core::KeyCode::Escape,
@@ -1328,7 +1329,8 @@ impl<H: UiHost> UiTree<H> {
                     }
                     true
                 } else {
-                    self.dismiss_topmost_overlay_on_escape(app, window, base_root, barrier_root)
+                    defer_escape_overlay_dismiss = true;
+                    false
                 }
             }
         {
@@ -2304,6 +2306,25 @@ impl<H: UiHost> UiTree<H> {
                             stop_propagation_requested = true;
                             break;
                         }
+                    }
+                }
+
+                if defer_escape_overlay_dismiss && !stop_propagation_requested {
+                    if let Event::KeyDown {
+                        key: fret_core::KeyCode::Escape,
+                        repeat: false,
+                        ..
+                    } = event
+                        && let Some(window) = self.window
+                        && self.dismiss_topmost_overlay_on_escape(
+                            app,
+                            window,
+                            base_root,
+                            barrier_root,
+                        )
+                    {
+                        self.request_redraw_coalesced(app);
+                        return;
                     }
                 }
             } else {
