@@ -1,12 +1,12 @@
 use std::any::Any;
 use std::future::Future;
-use std::sync::Arc;
 
 use fret_query::ui::QueryElementContextExt as _;
 pub use fret_query::with_query_client;
 pub use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryClient,
-    QueryHandle, QueryKey, QueryPolicy, QueryState, QueryStatus,
+    QueryError, QueryErrorKind, QueryHandle, QueryKey, QueryPolicy, QueryRetryPolicy, QueryState,
+    QueryStatus,
 };
 use fret_ui::UiHost;
 
@@ -21,7 +21,7 @@ pub trait UiWriterQueryExt<H: UiHost>: UiWriter<H> {
         &mut self,
         key: QueryKey<T>,
         policy: QueryPolicy,
-        fetch: impl FnOnce(CancellationToken) -> Result<T, Arc<str>> + Send + 'static,
+        fetch: impl FnOnce(CancellationToken) -> Result<T, QueryError> + Send + 'static,
     ) -> QueryHandle<T>;
 
     fn use_query_async<T, Fut>(
@@ -32,7 +32,7 @@ pub trait UiWriterQueryExt<H: UiHost>: UiWriter<H> {
     ) -> QueryHandle<T>
     where
         T: Any + Send + Sync + 'static,
-        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static;
+        Fut: Future<Output = Result<T, QueryError>> + Send + 'static;
 
     fn use_query_async_local<T, Fut>(
         &mut self,
@@ -42,7 +42,7 @@ pub trait UiWriterQueryExt<H: UiHost>: UiWriter<H> {
     ) -> QueryHandle<T>
     where
         T: Any + Send + Sync + 'static,
-        Fut: Future<Output = Result<T, Arc<str>>> + 'static;
+        Fut: Future<Output = Result<T, QueryError>> + 'static;
 
     fn invalidate_query<T: Any + Send + Sync + 'static>(&mut self, key: QueryKey<T>);
 
@@ -54,7 +54,7 @@ impl<H: UiHost, W: UiWriter<H> + ?Sized> UiWriterQueryExt<H> for W {
         &mut self,
         key: QueryKey<T>,
         policy: QueryPolicy,
-        fetch: impl FnOnce(CancellationToken) -> Result<T, Arc<str>> + Send + 'static,
+        fetch: impl FnOnce(CancellationToken) -> Result<T, QueryError> + Send + 'static,
     ) -> QueryHandle<T> {
         self.with_cx_mut(|cx| cx.use_query(key, policy, fetch))
     }
@@ -67,7 +67,7 @@ impl<H: UiHost, W: UiWriter<H> + ?Sized> UiWriterQueryExt<H> for W {
     ) -> QueryHandle<T>
     where
         T: Any + Send + Sync + 'static,
-        Fut: Future<Output = Result<T, Arc<str>>> + Send + 'static,
+        Fut: Future<Output = Result<T, QueryError>> + Send + 'static,
     {
         self.with_cx_mut(|cx| cx.use_query_async(key, policy, fetch))
     }
@@ -80,7 +80,7 @@ impl<H: UiHost, W: UiWriter<H> + ?Sized> UiWriterQueryExt<H> for W {
     ) -> QueryHandle<T>
     where
         T: Any + Send + Sync + 'static,
-        Fut: Future<Output = Result<T, Arc<str>>> + 'static,
+        Fut: Future<Output = Result<T, QueryError>> + 'static,
     {
         self.with_cx_mut(|cx| cx.use_query_async_local(key, policy, fetch))
     }

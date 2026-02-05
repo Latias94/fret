@@ -17,6 +17,7 @@ In Fret, a query key is:
 Construction:
 
 - `QueryKey::<T>::new(namespace, &key_value)`
+- `QueryKey::<T>::new_named(namespace, &key_value, "debug label")` (optional)
 
 The namespace is used for bulk invalidation (e.g. “all queries in this subsystem”).
 
@@ -87,6 +88,10 @@ constant per group (and call `invalidate_namespace` on each group).
 The structured key is hashed to 64-bit. Collisions are possible in theory, but should be extremely
 rare in practice when namespaces are scoped and keys are structured.
 
-If you need stronger guarantees, treat that as a decision gate (future work: optional debug key
-labels or wider hashes).
+## Debugging keys
 
+In debug builds, `fret-query` may emit **one-time warnings** for suspicious namespaces (missing a
+scope separator, uppercase/whitespace, missing a `.vN` suffix, etc.).
+
+If you need better diagnostics for collisions or query lifecycle tracing, use
+`QueryKey::new_named(...)` to attach a human-readable label (it does **not** affect key equality).

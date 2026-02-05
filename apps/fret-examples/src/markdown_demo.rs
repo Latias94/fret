@@ -8,7 +8,7 @@ use fret_launch::{
 };
 use fret_markdown as markdown;
 use fret_query::ui::QueryElementContextExt as _;
-use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus};
 use fret_runtime::Model;
 use fret_selector::ui::SelectorElementContextExt as _;
 use fret_ui::declarative;
@@ -54,7 +54,7 @@ enum RemoteImageData {
 }
 
 fn remote_image_key(url: &Arc<str>) -> QueryKey<RemoteImageData> {
-    QueryKey::new("markdown_demo.remote_image", url)
+    QueryKey::new("fret-examples.markdown_demo.remote_image.v1", url)
 }
 
 fn remote_image_policy() -> QueryPolicy {
@@ -67,11 +67,11 @@ fn remote_image_policy() -> QueryPolicy {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn download_remote_image(url: &str) -> Result<RemoteImageData, Arc<str>> {
+fn download_remote_image(url: &str) -> Result<RemoteImageData, QueryError> {
     use std::io::Read as _;
 
     if !(url.starts_with("http://") || url.starts_with("https://")) {
-        return Err(Arc::<str>::from(
+        return Err(QueryError::permanent(
             "only http/https are supported in this demo",
         ));
     }
@@ -80,11 +80,11 @@ fn download_remote_image(url: &str) -> Result<RemoteImageData, Arc<str>> {
         .set("User-Agent", "fret-markdown-demo")
         .set("Accept", "image/*")
         .call()
-        .map_err(|e| Arc::<str>::from(format!("request failed: {e}")))?;
+        .map_err(|e| QueryError::transient(format!("request failed: {e}")))?;
 
     let status = response.status();
     if !(200..=299).contains(&status) {
-        return Err(Arc::<str>::from(format!("http status {status}")));
+        return Err(QueryError::permanent(format!("http status {status}")));
     }
 
     let content_type = response
@@ -108,7 +108,7 @@ fn download_remote_image(url: &str) -> Result<RemoteImageData, Arc<str>> {
         }
         bytes.extend_from_slice(&buf[..n]);
         if bytes.len() > max_bytes {
-            return Err(Arc::<str>::from("image too large (>4MiB)"));
+            return Err(QueryError::permanent("image too large (>4MiB)"));
         }
     }
 
@@ -119,14 +119,14 @@ fn download_remote_image(url: &str) -> Result<RemoteImageData, Arc<str>> {
     }
 
     let image = image::load_from_memory(&bytes)
-        .map_err(|e| Arc::<str>::from(format!("decode failed: {e}")))?;
+        .map_err(|e| QueryError::permanent(format!("decode failed: {e}")))?;
     let rgba = image.to_rgba8();
     let (w, h) = rgba.dimensions();
 
     let pixel_budget = 8_000_000u64;
     let px = (w as u64) * (h as u64);
     if px > pixel_budget {
-        return Err(Arc::<str>::from("decoded image too large"));
+        return Err(QueryError::permanent("decoded image too large"));
     }
 
     Ok(RemoteImageData::Raster {
@@ -137,8 +137,8 @@ fn download_remote_image(url: &str) -> Result<RemoteImageData, Arc<str>> {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn download_remote_image(_url: &str) -> Result<RemoteImageData, Arc<str>> {
-    Err(Arc::<str>::from(
+fn download_remote_image(_url: &str) -> Result<RemoteImageData, QueryError> {
+    Err(QueryError::permanent(
         "remote images are not supported on wasm demo",
     ))
 }
@@ -372,7 +372,9 @@ $$
                     QueryStatus::Error => {
                         let msg = state
                             .error
-                            .unwrap_or_else(|| Arc::<str>::from("unknown error"));
+                            .as_ref()
+                            .map(|e| e.to_string())
+                            .unwrap_or_else(|| String::from("unknown error"));
                         return render_image_placeholder(
                             cx,
                             &theme,

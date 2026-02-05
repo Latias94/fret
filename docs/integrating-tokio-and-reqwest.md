@@ -68,22 +68,30 @@ fn install_wasm_spawner(app: &mut fret_app::App) {
 ### Tokio + Reqwest example
 
 ```rust
-use std::sync::Arc;
+use std::time::Duration;
 
 use fret_query::ui::QueryElementContextExt as _;
-use fret_query::{QueryKey, QueryPolicy, QueryStatus};
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryStatus};
 
 fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
     let key = QueryKey::<String>::new("my_app.http.user.v1", &123u64);
-    let handle = cx.use_query_async(key, QueryPolicy::default(), |token| async move {
-        if token.is_cancelled() {
-            return Err(Arc::<str>::from("cancelled"));
-        }
+    let policy = QueryPolicy {
+        retry: QueryRetryPolicy::exponential(
+            3,
+            Duration::from_millis(250),
+            Duration::from_secs(2),
+        ),
+        ..Default::default()
+    };
 
-        let resp = reqwest::get("https://example.com").await.map_err(|e| {
-            Arc::<str>::from(e.to_string())
-        })?;
-        let text = resp.text().await.map_err(|e| Arc::<str>::from(e.to_string()))?;
+    let handle = cx.use_query_async(key, policy, |_token| async move {
+        let resp = reqwest::get("https://example.com")
+            .await
+            .map_err(|e| QueryError::transient(e.to_string()))?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| QueryError::permanent(e.to_string()))?;
         Ok(text)
     });
 
@@ -121,4 +129,3 @@ fn ui(cx: &mut fret_ui::ElementContext<'_, fret_app::App>) {
   installed the global before calling `use_query_async` / `use_query_async_local`.
 - If you see stale results ignored: this is expected when multiple inflight requests complete out
   of order. Only the latest inflight ID is applied.
-
