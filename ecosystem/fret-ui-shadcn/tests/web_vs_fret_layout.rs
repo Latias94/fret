@@ -6002,21 +6002,39 @@ fn web_vs_fret_layout_avatar_demo_geometry() {
 
     let mut group_items = group_items;
     group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
-    let group_items = &group_items[..3];
+    let mut distinct_items: Vec<Rect> = Vec::with_capacity(3);
+    for rect in group_items {
+        if distinct_items
+            .last()
+            .is_some_and(|prev| (rect.origin.x.0 - prev.origin.x.0).abs() <= 1.0)
+        {
+            continue;
+        }
+        distinct_items.push(rect);
+        if distinct_items.len() == 3 {
+            break;
+        }
+    }
 
-    let min_x = group_items
+    assert!(
+        distinct_items.len() == 3,
+        "expected 3 distinct avatar group x positions; got={}; items={distinct_items:?}",
+        distinct_items.len(),
+    );
+
+    let min_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0)
         .fold(f32::INFINITY, f32::min);
-    let min_y = group_items
+    let min_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0)
         .fold(f32::INFINITY, f32::min);
-    let max_x = group_items
+    let max_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0 + r.size.width.0)
         .fold(f32::NEG_INFINITY, f32::max);
-    let max_y = group_items
+    let max_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0 + r.size.height.0)
         .fold(f32::NEG_INFINITY, f32::max);
@@ -6288,21 +6306,39 @@ fn web_vs_fret_layout_empty_avatar_group_geometry() {
 
     let mut group_items = group_items;
     group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
-    let group_items = &group_items[..3];
+    let mut distinct_items: Vec<Rect> = Vec::with_capacity(3);
+    for rect in group_items {
+        if distinct_items
+            .last()
+            .is_some_and(|prev| (rect.origin.x.0 - prev.origin.x.0).abs() <= 1.0)
+        {
+            continue;
+        }
+        distinct_items.push(rect);
+        if distinct_items.len() == 3 {
+            break;
+        }
+    }
 
-    let min_x = group_items
+    assert!(
+        distinct_items.len() == 3,
+        "expected 3 distinct avatar group x positions; got={}; items={distinct_items:?}",
+        distinct_items.len(),
+    );
+
+    let min_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0)
         .fold(f32::INFINITY, f32::min);
-    let min_y = group_items
+    let min_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0)
         .fold(f32::INFINITY, f32::min);
-    let max_x = group_items
+    let max_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0 + r.size.width.0)
         .fold(f32::NEG_INFINITY, f32::max);
-    let max_y = group_items
+    let max_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0 + r.size.height.0)
         .fold(f32::NEG_INFINITY, f32::max);
@@ -6476,21 +6512,39 @@ fn web_vs_fret_layout_item_avatar_geometry() {
 
     let mut group_items = group_items;
     group_items.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
-    let group_items = &group_items[..3];
+    let mut distinct_items: Vec<Rect> = Vec::with_capacity(3);
+    for rect in group_items {
+        if distinct_items
+            .last()
+            .is_some_and(|prev| (rect.origin.x.0 - prev.origin.x.0).abs() <= 1.0)
+        {
+            continue;
+        }
+        distinct_items.push(rect);
+        if distinct_items.len() == 3 {
+            break;
+        }
+    }
 
-    let min_x = group_items
+    assert!(
+        distinct_items.len() == 3,
+        "expected 3 distinct item-avatar group x positions; got={}; items={distinct_items:?}",
+        distinct_items.len(),
+    );
+
+    let min_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0)
         .fold(f32::INFINITY, f32::min);
-    let min_y = group_items
+    let min_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0)
         .fold(f32::INFINITY, f32::min);
-    let max_x = group_items
+    let max_x = distinct_items
         .iter()
         .map(|r| r.origin.x.0 + r.size.width.0)
         .fold(f32::NEG_INFINITY, f32::max);
-    let max_y = group_items
+    let max_y = distinct_items
         .iter()
         .map(|r| r.origin.y.0 + r.size.height.0)
         .fold(f32::NEG_INFINITY, f32::max);

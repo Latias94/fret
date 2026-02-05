@@ -13,6 +13,16 @@ use std::hash::Hash;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 
+#[cfg(feature = "query")]
+pub mod query;
+#[cfg(feature = "selector")]
+pub mod selector;
+
+#[cfg(feature = "query")]
+pub use query::UiWriterQueryExt;
+#[cfg(feature = "selector")]
+pub use selector::UiWriterSelectorExt;
+
 /// Minimal authoring surface for immediate-style composition.
 ///
 /// This is intended for ecosystem crates that want to expose helpers that work across multiple

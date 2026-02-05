@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, SemanticsRole};
 use fret_ui::element::AnyElement;
 use fret_ui::element::ContainerProps;
 use fret_ui::element::HoverRegionProps;
@@ -15,7 +15,7 @@ use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
 use fret_ui::element::ScrollbarStyle;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
@@ -332,13 +332,10 @@ impl ScrollAreaRoot {
 
                 let scroll_id = scroll.id;
                 let viewport = match viewport_test_id {
-                    Some(test_id) => cx.semantics(
-                        SemanticsProps {
-                            role: fret_core::SemanticsRole::Group,
-                            test_id: Some(test_id),
-                            ..Default::default()
-                        },
-                        move |_cx| vec![scroll],
+                    Some(test_id) => scroll.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Group)
+                            .test_id(test_id),
                     ),
                     None => scroll,
                 };

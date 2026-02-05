@@ -44,6 +44,17 @@ Web/wasm runs through tooling (not through `fret-kit`):
 
 - `cargo run -p fretboard -- dev web --demo ui_gallery`
 
+## State management (authoring ergonomics)
+
+Fret’s kernel primitives are intentionally small (`Model<T>`, explicit invalidation, driver-boundary inbox draining),
+so the default authoring story lives in ecosystem crates.
+
+- Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
+- Recommended building blocks:
+  - Typed UI → app routing (dynamic per-item actions): `fret-kit::mvu::MessageRouter<M>`
+  - Derived state (selectors/computed): `ecosystem/fret-selector`
+  - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
+
 ## Recommended reading order (for a new contributor or AI agent)
 
 1. `docs/architecture.md` — what Fret is, what it is not, and how crates fit together.

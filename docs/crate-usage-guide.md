@@ -229,6 +229,39 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 
 **Use it when:** you want a working native app with minimal boilerplate and a single memorable dependency.
 
+### `fret-executor`
+
+**What it is:** portable background work helpers built on the `DispatcherHandle` contract:
+
+- spawn background tasks without assuming a specific async runtime,
+- deliver results through inboxes drained at a driver boundary (ADR 0190),
+- propagate cancellation via `CancellationToken`.
+
+**Use it when:** you need to run work off the UI thread (or cooperatively on wasm) and want a
+consistent inbox + cancellation vocabulary.
+
+### `fret-selector`
+
+**What it is:** selector-style derived state helpers:
+
+- memoize expensive derived values behind an explicit dependency signature (`Deps: PartialEq`),
+- optional UI sugar (`ElementContext::use_selector(...)`) to keep view code readable.
+
+**Use it when:** you need stable derived values (counts, filtered views, projections) without
+introducing “tick models” or storing every derived value in the model store.
+
+### `fret-query`
+
+**What it is:** query-style async resource state (TanStack Query-like) adapted to Fret:
+
+- cached resource state in `Model<QueryState<T>>` so UI can observe it,
+- background fetch via `fret-executor`,
+- completion marshaled back through `InboxDrainRegistry` (ADR 0190),
+- invalidation + time-based GC.
+
+**Use it when:** you need loading/error/cache/invalidation semantics for remote resources or expensive
+computations.
+
 ### `fret-canvas`
 
 **What it is:** policy-light canvas substrate helpers (pan/zoom transforms, drag phases, pixel policies, text caches).
