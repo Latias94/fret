@@ -1792,6 +1792,8 @@ impl UiGalleryDriver {
                     if let Some(handle) = menubar_handle.borrow().clone() {
                         let group_active = handle.group_active.clone();
                         let trigger_registry = handle.trigger_registry.clone();
+                        let group_active_for_command = group_active.clone();
+                        let trigger_registry_for_command = trigger_registry.clone();
                         cx.command_add_on_command_for(
                             panel.id,
                             Arc::new(move |host, acx, command| {
@@ -1799,10 +1801,15 @@ impl UiGalleryDriver {
                                     return false;
                                 }
 
-                                let active = host.models_mut().get_cloned(&group_active).flatten();
+                                let active = host
+                                    .models_mut()
+                                    .get_cloned(&group_active_for_command)
+                                    .flatten();
                                 if let Some(active) = active {
                                     let _ = host.models_mut().update(&active.open, |v| *v = false);
-                                    let _ = host.models_mut().update(&group_active, |v| *v = None);
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&group_active_for_command, |v| *v = None);
                                     host.request_focus(active.trigger);
                                     host.request_redraw(acx.window);
                                     return true;
@@ -1810,17 +1817,37 @@ impl UiGalleryDriver {
 
                                 let entries = host
                                     .models_mut()
-                                    .get_cloned(&trigger_registry)
+                                    .get_cloned(&trigger_registry_for_command)
                                     .unwrap_or_default();
-                                let target = entries.iter().find(|e| e.enabled).map(|e| e.trigger);
+                                let target = entries.iter().find(|e| e.enabled).cloned();
                                 let Some(target) = target else {
                                     return false;
                                 };
 
-                                host.request_focus(target);
+                                let open_for_state = target.open.clone();
+                                let _ = host
+                                    .models_mut()
+                                    .update(&group_active_for_command, |v| {
+                                        *v = Some(
+                                            fret_ui_kit::primitives::menubar::trigger_row::MenubarActiveTrigger {
+                                                trigger: target.trigger,
+                                                open: open_for_state,
+                                            },
+                                        );
+                                    });
+
+                                host.request_focus(target.trigger);
                                 host.request_redraw(acx.window);
                                 true
                             }),
+                        );
+
+                        cx.key_add_on_key_down_for(
+                            panel.id,
+                            fret_ui_kit::primitives::menubar::trigger_row::open_on_alt_mnemonic(
+                                group_active.clone(),
+                                trigger_registry.clone(),
+                            ),
                         );
                     }
 
@@ -2226,6 +2253,7 @@ pub fn build_app() -> App {
     menu_bar.menus.push(Menu {
         title: Arc::from("Gallery"),
         role: None,
+        mnemonic: Some('g'),
         items: vec![
             MenuItem::Command {
                 command: CommandId::new(CMD_APP_SETTINGS),

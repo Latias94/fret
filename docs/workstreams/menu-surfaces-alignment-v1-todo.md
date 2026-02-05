@@ -87,10 +87,16 @@ Exit criteria:
   - Decision (defer): we intentionally do **not** ship heuristics like “first letter of menu title”.
     Without a source-of-truth for mnemonics (localization, collisions, author overrides),
     heuristics create unstable UX and regressions across downstream apps.
-  - Next: add an explicit mnemonic/access-key field at the menu model or config layer
-    (`menubar.json`), then implement:
-    - underlined letter rendering (presentation), and
-    - Alt+Key routing (policy) for Windows/Linux in-window menubars.
+  - Implemented:
+    - explicit `Menu.mnemonic` + `menubar.json` v2 support (contract)
+    - Alt+Key routing for in-window menubars (policy)
+  - Evidence: `crates/fret-runtime/src/menu.rs` (`Menu.mnemonic`, `MenuFileV2.mnemonic`, patch ops v2)
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`open_on_alt_mnemonic`)
+  - Evidence: `ecosystem/fret-kit/src/workspace_shell.rs` (installs Alt+mnemonic key handler)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (installs Alt+mnemonic key handler; adds Gallery mnemonic)
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-alt-mnemonic.json`
+- [x] MENU-MVP1-kbd-026 Render mnemonic underlines for in-window menubar triggers (presentation).
+  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`attributed_title_with_mnemonic_underline`, trigger label rendering)
 - [x] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (test `escape_unwinds_submenu_then_menu_and_restores_focus`)
 - [x] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.

@@ -197,6 +197,7 @@ fn build_app_menu(cmds: &WorkspaceMenuCommands) -> Option<Menu> {
     Some(Menu {
         title,
         role: Some(MenuRole::App),
+        mnemonic: None,
         items,
     })
 }
@@ -285,6 +286,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         menus.push(Menu {
             title: Arc::from("File"),
             role: Some(MenuRole::File),
+            mnemonic: Some('f'),
             items: file_items,
         });
     }
@@ -292,6 +294,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         menus.push(Menu {
             title: Arc::from("Edit"),
             role: Some(MenuRole::Edit),
+            mnemonic: Some('e'),
             items: edit_items,
         });
     }
@@ -299,6 +302,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         menus.push(Menu {
             title: Arc::from("View"),
             role: Some(MenuRole::View),
+            mnemonic: Some('v'),
             items: view_items,
         });
     }
@@ -306,6 +310,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     menus.push(Menu {
         title: Arc::from("Window"),
         role: Some(MenuRole::Window),
+        mnemonic: Some('w'),
         items: vec![
             MenuItem::Command {
                 command: next_tab,

@@ -37,6 +37,11 @@ pub struct MenuBar {
 pub struct Menu {
     pub title: Arc<str>,
     pub role: Option<MenuRole>,
+    /// Optional mnemonic/access key for Alt+Key activation on platforms that support it.
+    ///
+    /// This is intentionally separate from `title` so titles can remain localization-friendly
+    /// and so OS vs in-window surfaces can share one source of truth.
+    pub mnemonic: Option<char>,
     pub items: Vec<MenuItem>,
 }
 
@@ -113,17 +118,20 @@ pub enum MenuBarPatchOp {
     AppendMenu {
         title: String,
         role: Option<MenuRole>,
+        mnemonic: Option<char>,
         items: Vec<MenuItem>,
     },
     InsertMenuBefore {
         title: String,
         role: Option<MenuRole>,
+        mnemonic: Option<char>,
         before: String,
         items: Vec<MenuItem>,
     },
     InsertMenuAfter {
         title: String,
         role: Option<MenuRole>,
+        mnemonic: Option<char>,
         after: String,
         items: Vec<MenuItem>,
     },
@@ -258,6 +266,7 @@ impl MenuBar {
             menus.push(Menu {
                 title: Arc::from(menu.title),
                 role: None,
+                mnemonic: None,
                 items,
             });
         }
@@ -282,6 +291,7 @@ impl MenuBar {
             menus.push(Menu {
                 title: Arc::from(menu.title),
                 role: menu.role,
+                mnemonic: menu.mnemonic,
                 items,
             });
         }
@@ -448,6 +458,8 @@ pub struct MenuFileV2 {
     pub title: String,
     #[serde(default)]
     pub role: Option<MenuRole>,
+    #[serde(default)]
+    pub mnemonic: Option<char>,
     pub items: Vec<MenuItemFileV2>,
 }
 
@@ -608,6 +620,7 @@ impl MenuBarPatchOpFileV1 {
                 Ok(MenuBarPatchOp::AppendMenu {
                     title,
                     role: None,
+                    mnemonic: None,
                     items: out_items,
                 })
             }
@@ -623,6 +636,7 @@ impl MenuBarPatchOpFileV1 {
                 Ok(MenuBarPatchOp::InsertMenuBefore {
                     title,
                     role: None,
+                    mnemonic: None,
                     before,
                     items: out_items,
                 })
@@ -639,6 +653,7 @@ impl MenuBarPatchOpFileV1 {
                 Ok(MenuBarPatchOp::InsertMenuAfter {
                     title,
                     role: None,
+                    mnemonic: None,
                     after,
                     items: out_items,
                 })
@@ -707,12 +722,16 @@ enum MenuBarPatchOpFileV2 {
         #[serde(default)]
         role: Option<MenuRole>,
         #[serde(default)]
+        mnemonic: Option<char>,
+        #[serde(default)]
         items: Vec<MenuItemFileV2>,
     },
     InsertMenuBefore {
         title: String,
         #[serde(default)]
         role: Option<MenuRole>,
+        #[serde(default)]
+        mnemonic: Option<char>,
         before: String,
         #[serde(default)]
         items: Vec<MenuItemFileV2>,
@@ -721,6 +740,8 @@ enum MenuBarPatchOpFileV2 {
         title: String,
         #[serde(default)]
         role: Option<MenuRole>,
+        #[serde(default)]
+        mnemonic: Option<char>,
         after: String,
         #[serde(default)]
         items: Vec<MenuItemFileV2>,
@@ -793,7 +814,12 @@ enum MenuBarPatchOpFileV2 {
 impl MenuBarPatchOpFileV2 {
     fn into_op(self, index: usize) -> Result<MenuBarPatchOp, MenuBarError> {
         match self {
-            Self::AppendMenu { title, role, items } => {
+            Self::AppendMenu {
+                title,
+                role,
+                mnemonic,
+                items,
+            } => {
                 let mut out_items = Vec::with_capacity(items.len());
                 for (idx, item) in items.into_iter().enumerate() {
                     out_items.push(item.into_menu_item(&format!("ops[{index}].items[{idx}]"))?);
@@ -801,12 +827,14 @@ impl MenuBarPatchOpFileV2 {
                 Ok(MenuBarPatchOp::AppendMenu {
                     title,
                     role,
+                    mnemonic,
                     items: out_items,
                 })
             }
             Self::InsertMenuBefore {
                 title,
                 role,
+                mnemonic,
                 before,
                 items,
             } => {
@@ -817,6 +845,7 @@ impl MenuBarPatchOpFileV2 {
                 Ok(MenuBarPatchOp::InsertMenuBefore {
                     title,
                     role,
+                    mnemonic,
                     before,
                     items: out_items,
                 })
@@ -824,6 +853,7 @@ impl MenuBarPatchOpFileV2 {
             Self::InsertMenuAfter {
                 title,
                 role,
+                mnemonic,
                 after,
                 items,
             } => {
@@ -834,6 +864,7 @@ impl MenuBarPatchOpFileV2 {
                 Ok(MenuBarPatchOp::InsertMenuAfter {
                     title,
                     role,
+                    mnemonic,
                     after,
                     items: out_items,
                 })
@@ -961,7 +992,12 @@ fn apply_patch_op(
     let fail = |error: String| Err(MenuBarError::PatchFailed { index, error });
 
     match op {
-        MenuBarPatchOp::AppendMenu { title, role, items } => {
+        MenuBarPatchOp::AppendMenu {
+            title,
+            role,
+            mnemonic,
+            items,
+        } => {
             if menu_index(menu_bar, &title).is_some() {
                 return fail(format!("menu already exists: {title}"));
             }
@@ -969,6 +1005,7 @@ fn apply_patch_op(
             menu_bar.menus.push(Menu {
                 title: Arc::from(title),
                 role,
+                mnemonic,
                 items,
             });
             Ok(())
@@ -976,6 +1013,7 @@ fn apply_patch_op(
         MenuBarPatchOp::InsertMenuBefore {
             title,
             role,
+            mnemonic,
             before,
             items,
         } => {
@@ -991,6 +1029,7 @@ fn apply_patch_op(
                 Menu {
                     title: Arc::from(title),
                     role,
+                    mnemonic,
                     items,
                 },
             );
@@ -999,6 +1038,7 @@ fn apply_patch_op(
         MenuBarPatchOp::InsertMenuAfter {
             title,
             role,
+            mnemonic,
             after,
             items,
         } => {
@@ -1015,6 +1055,7 @@ fn apply_patch_op(
                 Menu {
                     title: Arc::from(title),
                     role,
+                    mnemonic,
                     items,
                 },
             );
@@ -1299,6 +1340,7 @@ mod tests {
             menus: vec![Menu {
                 title: Arc::from("File"),
                 role: None,
+                mnemonic: None,
                 items: vec![
                     MenuItem::Command {
                         command: CommandId::new("app.open"),
@@ -1320,6 +1362,7 @@ mod tests {
             menus: vec![Menu {
                 title: Arc::from("File"),
                 role: None,
+                mnemonic: None,
                 items: vec![
                     MenuItem::Separator,
                     MenuItem::Separator,
@@ -1357,6 +1400,7 @@ mod tests {
             menus: vec![Menu {
                 title: Arc::from("File"),
                 role: None,
+                mnemonic: None,
                 items: vec![
                     MenuItem::Submenu {
                         title: Arc::from("Empty"),

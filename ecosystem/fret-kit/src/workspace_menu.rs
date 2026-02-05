@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, Size, TextOverflow, TextStyle,
-    TextWrap,
+    AttributedText, Color, Corners, DecorationLineStyle, Edges, FontId, FontWeight, Px,
+    SemanticsRole, Size, TextOverflow, TextSpan, TextStyle, TextWrap, UnderlineStyle,
 };
 use fret_runtime::{
     CommandId, CommandScope, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem,
@@ -13,7 +13,7 @@ use fret_ui::action::{ActionCx, OnDismissRequest, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
     PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
-    SemanticsProps, SizeStyle, TextProps,
+    SemanticsProps, SizeStyle, StyledTextProps, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -75,6 +75,46 @@ fn stable_menu_key(raw: &str) -> String {
     format!("u{:016x}", fnv1a_64(raw))
 }
 
+fn attributed_title_with_mnemonic_underline(
+    title: Arc<str>,
+    mnemonic: char,
+    underline_color: Color,
+) -> Option<AttributedText> {
+    let mnemonic = mnemonic.to_ascii_lowercase();
+
+    let mut start: Option<usize> = None;
+    let mut len: usize = 0;
+    for (ix, ch) in title.char_indices() {
+        if ch.to_ascii_lowercase() == mnemonic {
+            start = Some(ix);
+            len = ch.len_utf8();
+            break;
+        }
+    }
+    let start = start?;
+
+    let underline = UnderlineStyle {
+        color: Some(underline_color),
+        style: DecorationLineStyle::Solid,
+    };
+
+    let mut spans: Vec<TextSpan> = Vec::with_capacity(3);
+    if start > 0 {
+        spans.push(TextSpan::new(start));
+    }
+    spans.push(TextSpan {
+        len,
+        shaping: Default::default(),
+        paint: fret_core::TextPaintStyle::default().with_underline(underline),
+    });
+    let after_start = start.saturating_add(len);
+    if after_start < title.len() {
+        spans.push(TextSpan::new(title.len().saturating_sub(after_start)));
+    }
+
+    Some(AttributedText::new(title, spans))
+}
+
 #[derive(Debug, Clone)]
 pub struct MenubarFromRuntimeOptions {
     pub platform: Platform,
@@ -125,6 +165,7 @@ enum InWindowMenuEntry {
 struct InWindowMenu {
     title: Arc<str>,
     enabled: bool,
+    mnemonic: Option<char>,
     entries: Arc<[InWindowMenuEntry]>,
 }
 
@@ -437,6 +478,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
             InWindowMenu {
                 title: menu.title.clone(),
                 enabled,
+                mnemonic: menu.mnemonic,
                 entries: Arc::from(entries.into_boxed_slice()),
             }
         })
@@ -586,6 +628,9 @@ fn render_menu_from_runtime<H: UiHost>(
 
         cx.pressable_with_id_props(|cx, st, trigger_id| {
             let is_open = cx.watch_model(&open).copied().unwrap_or(false);
+            let group_has_active = cx.watch_model(&group_active).cloned().is_some();
+            let show_mnemonics = matches!(opts.platform, Platform::Windows | Platform::Linux)
+                && (group_has_active || st.focused);
 
             menubar_trigger_row::register_trigger_in_registry(
                 cx,
@@ -593,6 +638,7 @@ fn render_menu_from_runtime<H: UiHost>(
                 trigger_id,
                 open.clone(),
                 enabled,
+                menu.mnemonic,
             );
             menubar_trigger_row::sync_trigger_row_state(
                 cx,
@@ -663,14 +709,32 @@ fn render_menu_from_runtime<H: UiHost>(
                 );
             }
 
-            let content = cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: menu.title.clone(),
-                style: Some(text_style),
-                color: Some(if enabled { fg } else { fg_disabled }),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-            });
+            let text_color = if enabled { fg } else { fg_disabled };
+            let content = if show_mnemonics
+                && let Some(mnemonic) = menu.mnemonic
+                && let Some(rich) = attributed_title_with_mnemonic_underline(
+                    menu.title.clone(),
+                    mnemonic,
+                    text_color,
+                ) {
+                cx.styled_text_props(StyledTextProps {
+                    layout: LayoutStyle::default(),
+                    rich,
+                    style: Some(text_style),
+                    color: Some(text_color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })
+            } else {
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: menu.title.clone(),
+                    style: Some(text_style),
+                    color: Some(text_color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                })
+            };
 
             let content = cx.container(
                 ContainerProps {
@@ -1380,6 +1444,43 @@ mod tests {
         }
     }
 
+    #[test]
+    fn mnemonic_underline_creates_valid_attributed_text() {
+        let title: Arc<str> = Arc::from("File");
+        let rich = attributed_title_with_mnemonic_underline(
+            title.clone(),
+            'i',
+            Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        )
+        .expect("expected mnemonic underline match");
+        assert!(rich.is_valid());
+        assert_eq!(rich.text, title);
+        assert_eq!(rich.spans.len(), 3);
+        assert!(rich.spans[0].paint.underline.is_none());
+        assert!(rich.spans[1].paint.underline.is_some());
+        assert!(rich.spans[2].paint.underline.is_none());
+
+        let miss = attributed_title_with_mnemonic_underline(
+            title.clone(),
+            'z',
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            },
+        );
+        assert!(
+            miss.is_none(),
+            "expected no underline when mnemonic not present"
+        );
+    }
+
     #[cfg(feature = "shadcn")]
     #[test]
     fn escape_unwinds_submenu_then_menu_and_restores_focus() {
@@ -1449,6 +1550,7 @@ mod tests {
                 menus: vec![Menu {
                     title: Arc::from("Window"),
                     role: None,
+                    mnemonic: None,
                     items: vec![
                         MenuItem::Submenu {
                             title: Arc::from("Split"),
