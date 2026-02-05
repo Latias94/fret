@@ -163,6 +163,9 @@ type SnapshotId =
   | "pinning_enable_pinning_false_enable_row_pinning_fn_overrides"
   | "pinning_action_pin_top_bottom"
   | "pinning_action_unpin_top"
+  | "pinning_action_on_row_pinning_change_noop_ignores"
+  | "pinning_action_reset_row_pinning_restores_initial"
+  | "pinning_action_reset_row_pinning_default_true_clears"
   | "pinning_tree_keep_true_child_hidden_when_parent_collapsed"
   | "pinning_tree_keep_true_child_visible_when_parent_expanded"
   | "pinning_tree_keep_false_never_surfaces_child_row"
@@ -174,6 +177,9 @@ type SnapshotId =
   | "column_pinning_action_pin_left_right_unpin"
   | "column_pinning_action_pins_when_enable_column_pinning_false"
   | "column_pinning_action_pins_when_enable_pinning_false"
+  | "column_pinning_action_on_column_pinning_change_noop_ignores"
+  | "column_pinning_action_reset_column_pinning_restores_initial"
+  | "column_pinning_action_reset_column_pinning_default_true_clears"
   | "grouping_baseline"
   | "grouping_state_one_column"
   | "grouping_state_two_columns"
@@ -301,6 +307,8 @@ type TanStackOptions = {
   __onColumnSizingInfoChange?: "noop"
   __onExpandedChange?: "noop"
   __onPaginationChange?: "noop"
+  __onColumnPinningChange?: "noop"
+  __onRowPinningChange?: "noop"
   __onRowSelectionChange?: "noop"
 }
 
@@ -606,6 +614,14 @@ type FixtureAction =
       type: "pinColumn"
       column_id: string
       position: "left" | "right" | null
+    }
+  | {
+      type: "resetRowPinning"
+      default_state?: boolean
+    }
+  | {
+      type: "resetColumnPinning"
+      default_state?: boolean
     }
   | {
       type: "toggleRowSelected"
@@ -1617,6 +1633,9 @@ async function main(): Promise<void> {
         currentState.columnSizingInfo = next ?? currentState.columnSizingInfo
       },
       onColumnPinningChange: (updater: any) => {
+        if (options.__onColumnPinningChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.columnPinning) : updater
         currentState.columnPinning = next ?? { left: [], right: [] }
@@ -1627,6 +1646,9 @@ async function main(): Promise<void> {
         currentState.columnOrder = next ?? []
       },
       onRowPinningChange: (updater: any) => {
+        if (options.__onRowPinningChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.rowPinning) : updater
         currentState.rowPinning = next ?? { top: [], bottom: [] }
@@ -2347,6 +2369,20 @@ function snapshotColumnPinning(
           throw new Error(`Unknown column in action: ${action.column_id}`)
         }
         col.pin(action.position === null ? false : action.position)
+        continue
+      }
+      if (action.type === "resetRowPinning") {
+        if (typeof table.resetRowPinning !== "function") {
+          throw new Error("Table has no resetRowPinning")
+        }
+        table.resetRowPinning(action.default_state)
+        continue
+      }
+      if (action.type === "resetColumnPinning") {
+        if (typeof table.resetColumnPinning !== "function") {
+          throw new Error("Table has no resetColumnPinning")
+        }
+        table.resetColumnPinning(action.default_state)
         continue
       }
       if (action.type === "toggleRowSelected") {
@@ -4008,6 +4044,52 @@ function snapshotColumnPinning(
           },
         ],
       ),
+      mkActions(
+        "pinning_action_on_row_pinning_change_noop_ignores",
+        { enableRowPinning: true, keepPinnedRows: true, __onRowPinningChange: "noop" },
+        {},
+        [
+          {
+            type: "pinRow",
+            row_id: "4",
+            position: "top",
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_action_reset_row_pinning_restores_initial",
+        {
+          enableRowPinning: true,
+          keepPinnedRows: true,
+          initialState: { rowPinning: { top: ["2"], bottom: [] } },
+        },
+        {
+          rowPinning: { top: ["4"], bottom: ["5"] },
+        },
+        [
+          {
+            type: "resetRowPinning",
+            default_state: false,
+          },
+        ],
+      ),
+      mkActions(
+        "pinning_action_reset_row_pinning_default_true_clears",
+        {
+          enableRowPinning: true,
+          keepPinnedRows: true,
+          initialState: { rowPinning: { top: ["2"], bottom: [] } },
+        },
+        {
+          rowPinning: { top: ["4"], bottom: ["5"] },
+        },
+        [
+          {
+            type: "resetRowPinning",
+            default_state: true,
+          },
+        ],
+      ),
     ]
   } else if (case_id === "pinning_tree") {
     const mk = (id: SnapshotId, options: TanStackOptions, state: TanStackState) => {
@@ -4169,6 +4251,24 @@ function snapshotColumnPinning(
         { enablePinning: false },
         {},
         [{ type: "pinColumn", column_id: "a", position: "left" }],
+      ),
+      mkActions(
+        "column_pinning_action_on_column_pinning_change_noop_ignores",
+        { __onColumnPinningChange: "noop" },
+        {},
+        [{ type: "pinColumn", column_id: "a", position: "left" }],
+      ),
+      mkActions(
+        "column_pinning_action_reset_column_pinning_restores_initial",
+        { initialState: { columnPinning: { left: ["a"], right: [] } } },
+        { columnPinning: { left: [], right: ["c"] } },
+        [{ type: "resetColumnPinning", default_state: false }],
+      ),
+      mkActions(
+        "column_pinning_action_reset_column_pinning_default_true_clears",
+        { initialState: { columnPinning: { left: ["a"], right: [] } } },
+        { columnPinning: { left: [], right: ["c"] } },
+        [{ type: "resetColumnPinning", default_state: true }],
       ),
     ]
   } else if (case_id === "sort_undefined") {

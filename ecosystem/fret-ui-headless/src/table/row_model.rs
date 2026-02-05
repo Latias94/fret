@@ -466,10 +466,12 @@ impl<'a, TData> Table<'a, TData> {
         let mut columns: Vec<super::ColumnDef<TData>> = Vec::new();
         push_leaf_columns(&column_tree, &mut columns);
 
+        // TanStack Table v8: `table.initialState` is derived from `options.initialState` and
+        // feature defaults. It does not implicitly mirror `options.state`.
         let initial_state = builder
             .initial_state
             .clone()
-            .unwrap_or_else(|| builder.state.clone());
+            .unwrap_or_else(super::TableState::default);
 
         Self {
             data: builder.data,
@@ -1212,8 +1214,26 @@ impl<'a, TData> Table<'a, TData> {
         super::is_some_rows_pinned(&self.state.row_pinning, position)
     }
 
+    /// TanStack-aligned: `table.resetRowPinning(defaultState?)`.
+    pub fn reset_row_pinning(&self, default_state: bool) -> super::RowPinningState {
+        if default_state {
+            super::RowPinningState::default()
+        } else {
+            self.initial_state.row_pinning.clone()
+        }
+    }
+
     pub fn is_some_columns_pinned(&self, position: Option<super::ColumnPinPosition>) -> bool {
         super::is_some_columns_pinned(&self.state.column_pinning, position)
+    }
+
+    /// TanStack-aligned: `table.resetColumnPinning(defaultState?)`.
+    pub fn reset_column_pinning(&self, default_state: bool) -> super::ColumnPinningState {
+        if default_state {
+            super::ColumnPinningState::default()
+        } else {
+            self.initial_state.column_pinning.clone()
+        }
     }
 
     pub fn row_is_pinned(&self, row_key: RowKey) -> Option<super::RowPinPosition> {

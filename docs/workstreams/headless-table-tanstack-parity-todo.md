@@ -272,6 +272,18 @@ ColumnDef keys referenced by upstream feature implementations:
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_tree.json`.
+  - Covered: controlled-hook noop semantics (`onRowPinningChange` ignores updater).
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`
+      (snapshot: `pinning_action_on_row_pinning_change_noop_ignores`)
+    - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onRowPinningChange`)
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
+- [x] HTP-rowpin-030 Align `resetRowPinning(defaultState?)` semantics.
+  - Parity-gated:
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`
+      (snapshots: `pinning_action_reset_row_pinning_restores_initial`,
+      `pinning_action_reset_row_pinning_default_true_clears`)
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_row_pinning`)
 - [~] HTP-expand-010 Align expanded state shape (`true | Record<RowId, boolean>`) and behaviors.
   - Done (parity-gated): expanded state transitions and row model outputs under `paginateExpandedRows` true/false.
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`
@@ -343,6 +355,18 @@ ColumnDef keys referenced by upstream feature implementations:
   - Parity-gated (option gates + state transition outcomes): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`.
   - Covered: `column.getPinnedIndex()`-equivalent (`column_pinning.pinned_index` in fixture snapshots).
+  - Covered: controlled-hook noop semantics (`onColumnPinningChange` ignores updater).
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`
+      (snapshot: `column_pinning_action_on_column_pinning_change_noop_ignores`)
+    - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnPinningChange`)
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
+- [x] HTP-colpin-020 Align `resetColumnPinning(defaultState?)` semantics.
+  - Parity-gated:
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`
+      (snapshots: `column_pinning_action_reset_column_pinning_restores_initial`,
+      `column_pinning_action_reset_column_pinning_default_true_clears`)
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_column_pinning`)
 - [~] HTP-colvis-010 Align column visibility option gates and hooks:
   - `enableHiding`, `onColumnVisibilityChange`.
   - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +

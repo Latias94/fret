@@ -150,6 +150,8 @@ Current status:
   but lossless “presence” semantics (omitted vs explicit defaults) are not fully modeled yet.
 - A dedicated fixture (`ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/state_shapes.json`) covers
   grouping/expanded/rowPinning/globalFilter state shapes.
+- Reset semantics parity gates exist for pinning (`resetRowPinning` / `resetColumnPinning`), including
+  `initialState` vs `state` behavior (fixtures: `pinning.json`, `column_pinning.json`).
 
 Definition of done:
 
@@ -239,4 +241,4 @@ Fixture schema (v0; evolving, but kept stable for tests):
 - Use the TODO tracker: `docs/workstreams/headless-table-tanstack-parity-todo.md`
 - Start with M1/M2 (types + state), then lock parity by fixtures before large refactors.
 
-Current focus (2026-02-03): M4 — Column sizing/resizing parity (including pinned offsets).
+Current focus (2026-02-05): M6 — Selection per-row function options parity (remaining `HTP-sel-010` / `HTP-sel-020`).

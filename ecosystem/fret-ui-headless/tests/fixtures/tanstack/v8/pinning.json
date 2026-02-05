@@ -150,6 +150,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -312,6 +321,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -474,6 +492,15 @@
             "1"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -638,6 +665,15 @@
             "1"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -769,6 +805,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -903,6 +946,13 @@
             "1"
           ]
         },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1060,6 +1110,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1222,6 +1281,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1385,6 +1453,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1548,6 +1625,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -1714,6 +1800,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -2005,6 +2100,15 @@
             "2"
           ]
         },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
         "selected": {
           "root": [],
           "flat": []
@@ -2149,6 +2253,924 @@
           "center": [
             "1",
             "2"
+          ],
+          "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "5": null
+          },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "5": -1
+          },
+          "is_some_rows_pinned": false,
+          "is_some_top_rows_pinned": false,
+          "is_some_bottom_rows_pinned": false
+        }
+      }
+    },
+    {
+      "id": "pinning_action_on_row_pinning_change_noop_ignores",
+      "options": {
+        "enableRowPinning": true,
+        "keepPinnedRows": true,
+        "__onRowPinningChange": "noop"
+      },
+      "state": {},
+      "actions": [
+        {
+          "type": "pinRow",
+          "row_id": "4",
+          "position": "top"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "row_pinning": {
+          "top": [],
+          "center": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": null,
+            "3": null,
+            "4": null,
+            "5": null
+          },
+          "pinned_index": {
+            "1": -1,
+            "2": -1,
+            "3": -1,
+            "4": -1,
+            "5": -1
+          },
+          "is_some_rows_pinned": false,
+          "is_some_top_rows_pinned": false,
+          "is_some_bottom_rows_pinned": false
+        }
+      }
+    },
+    {
+      "id": "pinning_action_reset_row_pinning_restores_initial",
+      "options": {
+        "enableRowPinning": true,
+        "keepPinnedRows": true,
+        "initialState": {
+          "rowPinning": {
+            "top": [
+              "2"
+            ],
+            "bottom": []
+          }
+        }
+      },
+      "state": {
+        "rowPinning": {
+          "top": [
+            "4"
+          ],
+          "bottom": [
+            "5"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "resetRowPinning",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [
+              "2"
+            ],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "row_pinning": {
+          "top": [
+            "2"
+          ],
+          "center": [
+            "1",
+            "3",
+            "4",
+            "5"
+          ],
+          "bottom": [],
+          "can_pin": {
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true
+          },
+          "pin_position": {
+            "1": null,
+            "2": "top",
+            "3": null,
+            "4": null,
+            "5": null
+          },
+          "pinned_index": {
+            "1": -1,
+            "2": 0,
+            "3": -1,
+            "4": -1,
+            "5": -1
+          },
+          "is_some_rows_pinned": true,
+          "is_some_top_rows_pinned": true,
+          "is_some_bottom_rows_pinned": false
+        }
+      }
+    },
+    {
+      "id": "pinning_action_reset_row_pinning_default_true_clears",
+      "options": {
+        "enableRowPinning": true,
+        "keepPinnedRows": true,
+        "initialState": {
+          "rowPinning": {
+            "top": [
+              "2"
+            ],
+            "bottom": []
+          }
+        }
+      },
+      "state": {
+        "rowPinning": {
+          "top": [
+            "4"
+          ],
+          "bottom": [
+            "5"
+          ]
+        }
+      },
+      "actions": [
+        {
+          "type": "resetRowPinning",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "row_pinning": {
+          "top": [],
+          "center": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
           ],
           "bottom": [],
           "can_pin": {

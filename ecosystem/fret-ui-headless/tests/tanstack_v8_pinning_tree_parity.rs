@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, FilteringFnSpec, RowKey, RowPinPosition, Table, TanStackTableOptions,
+    ColumnDef, FilteringFnSpec, RowKey, RowPinPosition, Table, TableState, TanStackTableOptions,
     TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
@@ -136,6 +136,15 @@ fn tanstack_v8_pinning_tree_parity() {
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
+        // TanStack: table-level reset APIs target `options.initialState`, not `options.state`.
+        let initial_state = match snap.options.get("initialState") {
+            Some(v) => TanStackTableState::from_json(v)
+                .expect("tanstack initialState")
+                .to_table_state()
+                .expect("initialState conversion"),
+            None => TableState::default(),
+        };
+
         let enable_row_pinning_mode = snap
             .options
             .get("__enableRowPinning")
@@ -147,6 +156,7 @@ fn tanstack_v8_pinning_tree_parity() {
                 .global_filter_fn(FilteringFnSpec::Auto)
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
                 .get_sub_rows(|row, _idx| Some(row.sub_rows.as_slice()))
+                .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options);
 
@@ -198,6 +208,7 @@ fn tanstack_v8_pinning_tree_parity() {
             .global_filter_fn(FilteringFnSpec::Auto)
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
             .get_sub_rows(|row, _idx| Some(row.sub_rows.as_slice()))
+            .initial_state(initial_state)
             .state(state)
             .options(options);
 

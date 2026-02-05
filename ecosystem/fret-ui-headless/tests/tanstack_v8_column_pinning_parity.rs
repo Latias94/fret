@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, ColumnPinPosition, RowKey, Table, TanStackTableOptions, TanStackTableState,
+    ColumnDef, ColumnPinPosition, RowKey, Table, TableState, TanStackTableOptions,
+    TanStackTableState,
 };
 use serde::Deserialize;
 
@@ -48,6 +49,11 @@ enum FixtureAction {
     PinColumn {
         column_id: String,
         position: Option<String>,
+    },
+    #[serde(rename = "resetColumnPinning")]
+    ResetColumnPinning {
+        #[serde(default)]
+        default_state: Option<bool>,
     },
 }
 
@@ -118,10 +124,26 @@ fn tanstack_v8_column_pinning_parity() {
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
+        // TanStack: table-level reset APIs target `options.initialState`, not `options.state`.
+        let initial_state = match snap.options.get("initialState") {
+            Some(v) => TanStackTableState::from_json(v)
+                .expect("tanstack initialState")
+                .to_table_state()
+                .expect("initialState conversion"),
+            None => TableState::default(),
+        };
+
+        let column_pinning_hook_noop = snap
+            .options
+            .get("__onColumnPinningChange")
+            .and_then(|v| v.as_str())
+            .is_some_and(|v| v == "noop");
+
         for action in &snap.actions {
             let table = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options)
                 .build();
@@ -131,11 +153,21 @@ fn tanstack_v8_column_pinning_parity() {
                     column_id,
                     position,
                 } => {
+                    if column_pinning_hook_noop {
+                        continue;
+                    }
                     let pos = parse_column_pin_position(position.as_deref());
                     let updater = table
                         .column_pinning_updater(column_id, pos)
                         .unwrap_or_else(|| panic!("unknown column in action: {column_id}"));
                     state.column_pinning = updater.apply(&state.column_pinning);
+                }
+                FixtureAction::ResetColumnPinning { default_state } => {
+                    if column_pinning_hook_noop {
+                        continue;
+                    }
+                    state.column_pinning =
+                        table.reset_column_pinning(default_state.unwrap_or(false));
                 }
             }
         }
@@ -156,6 +188,7 @@ fn tanstack_v8_column_pinning_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .initial_state(initial_state)
             .state(state)
             .options(options)
             .build();

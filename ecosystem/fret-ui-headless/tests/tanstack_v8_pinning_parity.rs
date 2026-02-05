@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, FilteringFnSpec, RowKey, RowPinPosition, Table, TanStackTableOptions,
+    ColumnDef, FilteringFnSpec, RowKey, RowPinPosition, Table, TableState, TanStackTableOptions,
     TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
@@ -53,6 +53,11 @@ enum FixtureAction {
         include_leaf_rows: bool,
         #[serde(default)]
         include_parent_rows: bool,
+    },
+    #[serde(rename = "resetRowPinning")]
+    ResetRowPinning {
+        #[serde(default)]
+        default_state: Option<bool>,
     },
 }
 
@@ -135,16 +140,31 @@ fn tanstack_v8_pinning_parity() {
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
+        // TanStack: table-level reset APIs target `options.initialState`, not `options.state`.
+        let initial_state = match snap.options.get("initialState") {
+            Some(v) => TanStackTableState::from_json(v)
+                .expect("tanstack initialState")
+                .to_table_state()
+                .expect("initialState conversion"),
+            None => TableState::default(),
+        };
+
         let enable_row_pinning_mode = snap
             .options
             .get("__enableRowPinning")
             .and_then(|v| v.as_str());
+        let row_pinning_hook_noop = snap
+            .options
+            .get("__onRowPinningChange")
+            .and_then(|v| v.as_str())
+            .is_some_and(|v| v == "noop");
 
         for action in &snap.actions {
             let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .global_filter_fn(FilteringFnSpec::Auto)
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options);
 
@@ -161,6 +181,9 @@ fn tanstack_v8_pinning_parity() {
                     include_leaf_rows,
                     include_parent_rows,
                 } => {
+                    if row_pinning_hook_noop {
+                        continue;
+                    }
                     let row_key = RowKey(
                         row_id
                             .parse::<u64>()
@@ -174,6 +197,12 @@ fn tanstack_v8_pinning_parity() {
                         *include_parent_rows,
                     );
                     state.row_pinning = updater.apply(&state.row_pinning);
+                }
+                FixtureAction::ResetRowPinning { default_state } => {
+                    if row_pinning_hook_noop {
+                        continue;
+                    }
+                    state.row_pinning = table.reset_row_pinning(default_state.unwrap_or(false));
                 }
             }
         }
@@ -195,6 +224,7 @@ fn tanstack_v8_pinning_parity() {
             .columns(columns.clone())
             .global_filter_fn(FilteringFnSpec::Auto)
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .initial_state(initial_state)
             .state(state)
             .options(options);
 
