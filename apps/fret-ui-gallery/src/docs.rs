@@ -939,6 +939,7 @@ This page validates a Material 3 autocomplete surface:
 - token-driven input + menu outcomes via `md.comp.{outlined,filled}-autocomplete.*`
 - combobox semantics (ADR 0073): `active_descendant` + `controls` ↔ `labelled_by`
 - non-modal popover menu that stays interactive while typing (click-through)
+- composition surface: `ExposedDropdown` (searchable select policy over `Autocomplete`)
 "#;
 
 pub(crate) const USAGE_MATERIAL3_AUTOCOMPLETE: &str = r#"
@@ -957,6 +958,17 @@ let ac = m3::Autocomplete::new(query)
     .selected_value(selected_value)
     .label("Search")
     .placeholder("Type to filter")
+    .items(items)
+    .into_element(cx);
+
+// Composition: searchable select.
+let committed = app
+    .models_mut()
+    .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+let exposed_query = app.models_mut().insert(String::new());
+let exposed = m3::ExposedDropdown::new(committed)
+    .query(exposed_query)
+    .label("Searchable select")
     .items(items)
     .into_element(cx);
 ```

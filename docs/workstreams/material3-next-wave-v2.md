@@ -313,6 +313,8 @@ Non-goals:
           - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
         - [x] Hook: optional `on_select` callback with a selection method enum for downstream effects.
           - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `ecosystem/fret-ui-material3/src/lib.rs`.
+        - [x] Add a Compose-style composition surface (`ExposedDropdown`) for searchable select policy.
+          - Evidence: `ecosystem/fret-ui-material3/src/exposed_dropdown.rs`, `apps/fret-ui-gallery/src/ui.rs`.
   - References:
     - Material Web tokens:
       `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-autocomplete.scss`,

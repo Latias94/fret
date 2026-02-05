@@ -8776,6 +8776,160 @@ fn material3_autocomplete_enter_commits_and_does_not_reopen_v1() {
 }
 
 #[test]
+fn material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1() {
+    use fret_ui::element::{FlexProps, Length};
+    use fret_ui_material3::{AutocompleteItem, ExposedDropdown, TextField, TextFieldVariant};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let selected_value = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+    let query = app.models_mut().insert(String::new());
+    let query_for_render = query.clone();
+    let other = app.models_mut().insert(String::new());
+
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let exposed = ExposedDropdown::new(selected_value.clone())
+                    .query(query_for_render.clone())
+                    .items(items.clone())
+                    .a11y_label("exposed dropdown")
+                    .test_id("material3-exposed-dropdown")
+                    .into_element(cx);
+
+                let other = TextField::new(other.clone())
+                    .variant(TextFieldVariant::Outlined)
+                    .label("Other")
+                    .test_id("other-field")
+                    .into_element(cx);
+
+                let mut column = FlexProps::default();
+                column.direction = fret_core::Axis::Vertical;
+                column.gap = Px(24.0);
+                column.layout.size.width = Length::Fill;
+
+                let content = cx.flex(column, |_cx| vec![exposed, other]);
+                vec![with_padding(cx, Px(24.0), content)]
+            })
+        };
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models_mut().get_cloned(&query).unwrap_or_default(),
+        "Beta",
+        "expected query to synchronize from the committed selection while blurred"
+    );
+
+    let (input_node, other_node): (NodeId, NodeId) = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            let input = snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-exposed-dropdown")).then_some(node.id)
+            })?;
+            let other = snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("other-field")).then_some(node.id)
+            })?;
+            Some((input, other))
+        })
+        .expect("expected input and other nodes in semantics snapshot");
+
+    ui.set_focus(Some(input_node));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let _ = app.models_mut().update(&query, |v| *v = "ga".to_string());
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    assert_eq!(
+        app.models_mut().get_cloned(&query).unwrap_or_default(),
+        "ga",
+        "expected query to remain editable while focused"
+    );
+
+    ui.set_focus(Some(other_node));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models_mut().get_cloned(&query).unwrap_or_default(),
+        "Beta",
+        "expected query to revert to the committed selection label on blur"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-exposed-dropdown"))
+        .expect("combobox input node after blur");
+    assert_eq!(input.value.as_deref(), Some("Beta"));
+}
+
+#[test]
 fn material3_headless_autocomplete_suite_goldens_v1() {
     use fret_ui::element::{FlexProps, Length};
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};

@@ -8952,6 +8952,8 @@ fn preview_material3_autocomplete(
     #[derive(Default)]
     struct LocalState {
         selected_value: Option<Model<Option<Arc<str>>>>,
+        exposed_selected_value: Option<Model<Option<Arc<str>>>>,
+        exposed_query: Option<Model<String>>,
     }
 
     let selected_value = cx.with_state(LocalState::default, |st| st.selected_value.clone());
@@ -8965,6 +8967,32 @@ fn preview_material3_autocomplete(
         model
     };
 
+    let exposed_selected_value =
+        cx.with_state(LocalState::default, |st| st.exposed_selected_value.clone());
+    let exposed_selected_value = if let Some(model) = exposed_selected_value {
+        model
+    } else {
+        let model = cx
+            .app
+            .models_mut()
+            .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+        cx.with_state(LocalState::default, |st| {
+            st.exposed_selected_value = Some(model.clone())
+        });
+        model
+    };
+
+    let exposed_query = cx.with_state(LocalState::default, |st| st.exposed_query.clone());
+    let exposed_query = if let Some(model) = exposed_query {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(String::new());
+        cx.with_state(LocalState::default, |st| {
+            st.exposed_query = Some(model.clone())
+        });
+        model
+    };
+
     let query_now = cx
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_default();
@@ -8972,6 +9000,11 @@ fn preview_material3_autocomplete(
         .get_model_cloned(&selected_value, Invalidation::Layout)
         .unwrap_or(None);
     let selected_label = selected_now.as_deref().unwrap_or("<none>");
+
+    let exposed_selected_now = cx
+        .get_model_cloned(&exposed_selected_value, Invalidation::Layout)
+        .unwrap_or(None);
+    let exposed_selected_label = exposed_selected_now.as_deref().unwrap_or("<none>");
 
     let toggles = stack::hstack(
         cx,
@@ -9057,6 +9090,35 @@ fn preview_material3_autocomplete(
         ])
         .into_element(cx),
         shadcn::CardContent::new(vec![filled]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let exposed = material3::ExposedDropdown::new(exposed_selected_value.clone())
+        .query(exposed_query.clone())
+        .variant(material3::AutocompleteVariant::Outlined)
+        .label("Searchable select")
+        .placeholder("Type to filter")
+        .supporting_text(
+            "Policy: when the input blurs, the query reverts to the committed selection.",
+        )
+        .items(items.clone())
+        .disabled(disabled_now)
+        .error(error_now)
+        .a11y_label("exposed dropdown")
+        .test_id("ui-gallery-material3-exposed-dropdown")
+        .into_element(cx);
+
+    let exposed_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Exposed dropdown (composition)").into_element(cx),
+            shadcn::CardDescription::new(
+                "Compose-style: a committed selection model drives the closed display, while the query stays editable while focused.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![exposed]).into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
@@ -9160,6 +9222,11 @@ fn preview_material3_autocomplete(
             "Query: \"{}\" | Selected value: {}",
             query_now, selected_label
         ))),
+        cx.text(Arc::from(format!(
+            "Exposed dropdown committed value: {}",
+            exposed_selected_label
+        ))),
+        exposed_card,
         outlined_card,
         filled_card,
         dialog,

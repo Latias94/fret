@@ -106,6 +106,7 @@ pub struct Autocomplete {
     open_on_focus: bool,
     set_query_on_select: bool,
     on_select: Option<OnAutocompleteSelect>,
+    input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
     disabled: bool,
     error: bool,
     label: Option<Arc<str>>,
@@ -140,6 +141,7 @@ impl Autocomplete {
             open_on_focus: true,
             set_query_on_select: true,
             on_select: None,
+            input_id_out: None,
             disabled: false,
             error: false,
             label: None,
@@ -177,6 +179,11 @@ impl Autocomplete {
 
     pub fn on_select(mut self, on_select: OnAutocompleteSelect) -> Self {
         self.on_select = Some(on_select);
+        self
+    }
+
+    pub fn input_id_out(mut self, input_id_out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
+        self.input_id_out = Some(input_id_out);
         self
     }
 
@@ -487,6 +494,10 @@ fn autocomplete_into_element<H: UiHost>(
         let Some(input_id) = runtime.input_element_id.get() else {
             return trigger;
         };
+
+        if let Some(out) = autocomplete.input_id_out.clone() {
+            out.set(Some(input_id));
+        }
 
         install_input_key_handlers(
             cx,
