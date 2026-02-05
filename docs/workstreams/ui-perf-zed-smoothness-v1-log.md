@@ -2721,3 +2721,95 @@ cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-hit-test-tortur
 
 Bundle:
 - `target/fret-diag-run/2026-02-05-pointer-move-bounds-tree-query-stats/1770247519772-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 07:38:02 (commit `913ee260`)
+
+Change:
+- (no code change) Re-run the pointer-move gate at repeat=7 to validate that the new bounds-tree “work” counters
+  (visited/pushed) can explain the tail.
+
+Why:
+- The pointer-move gate previously showed a few ~0.9ms `hit_test_time_us` outliers. Without a work proxy it was not
+  clear whether this was algorithmic cost (too many nodes visited) or wall-time jitter.
+
+Command:
+```sh
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-bounds-tree-work \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --timeout-ms 300000 --poll-ms 200 \
+  --max-pointer-move-dispatch-us 2000 \
+  --max-pointer-move-hit-test-us 1500 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Results (median across 7 runs; 192 pointer-move frames per run):
+- `dispatch_time_us`: p50 ~800, p95 ~936.6, max (across runs) 1106
+- `hit_test_time_us`: p50 ~581.5, p95 ~785.9, max (across runs) 925
+
+Worst pointer-move hit-test frame (from the worst-by-hit bundle below):
+- `tick_id=893 frame_id=895`
+- `hit_test_time_us=925`, `dispatch_time_us=946`
+- `hit_test_bounds_tree_queries=1`, `nodes_visited=12`, `nodes_pushed=12`
+- `bounds_tree_hit=1`, `candidate_rejected=0`
+
+Takeaway:
+- The tail is **not** explained by a bounds-tree explosion (visited/pushed stays small even at the max frame). The
+  remaining ~0.9ms is likely fixed per-query overhead (clip/corner-radii checks, transform work, widget hit-test),
+  or wall-time jitter. Next step is to add sub-step timing inside hit testing.
+
+Bundles:
+- Worst-by-hit: `target/fret-diag-perf/2026-02-05-pointer-move-r7-bounds-tree-work/1770248282947-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+- Worst-by-dispatch: `target/fret-diag-perf/2026-02-05-pointer-move-r7-bounds-tree-work/1770248580579-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`
+
+## 2026-02-05 08:21:34 (commit `55dd923d`)
+
+Change:
+- feat(diag): track hit-test path-cache reuse
+
+Why:
+- We need a concrete signal for “did the cached-path fast path actually help?” on pointer-move workloads.
+- This enables A/B experiments (bounds-tree on/off, different hover policies) without guesswork.
+
+Notes:
+- New per-frame counters exported in diagnostics bundles:
+  - `debug.stats.hit_test_path_cache_hits`
+  - `debug.stats.hit_test_path_cache_misses`
+- Semantics:
+  - `hits`: a hit-test query was satisfied via `try_hit_test_along_cached_path` (no bounds-tree query needed).
+  - `misses`: a cached-path hit-test was attempted for the cached layer root but did not hit, so we fell back.
+
+Command:
+```sh
+cargo build -p fret-ui-gallery --release
+
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json \
+  --dir target/fret-diag-perf/2026-02-05-pointer-move-r7-path-cache-stats-55dd923d \
+  --reuse-launch --warmup-frames 5 --repeat 7 --sort time --top 15 --json \
+  --timeout-ms 300000 --poll-ms 200 \
+  --max-pointer-move-dispatch-us 2000 \
+  --max-pointer-move-hit-test-us 1500 \
+  --max-pointer-move-global-changes 0 \
+  --env FRET_UI_GALLERY_HARNESS_ONLY=hit_test_torture \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (median across 7 runs; 192 pointer-move frames per run):
+- `dispatch_time_us`: p50 ~797, p95 ~946.0, max (across runs) 1180
+- `hit_test_time_us`: p50 ~586.0, p95 ~783.5, max (across runs) 943
+
+Path-cache reuse (worst-by-hit bundle below; 192 pointer-move frames):
+- `hit_test_path_cache_hits_total=4`
+- `hit_test_path_cache_misses_total=188`
+- Hit rate: ~2.1% (4 / 192)
+
+Interpretation:
+- On this stripes sweep workload, the pointer crosses many regions per frame, so cached-path reuse is expected to be
+  low. The counter is still useful to confirm whether a change improves locality on more realistic pages.
+
+Bundles:
+- `target/fret-diag-perf/2026-02-05-pointer-move-r7-path-cache-stats-55dd923d/1770250128271-ui-gallery-hit-test-torture-stripes-move-sweep-steady/bundle.json`

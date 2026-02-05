@@ -84,6 +84,32 @@ To close the gap responsibly, treat perf as a contract and work from the “lowe
 This playbook is intentionally compatible with “fearless refactors”: each change should produce a measurable delta and
 an entry in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commit-addressable) so regressions are reversible.
 
+## 0.3 Pointer-move hit-test status (current probe)
+
+Current “Zed feel” probe:
+
+- Script: `tools/diag-scripts/ui-gallery-hit-test-torture-stripes-move-sweep-steady.json`
+- Gate: `fretboard diag perf ... --max-pointer-move-dispatch-us/--max-pointer-move-hit-test-us`
+
+Findings (macOS Apple M4; repeat=7):
+
+- `hit_test_time_us` is measurable and relatively stable (p50 ~0.58ms, p95 ~0.78ms, max ~0.94ms across runs).
+- The bounds-tree “work” proxy stays small even at the worst pointer-move frame:
+  - Example worst-by-hit frame: `nodes_visited=12`, `nodes_pushed=12`, `bounds_tree_queries=1` with `hit_test_time_us=925`.
+- Cached-path reuse exists but is expectedly low on the stripes sweep workload:
+  - Example bundle: 4 hits / 188 misses over 192 pointer-move frames (~2.1% hit rate).
+
+Implication:
+
+- The remaining tail is not a “bounds-tree explosion” problem. Next improvements should focus on:
+  - reducing fixed per-query overhead (clip + rounded-rect hit test, transform work, widget hit-test calls), and/or
+  - adding sub-step timers so tail latency is attributable to concrete work (not just wall time).
+
+Evidence:
+
+- Perf log entries under:
+  - `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (commits `913ee260`, `55dd923d`)
+
 ## 1) What GPUI does that matters for smoothness
 
 The following are “load-bearing” for Zed feel. Each entry links to the GPUI reference location.
