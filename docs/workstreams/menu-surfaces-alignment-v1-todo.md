@@ -126,12 +126,13 @@ Exit criteria:
 - Core invariants are covered by unit tests and at least one `fretboard diag` script.
 
 - [ ] MENU-MVP4-test-050 Add nextest coverage for menu normalization (shared helper, if implemented).
-- [~] MENU-MVP4-test-051 Add a `fretboard diag` script for keyboard-only menubar navigation:
+- [x] MENU-MVP4-test-051 Add a `fretboard diag` script for keyboard-only menubar navigation:
   - Focus menubar (F10)
   - Open menu (Enter/ArrowDown)
   - Rove items + open submenu + close with Escape
   - Verify stable `test_id` anchors
-  - Partial: `tools/diag-scripts/ui-gallery-menubar-alt-activation.json` (toggles in-window menubar on, then validates Alt activation focuses `menubar-trigger-file`)
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-keyboard-navigation.json` (F10 focus → Window menu → Split submenu → Escape unwind)
+  - Extra: `tools/diag-scripts/ui-gallery-menubar-alt-activation.json` (toggles in-window menubar on, then validates Alt activation focuses `menubar-trigger-file`)
 - [ ] MENU-MVP4-test-052 Add a diag script for pointer “submenu grace intent” (prevent accidental close when moving toward submenu).
 
 ---
