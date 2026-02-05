@@ -11,6 +11,8 @@ documentation.workspace = true
 
 [features]
 default = []
+query = ["fret-authoring/query"]
+selector = ["fret-authoring/selector"]
 
 [dependencies]
 fret-authoring = { path = "../fret-authoring" }

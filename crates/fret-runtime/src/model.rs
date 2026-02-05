@@ -375,6 +375,33 @@ impl<T: Any> Drop for ModelLease<T> {
     }
 }
 
+/// Untyped lease used by `ModelStore::update_any`.
+struct ModelLeaseAny {
+    id: ModelId,
+    value: Option<Box<dyn Any>>,
+    dirty: bool,
+}
+
+impl ModelLeaseAny {
+    fn value_mut(&mut self) -> &mut dyn Any {
+        self.value
+            .as_deref_mut()
+            .expect("leased model must contain a value")
+    }
+
+    fn mark_dirty(&mut self) {
+        self.dirty = true;
+    }
+}
+
+impl Drop for ModelLeaseAny {
+    fn drop(&mut self) {
+        if self.value.is_some() && !std::thread::panicking() {
+            panic!("ModelLeaseAny must be ended with ModelStore::end_lease_any");
+        }
+    }
+}
+
 impl ModelStore {
     #[track_caller]
     fn state(&self) -> std::cell::Ref<'_, ModelStoreState> {
@@ -709,6 +736,34 @@ impl ModelStore {
     }
 
     #[track_caller]
+    pub fn update_any<R>(
+        &mut self,
+        id: ModelId,
+        f: impl FnOnce(&mut dyn Any) -> R,
+    ) -> Result<R, ModelUpdateError> {
+        let changed_at = Location::caller();
+
+        let mut lease = self.lease_any(id)?;
+        let result = if cfg!(panic = "unwind") {
+            catch_unwind(AssertUnwindSafe(|| f(lease.value_mut())))
+        } else {
+            Ok(f(lease.value_mut()))
+        };
+
+        match result {
+            Ok(value) => {
+                lease.mark_dirty();
+                self.end_lease_any_with_changed_at(&mut lease, changed_at);
+                Ok(value)
+            }
+            Err(panic) => {
+                self.end_lease_any(&mut lease);
+                resume_unwind(panic)
+            }
+        }
+    }
+
+    #[track_caller]
     fn lease_shared<T: Any>(&self, model: &Model<T>) -> Result<ModelLease<T>, ModelUpdateError> {
         #[cfg(debug_assertions)]
         let caller = Location::caller();
@@ -809,6 +864,64 @@ impl ModelStore {
         self.lease_shared(model)
     }
 
+    #[track_caller]
+    fn lease_any(&mut self, id: ModelId) -> Result<ModelLeaseAny, ModelUpdateError> {
+        #[cfg(debug_assertions)]
+        let caller = Location::caller();
+        let boxed = {
+            let mut state = self.state_mut();
+            let entry = state
+                .storage
+                .get_mut(id)
+                .ok_or(ModelUpdateError::NotFound)?;
+            if entry.strong == 0 {
+                return Err(ModelUpdateError::NotFound);
+            }
+
+            match entry.value.take() {
+                Some(value) => {
+                    #[cfg(debug_assertions)]
+                    {
+                        entry.leased_at = Some(caller);
+                        entry.leased_type = Some(entry.created_type);
+                    }
+                    value
+                }
+                None => {
+                    #[cfg(debug_assertions)]
+                    {
+                        let leased_type = entry.leased_type.unwrap_or("<unknown>");
+                        if let Some(leased_at) = entry.leased_at {
+                            eprintln!(
+                                "model already leased: id={id:?} type={leased_type} leased_at={}:{}:{} attempted_at={}:{}:{}",
+                                leased_at.file(),
+                                leased_at.line(),
+                                leased_at.column(),
+                                caller.file(),
+                                caller.line(),
+                                caller.column()
+                            );
+                        } else {
+                            eprintln!(
+                                "model already leased: id={id:?} type={leased_type} attempted_at={}:{}:{} (lease origin unknown)",
+                                caller.file(),
+                                caller.line(),
+                                caller.column()
+                            );
+                        }
+                    }
+                    return Err(ModelUpdateError::AlreadyLeased);
+                }
+            }
+        };
+
+        Ok(ModelLeaseAny {
+            id,
+            value: Some(boxed),
+            dirty: false,
+        })
+    }
+
     fn end_lease_shared<T: Any>(
         &self,
         lease: &mut ModelLease<T>,
@@ -866,6 +979,65 @@ impl ModelStore {
         changed_at: &'static Location<'static>,
     ) {
         self.end_lease_shared(lease, Some(changed_at));
+    }
+
+    fn end_lease_any_shared(
+        &self,
+        lease: &mut ModelLeaseAny,
+        changed_at: Option<&'static Location<'static>>,
+    ) {
+        let Some(value) = lease.value.take() else {
+            return;
+        };
+
+        // Same borrow-drop rule as `dec_strong`: do not drop removed values while holding a borrow.
+        let removed = {
+            let mut state = self.state_mut();
+            let (mark_dirty, should_remove) = {
+                let entry = state.storage.get_mut(lease.id).expect("leased id exists");
+                assert!(entry.value.is_none(), "model entry should be leased");
+                entry.value = Some(value);
+                #[cfg(debug_assertions)]
+                {
+                    entry.leased_at = None;
+                    entry.leased_type = None;
+                }
+                if lease.dirty {
+                    entry.revision = entry.revision.saturating_add(1);
+                    #[cfg(debug_assertions)]
+                    {
+                        entry.last_changed_at = changed_at;
+                        entry.last_changed_type = Some(entry.created_type);
+                    }
+                    // NOTE: `entry` holds a mutable borrow of `state`, so defer the `mark_changed` call.
+                }
+                let should_remove = entry.pending_drop && entry.strong == 0;
+                (lease.dirty, should_remove)
+            };
+            if mark_dirty {
+                Self::mark_changed_locked(&mut state, lease.id);
+            }
+            if should_remove {
+                Self::mark_changed_locked(&mut state, lease.id);
+                Some(state.storage.remove(lease.id))
+            } else {
+                None
+            }
+        };
+
+        drop(removed);
+    }
+
+    fn end_lease_any(&mut self, lease: &mut ModelLeaseAny) {
+        self.end_lease_any_shared(lease, None);
+    }
+
+    fn end_lease_any_with_changed_at(
+        &mut self,
+        lease: &mut ModelLeaseAny,
+        changed_at: &'static Location<'static>,
+    ) {
+        self.end_lease_any_shared(lease, Some(changed_at));
     }
 
     pub fn notify_with_changed_at<T: Any>(
@@ -1109,6 +1281,40 @@ mod tests {
 
         let mut lease = store.lease(&model).expect("lease should succeed");
         let err = store.notify(&model).expect_err("notify should fail");
+        assert!(matches!(err, ModelUpdateError::AlreadyLeased));
+
+        store.end_lease(&mut lease);
+    }
+
+    #[test]
+    fn update_any_updates_value_and_bumps_revision() {
+        let mut store = ModelStore::default();
+        let model = store.insert(1_u32);
+
+        assert_eq!(store.revision(&model), Some(0));
+        store
+            .update_any(model.id(), |any| {
+                let v = any.downcast_mut::<u32>().expect("stored type should match");
+                *v = 2;
+            })
+            .expect("update_any should succeed");
+
+        assert_eq!(store.get_copied(&model), Some(2));
+        assert_eq!(store.revision(&model), Some(1));
+
+        let changed = store.take_changed_models();
+        assert_eq!(changed, vec![model.id()]);
+    }
+
+    #[test]
+    fn update_any_errors_while_leased() {
+        let mut store = ModelStore::default();
+        let model = store.insert(1_u32);
+        let mut lease = store.lease(&model).expect("lease should succeed");
+
+        let err = store
+            .update_any(model.id(), |_any| {})
+            .expect_err("update_any should fail while leased");
         assert!(matches!(err, ModelUpdateError::AlreadyLeased));
 
         store.end_lease(&mut lease);

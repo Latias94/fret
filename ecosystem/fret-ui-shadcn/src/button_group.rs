@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, SemanticsProps, SizeStyle,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle,
     TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -288,153 +288,192 @@ impl ButtonGroup {
 
         let items = self.items;
         let orientation = self.orientation;
-        let a11y_label = self.a11y_label.clone();
+        let a11y_label = self.a11y_label;
 
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Group,
-                label: a11y_label,
-                ..Default::default()
-            },
-            move |cx| {
-                vec![cx.flex(props, move |cx| {
-                    let radius = Theme::global(&*cx.app).metric_required("metric.radius.md");
-                    let len = items.len();
+        let group = cx.flex(props, move |cx| {
+            let radius = Theme::global(&*cx.app).metric_required("metric.radius.md");
+            let len = items.len();
 
-                    items
-                        .into_iter()
-                        .enumerate()
-                        .map(|(idx, item)| match item {
-                            ButtonGroupItem::Button(button) => {
-                                let is_first = idx == 0;
-                                let is_last = idx + 1 == len;
+            items
+                .into_iter()
+                .enumerate()
+                .map(|(idx, item)| match item {
+                    ButtonGroupItem::Button(button) => {
+                        let is_first = idx == 0;
+                        let is_last = idx + 1 == len;
 
-                                let corners = match orientation {
-                                    ButtonGroupOrientation::Horizontal => Corners {
-                                        top_left: if is_first { radius } else { Px(0.0) },
-                                        bottom_left: if is_first { radius } else { Px(0.0) },
-                                        top_right: if is_last { radius } else { Px(0.0) },
-                                        bottom_right: if is_last { radius } else { Px(0.0) },
-                                    },
-                                    ButtonGroupOrientation::Vertical => Corners {
-                                        top_left: if is_first { radius } else { Px(0.0) },
-                                        top_right: if is_first { radius } else { Px(0.0) },
-                                        bottom_right: if is_last { radius } else { Px(0.0) },
-                                        bottom_left: if is_last { radius } else { Px(0.0) },
-                                    },
-                                };
+                        let corners = match orientation {
+                            ButtonGroupOrientation::Horizontal => Corners {
+                                top_left: if is_first { radius } else { Px(0.0) },
+                                bottom_left: if is_first { radius } else { Px(0.0) },
+                                top_right: if is_last { radius } else { Px(0.0) },
+                                bottom_right: if is_last { radius } else { Px(0.0) },
+                            },
+                            ButtonGroupOrientation::Vertical => Corners {
+                                top_left: if is_first { radius } else { Px(0.0) },
+                                top_right: if is_first { radius } else { Px(0.0) },
+                                bottom_right: if is_last { radius } else { Px(0.0) },
+                                bottom_left: if is_last { radius } else { Px(0.0) },
+                            },
+                        };
 
-                                let button = match orientation {
-                                    ButtonGroupOrientation::Horizontal => {
-                                        if is_first {
-                                            button
-                                        } else {
-                                            button.border_left_width_override(Px(0.0))
-                                        }
-                                    }
-                                    ButtonGroupOrientation::Vertical => {
-                                        if is_first {
-                                            button
-                                        } else {
-                                            button.border_top_width_override(Px(0.0))
-                                        }
-                                    }
-                                };
-
-                                button.corner_radii_override(corners).into_element(cx)
+                        let button = match orientation {
+                            ButtonGroupOrientation::Horizontal => {
+                                if is_first {
+                                    button
+                                } else {
+                                    button.border_left_width_override(Px(0.0))
+                                }
                             }
-                            ButtonGroupItem::Text(text) => {
-                                let is_first = idx == 0;
-                                let is_last = idx + 1 == len;
-
-                                let corners = match orientation {
-                                    ButtonGroupOrientation::Horizontal => Corners {
-                                        top_left: if is_first { radius } else { Px(0.0) },
-                                        bottom_left: if is_first { radius } else { Px(0.0) },
-                                        top_right: if is_last { radius } else { Px(0.0) },
-                                        bottom_right: if is_last { radius } else { Px(0.0) },
-                                    },
-                                    ButtonGroupOrientation::Vertical => Corners {
-                                        top_left: if is_first { radius } else { Px(0.0) },
-                                        top_right: if is_first { radius } else { Px(0.0) },
-                                        bottom_right: if is_last { radius } else { Px(0.0) },
-                                        bottom_left: if is_last { radius } else { Px(0.0) },
-                                    },
-                                };
-
-                                let text = match orientation {
-                                    ButtonGroupOrientation::Horizontal => {
-                                        if is_first {
-                                            text
-                                        } else {
-                                            text.border_left_width_override(Px(0.0))
-                                        }
-                                    }
-                                    ButtonGroupOrientation::Vertical => {
-                                        if is_first {
-                                            text
-                                        } else {
-                                            text.border_top_width_override(Px(0.0))
-                                        }
-                                    }
-                                };
-
-                                text.corner_radii_override(corners).into_element(cx)
+                            ButtonGroupOrientation::Vertical => {
+                                if is_first {
+                                    button
+                                } else {
+                                    button.border_top_width_override(Px(0.0))
+                                }
                             }
-                            ButtonGroupItem::InputGroup(group) => {
-                                let is_first = idx == 0;
-                                let is_last = idx + 1 == len;
+                        };
 
-                                let corners = match orientation {
-                                    ButtonGroupOrientation::Horizontal => Corners {
-                                        top_left: if is_first { radius } else { Px(0.0) },
-                                        bottom_left: if is_first { radius } else { Px(0.0) },
-                                        top_right: if is_last { radius } else { Px(0.0) },
-                                        bottom_right: if is_last { radius } else { Px(0.0) },
-                                    },
-                                    ButtonGroupOrientation::Vertical => Corners {
-                                        top_left: if is_first { radius } else { Px(0.0) },
-                                        top_right: if is_first { radius } else { Px(0.0) },
-                                        bottom_right: if is_last { radius } else { Px(0.0) },
-                                        bottom_left: if is_last { radius } else { Px(0.0) },
-                                    },
-                                };
+                        button.corner_radii_override(corners).into_element(cx)
+                    }
+                    ButtonGroupItem::Text(text) => {
+                        let is_first = idx == 0;
+                        let is_last = idx + 1 == len;
 
-                                let group = match orientation {
-                                    ButtonGroupOrientation::Horizontal => {
-                                        if is_first {
-                                            group
-                                        } else {
-                                            group.border_left_width_override(Px(0.0))
-                                        }
-                                    }
-                                    ButtonGroupOrientation::Vertical => {
-                                        if is_first {
-                                            group
-                                        } else {
-                                            group.border_top_width_override(Px(0.0))
-                                        }
-                                    }
-                                };
+                        let corners = match orientation {
+                            ButtonGroupOrientation::Horizontal => Corners {
+                                top_left: if is_first { radius } else { Px(0.0) },
+                                bottom_left: if is_first { radius } else { Px(0.0) },
+                                top_right: if is_last { radius } else { Px(0.0) },
+                                bottom_right: if is_last { radius } else { Px(0.0) },
+                            },
+                            ButtonGroupOrientation::Vertical => Corners {
+                                top_left: if is_first { radius } else { Px(0.0) },
+                                top_right: if is_first { radius } else { Px(0.0) },
+                                bottom_right: if is_last { radius } else { Px(0.0) },
+                                bottom_left: if is_last { radius } else { Px(0.0) },
+                            },
+                        };
 
-                                let group = match orientation {
-                                    ButtonGroupOrientation::Horizontal => group.refine_layout(
-                                        LayoutRefinement::default().flex_1().min_w_0(),
-                                    ),
-                                    ButtonGroupOrientation::Vertical => group,
-                                };
-
-                                group.corner_radii_override(corners).into_element(cx)
+                        let text = match orientation {
+                            ButtonGroupOrientation::Horizontal => {
+                                if is_first {
+                                    text
+                                } else {
+                                    text.border_left_width_override(Px(0.0))
+                                }
                             }
-                            ButtonGroupItem::Group(group) => group.into_element(cx),
-                            ButtonGroupItem::Separator(separator) => {
-                                separator.flex_stretch_cross_axis(true).into_element(cx)
+                            ButtonGroupOrientation::Vertical => {
+                                if is_first {
+                                    text
+                                } else {
+                                    text.border_top_width_override(Px(0.0))
+                                }
                             }
-                            ButtonGroupItem::Element(element) => element,
-                        })
-                        .collect::<Vec<_>>()
-                })]
-            },
-        )
+                        };
+
+                        text.corner_radii_override(corners).into_element(cx)
+                    }
+                    ButtonGroupItem::InputGroup(group) => {
+                        let is_first = idx == 0;
+                        let is_last = idx + 1 == len;
+
+                        let corners = match orientation {
+                            ButtonGroupOrientation::Horizontal => Corners {
+                                top_left: if is_first { radius } else { Px(0.0) },
+                                bottom_left: if is_first { radius } else { Px(0.0) },
+                                top_right: if is_last { radius } else { Px(0.0) },
+                                bottom_right: if is_last { radius } else { Px(0.0) },
+                            },
+                            ButtonGroupOrientation::Vertical => Corners {
+                                top_left: if is_first { radius } else { Px(0.0) },
+                                top_right: if is_first { radius } else { Px(0.0) },
+                                bottom_right: if is_last { radius } else { Px(0.0) },
+                                bottom_left: if is_last { radius } else { Px(0.0) },
+                            },
+                        };
+
+                        let group = match orientation {
+                            ButtonGroupOrientation::Horizontal => {
+                                if is_first {
+                                    group
+                                } else {
+                                    group.border_left_width_override(Px(0.0))
+                                }
+                            }
+                            ButtonGroupOrientation::Vertical => {
+                                if is_first {
+                                    group
+                                } else {
+                                    group.border_top_width_override(Px(0.0))
+                                }
+                            }
+                        };
+
+                        let group = match orientation {
+                            ButtonGroupOrientation::Horizontal => {
+                                group.refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                            }
+                            ButtonGroupOrientation::Vertical => group,
+                        };
+
+                        group.corner_radii_override(corners).into_element(cx)
+                    }
+                    ButtonGroupItem::Group(group) => group.into_element(cx),
+                    ButtonGroupItem::Separator(separator) => {
+                        separator.flex_stretch_cross_axis(true).into_element(cx)
+                    }
+                    ButtonGroupItem::Element(element) => element,
+                })
+                .collect::<Vec<_>>()
+        });
+
+        let mut decoration = SemanticsDecoration::default().role(fret_core::SemanticsRole::Group);
+        if let Some(a11y_label) = a11y_label {
+            decoration = decoration.label(a11y_label);
+        }
+        group.attach_semantics(decoration)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    #[test]
+    fn button_group_stamps_role_without_layout_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(100.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ButtonGroup::new([ButtonGroupItem::from(cx.text("A"))])
+                .a11y_label("Actions")
+                .into_element(cx)
+        });
+
+        assert!(
+            !matches!(element.kind, ElementKind::Semantics(_)),
+            "expected ButtonGroup to avoid `Semantics` wrappers; use `attach_semantics` instead"
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(fret_core::SemanticsRole::Group)
+        );
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.label.as_deref()),
+            Some("Actions")
+        );
     }
 }

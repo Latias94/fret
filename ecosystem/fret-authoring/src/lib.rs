@@ -38,6 +38,15 @@ impl Response {
         self.changed
     }
 }
+#[cfg(feature = "query")]
+pub mod query;
+#[cfg(feature = "selector")]
+pub mod selector;
+
+#[cfg(feature = "query")]
+pub use query::UiWriterQueryExt;
+#[cfg(feature = "selector")]
+pub use selector::UiWriterSelectorExt;
 
 /// Minimal authoring surface for immediate-style composition.
 ///

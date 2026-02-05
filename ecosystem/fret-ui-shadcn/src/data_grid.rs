@@ -14,12 +14,12 @@ use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, MainAlign, Overflow,
     PositionStyle, PressableProps, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
-    ScrollbarStyle, SemanticsProps, SizeStyle, StackProps, WheelRegionProps,
+    ScrollbarStyle, SizeStyle, StackProps, WheelRegionProps,
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::grid_viewport::{
-    compute_grid_viewport_2d, default_range_extractor, GridAxisMetrics,
+    GridAxisMetrics, compute_grid_viewport_2d, default_range_extractor,
 };
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -27,6 +27,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement};
 
 use crate::table::{TableCell, TableHead};
+use crate::test_id::attach_test_id;
 
 #[derive(Debug, Clone)]
 pub struct DataGridRowState {
@@ -88,15 +89,6 @@ fn scrollbar_thumb_hover(theme: &Theme) -> Color {
     theme
         .color_by_key("scrollbar.thumb.hover.background")
         .unwrap_or_else(|| with_alpha(theme.color_required("muted-foreground"), 0.55))
-}
-
-fn list_layout_style() -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.flex.grow = 1.0;
-    layout.flex.shrink = 1.0;
-    layout.flex.basis = Length::Px(Px(0.0));
-    layout
 }
 
 #[derive(Debug, Clone)]
@@ -292,18 +284,15 @@ impl DataGrid {
                         });
 
                     let (body, body_id) = {
-                        let mut body_layout = list_layout_style();
+                        let mut body_layout = LayoutStyle::default();
+                        body_layout.position = PositionStyle::Absolute;
+                        body_layout.inset.top = Some(row_height);
+                        body_layout.inset.left = Some(Px(0.0));
+                        body_layout.inset.right = Some(Px(0.0));
+                        body_layout.inset.bottom = Some(Px(0.0));
+                        body_layout.size.width = Length::Fill;
+                        body_layout.size.height = Length::Fill;
                         body_layout.overflow = Overflow::Clip;
-
-                        let mut body_slot_layout = LayoutStyle::default();
-                        body_slot_layout.position = PositionStyle::Absolute;
-                        body_slot_layout.inset.top = Some(row_height);
-                        body_slot_layout.inset.left = Some(Px(0.0));
-                        body_slot_layout.inset.right = Some(Px(0.0));
-                        body_slot_layout.inset.bottom = Some(Px(0.0));
-                        body_slot_layout.size.width = Length::Fill;
-                        body_slot_layout.size.height = Length::Fill;
-                        body_slot_layout.overflow = Overflow::Clip;
 
                         let mut content_layout = LayoutStyle::default();
                         content_layout.size.width = Length::Px(total_w);
@@ -467,14 +456,7 @@ impl DataGrid {
                         );
 
                         let body_id = body.id;
-                        let body = cx.semantics(
-                            SemanticsProps {
-                                layout: body_slot_layout,
-                                test_id: Some(Arc::<str>::from("shadcn-data-grid-body")),
-                                ..Default::default()
-                            },
-                            move |_cx| [body],
-                        );
+                        let body = attach_test_id(body, Arc::<str>::from("shadcn-data-grid-body"));
 
                         (body, body_id)
                     };
@@ -531,31 +513,29 @@ impl DataGrid {
                             out
                         });
 
-                        cx.wheel_region(
-                            WheelRegionProps {
-                                axis: ScrollAxis::Both,
-                                scroll_target: Some(body_id),
-                                scroll_handle: scroll_handle.clone(),
+                        let header_layout = LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Px(row_height),
                                 ..Default::default()
                             },
-                            move |_cx| vec![header_inner],
-                        )
-                    };
-                    let header = cx.semantics(
-                        SemanticsProps {
-                            layout: LayoutStyle {
-                                size: SizeStyle {
-                                    width: Length::Fill,
-                                    height: Length::Px(row_height),
+                            ..Default::default()
+                        };
+
+                        attach_test_id(
+                            cx.wheel_region(
+                                WheelRegionProps {
+                                    layout: header_layout,
+                                    axis: ScrollAxis::Both,
+                                    scroll_target: Some(body_id),
+                                    scroll_handle: scroll_handle.clone(),
                                     ..Default::default()
                                 },
-                                ..Default::default()
-                            },
-                            test_id: Some(Arc::<str>::from("shadcn-data-grid-header")),
-                            ..Default::default()
-                        },
-                        move |_cx| [header],
-                    );
+                                move |_cx| vec![header_inner],
+                            ),
+                            Arc::<str>::from("shadcn-data-grid-header"),
+                        )
+                    };
 
                     let show_scrollbar_x = scroll_handle.max_offset().x.0 > 0.01;
                     let show_scrollbar_y = scroll_handle.max_offset().y.0 > 0.01;

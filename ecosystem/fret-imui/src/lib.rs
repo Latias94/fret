@@ -18,7 +18,16 @@ use fret_authoring::UiWriter;
 use fret_ui::element::{AnyElement, ColumnProps, Elements, Length, RowProps};
 use fret_ui::{ElementContext, UiHost};
 
+#[cfg(feature = "query")]
+pub mod query;
+#[cfg(feature = "selector")]
+pub mod selector;
+
 pub mod prelude {
+    #[cfg(feature = "query")]
+    pub use crate::query::UiWriterQueryExt as _;
+    #[cfg(feature = "selector")]
+    pub use crate::selector::UiWriterSelectorExt as _;
     pub use crate::{ImUi, Response, imui, imui_build, imui_vstack};
     pub use fret_authoring::UiWriter;
 }

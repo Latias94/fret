@@ -39,6 +39,39 @@ fn model_change_invalidates_observers() {
 }
 
 #[test]
+fn model_change_invalidates_bound_text_input() {
+    let mut app = crate::test_host::TestHost::new();
+    let model = app.models_mut().insert(String::new());
+
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_paint_cache_enabled(true);
+
+    let node = ui.create_node(crate::text_input::BoundTextInput::new(model.clone()));
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(240.0), fret_core::Px(40.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.test_clear_node_invalidations(node);
+
+    let _ = model.update(&mut app, |v, _cx| v.push_str("hello"));
+    let changed = app.take_changed_models();
+    assert!(changed.contains(&model.id()));
+
+    ui.propagate_model_changes(&mut app, &changed);
+    let n = ui.nodes.get(node).unwrap();
+    assert!(n.invalidation.layout);
+    assert!(n.invalidation.paint);
+}
+
+#[test]
 fn debug_invalidation_walks_record_model_change_root() {
     let mut app = crate::test_host::TestHost::new();
     let model = app.models_mut().insert(0u32);

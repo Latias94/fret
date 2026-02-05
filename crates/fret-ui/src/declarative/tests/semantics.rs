@@ -87,6 +87,75 @@ fn declarative_attach_semantics_overrides_role_label_and_sets_test_id() {
 }
 
 #[test]
+fn declarative_attach_semantics_can_override_state_and_relations() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-attach-semantics-v2",
+        |cx| {
+            let label = cx
+                .text("Label")
+                .attach_semantics(crate::element::SemanticsDecoration::default().test_id("label"));
+            let labelled_by = label.id.0;
+
+            vec![
+                label,
+                cx.text("Target").attach_semantics(
+                    crate::element::SemanticsDecoration::default()
+                        .test_id("target")
+                        .role(fret_core::SemanticsRole::Checkbox)
+                        .disabled(true)
+                        .selected(true)
+                        .expanded(true)
+                        .checked(Some(true))
+                        .labelled_by_element(labelled_by),
+                ),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let label_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("label"))
+        .expect("label semantics node");
+    let target_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("target"))
+        .expect("target semantics node");
+
+    assert_eq!(target_node.role, fret_core::SemanticsRole::Checkbox);
+    assert!(target_node.flags.disabled);
+    assert!(target_node.flags.selected);
+    assert!(target_node.flags.expanded);
+    assert_eq!(target_node.flags.checked, Some(true));
+    assert!(
+        target_node.labelled_by.contains(&label_node.id),
+        "expected target to be labelled_by the label node"
+    );
+}
+
+#[test]
 fn declarative_text_input_sets_semantics_label() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

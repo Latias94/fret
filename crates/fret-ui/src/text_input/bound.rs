@@ -345,6 +345,8 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.observe_model(&self.model, Invalidation::Layout);
+        cx.observe_model(&self.model, Invalidation::Paint);
         let force = !self.dirty_since_sync;
         self.sync_from_model(cx.app, force);
         self.input.layout(cx)
