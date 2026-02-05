@@ -37,11 +37,14 @@ Conventions:
 - [x] Export top-N widget paint hotspots (exclusive time) so `paint_widget_time_us` is attributable.
   - Evidence: `feat(diag): export paint widget hotspots` (commit `e1132c95`).
   - Evidence bundle: `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/.../bundle.json`
-- [ ] Add `ElementHostWidget` paint sub-timers so we can explain the top hotspots:
+- [x] Add `ElementHostWidget` paint sub-timers so we can explain the top hotspots:
   - obs-models iteration,
   - obs-globals iteration,
   - element instance lookup,
   - view-cache / frame-prep overhead (first-call per frame).
+  - Evidence: `feat(diag): add host-widget paint sub-timers` (commit `188d7da1`).
+  - Result (menubar steady probe): obs-models/globals/instance lookup are each O(10us) and do not explain the ~1ms+
+    `ElementHostWidget` hotspots; next step is to time child traversal / bounds queries / clip setup overhead.
 - [ ] Add paint-phase micro timers for the remaining dominant candidates:
   - per-node traversal overhead on stable frames (excluding widget code),
   - observation merging/collapse costs beyond the already-timed “collapse observations” step.

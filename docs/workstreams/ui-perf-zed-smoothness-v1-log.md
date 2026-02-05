@@ -3704,3 +3704,45 @@ Takeaway:
 - The “missing observed_*_next” fallback did not improve stable-frame paint for this probe.
 - Next: instrument `ElementHostWidget::paint_impl` with sub-timers (obs-models, obs-globals, instance lookup) to locate
   the remaining ~1ms+ slices, and only then attempt a targeted refactor.
+
+## 2026-02-05 13:20:04 (commit `188d7da1`)
+
+Change:
+- Export `ElementHostWidget::paint_impl` sub-timers:
+  - observed models iteration time + item count
+  - observed globals iteration time + item count
+  - element instance lookup time + call count
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Worst bundle:
+  - `target/fret-diag/1770297604582-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Command:
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --reuse-launch --repeat 7 --timeout-ms 180000 --sort time --top 15 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us; repeat=7):
+- `total_time_us`: p50=3303 p95=3552 max=3552
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- `paint_time_us=2551`
+- `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2452/12`
+- `paint_host_widget.us(models/globals/instance)=16/10/16 items=14/1 calls=153`
+- `paint_widget_hotspots` (top 3):
+  - `us=1101 type=ElementHostWidget ops(excl/incl)=1/1`
+  - `us=933  type=ElementHostWidget ops(excl/incl)=1/1`
+  - `us=352  type=ElementHostWidget ops(excl/incl)=1/1`
+
+Takeaway:
+- Observed deps access + instance lookup are **not** the cause of the ~1ms+ host-widget paint hotspots (they are
+  O(10us) each on this probe).
+- Next: time the remaining host-widget paint overhead candidates (child traversal / bounds queries / clip setup), then
+  only attempt an aggressive refactor once the sub-slice is confirmed.

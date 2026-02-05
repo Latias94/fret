@@ -176,8 +176,26 @@ Interpretation:
   hidden “touch” clone costs on cache-hit frames.
 - Update: quick attempts to remove/avoid those clones (commits `424ca9fc`, `df5df0b7`) did not materially reduce the
   hotspots on this probe (see the perf log entries on 2026-02-05 20:28 and 20:37).
-  - Next: add sub-timers inside `ElementHostWidget::paint_impl` (obs-models, obs-globals, instance lookup) so the
-    remaining ~1ms slices are attributable before refactoring further.
+  - Next (done): add sub-timers inside `ElementHostWidget::paint_impl` (obs-models, obs-globals, instance lookup) so
+    the remaining ~1ms slices are attributable before refactoring further.
+
+Follow-up instrumentation:
+
+- Commit: `188d7da1` (`feat(diag): add host-widget paint sub-timers`)
+- Evidence bundle:
+  - `target/fret-diag/1770297604582-ui-gallery-menubar-file-escape-steady/bundle.json`
+- Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+  - `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2452/12`
+  - `paint_host_widget.us(models/globals/instance)=16/10/16 items=14/1 calls=153`
+
+Updated interpretation:
+
+- Observed deps + instance lookup are **not** the cause of the ~1ms+ `ElementHostWidget` hotspots (they are O(10us)).
+- Next: time the remaining “host-widget paint overhead” candidates:
+  - child traversal overhead in `paint_children_clipped_if` (clip push/pop + `child_bounds` queries + `cx.paint` call
+    overhead),
+  - per-instance-variant overhead (e.g. `Container` vs `ViewCache`),
+  - any per-frame “first paint” work hidden behind element instance properties (e.g. cache keys, transforms).
 
 ---
 
