@@ -224,7 +224,10 @@ fn tanstack_v8_column_pinning_parity() {
         def
     };
 
-    let columns: Vec<ColumnDef<FixtureRow>> = vec![col("a"), col("b"), col("c")];
+    let columns: Vec<ColumnDef<FixtureRow>> = vec![
+        ColumnDef::<FixtureRow>::new("ab").columns(vec![col("a"), col("b")]),
+        col("c"),
+    ];
 
     for snap in fixture.snapshots {
         let tanstack_options =

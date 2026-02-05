@@ -123,17 +123,20 @@
           "can_pin": {
             "a": true,
             "b": false,
-            "c": true
+            "c": true,
+            "ab": true
           },
           "pin_position": {
             "a": null,
             "b": null,
-            "c": null
+            "c": null,
+            "ab": null
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": 0
           },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
@@ -233,17 +236,20 @@
           "can_pin": {
             "a": false,
             "b": false,
-            "c": false
+            "c": false,
+            "ab": false
           },
           "pin_position": {
             "a": null,
             "b": null,
-            "c": null
+            "c": null,
+            "ab": null
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": 0
           },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
@@ -343,17 +349,20 @@
           "can_pin": {
             "a": false,
             "b": false,
-            "c": false
+            "c": false,
+            "ab": false
           },
           "pin_position": {
             "a": null,
             "b": null,
-            "c": null
+            "c": null,
+            "ab": null
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": 0
           },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
@@ -551,21 +560,226 @@
           "can_pin": {
             "a": true,
             "b": false,
-            "c": true
+            "c": true,
+            "ab": true
           },
           "pin_position": {
             "a": null,
             "b": null,
-            "c": "right"
+            "c": "right",
+            "ab": null
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": 0
           },
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": false,
           "is_some_right_columns_pinned": true
+        }
+      }
+    },
+    {
+      "id": "column_pinning_action_pin_group_pins_leaf_columns",
+      "options": {},
+      "state": {},
+      "actions": [
+        {
+          "type": "pinColumn",
+          "column_id": "ab",
+          "position": "left"
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1"
+          ],
+          "flat": [
+            "1"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 175,
+          "left_total_size": 150,
+          "center_total_size": 25,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "a": 0,
+            "b": 100,
+            "c": 150
+          },
+          "left": {
+            "a": 0,
+            "b": 100,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": 0
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "a": 75,
+            "b": 25,
+            "c": 0
+          },
+          "left": {
+            "a": 50,
+            "b": 0,
+            "c": null
+          },
+          "center": {
+            "a": null,
+            "b": null,
+            "c": 0
+          },
+          "right": {
+            "a": null,
+            "b": null,
+            "c": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [
+              "a",
+              "b"
+            ],
+            "right": []
+          },
+          "columnOrder": []
+        },
+        "column_pinning": {
+          "left": [
+            "a",
+            "b"
+          ],
+          "center": [
+            "c"
+          ],
+          "right": [],
+          "can_pin": {
+            "a": true,
+            "b": false,
+            "c": true,
+            "ab": true
+          },
+          "pin_position": {
+            "a": "left",
+            "b": "left",
+            "c": null,
+            "ab": "left"
+          },
+          "pinned_index": {
+            "a": 0,
+            "b": 1,
+            "c": 0,
+            "ab": -1
+          },
+          "is_some_columns_pinned": true,
+          "is_some_left_columns_pinned": true,
+          "is_some_right_columns_pinned": false
         }
       }
     },
@@ -751,17 +965,20 @@
           "can_pin": {
             "a": false,
             "b": false,
-            "c": false
+            "c": false,
+            "ab": false
           },
           "pin_position": {
             "a": "left",
             "b": null,
-            "c": null
+            "c": null,
+            "ab": "left"
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": -1
           },
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
@@ -951,17 +1168,20 @@
           "can_pin": {
             "a": false,
             "b": false,
-            "c": false
+            "c": false,
+            "ab": false
           },
           "pin_position": {
             "a": "left",
             "b": null,
-            "c": null
+            "c": null,
+            "ab": "left"
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": -1
           },
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
@@ -1148,17 +1368,20 @@
           "can_pin": {
             "a": true,
             "b": false,
-            "c": true
+            "c": true,
+            "ab": true
           },
           "pin_position": {
             "a": null,
             "b": null,
-            "c": null
+            "c": null,
+            "ab": null
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": 0
           },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,
@@ -1361,17 +1584,20 @@
           "can_pin": {
             "a": true,
             "b": false,
-            "c": true
+            "c": true,
+            "ab": true
           },
           "pin_position": {
             "a": "left",
             "b": null,
-            "c": null
+            "c": null,
+            "ab": "left"
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": -1
           },
           "is_some_columns_pinned": true,
           "is_some_left_columns_pinned": true,
@@ -1571,17 +1797,20 @@
           "can_pin": {
             "a": true,
             "b": false,
-            "c": true
+            "c": true,
+            "ab": true
           },
           "pin_position": {
             "a": null,
             "b": null,
-            "c": null
+            "c": null,
+            "ab": null
           },
           "pinned_index": {
             "a": 0,
             "b": 0,
-            "c": 0
+            "c": 0,
+            "ab": 0
           },
           "is_some_columns_pinned": false,
           "is_some_left_columns_pinned": false,

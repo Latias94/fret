@@ -196,6 +196,7 @@ type SnapshotId =
   | "column_pinning_enable_column_pinning_false_disables_can_pin"
   | "column_pinning_enable_pinning_false_disables_can_pin"
   | "column_pinning_action_pin_left_right_unpin"
+  | "column_pinning_action_pin_group_pins_leaf_columns"
   | "column_pinning_action_pins_when_enable_column_pinning_false"
   | "column_pinning_action_pins_when_enable_pinning_false"
   | "column_pinning_action_on_column_pinning_change_noop_ignores"
@@ -1493,6 +1494,41 @@ async function main(): Promise<void> {
       maxSize: c.maxSize,
       enableHiding: c.enableHiding,
     }))
+  } else if (case_id === "column_pinning") {
+    // Column pinning against a grouped column that pins multiple leaf columns at once.
+    // We keep a 1-row dataset so table-core initializes consistently.
+    const rows: DemoProcessRow[] = [{ id: 1, name: "x", status: "x", cpu: 0, mem_mb: 0 }]
+    data = rows
+
+    const pinColumns = [
+      { id: "a", size: 100, minSize: 20, maxSize: 300, enablePinning: true },
+      { id: "b", size: 50, enablePinning: false },
+      { id: "c", size: 25, enablePinning: true },
+    ]
+    columns_meta = pinColumns.map(({ id, size, minSize, maxSize }) => ({
+      id,
+      size,
+      minSize,
+      maxSize,
+    }))
+
+    const leaf = (c: any) => ({
+      id: c.id,
+      accessorFn: (row: DemoProcessRow) => row.id,
+      size: c.size,
+      minSize: c.minSize,
+      maxSize: c.maxSize,
+      enableResizing: true,
+      enablePinning: c.enablePinning,
+    })
+
+    columns = [
+      {
+        id: "ab",
+        columns: [leaf(pinColumns[0]), leaf(pinColumns[1])],
+      },
+      leaf(pinColumns[2]),
+    ]
   } else {
     // Column sizing / pinning / ordering outputs (no row model expectations needed).
     // We keep a 1-row dataset so table-core initializes consistently.
@@ -2344,11 +2380,29 @@ function snapshotColumnPinning(
     throw new Error("Column pinning APIs are not available on this table instance")
   }
 
+  const flattenColumns = (cols: any[]): any[] => {
+    const flat: any[] = []
+    const visit = (arr: any[]) => {
+      for (const col of arr ?? []) {
+        flat.push(col)
+        const children = col?.columns
+        if (children?.length) {
+          visit(children)
+        }
+      }
+    }
+    visit(cols)
+    return flat
+  }
+
+  const all_ids = flattenColumns(table.getAllColumns?.() ?? []).map((c: any) => String(c.id))
   const leaf = (table.getAllLeafColumns?.() ?? []).map((c: any) => String(c.id))
+  const ids = [...new Set([...leaf, ...all_ids])]
+
   const can_pin: Record<string, boolean> = {}
   const pin_position: Record<string, "left" | "right" | null> = {}
   const pinned_index: Record<string, number> = {}
-  for (const id of leaf) {
+  for (const id of ids) {
     const col = table.getColumn?.(id)
     if (!col) {
       continue
@@ -4530,6 +4584,12 @@ function snapshotColumnPinning(
           { type: "pinColumn", column_id: "c", position: "right" },
           { type: "pinColumn", column_id: "a", position: null },
         ],
+      ),
+      mkActions(
+        "column_pinning_action_pin_group_pins_leaf_columns",
+        {},
+        {},
+        [{ type: "pinColumn", column_id: "ab", position: "left" }],
       ),
       mkActions(
         "column_pinning_action_pins_when_enable_column_pinning_false",

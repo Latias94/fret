@@ -383,6 +383,8 @@ ColumnDef keys referenced by upstream feature implementations:
   - Parity-gated (option gates + state transition outcomes): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`.
   - Covered: `column.getPinnedIndex()`-equivalent (`column_pinning.pinned_index` in fixture snapshots).
+  - Covered: group column pinning pins its leaf columns (and group `getPinnedIndex()` returns `-1` because leaf ids are stored in state).
+    - Fixture snapshot: `column_pinning_action_pin_group_pins_leaf_columns`
   - Covered: controlled-hook noop semantics (`onColumnPinningChange` ignores updater).
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_pinning.json`
       (snapshot: `column_pinning_action_on_column_pinning_change_noop_ignores`)
