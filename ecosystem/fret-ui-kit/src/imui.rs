@@ -235,6 +235,8 @@ fn float_window_drag_kind_for_element(element: GlobalElementId) -> fret_runtime:
     fret_runtime::DragKindId(FLOAT_WINDOW_DRAG_KIND_MASK | element.0)
 }
 
+const KEY_FLOAT_WINDOW_ACTIVATE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.activate.v1");
+
 /// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
 ///
 /// This mirrors the `fret-imui::ImUi` pattern without depending on the `fret-imui` crate.
@@ -267,8 +269,40 @@ impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUiFacade<'cx, 'a, H> {
 struct FloatWindowState {
     position: Point,
     last_drag_position: Option<Point>,
+    window_test_id: Arc<str>,
     title_bar_test_id: Arc<str>,
     close_button_test_id: Arc<str>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct FloatWindowLayerMarker {
+    layer: GlobalElementId,
+}
+
+#[derive(Debug, Default)]
+struct FloatWindowLayerZOrder {
+    order: Vec<GlobalElementId>,
+}
+
+impl FloatWindowLayerZOrder {
+    fn ensure_present(&mut self, window: GlobalElementId) {
+        if self.order.contains(&window) {
+            return;
+        }
+        self.order.push(window);
+    }
+
+    fn bring_to_front(&mut self, window: GlobalElementId) {
+        self.ensure_present(window);
+        let Some(idx) = self.order.iter().position(|w| *w == window) else {
+            return;
+        };
+        if idx + 1 == self.order.len() {
+            return;
+        }
+        self.order.remove(idx);
+        self.order.push(window);
+    }
 }
 
 /// Immediate-mode facade helpers for any authoring frontend that implements `UiWriter`.
@@ -291,6 +325,80 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             props.layout.size.height = fret_ui::element::Length::Px(fret_core::Px(1.0));
             cx.container(props, |_| Vec::new())
         });
+        self.add(element);
+    }
+
+    /// Render a window-scoped floating window layer that manages z-order (bring-to-front).
+    ///
+    /// Notes:
+    /// - This is an opt-in container; a plain `floating_window(...)` call sequence keeps call-order z.
+    /// - Call this late in the parent tree to ensure the layer paints above base content.
+    fn floating_layer(
+        &mut self,
+        id: &str,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| {
+            cx.named(id, |cx| {
+                let layer_id = cx.root_id();
+                cx.with_state_for(
+                    layer_id,
+                    || FloatWindowLayerMarker { layer: layer_id },
+                    |st| st.layer = layer_id,
+                );
+
+                let mut windows: Vec<AnyElement> = Vec::new();
+                {
+                    let mut ui = ImUiFacade {
+                        cx,
+                        out: &mut windows,
+                    };
+                    f(&mut ui);
+                }
+
+                let mut z_order =
+                    cx.with_state_for(layer_id, FloatWindowLayerZOrder::default, |st| {
+                        for w in windows.iter() {
+                            st.ensure_present(w.id);
+                        }
+                        st.order.clone()
+                    });
+
+                // Ensure we never rank missing windows above present ones if the order vector is stale.
+                z_order.retain(|id| windows.iter().any(|w| w.id == *id));
+
+                let mut indexed: Vec<(usize, usize, AnyElement)> = windows
+                    .into_iter()
+                    .enumerate()
+                    .map(|(original, w)| {
+                        let idx = z_order
+                            .iter()
+                            .position(|id| *id == w.id)
+                            .unwrap_or(usize::MAX);
+                        (idx, original, w)
+                    })
+                    .collect();
+
+                indexed.sort_by_key(|(idx, original, _)| (*idx, *original));
+                let windows_sorted: Vec<AnyElement> =
+                    indexed.into_iter().map(|(_, _, w)| w).collect();
+
+                let mut props = fret_ui::element::StackProps::default();
+                props.layout.position = PositionStyle::Absolute;
+                props.layout.inset = InsetStyle {
+                    left: Some(Px(0.0)),
+                    right: Some(Px(0.0)),
+                    top: Some(Px(0.0)),
+                    bottom: Some(Px(0.0)),
+                };
+                props.layout.overflow = Overflow::Visible;
+                props.layout.size.width = Length::Fill;
+                props.layout.size.height = Length::Fill;
+
+                cx.stack_props(props, move |_cx| windows_sorted)
+            })
+        });
+
         self.add(element);
     }
 
@@ -702,6 +810,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let open_model = open.map(|m| m.clone());
 
                 let window_id = cx.root_id();
+                if let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() {
+                    cx.with_state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
+                        st.ensure_present(window_id);
+                    });
+                }
                 let drag_kind = float_window_drag_kind_for_element(window_id);
 
                 let drag_snapshot = cx
@@ -715,33 +828,40 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .filter(|drag| drag.kind == drag_kind)
                     .map(|drag| (drag.dragging, drag.position, drag.start_position));
 
-                let (position, title_bar_test_id, close_button_test_id) = cx.with_state_for(
-                    window_id,
-                    || FloatWindowState {
-                        position: initial_position,
-                        last_drag_position: None,
-                        title_bar_test_id: Arc::from(format!("imui.float_window.title_bar:{id}")),
-                        close_button_test_id: Arc::from(format!("imui.float_window.close:{id}")),
-                    },
-                    |st| {
-                        if let Some((dragging, current, start)) = drag_snapshot {
-                            if dragging {
-                                let prev = st.last_drag_position.unwrap_or(start);
-                                st.position = point_add(st.position, point_sub(current, prev));
-                                st.last_drag_position = Some(current);
+                let (position, window_test_id, title_bar_test_id, close_button_test_id) = cx
+                    .with_state_for(
+                        window_id,
+                        || FloatWindowState {
+                            position: initial_position,
+                            last_drag_position: None,
+                            window_test_id: Arc::from(format!("imui.float_window.window:{id}")),
+                            title_bar_test_id: Arc::from(format!(
+                                "imui.float_window.title_bar:{id}"
+                            )),
+                            close_button_test_id: Arc::from(format!(
+                                "imui.float_window.close:{id}"
+                            )),
+                        },
+                        |st| {
+                            if let Some((dragging, current, start)) = drag_snapshot {
+                                if dragging {
+                                    let prev = st.last_drag_position.unwrap_or(start);
+                                    st.position = point_add(st.position, point_sub(current, prev));
+                                    st.last_drag_position = Some(current);
+                                } else {
+                                    st.last_drag_position = None;
+                                }
                             } else {
                                 st.last_drag_position = None;
                             }
-                        } else {
-                            st.last_drag_position = None;
-                        }
-                        (
-                            st.position,
-                            st.title_bar_test_id.clone(),
-                            st.close_button_test_id.clone(),
-                        )
-                    },
-                );
+                            (
+                                st.position,
+                                st.window_test_id.clone(),
+                                st.title_bar_test_id.clone(),
+                                st.close_button_test_id.clone(),
+                            )
+                        },
+                    );
 
                 let (popover, border, muted) = {
                     let theme = fret_ui::Theme::global(&*cx.app);
@@ -768,7 +888,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 window_props.border_color = Some(border);
                 window_props.corner_radii = Corners::all(Px(8.0));
 
-                cx.container(window_props, |cx| {
+                let mut window = cx.container(window_props, |cx| {
                     let mut col = ColumnProps::default();
                     col.layout.size.width = Length::Auto;
                     col.layout.size.height = Length::Auto;
@@ -809,6 +929,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             let title = title.clone();
                             let title_bar_test_id = title_bar_test_id.clone();
                             let open_for_key = open_model.clone();
+                            let window_id = window_id;
                             let drag_surface = cx.pointer_region(
                                 PointerRegionProps {
                                     layout: {
@@ -821,6 +942,21 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 },
                                 move |cx| {
                                     let region_id = cx.root_id();
+
+                                    if cx.take_transient_for(region_id, KEY_FLOAT_WINDOW_ACTIVATE) {
+                                        if let Some(marker) =
+                                            cx.inherited_state::<FloatWindowLayerMarker>()
+                                        {
+                                            cx.with_state_for(
+                                                marker.layer,
+                                                FloatWindowLayerZOrder::default,
+                                                |st| {
+                                                    st.bring_to_front(window_id);
+                                                },
+                                            );
+                                        }
+                                    }
+
                                     cx.key_clear_on_key_down_for(region_id);
                                     if let Some(open) = open_for_key.clone() {
                                         cx.key_on_key_down_for(
@@ -854,6 +990,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                                     down.position,
                                                 );
                                             }
+                                            host.record_transient_event(
+                                                acx,
+                                                KEY_FLOAT_WINDOW_ACTIVATE,
+                                            );
                                             host.notify(acx);
                                             false
                                         },
@@ -970,7 +1110,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     );
 
                     vec![cx.column(col, |_cx| vec![title_bar, content])]
-                })
+                });
+                // `cx.container(...)` introduces a fresh scoped id; normalize the outer window element
+                // id back to the named scope id so z-order state can track windows by `window_id`.
+                window.id = window_id;
+                window.attach_semantics(
+                    fret_ui::element::SemanticsDecoration::default().test_id(window_test_id),
+                )
             })
         });
 
