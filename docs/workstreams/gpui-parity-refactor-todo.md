@@ -1466,7 +1466,7 @@ topics (if/when we implement them):
         - window-boundary: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878293896-components-gallery-table-window-boundary-scroll/bundle.json` (2201/1732/21/448)
         - sort+scroll: `target/fret-diag-perf-components-gallery-table-suite-prefetch6/1769878326558-components-gallery-table-sort-and-scroll/bundle.json` (4413/3249/11/1153)
 
-- [~] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
+- [x] GPUI-MVP5-eco-010 AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome.
   - Touches: `ecosystem/fret-ui-ai/src/*`, `apps/fret-ui-gallery/src/*`, `apps/fretboard/src/diag.rs`.
   - Done when: append-heavy transcript updates no longer rebuild/relayout the entire history while scrolling, and the harness proves stable paint
     under view-cache reuse.
@@ -1474,9 +1474,23 @@ topics (if/when we implement them):
     - UI Gallery harness: `PAGE_AI_TRANSCRIPT_TORTURE` with root test id `ui-gallery-ai-transcript-root`.
       - Note: the harness uses a bounded viewport (`h_px(Px(460.0))`) so VirtualList window telemetry is meaningful.
     - Script: `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`.
-    - Gate (suite): `fretboard diag suite ui-gallery-ai-transcript-retained --warmup-frames 5 --check-retained-vlist-reconcile-no-notify 1 --check-retained-vlist-attach-detach-max 256 --check-retained-vlist-scroll-window-dirty-max 0 --check-view-cache-reuse-min 10 --check-wheel-scroll ui-gallery-ai-transcript-row-0 --check-stale-paint ui-gallery-ai-transcript-row-0 ...`
-      - Defaults: enables view-cache + shell and sets `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`.
-    - Evidence bundle (cache+shell): `target/fret-diag/1769689580999-ui-gallery-ai-transcript-torture-scroll/bundle.json`.
+    - Gate (suite): `fretboard diag suite ui-gallery-ai-transcript-retained --launch -- cargo run -p fret-ui-gallery`
+  - Progress (v2):
+    - Suite defaults now enable cache+shell and a variable-height dataset:
+      - `apps/fretboard/src/diag/mod.rs` (`ui-gallery-ai-transcript-retained` sets `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`, `FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT=1`, and defaults `--warmup-frames 5`)
+    - Script now includes an append step so “new messages arriving while scrolling” is exercised:
+      - `apps/fret-ui-gallery/src/ui.rs` (`ui-gallery-ai-transcript-append`)
+      - `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json` (click append + idle tail)
+    - Gates enforced by the suite (defaults):
+      - view-cache reuse stability: `--check-view-cache-reuse-stable-min 10` (writes evidence JSON)
+      - retained VirtualList sanity: `--check-retained-vlist-reconcile-no-notify 1`, `--check-retained-vlist-attach-detach-max 256`
+      - retained-only enforcement: `--check-vlist-window-shifts-non-retained-max 0` (writes evidence JSON)
+      - hover chrome should not cause declarative layout invalidation: `--check-hover-layout-max 0`
+      - stale paint safety while scrolling: `--check-stale-paint ui-gallery-ai-transcript-row-0`
+    - Evidence (cache+shell, local):
+      - `target/fret-diag-ai-transcript5/1770275796596-ui-gallery-ai-transcript-torture-scroll/bundle.json`
+      - `target/fret-diag-ai-transcript5/check.view_cache_reuse_stable.json`
+      - `target/fret-diag-ai-transcript5/check.vlist_window_shifts_non_retained_max.json`
 - [x] GPUI-MVP5-perf-002 Reduce input-driven `notify_call` hotspots by narrowing cache roots or targeting dirtiness.
   - Goal: VirtualList torture no longer attributes the dominant `notify_call` hotspot to `pressable.rs:*` while preserving correctness.
   - Instrumentation (v2): bundles now export bounded `debug.notify_requests` with `notify()` callsite attribution

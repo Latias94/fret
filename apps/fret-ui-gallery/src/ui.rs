@@ -11668,6 +11668,8 @@ fn preview_ai_transcript_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+
     let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
@@ -11675,15 +11677,29 @@ fn preview_ai_transcript_torture(
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(5_000);
+    let append_batch: usize = 100;
 
     #[derive(Default)]
     struct TranscriptModels {
-        messages: Option<Arc<[ui_ai::ConversationMessage]>>,
+        messages: Option<Model<Arc<[ui_ai::ConversationMessage]>>>,
     }
 
-    let messages = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
-    let messages = match messages {
-        Some(messages) => messages,
+    let message_text = |i: u64| -> Arc<str> {
+        if variable_height && i % 7 == 0 {
+            Arc::<str>::from(format!(
+                "Message {i}\nDetails: seed={} tokens={} latency={}ms",
+                (i * 31) % 97,
+                16 + (i % 64),
+                10 + (i % 120)
+            ))
+        } else {
+            Arc::<str>::from(format!("Message {i}: hello world"))
+        }
+    };
+
+    let messages_model = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
+    let messages_model = match messages_model {
+        Some(model) => model,
         None => {
             let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
             for i in 0..message_count as u64 {
@@ -11693,25 +11709,51 @@ fn preview_ai_transcript_torture(
                     2 => ui_ai::MessageRole::Tool,
                     _ => ui_ai::MessageRole::System,
                 };
-                let text = if variable_height && i % 7 == 0 {
-                    Arc::<str>::from(format!(
-                        "Message {i}\nDetails: seed={} tokens={} latency={}ms",
-                        (i * 31) % 97,
-                        16 + (i % 64),
-                        10 + (i % 120)
-                    ))
+                out.push(ui_ai::ConversationMessage::new(i, role, message_text(i)));
+            }
+
+            let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
+            let model = cx.app.models_mut().insert(out);
+            cx.with_state(TranscriptModels::default, |st| {
+                st.messages = Some(model.clone())
+            });
+            model
+        }
+    };
+    let messages = cx
+        .get_model_cloned(&messages_model, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::from([]));
+
+    let append_messages_on_activate: OnActivate = {
+        let messages_model = messages_model.clone();
+        Arc::new(move |host, acx, _reason| {
+            let existing = host
+                .models_mut()
+                .get_cloned(&messages_model)
+                .unwrap_or_else(|| Arc::from([]));
+            let start = existing.len() as u64;
+
+            let mut out: Vec<ui_ai::ConversationMessage> = existing.iter().cloned().collect();
+            out.reserve(append_batch);
+            for i in start..start + append_batch as u64 {
+                let role = match i % 4 {
+                    0 => ui_ai::MessageRole::User,
+                    1 => ui_ai::MessageRole::Assistant,
+                    2 => ui_ai::MessageRole::Tool,
+                    _ => ui_ai::MessageRole::System,
+                };
+                let text = if variable_height && i % 5 == 0 {
+                    Arc::<str>::from(format!("Appended {i}\n(extra line)"))
                 } else {
-                    Arc::<str>::from(format!("Message {i}: hello world"))
+                    Arc::<str>::from(format!("Appended {i}"))
                 };
                 out.push(ui_ai::ConversationMessage::new(i, role, text));
             }
 
             let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
-            cx.with_state(TranscriptModels::default, |st| {
-                st.messages = Some(out.clone())
-            });
-            out
-        }
+            let _ = host.models_mut().update(&messages_model, |v| *v = out);
+            host.request_redraw(acx.window);
+        })
     };
 
     let header = stack::vstack(
@@ -11723,6 +11765,10 @@ fn preview_ai_transcript_torture(
             vec![
                 cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
+                fret_ui_shadcn::Button::new(format!("Append {append_batch} messages"))
+                    .test_id("ui-gallery-ai-transcript-append")
+                    .on_activate(append_messages_on_activate)
+                    .into_element(cx),
             ]
         },
     );

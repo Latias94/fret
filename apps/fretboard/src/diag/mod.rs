@@ -2432,6 +2432,13 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_ai_transcript_retained_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT",
+                        "1",
+                    );
                     (
                         vec![resolve_path(
                             &workspace_root,
@@ -2756,7 +2763,8 @@ See: `docs/tracy.md`.\n";
                     || is_ui_gallery_vlist_window_boundary_retained_suite
                     || is_ui_gallery_canvas_cull_suite
                     || is_ui_gallery_node_graph_cull_suite
-                    || is_ui_gallery_chart_torture_suite)
+                    || is_ui_gallery_chart_torture_suite
+                    || is_ui_gallery_ai_transcript_retained_suite)
             {
                 warmup_frames = 5;
             }
@@ -2942,6 +2950,7 @@ See: `docs/tracy.md`.\n";
                         || is_components_gallery_table_keep_alive_suite;
                     let pan_zoom_suite =
                         is_ui_gallery_canvas_cull_suite || is_ui_gallery_chart_torture_suite;
+                    let ai_transcript_suite = is_ui_gallery_ai_transcript_retained_suite;
                     let suite_components_gallery_stale_paint_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -2951,6 +2960,9 @@ See: `docs/tracy.md`.\n";
                                     .then_some("components-gallery-table-root")
                             })
                             .filter(|_| check_stale_paint_test_id.is_none());
+                    let suite_ai_transcript_stale_paint_test_id = ai_transcript_suite
+                        .then_some("ui-gallery-ai-transcript-row-0")
+                        .filter(|_| check_stale_paint_test_id.is_none());
                     let suite_components_gallery_wheel_scroll_hit_changes_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -2968,11 +2980,16 @@ See: `docs/tracy.md`.\n";
                         .filter(|_| check_layout_fast_path_min.is_none());
                     let suite_stale_paint_test_id = vlist_window_boundary_suite
                         .then_some("ui-gallery-virtual-list-root")
+                        .or(suite_ai_transcript_stale_paint_test_id)
                         .filter(|_| check_stale_paint_test_id.is_none());
                     let suite_view_cache_reuse_min = (vlist_window_boundary_suite
                         || pan_zoom_suite)
                         .then_some(1u64)
+                        .or_else(|| ai_transcript_suite.then_some(10u64))
                         .filter(|_| check_view_cache_reuse_min.is_none());
+                    let suite_view_cache_reuse_stable_min = ai_transcript_suite
+                        .then_some(10u64)
+                        .filter(|_| check_view_cache_reuse_stable_min.is_none());
                     let suite_pixels_changed_test_id = is_ui_gallery_canvas_cull_suite
                         .then_some("ui-gallery-canvas-cull-root")
                         .or_else(|| {
@@ -3000,6 +3017,9 @@ See: `docs/tracy.md`.\n";
                     let suite_prepaint_actions_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_prepaint_actions_min.is_none());
+                    let suite_hover_layout_max = ai_transcript_suite
+                        .then_some(0u32)
+                        .filter(|_| check_hover_layout_max.is_none());
                     let suite_chart_sampling_window_shifts_min = is_ui_gallery_chart_torture_suite
                         .then_some(1u64)
                         .filter(|_| check_chart_sampling_window_shifts_min.is_none());
@@ -3032,14 +3052,15 @@ See: `docs/tracy.md`.\n";
                         && !check_vlist_policy_key_stable;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
-                    let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
+                    let retained_vlist_suite = components_gallery_suite
+                        || ai_transcript_suite
+                        || vlist_window_boundary_retained_suite;
+                    let suite_retained_vlist_reconcile_no_notify_min = (retained_vlist_suite
                         && script_requires_retained_vlist_reconcile_gate)
-                        || vlist_window_boundary_retained_suite)
                         .then_some(1u64)
                         .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
-                    let suite_retained_vlist_attach_detach_max = ((components_gallery_suite
+                    let suite_retained_vlist_attach_detach_max = (retained_vlist_suite
                         && script_requires_retained_vlist_reconcile_gate)
-                        || vlist_window_boundary_retained_suite)
                         .then_some(if vlist_window_boundary_retained_suite {
                             64u64
                         } else {
@@ -3118,10 +3139,10 @@ See: `docs/tracy.md`.\n";
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
-                        check_hover_layout_max,
+                        check_hover_layout_max.or(suite_hover_layout_max),
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
                         &notify_hotspot_file_max_for_script,
-                        check_view_cache_reuse_stable_min,
+                        check_view_cache_reuse_stable_min.or(suite_view_cache_reuse_stable_min),
                         check_view_cache_reuse_min
                             .or(suite_view_cache_reuse_min)
                             .or(suite_components_gallery_view_cache_reuse_min),
@@ -5486,7 +5507,8 @@ fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bo
 
     matches!(
         name,
-        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+        "ui-gallery-ai-transcript-torture-scroll.json"
+            | "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
             | "ui-gallery-tree-window-boundary-scroll-retained.json"
             | "ui-gallery-data-table-window-boundary-scroll-retained.json"
             | "ui-gallery-table-retained-window-boundary-scroll.json"
