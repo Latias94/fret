@@ -40,34 +40,38 @@ pub fn with_element_state<H: UiHost, S: Any, R>(
     })
 }
 
-pub(crate) fn observed_models_for_element<H: UiHost>(
+pub(crate) fn with_observed_models_for_element<H: UiHost, R>(
     app: &mut H,
     window: AppWindowId,
     element: GlobalElementId,
-) -> Vec<(ModelId, Invalidation)> {
+    f: impl FnOnce(&[(ModelId, Invalidation)]) -> R,
+) -> R {
     let frame_id = app.frame_id();
     app.with_global_mut_untracked(ElementRuntime::new, |runtime, _app| {
         runtime.prepare_window_for_frame(window, frame_id);
-        runtime
-            .for_window_mut(window)
+        let window_state = runtime.for_window_mut(window);
+        let items = window_state
             .observed_models_next
             .get(&element)
-            .cloned()
-            .unwrap_or_default()
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+        f(items)
     })
 }
 
-pub(crate) fn observed_globals_for_element<H: UiHost>(
+pub(crate) fn with_observed_globals_for_element<H: UiHost, R>(
     app: &mut H,
     window: AppWindowId,
     element: GlobalElementId,
-) -> Vec<(TypeId, Invalidation)> {
+    f: impl FnOnce(&[(TypeId, Invalidation)]) -> R,
+) -> R {
     with_window_state(app, window, |window_state| {
-        window_state
+        let items = window_state
             .observed_globals_next
             .get(&element)
-            .cloned()
-            .unwrap_or_default()
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+        f(items)
     })
 }
 

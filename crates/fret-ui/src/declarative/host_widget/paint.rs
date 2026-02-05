@@ -10,17 +10,17 @@ impl ElementHostWidget {
             return;
         };
 
-        for (model, invalidation) in
-            crate::elements::observed_models_for_element(cx.app, window, self.element)
-        {
-            (cx.observe_model)(model, invalidation);
-        }
+        crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
+            for &(model, invalidation) in items {
+                (cx.observe_model)(model, invalidation);
+            }
+        });
 
-        for (global, invalidation) in
-            crate::elements::observed_globals_for_element(cx.app, window, self.element)
-        {
-            (cx.observe_global)(global, invalidation);
-        }
+        crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
+            for &(global, invalidation) in items {
+                (cx.observe_global)(global, invalidation);
+            }
+        });
 
         let Some(instance) = self.instance(cx.app, window, cx.node) else {
             return;
