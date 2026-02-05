@@ -310,8 +310,10 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
                 let constraints = TextConstraints {
-                    max_width: Some(cx.bounds.size.width),
+                    max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
@@ -320,14 +322,37 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
-                let needs_prepare = self.text_cache.blob.is_none()
-                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
-                    || self.text_cache.last_text.as_ref() != Some(&props.text)
-                    || self.text_cache.last_style.as_ref() != Some(&style)
-                    || self.text_cache.last_wrap != Some(props.wrap)
-                    || self.text_cache.last_overflow != Some(props.overflow)
-                    || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let blob_missing = self.text_cache.blob.is_none();
+                let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
+                let text_changed = self.text_cache.last_text.as_ref() != Some(&props.text);
+                let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
+                let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
+                let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let width_changed = self.text_cache.last_width != Some(max_width);
+                let font_stack_changed =
+                    self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let needs_prepare = blob_missing
+                    || scale_changed
+                    || text_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || width_changed
+                    || font_stack_changed;
+
+                if needs_prepare && cx.tree.debug_enabled() {
+                    cx.tree.debug_record_paint_text_prepare_reasons(
+                        blob_missing,
+                        scale_changed,
+                        text_changed,
+                        false,
+                        style_changed,
+                        wrap_changed,
+                        overflow_changed,
+                        width_changed,
+                        font_stack_changed,
+                    );
+                }
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
@@ -346,7 +371,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
-                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -382,8 +407,10 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
                 let constraints = TextConstraints {
-                    max_width: Some(cx.bounds.size.width),
+                    max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
@@ -392,14 +419,37 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
-                let needs_prepare = self.text_cache.blob.is_none()
-                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
-                    || self.text_cache.last_rich.as_ref() != Some(&props.rich)
-                    || self.text_cache.last_style.as_ref() != Some(&style)
-                    || self.text_cache.last_wrap != Some(props.wrap)
-                    || self.text_cache.last_overflow != Some(props.overflow)
-                    || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let blob_missing = self.text_cache.blob.is_none();
+                let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
+                let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
+                let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
+                let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
+                let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let width_changed = self.text_cache.last_width != Some(max_width);
+                let font_stack_changed =
+                    self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let needs_prepare = blob_missing
+                    || scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || width_changed
+                    || font_stack_changed;
+
+                if needs_prepare && cx.tree.debug_enabled() {
+                    cx.tree.debug_record_paint_text_prepare_reasons(
+                        blob_missing,
+                        scale_changed,
+                        false,
+                        rich_changed,
+                        style_changed,
+                        wrap_changed,
+                        overflow_changed,
+                        width_changed,
+                        font_stack_changed,
+                    );
+                }
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
@@ -419,7 +469,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
-                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 
@@ -455,8 +505,10 @@ impl ElementHostWidget {
                     .color
                     .or_else(|| cx.theme().color_by_key("foreground"))
                     .unwrap_or(cx.theme().colors.text_primary);
+                let max_width =
+                    crate::pixel_snap::snap_px_round(cx.bounds.size.width, cx.scale_factor);
                 let constraints = TextConstraints {
-                    max_width: Some(cx.bounds.size.width),
+                    max_width: Some(max_width),
                     wrap: props.wrap,
                     overflow: props.overflow,
                     scale_factor: cx.scale_factor,
@@ -465,14 +517,37 @@ impl ElementHostWidget {
                     .debug_record_text_constraints_prepared(cx.node, constraints);
 
                 let scale_bits = cx.scale_factor.to_bits();
-                let needs_prepare = self.text_cache.blob.is_none()
-                    || self.text_cache.prepared_scale_factor_bits != Some(scale_bits)
-                    || self.text_cache.last_rich.as_ref() != Some(&props.rich)
-                    || self.text_cache.last_style.as_ref() != Some(&style)
-                    || self.text_cache.last_wrap != Some(props.wrap)
-                    || self.text_cache.last_overflow != Some(props.overflow)
-                    || self.text_cache.last_width != Some(cx.bounds.size.width)
-                    || self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let blob_missing = self.text_cache.blob.is_none();
+                let scale_changed = self.text_cache.prepared_scale_factor_bits != Some(scale_bits);
+                let rich_changed = self.text_cache.last_rich.as_ref() != Some(&props.rich);
+                let style_changed = self.text_cache.last_style.as_ref() != Some(&style);
+                let wrap_changed = self.text_cache.last_wrap != Some(props.wrap);
+                let overflow_changed = self.text_cache.last_overflow != Some(props.overflow);
+                let width_changed = self.text_cache.last_width != Some(max_width);
+                let font_stack_changed =
+                    self.text_cache.last_font_stack_key != Some(font_stack_key);
+                let needs_prepare = blob_missing
+                    || scale_changed
+                    || rich_changed
+                    || style_changed
+                    || wrap_changed
+                    || overflow_changed
+                    || width_changed
+                    || font_stack_changed;
+
+                if needs_prepare && cx.tree.debug_enabled() {
+                    cx.tree.debug_record_paint_text_prepare_reasons(
+                        blob_missing,
+                        scale_changed,
+                        false,
+                        rich_changed,
+                        style_changed,
+                        wrap_changed,
+                        overflow_changed,
+                        width_changed,
+                        font_stack_changed,
+                    );
+                }
 
                 if needs_prepare {
                     if let Some(blob) = self.text_cache.blob.take() {
@@ -492,7 +567,7 @@ impl ElementHostWidget {
                     self.text_cache.last_style = Some(style);
                     self.text_cache.last_wrap = Some(props.wrap);
                     self.text_cache.last_overflow = Some(props.overflow);
-                    self.text_cache.last_width = Some(cx.bounds.size.width);
+                    self.text_cache.last_width = Some(max_width);
                     self.text_cache.last_font_stack_key = Some(font_stack_key);
                 }
 

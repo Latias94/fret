@@ -46,6 +46,16 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_host_widget_instance_lookup_calls = 0;
             self.debug_stats.paint_text_prepare_time = Duration::default();
             self.debug_stats.paint_text_prepare_calls = 0;
+            self.debug_stats.paint_text_prepare_reason_blob_missing = 0;
+            self.debug_stats.paint_text_prepare_reason_scale_changed = 0;
+            self.debug_stats.paint_text_prepare_reason_text_changed = 0;
+            self.debug_stats.paint_text_prepare_reason_rich_changed = 0;
+            self.debug_stats.paint_text_prepare_reason_style_changed = 0;
+            self.debug_stats.paint_text_prepare_reason_wrap_changed = 0;
+            self.debug_stats.paint_text_prepare_reason_overflow_changed = 0;
+            self.debug_stats.paint_text_prepare_reason_width_changed = 0;
+            self.debug_stats
+                .paint_text_prepare_reason_font_stack_changed = 0;
             self.debug_paint_widget_exclusive_started = None;
             self.debug_stats.paint_input_context_time = Duration::default();
             self.debug_stats.paint_scroll_handle_invalidation_time = Duration::default();

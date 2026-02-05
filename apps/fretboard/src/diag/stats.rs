@@ -240,6 +240,15 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_host_widget_instance_lookup_calls: u32,
     pub(super) paint_text_prepare_time_us: u64,
     pub(super) paint_text_prepare_calls: u32,
+    pub(super) paint_text_prepare_reason_blob_missing: u32,
+    pub(super) paint_text_prepare_reason_scale_changed: u32,
+    pub(super) paint_text_prepare_reason_text_changed: u32,
+    pub(super) paint_text_prepare_reason_rich_changed: u32,
+    pub(super) paint_text_prepare_reason_style_changed: u32,
+    pub(super) paint_text_prepare_reason_wrap_changed: u32,
+    pub(super) paint_text_prepare_reason_overflow_changed: u32,
+    pub(super) paint_text_prepare_reason_width_changed: u32,
+    pub(super) paint_text_prepare_reason_font_stack_changed: u32,
     pub(super) paint_input_context_time_us: u64,
     pub(super) paint_scroll_handle_invalidation_time_us: u64,
     pub(super) paint_collect_roots_time_us: u64,
@@ -733,6 +742,31 @@ impl BundleStatsReport {
                     "    paint_text_prepare.us(time/calls)={}/{}",
                     row.paint_text_prepare_time_us, row.paint_text_prepare_calls
                 );
+                let reasons = [
+                    row.paint_text_prepare_reason_blob_missing,
+                    row.paint_text_prepare_reason_scale_changed,
+                    row.paint_text_prepare_reason_text_changed,
+                    row.paint_text_prepare_reason_rich_changed,
+                    row.paint_text_prepare_reason_style_changed,
+                    row.paint_text_prepare_reason_wrap_changed,
+                    row.paint_text_prepare_reason_overflow_changed,
+                    row.paint_text_prepare_reason_width_changed,
+                    row.paint_text_prepare_reason_font_stack_changed,
+                ];
+                if reasons.iter().any(|&v| v > 0) {
+                    println!(
+                        "    paint_text_prepare.reasons(blob/scale/text/rich/style/wrap/overflow/width/font)={}/{}/{}/{}/{}/{}/{}/{}/{}",
+                        row.paint_text_prepare_reason_blob_missing,
+                        row.paint_text_prepare_reason_scale_changed,
+                        row.paint_text_prepare_reason_text_changed,
+                        row.paint_text_prepare_reason_rich_changed,
+                        row.paint_text_prepare_reason_style_changed,
+                        row.paint_text_prepare_reason_wrap_changed,
+                        row.paint_text_prepare_reason_overflow_changed,
+                        row.paint_text_prepare_reason_width_changed,
+                        row.paint_text_prepare_reason_font_stack_changed,
+                    );
+                }
             }
             if !row.paint_widget_hotspots.is_empty() {
                 let items: Vec<String> = row
@@ -1566,6 +1600,42 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_text_prepare_calls".to_string(),
                     Value::from(row.paint_text_prepare_calls),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_blob_missing".to_string(),
+                    Value::from(row.paint_text_prepare_reason_blob_missing),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_scale_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_scale_changed),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_text_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_text_changed),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_rich_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_rich_changed),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_style_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_style_changed),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_wrap_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_wrap_changed),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_overflow_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_overflow_changed),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_width_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_width_changed),
+                );
+                obj.insert(
+                    "paint_text_prepare_reason_font_stack_changed".to_string(),
+                    Value::from(row.paint_text_prepare_reason_font_stack_changed),
                 );
                 obj.insert(
                     "paint_input_context_time_us".to_string(),
@@ -4611,6 +4681,60 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let paint_text_prepare_reason_blob_missing = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_blob_missing"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_scale_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_scale_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_text_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_text_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_rich_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_rich_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_style_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_style_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_wrap_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_wrap_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_overflow_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_overflow_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_width_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_width_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_text_prepare_reason_font_stack_changed = stats
+                .and_then(|m| m.get("paint_text_prepare_reason_font_stack_changed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let paint_input_context_time_us = stats
                 .and_then(|m| m.get("paint_input_context_time_us"))
                 .and_then(|v| v.as_u64())
@@ -5383,6 +5507,15 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_host_widget_instance_lookup_calls,
                 paint_text_prepare_time_us,
                 paint_text_prepare_calls,
+                paint_text_prepare_reason_blob_missing,
+                paint_text_prepare_reason_scale_changed,
+                paint_text_prepare_reason_text_changed,
+                paint_text_prepare_reason_rich_changed,
+                paint_text_prepare_reason_style_changed,
+                paint_text_prepare_reason_wrap_changed,
+                paint_text_prepare_reason_overflow_changed,
+                paint_text_prepare_reason_width_changed,
+                paint_text_prepare_reason_font_stack_changed,
                 paint_input_context_time_us,
                 paint_scroll_handle_invalidation_time_us,
                 paint_collect_roots_time_us,

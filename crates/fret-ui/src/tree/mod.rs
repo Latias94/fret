@@ -339,6 +339,24 @@ pub struct UiDebugFrameStats {
     pub paint_text_prepare_time: Duration,
     /// Number of text blob preparations performed during `Widget::paint`.
     pub paint_text_prepare_calls: u32,
+    /// Count of text prepares where the cached blob was missing.
+    pub paint_text_prepare_reason_blob_missing: u32,
+    /// Count of text prepares triggered by a scale factor change.
+    pub paint_text_prepare_reason_scale_changed: u32,
+    /// Count of text prepares triggered by a plain-text change.
+    pub paint_text_prepare_reason_text_changed: u32,
+    /// Count of text prepares triggered by an attributed-text change.
+    pub paint_text_prepare_reason_rich_changed: u32,
+    /// Count of text prepares triggered by a text-style change.
+    pub paint_text_prepare_reason_style_changed: u32,
+    /// Count of text prepares triggered by a wrap-mode change.
+    pub paint_text_prepare_reason_wrap_changed: u32,
+    /// Count of text prepares triggered by an overflow-mode change.
+    pub paint_text_prepare_reason_overflow_changed: u32,
+    /// Count of text prepares triggered by a max-width change.
+    pub paint_text_prepare_reason_width_changed: u32,
+    /// Count of text prepares triggered by a font-stack-key change.
+    pub paint_text_prepare_reason_font_stack_changed: u32,
     pub paint_input_context_time: Duration,
     pub paint_scroll_handle_invalidation_time: Duration,
     pub paint_collect_roots_time: Duration,
@@ -2228,6 +2246,78 @@ impl<H: UiHost> UiTree<H> {
             .saturating_add(elapsed);
         self.debug_stats.paint_text_prepare_calls =
             self.debug_stats.paint_text_prepare_calls.saturating_add(1);
+    }
+
+    pub(crate) fn debug_record_paint_text_prepare_reasons(
+        &mut self,
+        blob_missing: bool,
+        scale_changed: bool,
+        text_changed: bool,
+        rich_changed: bool,
+        style_changed: bool,
+        wrap_changed: bool,
+        overflow_changed: bool,
+        width_changed: bool,
+        font_stack_changed: bool,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        if blob_missing {
+            self.debug_stats.paint_text_prepare_reason_blob_missing = self
+                .debug_stats
+                .paint_text_prepare_reason_blob_missing
+                .saturating_add(1);
+        }
+        if scale_changed {
+            self.debug_stats.paint_text_prepare_reason_scale_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_scale_changed
+                .saturating_add(1);
+        }
+        if text_changed {
+            self.debug_stats.paint_text_prepare_reason_text_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_text_changed
+                .saturating_add(1);
+        }
+        if rich_changed {
+            self.debug_stats.paint_text_prepare_reason_rich_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_rich_changed
+                .saturating_add(1);
+        }
+        if style_changed {
+            self.debug_stats.paint_text_prepare_reason_style_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_style_changed
+                .saturating_add(1);
+        }
+        if wrap_changed {
+            self.debug_stats.paint_text_prepare_reason_wrap_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_wrap_changed
+                .saturating_add(1);
+        }
+        if overflow_changed {
+            self.debug_stats.paint_text_prepare_reason_overflow_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_overflow_changed
+                .saturating_add(1);
+        }
+        if width_changed {
+            self.debug_stats.paint_text_prepare_reason_width_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_width_changed
+                .saturating_add(1);
+        }
+        if font_stack_changed {
+            self.debug_stats
+                .paint_text_prepare_reason_font_stack_changed = self
+                .debug_stats
+                .paint_text_prepare_reason_font_stack_changed
+                .saturating_add(1);
+        }
     }
 
     pub(crate) fn debug_record_hover_edge_pressable(&mut self) {

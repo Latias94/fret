@@ -6225,6 +6225,24 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub paint_text_prepare_calls: u32,
     #[serde(default)]
+    pub paint_text_prepare_reason_blob_missing: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_scale_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_text_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_rich_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_style_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_wrap_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_overflow_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_width_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_font_stack_changed: u32,
+    #[serde(default)]
     pub paint_input_context_time_us: u64,
     #[serde(default)]
     pub paint_scroll_handle_invalidation_time_us: u64,
@@ -6619,6 +6637,17 @@ impl UiFrameStatsV1 {
             paint_host_widget_instance_lookup_calls: stats.paint_host_widget_instance_lookup_calls,
             paint_text_prepare_time_us: stats.paint_text_prepare_time.as_micros() as u64,
             paint_text_prepare_calls: stats.paint_text_prepare_calls,
+            paint_text_prepare_reason_blob_missing: stats.paint_text_prepare_reason_blob_missing,
+            paint_text_prepare_reason_scale_changed: stats.paint_text_prepare_reason_scale_changed,
+            paint_text_prepare_reason_text_changed: stats.paint_text_prepare_reason_text_changed,
+            paint_text_prepare_reason_rich_changed: stats.paint_text_prepare_reason_rich_changed,
+            paint_text_prepare_reason_style_changed: stats.paint_text_prepare_reason_style_changed,
+            paint_text_prepare_reason_wrap_changed: stats.paint_text_prepare_reason_wrap_changed,
+            paint_text_prepare_reason_overflow_changed: stats
+                .paint_text_prepare_reason_overflow_changed,
+            paint_text_prepare_reason_width_changed: stats.paint_text_prepare_reason_width_changed,
+            paint_text_prepare_reason_font_stack_changed: stats
+                .paint_text_prepare_reason_font_stack_changed,
             paint_input_context_time_us: stats.paint_input_context_time.as_micros() as u64,
             paint_scroll_handle_invalidation_time_us: stats
                 .paint_scroll_handle_invalidation_time
