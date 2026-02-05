@@ -3787,8 +3787,11 @@ Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
 - `paint_widget_hotspots` (top 3) remain `kind=Text` and sum to ~2.44ms.
 
 Takeaway:
-- Stable frames are spending ~2.5ms in `TextService::prepare` (3 calls) on this probe, which largely explains the
+- Worst frames on this probe are spending ~2.5ms in `TextService::prepare` (3 calls), which largely explains the
   paint hotspots.
+- Follow-up evidence suggests `paint_text_prepare_calls` is often `0` on many frames, with spikes concentrated in a
+  smaller subset of frames (e.g. first appearance / cache miss frames). Treat this as a **tail-latency** issue until
+  per-element attribution confirms true per-frame churn.
 
 ## 2026-02-05 14:13:54 (commit `80a46d49`)
 
@@ -3808,7 +3811,74 @@ Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
 - `paint_text_prepare.reasons(blob/scale/text/rich/style/wrap/overflow/width/font)=3/3/0/0/0/0/0/3/0`
 
 Takeaway:
-- The repeated per-frame text prepares are dominated by `blob_missing` (and derived "key changed" fields), i.e. the
-  `ElementHostWidget` text blob cache is not persisting across frames for these nodes.
-- Next: explain why the text blob cache is missing on stable frames (most likely node/widget churn driven by
-  view-cache liveness/GC bookkeeping) and fix that so warm stable frames reach `paint_text_prepare_calls==0`.
+- Worst-frame text prepares are dominated by `blob_missing` (and derived "key changed" fields), i.e. the
+  `ElementHostWidget` text blob cache is missing when the hitch occurs.
+- `blob_missing` can mean either “first prepare for this widget” **or** “cache was cleared between frames”, so this is
+  not yet proof of per-frame churn.
+- Next: attribute prepares to **stable element ids** across frames (top-N prepare hotspots), then explain whether misses
+  are due to subtree churn / cleanup paths or simply first-appearance spikes; aim for warm stable frames where
+  `paint_text_prepare_calls==0` and no >1ms prepare spikes.
+
+## 2026-02-05 14:56:31 (commit `22e1b538`)
+
+Change:
+- Re-run the menubar steady probe with consistent env + warmup/repeat (no code change; baseline evidence refresh).
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Worst bundle:
+  - `target/fret-diag-codex-vcache/1770303391967-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Command:
+```bash
+target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --warmup-frames 10 --repeat 5 --reuse-launch --sort time --json \
+  --dir target/fret-diag-codex-vcache \
+  --launch -- target/codex-perf/release/fret-ui-gallery
+```
+
+Results (us; repeat=5):
+- `total_time_us`: min=3500 p50=3711 p95=3886 max=3886
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- `time.us(total/layout/prepaint/paint)=3886/1220/29/2637`
+- `paint_text_prepare.us(time/calls)=2439/3`
+- `paint_text_prepare.reasons(blob/scale/text/rich/style/wrap/overflow/width/font)=3/3/0/0/0/0/0/3/0`
+
+Takeaway:
+- This probe still hits multi-millisecond text prepare spikes even with warmup + view cache enabled; next step remains
+  per-element attribution to distinguish “first appearance” from “cache cleared/recreated” spikes.
+
+## 2026-02-05 15:15:57 (commit `77979100`)
+
+Change:
+- Export `paint_text_prepare_hotspots` (top-N per frame) into diagnostics bundles and surface it in `fretboard diag stats`.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Worst bundle:
+  - `target/fret-diag-codex-preparehot/1770304558320-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Command:
+```bash
+target/codex-perf/debug/fretboard diag perf tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --warmup-frames 10 --repeat 1 --reuse-launch --sort time --json \
+  --dir target/fret-diag-codex-preparehot \
+  --launch -- target/codex-perf/release/fret-ui-gallery
+```
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- `paint_text_prepare.us(time/calls)=2365/3`
+- `paint_text_prepare_hotspots` (top 3):
+  - `us=1085 node=12884902507 kind=Text len=652 max_width=494.0 wrap=word overflow=clip reasons=blob|scale|width element=3279273990770790565`
+  - `us=917  node=4294967930 kind=Text len=586 max_width=494.0 wrap=word overflow=clip reasons=blob|scale|width element=1046958583803201156`
+  - `us=361  node=4294967931 kind=Text len=258 max_width=494.0 wrap=word overflow=clip reasons=blob|scale|width element=15496724796638654331`
+
+Takeaway:
+- We can now track whether the *same element ids* are repeatedly missing their blobs across frames, or whether these
+  are first-appearance spikes. Next: correlate these element ids with cleanup/remove-subtree records and cache-root
+  reuse reasons.

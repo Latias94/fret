@@ -352,6 +352,15 @@ Perf acceptance:
     `renderer_intermediate_pool_evictions` (and related counters).
   - New sort modes:
     - `atlas_upload_bytes`, `atlas_evicted_pages`, `intermediate_peak_bytes`, `pool_evictions`
+- [ ] Add a GPU-time signal (where supported) to separate “CPU is fine” vs “GPU stalls”.
+  - Candidate: timestamp queries in the renderer + export `gpu_render_us` (best-effort).
+  - If unsupported on a backend, export `None` and keep the field stable in the bundle schema.
+- [ ] Establish per-script renderer complexity budgets (to prevent silent GPU regressions).
+  - Track at minimum: `renderer_draw_calls`, `renderer_pipeline_switches`, `renderer_bind_group_switches`,
+    `renderer_scissor_sets`, and `renderer_text_atlas_upload_bytes`.
+  - Add at least one acceptance script that is renderer-heavy (effects/blur, large text surface, SVG churn).
+- [ ] Make RenderDoc captures repeatable for the acceptance scripts.
+  - Pin marker names and a canonical `--renderdoc-after-frames` per script so “capture the hitch” is low-friction.
 
 ### M7.1: Renderer churn correlation (tail latency)
 
@@ -434,7 +443,13 @@ Perf acceptance:
 - [x] Cut code editor syntax paint cost in the “autoscroll torture” probe (p95 paint drops from ~23ms → ~5ms).
   - Implemented by `perf(fret-code-editor): cache syntax rich rows` (commit `81159325`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries for commit `bd709f88` (baseline) and `81159325`.
-- [ ] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
+- [x] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
+  - `paint_widget_hotspots` now include `ElementInstance` kind attribution (commit `c80525b9`).
+  - Paint-phase text prepare counters + reason counts:
+    - `paint_text_prepare_time_us`, `paint_text_prepare_calls` (commit `07d2ccf2`)
+    - `paint_text_prepare_reason_*` (commit `80a46d49`)
+  - Per-frame top-N text prepare hotspots with node/element ids + constraints + reason mask:
+    - `paint_text_prepare_hotspots` (commit `77979100`)
 - [ ] Ensure atlas eviction and re-upload events are observable in perf snapshots.
 
 Perf acceptance:

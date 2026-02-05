@@ -88,6 +88,29 @@ Useful `diag` sort modes:
 
 Tip: You can disable it explicitly by passing `--env FRET_DIAG_RENDERER_PERF=0`.
 
+### 2.2.2 UI runtime text prepare hotspots (per-element attribution)
+
+Diagnostics bundles also export **per-frame top-N text prepare events** recorded during `Widget::paint`:
+
+- `paint_text_prepare_hotspots` (node/element ids, kind, text length, constraints, reason mask, time).
+
+This is the fastest way to answer:
+
+- “Is this a first-appearance spike (blob missing because the widget just mounted)?”
+- “Or did we clear/recreate a text cache across frames?”
+
+Workflow:
+
+1) Capture a bundle via `fretboard diag perf` (or `diag repro`).
+2) Inspect the worst frame:
+
+```bash
+fretboard diag stats <bundle.json> --sort time --top 1
+```
+
+3) Use the `paint_text_prepare_hotspots` line to identify the **exact** element ids that prepared and correlate them
+   with other evidence (removed subtrees, cache root reuse reasons, semantics role/test_id).
+
 ### 2.3 Deep CPU attribution: Tracy (`diag repro --with tracy`)
 
 Tracy is the best way to see *where* CPU time goes across the runtime + renderer call stack.
