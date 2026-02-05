@@ -57,11 +57,19 @@ See also: `docs/reference-stack-ui-behavior.md`, `docs/radix-primitives-alignmen
 
 ## Current state (2026-02)
 
-`ecosystem/fret-ui-ai` exists and is wired into UI Gallery as a long-transcript harness:
+`ecosystem/fret-ui-ai` exists and is wired into UI Gallery with both a long-transcript harness and
+an interactive chat demo:
 
-- `ConversationTranscript`: virtualized transcript + stick-to-bottom + scroll-to-bottom affordance.
-- `Message`: minimal message bubble (role-based background).
-- UI Gallery torture page: `AI Transcript / Long Conversation Harness` (virtualization + cache reuse).
+- `AiConversationTranscript` + `MessageParts`: parts-based transcript rendering with stable per-message
+  `test_id` prefixes.
+- `MessageResponse`: markdown rendering backed by `ecosystem/fret-markdown` with streaming-friendly
+  updates and code-block actions (expand/collapse).
+- `PromptInput`: textarea + send/stop + disabled/loading states, with keyboard-first selectors.
+- `ToolCallBlock` + `SourcesBlock` + `InlineCitation`: initial tooling surfaces (collapsible tool
+  calls, sources list, citation button chrome).
+- UI Gallery pages:
+  - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
+  - `AI chat (demo)` (`ai_chat_demo`): small interactive demo with `fretboard diag` gates.
 
 This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
 
@@ -176,6 +184,14 @@ Every interactive/virtualized surface must expose stable selectors:
 
 This is required for `fretboard diag` scripts and for long-term refactors.
 
+Convention (v0; subject to refinement):
+
+- Messages (transcript): `ui-ai-msg-{message_id}-...`
+- Prompt input (example app prefix): `<prefix>prompt-textarea`, `<prefix>prompt-send`, `<prefix>prompt-stop`
+- Tool call blocks: `<msg_prefix>toolcall-{part_index}`, trigger `<msg_prefix>toolcall-trigger-{part_index}`
+- Sources blocks: `<msg_prefix>sources-{part_index}`, rows `<msg_prefix>source-row-{part_index}-{row_index}`
+- Markdown code actions: `<msg_prefix>code-expand-{ordinal}`
+
 ### 5) Keep policy out of `crates/fret-ui`
 
 If implementing a feature tempts you to add a runtime public API, stop and justify it against ADR
@@ -231,7 +247,7 @@ Implemented in `ecosystem/fret-ui-ai/src/model.rs` as:
 - `AiMessage { id, external_id?, role, parts: Arc<[MessagePart]> }`
 - `MessagePart` variants:
   - `Text(Arc<str>)` (typically user input)
-  - `Markdown(Arc<str>)` (typically assistant output)
+  - `Markdown(MarkdownPart { text: Arc<str>, finalized: bool })` (assistant output; supports streaming)
   - `ToolCall(ToolCall)` (structured input/output + lifecycle)
   - `Sources(Arc<[SourceItem]>)`
 
@@ -267,10 +283,11 @@ optional range), so scripts can select and highlight deterministically.
 
 We need a contract for “assistant is streaming” without locking into a networking stack:
 
-- append-only updates for markdown/text parts,
+- append-only updates for `MessagePart::Markdown` via `MarkdownPart.text` while `finalized == false`,
 - stable block identifiers for code fences so per-block state (copy/expand) is preserved while
   text grows,
-- a `finalize()` moment that enables heavier post-processing if needed (syntax highlight, linkify).
+- a `finalized = true` moment that flushes pending blocks (e.g. unterminated code fences) and enables
+  heavier post-processing if needed (syntax highlight, linkify).
 
 ## Theme tokens (v0 strategy)
 
@@ -364,11 +381,11 @@ Legend:
 | --- | --- | --- | --- | --- |
 | `conversation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/conversation.rs` | Partial | Transcript + scroll affordances exist; still missing parts surface + empty state + download. |
 | `message.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message.rs` | Partial | Minimal role chrome exists; needs parts-based composition (content/actions/toolbar). |
-| (subset) | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_response.rs` | Partial | Markdown rendering exists; streaming + code actions are TODO. |
-| `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Planned (M1) | MVP: textarea + send/stop + disabled/loading + test_id. |
-| `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool_call.rs` | Planned (M2) | Render `ToolCall` parts: running/success/error + collapse + stable anchors. |
-| `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources.rs` | Planned (M2) | `SourceItem` list + open-url intent hook. |
-| `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Planned (M2) | Transcript-local anchor/jump/highlight contract; needs stable selectors. |
+| (subset) | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/message_response.rs` | Partial | Markdown rendering exists; streaming append + finalize supported; richer per-block actions (copy/download) are TODO. |
+| `prompt-input.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/prompt_input.rs` | Done | MVP: textarea + send/stop + disabled/loading + stable selectors. |
+| `tool.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/tool_call_block.rs` | Partial | Tool call block exists (collapsible + state chrome); richer payload views are pending. |
+| `sources.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/sources_block.rs` | Partial | Sources list exists; inline linking + open-url intent wiring is still evolving. |
+| `inline-citation.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/inline_citation.rs` | Partial | Citation chrome exists; anchor/jump/highlight contract is TODO. |
 | `attachments.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/attachments.rs` | Defer | Needs file picker/bytes ownership contract; keep as intent-only. |
 | `code-block.tsx` | `fret-ui-ai` + `fret-code-view` | `ecosystem/fret-markdown` + `ecosystem/fret-code-view` | Partial | Code fences render via markdown; copy/expand/download actions need slots. |
 | `snippet.tsx` | `fret-ui-ai` | `ecosystem/fret-ui-ai/src/elements/snippet.rs` | Defer | Likely a thin wrapper over code view + metadata chrome. |

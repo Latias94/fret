@@ -22,11 +22,11 @@ Each TODO is labeled:
 
 ### M0 — Foundations (composition + gates)
 
-- [ ] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (conversation/message/prompt/tool/code/utils).
-- [ ] AIEL-MVP0-foundation-002 Add crate-level docs and a small “usage” section for each exported surface.
-- [ ] AIEL-MVP0-foundation-003 Add baseline `test_id` conventions (roots/rows/actions) for diag automation.
-- [ ] AIEL-MVP0-foundation-004 Add at least one `fretboard diag` script that targets the existing transcript torture page.
-- [ ] AIEL-MVP0-foundation-005 Define the `fret-ui-ai` data model v0 (message parts, tool calls, sources, citations).
+- [x] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (elements + model).
+- [~] AIEL-MVP0-foundation-002 Add crate-level docs and a small “usage” section for each exported surface.
+- [x] AIEL-MVP0-foundation-003 Add baseline `test_id` conventions (roots/rows/actions) for diag automation.
+- [ ] AIEL-MVP0-foundation-004 Add at least one `fretboard diag` script that targets the transcript torture page (`ai_transcript_torture`).
+- [x] AIEL-MVP0-foundation-005 Define the `fret-ui-ai` data model v0 (message parts, tool calls, sources, citations).
 - [ ] AIEL-MVP0-foundation-006 Define the `fret.ai.*` theme token v0 list (keep small; document defaults + usage rules).
 
 ## Component inventory (upstream baseline)
@@ -44,10 +44,10 @@ Status legend:
 | --- | --- | --- | --- |
 | `conversation` | Prototype | `fret-ui-ai` | Transcript virtualization exists; missing empty state/download/parts. |
 | `message` | Prototype | `fret-ui-ai` | Minimal bubble exists; missing composition parts + markdown response. |
-| `prompt-input` | Not started | `fret-ui-ai` | Will be built on `fret-ui-shadcn::{InputGroup, CommandPalette, Select, DropdownMenu}`. |
-| `tool` | Not started | `fret-ui-ai` | Likely needs collapsible + code/markdown slots. |
-| `sources` | Not started | `fret-ui-ai` | Open-url intent should be app-owned. |
-| `inline-citation` | Not started | `fret-ui-ai` | Needs stable anchor + highlight behavior. |
+| `prompt-input` | Prototype | `fret-ui-ai` | MVP exists (send/stop/disabled/loading + `test_id`). |
+| `tool` | Prototype | `fret-ui-ai` | Tool call block exists (collapsible + state chrome); richer payload views pending. |
+| `sources` | Prototype | `fret-ui-ai` | Sources list exists; stable linking + open-url intent wiring pending. |
+| `inline-citation` | Prototype | `fret-ui-ai` | Citation chrome exists; anchor/jump/highlight behavior pending. |
 | `reasoning` | Not started | `fret-ui-ai` | Only if apps need it. |
 | `suggestion` | Not started | `fret-ui-ai` | Optional. |
 | `queue` | Not started | `fret-ui-ai` | Optional. |
@@ -100,15 +100,29 @@ Status legend:
 
 - [ ] AIEL-MVP1-chat-001 Port `Conversation` parts: content, empty state, scroll button, download.
 - [ ] AIEL-MVP1-chat-002 Port `Message` parts: content wrapper, actions, toolbar slots.
-- [ ] AIEL-MVP1-chat-003 Add `MessageResponse` (markdown/code rendering + streaming-friendly updates).
-- [ ] AIEL-MVP1-chat-004 Port `PromptInput` MVP (text input + send/stop + disabled/loading states).
-- [ ] AIEL-MVP1-chat-005 UI Gallery page(s): chat demo with streaming append + tool calls (not just torture).
+- [x] AIEL-MVP1-chat-003 Add `MessageResponse` (markdown/code rendering + initial code actions).
+- [x] AIEL-MVP1-chat-004 Port `PromptInput` MVP (text input + send/stop + disabled/loading states).
+- [x] AIEL-MVP1-chat-005 UI Gallery page(s): chat demo with streaming append + tool calls (not just torture).
+- [x] AIEL-MVP1-chat-006 Define and implement the v0 streaming contract for markdown parts (append-only + finalize).
 
 ### M2 — Tooling surfaces (assistant/tooling apps)
 
-- [ ] AIEL-MVP2-tools-001 Port `Tool` (input/output blocks, running/success/error states, collapse).
-- [ ] AIEL-MVP2-tools-002 Port `Sources` and `InlineCitation` (stable linking and display).
+- [~] AIEL-MVP2-tools-001 Port `Tool` (input/output blocks, running/success/error states, collapse).
+- [~] AIEL-MVP2-tools-002 Port `Sources` and `InlineCitation` (stable linking and display).
 - [ ] AIEL-MVP2-tools-003 Port `Suggestion` and `Queue` (optional; only if apps need them).
+
+## Regression gates (scripts)
+
+Existing gates (UI Gallery `ai_chat_demo`):
+
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
+
+Planned next gate:
+
+- `AIEL-MVP0-foundation-004`: long transcript scroll stability gate on `ai_transcript_torture`.
 
 ### M3 — Code artifacts (developer-facing outputs)
 
