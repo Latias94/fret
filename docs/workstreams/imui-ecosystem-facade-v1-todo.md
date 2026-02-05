@@ -125,11 +125,17 @@ Exit criteria:
 - [x] IMUIECO-float-032b Add ImGui-style `open` model + close button for floating windows.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window_open`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_close_button_sets_open_false`).
+- [x] IMUIECO-float-032c Add `Esc`-to-close for ImGui-style `open` windows (when focused).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`floating_window_open`: `KeyCode::Escape` handler).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_escape_sets_open_false_after_focusing_title_bar`).
+- [x] IMUIECO-float-032d Add bring-to-front z-order management for floating windows (ImGui-style activation).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_layer`, `KEY_FLOAT_WINDOW_ACTIVATE`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_layer_bring_to_front_updates_hit_test_order`).
 - [ ] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
   - title bar, close button, Esc-to-close,
   - resize handles + resize session state,
   - focus trap/restore when appropriate (aligned with overlay policy).
-  - Note: `Esc-to-close` is implemented for `floating_window_open` when the title bar is focused.
+  - Note: title bar + close button + `Esc`-to-close are implemented for `floating_window_open`; resize handles remain open.
 - [~] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
 - [ ] IMUIECO-float-034 Decide OS-window promotion scope:

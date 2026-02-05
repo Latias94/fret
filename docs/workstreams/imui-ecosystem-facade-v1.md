@@ -17,7 +17,11 @@ Status snapshot (2026-02-05):
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
 - The initial egui/imgui-like convenience surface is hosted in `ecosystem/fret-ui-kit` behind its `imui` feature.
 - `ResponseExt` now covers common v1 signals (secondary + double click, drag lifecycle + deltas, context-menu request).
-- A minimal in-window floating window skeleton exists (`floating_window`: draggable title bar; no resize/close yet).
+- A minimal in-window floating window primitive exists (`floating_window` / `floating_window_open`):
+  - draggable title bar + element-local position state,
+  - optional ImGui-style `open` model + close button,
+  - `Esc`-to-close when the title bar is focused,
+  - opt-in `floating_layer(...)` for bring-to-front z-order management.
 
 Tracking:
 
