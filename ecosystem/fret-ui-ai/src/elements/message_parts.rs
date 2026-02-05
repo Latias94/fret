@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
 use fret_core::{FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
 use fret_ui_shadcn::Card;
 
-use crate::elements::{MessageResponse, SourcesBlock, ToolCallBlock};
+use crate::elements::{InlineCitation, MessageResponse, SourcesBlock, ToolCallBlock};
 use crate::model::{MessagePart, MessageRole};
 
 #[derive(Clone)]
@@ -64,125 +66,227 @@ impl MessageParts {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        #[derive(Default)]
+        struct CitationSelectionState {
+            selected_source_id: Option<Model<Option<Arc<str>>>>,
+        }
+
+        let selected_source_id = cx.with_state(CitationSelectionState::default, |st| {
+            st.selected_source_id.clone()
+        });
+        let selected_source_id = match selected_source_id {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(None::<Arc<str>>);
+                cx.with_state(CitationSelectionState::default, |st| {
+                    st.selected_source_id = Some(model.clone());
+                });
+                model
+            }
+        };
+
+        fn role_bg_key(role: MessageRole) -> &'static str {
+            match role {
+                MessageRole::User => "fret.ai.message.user.bg",
+                MessageRole::Assistant => "fret.ai.message.assistant.bg",
+                MessageRole::System => "fret.ai.message.system.bg",
+                MessageRole::Tool => "fret.ai.message.tool.bg",
+            }
+        }
+
+        fn role_fg_key(role: MessageRole) -> &'static str {
+            match role {
+                MessageRole::User => "fret.ai.message.user.fg",
+                MessageRole::Assistant => "fret.ai.message.assistant.fg",
+                MessageRole::System => "fret.ai.message.system.fg",
+                MessageRole::Tool => "fret.ai.message.tool.fg",
+            }
+        }
+
         let chrome = match self.role {
             MessageRole::User => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("primary")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("primary"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
             MessageRole::Assistant => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("card")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("card"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
             MessageRole::System => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("muted")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("muted"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
             MessageRole::Tool => {
-                ChromeRefinement::default().bg(ColorRef::Color(theme.color_required("secondary")))
+                let bg = theme
+                    .color_by_key(role_bg_key(self.role))
+                    .unwrap_or_else(|| theme.color_required("secondary"));
+                ChromeRefinement::default().bg(ColorRef::Color(bg))
             }
         }
         .rounded(Radius::Lg)
         .p(Space::N4);
 
         let fg = match self.role {
-            MessageRole::User => theme.color_required("primary-foreground"),
-            _ => theme.color_required("foreground"),
+            MessageRole::User => theme
+                .color_by_key(role_fg_key(self.role))
+                .unwrap_or_else(|| theme.color_required("primary-foreground")),
+            _ => theme
+                .color_by_key(role_fg_key(self.role))
+                .unwrap_or_else(|| theme.color_required("foreground")),
         };
 
         let on_link_activate = self.on_link_activate;
         let test_id_prefix = self.test_id_prefix;
         let parts = self.parts;
+        let selected_source_id = selected_source_id.clone();
 
-        let content = cx.stack(move |cx| {
-            let mut out = Vec::new();
-            for (index, part) in parts.iter().enumerate() {
-                let part_id = test_id_prefix
-                    .clone()
-                    .map(|p| Arc::<str>::from(format!("{p}part-{index}")));
-                match part {
-                    MessagePart::Text(text) => {
-                        let text_style = TextStyle {
-                            font: Default::default(),
-                            size: theme.metric_required("font.size"),
-                            weight: FontWeight::NORMAL,
-                            slant: Default::default(),
-                            line_height: Some(theme.metric_required("font.line_height")),
-                            letter_spacing_em: None,
-                        };
+        let content = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N3),
+            move |cx| {
+                let mut out = Vec::new();
+                for (index, part) in parts.iter().enumerate() {
+                    let part_id = test_id_prefix
+                        .clone()
+                        .map(|p| Arc::<str>::from(format!("{p}part-{index}")));
+                    match part {
+                        MessagePart::Text(text) => {
+                            let text_style = TextStyle {
+                                font: Default::default(),
+                                size: theme.metric_required("font.size"),
+                                weight: FontWeight::NORMAL,
+                                slant: Default::default(),
+                                line_height: Some(theme.metric_required("font.line_height")),
+                                letter_spacing_em: None,
+                            };
 
-                        let el = cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: text.clone(),
-                            style: Some(text_style),
-                            color: Some(fg),
-                            wrap: TextWrap::Word,
-                            overflow: TextOverflow::Clip,
-                        });
+                            let el = cx.text_props(TextProps {
+                                layout: LayoutStyle::default(),
+                                text: text.clone(),
+                                style: Some(text_style),
+                                color: Some(fg),
+                                wrap: TextWrap::Word,
+                                overflow: TextOverflow::Clip,
+                            });
 
-                        let Some(test_id) = part_id else {
-                            out.push(el);
-                            continue;
-                        };
+                            let Some(test_id) = part_id else {
+                                out.push(el);
+                                continue;
+                            };
 
-                        out.push(cx.semantics(
-                            SemanticsProps {
-                                role: SemanticsRole::Group,
-                                test_id: Some(test_id),
-                                ..Default::default()
-                            },
-                            move |_cx| vec![el],
-                        ));
-                    }
-                    MessagePart::Markdown(md) => {
-                        let mut response =
-                            MessageResponse::new(md.text.clone()).finalized(md.finalized);
-                        if let Some(handler) = on_link_activate.clone() {
-                            response = response.on_link_activate(handler);
+                            out.push(cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::Group,
+                                    test_id: Some(test_id),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![el],
+                            ));
                         }
-                        if let Some(prefix) = test_id_prefix.clone() {
-                            response = response.test_id_prefix(prefix);
-                        }
-                        let el = response.into_element(cx);
-                        let Some(test_id) = part_id else {
-                            out.push(el);
-                            continue;
-                        };
+                        MessagePart::Markdown(md) => {
+                            let mut response =
+                                MessageResponse::new(md.text.clone()).finalized(md.finalized);
+                            if let Some(handler) = on_link_activate.clone() {
+                                response = response.on_link_activate(handler);
+                            }
+                            if let Some(prefix) = test_id_prefix.clone() {
+                                response = response.test_id_prefix(prefix);
+                            }
+                            let el = response.into_element(cx);
+                            let Some(test_id) = part_id else {
+                                out.push(el);
+                                continue;
+                            };
 
-                        out.push(cx.semantics(
-                            SemanticsProps {
-                                role: SemanticsRole::Group,
-                                test_id: Some(test_id),
-                                ..Default::default()
-                            },
-                            move |_cx| vec![el],
-                        ));
-                    }
-                    MessagePart::ToolCall(call) => {
-                        let mut block = ToolCallBlock::new(call.clone());
-                        if let Some(prefix) = test_id_prefix.clone() {
-                            let root = Arc::<str>::from(format!("{prefix}toolcall-{index}"));
-                            let trigger =
-                                Arc::<str>::from(format!("{prefix}toolcall-trigger-{index}"));
-                            block = block.test_id_root(root).test_id_trigger(trigger);
+                            out.push(cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::Group,
+                                    test_id: Some(test_id),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![el],
+                            ));
                         }
-                        out.push(block.into_element(cx));
-                    }
-                    MessagePart::Sources(items) => {
-                        let mut block = SourcesBlock::new(items.clone());
-                        if let Some(handler) = on_link_activate.clone() {
-                            block = block.on_open_url(handler);
+                        MessagePart::ToolCall(call) => {
+                            let mut block = ToolCallBlock::new(call.clone());
+                            if let Some(prefix) = test_id_prefix.clone() {
+                                let root = Arc::<str>::from(format!("{prefix}toolcall-{index}"));
+                                let trigger =
+                                    Arc::<str>::from(format!("{prefix}toolcall-trigger-{index}"));
+                                block = block.test_id_root(root).test_id_trigger(trigger);
+                            }
+                            out.push(block.into_element(cx));
                         }
-                        if let Some(prefix) = test_id_prefix.clone() {
-                            block = block
-                                .test_id_root(Arc::<str>::from(format!("{prefix}sources-{index}")))
-                                .test_id_row_prefix(Arc::<str>::from(format!(
-                                    "{prefix}source-row-{index}-"
-                                )));
+                        MessagePart::Sources(items) => {
+                            let mut block = SourcesBlock::new(items.clone())
+                                .highlighted_source_model(selected_source_id.clone());
+                            if let Some(handler) = on_link_activate.clone() {
+                                block = block.on_open_url(handler);
+                            }
+                            if let Some(prefix) = test_id_prefix.clone() {
+                                block = block
+                                    .test_id_root(Arc::<str>::from(format!(
+                                        "{prefix}sources-{index}"
+                                    )))
+                                    .test_id_row_prefix(Arc::<str>::from(format!(
+                                        "{prefix}source-row-{index}-"
+                                    )));
+                            }
+                            out.push(block.into_element(cx));
                         }
-                        out.push(block.into_element(cx));
+                        MessagePart::Citations(items) => {
+                            let row = stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N2),
+                                |cx| {
+                                    let mut out = Vec::new();
+                                    for (citation_index, item) in items.iter().enumerate() {
+                                        let mut citation = InlineCitation::new(item.label.clone())
+                                            .source_id(item.source_id.clone())
+                                            .select_source_model(selected_source_id.clone());
+
+                                        if let Some(prefix) = test_id_prefix.clone() {
+                                            citation = citation.test_id(Arc::<str>::from(format!(
+                                                "{prefix}citation-{index}-{citation_index}"
+                                            )));
+                                        }
+
+                                        out.push(citation.into_element(cx));
+                                    }
+                                    out
+                                },
+                            );
+
+                            let Some(test_id) = part_id else {
+                                out.push(row);
+                                continue;
+                            };
+
+                            out.push(cx.semantics(
+                                SemanticsProps {
+                                    role: SemanticsRole::Group,
+                                    test_id: Some(test_id),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![row],
+                            ));
+                        }
                     }
                 }
-            }
 
-            out
-        });
+                out
+            },
+        );
 
         Card::new(vec![content])
             .refine_style(chrome)

@@ -61,6 +61,22 @@ impl SourceItem {
     }
 }
 
+/// An inline citation reference (typically rendered near assistant output).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CitationItem {
+    pub source_id: Arc<str>,
+    pub label: Arc<str>,
+}
+
+impl CitationItem {
+    pub fn new(source_id: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            source_id: source_id.into(),
+            label: label.into(),
+        }
+    }
+}
+
 /// Tool call payload representation (portable; apps decide the actual schema).
 #[derive(Debug, Clone, PartialEq)]
 pub enum ToolCallPayload {
@@ -156,6 +172,8 @@ pub enum MessagePart {
     ToolCall(ToolCall),
     /// A list of sources (citations, references).
     Sources(Arc<[SourceItem]>),
+    /// A list of inline citations that reference a `Sources` part.
+    Citations(Arc<[CitationItem]>),
 }
 
 /// A message record suitable for conversation/transcript UIs.

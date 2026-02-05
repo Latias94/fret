@@ -11,6 +11,6 @@ pub use elements::{
     ToolCallBlock,
 };
 pub use model::{
-    AiMessage, ExternalId, MarkdownPart, MessageId, MessagePart, MessageRole, SourceItem, ToolCall,
-    ToolCallPayload, ToolCallState,
+    AiMessage, CitationItem, ExternalId, MarkdownPart, MessageId, MessagePart, MessageRole,
+    SourceItem, ToolCall, ToolCallPayload, ToolCallState,
 };

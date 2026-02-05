@@ -11493,6 +11493,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
         tool_call_running: ui_ai::ToolCall,
         tool_call_final: ui_ai::ToolCall,
         sources: Arc<[ui_ai::SourceItem]>,
+        citations: Arc<[ui_ai::CitationItem]>,
     }
 
     #[derive(Default)]
@@ -11596,6 +11597,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                     let assistant_id = pending_state.assistant_id;
                     let tool_call_running = pending_state.tool_call_running.clone();
                     let sources = pending_state.sources.clone();
+                    let citations = pending_state.citations.clone();
 
                     let _ = cx.app.models_mut().update(&messages, |list| {
                         let mut vec = list.as_ref().to_vec();
@@ -11606,6 +11608,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                                 )),
                                 ui_ai::MessagePart::ToolCall(tool_call_running),
                                 ui_ai::MessagePart::Sources(sources),
+                                ui_ai::MessagePart::Citations(citations),
                             ]);
                         }
                         *list = vec.into();
@@ -11619,6 +11622,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                 let markdown = pending_state.markdown.clone();
                 let tool_call_final = pending_state.tool_call_final.clone();
                 let sources = pending_state.sources.clone();
+                let citations = pending_state.citations.clone();
 
                 let _ = cx.app.models_mut().update(&messages, |list| {
                     let mut vec = list.as_ref().to_vec();
@@ -11627,6 +11631,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                             ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::new(markdown)),
                             ui_ai::MessagePart::ToolCall(tool_call_final),
                             ui_ai::MessagePart::Sources(sources),
+                            ui_ai::MessagePart::Citations(citations),
                         ]);
                     }
                     *list = vec.into();
@@ -11708,6 +11713,11 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                     .excerpt("Another excerpt: this should wrap and remain readable."),
             ]);
 
+            let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
+                ui_ai::CitationItem::new("src-0", "[1]"),
+                ui_ai::CitationItem::new("src-1", "[2]"),
+            ]);
+
             let reply = format!(
                 "Echo: **{text}**\n\nThis reply is streamed via append-only updates.\n\n```rust\nfn streamed_demo() {{\n    println!(\"{text}\");\n}}\n"
             );
@@ -11739,6 +11749,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                         )),
                         ui_ai::MessagePart::ToolCall(tool_call.clone()),
                         ui_ai::MessagePart::Sources(sources.clone()),
+                        ui_ai::MessagePart::Citations(citations.clone()),
                     ],
                 ));
                 *list = vec.into();
@@ -11753,6 +11764,7 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<
                     tool_call_running: tool_call,
                     tool_call_final,
                     sources,
+                    citations,
                 })
             });
             let _ = host.models_mut().update(&loading, |v| *v = true);
