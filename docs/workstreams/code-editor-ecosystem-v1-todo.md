@@ -1,7 +1,7 @@
 # Code Editor Ecosystem v1 - TODO Tracker
 
 Status: Active (workstream tracker)
-Last updated: 2026-02-04
+Last updated: 2026-02-05
 
 This is the checkbox tracker companion to:
 
@@ -162,6 +162,9 @@ Evidence anchors:
   - Surface glue: `windowed_rows_surface_with_pointer_region` also sets `scroll.windowed_paint = true` (the code editor uses the pointer-region variant).
   - Paint correctness: `windowed_rows_surface` now anchors row rects at the canvas bounds origin to avoid “left clipped / prefixes missing”.
   - Diagnostics gate: `tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json` + `--check-windowed-rows-offset-changes-min 1` (with UI Gallery view-cache enabled).
+- [x] Add a soft-wrap + editing baseline gate (ui-gallery torture).
+  - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json`
+  - Gates: `--check-windowed-rows-offset-changes-min 1` + `--check-pixels-changed ui-gallery-code-editor-torture-root`
 - [x] Clamp windowed row hit-testing during drags (keeps selection updates continuous when the pointer leaves bounds).
 - [x] Drag-to-select edge autoscroll (Zed-style scaling), including a timer-driven path so it continues while the pointer is stationary at the viewport edge.
 
