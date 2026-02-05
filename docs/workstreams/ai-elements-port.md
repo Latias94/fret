@@ -190,6 +190,7 @@ Convention (v0; subject to refinement):
 - Prompt input (example app prefix): `<prefix>prompt-textarea`, `<prefix>prompt-send`, `<prefix>prompt-stop`
 - Tool call blocks: `<msg_prefix>toolcall-{part_index}`, trigger `<msg_prefix>toolcall-trigger-{part_index}`
 - Sources blocks: `<msg_prefix>sources-{part_index}`, rows `<msg_prefix>source-row-{part_index}-{row_index}`
+- Inline citations: `<msg_prefix>citation-{part_index}-{citation_index}` (and optional highlight: `<source_row_test_id>-active`)
 - Markdown code actions: `<msg_prefix>code-expand-{ordinal}`
 
 ### 5) Keep policy out of `crates/fret-ui`
@@ -250,6 +251,7 @@ Implemented in `ecosystem/fret-ui-ai/src/model.rs` as:
   - `Markdown(MarkdownPart { text: Arc<str>, finalized: bool })` (assistant output; supports streaming)
   - `ToolCall(ToolCall)` (structured input/output + lifecycle)
   - `Sources(Arc<[SourceItem]>)`
+  - `Citations(Arc<[CitationItem]>)` (inline citations referencing a `Sources` part)
 
 Notes:
 
@@ -304,18 +306,28 @@ Rules:
 
 Initial token candidates (names tentative; keep the list small):
 
-- Transcript layout:
-  - `fret.ai.conversation.padding`
-  - `fret.ai.conversation.gap`
-  - `fret.ai.conversation.scroll_button.offset_bottom`
-- Message chrome:
-  - `fret.ai.message.user.bg` / `.fg`
-  - `fret.ai.message.assistant.bg` / `.fg`
-  - `fret.ai.message.system.bg` / `.fg`
-  - `fret.ai.message.tool.bg` / `.fg`
-- Prompt input:
-  - `fret.ai.prompt_input.min_height`
-  - `fret.ai.prompt_input.max_height`
+Token list (v0):
+
+| Token key | Kind | Default (fallback) | Notes |
+| --- | --- | --- | --- |
+| `fret.ai.conversation.padding` | metric (px) | `Space::N4` | Padding for transcript content area. |
+| `fret.ai.conversation.gap` | metric (px) | `Space::N8` | Gap between transcript rows. |
+| `fret.ai.conversation.scroll_button.offset_bottom` | metric (px) | `Space::N4` | Offset for “scroll to bottom” affordance. |
+| `fret.ai.message.user.bg` | color | `primary` | User message background. |
+| `fret.ai.message.user.fg` | color | `primary-foreground` | User message foreground. |
+| `fret.ai.message.assistant.bg` | color | `card` | Assistant message background. |
+| `fret.ai.message.assistant.fg` | color | `foreground` | Assistant message foreground. |
+| `fret.ai.message.system.bg` | color | `muted` | System message background. |
+| `fret.ai.message.system.fg` | color | `foreground` | System message foreground. |
+| `fret.ai.message.tool.bg` | color | `secondary` | Tool message background. |
+| `fret.ai.message.tool.fg` | color | `foreground` | Tool message foreground. |
+| `fret.ai.prompt_input.min_height` | metric (px) | `Space::N10` | Minimum height for multi-line prompt input (if/when enabled). |
+| `fret.ai.prompt_input.max_height` | metric (px) | `Px(240.0)` | Maximum height for multi-line prompt input (if/when enabled). |
+
+Implemented today:
+
+- `fret.ai.message.*.bg` / `fret.ai.message.*.fg` are read by `MessageParts` with shadcn fallback
+  tokens when not configured.
 
 Avoid hard-coded string keys like `theme.color_required("primary")` in `fret-ui-ai` where a
 tokenized mapping is feasible.
