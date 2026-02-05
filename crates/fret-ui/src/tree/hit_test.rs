@@ -20,7 +20,10 @@ impl<H: UiHost> UiTree<H> {
         {
             for &root in layers {
                 if root == cache.layer_root {
-                    if cache.path.first().copied() == Some(root)
+                    let bounds_tree_enabled = self.hit_test_bounds_trees.layer_enabled(root);
+
+                    if !bounds_tree_enabled
+                        && cache.path.first().copied() == Some(root)
                         && let Some(hit) = {
                             let started = self.debug_enabled.then(std::time::Instant::now);
                             let hit = self.try_hit_test_along_cached_path(&cache.path, position);
@@ -38,7 +41,7 @@ impl<H: UiHost> UiTree<H> {
                         return Some(hit);
                     }
 
-                    if self.debug_enabled {
+                    if self.debug_enabled && !bounds_tree_enabled {
                         self.debug_stats.hit_test_path_cache_misses = self
                             .debug_stats
                             .hit_test_path_cache_misses

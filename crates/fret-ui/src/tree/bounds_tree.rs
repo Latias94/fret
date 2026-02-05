@@ -235,6 +235,21 @@ impl HitTestBoundsTrees {
         self.layers.push(layer);
     }
 
+    pub(super) fn layer_enabled(&self, layer_root: NodeId) -> bool {
+        if hit_test_bounds_tree_disabled() {
+            return false;
+        }
+        let Some(frame_id) = self.frame_id else {
+            return false;
+        };
+        self.layers.iter().any(|layer| {
+            layer.used_this_frame
+                && layer.frame_id == Some(frame_id)
+                && layer.root == layer_root
+                && layer.enabled
+        })
+    }
+
     fn layer_mut(&mut self, layer_root: NodeId) -> &mut LayerBoundsTree {
         let frame_id = self.frame_id;
 
