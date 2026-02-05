@@ -75,10 +75,14 @@ Exit criteria:
 - Alt activates the menubar on Windows/Linux (or a deliberate alternative is documented).
 - Arrow and typeahead navigation matches the intended Radix/APG outcomes.
 
-- [ ] MENU-MVP1-kbd-020 Define and implement Alt activation strategy for in-window menubar (Windows/Linux).
+- [x] MENU-MVP1-kbd-020 Define and implement Alt activation strategy for in-window menubar (Windows/Linux).
   - Notes:
-    - Decide whether Alt should open menubar without opening the first menu (traditional behavior) vs open first menu.
-    - Ensure `focus.is_text_input` gating (avoid interfering with IME/text input).
+    - Decision: Alt-up (press + release Alt without other keys) triggers `focus.menu_bar` (does not auto-open the first menu).
+    - Cancelation: any other keydown, pointer-down, or IME/text input while Alt is held cancels activation.
+    - Guard: only fires when the window has an in-window menubar (`WindowMenuBarFocusService.present == true`) and when `!focus.is_text_input`.
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs` (`handle_alt_menu_bar_activation`)
+  - Evidence: `crates/fret-ui/src/tree/tests/alt_menu_bar_activation.rs` (nextest coverage)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (publishes `WindowMenuBarFocusService` for in-window menubar)
 - [ ] MENU-MVP1-kbd-021 Implement mnemonic strategy (underlined letter + Alt+Key) or explicitly defer with rationale.
 - [ ] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
 - [ ] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.
@@ -122,11 +126,12 @@ Exit criteria:
 - Core invariants are covered by unit tests and at least one `fretboard diag` script.
 
 - [ ] MENU-MVP4-test-050 Add nextest coverage for menu normalization (shared helper, if implemented).
-- [ ] MENU-MVP4-test-051 Add a `fretboard diag` script for keyboard-only menubar navigation:
+- [~] MENU-MVP4-test-051 Add a `fretboard diag` script for keyboard-only menubar navigation:
   - Focus menubar (F10)
   - Open menu (Enter/ArrowDown)
   - Rove items + open submenu + close with Escape
   - Verify stable `test_id` anchors
+  - Partial: `tools/diag-scripts/ui-gallery-menubar-alt-activation.json` (toggles in-window menubar on, then validates Alt activation focuses `menubar-trigger-file`)
 - [ ] MENU-MVP4-test-052 Add a diag script for pointer “submenu grace intent” (prevent accidental close when moving toward submenu).
 
 ---
@@ -134,4 +139,5 @@ Exit criteria:
 ## Notes / decisions log (keep short)
 
 - [ ] MENU-MVP0-docs-900 Pick the canonical layer for menu normalization (see `MENU-MVP0-sanitize-010`).
-- [ ] MENU-MVP1-docs-901 Decide Alt activation behavior and document trade-offs.
+- [x] MENU-MVP1-docs-901 Decide Alt activation behavior and document trade-offs.
+  - Decision: Alt-up focuses menubar triggers via `focus.menu_bar` on Windows/Linux; see `MENU-MVP1-kbd-020`.

@@ -91,6 +91,9 @@ Focus integration exists:
   `crates/fret-app/src/core_commands.rs`.
 - Window-scoped gating for “menu bar is present” is modeled by
   `crates/fret-runtime/src/window_menu_bar_focus.rs` and used by workspace shells.
+- Alt activation (Windows/Linux): Alt-up (press + release Alt without other keys) emits
+  `focus.menu_bar` when `WindowMenuBarFocusService.present == true` and when `!focus.is_text_input`.
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs` (`handle_alt_menu_bar_activation`)
 
 Recently fixed (correctness + parity):
 
@@ -181,4 +184,3 @@ High-level intent:
   milestone minimal and outcome-driven.
 - **Dynamic menus**: “Recent” and “Window list” are easy to implement badly (unstable IDs, rebuild
   churn). We should define ID stability and update frequency early.
-
