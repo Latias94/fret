@@ -56,7 +56,7 @@ layout. This workstream is about making that the default across ecosystem code.
 - [x] SDC-tool-020 Add an audit recipe (rg patterns) and “exceptions list” section below.
   - Outcome: quick repo-wide scans can be done without guesswork.
 
-### M1 — shadcn: remove “test_id-only Semantics wrappers”
+### M1 — shadcn: remove “stamping-only Semantics wrappers”
 
 - [x] SDC-shadcn-100 Slider: migrate `*-track/*-range/*-thumb-*` stamping to `attach_semantics`.
   - Delete any layout workarounds that exist only because of wrapper semantics.
@@ -67,6 +67,12 @@ layout. This workstream is about making that the default across ecosystem code.
   - Evidence: `ecosystem/fret-ui-shadcn/src/select.rs`
 - [x] SDC-shadcn-103 Card: migrate `CardAction` stamping to `attach_semantics` (avoid `Semantics` wrappers for slots).
   - Evidence: `ecosystem/fret-ui-shadcn/src/card.rs`
+- [x] SDC-shadcn-104 Alert: migrate role stamping to `attach_semantics` (avoid wrapper-only `role=Alert`).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/alert.rs`
+- [x] SDC-shadcn-105 ButtonGroup: migrate group role/label stamping to `attach_semantics`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/button_group.rs`
+- [x] SDC-shadcn-106 Chart: migrate panel role/label stamping to `attach_semantics`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/chart.rs`
 - [x] SDC-shadcn-110 DataGrid: migrate header/body cell stamps to decorators where possible.
   - Evidence: `ecosystem/fret-ui-shadcn/src/data_grid.rs`, `ecosystem/fret-ui-shadcn/tests/data_grid_layout.rs`
 - [x] SDC-shadcn-120 Form/Field: migrate any “role-only” wrappers used for structure to decorators.
