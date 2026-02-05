@@ -200,6 +200,26 @@
               0,
               38
             ]
+          },
+          "global": {
+            "row_model": {
+              "root": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ],
+              "flat": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ]
+            },
+            "unique_values": {},
+            "min_max": null
           }
         }
       }
@@ -329,6 +349,18 @@
               0,
               38
             ]
+          },
+          "global": {
+            "row_model": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            },
+            "unique_values": {},
+            "min_max": null
           }
         }
       }
@@ -457,6 +489,18 @@
               7,
               38
             ]
+          },
+          "global": {
+            "row_model": {
+              "root": [
+                "1"
+              ],
+              "flat": [
+                "1"
+              ]
+            },
+            "unique_values": {},
+            "min_max": null
           }
         }
       }
@@ -625,6 +669,26 @@
               0,
               38
             ]
+          },
+          "global": {
+            "row_model": {
+              "root": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ],
+              "flat": [
+                "1",
+                "2",
+                "3",
+                "4",
+                "5"
+              ]
+            },
+            "unique_values": {},
+            "min_max": null
           }
         }
       }

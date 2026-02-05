@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, Table, TableState, TanStackTableOptions, TanStackTableState,
+    ColumnDef, RowKey, Table, TableState, TanStackTableOptions, TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
 
@@ -29,6 +29,7 @@ struct FacetingColumnExpect {
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct FacetingExpect {
     cpu: FacetingColumnExpect,
+    global: FacetingColumnExpect,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -90,7 +91,10 @@ fn tanstack_v8_faceting_parity() {
             .to_ascii_lowercase()
             .contains(&q.to_ascii_lowercase())
     });
-    let cpu = ColumnDef::<FixtureRow>::new("cpu").facet_key_by(|row: &FixtureRow| row.cpu);
+    let cpu = ColumnDef::<FixtureRow>::new("cpu")
+        .sort_value_by(|row: &FixtureRow| TanStackValue::Number(row.cpu as f64))
+        .filtering_fn_named("inNumberRange")
+        .facet_key_by(|row: &FixtureRow| row.cpu);
 
     let columns = vec![status, cpu];
 
@@ -104,7 +108,7 @@ fn tanstack_v8_faceting_parity() {
 
         let table = Table::builder(&data)
             .columns(columns.clone())
-            .get_row_key(|row, _idx, _parent| fret_ui_headless::table::RowKey(row.id))
+            .get_row_key(|row, _idx, _parent| RowKey(row.id))
             .state(state)
             .options(options)
             .build();
@@ -136,6 +140,28 @@ fn tanstack_v8_faceting_parity() {
         assert_eq!(
             got_min_max, cpu.min_max,
             "snapshot {} faceting.cpu.min_max mismatch",
+            snap.id
+        );
+
+        let global = &snap.expect.faceting.global;
+        assert_eq!(
+            snapshot_row_model(table.filtered_row_model()),
+            global.row_model,
+            "snapshot {} faceting.global.row_model mismatch",
+            snap.id
+        );
+
+        let got_global_unique: BTreeMap<String, usize> = BTreeMap::new();
+        assert_eq!(
+            got_global_unique, global.unique_values,
+            "snapshot {} faceting.global.unique_values mismatch",
+            snap.id
+        );
+
+        let got_global_min_max: Option<(u64, u64)> = None;
+        assert_eq!(
+            got_global_min_max, global.min_max,
+            "snapshot {} faceting.global.min_max mismatch",
             snap.id
         );
     }

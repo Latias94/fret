@@ -139,6 +139,10 @@ type SnapshotId =
   | "selection_toggle_all_page_rows_respects_pagination"
   | "selection_enable_row_selection_fn_odd_ids_toggle_all_rows_selects_selectable"
   | "selection_enable_row_selection_fn_odd_ids_toggle_row_unselectable_noop"
+  | "faceting_baseline"
+  | "faceting_cpu_own_filter_ignored"
+  | "faceting_cpu_other_filter_applied"
+  | "faceting_manual_filtering_bypasses"
   | "selection_enable_row_selection_fn_odd_ids_toggle_all_page_rows_selects_selectable"
   | "selection_tree_baseline"
   | "selection_tree_state_child_selected_marks_parent_some_selected"
@@ -582,6 +586,18 @@ type FixtureSnapshot = {
       is_some_columns_pinned: boolean
       is_some_left_columns_pinned: boolean
       is_some_right_columns_pinned: boolean
+    }
+    faceting?: {
+      cpu: {
+        row_model: RowModelSnapshot
+        unique_values: Record<string, number>
+        min_max: [number, number] | null
+      }
+      global: {
+        row_model: RowModelSnapshot
+        unique_values: Record<string, number>
+        min_max: [number, number] | null
+      }
     }
     next_state?: TanStackState
   }
@@ -2150,6 +2166,30 @@ function snapshotFaceting(table: any, column_id: string): {
 
   return {
     row_model: snapshotRowModel(faceted),
+    unique_values,
+    min_max:
+      Array.isArray(minmax) && minmax.length === 2
+        ? [Number(minmax[0]), Number(minmax[1])]
+        : null,
+  }
+}
+
+function snapshotGlobalFaceting(table: any): {
+  row_model: NonNullable<FixtureSnapshot["expect"]["core"]>
+  unique_values: Record<string, number>
+  min_max: [number, number] | null
+} {
+  const model = table.getGlobalFacetedRowModel?.()
+  const unique = table.getGlobalFacetedUniqueValues?.()
+  const minmax = table.getGlobalFacetedMinMaxValues?.()
+
+  const unique_values: Record<string, number> = {}
+  for (const [k, v] of unique?.entries?.() ?? []) {
+    unique_values[String(k)] = Number(v)
+  }
+
+  return {
+    row_model: snapshotRowModel(model),
     unique_values,
     min_max:
       Array.isArray(minmax) && minmax.length === 2
@@ -4701,6 +4741,7 @@ function snapshotColumnPinning(
           ...base,
           faceting: {
             cpu: snapshotFaceting(table, "cpu"),
+            global: snapshotGlobalFaceting(table),
           },
         },
       }

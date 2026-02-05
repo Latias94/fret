@@ -423,6 +423,18 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ---
 
+## M6.5 — Faceting parity
+
+- [x] HTP-face-010 Gate faceting surfaces (`ColumnFaceting` / `GlobalFaceting`).
+  - Parity-gated:
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs`
+  - Notes:
+    - `GlobalFaceting` unique/minmax are empty/null with TanStack’s built-in helpers because
+      `__global__` is not a real column (upstream warns; fixture captures this).
+
+---
+
 ## M7 — Engine memoization parity + perf gates
 
 - [ ] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
