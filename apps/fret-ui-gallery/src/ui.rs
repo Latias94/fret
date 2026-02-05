@@ -6065,16 +6065,260 @@ fn preview_calendar(
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
-    let calendar = shadcn::Calendar::new(month, selected)
-        .number_of_months(1)
-        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
-        .into_element(cx);
-    vec![stack::hstack(
+    use fret_ui_headless::calendar::DateRangeSelection;
+
+    let theme = Theme::global(&*cx.app).clone();
+
+    #[derive(Default, Clone)]
+    struct CalendarModels {
+        range_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        range_selected: Option<Model<DateRangeSelection>>,
+        booked_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        booked_selected: Option<Model<Option<Date>>>,
+        custom_cell_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        custom_cell_selected: Option<Model<Option<Date>>>,
+        week_number_month: Option<Model<fret_ui_headless::calendar::CalendarMonth>>,
+        week_number_selected: Option<Model<Option<Date>>>,
+    }
+
+    let initial_month = cx
+        .get_model_copied(&month, Invalidation::Layout)
+        .unwrap_or_else(|| {
+            fret_ui_headless::calendar::CalendarMonth::from_date(
+                time::OffsetDateTime::now_utc().date(),
+            )
+        });
+
+    let state = cx.with_state(CalendarModels::default, |st| st.clone());
+
+    let range_month = match state.range_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.range_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let range_selected = match state.range_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(DateRangeSelection::default());
+            cx.with_state(CalendarModels::default, |st| {
+                st.range_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let booked_month = match state.booked_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.booked_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let booked_selected = match state.booked_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Date>);
+            cx.with_state(CalendarModels::default, |st| {
+                st.booked_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let custom_cell_month = match state.custom_cell_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.custom_cell_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let custom_cell_selected = match state.custom_cell_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Date>);
+            cx.with_state(CalendarModels::default, |st| {
+                st.custom_cell_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let week_number_month = match state.week_number_month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(initial_month);
+            cx.with_state(CalendarModels::default, |st| {
+                st.week_number_month = Some(model.clone())
+            });
+            model
+        }
+    };
+    let week_number_selected = match state.week_number_selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<Date>);
+            cx.with_state(CalendarModels::default, |st| {
+                st.week_number_selected = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let basic = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N6).items_start(),
+            |cx| {
+                let selected_str = cx
+                    .get_model_copied(&selected, Invalidation::Layout)
+                    .flatten()
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "<none>".to_string());
+
+                vec![
+                    shadcn::Calendar::new(month.clone(), selected.clone())
+                        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+                        .into_element(cx),
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(Space::N1).items_start(),
+                        |cx| {
+                            vec![cx.text_props(TextProps {
+                                layout: Default::default(),
+                                text: Arc::from(format!("selected={}", selected_str)),
+                                style: None,
+                                color: Some(theme.color_required("muted-foreground")),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                            })]
+                        },
+                    ),
+                ]
+            },
+        );
+        section(cx, "Basic", body)
+    };
+
+    let range = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N6).items_start(),
+            |cx| {
+                let range = cx
+                    .get_model_copied(&range_selected, Invalidation::Layout)
+                    .unwrap_or_default();
+                let from = range
+                    .from
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "<none>".to_string());
+                let to = range
+                    .to
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "<none>".to_string());
+
+                vec![
+                    shadcn::CalendarRange::new(range_month.clone(), range_selected.clone())
+                        .number_of_months(2)
+                        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+                        .into_element(cx),
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default().gap(Space::N1).items_start(),
+                        |cx| {
+                            vec![
+                                cx.text_props(TextProps {
+                                    layout: Default::default(),
+                                    text: Arc::from(format!("from={}", from)),
+                                    style: None,
+                                    color: Some(theme.color_required("muted-foreground")),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                                cx.text_props(TextProps {
+                                    layout: Default::default(),
+                                    text: Arc::from(format!("to={}", to)),
+                                    style: None,
+                                    color: Some(theme.color_required("muted-foreground")),
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                }),
+                            ]
+                        },
+                    ),
+                ]
+            },
+        );
+        section(cx, "Range Calendar", body)
+    };
+
+    let booked_dates = {
+        let body = stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N6).items_start(),
+            |cx| {
+                vec![
+                    shadcn::Calendar::new(booked_month.clone(), booked_selected.clone())
+                        .disabled_by(|d| {
+                            matches!(d.weekday(), time::Weekday::Saturday | time::Weekday::Sunday)
+                        })
+                        .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+                        .into_element(cx),
+                    cx.text_props(TextProps {
+                        layout: Default::default(),
+                        text: Arc::from("Disabled: weekends"),
+                        style: None,
+                        color: Some(theme.color_required("muted-foreground")),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    }),
+                ]
+            },
+        );
+        section(cx, "Booked dates", body)
+    };
+
+    let custom_cell_size = {
+        let body = shadcn::Calendar::new(custom_cell_month.clone(), custom_cell_selected.clone())
+            .cell_size(Px(44.0))
+            .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+            .into_element(cx);
+        section(cx, "Custom Cell Size", body)
+    };
+
+    let week_numbers = {
+        let body = shadcn::Calendar::new(week_number_month.clone(), week_number_selected.clone())
+            .show_week_number(true)
+            .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+            .into_element(cx);
+        section(cx, "Week Numbers", body)
+    };
+
+    vec![stack::vstack(
         cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_center(),
-        move |_cx| [calendar],
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| vec![basic, range, booked_dates, custom_cell_size, week_numbers],
     )]
 }
 
