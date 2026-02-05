@@ -5,6 +5,7 @@
 
 pub mod v30;
 
+pub(crate) mod autocomplete;
 pub(crate) mod badge;
 pub(crate) mod button;
 pub(crate) mod card;

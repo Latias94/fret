@@ -51,6 +51,11 @@ impl PortId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
+
+    /// Creates a port id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
+    }
 }
 
 /// Stable identifier for an edge instance.
@@ -63,6 +68,11 @@ impl EdgeId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
+
+    /// Creates an edge id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
+    }
 }
 
 /// Stable identifier for a graph-scoped symbol.
@@ -74,6 +84,11 @@ impl SymbolId {
     /// Generates a new random symbol id.
     pub fn new() -> Self {
         Self(Uuid::new_v4())
+    }
+
+    /// Creates a symbol id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
     }
 }
 

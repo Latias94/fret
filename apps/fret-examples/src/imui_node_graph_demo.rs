@@ -35,7 +35,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiNodeGraphState) -> fret_k
     let view = st.view.clone();
 
     fret_imui::imui(cx, |ui| {
-        use fret_imui::UiWriterImUiExt as _;
+        use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
         let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {

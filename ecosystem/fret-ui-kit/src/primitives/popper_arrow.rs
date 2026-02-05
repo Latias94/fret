@@ -9,10 +9,10 @@
 //! In Fret, placement math lives in `crate::primitives::popper`, while this module provides a
 //! small renderer-agnostic element builder for the common "diamond" arrow shape.
 
-use fret_core::{Color, Corners, Edges, Point, Px, SemanticsRole, Transform2D};
+use fret_core::{Color, Corners, Edges, Point, Px, Transform2D};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SemanticsProps, SizeStyle, VisualTransformProps,
+    SemanticsDecoration, SizeStyle, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{AnchoredPanelLayout, Side};
 use fret_ui::{ElementContext, UiHost};
@@ -155,22 +155,10 @@ pub fn diamond_arrow_element_refined<H: UiHost>(
             );
 
             if let Some(test_id) = &test_id {
-                vec![cx.semantics(
-                    SemanticsProps {
-                        role: SemanticsRole::Generic,
-                        test_id: Some(test_id.clone()),
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Fill,
-                                height: Length::Fill,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    move |_cx| vec![container],
-                )]
+                vec![
+                    container
+                        .attach_semantics(SemanticsDecoration::default().test_id(test_id.clone())),
+                ]
             } else {
                 vec![container]
             }

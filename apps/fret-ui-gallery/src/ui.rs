@@ -268,6 +268,10 @@ pub(crate) fn content_view(
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_autocomplete_value: Model<String>,
+    material3_autocomplete_disabled: Model<bool>,
+    material3_autocomplete_error: Model<bool>,
+    material3_autocomplete_dialog_open: Model<bool>,
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -430,6 +434,10 @@ pub(crate) fn content_view(
         material3_text_field_value,
         material3_text_field_disabled,
         material3_text_field_error,
+        material3_autocomplete_value,
+        material3_autocomplete_disabled,
+        material3_autocomplete_error,
+        material3_autocomplete_dialog_open,
         material3_menu_open,
         text_input,
         text_area,
@@ -599,6 +607,10 @@ fn page_preview(
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_autocomplete_value: Model<String>,
+    material3_autocomplete_disabled: Model<bool>,
+    material3_autocomplete_error: Model<bool>,
+    material3_autocomplete_dialog_open: Model<bool>,
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -685,6 +697,7 @@ fn page_preview(
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
         PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
+        PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => preview_button(cx),
@@ -869,6 +882,17 @@ fn page_preview(
         PAGE_MATERIAL3_SELECT => material3_scoped_page(cx, material3_expressive.clone(), |cx| {
             preview_material3_select(cx)
         }),
+        PAGE_MATERIAL3_AUTOCOMPLETE => {
+            material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                preview_material3_autocomplete(
+                    cx,
+                    material3_autocomplete_value,
+                    material3_autocomplete_disabled,
+                    material3_autocomplete_error,
+                    material3_autocomplete_dialog_open,
+                )
+            })
+        }
         PAGE_MATERIAL3_TEXT_FIELD => {
             material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 preview_material3_text_field(
@@ -11425,6 +11449,304 @@ fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     ]
 }
 
+fn preview_material3_autocomplete(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<String>,
+    disabled: Model<bool>,
+    error: Model<bool>,
+    dialog_open: Model<bool>,
+) -> Vec<AnyElement> {
+    let disabled_now = cx
+        .get_model_copied(&disabled, Invalidation::Layout)
+        .unwrap_or(false);
+    let error_now = cx
+        .get_model_copied(&error, Invalidation::Layout)
+        .unwrap_or(false);
+
+    #[derive(Default)]
+    struct LocalState {
+        selected_value: Option<Model<Option<Arc<str>>>>,
+        exposed_selected_value: Option<Model<Option<Arc<str>>>>,
+        exposed_query: Option<Model<String>>,
+    }
+
+    let selected_value = cx.with_state(LocalState::default, |st| st.selected_value.clone());
+    let selected_value = if let Some(model) = selected_value {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(None::<Arc<str>>);
+        cx.with_state(LocalState::default, |st| {
+            st.selected_value = Some(model.clone())
+        });
+        model
+    };
+
+    let exposed_selected_value =
+        cx.with_state(LocalState::default, |st| st.exposed_selected_value.clone());
+    let exposed_selected_value = if let Some(model) = exposed_selected_value {
+        model
+    } else {
+        let model = cx
+            .app
+            .models_mut()
+            .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+        cx.with_state(LocalState::default, |st| {
+            st.exposed_selected_value = Some(model.clone())
+        });
+        model
+    };
+
+    let exposed_query = cx.with_state(LocalState::default, |st| st.exposed_query.clone());
+    let exposed_query = if let Some(model) = exposed_query {
+        model
+    } else {
+        let model = cx.app.models_mut().insert(String::new());
+        cx.with_state(LocalState::default, |st| {
+            st.exposed_query = Some(model.clone())
+        });
+        model
+    };
+
+    let query_now = cx
+        .get_model_cloned(&value, Invalidation::Layout)
+        .unwrap_or_default();
+    let selected_now = cx
+        .get_model_cloned(&selected_value, Invalidation::Layout)
+        .unwrap_or(None);
+    let selected_label = selected_now.as_deref().unwrap_or("<none>");
+
+    let exposed_selected_now = cx
+        .get_model_cloned(&exposed_selected_value, Invalidation::Layout)
+        .unwrap_or(None);
+    let exposed_selected_label = exposed_selected_now.as_deref().unwrap_or("<none>");
+
+    let toggles = stack::hstack(
+        cx,
+        stack::HStackProps::default().gap(Space::N4).items_center(),
+        move |cx| {
+            vec![
+                cx.text("disabled"),
+                material3::Switch::new(disabled.clone())
+                    .a11y_label("Disable autocomplete")
+                    .test_id("ui-gallery-material3-autocomplete-disabled")
+                    .into_element(cx),
+                cx.text("error"),
+                material3::Switch::new(error.clone())
+                    .a11y_label("Toggle autocomplete error state")
+                    .test_id("ui-gallery-material3-autocomplete-error")
+                    .into_element(cx),
+            ]
+        },
+    );
+
+    let items: Arc<[material3::AutocompleteItem]> = Arc::from(vec![
+        material3::AutocompleteItem::new("alpha", "Alpha"),
+        material3::AutocompleteItem::new("beta", "Beta"),
+        material3::AutocompleteItem::new("gamma", "Gamma"),
+        material3::AutocompleteItem::new("delta", "Delta"),
+        material3::AutocompleteItem::new("epsilon", "Epsilon"),
+        material3::AutocompleteItem::new("zeta", "Zeta"),
+    ]);
+
+    let supporting = if error_now {
+        "Error: required"
+    } else {
+        "Supporting text"
+    };
+
+    let outlined = material3::Autocomplete::new(value.clone())
+        .selected_value(selected_value.clone())
+        .variant(material3::AutocompleteVariant::Outlined)
+        .label("Search")
+        .placeholder("Type to filter")
+        .supporting_text(supporting)
+        .items(items.clone())
+        .disabled(disabled_now)
+        .error(error_now)
+        .a11y_label("autocomplete outlined")
+        .test_id("ui-gallery-material3-autocomplete")
+        .into_element(cx);
+
+    let outlined_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Outlined").into_element(cx),
+            shadcn::CardDescription::new(
+                "Combobox-style: focus stays on the input; the active option is exposed via active-descendant.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![outlined]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let filled = material3::Autocomplete::new(value.clone())
+        .selected_value(selected_value.clone())
+        .variant(material3::AutocompleteVariant::Filled)
+        .label("Search (filled)")
+        .placeholder("Type to filter")
+        .supporting_text(supporting)
+        .items(items.clone())
+        .disabled(disabled_now)
+        .error(error_now)
+        .a11y_label("autocomplete filled")
+        .test_id("ui-gallery-material3-autocomplete-filled")
+        .into_element(cx);
+
+    let filled_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Filled").into_element(cx),
+            shadcn::CardDescription::new(
+                "Filled container + active indicator outcomes (token-driven).",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![filled]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let exposed = material3::ExposedDropdown::new(exposed_selected_value.clone())
+        .query(exposed_query.clone())
+        .variant(material3::AutocompleteVariant::Outlined)
+        .label("Searchable select")
+        .placeholder("Type to filter")
+        .supporting_text(
+            "Policy: when the input blurs, the query reverts to the committed selection.",
+        )
+        .items(items.clone())
+        .disabled(disabled_now)
+        .error(error_now)
+        .a11y_label("exposed dropdown")
+        .test_id("ui-gallery-material3-exposed-dropdown")
+        .into_element(cx);
+
+    let exposed_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Exposed dropdown (composition)").into_element(cx),
+            shadcn::CardDescription::new(
+                "Compose-style: a committed selection model drives the closed display, while the query stays editable while focused.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![exposed]).into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
+
+    let open_action: fret_ui::action::OnActivate = {
+        let dialog_open = dialog_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&dialog_open, |v| *v = true);
+            host.request_redraw(action_cx.window);
+        })
+    };
+    let close_action: fret_ui::action::OnActivate = {
+        let dialog_open = dialog_open.clone();
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&dialog_open, |v| *v = false);
+            host.request_redraw(action_cx.window);
+        })
+    };
+
+    let dialog = material3::Dialog::new(dialog_open.clone())
+        .headline("Autocomplete (Dialog probe)")
+        .supporting_text("Overlay should anchor correctly inside a modal dialog without clipping.")
+        .actions(vec![material3::DialogAction::new("Close").on_activate(close_action)])
+        .test_id("ui-gallery-material3-autocomplete-dialog")
+        .into_element(
+            cx,
+            move |cx| {
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N4),
+                    move |cx| {
+                        vec![
+                            material3::Button::new("Open dialog probe")
+                                .variant(material3::ButtonVariant::Filled)
+                                .on_activate(open_action.clone())
+                                .test_id("ui-gallery-material3-autocomplete-dialog-open")
+                                .into_element(cx),
+                            cx.text("Tip: focus the autocomplete and press ArrowDown; keep typing while the menu is open."),
+                        ]
+                    },
+                )
+            },
+            {
+                let items = items.clone();
+                let value = value.clone();
+                move |cx| {
+                    let spacer = cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut l = fret_ui::element::LayoutStyle::default();
+                                l.size.width = fret_ui::element::Length::Fill;
+                                l.size.height = fret_ui::element::Length::Px(Px(360.0));
+                                l
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::<AnyElement>::new(),
+                    );
+
+                    vec![stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                                    .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N4),
+                        move |cx| {
+                            vec![
+                                material3::Autocomplete::new(value.clone())
+                                    .selected_value(selected_value.clone())
+                                    .variant(material3::AutocompleteVariant::Outlined)
+                                    .label("Dialog autocomplete")
+                                    .placeholder("Type to filter")
+                                    .supporting_text("Bottom-edge clamping probe: open near the dialog bottom.")
+                                    .items(items.clone())
+                                    .a11y_label("autocomplete dialog")
+                                    .test_id("ui-gallery-material3-autocomplete-dialog-field")
+                                    .into_element(cx),
+                                spacer,
+                                material3::Autocomplete::new(value.clone())
+                                    .selected_value(selected_value.clone())
+                                    .variant(material3::AutocompleteVariant::Outlined)
+                                    .label("Dialog autocomplete (bottom)")
+                                    .placeholder("Type to filter")
+                                    .supporting_text("Open menu near the dialog bottom edge.")
+                                    .items(items.clone())
+                                    .a11y_label("autocomplete dialog bottom")
+                                    .test_id("ui-gallery-material3-autocomplete-dialog-field-bottom")
+                                    .into_element(cx),
+                            ]
+                        },
+                    )]
+                }
+            },
+        );
+
+    vec![
+        cx.text("Material 3 Autocomplete: editable combobox input with a listbox popover menu."),
+        toggles,
+        cx.text(Arc::from(format!(
+            "Query: \"{}\" | Selected value: {}",
+            query_now, selected_label
+        ))),
+        cx.text(Arc::from(format!(
+            "Exposed dropdown committed value: {}",
+            exposed_selected_label
+        ))),
+        exposed_card,
+        outlined_card,
+        filled_card,
+        dialog,
+    ]
+}
+
 fn preview_material3_text_field(
     cx: &mut ElementContext<'_, App>,
     value: Model<String>,
@@ -14278,15 +14600,28 @@ fn preview_ai_transcript_torture(
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
             let revision = messages.len().min(u64::MAX as usize) as u64;
 
+            let transcript = ui_ai::ConversationTranscript::from_arc(messages.clone())
+                .content_revision(revision)
+                .scroll_handle(scroll_handle.clone())
+                .stick_to_bottom(false)
+                .show_scroll_to_bottom_button(false)
+                .debug_root_test_id("ui-gallery-ai-transcript-root")
+                .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
+                .into_element(cx);
+
+            let scroll_button = ui_ai::ConversationScrollButton::new(scroll_handle)
+                .test_id("ui-gallery-ai-transcript-scroll-bottom")
+                .into_element(cx);
+
+            let layout = decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().w_full().h_full().relative(),
+            );
+
             vec![
-                ui_ai::ConversationTranscript::from_arc(messages.clone())
-                    .content_revision(revision)
-                    .scroll_handle(scroll_handle)
-                    .stick_to_bottom(false)
-                    .show_scroll_to_bottom_button(false)
-                    .debug_root_test_id("ui-gallery-ai-transcript-root")
-                    .debug_row_test_id_prefix("ui-gallery-ai-transcript-row-")
-                    .into_element(cx),
+                cx.stack_props(fret_ui::element::StackProps { layout }, |_cx| {
+                    vec![transcript, scroll_button]
+                }),
             ]
         });
 
@@ -14300,6 +14635,460 @@ fn preview_ai_transcript_torture(
     vec![
         header,
         cx.container(container_props, |_cx| vec![transcript]),
+    ]
+}
+
+fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
+    use std::sync::Arc;
+
+    use fret_runtime::Model;
+    use fret_ui::Invalidation;
+    use fret_ui::action::OnActivate;
+    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::{LayoutRefinement, Space};
+
+    #[derive(Debug, Clone)]
+    struct PendingReply {
+        assistant_id: u64,
+        chunks: Arc<[Arc<str>]>,
+        next_chunk: usize,
+        markdown: Arc<str>,
+        tool_call_running: ui_ai::ToolCall,
+        tool_call_final: ui_ai::ToolCall,
+        sources: Arc<[ui_ai::SourceItem]>,
+        citations: Arc<[ui_ai::CitationItem]>,
+    }
+
+    #[derive(Default)]
+    struct ChatModels {
+        prompt: Option<Model<String>>,
+        messages: Option<Model<Arc<[ui_ai::AiMessage]>>>,
+        loading: Option<Model<bool>>,
+        pending: Option<Model<Option<PendingReply>>>,
+        next_id: Option<Model<u64>>,
+        content_revision: Option<Model<u64>>,
+        exported_md_len: Option<Model<Option<usize>>>,
+    }
+
+    let prompt = cx.with_state(ChatModels::default, |st| st.prompt.clone());
+    let prompt = match prompt {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(String::new());
+            cx.with_state(ChatModels::default, |st| st.prompt = Some(model.clone()));
+            model
+        }
+    };
+
+    let messages = cx.with_state(ChatModels::default, |st| st.messages.clone());
+    let messages = match messages {
+        Some(model) => model,
+        None => {
+            let initial: Arc<[ui_ai::AiMessage]> = Arc::from(vec![
+                ui_ai::AiMessage::new(
+                    1,
+                    ui_ai::MessageRole::User,
+                    [ui_ai::MessagePart::Text(Arc::<str>::from("Hello!"))],
+                ),
+                ui_ai::AiMessage::new(
+                    2,
+                    ui_ai::MessageRole::Assistant,
+                    [ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::new(
+                        Arc::<str>::from(
+                            "This is a small demo for `PromptInput` + transcript append.\n\nIt also exercises tool calls + sources blocks.\n\n```rust\nfn demo() {\n    println!(\"hello from code fence\");\n}\n```",
+                        ),
+                    ))],
+                ),
+            ]);
+            let model = cx.app.models_mut().insert(initial);
+            cx.with_state(ChatModels::default, |st| st.messages = Some(model.clone()));
+            model
+        }
+    };
+
+    let loading = cx.with_state(ChatModels::default, |st| st.loading.clone());
+    let loading = match loading {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ChatModels::default, |st| st.loading = Some(model.clone()));
+            model
+        }
+    };
+
+    let pending = cx.with_state(ChatModels::default, |st| st.pending.clone());
+    let pending = match pending {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<PendingReply>);
+            cx.with_state(ChatModels::default, |st| st.pending = Some(model.clone()));
+            model
+        }
+    };
+
+    let next_id = cx.with_state(ChatModels::default, |st| st.next_id.clone());
+    let next_id = match next_id {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(3u64);
+            cx.with_state(ChatModels::default, |st| st.next_id = Some(model.clone()));
+            model
+        }
+    };
+
+    let content_revision = cx.with_state(ChatModels::default, |st| st.content_revision.clone());
+    let content_revision = match content_revision {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0u64);
+            cx.with_state(ChatModels::default, |st| {
+                st.content_revision = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let exported_md_len = cx.with_state(ChatModels::default, |st| st.exported_md_len.clone());
+    let exported_md_len = match exported_md_len {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None::<usize>);
+            cx.with_state(ChatModels::default, |st| {
+                st.exported_md_len = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let loading_value = cx
+        .get_model_copied(&loading, Invalidation::Paint)
+        .unwrap_or(false);
+    let pending_value = cx
+        .get_model_cloned(&pending, Invalidation::Paint)
+        .unwrap_or(None);
+
+    if loading_value {
+        if let Some(pending_state) = pending_value {
+            if pending_state.next_chunk < pending_state.chunks.len() {
+                cx.request_frame();
+
+                if let Some(chunk) = pending_state.chunks.get(pending_state.next_chunk).cloned() {
+                    let new_markdown =
+                        Arc::<str>::from(format!("{}{}", pending_state.markdown, chunk));
+
+                    let _ = cx.app.models_mut().update(&pending, |v| {
+                        if let Some(p) = v {
+                            p.markdown = new_markdown.clone();
+                            p.next_chunk = p.next_chunk.saturating_add(1);
+                        }
+                    });
+
+                    let assistant_id = pending_state.assistant_id;
+                    let tool_call_running = pending_state.tool_call_running.clone();
+                    let sources = pending_state.sources.clone();
+                    let citations = pending_state.citations.clone();
+
+                    let _ = cx.app.models_mut().update(&messages, |list| {
+                        let mut vec = list.as_ref().to_vec();
+                        if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
+                            msg.parts = Arc::from(vec![
+                                ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                                    new_markdown.clone(),
+                                )),
+                                ui_ai::MessagePart::ToolCall(tool_call_running),
+                                ui_ai::MessagePart::Sources(sources),
+                                ui_ai::MessagePart::Citations(citations),
+                            ]);
+                        }
+                        *list = vec.into();
+                    });
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&content_revision, |v| *v = v.saturating_add(1));
+                } else {
+                    let _ = cx.app.models_mut().update(&pending, |v| *v = None);
+                    let _ = cx.app.models_mut().update(&loading, |v| *v = false);
+                }
+            } else {
+                let assistant_id = pending_state.assistant_id;
+                let markdown = pending_state.markdown.clone();
+                let tool_call_final = pending_state.tool_call_final.clone();
+                let sources = pending_state.sources.clone();
+                let citations = pending_state.citations.clone();
+
+                let _ = cx.app.models_mut().update(&messages, |list| {
+                    let mut vec = list.as_ref().to_vec();
+                    if let Some(msg) = vec.iter_mut().find(|m| m.id == assistant_id) {
+                        msg.parts = Arc::from(vec![
+                            ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::new(markdown)),
+                            ui_ai::MessagePart::ToolCall(tool_call_final),
+                            ui_ai::MessagePart::Sources(sources),
+                            ui_ai::MessagePart::Citations(citations),
+                        ]);
+                    }
+                    *list = vec.into();
+                });
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&content_revision, |v| *v = v.saturating_add(1));
+
+                let _ = cx.app.models_mut().update(&pending, |v| *v = None);
+                let _ = cx.app.models_mut().update(&loading, |v| *v = false);
+            }
+        }
+    }
+
+    let send: OnActivate = Arc::new({
+        let prompt = prompt.clone();
+        let messages = messages.clone();
+        let pending = pending.clone();
+        let loading = loading.clone();
+        let next_id = next_id.clone();
+        let content_revision = content_revision.clone();
+        move |host, _action_cx, _reason| {
+            fn chunk_for_demo(text: &str, chars_per_chunk: usize) -> Arc<[Arc<str>]> {
+                let mut out = Vec::new();
+                let mut buf = String::new();
+                let mut count = 0usize;
+
+                for ch in text.chars() {
+                    buf.push(ch);
+                    count = count.saturating_add(1);
+                    if count >= chars_per_chunk {
+                        out.push(Arc::<str>::from(std::mem::take(&mut buf)));
+                        count = 0;
+                    }
+                }
+
+                if !buf.is_empty() {
+                    out.push(Arc::<str>::from(buf));
+                }
+
+                out.into()
+            }
+
+            let text = host.models_mut().read(&prompt, Clone::clone).ok();
+            let Some(text) = text else { return };
+            let text = text.trim().to_string();
+            if text.is_empty() {
+                return;
+            }
+
+            let user_id = host
+                .models_mut()
+                .update(&next_id, |v| {
+                    let id = *v;
+                    *v = v.saturating_add(1);
+                    id
+                })
+                .ok()
+                .unwrap_or(0);
+            let assistant_id = host
+                .models_mut()
+                .update(&next_id, |v| {
+                    let id = *v;
+                    *v = v.saturating_add(1);
+                    id
+                })
+                .ok()
+                .unwrap_or(0);
+
+            let tool_call = ui_ai::ToolCall::new("toolcall-0", "search")
+                .state(ui_ai::ToolCallState::Running)
+                .input(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "query": text,
+                    "k": 3
+                })));
+
+            let sources: Arc<[ui_ai::SourceItem]> = Arc::from(vec![
+                ui_ai::SourceItem::new("src-0", "Example source A")
+                    .url("https://example.com/a")
+                    .excerpt("A short excerpt used for truncation and wrapping tests."),
+                ui_ai::SourceItem::new("src-1", "Example source B")
+                    .url("https://example.com/b")
+                    .excerpt("Another excerpt: this should wrap and remain readable."),
+            ]);
+
+            let citations: Arc<[ui_ai::CitationItem]> = Arc::from(vec![
+                ui_ai::CitationItem::new("src-0", "[1]"),
+                ui_ai::CitationItem::from_arc(
+                    Arc::from(vec![Arc::<str>::from("src-0"), Arc::<str>::from("src-1")]),
+                    "[2]",
+                ),
+            ]);
+
+            let reply = format!(
+                "Echo: **{text}**\n\nThis reply is streamed via append-only updates.\n\n```rust\nfn streamed_demo() {{\n    println!(\"{text}\");\n}}\n"
+            );
+            let chunks = chunk_for_demo(&reply, 12);
+
+            let tool_call_final = tool_call
+                .clone()
+                .state(ui_ai::ToolCallState::Succeeded)
+                .output(ui_ai::ToolCallPayload::Json(serde_json::json!({
+                    "results": [
+                        {"title": "A", "score": 0.9},
+                        {"title": "B", "score": 0.8}
+                    ]
+                })));
+
+            let _ = host.models_mut().update(&messages, |list| {
+                let mut vec = list.as_ref().to_vec();
+                vec.push(ui_ai::AiMessage::new(
+                    user_id,
+                    ui_ai::MessageRole::User,
+                    [ui_ai::MessagePart::Text(Arc::<str>::from(text))],
+                ));
+                vec.push(ui_ai::AiMessage::new(
+                    assistant_id,
+                    ui_ai::MessageRole::Assistant,
+                    [
+                        ui_ai::MessagePart::Markdown(ui_ai::MarkdownPart::streaming(
+                            Arc::<str>::from(""),
+                        )),
+                        ui_ai::MessagePart::ToolCall(tool_call.clone()),
+                        ui_ai::MessagePart::Sources(sources.clone()),
+                        ui_ai::MessagePart::Citations(citations.clone()),
+                    ],
+                ));
+                *list = vec.into();
+            });
+            let _ = host
+                .models_mut()
+                .update(&content_revision, |v| *v = v.saturating_add(1));
+
+            let _ = host.models_mut().update(&pending, |v| {
+                *v = Some(PendingReply {
+                    assistant_id,
+                    chunks,
+                    next_chunk: 0,
+                    markdown: Arc::<str>::from(""),
+                    tool_call_running: tool_call,
+                    tool_call_final,
+                    sources,
+                    citations,
+                })
+            });
+            let _ = host.models_mut().update(&loading, |v| *v = true);
+        }
+    });
+
+    let stop: OnActivate = Arc::new({
+        let messages = messages.clone();
+        let pending = pending.clone();
+        let loading = loading.clone();
+        let content_revision = content_revision.clone();
+        move |host, _action_cx, _reason| {
+            let assistant_id = host
+                .models_mut()
+                .read(&pending, |v| v.as_ref().map(|p| p.assistant_id))
+                .ok()
+                .flatten();
+
+            let _ = host.models_mut().update(&pending, |v| *v = None);
+            let _ = host.models_mut().update(&loading, |v| *v = false);
+
+            let Some(assistant_id) = assistant_id else {
+                return;
+            };
+            let _ = host.models_mut().update(&messages, |list| {
+                let vec: Vec<_> = list
+                    .iter()
+                    .cloned()
+                    .filter(|m| m.id != assistant_id)
+                    .collect();
+                *list = vec.into();
+            });
+            let _ = host
+                .models_mut()
+                .update(&content_revision, |v| *v = v.saturating_add(1));
+        }
+    });
+
+    let export_markdown: OnActivate = Arc::new({
+        let messages = messages.clone();
+        let exported_md_len = exported_md_len.clone();
+        move |host, _action_cx, _reason| {
+            let messages = host.models_mut().read(&messages, Clone::clone).ok();
+            let Some(messages) = messages else {
+                return;
+            };
+
+            let md = ui_ai::messages_to_markdown(messages.as_ref());
+            let _ = host
+                .models_mut()
+                .update(&exported_md_len, |v| *v = Some(md.len()));
+        }
+    });
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: interactive demo for PromptInput + transcript append."),
+                cx.text("Send triggers a short \"loading\" window where Stop is available."),
+            ]
+        },
+    );
+
+    let actions_demo = {
+        let copy = ui_ai::MessageAction::new("Copy")
+            .tooltip("Copy")
+            .test_id("ui-gallery-ai-chat-action-copy")
+            .children([shadcn::icon::icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.copy"),
+            )])
+            .into_element(cx);
+
+        ui_ai::MessageActions::new([copy])
+            .test_id("ui-gallery-ai-chat-actions")
+            .into_element(cx)
+    };
+
+    let chat = ui_ai::AiChat::new(messages.clone(), prompt)
+        .loading_model(loading.clone())
+        .content_revision_model(content_revision.clone())
+        .on_send(send)
+        .on_stop(stop)
+        .show_download(true)
+        .on_download(export_markdown)
+        .download_test_id("ui-gallery-ai-chat-download")
+        .message_test_id_prefix("ui-ai-msg-")
+        .transcript_root_test_id("ui-gallery-ai-chat-transcript-root")
+        .transcript_row_test_id_prefix("ui-gallery-ai-chat-transcript-row-")
+        .scroll_button_test_id("ui-gallery-ai-chat-scroll-bottom")
+        .prompt_root_test_id("ui-gallery-ai-chat-prompt-root")
+        .prompt_textarea_test_id("ui-gallery-ai-chat-prompt-textarea")
+        .prompt_send_test_id("ui-gallery-ai-chat-prompt-send")
+        .prompt_stop_test_id("ui-gallery-ai-chat-prompt-stop")
+        .transcript_container_layout(LayoutRefinement::default().w_full().h_px(Px(460.0)))
+        .into_element(cx);
+
+    let exported_value = cx
+        .get_model_cloned(&exported_md_len, Invalidation::Paint)
+        .unwrap_or(None);
+    let exported = exported_value.map(|len| {
+        cx.semantics(
+            fret_ui::element::SemanticsProps {
+                role: fret_core::SemanticsRole::Text,
+                test_id: Some(Arc::<str>::from("ui-gallery-ai-chat-exported-md-len")),
+                ..Default::default()
+            },
+            move |cx| vec![cx.text(format!("Exported markdown: {len} chars"))],
+        )
+    });
+
+    vec![
+        header,
+        actions_demo,
+        chat,
+        exported.unwrap_or_else(|| cx.text("")),
     ]
 }
 

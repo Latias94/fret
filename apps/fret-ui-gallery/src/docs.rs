@@ -484,6 +484,28 @@ let transcript = ConversationTranscript::new(vec![
 ```
 "#;
 
+pub(crate) const DOC_AI_CHAT_DEMO: &str = r#"
+## AI chat (demo)
+
+This page is a small, interactive demo for the `fret-ui-ai` chat surfaces:
+
+- `ConversationTranscript` for a short transcript,
+- `PromptInput` for composing + sending messages,
+- stable `test_id` anchors for automation.
+
+It exists to validate:
+
+- prompt input ergonomics (send/stop/disabled/loading),
+- transcript append behavior + stick-to-bottom eligibility,
+- a keyboard-first automation path via `fretboard diag`.
+"#;
+
+pub(crate) const USAGE_AI_CHAT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{ConversationTranscript, PromptInput};
+```
+"#;
+
 pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
 ## Inspector (torture harness)
 
@@ -928,6 +950,49 @@ let items = [
 
 let select = m3::Select::new(model)
     .placeholder("Pick one")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
+pub(crate) const DOC_MATERIAL3_AUTOCOMPLETE: &str = r#"
+## Material 3 Autocomplete (MVP)
+
+This page validates a Material 3 autocomplete surface:
+
+- token-driven input + menu outcomes via `md.comp.{outlined,filled}-autocomplete.*`
+- combobox semantics (ADR 0073): `active_descendant` + `controls` ↔ `labelled_by`
+- non-modal popover menu that stays interactive while typing (click-through)
+- composition surface: `ExposedDropdown` (searchable select policy over `Autocomplete`)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_AUTOCOMPLETE: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let query = app.models_mut().insert(String::new());
+let selected_value = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::AutocompleteItem::new("alpha", "Alpha"),
+    m3::AutocompleteItem::new("beta", "Beta"),
+];
+
+let ac = m3::Autocomplete::new(query)
+    .selected_value(selected_value)
+    .label("Search")
+    .placeholder("Type to filter")
+    .items(items)
+    .into_element(cx);
+
+// Composition: searchable select.
+let committed = app
+    .models_mut()
+    .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+let exposed_query = app.models_mut().insert(String::new());
+let exposed = m3::ExposedDropdown::new(committed)
+    .query(exposed_query)
+    .label("Searchable select")
     .items(items)
     .into_element(cx);
 ```

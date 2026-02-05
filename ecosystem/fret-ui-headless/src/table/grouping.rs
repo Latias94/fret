@@ -406,10 +406,16 @@ pub fn group_row_model<'a, TData>(
                     });
                     out.rows_by_key.insert(leaf_key, leaf_index);
                     leaf_nodes.push(leaf_index);
+                    // TanStack-compatible: leaf rows are included in flat rows during recursion,
+                    // and may appear again when their parent group appends its `subRows`.
+                    out.flat_rows.push(leaf_index);
                 }
                 leaf_nodes
             };
 
+            // TanStack-compatible: group rows append their sub rows (not themselves) to the flat
+            // row list.
+            out.flat_rows.extend(sub_rows.iter().copied());
             if let Some(node) = out.arena.get_mut(index) {
                 node.sub_rows = sub_rows;
             }
@@ -439,22 +445,8 @@ pub fn group_row_model<'a, TData>(
         &mut out,
     );
 
-    fn flatten(
-        index: GroupedRowIndex,
-        out_arena: &[GroupedRow],
-        out_flat: &mut Vec<GroupedRowIndex>,
-    ) {
-        out_flat.push(index);
-        if let Some(row) = out_arena.get(index) {
-            for &child in &row.sub_rows {
-                flatten(child, out_arena, out_flat);
-            }
-        }
-    }
-
-    for &root in &out.root_rows {
-        flatten(root, &out.arena, &mut out.flat_rows);
-    }
+    // TanStack-compatible: root grouped rows are appended to the flat row list at the end.
+    out.flat_rows.extend(out.root_rows.iter().copied());
 
     out
 }

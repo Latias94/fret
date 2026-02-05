@@ -11,12 +11,6 @@ pub type ColumnOrderState = Vec<ColumnId>;
 pub fn set_column_order(order: &mut ColumnOrderState, ids: impl IntoIterator<Item = ColumnId>) {
     order.clear();
     for id in ids {
-        if order
-            .iter()
-            .any(|existing| existing.as_ref() == id.as_ref())
-        {
-            continue;
-        }
         order.push(id);
     }
 }
@@ -119,12 +113,12 @@ mod tests {
     }
 
     #[test]
-    fn set_column_order_dedupes_preserves_first() {
+    fn set_column_order_preserves_input_order_including_duplicates() {
         let mut order: ColumnOrderState = vec!["a".into()];
         set_column_order_for(&mut order, ["b", "a", "b"]);
         assert_eq!(
             order.iter().map(|c| c.as_ref()).collect::<Vec<_>>(),
-            vec!["b", "a"]
+            vec!["b", "a", "b"]
         );
     }
 

@@ -116,6 +116,11 @@ impl ElementHostWidget {
                     cx.set_expanded(expanded);
                 }
                 cx.set_active_descendant(props.active_descendant);
+                if let Some(element) = props.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
+                }
                 input.semantics(cx);
             }
             ElementInstance::TextArea(props) => {

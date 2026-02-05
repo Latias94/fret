@@ -185,8 +185,18 @@ fn responsive_md_width_auto(mut element: AnyElement) -> AnyElement {
 }
 
 fn is_radio_group_element(element: &AnyElement) -> bool {
+    if element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.role)
+        .is_some_and(|role| role == SemanticsRole::RadioGroup)
+    {
+        return true;
+    }
+
     match &element.kind {
         ElementKind::Semantics(props) if props.role == SemanticsRole::RadioGroup => true,
+        ElementKind::SemanticFlex(props) if props.role == SemanticsRole::RadioGroup => true,
         ElementKind::Pressable(props)
             if props
                 .a11y
@@ -200,8 +210,18 @@ fn is_radio_group_element(element: &AnyElement) -> bool {
 }
 
 fn is_checkbox_group_element(element: &AnyElement) -> bool {
+    if element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.role)
+        .is_some_and(|role| role == SemanticsRole::List)
+    {
+        return true;
+    }
+
     match &element.kind {
         ElementKind::Semantics(props) if props.role == SemanticsRole::List => true,
+        ElementKind::SemanticFlex(props) if props.role == SemanticsRole::List => true,
         _ => false,
     }
 }

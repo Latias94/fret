@@ -6356,6 +6356,55 @@ fn container_applies_padding_and_paints_background() {
 }
 
 #[test]
+fn container_border_change_invalidates_child_layout() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let mut text = FakeTextService::default();
+
+    let mut root: Option<NodeId> = None;
+    for pass in 0..2 {
+        let border = if pass == 0 { Px(0.0) } else { Px(4.0) };
+        let rendered = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "container-border-change-invalidates-child-layout",
+            |cx| {
+                let mut container = crate::element::ContainerProps::default();
+                container.border = fret_core::Edges::all(border);
+
+                vec![cx.container(container, |cx| vec![cx.text("hi")])]
+            },
+        );
+        let root_node = *root.get_or_insert(rendered);
+        if pass == 0 {
+            ui.set_root(root_node);
+        } else {
+            assert_eq!(
+                root_node, rendered,
+                "expected stable root node across frames"
+            );
+        }
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let container_node = ui.children(root_node)[0];
+        let text_node = ui.children(container_node)[0];
+        let text_bounds = ui.debug_node_bounds(text_node).expect("text bounds");
+
+        assert_eq!(text_bounds.origin.x, border);
+        assert_eq!(text_bounds.origin.y, border);
+
+        app.advance_frame();
+    }
+}
+
+#[test]
 fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

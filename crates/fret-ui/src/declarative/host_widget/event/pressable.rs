@@ -74,6 +74,10 @@ pub(super) fn handle_pressable<H: UiHost>(
             self.app.next_clipboard_token()
         }
 
+        fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
+            crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
+        }
+
         #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
@@ -344,12 +348,6 @@ pub(super) fn handle_pressable<H: UiHost>(
                 click_count,
                 pointer_type,
             } => {
-                if *button != MouseButton::Left {
-                    return;
-                }
-                let pressed =
-                    crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
-
                 let hook = crate::elements::with_element_state(
                     &mut *cx.app,
                     window,
@@ -359,7 +357,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                 );
 
                 let mut skip_activate = false;
-                if let Some(h) = hook {
+                if let Some(h) = hook.clone() {
                     let up = action::PointerUpCx {
                         pointer_id: *pointer_id,
                         position: *position,
@@ -400,6 +398,16 @@ pub(super) fn handle_pressable<H: UiHost>(
                         action::PressablePointerUpResult::SkipActivate
                     );
                 }
+
+                if *button != MouseButton::Left {
+                    if hook.is_some() {
+                        cx.request_redraw();
+                    }
+                    return;
+                }
+
+                let pressed =
+                    crate::elements::is_pressed_pressable(&mut *cx.app, window, this.element);
 
                 cx.release_pointer_capture();
                 if let Some(prev_node) =

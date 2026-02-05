@@ -1,31 +1,49 @@
 use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
-    TextBlobId,
 };
 use fret_runtime::CommandId;
-use fret_runtime::ui_host::{
-    CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
-};
-use fret_runtime::{
-    ClipboardToken, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect, FrameId,
-};
-use fret_runtime::{ModelHost, ModelStore, TickId, TimerToken};
+use fret_runtime::{DragSession, DragSessionId, Effect};
 use fret_ui::retained_bridge::Widget as _;
 use serde_json::Value;
-use std::any::{Any, TypeId};
-use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
+use crate::rules::EdgeEndpoint;
+use crate::ui::commands::{
+    CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
+    CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X,
+    CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+    CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
+    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
+};
 
+mod a11y_active_descendant_conformance;
+mod background_style_conformance;
+mod cached_edge_labels_tile_equivalence_conformance;
+mod cached_edges_tile_equivalence_conformance;
 mod callbacks_conformance;
 mod color_mode_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod custom_edge_path_conformance;
+mod derived_geometry_invalidation_conformance;
+mod derived_geometry_updates_conformance;
+mod drag_preview_conformance;
+mod draw_order_invalidation_conformance;
+mod edge_drag_conformance;
+mod edge_hit_width_conformance;
+mod edge_insert_conformance;
+mod edge_insert_gestures_conformance;
+mod edge_label_route_anchor_conformance;
+mod edge_label_style_override_conformance;
+mod edge_marker_bezier_tangent_conformance;
+mod edge_marker_size_zoom_conformance;
+mod edge_marker_step_tangent_conformance;
+mod edge_marker_tangent_fallback_conformance;
+mod edge_types_invalidation_conformance;
 mod edit_command_availability_conformance;
 mod elevate_on_select_conformance;
 mod fit_view_nodes_conformance;
@@ -33,27 +51,54 @@ mod fit_view_on_mount_conformance;
 mod fit_view_options_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
+mod group_preview_conformance;
 mod hit_testing_conformance;
+mod hit_testing_semantic_zoom_conformance;
+mod hot_state_invalidation_conformance;
 mod insert_node_drag_conformance;
+mod insert_node_drag_drop_conformance;
 mod interaction_conformance;
 mod internals_conformance;
 mod invalidation_ordering_conformance;
 mod is_valid_connection_conformance;
+mod measured_output_store_conformance;
 mod middleware_conformance;
 mod node_origin_conformance;
+mod node_resize_preview_conformance;
 mod node_sizing_conformance;
+mod nudge_step_conformance;
 mod only_render_visible_elements_conformance;
+mod op_batching_determinism_conformance;
+mod overlay_group_rename_conformance;
+mod overlay_invalidation_conformance;
+mod overlay_menu_searcher_conformance;
+mod overlay_minimap_controls_conformance;
+mod overlay_toolbars_conformance;
 mod perf_cache;
+mod perf_cache_prune_conformance;
 mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
 mod portal_pointer_passthrough_conformance;
+mod prelude;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
+mod spatial_index_equivalence_conformance;
+mod threshold_zoom_conformance;
 mod viewport_animation_conformance;
 mod viewport_helper_conformance;
 mod xyflow_style_conformance;
 mod z_order_conformance;
+
+mod harness;
+use harness::{
+    NullServices, TestUiHostImpl, command_cx, event_cx, make_test_graph_two_nodes,
+    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
+    make_test_graph_two_nodes_with_size, read_node_pos,
+};
+
+use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
+use super::NodeGraphCanvas;
 
 #[test]
 fn inflate_rect_expands_by_margin() {
@@ -912,266 +957,6 @@ fn shift_double_click_background_zooms_out_about_pointer() {
 }
 
 #[test]
-fn double_click_edge_inserts_reroute_when_enabled() {
-    let mut host = TestUiHostImpl::default();
-    let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
-        make_test_graph_two_nodes_with_ports_spaced_x(420.0);
-    let edge_id = EdgeId::new();
-    graph_value.edges.insert(
-        edge_id,
-        Edge {
-            kind: EdgeKind::Data,
-            from: a_out,
-            to: b_in,
-            selectable: None,
-            deletable: None,
-            reconnectable: None,
-        },
-    );
-
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_double_click = true;
-        s.interaction.reroute_on_edge_double_click = true;
-    });
-
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(800.0), Px(600.0)),
-    );
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds,
-        &mut prevented_default_actions,
-    );
-
-    let snap = canvas.sync_view_state(cx.app);
-    let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
-    let from = geom.port_center(a_out).expect("from port center");
-    let to = geom.port_center(b_in).expect("to port center");
-    let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
-    let pos = super::cubic_bezier(from, c1, c2, to, 0.5);
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: pos,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            click_count: 2,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
-    let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
-    assert_eq!(nodes_len, 3);
-    assert_eq!(edges_len, 2);
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
-            .unwrap_or(false)
-    );
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g
-                .nodes
-                .values()
-                .any(|n| n.kind.0 == crate::REROUTE_KIND))
-            .unwrap_or(false)
-    );
-
-    let after = canvas.sync_view_state(cx.app);
-    assert_eq!(after.selected_edges.len(), 0);
-    assert_eq!(after.selected_nodes.len(), 1);
-    assert_eq!(after.zoom, 1.0);
-}
-
-#[test]
-fn alt_double_click_edge_opens_insert_node_picker() {
-    let mut host = TestUiHostImpl::default();
-    let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
-        make_test_graph_two_nodes_with_ports_spaced_x(420.0);
-    let edge_id = EdgeId::new();
-    graph_value.edges.insert(
-        edge_id,
-        Edge {
-            kind: EdgeKind::Data,
-            from: a_out,
-            to: b_in,
-            selectable: None,
-            deletable: None,
-            reconnectable: None,
-        },
-    );
-
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
-
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(800.0), Px(600.0)),
-    );
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds,
-        &mut prevented_default_actions,
-    );
-
-    let snap = canvas.sync_view_state(cx.app);
-    let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
-    let from = geom.port_center(a_out).expect("from port center");
-    let to = geom.port_center(b_in).expect("to port center");
-    let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
-    let pos = super::cubic_bezier(from, c1, c2, to, 0.5);
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: pos,
-            button: MouseButton::Left,
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            click_count: 2,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
-    let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
-    assert_eq!(nodes_len, 2);
-    assert_eq!(edges_len, 1);
-
-    let Some(searcher) = canvas.interaction.searcher.as_ref() else {
-        panic!("expected searcher to be open");
-    };
-    assert!(matches!(
-        searcher.target,
-        super::super::state::ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_id
-    ));
-}
-
-#[test]
-fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
-    let mut host = TestUiHostImpl::default();
-    let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
-        make_test_graph_two_nodes_with_ports_spaced_x(420.0);
-    let edge_id = EdgeId::new();
-    graph_value.edges.insert(
-        edge_id,
-        Edge {
-            kind: EdgeKind::Data,
-            from: a_out,
-            to: b_in,
-            selectable: None,
-            deletable: None,
-            reconnectable: None,
-        },
-    );
-
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edge_insert_on_alt_drag = true;
-    });
-
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(800.0), Px(600.0)),
-    );
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds,
-        &mut prevented_default_actions,
-    );
-
-    let snap = canvas.sync_view_state(cx.app);
-    let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
-    let from = geom.port_center(a_out).expect("from port center");
-    let to = geom.port_center(b_in).expect("to port center");
-    let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
-    let edge_pos = super::cubic_bezier(from, c1, c2, to, 0.5);
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: edge_pos,
-            button: MouseButton::Left,
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            click_count: 1,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Move {
-            pointer_id: fret_core::PointerId::default(),
-            position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
-            buttons: MouseButtons {
-                left: true,
-                ..MouseButtons::default()
-            },
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Up {
-            pointer_id: fret_core::PointerId::default(),
-            position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
-            button: MouseButton::Left,
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            is_click: true,
-            click_count: 1,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
-    let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
-    assert_eq!(nodes_len, 2);
-    assert_eq!(edges_len, 1);
-
-    let Some(searcher) = canvas.interaction.searcher.as_ref() else {
-        panic!("expected searcher to be open");
-    };
-    assert!(matches!(
-        searcher.target,
-        super::super::state::ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_id
-    ));
-}
-
-#[test]
 fn internal_drag_drop_candidate_on_edge_splits_edge() {
     use std::sync::Arc;
 
@@ -1295,535 +1080,6 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
     let after = canvas.sync_view_state(cx.app);
     assert_eq!(after.selected_nodes.len(), 1);
     assert_eq!(after.selected_edges.len(), 0);
-}
-use crate::rules::EdgeEndpoint;
-use crate::ui::commands::{
-    CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
-    CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X,
-    CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
-    CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
-    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
-};
-
-use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
-use super::NodeGraphCanvas;
-
-#[derive(Default)]
-struct NullServices;
-
-impl fret_core::TextService for NullServices {
-    fn prepare(
-        &mut self,
-        _input: &fret_core::TextInput,
-        _constraints: fret_core::TextConstraints,
-    ) -> (TextBlobId, fret_core::TextMetrics) {
-        (
-            TextBlobId::default(),
-            fret_core::TextMetrics {
-                size: Size::new(Px(0.0), Px(0.0)),
-                baseline: Px(0.0),
-            },
-        )
-    }
-
-    fn release(&mut self, _blob: TextBlobId) {}
-}
-
-impl fret_core::PathService for NullServices {
-    fn prepare(
-        &mut self,
-        _commands: &[fret_core::PathCommand],
-        _style: fret_core::PathStyle,
-        _constraints: fret_core::PathConstraints,
-    ) -> (fret_core::PathId, fret_core::PathMetrics) {
-        (
-            fret_core::PathId::default(),
-            fret_core::PathMetrics::default(),
-        )
-    }
-
-    fn release(&mut self, _path: fret_core::PathId) {}
-}
-
-impl fret_core::SvgService for NullServices {
-    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
-        fret_core::SvgId::default()
-    }
-
-    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
-        true
-    }
-}
-
-#[derive(Default)]
-struct TestUiHostImpl {
-    globals: HashMap<TypeId, Box<dyn Any>>,
-    models: ModelStore,
-    commands: CommandRegistry,
-    redraw: HashSet<AppWindowId>,
-    effects: Vec<Effect>,
-    drag: Option<DragSession>,
-    tick_id: TickId,
-    frame_id: FrameId,
-    next_timer_token: u64,
-    next_clipboard_token: u64,
-    next_image_upload_token: u64,
-}
-
-impl GlobalsHost for TestUiHostImpl {
-    fn set_global<T: Any>(&mut self, value: T) {
-        self.globals.insert(TypeId::of::<T>(), Box::new(value));
-    }
-
-    fn global<T: Any>(&self) -> Option<&T> {
-        self.globals
-            .get(&TypeId::of::<T>())
-            .and_then(|b| b.downcast_ref::<T>())
-    }
-
-    fn with_global_mut<T: Any, R>(
-        &mut self,
-        init: impl FnOnce() -> T,
-        f: impl FnOnce(&mut T, &mut Self) -> R,
-    ) -> R {
-        let type_id = TypeId::of::<T>();
-        if !self.globals.contains_key(&type_id) {
-            self.globals.insert(type_id, Box::new(init()));
-        }
-
-        // Avoid aliasing `&mut self` by temporarily removing the value.
-        let boxed = self
-            .globals
-            .remove(&type_id)
-            .expect("global must exist")
-            .downcast::<T>()
-            .ok()
-            .expect("global has wrong type");
-        let mut value = *boxed;
-
-        let out = f(&mut value, self);
-        self.globals.insert(type_id, Box::new(value));
-        out
-    }
-}
-
-impl ModelHost for TestUiHostImpl {
-    fn models(&self) -> &ModelStore {
-        &self.models
-    }
-
-    fn models_mut(&mut self) -> &mut ModelStore {
-        &mut self.models
-    }
-}
-
-impl ModelsHost for TestUiHostImpl {
-    fn take_changed_models(&mut self) -> Vec<fret_runtime::ModelId> {
-        self.models.take_changed_models()
-    }
-}
-
-impl CommandsHost for TestUiHostImpl {
-    fn commands(&self) -> &CommandRegistry {
-        &self.commands
-    }
-}
-
-impl EffectSink for TestUiHostImpl {
-    fn request_redraw(&mut self, window: AppWindowId) {
-        self.redraw.insert(window);
-    }
-
-    fn push_effect(&mut self, effect: Effect) {
-        self.effects.push(effect);
-    }
-}
-
-impl TimeHost for TestUiHostImpl {
-    fn tick_id(&self) -> TickId {
-        self.tick_id
-    }
-
-    fn frame_id(&self) -> FrameId {
-        self.frame_id
-    }
-
-    fn next_timer_token(&mut self) -> TimerToken {
-        self.next_timer_token = self.next_timer_token.saturating_add(1);
-        TimerToken(self.next_timer_token)
-    }
-
-    fn next_clipboard_token(&mut self) -> ClipboardToken {
-        self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
-        ClipboardToken(self.next_clipboard_token)
-    }
-
-    fn next_image_upload_token(&mut self) -> fret_runtime::ImageUploadToken {
-        self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
-        fret_runtime::ImageUploadToken(self.next_image_upload_token)
-    }
-}
-
-impl DragHost for TestUiHostImpl {
-    fn drag(&self, pointer_id: fret_core::PointerId) -> Option<&DragSession> {
-        self.drag
-            .as_ref()
-            .filter(|drag| drag.pointer_id == pointer_id)
-    }
-
-    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        self.drag.as_ref().is_some_and(|d| predicate(d))
-    }
-
-    fn find_drag_pointer_id(
-        &self,
-        mut predicate: impl FnMut(&DragSession) -> bool,
-    ) -> Option<fret_core::PointerId> {
-        self.drag
-            .as_ref()
-            .filter(|d| predicate(d))
-            .map(|d| d.pointer_id)
-    }
-
-    fn cancel_drag_sessions(
-        &mut self,
-        mut predicate: impl FnMut(&DragSession) -> bool,
-    ) -> Vec<fret_core::PointerId> {
-        let Some(drag) = self.drag.as_ref() else {
-            return Vec::new();
-        };
-        if !predicate(drag) {
-            return Vec::new();
-        }
-        let pointer_id = drag.pointer_id;
-        self.drag = None;
-        vec![pointer_id]
-    }
-
-    fn drag_mut(&mut self, pointer_id: fret_core::PointerId) -> Option<&mut DragSession> {
-        self.drag
-            .as_mut()
-            .filter(|drag| drag.pointer_id == pointer_id)
-    }
-
-    fn cancel_drag(&mut self, pointer_id: fret_core::PointerId) {
-        if self.drag(pointer_id).is_some() {
-            self.drag = None;
-        }
-    }
-
-    fn begin_drag_with_kind<T: Any>(
-        &mut self,
-        pointer_id: fret_core::PointerId,
-        kind: DragKindId,
-        source_window: AppWindowId,
-        start: Point,
-        payload: T,
-    ) {
-        self.drag = Some(DragSession::new(
-            DragSessionId(1),
-            pointer_id,
-            source_window,
-            kind,
-            start,
-            payload,
-        ));
-    }
-
-    fn begin_cross_window_drag_with_kind<T: Any>(
-        &mut self,
-        pointer_id: fret_core::PointerId,
-        kind: DragKindId,
-        source_window: AppWindowId,
-        start: Point,
-        payload: T,
-    ) {
-        self.drag = Some(DragSession::new_cross_window(
-            DragSessionId(1),
-            pointer_id,
-            source_window,
-            kind,
-            start,
-            payload,
-        ));
-    }
-}
-
-fn event_cx<'a>(
-    host: &'a mut TestUiHostImpl,
-    services: &'a mut NullServices,
-    bounds: Rect,
-    prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
-) -> fret_ui::retained_bridge::EventCx<'a, TestUiHostImpl> {
-    fret_ui::retained_bridge::EventCx {
-        app: host,
-        services,
-        node: fret_core::NodeId::default(),
-        layer_root: None,
-        window: None,
-        input_ctx: fret_runtime::InputContext::default(),
-        pointer_id: None,
-        prevented_default_actions,
-        children: &[],
-        focus: None,
-        captured: None,
-        bounds,
-        invalidations: Vec::new(),
-        requested_focus: None,
-        requested_capture: None,
-        requested_cursor: None,
-        notify_requested: false,
-        stop_propagation: false,
-    }
-}
-
-fn command_cx<'a>(
-    host: &'a mut TestUiHostImpl,
-    services: &'a mut NullServices,
-    tree: &'a mut fret_ui::UiTree<TestUiHostImpl>,
-) -> fret_ui::retained_bridge::CommandCx<'a, TestUiHostImpl> {
-    fret_ui::retained_bridge::CommandCx {
-        app: host,
-        services,
-        tree,
-        node: fret_core::NodeId::default(),
-        window: None,
-        input_ctx: fret_runtime::InputContext::default(),
-        focus: None,
-        invalidations: Vec::new(),
-        requested_focus: None,
-        stop_propagation: false,
-    }
-}
-
-fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
-    let mut graph = Graph::new(GraphId::new());
-    let kind = NodeKindKey::new("test.node");
-
-    let a = NodeId::new();
-    let b = NodeId::new();
-
-    graph.nodes.insert(
-        a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
-    graph.nodes.insert(
-        b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 10.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
-
-    (graph, a, b)
-}
-
-fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
-    let mut graph = Graph::new(GraphId::new());
-    let kind = NodeKindKey::new("test.node");
-
-    let a = NodeId::new();
-    let b = NodeId::new();
-
-    graph.nodes.insert(
-        a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: Some(CanvasSize {
-                width: 40.0,
-                height: 20.0,
-            }),
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
-    graph.nodes.insert(
-        b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 10.0, y: 5.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: Some(CanvasSize {
-                width: 40.0,
-                height: 20.0,
-            }),
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
-    );
-
-    (graph, a, b)
-}
-
-fn make_test_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
-    let mut graph = Graph::new(GraphId::new());
-    let kind = NodeKindKey::new("test.node");
-
-    let a = NodeId::new();
-    let a_in = PortId::new();
-    let a_out = PortId::new();
-    graph.nodes.insert(
-        a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: vec![a_in, a_out],
-            data: Value::Null,
-        },
-    );
-    graph.ports.insert(
-        a_in,
-        Port {
-            node: a,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
-    );
-    graph.ports.insert(
-        a_out,
-        Port {
-            node: a,
-            key: PortKey::new("out"),
-            dir: PortDirection::Out,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Multi,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
-    );
-
-    let b = NodeId::new();
-    let b_in = PortId::new();
-    graph.nodes.insert(
-        b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 200.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: vec![b_in],
-            data: Value::Null,
-        },
-    );
-    graph.ports.insert(
-        b_in,
-        Port {
-            node: b,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
-    );
-
-    (graph, a, a_in, a_out, b, b_in)
-}
-
-fn make_test_graph_two_nodes_with_ports_spaced_x(
-    dx: f32,
-) -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
-    let (mut graph, a, a_in, a_out, b, b_in) = make_test_graph_two_nodes_with_ports();
-    graph
-        .nodes
-        .entry(b)
-        .and_modify(|n| n.pos = CanvasPoint { x: dx, y: 0.0 });
-    (graph, a, a_in, a_out, b, b_in)
-}
-
-fn read_node_pos(
-    host: &mut TestUiHostImpl,
-    model: &fret_runtime::Model<Graph>,
-    id: NodeId,
-) -> CanvasPoint {
-    model
-        .read_ref(host, |g| g.nodes.get(&id).map(|n| n.pos))
-        .ok()
-        .flatten()
-        .unwrap_or_default()
 }
 
 #[test]
