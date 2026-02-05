@@ -228,6 +228,11 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_time_us: u64,
     pub(super) paint_record_visual_bounds_time_us: u64,
     pub(super) paint_record_visual_bounds_calls: u32,
+    pub(super) paint_input_context_time_us: u64,
+    pub(super) paint_scroll_handle_invalidation_time_us: u64,
+    pub(super) paint_collect_roots_time_us: u64,
+    pub(super) paint_publish_text_input_snapshot_time_us: u64,
+    pub(super) paint_collapse_observations_time_us: u64,
     pub(super) dispatch_time_us: u64,
     pub(super) dispatch_pointer_events: u32,
     pub(super) dispatch_pointer_event_time_us: u64,
@@ -654,6 +659,21 @@ impl BundleStatsReport {
                 row.propagated_global_change_observation_edges,
                 row.propagated_global_change_unobserved_globals
             );
+            if row.paint_input_context_time_us > 0
+                || row.paint_scroll_handle_invalidation_time_us > 0
+                || row.paint_collect_roots_time_us > 0
+                || row.paint_publish_text_input_snapshot_time_us > 0
+                || row.paint_collapse_observations_time_us > 0
+            {
+                println!(
+                    "    paint_breakdown.us(input_ctx/scroll_inv/collect_roots/text_snapshot/collapse)={}/{}/{}/{}/{}",
+                    row.paint_input_context_time_us,
+                    row.paint_scroll_handle_invalidation_time_us,
+                    row.paint_collect_roots_time_us,
+                    row.paint_publish_text_input_snapshot_time_us,
+                    row.paint_collapse_observations_time_us
+                );
+            }
             if !row.top_invalidation_walks.is_empty() {
                 let items: Vec<String> = row
                     .top_invalidation_walks
@@ -1405,6 +1425,26 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_record_visual_bounds_calls".to_string(),
                     Value::from(row.paint_record_visual_bounds_calls),
+                );
+                obj.insert(
+                    "paint_input_context_time_us".to_string(),
+                    Value::from(row.paint_input_context_time_us),
+                );
+                obj.insert(
+                    "paint_scroll_handle_invalidation_time_us".to_string(),
+                    Value::from(row.paint_scroll_handle_invalidation_time_us),
+                );
+                obj.insert(
+                    "paint_collect_roots_time_us".to_string(),
+                    Value::from(row.paint_collect_roots_time_us),
+                );
+                obj.insert(
+                    "paint_publish_text_input_snapshot_time_us".to_string(),
+                    Value::from(row.paint_publish_text_input_snapshot_time_us),
+                );
+                obj.insert(
+                    "paint_collapse_observations_time_us".to_string(),
+                    Value::from(row.paint_collapse_observations_time_us),
                 );
                 obj.insert(
                     "paint_cache_replay_time_us".to_string(),
@@ -4322,6 +4362,26 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let paint_input_context_time_us = stats
+                .and_then(|m| m.get("paint_input_context_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_scroll_handle_invalidation_time_us = stats
+                .and_then(|m| m.get("paint_scroll_handle_invalidation_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_collect_roots_time_us = stats
+                .and_then(|m| m.get("paint_collect_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_publish_text_input_snapshot_time_us = stats
+                .and_then(|m| m.get("paint_publish_text_input_snapshot_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_collapse_observations_time_us = stats
+                .and_then(|m| m.get("paint_collapse_observations_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let dispatch_time_us = stats
                 .and_then(|m| m.get("dispatch_time_us"))
                 .and_then(|v| v.as_u64())
@@ -5061,6 +5121,11 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_time_us,
                 paint_record_visual_bounds_time_us,
                 paint_record_visual_bounds_calls,
+                paint_input_context_time_us,
+                paint_scroll_handle_invalidation_time_us,
+                paint_collect_roots_time_us,
+                paint_publish_text_input_snapshot_time_us,
+                paint_collapse_observations_time_us,
                 dispatch_time_us,
                 dispatch_pointer_events,
                 dispatch_pointer_event_time_us,

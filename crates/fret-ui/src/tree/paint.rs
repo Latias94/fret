@@ -25,6 +25,11 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_cache_bounds_translated_nodes = 0;
             self.debug_stats.paint_record_visual_bounds_time = Duration::default();
             self.debug_stats.paint_record_visual_bounds_calls = 0;
+            self.debug_stats.paint_input_context_time = Duration::default();
+            self.debug_stats.paint_scroll_handle_invalidation_time = Duration::default();
+            self.debug_stats.paint_collect_roots_time = Duration::default();
+            self.debug_stats.paint_publish_text_input_snapshot_time = Duration::default();
+            self.debug_stats.paint_collapse_observations_time = Duration::default();
             self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
@@ -34,6 +39,7 @@ impl<H: UiHost> UiTree<H> {
         // has been dispatched yet (ADR 0012).
         let focus_is_text_input = self.focus_is_text_input();
         self.set_ime_allowed(app, focus_is_text_input);
+        let input_ctx_started = self.debug_enabled.then(Instant::now);
         let (active_layers, barrier_root) = self.active_input_layers();
         let _ = active_layers;
         if let Some(window) = self.window {
@@ -83,15 +89,28 @@ impl<H: UiHost> UiTree<H> {
                 );
             }
         }
+        if let Some(input_ctx_started) = input_ctx_started {
+            self.debug_stats.paint_input_context_time = self
+                .debug_stats
+                .paint_input_context_time
+                .saturating_add(input_ctx_started.elapsed());
+        }
 
         // Scroll offsets can change without triggering layout invalidations (e.g. wheel deltas that
         // only affect hit-testing/paint, or programmatic scroll handle updates in frames that skip
         // layout). Ensure we consume scroll-handle change invalidations before paint-cache replay
         // so cached ancestors cannot replay stale ops.
+        let scroll_inv_started = self.debug_enabled.then(Instant::now);
         self.invalidate_scroll_handle_bindings_for_changed_handles(
             app,
             crate::layout_pass::LayoutPassKind::Final,
         );
+        if let Some(scroll_inv_started) = scroll_inv_started {
+            self.debug_stats.paint_scroll_handle_invalidation_time = self
+                .debug_stats
+                .paint_scroll_handle_invalidation_time
+                .saturating_add(scroll_inv_started.elapsed());
+        }
 
         let cache_enabled = self.paint_cache_enabled();
         if cache_enabled {
@@ -100,10 +119,17 @@ impl<H: UiHost> UiTree<H> {
             self.paint_cache.invalidate_recording();
         }
 
+        let roots_started = self.debug_enabled.then(Instant::now);
         let roots: Vec<NodeId> = self
             .visible_layers_in_paint_order()
             .map(|layer| self.layers[layer].root)
             .collect();
+        if let Some(roots_started) = roots_started {
+            self.debug_stats.paint_collect_roots_time = self
+                .debug_stats
+                .paint_collect_roots_time
+                .saturating_add(roots_started.elapsed());
+        }
         for root in roots {
             self.paint(app, services, root, bounds, scene, scale_factor);
         }
@@ -111,6 +137,7 @@ impl<H: UiHost> UiTree<H> {
         // Publish a platform-facing text-input snapshot after paint so text widgets can update
         // their IME cursor area in the same frame (ADR 0012).
         if let Some(window) = self.window {
+            let text_snapshot_started = self.debug_enabled.then(Instant::now);
             let mut next = if focus_is_text_input {
                 self.focus
                     .and_then(|focus| self.nodes.get(focus))
@@ -137,6 +164,12 @@ impl<H: UiHost> UiTree<H> {
                     },
                 );
             }
+            if let Some(text_snapshot_started) = text_snapshot_started {
+                self.debug_stats.paint_publish_text_input_snapshot_time = self
+                    .debug_stats
+                    .paint_publish_text_input_snapshot_time
+                    .saturating_add(text_snapshot_started.elapsed());
+            }
         }
 
         if cache_enabled {
@@ -148,7 +181,14 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
+        let collapse_started = self.debug_enabled.then(Instant::now);
         self.collapse_paint_observations_to_view_cache_roots_if_needed();
+        if let Some(collapse_started) = collapse_started {
+            self.debug_stats.paint_collapse_observations_time = self
+                .debug_stats
+                .paint_collapse_observations_time
+                .saturating_add(collapse_started.elapsed());
+        }
 
         if let Some(started) = started {
             self.debug_stats.paint_time = started.elapsed();

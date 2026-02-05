@@ -6162,6 +6162,16 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub paint_record_visual_bounds_calls: u32,
     #[serde(default)]
+    pub paint_input_context_time_us: u64,
+    #[serde(default)]
+    pub paint_scroll_handle_invalidation_time_us: u64,
+    #[serde(default)]
+    pub paint_collect_roots_time_us: u64,
+    #[serde(default)]
+    pub paint_publish_text_input_snapshot_time_us: u64,
+    #[serde(default)]
+    pub paint_collapse_observations_time_us: u64,
+    #[serde(default)]
     pub dispatch_time_us: u64,
     #[serde(default)]
     pub dispatch_pointer_events: u32,
@@ -6526,6 +6536,16 @@ impl UiFrameStatsV1 {
             paint_record_visual_bounds_time_us: stats.paint_record_visual_bounds_time.as_micros()
                 as u64,
             paint_record_visual_bounds_calls: stats.paint_record_visual_bounds_calls,
+            paint_input_context_time_us: stats.paint_input_context_time.as_micros() as u64,
+            paint_scroll_handle_invalidation_time_us: stats
+                .paint_scroll_handle_invalidation_time
+                .as_micros() as u64,
+            paint_collect_roots_time_us: stats.paint_collect_roots_time.as_micros() as u64,
+            paint_publish_text_input_snapshot_time_us: stats
+                .paint_publish_text_input_snapshot_time
+                .as_micros() as u64,
+            paint_collapse_observations_time_us: stats.paint_collapse_observations_time.as_micros()
+                as u64,
             dispatch_time_us: stats.dispatch_time.as_micros() as u64,
             dispatch_pointer_events: stats.dispatch_pointer_events,
             dispatch_pointer_event_time_us: stats.dispatch_pointer_event_time.as_micros() as u64,
