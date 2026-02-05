@@ -55,6 +55,26 @@ fn diag_test_id(prefix: &str, raw: &str) -> Arc<str> {
     Arc::<str>::from(format!("{prefix}-{}", diag_test_id_suffix(raw)))
 }
 
+fn fnv1a_64(s: &str) -> u64 {
+    const OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+    const PRIME: u64 = 0x00000100000001B3;
+
+    let mut hash = OFFSET_BASIS;
+    for b in s.as_bytes() {
+        hash ^= *b as u64;
+        hash = hash.wrapping_mul(PRIME);
+    }
+    hash
+}
+
+fn stable_menu_key(raw: &str) -> String {
+    let slug = diag_test_id_suffix(raw);
+    if slug != "x" {
+        return slug;
+    }
+    format!("u{:016x}", fnv1a_64(raw))
+}
+
 #[derive(Debug, Clone)]
 pub struct MenubarFromRuntimeOptions {
     pub platform: Platform,
@@ -318,7 +338,7 @@ fn build_entries<H: UiHost>(
     prefix: &str,
 ) -> Vec<InWindowMenuEntry> {
     let mut out = Vec::new();
-    for (idx, item) in items.iter().enumerate() {
+    for item in items.iter() {
         match item {
             MenuItem::Separator => out.push(InWindowMenuEntry::Separator),
             MenuItem::SystemMenu {
@@ -327,7 +347,10 @@ fn build_entries<H: UiHost>(
             } => {
                 // In-window surfaces cannot materialize OS-owned menus. Keep a disabled placeholder
                 // entry so the authored menu shape remains visible.
-                let value: Arc<str> = Arc::from(format!("{prefix}.system_menu.{idx}"));
+                let value: Arc<str> = Arc::from(format!(
+                    "{prefix}.system_menu.{}",
+                    stable_menu_key(title.as_ref())
+                ));
                 out.push(system_menu_placeholder_item(
                     title.clone(),
                     value,
@@ -343,10 +366,11 @@ fn build_entries<H: UiHost>(
                 opts,
             ))),
             MenuItem::Submenu { title, when, items } => {
-                let value: Arc<str> = Arc::from(format!("{prefix}.submenu.{idx}"));
+                let child_key = stable_menu_key(title.as_ref());
+                let value: Arc<str> = Arc::from(format!("{prefix}.submenu.{child_key}"));
                 let disabled = when.as_ref().is_some_and(|w| !w.eval(gating.input_ctx()));
                 let trigger = submenu_item(title.clone(), value, disabled);
-                let child_prefix = format!("{prefix}.submenu.{idx}");
+                let child_prefix = format!("{prefix}.submenu.{child_key}");
                 let entries =
                     build_entries(cx, items, gating, shortcut_base_ctx, opts, &child_prefix);
                 out.push(InWindowMenuEntry::Submenu(InWindowSubmenu {
@@ -397,15 +421,15 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let menus: Vec<InWindowMenu> = normalized_menu_bar
         .menus
         .iter()
-        .enumerate()
-        .map(|(idx, menu)| {
+        .map(|menu| {
+            let menu_key = stable_menu_key(menu.title.as_ref());
             let entries = build_entries(
                 cx,
                 &menu.items,
                 &gating,
                 &shortcut_base_ctx,
                 &opts,
-                &format!("menu.{idx}"),
+                &format!("menu.{menu_key}"),
             );
             let enabled = entries
                 .iter()
