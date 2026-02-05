@@ -197,11 +197,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     }
 
                     let mut affected_ports: Vec<PortId> = Vec::new();
-                    for (id, _prev, _next) in &moved_nodes {
-                        if let Some(ports) = meta.node_ports.get(id) {
-                            affected_ports.extend(ports.iter().copied());
-                        }
-                    }
+                    super::extend_ports_for_nodes(
+                        meta.node_ports,
+                        moved_nodes.iter().map(|(id, _, _)| *id),
+                        &mut affected_ports,
+                    );
 
                     Self::update_edges_for_ports(
                         geom_mut,

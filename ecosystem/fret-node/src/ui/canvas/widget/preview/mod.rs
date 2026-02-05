@@ -30,3 +30,16 @@ pub(super) fn resolve_edge_endpoints_from_model<H: UiHost>(
         .ok()
         .unwrap_or_default()
 }
+
+pub(super) fn extend_ports_for_nodes(
+    node_ports: &HashMap<GraphNodeId, Vec<PortId>>,
+    nodes: impl IntoIterator<Item = GraphNodeId>,
+    out: &mut Vec<PortId>,
+) {
+    out.clear();
+    for node_id in nodes {
+        if let Some(ports) = node_ports.get(&node_id) {
+            out.extend(ports.iter().copied());
+        }
+    }
+}
