@@ -5,6 +5,7 @@ import { execSync } from "child_process"
 
 type CaseId =
   | "demo_process"
+  | "pagination"
   | "sort_undefined"
   | "sorting_fns"
   | "filtering_fns"
@@ -132,6 +133,15 @@ type SnapshotId =
   | "expanding_action_toggle_row_on_expanded_change_noop_ignores"
   | "expanding_action_toggle_row_enable_expanding_false_still_updates_state"
   | "expanding_action_toggle_all"
+  | "pagination_baseline"
+  | "pagination_set_page_index_out_of_range_uncontrolled"
+  | "pagination_set_page_index_clamps_when_page_count_is_set"
+  | "pagination_set_page_size_recomputes_page_index"
+  | "pagination_manual_pagination_true_returns_pre_pagination"
+  | "pagination_on_pagination_change_noop_ignores"
+  | "pagination_page_count_minus_one_allows_next"
+  | "pagination_row_count_infers_page_count"
+  | "pagination_override_get_pagination_row_model_pre_pagination"
   | "pinning_keep_true_page_0"
   | "pinning_keep_false_page_0"
   | "pinning_keep_true_sorted_page_0"
@@ -166,6 +176,10 @@ type SnapshotId =
   | "grouping_autoreset_expanded_default_resets"
   | "grouping_autoreset_expanded_manual_expanding_true_no_reset"
   | "grouping_autoreset_expanded_auto_reset_expanded_true_overrides_manual"
+  | "grouping_autoreset_page_index_default_resets"
+  | "grouping_autoreset_page_index_manual_pagination_true_no_reset"
+  | "grouping_autoreset_page_index_auto_reset_page_index_true_overrides_manual"
+  | "grouping_autoreset_page_index_auto_reset_all_false_disables"
   | "grouping_action_toggle_noop_when_enable_grouping_false"
   | "grouping_action_toggle_ignores_enable_grouping_false"
   | "grouping_state_one_column_sort_role_desc"
@@ -223,6 +237,9 @@ type TanStackOptions = {
   manualFiltering?: boolean
   manualSorting?: boolean
   manualPagination?: boolean
+  autoResetPageIndex?: boolean
+  pageCount?: number
+  rowCount?: number
   autoResetExpanded?: boolean
   manualExpanding?: boolean
   enableExpanding?: boolean
@@ -261,6 +278,8 @@ type TanStackOptions = {
   __getIsRowExpanded?: "always_false"
   // Fixture-only: override `getExpandedRowModel` with a deterministic implementation.
   __getExpandedRowModel?: "pre_expanded"
+  // Fixture-only: override `getPaginationRowModel` with a deterministic implementation.
+  __getPaginationRowModel?: "pre_pagination"
   // Fixture-only: inject `enableRowPinning` as a deterministic per-row predicate.
   __enableRowPinning?: "odd_ids"
   // Fixture-only: when set, the generator injects a deterministic `options.sortingFns` map.
@@ -272,6 +291,7 @@ type TanStackOptions = {
   __onColumnSizingChange?: "noop"
   __onColumnSizingInfoChange?: "noop"
   __onExpandedChange?: "noop"
+  __onPaginationChange?: "noop"
 }
 
 type RowModelSnapshot = { root: string[]; flat: string[] }
@@ -288,6 +308,11 @@ type FixtureSnapshot = {
     expanded?: RowModelSnapshot
     paginated: RowModelSnapshot
     row_model: RowModelSnapshot
+    page_count?: number
+    row_count?: number
+    can_previous_page?: boolean
+    can_next_page?: boolean
+    page_options?: number[]
     selected?: RowModelSnapshot
     filtered_selected?: RowModelSnapshot
     grouped_selected?: RowModelSnapshot
@@ -589,6 +614,38 @@ type FixtureAction =
       value?: boolean
     }
   | {
+      type: "setPageIndex"
+      page_index: number
+    }
+  | {
+      type: "setPageSize"
+      page_size: number
+    }
+  | {
+      type: "nextPage"
+    }
+  | {
+      type: "previousPage"
+    }
+  | {
+      type: "firstPage"
+    }
+  | {
+      type: "lastPage"
+    }
+  | {
+      type: "resetPageIndex"
+      default_state?: boolean
+    }
+  | {
+      type: "resetPageSize"
+      default_state?: boolean
+    }
+  | {
+      type: "resetPagination"
+      default_state?: boolean
+    }
+  | {
       type: "toggleGrouping"
       column_id: string
       value?: boolean
@@ -641,6 +698,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
       const v = argv[i + 1]
       if (
         v !== "demo_process" &&
+        v !== "pagination" &&
         v !== "sort_undefined" &&
         v !== "sorting_fns" &&
         v !== "filtering_fns" &&
@@ -667,7 +725,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding|grouping|grouping_aggregation_fns|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|column_sizing|column_resizing_group_headers|state_shapes|selection|expanding|grouping|grouping_aggregation_fns|render_fallback]",
     )
   }
   return { out, case_id }
@@ -864,6 +922,7 @@ async function main(): Promise<void> {
 
   if (
     case_id === "demo_process" ||
+    case_id === "pagination" ||
     case_id === "state_shapes" ||
     case_id === "selection" ||
     case_id === "pinning"
@@ -1377,6 +1436,9 @@ async function main(): Promise<void> {
       manualFiltering: options.manualFiltering ?? false,
       manualSorting: options.manualSorting ?? false,
       manualPagination: options.manualPagination ?? false,
+      autoResetPageIndex: options.autoResetPageIndex,
+      pageCount: options.pageCount,
+      rowCount: options.rowCount,
       autoResetExpanded: options.autoResetExpanded,
       manualExpanding: options.manualExpanding ?? false,
       enableExpanding: options.enableExpanding,
@@ -1460,7 +1522,10 @@ async function main(): Promise<void> {
           }
         : {}),
       getSortedRowModel: tableCore.getSortedRowModel(),
-      getPaginationRowModel: tableCore.getPaginationRowModel(),
+      getPaginationRowModel:
+        options.__getPaginationRowModel === "pre_pagination"
+          ? (t: any) => () => t.getPrePaginationRowModel?.()
+          : tableCore.getPaginationRowModel(),
       getExpandedRowModel:
         options.__getExpandedRowModel === "pre_expanded"
           ? (t: any) => () => t.getPreExpandedRowModel?.()
@@ -1478,6 +1543,14 @@ async function main(): Promise<void> {
         const next =
           typeof updater === "function" ? updater(currentState.globalFilter) : updater
         currentState.globalFilter = next
+      },
+      onPaginationChange: (updater: any) => {
+        if (options.__onPaginationChange === "noop") {
+          return
+        }
+        const next =
+          typeof updater === "function" ? updater(currentState.pagination) : updater
+        currentState.pagination = next ?? currentState.pagination
       },
       onColumnVisibilityChange: (updater: any) => {
         const next =
@@ -1546,17 +1619,22 @@ function snapshotForState(
   state: TanStackState,
 ): FixtureSnapshot["expect"] {
   const { table } = buildTable(options, state)
-  return {
-    core: snapshotRowModel(table.getCoreRowModel()),
-    filtered: snapshotRowModel(table.getFilteredRowModel()),
-    sorted: snapshotRowModel(table.getSortedRowModel()),
-    expanded: snapshotRowModel(table.getExpandedRowModel()),
-    paginated: snapshotRowModel(table.getPaginationRowModel()),
-    row_model: snapshotRowModel(table.getRowModel()),
-    selected: snapshotRowModel(table.getSelectedRowModel?.() ?? emptyRowModelSnapshot()),
-    filtered_selected: snapshotRowModel(
-      table.getFilteredSelectedRowModel?.() ?? emptyRowModelSnapshot(),
-    ),
+    return {
+      core: snapshotRowModel(table.getCoreRowModel()),
+      filtered: snapshotRowModel(table.getFilteredRowModel()),
+      sorted: snapshotRowModel(table.getSortedRowModel()),
+      expanded: snapshotRowModel(table.getExpandedRowModel()),
+      paginated: snapshotRowModel(table.getPaginationRowModel()),
+      row_model: snapshotRowModel(table.getRowModel()),
+      page_count: Number(table.getPageCount?.() ?? 0),
+      row_count: Number(table.getRowCount?.() ?? 0),
+      can_previous_page: Boolean(table.getCanPreviousPage?.()),
+      can_next_page: Boolean(table.getCanNextPage?.()),
+      page_options: (table.getPageOptions?.() ?? []).map((v: any) => Number(v)),
+      selected: snapshotRowModel(table.getSelectedRowModel?.() ?? emptyRowModelSnapshot()),
+      filtered_selected: snapshotRowModel(
+        table.getFilteredSelectedRowModel?.() ?? emptyRowModelSnapshot(),
+      ),
     grouped_selected: snapshotRowModel(table.getGroupedSelectedRowModel?.() ?? emptyRowModelSnapshot()),
     is_all_rows_selected: Boolean(table.getIsAllRowsSelected?.()),
     is_some_rows_selected: Boolean(table.getIsSomeRowsSelected?.()),
@@ -2255,6 +2333,69 @@ function snapshotColumnPinning(
         table.toggleAllRowsExpanded(action.value)
         continue
       }
+      if (action.type === "setPageIndex") {
+        if (typeof table.setPageIndex !== "function") {
+          throw new Error("Table has no setPageIndex")
+        }
+        table.setPageIndex(action.page_index)
+        continue
+      }
+      if (action.type === "setPageSize") {
+        if (typeof table.setPageSize !== "function") {
+          throw new Error("Table has no setPageSize")
+        }
+        table.setPageSize(action.page_size)
+        continue
+      }
+      if (action.type === "nextPage") {
+        if (typeof table.nextPage !== "function") {
+          throw new Error("Table has no nextPage")
+        }
+        table.nextPage()
+        continue
+      }
+      if (action.type === "previousPage") {
+        if (typeof table.previousPage !== "function") {
+          throw new Error("Table has no previousPage")
+        }
+        table.previousPage()
+        continue
+      }
+      if (action.type === "firstPage") {
+        if (typeof table.firstPage !== "function") {
+          throw new Error("Table has no firstPage")
+        }
+        table.firstPage()
+        continue
+      }
+      if (action.type === "lastPage") {
+        if (typeof table.lastPage !== "function") {
+          throw new Error("Table has no lastPage")
+        }
+        table.lastPage()
+        continue
+      }
+      if (action.type === "resetPageIndex") {
+        if (typeof table.resetPageIndex !== "function") {
+          throw new Error("Table has no resetPageIndex")
+        }
+        table.resetPageIndex(action.default_state)
+        continue
+      }
+      if (action.type === "resetPageSize") {
+        if (typeof table.resetPageSize !== "function") {
+          throw new Error("Table has no resetPageSize")
+        }
+        table.resetPageSize(action.default_state)
+        continue
+      }
+      if (action.type === "resetPagination") {
+        if (typeof table.resetPagination !== "function") {
+          throw new Error("Table has no resetPagination")
+        }
+        table.resetPagination(action.default_state)
+        continue
+      }
       if (action.type === "toggleGrouping") {
         const col = table.getColumn(action.column_id)
         if (!col) {
@@ -2360,6 +2501,11 @@ function snapshotColumnPinning(
       expanded: snapshotRowModel(table.getExpandedRowModel()),
       paginated: snapshotRowModel(table.getPaginationRowModel()),
       row_model: snapshotRowModel(table.getRowModel()),
+      page_count: Number(table.getPageCount?.() ?? 0),
+      row_count: Number(table.getRowCount?.() ?? 0),
+      can_previous_page: Boolean(table.getCanPreviousPage?.()),
+      can_next_page: Boolean(table.getCanNextPage?.()),
+      page_options: (table.getPageOptions?.() ?? []).map((v: any) => Number(v)),
       selected: snapshotRowModel(table.getSelectedRowModel?.() ?? emptyRowModelSnapshot()),
       filtered_selected: snapshotRowModel(
         table.getFilteredSelectedRowModel?.() ?? emptyRowModelSnapshot(),
@@ -2675,6 +2821,79 @@ function snapshotColumnPinning(
         expect: snapshotForState(defaultOptions, {
           pagination: { pageIndex: 0, pageSize: 2 },
         }),
+      },
+    ]
+  } else if (case_id === "pagination") {
+    const base = defaultOptions
+    snapshots = [
+      {
+        id: "pagination_baseline",
+        options: base,
+        state: {},
+        expect: snapshotForState(base, {}),
+      },
+      {
+        id: "pagination_set_page_index_out_of_range_uncontrolled",
+        options: base,
+        state: { pagination: { pageIndex: 0, pageSize: 2 } },
+        actions: [{ type: "setPageIndex", page_index: 10 }],
+        expect: snapshotForActions(base, { pagination: { pageIndex: 0, pageSize: 2 } }, [
+          { type: "setPageIndex", page_index: 10 },
+        ]),
+      },
+      {
+        id: "pagination_set_page_index_clamps_when_page_count_is_set",
+        options: { ...base, pageCount: 2 },
+        state: { pagination: { pageIndex: 0, pageSize: 2 } },
+        actions: [{ type: "setPageIndex", page_index: 10 }],
+        expect: snapshotForActions({ ...base, pageCount: 2 }, { pagination: { pageIndex: 0, pageSize: 2 } }, [
+          { type: "setPageIndex", page_index: 10 },
+        ]),
+      },
+      {
+        id: "pagination_set_page_size_recomputes_page_index",
+        options: base,
+        state: { pagination: { pageIndex: 2, pageSize: 2 } },
+        actions: [{ type: "setPageSize", page_size: 3 }],
+        expect: snapshotForActions(base, { pagination: { pageIndex: 2, pageSize: 2 } }, [
+          { type: "setPageSize", page_size: 3 },
+        ]),
+      },
+      {
+        id: "pagination_manual_pagination_true_returns_pre_pagination",
+        options: { ...base, manualPagination: true },
+        state: { pagination: { pageIndex: 1, pageSize: 2 } },
+        expect: snapshotForState({ ...base, manualPagination: true }, { pagination: { pageIndex: 1, pageSize: 2 } }),
+      },
+      {
+        id: "pagination_on_pagination_change_noop_ignores",
+        options: { ...base, __onPaginationChange: "noop" },
+        state: { pagination: { pageIndex: 0, pageSize: 2 } },
+        actions: [{ type: "setPageIndex", page_index: 1 }],
+        expect: snapshotForActions({ ...base, __onPaginationChange: "noop" }, { pagination: { pageIndex: 0, pageSize: 2 } }, [
+          { type: "setPageIndex", page_index: 1 },
+        ]),
+      },
+      {
+        id: "pagination_page_count_minus_one_allows_next",
+        options: { ...base, pageCount: -1 },
+        state: { pagination: { pageIndex: 0, pageSize: 2 } },
+        expect: snapshotForState({ ...base, pageCount: -1 }, { pagination: { pageIndex: 0, pageSize: 2 } }),
+      },
+      {
+        id: "pagination_row_count_infers_page_count",
+        options: { ...base, rowCount: 100 },
+        state: { pagination: { pageIndex: 0, pageSize: 10 } },
+        expect: snapshotForState({ ...base, rowCount: 100 }, { pagination: { pageIndex: 0, pageSize: 10 } }),
+      },
+      {
+        id: "pagination_override_get_pagination_row_model_pre_pagination",
+        options: { ...base, __getPaginationRowModel: "pre_pagination" },
+        state: { pagination: { pageIndex: 1, pageSize: 2 } },
+        expect: snapshotForState(
+          { ...base, __getPaginationRowModel: "pre_pagination" },
+          { pagination: { pageIndex: 1, pageSize: 2 } },
+        ),
       },
     ]
   } else if (case_id === "state_shapes") {
@@ -3420,6 +3639,42 @@ function snapshotColumnPinning(
         "grouping_autoreset_expanded_auto_reset_expanded_true_overrides_manual",
         { manualExpanding: true, autoResetExpanded: true },
         { expanded: { "1": true } },
+        [
+          { type: "toggleGrouping", column_id: "role" },
+          { type: "toggleGrouping", column_id: "team" },
+        ],
+      ),
+      await mkActionsAutoReset(
+        "grouping_autoreset_page_index_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [
+          { type: "toggleGrouping", column_id: "role" },
+          { type: "toggleGrouping", column_id: "team" },
+        ],
+      ),
+      await mkActionsAutoReset(
+        "grouping_autoreset_page_index_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [
+          { type: "toggleGrouping", column_id: "role" },
+          { type: "toggleGrouping", column_id: "team" },
+        ],
+      ),
+      await mkActionsAutoReset(
+        "grouping_autoreset_page_index_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [
+          { type: "toggleGrouping", column_id: "role" },
+          { type: "toggleGrouping", column_id: "team" },
+        ],
+      ),
+      await mkActionsAutoReset(
+        "grouping_autoreset_page_index_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
         [
           { type: "toggleGrouping", column_id: "role" },
           { type: "toggleGrouping", column_id: "team" },

@@ -376,6 +376,7 @@ fn tanstack_v8_grouping_parity() {
             .is_some_and(|v| v == "pre_grouped");
 
         let mut auto_reset_expanded_registered = false;
+        let mut auto_reset_page_index_registered = false;
 
         for action in &snap.actions {
             let prev_grouping = state.grouping.clone();
@@ -426,6 +427,15 @@ fn tanstack_v8_grouping_parity() {
                 } else if table.should_auto_reset_expanded() {
                     state.expanding = table.reset_expanded(false);
                 }
+
+                // TanStack Table v8: the grouped row model memo debug callback also queues
+                // `_autoResetPageIndex()` (RowPagination feature). Mirrors the same "first call
+                // registers, subsequent calls may reset" behavior.
+                if !auto_reset_page_index_registered {
+                    auto_reset_page_index_registered = true;
+                } else if table.should_auto_reset_page_index() {
+                    state.pagination = table.reset_page_index(false);
+                }
             }
         }
 
@@ -443,6 +453,11 @@ fn tanstack_v8_grouping_parity() {
             assert_eq!(
                 state.expanding, expected_state.expanding,
                 "snapshot {} next_state.expanded mismatch",
+                snap.id
+            );
+            assert_eq!(
+                state.pagination, expected_state.pagination,
+                "snapshot {} next_state.pagination mismatch",
                 snap.id
             );
         }

@@ -117,6 +117,7 @@ pub struct TableBuilder<'a, TData> {
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     expanded_row_model_override_pre_expanded: bool,
+    pagination_row_model_override_pre_pagination: bool,
     initial_state: Option<super::TableState>,
     state: super::TableState,
     options: super::TableOptions,
@@ -140,6 +141,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_sub_rows: None,
             get_grouped_row_model: None,
             expanded_row_model_override_pre_expanded: false,
+            pagination_row_model_override_pre_pagination: false,
             initial_state: None,
             state: super::TableState::default(),
             options: super::TableOptions::default(),
@@ -252,6 +254,12 @@ impl<'a, TData> TableBuilder<'a, TData> {
     /// TanStack-aligned: override `getExpandedRowModel` to return `getPreExpandedRowModel()`.
     pub fn override_expanded_row_model_pre_expanded(mut self) -> Self {
         self.expanded_row_model_override_pre_expanded = true;
+        self
+    }
+
+    /// TanStack-aligned: override `getPaginationRowModel` to return `getPrePaginationRowModel()`.
+    pub fn override_pagination_row_model_pre_pagination(mut self) -> Self {
+        self.pagination_row_model_override_pre_pagination = true;
         self
     }
 
@@ -380,6 +388,7 @@ pub struct Table<'a, TData> {
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     expanded_row_model_override_pre_expanded: bool,
+    pagination_row_model_override_pre_pagination: bool,
     /// TanStack-aligned `initialState` snapshot (used by table-level reset APIs).
     initial_state: super::TableState,
     state: super::TableState,
@@ -479,6 +488,8 @@ impl<'a, TData> Table<'a, TData> {
             get_grouped_row_model: builder.get_grouped_row_model,
             expanded_row_model_override_pre_expanded: builder
                 .expanded_row_model_override_pre_expanded,
+            pagination_row_model_override_pre_pagination: builder
+                .pagination_row_model_override_pre_pagination,
             initial_state,
             state: builder.state,
             options: builder.options,
@@ -707,6 +718,179 @@ impl<'a, TData> Table<'a, TData> {
         } else {
             self.initial_state.expanding.clone()
         }
+    }
+
+    /// TanStack-aligned: `autoResetAll ?? autoResetPageIndex ?? !manualPagination`.
+    pub fn should_auto_reset_page_index(&self) -> bool {
+        self.options
+            .auto_reset_all
+            .or(self.options.auto_reset_page_index)
+            .unwrap_or(!self.options.manual_pagination)
+    }
+
+    /// TanStack-aligned: `table.resetPageIndex(defaultState?)`.
+    pub fn reset_page_index(&self, default_state: bool) -> super::PaginationState {
+        let value = if default_state {
+            0
+        } else {
+            self.initial_state.pagination.page_index as i32
+        };
+        self.set_page_index(value)
+    }
+
+    /// TanStack-aligned: `table.resetPageSize(defaultState?)`.
+    pub fn reset_page_size(&self, default_state: bool) -> super::PaginationState {
+        let value = if default_state {
+            10
+        } else {
+            self.initial_state.pagination.page_size as i32
+        };
+        self.set_page_size(value)
+    }
+
+    /// TanStack-aligned: `table.resetPagination(defaultState?)`.
+    pub fn reset_pagination(&self, default_state: bool) -> super::PaginationState {
+        if default_state {
+            super::PaginationState::default()
+        } else {
+            self.initial_state.pagination
+        }
+    }
+
+    /// TanStack-aligned: `table.setPageIndex(updater)`, with clamping based on `options.pageCount`.
+    pub fn set_page_index(&self, page_index: i32) -> super::PaginationState {
+        super::PaginationState {
+            page_index: Self::clamp_page_index(page_index, self.options.page_count),
+            page_size: self.state.pagination.page_size,
+        }
+    }
+
+    pub fn pagination_updater_set_page_index(
+        &self,
+        page_index: i32,
+    ) -> super::Updater<super::PaginationState> {
+        let page_count_hint = self.options.page_count;
+        super::Updater::Func(Arc::new(move |old| super::PaginationState {
+            page_index: Self::clamp_page_index(page_index, page_count_hint),
+            page_size: old.page_size,
+        }))
+    }
+
+    /// TanStack-aligned: `table.setPageSize(updater)`.
+    pub fn set_page_size(&self, page_size: i32) -> super::PaginationState {
+        let page_size = (page_size as i64).max(1) as usize;
+        let top_row_index = self
+            .state
+            .pagination
+            .page_size
+            .saturating_mul(self.state.pagination.page_index);
+        let page_index = top_row_index / page_size;
+        super::PaginationState {
+            page_index,
+            page_size,
+        }
+    }
+
+    pub fn pagination_updater_set_page_size(
+        &self,
+        page_size: i32,
+    ) -> super::Updater<super::PaginationState> {
+        super::Updater::Func(Arc::new(move |old| {
+            let page_size = (page_size as i64).max(1) as usize;
+            let top_row_index = old.page_size.saturating_mul(old.page_index);
+            let page_index = top_row_index / page_size;
+            super::PaginationState {
+                page_index,
+                page_size,
+            }
+        }))
+    }
+
+    /// TanStack-aligned: `table.previousPage()`.
+    pub fn previous_page(&self) -> super::PaginationState {
+        let current = self.state.pagination.page_index as i32;
+        self.set_page_index(current.saturating_sub(1))
+    }
+
+    /// TanStack-aligned: `table.nextPage()`.
+    pub fn next_page(&self) -> super::PaginationState {
+        let current = self.state.pagination.page_index as i32;
+        self.set_page_index(current.saturating_add(1))
+    }
+
+    /// TanStack-aligned: `table.firstPage()`.
+    pub fn first_page(&self) -> super::PaginationState {
+        self.set_page_index(0)
+    }
+
+    /// TanStack-aligned: `table.lastPage()`.
+    pub fn last_page(&self) -> super::PaginationState {
+        self.set_page_index(self.page_count().saturating_sub(1))
+    }
+
+    /// TanStack-aligned: `table.getRowCount()`.
+    pub fn row_count(&self) -> usize {
+        self.options
+            .row_count
+            .unwrap_or_else(|| self.pre_pagination_row_model().root_rows().len())
+    }
+
+    /// TanStack-aligned: `table.getPageCount()`.
+    pub fn page_count(&self) -> i32 {
+        if let Some(page_count) = self.options.page_count {
+            return page_count;
+        }
+        let page_size = self.state.pagination.page_size;
+        if page_size == 0 {
+            return 0;
+        }
+        let count = self.row_count().div_ceil(page_size);
+        i32::try_from(count).unwrap_or(i32::MAX)
+    }
+
+    /// TanStack-aligned: `table.getCanPreviousPage()`.
+    pub fn can_previous_page(&self) -> bool {
+        self.state.pagination.page_index > 0
+    }
+
+    /// TanStack-aligned: `table.getCanNextPage()`.
+    pub fn can_next_page(&self) -> bool {
+        let page_index = self.state.pagination.page_index;
+        let page_count = self.page_count();
+        if page_count == -1 {
+            return true;
+        }
+        if page_count == 0 {
+            return false;
+        }
+        let Ok(page_count) = usize::try_from(page_count) else {
+            return false;
+        };
+        page_index + 1 < page_count
+    }
+
+    /// TanStack-aligned: `table.getPageOptions()`.
+    pub fn page_options(&self) -> Vec<usize> {
+        let page_count = self.page_count();
+        if page_count <= 0 {
+            return Vec::new();
+        }
+        let Ok(page_count) = usize::try_from(page_count) else {
+            return Vec::new();
+        };
+        (0..page_count).collect()
+    }
+
+    fn clamp_page_index(page_index: i32, page_count_hint: Option<i32>) -> usize {
+        let max = match page_count_hint {
+            None => i32::MAX,
+            Some(-1) => i32::MAX,
+            Some(n) => n.saturating_sub(1),
+        };
+        if max < 0 {
+            return 0;
+        }
+        page_index.max(0).min(max) as usize
     }
 
     pub fn grouping(&self) -> &super::GroupingState {
@@ -1927,6 +2111,9 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn row_model(&self) -> &RowModel<'a, TData> {
         if self.options.manual_pagination {
+            return self.pre_pagination_row_model();
+        }
+        if self.pagination_row_model_override_pre_pagination {
             return self.pre_pagination_row_model();
         }
         if self.options.paginate_expanded_rows {

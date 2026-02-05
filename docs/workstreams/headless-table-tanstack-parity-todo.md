@@ -296,9 +296,19 @@ ColumnDef keys referenced by upstream feature implementations:
     `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs`.
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_can_expand_for_row`, `row_is_expanded_for_row`)
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_expanding.rs` (`expand_row_model`)
-- [ ] HTP-page-010 Align pagination option gates and hooks:
+- [x] HTP-page-010 Align pagination option gates and hooks:
   - `manualPagination`, `pageCount`, `rowCount`, `onPaginationChange`, `getPaginationRowModel` override.
-- [ ] HTP-page-020 Align `autoResetPageIndex` / `autoResetAll` behaviors.
+  - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pagination.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_pagination_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/options.rs` (`page_count`, `row_count`)
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`pagination_updater_set_page_index`, `pagination_updater_set_page_size`, `page_count`)
+  - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (fixture-only markers: `__onPaginationChange`, `__getPaginationRowModel`)
+- [x] HTP-page-020 Align `autoResetPageIndex` / `autoResetAll` behaviors.
+  - Parity-gated (state transition outcomes): `grouping_autoreset_page_index_*` snapshots in
+    `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json`,
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::should_auto_reset_page_index`, `Table::reset_page_index`)
+  - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`mkActionsAutoReset` + snapshots)
 - [ ] HTP-page-030 Align `paginateExpandedRows` interactions with expansion and page bounds.
   - Note: TanStack `getPaginationRowModel` can yield duplicated `flatRows` entries when `paginateExpandedRows=false`.
 - [~] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
@@ -360,6 +370,7 @@ fixture outcomes.
 | Fixture (JSON) | `case_id` | Upstream feature(s) covered | Rust parity gate | Status |
 | --- | --- | --- | --- | --- |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/demo_process.json` | `demo_process` | `ColumnFiltering`, `RowSorting`, `RowPagination` (basic), option/state transition scaffolding | `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs` | Partial |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pagination.json` | `pagination` | `RowPagination` (option gates + pageCount/rowCount + controlled hook semantics) | `ecosystem/fret-ui-headless/tests/tanstack_v8_pagination_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sort_undefined.json` | `sort_undefined` | `RowSorting` (`sortUndefined`: `first/last/-1/1`) | `ecosystem/fret-ui-headless/tests/tanstack_v8_sort_undefined_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json` | `column_sizing` | `ColumnSizing` (totals, start/after offsets, clamp, resize lifecycle + `columnSizingInfo`, RTL delta sign flip) | `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json` | `column_resizing_group_headers` | `ColumnSizing` (group header resize fan-out + group entry in `columnSizingStart`) | `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs` | Partial |

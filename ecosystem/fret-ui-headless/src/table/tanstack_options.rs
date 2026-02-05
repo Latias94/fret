@@ -49,6 +49,12 @@ pub struct TanStackTableOptions {
     pub manual_sorting: bool,
     #[serde(default, rename = "manualPagination")]
     pub manual_pagination: bool,
+    #[serde(default, rename = "autoResetPageIndex")]
+    pub auto_reset_page_index: Option<bool>,
+    #[serde(default, rename = "pageCount")]
+    pub page_count: Option<i32>,
+    #[serde(default, rename = "rowCount")]
+    pub row_count: Option<usize>,
     #[serde(default, rename = "manualExpanding")]
     pub manual_expanding: bool,
     #[serde(default = "default_true", rename = "enableExpanding")]
@@ -110,6 +116,9 @@ impl Default for TanStackTableOptions {
             enable_global_filter: true,
             manual_sorting: false,
             manual_pagination: false,
+            auto_reset_page_index: None,
+            page_count: None,
+            row_count: None,
             manual_expanding: false,
             enable_expanding: true,
             auto_reset_all: None,
@@ -153,6 +162,9 @@ impl TanStackTableOptions {
         out.enable_global_filter = self.enable_global_filter;
         out.manual_sorting = self.manual_sorting;
         out.manual_pagination = self.manual_pagination;
+        out.auto_reset_page_index = self.auto_reset_page_index;
+        out.page_count = self.page_count;
+        out.row_count = self.row_count;
         out.manual_expanding = self.manual_expanding;
         out.enable_expanding = self.enable_expanding;
         out.auto_reset_all = self.auto_reset_all;

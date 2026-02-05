@@ -23,6 +23,14 @@ pub struct TableOptions {
     ///
     /// When `true`, `row_model()` returns `pre_pagination_row_model()`.
     pub manual_pagination: bool,
+    /// TanStack-aligned: pagination auto reset gate (`autoResetPageIndex`).
+    pub auto_reset_page_index: Option<bool>,
+    /// TanStack-aligned: total page count hint (`pageCount`).
+    ///
+    /// When set to `-1`, the page count is treated as unknown.
+    pub page_count: Option<i32>,
+    /// TanStack-aligned: total row count hint (`rowCount`).
+    pub row_count: Option<usize>,
     /// If enabled, expanded row handling is assumed to be done externally.
     ///
     /// When `true`, `expanded_row_model()` returns `pre_expanded_row_model()`.
@@ -96,6 +104,9 @@ impl Default for TableOptions {
             enable_global_filter: true,
             manual_sorting: false,
             manual_pagination: false,
+            auto_reset_page_index: None,
+            page_count: None,
+            row_count: None,
             manual_expanding: false,
             enable_expanding: true,
             auto_reset_all: None,

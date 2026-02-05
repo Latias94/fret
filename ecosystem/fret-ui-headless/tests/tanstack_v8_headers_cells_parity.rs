@@ -7,9 +7,13 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureRow {
     id: u64,
+    #[allow(dead_code)]
     name: String,
+    #[allow(dead_code)]
     status: String,
+    #[allow(dead_code)]
     cpu: u64,
+    #[allow(dead_code)]
     mem_mb: u64,
 }
 

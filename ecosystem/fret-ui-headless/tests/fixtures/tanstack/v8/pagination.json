@@ -1,0 +1,1803 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "pagination",
+  "data": [
+    {
+      "id": 1,
+      "name": "Renderer",
+      "status": "Running",
+      "cpu": 12,
+      "mem_mb": 420
+    },
+    {
+      "id": 2,
+      "name": "Asset Cache",
+      "status": "Idle",
+      "cpu": 0,
+      "mem_mb": 128
+    },
+    {
+      "id": 3,
+      "name": "Indexer",
+      "status": "Running",
+      "cpu": 38,
+      "mem_mb": 860
+    },
+    {
+      "id": 4,
+      "name": "Spellcheck",
+      "status": "Disabled",
+      "cpu": 0,
+      "mem_mb": 0
+    },
+    {
+      "id": 5,
+      "name": "Language Server",
+      "status": "Running",
+      "cpu": 7,
+      "mem_mb": 512
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "pagination_baseline",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {},
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "pagination_set_page_index_out_of_range_uncontrolled",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        }
+      },
+      "actions": [
+        {
+          "type": "setPageIndex",
+          "page_index": 10
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [],
+          "flat": []
+        },
+        "row_model": {
+          "root": [],
+          "flat": []
+        },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": true,
+        "can_next_page": false,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 10,
+            "pageSize": 2
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "pagination_set_page_index_clamps_when_page_count_is_set",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "pageCount": 2
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        }
+      },
+      "actions": [
+        {
+          "type": "setPageIndex",
+          "page_index": 10
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "3",
+            "4"
+          ],
+          "flat": [
+            "3",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "3",
+            "4"
+          ],
+          "flat": [
+            "3",
+            "4"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 5,
+        "can_previous_page": true,
+        "can_next_page": false,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 1,
+            "pageSize": 2
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "pagination_set_page_size_recomputes_page_index",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 2,
+          "pageSize": 2
+        }
+      },
+      "actions": [
+        {
+          "type": "setPageSize",
+          "page_size": 3
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "4",
+            "5"
+          ],
+          "flat": [
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "4",
+            "5"
+          ],
+          "flat": [
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 2,
+        "row_count": 5,
+        "can_previous_page": true,
+        "can_next_page": false,
+        "page_options": [
+          0,
+          1
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 1,
+            "pageSize": 3
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "pagination_manual_pagination_true_returns_pre_pagination",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": true,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 1,
+          "pageSize": 2
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": true,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "pagination_on_pagination_change_noop_ignores",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "__onPaginationChange": "noop"
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        }
+      },
+      "actions": [
+        {
+          "type": "setPageIndex",
+          "page_index": 1
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 2
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "pagination_page_count_minus_one_allows_next",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "pageCount": -1
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 2
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2"
+          ],
+          "flat": [
+            "1",
+            "2"
+          ]
+        },
+        "page_count": -1,
+        "row_count": 5,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "pagination_row_count_infers_page_count",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "rowCount": 100
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 0,
+          "pageSize": 10
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 10,
+        "row_count": 100,
+        "can_previous_page": false,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    },
+    {
+      "id": "pagination_override_get_pagination_row_model_pre_pagination",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "__getPaginationRowModel": "pre_pagination"
+      },
+      "state": {
+        "pagination": {
+          "pageIndex": 1,
+          "pageSize": 2
+        }
+      },
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "page_count": 3,
+        "row_count": 5,
+        "can_previous_page": true,
+        "can_next_page": true,
+        "page_options": [
+          0,
+          1,
+          2
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false
+      }
+    }
+  ]
+}
