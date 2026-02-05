@@ -7133,6 +7133,194 @@ fn material3_headless_divider_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_list_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{List, ListItem};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            for (case_name, hover_id, focus_id) in [
+                ("idle", None, None),
+                ("hover_selected", Some("list-beta"), None),
+                ("focus_visible_selected", None, Some("list-beta")),
+            ] {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(520.0), Px(420.0)),
+                );
+
+                let selected = app.models_mut().insert(Arc::<str>::from("beta"));
+
+                let render = |ui: &mut UiTree<TestHost>,
+                              app: &mut TestHost,
+                              services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(12.0);
+
+                            let list = List::new(selected.clone())
+                                .test_id("list")
+                                .items(vec![
+                                    ListItem::new("alpha", "Alpha")
+                                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                                        .test_id("list-alpha"),
+                                    ListItem::new("beta", "Beta (selected)")
+                                        .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                                        .test_id("list-beta"),
+                                    ListItem::new("charlie", "Charlie (disabled)")
+                                        .leading_icon(fret_icons::ids::ui::SLASH)
+                                        .disabled(true)
+                                        .test_id("list-charlie"),
+                                ])
+                                .into_element(cx);
+
+                            let content = cx.flex(props, |_cx| vec![list]);
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let root = render(&mut ui, &mut app, &mut services);
+                ui.set_root(root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                if case_name == "idle" {
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+                    );
+                }
+
+                if let Some(test_id) = hover_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
+                            )
+                        });
+                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
+                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
+                    });
+                    let hover_at = Point::new(
+                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
+                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                    );
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), hover_at),
+                    );
+                }
+
+                if let Some(test_id) = focus_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
+                            )
+                        });
+                    ui.set_focus(Some(node_id));
+                    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                }
+
+                let mut settled: Option<Material3HeadlessGoldenV1> = None;
+                for frame in 0..64 {
+                    app.advance_frame();
+                    let root = render(&mut ui, &mut app, &mut services);
+                    ui.set_root(root);
+                    ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                    let mut scene = Scene::default();
+                    ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+                    if frame < 28 {
+                        continue;
+                    }
+
+                    let snapshot = material3_scene_snapshot_v1(&scene);
+                    if let Some(prev) = settled.as_ref() {
+                        assert_eq!(
+                            snapshot, *prev,
+                            "expected list scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                        );
+                    } else {
+                        settled = Some(snapshot);
+                    }
+                }
+
+                let Some(snapshot) = settled else {
+                    panic!("expected a settled list snapshot ({label}, {scale}, {case_name})");
+                };
+                cases.insert(case_name.to_string(), snapshot);
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(&format!("material3-list.{scale}.{label}"), &suite);
+        }
+    }
+}
+
+#[test]
 fn material3_headless_progress_indicator_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
     use fret_ui_material3::{CircularProgressIndicator, LinearProgressIndicator};
