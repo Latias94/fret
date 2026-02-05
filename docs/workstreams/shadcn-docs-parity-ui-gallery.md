@@ -34,12 +34,12 @@ Status legend:
 |------|--------|--------------|----------|
 | Button | Aligned (with gaps) | Added RTL; “Link (render)” is a TODO because `Button::render/asChild` is not implemented in `fret-ui-shadcn` yet. | `apps/fret-ui-gallery/src/ui.rs` |
 | Menubar | Aligned | Added examples: Checkbox, Radio, Submenu, With Icons, RTL. | `apps/fret-ui-gallery/src/ui.rs` |
+| Navigation Menu | Aligned (with gaps) | Demo + RTL match docs. Doc-site `render` link composition is not modeled; use `NavigationMenuLink` + commands instead. | `apps/fret-ui-gallery/src/ui.rs` |
 
 ## Next
 
 Priority order (highest first):
 
-1. **Navigation Menu**: mirror docs, add RTL, decide on a link-composition story (`render/asChild` equivalent or an explicit `Link` component).
-2. **Sidebar**: align examples and verify hover/active chrome across all items (repro + hit-test diagnostics if needed).
-3. **Native Select / Pagination**: upgrade from “smoke stubs” to doc-shaped previews.
-
+1. **Sidebar**: align examples and verify hover/active chrome across all items (repro + hit-test diagnostics if needed).
+2. **Native Select**: upgrade from “smoke stubs” to doc-shaped previews.
+3. **Pagination**: mirror docs ordering (and add RTL if applicable).

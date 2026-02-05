@@ -2037,12 +2037,33 @@ pub(crate) const USAGE_NATIVE_SELECT: &str = r#"
 pub(crate) const DOC_NAVIGATION_MENU: &str = r#"
 ## Navigation Menu
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/navigation-menu.mdx`.
 "#;
 
 pub(crate) const USAGE_NAVIGATION_MENU: &str = r#"
 ```rust
-// Gallery preview is a smoke stub.
+use fret_ui_shadcn as shadcn;
+use std::sync::Arc;
+
+let value = cx.app.models_mut().insert(None::<Arc<str>>);
+
+let item = shadcn::NavigationMenuItem::new(
+    "getting_started",
+    "Getting started",
+    [
+        shadcn::NavigationMenuLink::new(value.clone(), [cx.text("Introduction")])
+            .on_click("app.open")
+            .into_element(cx),
+    ],
+);
+
+let menu = shadcn::NavigationMenu::new(value.clone())
+    .list(shadcn::NavigationMenuList::new([
+        item,
+        // Items with empty content behave like the shadcn `navigationMenuTriggerStyle()` link.
+        shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty()),
+    ]))
+    .into_element(cx);
 ```
 "#;
 
