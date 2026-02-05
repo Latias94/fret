@@ -88,10 +88,11 @@ Recommended gates while iterating:
 
 Planned additions (M2):
 
-- [ ] Background variants + theming conformance (dots/cross + tokens).
-- [ ] Controls B-layer wiring conformance (store/actions integration, no widget peeking).
-- [ ] MiniMap navigation conformance (click/drag-to-pan, deterministic mapping).
-- [ ] Toolbars composition conformance (overlay layering + pointer passthrough).
+- [x] Background variants + token surface conformance (lines/dots/cross + cache guardrails).
+- [x] Controls B-layer wiring conformance (command binding overrides; no widget peeking).
+- [x] MiniMap navigation conformance (click/drag-to-pan, deterministic mapping + view queue binding).
+- [x] Toolbars composition conformance (pointer passthrough + focus release when hidden).
+- [ ] Follow-up: per-editor theme token plumbing guidance (bridge `Theme` → `NodeGraphStyle`/`NodeGraphBackgroundStyle`).
 
 ## Code map (likely touch points)
 
@@ -106,7 +107,11 @@ Planned additions (M2):
 
 - Background style updates do not rebuild derived geometry:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
+- Background variants (dots/cross) emit stable scene ops in unit conformance:
+  `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
 - Controls overlay supports B-layer command injection:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 - MiniMap supports B-layer navigation wiring via `NodeGraphViewQueue`:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+- Toolbars participate in overlay hit-testing (passthrough) and focus routing:
+  `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`

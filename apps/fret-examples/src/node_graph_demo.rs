@@ -1354,9 +1354,11 @@ impl NodeGraphDemoDriver {
         let group_rename_text = models.group_rename_text.clone();
         let store = models.store.clone();
         let mut style = NodeGraphStyle::from_theme(Theme::global(app));
+        let mut background = style.background_style();
         if let Some(style_state) = app.global::<Arc<NodeGraphDemoStyleState>>().cloned() {
-            style.grid_pattern = style_state.background_pattern();
+            background.grid_pattern = style_state.background_pattern();
         }
+        style = style.with_background_style(background);
 
         let presenter =
             MeasuredNodeGraphPresenter::new(DemoPresenter::new(registry), measured.manual.clone());
