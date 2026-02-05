@@ -2883,6 +2883,14 @@ fn preview_code_editor_torture(
         last_boundaries.set(Some(boundary_identifier_enabled));
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    cx.app.with_global_mut(
+        crate::harness::UiGalleryCodeEditorHandlesStore::default,
+        |store, _app| {
+            store.per_window.insert(cx.window, handle.clone());
+        },
+    );
+
     let editor = code_editor::CodeEditor::new(handle)
         .overscan(128)
         .soft_wrap_cols(soft_wrap_enabled.then_some(80))

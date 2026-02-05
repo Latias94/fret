@@ -1036,7 +1036,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.extend(click_events(pos, button));
 
                 active.wait_until = None;
@@ -1093,7 +1093,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.push(move_pointer_event(pos));
 
                 active.wait_until = None;
@@ -1156,7 +1156,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let start = center_of_rect(node.bounds);
+                let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 let end = Point::new(
                     fret_core::Px(start.x.0 + delta_x),
                     fret_core::Px(start.y.0 + delta_y),
@@ -1221,7 +1221,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.push(wheel_event(pos, delta_x, delta_y));
 
                 active.wait_until = None;
@@ -1360,7 +1360,10 @@ impl UiDiagnosticsService {
                         let container_node =
                             select_semantics_node(snapshot, window, element_runtime, &container);
                         if let Some(container_node) = container_node {
-                            let pos = center_of_rect(container_node.bounds);
+                            let pos = center_of_rect_clamped_to_rect(
+                                container_node.bounds,
+                                window_bounds,
+                            );
                             output.events.push(wheel_event(pos, delta_x, delta_y));
                         }
 
@@ -1427,7 +1430,8 @@ impl UiDiagnosticsService {
                             if let Some(node) =
                                 select_semantics_node(snapshot, window, element_runtime, &target)
                             {
-                                let pos = center_of_rect(node.bounds);
+                                let pos =
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left));
@@ -1514,7 +1518,8 @@ impl UiDiagnosticsService {
                             if let Some(node) =
                                 select_semantics_node(snapshot, window, element_runtime, &menu)
                             {
-                                let pos = center_of_rect(node.bounds);
+                                let pos =
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left));
@@ -1613,8 +1618,8 @@ impl UiDiagnosticsService {
                     let from_node = select_semantics_node(snapshot, window, element_runtime, &from);
                     let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
                     if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
-                        let start = center_of_rect(from_node.bounds);
-                        let end = center_of_rect(to_node.bounds);
+                        let start = center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
+                        let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
                         output
                             .events
                             .extend(drag_events(start, end, button, steps.max(1)));
@@ -1698,7 +1703,7 @@ impl UiDiagnosticsService {
 
                             if state.phase == 0 {
                                 let x = clamp_x(left + width * target_t);
-                                let start = center_of_rect(bounds);
+                                let start = center_of_rect_clamped_to_rect(bounds, window_bounds);
                                 let start_x = state.last_drag_x.unwrap_or(start.x.0);
                                 let start = Point::new(fret_core::Px(start_x), start.y);
                                 let end = Point::new(fret_core::Px(x), start.y);
@@ -1739,7 +1744,8 @@ impl UiDiagnosticsService {
                                     } else {
                                         let error = value - observed;
                                         let dx = (error / span) * width;
-                                        let start = center_of_rect(bounds);
+                                        let start =
+                                            center_of_rect_clamped_to_rect(bounds, window_bounds);
                                         let start_x = state.last_drag_x.unwrap_or(start.x.0);
                                         let end_x = clamp_x(start_x + dx);
                                         let start = Point::new(fret_core::Px(start_x), start.y);
@@ -7765,6 +7771,36 @@ fn center_of_rect(rect: Rect) -> Point {
     let x = rect.origin.x + rect.size.width * 0.5;
     let y = rect.origin.y + rect.size.height * 0.5;
     Point::new(x, y)
+}
+
+fn center_of_rect_clamped_to_rect(rect: Rect, clamp: Rect) -> Point {
+    if !rects_intersect(rect, clamp) {
+        return center_of_rect(rect);
+    }
+
+    let rx0 = rect.origin.x.0;
+    let ry0 = rect.origin.y.0;
+    let rx1 = rx0 + rect.size.width.0.max(0.0);
+    let ry1 = ry0 + rect.size.height.0.max(0.0);
+
+    let cx0 = clamp.origin.x.0;
+    let cy0 = clamp.origin.y.0;
+    let cx1 = cx0 + clamp.size.width.0.max(0.0);
+    let cy1 = cy0 + clamp.size.height.0.max(0.0);
+
+    let ix0 = rx0.max(cx0);
+    let iy0 = ry0.max(cy0);
+    let ix1 = rx1.min(cx1);
+    let iy1 = ry1.min(cy1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return center_of_rect(rect);
+    }
+
+    Point::new(
+        fret_core::Px((ix0 + ix1) * 0.5),
+        fret_core::Px((iy0 + iy1) * 0.5),
+    )
 }
 
 fn pick_semantics_node_at<'a>(
