@@ -41,19 +41,23 @@ Each TODO is labeled:
 
 ## Near-term Focus (keep tight)
 
-- **MVP5-eco-004 / eco-005**: promote the existing canvas/chart harnesses into first “real migration targets” (one each), with deterministic scripts + gates.
-- **MVP5-eco-010**: AI transcript surfaces: prepaint-windowed + paint-only selection/hover chrome (scripts + gates).
+- **MVP5-virt-004**: decide whether Track B (“non-retained window shifts without rerender”) stays deferred; if revisited,
+  target making `ui-gallery-vlist-window-boundary` pass `--check-vlist-window-shifts-non-retained-max 0` via an explicit host
+  boundary (ADR 0192-style) rather than structural mutation in prepaint.
+- **Harness hygiene**: keep the guard-rail suites stable (node graph cull window, chart sampling window shifts, vlist small-scroll no-window-shifts).
 
 ## Near-term Plan (2026-02; make progress measurable)
 
 - **P1 — Keep the tracker honest (close “contract drift”)**
   - Deliverable: ensure each `[~]` item has crisp “next action” bullets + at least one gate/harness link; split remaining work into small, gateable follow-ups.
-- **P2 — MVP5-eco-004 canvas/node graph: first migration target**
+- **P2 — MVP5-eco-004 canvas/node graph: first migration target (done)**
   - Deliverable: pick one concrete surface (prefer `ecosystem/fret-node`), add deterministic pan/zoom script, and gate that small pans stay paint/prepaint-only while culling changes remain explainable.
-- **P3 — MVP5-eco-005 chart/plot sampling: first migration target**
+- **P3 — MVP5-eco-005 chart/plot sampling: first migration target (done)**
   - Deliverable: define a stable sampling-window key + explainability output (prepaint action + output key), and gate that small pans do not force cache-root rerenders under view-cache + shell.
-- **P4 — MVP5-eco-010 AI transcript surfaces: first windowed migration target**
+- **P4 — MVP5-eco-010 AI transcript surfaces: first windowed migration target (done)**
   - Deliverable: migrate the transcript harness to prepaint-windowed rows + paint-only hover/selection chrome, with deterministic scripts + gates under view-cache + shell.
+- **P5 — MVP5-virt-004 non-retained: close the remaining gap (optional)**
+  - Deliverable: either keep the item deferred (with guard rails), or land a host boundary that enables window shifts without dirtying the parent cache root.
 
 ## Baseline (Verified Existing Building Blocks)
 
