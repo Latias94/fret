@@ -62,16 +62,20 @@ an interactive chat demo:
 
 - `AiConversationTranscript` + `MessageParts`: parts-based transcript rendering with stable per-message
   `test_id` prefixes.
+- `AiChat`: a default composition shell (transcript + scroll affordance + prompt input + optional
+  empty/download parts), intended as a “good starting point” for apps.
 - `MessageResponse`: markdown rendering backed by `ecosystem/fret-markdown` with streaming-friendly
   updates and code-block actions (expand/collapse).
 - `PromptInput`: textarea + send/stop + disabled/loading states, with keyboard-first selectors.
 - `ToolCallBlock` + `SourcesBlock` + `InlineCitation`: initial tooling surfaces (collapsible tool
-  calls, sources list, citation button chrome).
+  calls, sources list, citation highlight selection).
 - `ConversationEmptyState` + `ConversationScrollButton` + `ConversationDownload` + `MessageToolbar`:
   conversation/message parts for app composition.
+- `messages_to_markdown`: a pure helper used by “download/copy transcript” flows (effects are app-owned).
 - UI Gallery pages:
   - `AI transcript (torture harness)` (`ai_transcript_torture`): long-scroll virtualization + cache reuse.
-  - `AI chat (demo)` (`ai_chat_demo`): small interactive demo with `fretboard diag` gates.
+  - `AI chat (demo)` (`ai_chat_demo`): interactive demo with `fretboard diag` gates (prompt input,
+    streaming finalize, tool-call disclosure, citation highlight, export-to-markdown).
 
 This is a good foundation, but it is only a small subset of the upstream AI Elements surface.
 
@@ -115,6 +119,48 @@ P2 (workflow + voice):
 
 4. **Dogfood in UI Gallery**
    - Each new component family gets a UI Gallery page that can be used for perf/interaction regression.
+
+## Upstream parity focus (2026-02)
+
+The pinned upstream (`repo-ref/ai-elements/packages/elements/src`) is the spec. For the next phase,
+we focus on closing parity gaps for the two most user-visible “AI Elements” surfaces:
+
+### `sources.tsx` (Collapsible list)
+
+Upstream behavior:
+
+- `Sources` is a `Collapsible` root with a trigger that reads “Used N sources”.
+- The content is hidden by default and expands/collapses with lightweight motion.
+- Each `Source` is a link (`target="_blank"`) with an icon + title.
+
+Fret mapping:
+
+- `SourcesBlock` becomes a Collapsible-based surface (apps still own effects; link activation emits
+  `on_open_url` intents).
+- Stable selectors remain mandatory:
+  - root: `${msg_prefix}sources-{part_index}`
+  - trigger: `${root}-trigger`
+  - content: `${root}-content`
+  - rows: `${msg_prefix}source-row-{part_index}-{row_index}`
+
+### `inline-citation.tsx` (HoverCard + pager)
+
+Upstream behavior:
+
+- Citation trigger is a rounded “badge” that shows `hostname` for the first source and `+N` for
+  additional sources.
+- Hovering opens a `HoverCard` (open/close delay 0) with a small pager:
+  - prev/next arrows,
+  - index label (`current/count`),
+  - body content per source.
+
+Fret mapping:
+
+- `InlineCitation` evolves into a HoverCard-based surface built from shadcn primitives:
+  - `HoverCard` + `HoverCardContent`,
+  - rounded-full outline buttons for pager arrows,
+  - message-local selection model for “highlight selected source” (optional extra).
+- Data model requirement: a single citation may reference **multiple sources**.
 
 ## How to execute (workflow)
 
@@ -480,7 +526,7 @@ Definition of done:
 Evidence (expected):
 
 - `docs/workstreams/ai-elements-port-todo.md` M0 items marked `[x]`
-- `tools/diag-scripts/ui-gallery-ai-transcript-scroll.json` (or an equivalent script) gated by `fretboard diag`
+- `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json` (or equivalent) gated by `fretboard diag`
 
 ### M1 — Chat surfaces MVP
 
@@ -496,7 +542,9 @@ Definition of done:
 
 Evidence (expected):
 
-- `tools/diag-scripts/ui-gallery-ai-prompt-input-keyboard.json` (or equivalent)
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-prompt-input-keyboard.json` (or equivalent)
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-export-markdown.json`
 
 ### M2 — Tooling surfaces MVP
 
@@ -505,6 +553,11 @@ Definition of done:
 - Tool calls can be displayed in a transcript (input/output, running/success/error, collapse).
 - Sources/citations can be displayed with deterministic selectors and “open url” intents.
 - Interaction-heavy behavior is gated by at least one diag script + one Rust invariant test.
+
+Evidence (expected):
+
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
 
 ### M3 — Code artifacts MVP
 
