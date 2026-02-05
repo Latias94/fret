@@ -90,6 +90,35 @@
     },
     { "type": "wait_frames", "n": 5 },
     {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after-insert"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after-insert"
+    },
+    { "type": "press_key", "key": "z", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after-undo"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after-undo"
+    },
+    { "type": "press_key", "key": "z", "modifiers": { "ctrl": true, "shift": true } },
+    { "type": "press_key", "key": "y", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after-redo"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-code-editor-torture-soft-wrap-editing-after-redo"
+    },
+    {
       "type": "move_pointer",
       "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" }
     },

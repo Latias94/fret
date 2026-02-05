@@ -32,6 +32,7 @@ use stats::{
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
     check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_torture_marker_present,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
     check_bundle_for_view_cache_reuse_min, check_bundle_for_view_cache_reuse_stable_min,
     check_bundle_for_viewport_capture_min, check_bundle_for_viewport_input_min,
     check_bundle_for_vlist_policy_key_stable, check_bundle_for_vlist_visible_range_refreshes_max,
@@ -106,6 +107,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_pixels_changed_test_id: Option<String> = None;
     let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
+    let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
@@ -527,6 +529,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-code-editor-torture-marker-present" => {
                 check_ui_gallery_code_editor_torture_marker_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-undo-redo" => {
+                check_ui_gallery_code_editor_torture_undo_redo = true;
                 i += 1;
             }
             "--check-semantics-changed-repainted" => {
@@ -1329,6 +1335,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
 
             let src = resolve_path(&workspace_root, PathBuf::from(src));
+            let script_wants_screenshots = script_requests_screenshots(&src);
             let mut child = maybe_launch_demo(
                 &launch,
                 &launch_env,
@@ -1336,7 +1343,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
-                pack_defaults.2 || check_pixels_changed_test_id.is_some(),
+                pack_defaults.2
+                    || check_pixels_changed_test_id.is_some()
+                    || script_wants_screenshots,
                 timeout_ms,
                 poll_ms,
             )?;
@@ -1369,6 +1378,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
                     || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1419,6 +1429,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_scene_eps,
                         check_pixels_changed_test_id.as_deref(),
                         check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -1622,7 +1633,9 @@ See: `docs/tracy.md`.\n";
                 &resolved_out_dir,
                 &resolved_ready_path,
                 &resolved_exit_path,
-                pack_defaults.2 || check_pixels_changed_test_id.is_some(),
+                pack_defaults.2
+                    || check_pixels_changed_test_id.is_some()
+                    || scripts.iter().any(|p| script_requests_screenshots(p)),
                 timeout_ms,
                 poll_ms,
             )?;
@@ -1719,6 +1732,7 @@ See: `docs/tracy.md`.\n";
                         || check_idle_no_paint_min.is_some()
                         || check_pixels_changed_test_id.is_some()
                         || check_ui_gallery_code_editor_torture_marker_present
+                        || check_ui_gallery_code_editor_torture_undo_redo
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1767,6 +1781,7 @@ See: `docs/tracy.md`.\n";
                             check_stale_scene_eps,
                             check_pixels_changed_test_id.as_deref(),
                             check_ui_gallery_code_editor_torture_marker_present,
+                            check_ui_gallery_code_editor_torture_undo_redo,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
@@ -2732,7 +2747,8 @@ See: `docs/tracy.md`.\n";
                 || (check_pixels_changed_test_id.is_none()
                     && scripts
                         .iter()
-                        .any(|src| ui_gallery_script_requires_pixels_changed_gate(src)));
+                        .any(|src| ui_gallery_script_requires_pixels_changed_gate(src)))
+                || scripts.iter().any(|src| script_requests_screenshots(src));
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -2845,6 +2861,7 @@ See: `docs/tracy.md`.\n";
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
                     || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -3002,6 +3019,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_marker_present =
                         ui_gallery_script_requires_code_editor_torture_marker_present_gate(&src)
                             && !check_ui_gallery_code_editor_torture_marker_present;
+                    let suite_ui_gallery_code_editor_torture_undo_redo =
+                        ui_gallery_script_requires_code_editor_torture_undo_redo_gate(&src)
+                            && !check_ui_gallery_code_editor_torture_undo_redo;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
                     let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
@@ -3066,6 +3086,8 @@ See: `docs/tracy.md`.\n";
                             .or(suite_pixels_changed_test_id),
                         check_ui_gallery_code_editor_torture_marker_present
                             || suite_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo
+                            || suite_ui_gallery_code_editor_torture_undo_redo,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -5554,6 +5576,36 @@ fn ui_gallery_script_requires_code_editor_torture_marker_present_gate(script: &P
     )
 }
 
+fn ui_gallery_script_requires_code_editor_torture_undo_redo_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"
+    )
+}
+
+fn script_requests_screenshots(script: &Path) -> bool {
+    let Ok(bytes) = std::fs::read(script) else {
+        return false;
+    };
+    let Ok(value) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+        return false;
+    };
+    value
+        .get("steps")
+        .and_then(|v| v.as_array())
+        .is_some_and(|steps| {
+            steps.iter().any(|s| {
+                s.get("type")
+                    .and_then(|v| v.as_str())
+                    .is_some_and(|t| t == "capture_screenshot")
+            })
+        })
+}
+
 #[derive(Debug, Clone)]
 struct ResolvedScriptPaths {
     out_dir: PathBuf,
@@ -5632,7 +5684,7 @@ fn run_script_suite_collect_bundles(
         &paths.out_dir,
         &paths.ready_path,
         &paths.exit_path,
-        false,
+        scripts.iter().any(|src| script_requests_screenshots(src)),
         timeout_ms,
         poll_ms,
     )?;
@@ -5743,6 +5795,7 @@ fn apply_post_run_checks(
     check_stale_scene_eps: f32,
     check_pixels_changed_test_id: Option<&str>,
     check_ui_gallery_code_editor_torture_marker_present: bool,
+    check_ui_gallery_code_editor_torture_undo_redo: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
@@ -5789,6 +5842,12 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_torture_marker_present {
         check_bundle_for_ui_gallery_code_editor_torture_marker_present(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_undo_redo {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
+            bundle_path,
+            warmup_frames,
+        )?;
     }
     if check_semantics_changed_repainted {
         check_bundle_for_semantics_changed_repainted(
@@ -6536,6 +6595,7 @@ mod tests {
         check_bundle_for_retained_vlist_keep_alive_budget_json,
         check_bundle_for_retained_vlist_reconcile_no_notify_min_json,
         check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
+        check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json,
         check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
         check_bundle_for_wheel_scroll_hit_changes_json,
@@ -8912,5 +8972,126 @@ mod tests {
                 .and_then(|v| v.as_u64()),
             Some(9)
         );
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_undo_redo_gate_passes_on_marker_toggle_sequence() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "code_editor": { "torture": {
+                                    "marker_present": false,
+                                    "text_len_bytes": 10,
+                                    "selection": { "anchor": 0, "caret": 0 }
+                                }}
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "code_editor": { "torture": {
+                                    "marker_present": true,
+                                    "text_len_bytes": 30,
+                                    "selection": { "anchor": 0, "caret": 5 }
+                                }}
+                            }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "code_editor": { "torture": {
+                                    "marker_present": false,
+                                    "text_len_bytes": 10,
+                                    "selection": { "anchor": 0, "caret": 5 }
+                                }}
+                            }
+                        },
+                        {
+                            "tick_id": 4,
+                            "frame_id": 4,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "code_editor": { "torture": {
+                                    "marker_present": true,
+                                    "text_len_bytes": 30,
+                                    "selection": { "anchor": 0, "caret": 5 }
+                                }}
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_undo_redo_gate_passes");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_undo_redo_gate_fails_without_redo() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "code_editor": { "torture": {
+                                    "marker_present": true,
+                                    "text_len_bytes": 30,
+                                    "selection": { "anchor": 0, "caret": 5 }
+                                }}
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "app_snapshot": {
+                                "kind": "fret_ui_gallery",
+                                "code_editor": { "torture": {
+                                    "marker_present": false,
+                                    "text_len_bytes": 10,
+                                    "selection": { "anchor": 0, "caret": 5 }
+                                }}
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_undo_redo_gate_fails");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        let err = check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json(
+            &bundle,
+            &bundle_path,
+            0,
+        )
+        .unwrap_err();
+        assert!(err.contains("undo/redo gate failed"));
     }
 }
