@@ -1475,6 +1475,66 @@ mod tests {
     }
 
     #[test]
+    fn floating_window_escape_sets_open_false_after_focusing_title_bar() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = app.models_mut().insert(true);
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_open(
+                        "demo",
+                        "Demo",
+                        &open,
+                        Point::new(Px(10.0), Px(10.0)),
+                        |ui| {
+                            ui.text("Hello");
+                        },
+                    );
+                })
+            },
+        );
+
+        let _ = floating_window_nodes(&ui, root);
+        let title_bar = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:demo",
+        );
+        click_at(&mut ui, &mut app, &mut services, title_bar);
+        assert!(ui.focus().is_some(), "expected title bar to take focus");
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Escape,
+            Modifiers::default(),
+        );
+        assert!(!app.models().get_copied(&open).unwrap_or(true));
+    }
+
+    #[test]
     fn checkbox_changed_is_delivered_once_and_updates_model() {
         let window = AppWindowId::default();
         let bounds = Rect::new(

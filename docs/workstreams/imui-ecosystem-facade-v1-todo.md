@@ -129,6 +129,7 @@ Exit criteria:
   - title bar, close button, Esc-to-close,
   - resize handles + resize session state,
   - focus trap/restore when appropriate (aligned with overlay policy).
+  - Note: `Esc-to-close` is implemented for `floating_window_open` when the title bar is focused.
 - [~] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
 - [ ] IMUIECO-float-034 Decide OS-window promotion scope:

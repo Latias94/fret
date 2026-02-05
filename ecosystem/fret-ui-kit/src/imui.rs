@@ -808,6 +808,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                             let title = title.clone();
                             let title_bar_test_id = title_bar_test_id.clone();
+                            let open_for_key = open_model.clone();
                             let drag_surface = cx.pointer_region(
                                 PointerRegionProps {
                                     layout: {
@@ -819,12 +820,31 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                     ..Default::default()
                                 },
                                 move |cx| {
+                                    let region_id = cx.root_id();
+                                    cx.key_clear_on_key_down_for(region_id);
+                                    if let Some(open) = open_for_key.clone() {
+                                        cx.key_on_key_down_for(
+                                            region_id,
+                                            Arc::new(move |host, acx, down| {
+                                                if down.key != KeyCode::Escape || down.repeat {
+                                                    return false;
+                                                }
+                                                let _ = host.update_model(&open, |v: &mut bool| {
+                                                    *v = false;
+                                                });
+                                                host.notify(acx);
+                                                true
+                                            }),
+                                        );
+                                    }
+
                                     cx.pointer_region_on_pointer_down(Arc::new(
                                         move |host, acx, down| {
                                             if down.button != MouseButton::Left {
                                                 return false;
                                             }
 
+                                            host.request_focus(acx.target);
                                             host.capture_pointer();
                                             if host.drag(down.pointer_id).is_none() {
                                                 host.begin_drag_with_kind(
