@@ -219,6 +219,9 @@ Fret:
 - For scripted harness perf probes, suppressing ui-gallery’s dev-only config poller timer
   (`with_config_files_watcher(...)`) removed timer dispatch from pointer-move frames entirely and collapsed
   pointer-move dispatch p95 from ~247us → ~26us (commit `06feeb41`).
+- Re-check on current `main`: even when force-enabling the watcher in harness mode
+  (`FRET_UI_GALLERY_ENABLE_CONFIG_WATCHER=1`, added by `e978fe85`), pointer-move dispatch remains at the “noise floor”
+  for this probe (p95 ~16us; see perf log entry 2026-02-05 15:59:00, commit `1293364f`).
 
 Implication:
 
