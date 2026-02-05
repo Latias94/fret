@@ -87,6 +87,8 @@ Exit criteria:
 - [x] IMUIECO-resp-012 Add context-menu request signal (right click / keyboard menu key).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::context_menu_requested`, key hook + right-click hook).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`right_click_sets_context_menu_requested_true_once`, `shift_f10_sets_context_menu_requested_true_once`).
+- [x] IMUIECO-resp-012b Add context-menu anchor + trigger identity for popup alignment.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::{id,context_menu_anchor}`).
 - [x] IMUIECO-resp-013 Document “two-frame stabilization” where geometry is sourced from last-frame bounds.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.3).
 
@@ -114,7 +116,9 @@ Exit criteria:
 - Overlays have convenient immediate-mode entry points with correct dismissal/focus policy.
 - Floating windows/areas exist as first-class outcomes in-window, aligned with ImGui-style UX.
 
-- [ ] IMUIECO-overlays-030 Menu/popover/tooltip convenience wrappers built on `OverlayController`.
+- [x] IMUIECO-overlays-030 Menu/popover/tooltip convenience wrappers built on `OverlayController`.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{open_popup_at,begin_popup_menu,begin_popup_context_menu}`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_opens_on_right_click_and_closes_on_outside_click`).
 - [ ] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
   - move (drag) + z-order + focus activation,
   - predictable hit-testing with overlays,
