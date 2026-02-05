@@ -84,3 +84,18 @@ Evidence (demo):
 - Background updates do not rebuild derived geometry:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
 
+## Accessibility note
+
+If you want `aria-activedescendant`-style semantics for focused nodes/ports/edges, mount the
+semantics-only children under the canvas (in this exact order):
+
+- `NodeGraphA11yFocusedPort`
+- `NodeGraphA11yFocusedEdge`
+- `NodeGraphA11yFocusedNode`
+
+The canvas will set `SemanticsNode.active_descendant` to one of these children based on its
+internal focus state.
+
+Conformance:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`

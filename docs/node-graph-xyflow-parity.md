@@ -889,6 +889,8 @@ canonical data flow and invalidation boundaries:
   - fret-node:
     - `Tab` / `Shift+Tab` focus-cycle nodes (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - `Ctrl/Cmd+Tab` focus-cycle edges (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - [x] `active_descendant` semantics are stable when `NodeGraphA11yFocused{Port,Edge,Node}` children are mounted:
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
     - TODO: semantic focus nodes (ARIA-like), ports focus path, and minimap/controls focus
 
 ---
