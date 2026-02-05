@@ -2282,6 +2282,8 @@ See: `docs/tracy.md`.\n";
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
             let is_ui_gallery_vlist_window_boundary_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary-retained";
+            let is_ui_gallery_vlist_no_window_shifts_small_scroll_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-vlist-no-window-shifts-small-scroll";
             let is_ui_gallery_ui_kit_list_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
             let is_ui_gallery_inspector_torture_suite =
@@ -2584,6 +2586,30 @@ See: `docs/tracy.md`.\n";
                         )],
                         Some(BuiltinSuite::UiGallery),
                     )
+                } else if is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+                    // Guard rail harness: under view-cache + shell, small scroll deltas should
+                    // not force a non-retained VirtualList window shift (which currently implies
+                    // a cache-root rerender to rebuild visible items).
+                    //
+                    // Callers can still override env explicitly via `--env KEY=...`.
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
+                        "1",
+                    );
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
                 } else if is_ui_gallery_vlist_window_boundary_retained_suite {
                     // Retained-host counterpart of the window-boundary harness. This suite is used
                     // to validate the ADR 0192 track (retained reconcile) with the same script and
@@ -2825,6 +2851,12 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
+            // Suite defaults: most suites only need a small warmup to skip startup churn, but
+            // "no shift" gates should avoid the initial VirtualList window stabilization phase.
+            if warmup_frames == 0 && is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+                warmup_frames = 32;
+            }
+
             if warmup_frames == 0
                 && (is_ui_gallery_vlist_window_boundary_suite
                     || is_ui_gallery_vlist_window_boundary_retained_suite
@@ -2989,6 +3021,7 @@ See: `docs/tracy.md`.\n";
                     || is_ui_gallery_chart_torture_suite
                     || is_ui_gallery_vlist_window_boundary_suite
                     || is_ui_gallery_vlist_window_boundary_retained_suite
+                    || is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
                     || is_components_gallery_file_tree_suite
                     || is_components_gallery_table_suite
                     || is_components_gallery_table_keep_alive_suite
@@ -3024,6 +3057,10 @@ See: `docs/tracy.md`.\n";
                     let pan_zoom_suite =
                         is_ui_gallery_canvas_cull_suite || is_ui_gallery_chart_torture_suite;
                     let ai_transcript_suite = is_ui_gallery_ai_transcript_retained_suite;
+                    let suite_wheel_scroll_test_id =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some("ui-gallery-virtual-list-row-0-label")
+                            .filter(|_| check_wheel_scroll_test_id.is_none());
                     let suite_components_gallery_stale_paint_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -3129,6 +3166,18 @@ See: `docs/tracy.md`.\n";
                         script_requires_retained_vlist_reconcile_gate
                             .then_some(0u64)
                             .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
+                    let suite_vlist_small_scroll_window_shifts_non_retained_max =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some(0u64)
+                            .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
+                    let suite_vlist_small_scroll_window_shifts_prefetch_max =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some(0u64)
+                            .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
+                    let suite_vlist_small_scroll_window_shifts_escape_max =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some(0u64)
+                            .filter(|_| check_vlist_window_shifts_escape_max.is_none());
                     let suite_vlist_policy_key_stable = components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate
                         && !check_vlist_policy_key_stable;
@@ -3197,7 +3246,9 @@ See: `docs/tracy.md`.\n";
                             .or(suite_pixels_changed_test_id),
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id.as_deref(),
+                        check_wheel_scroll_test_id
+                            .as_deref()
+                            .or(suite_wheel_scroll_test_id),
                         check_wheel_scroll_hit_changes_test_id
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
@@ -3217,11 +3268,14 @@ See: `docs/tracy.md`.\n";
                         check_vlist_window_shifts_have_prepaint_actions
                             || suite_vlist_window_shifts_have_prepaint_actions,
                         vlist_window_shifts_non_retained_max_for_script
-                            .or(suite_vlist_window_shifts_non_retained_max),
+                            .or(suite_vlist_window_shifts_non_retained_max)
+                            .or(suite_vlist_small_scroll_window_shifts_non_retained_max),
                         check_vlist_window_shifts_prefetch_max
-                            .or(suite_vlist_window_shifts_prefetch_max),
+                            .or(suite_vlist_window_shifts_prefetch_max)
+                            .or(suite_vlist_small_scroll_window_shifts_prefetch_max),
                         check_vlist_window_shifts_escape_max
-                            .or(suite_vlist_window_shifts_escape_max),
+                            .or(suite_vlist_window_shifts_escape_max)
+                            .or(suite_vlist_small_scroll_window_shifts_escape_max),
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),

@@ -768,6 +768,17 @@ topics (if/when we implement them):
         one-shot rerender to rebuild `visible_items` when the window actually changes.
       - If revisited, prefer implementing this as an explicit boundary/host (not structural mutation in prepaint) so the
         result remains diagnosable and compatible with view-cache reuse + GC invariants (ADR 0191/0193).
+      - Slice (guard rail; implemented): small scroll deltas should stay within the current window (no non-retained shifts).
+        - Script: `tools/diag-scripts/ui-gallery-virtual-list-small-scroll-no-window-shifts.json`
+        - Suite: `fretboard diag suite ui-gallery-vlist-no-window-shifts-small-scroll` (defaults: view-cache + shell + minimal vlist + known heights; warmup=32)
+        - Gates (post-run):
+          - `--check-wheel-scroll ui-gallery-virtual-list-row-0-label`
+          - `--check-vlist-window-shifts-non-retained-max 0`
+          - `--check-vlist-window-shifts-prefetch-max 0`
+          - `--check-vlist-window-shifts-escape-max 0`
+      - Slice (remaining gap): make `ui-gallery-vlist-window-boundary` pass `--check-vlist-window-shifts-non-retained-max 0`
+        by replacing the rerender-on-shift path with an explicit host boundary (ADR 0192-style), or by introducing a new boundary
+        dedicated to composable non-retained lists.
     - [x] Add staged prefetch (ADR 0190 v2 addendum): shift retained-host windows *before* `window_mismatch` and reconcile incrementally.
       - Idea: when the visible range approaches the prefetch boundary (but is still covered), shift the window by a small bounded step and request redraw.
       - Goal: turn “one big boundary tick” into a bounded stream of small reconciles, reducing worst-tick spikes.
