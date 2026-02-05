@@ -325,7 +325,7 @@ Non-goals:
             - The trailing chevron rotation is animated using the dropdown menu motion tokens
               (`open_duration_ms` / `close_duration_ms` + `easing`) so the icon aligns with overlay
               open/close motion.
-            - The trailing icon press target paints a hover/pressed state layer (icon-button-like)
+            - The trailing icon press target paints an icon-button-like state layer + bounded ripple,
               without becoming a separate focus stop.
           - Evidence:
             - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField::{trailing_icon,field_id_out}`)
