@@ -10,8 +10,9 @@
 use std::hash::Hash;
 use std::sync::Arc;
 
+pub use fret_authoring::Response;
 use fret_authoring::UiWriter;
-use fret_core::{Px, Rect, SemanticsRole};
+use fret_core::{Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::{
@@ -23,26 +24,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 pub mod prelude {
     pub use crate::{ImUi, Response, UiWriterImUiExt as _, imui, imui_build, imui_vstack};
     pub use fret_authoring::UiWriter;
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Response {
-    pub hovered: bool,
-    pub pressed: bool,
-    pub focused: bool,
-    pub clicked: bool,
-    pub changed: bool,
-    pub rect: Option<Rect>,
-}
-
-impl Response {
-    pub fn clicked(self) -> bool {
-        self.clicked
-    }
-
-    pub fn changed(self) -> bool {
-        self.changed
-    }
 }
 
 const fn fnv1a64(bytes: &[u8]) -> u64 {

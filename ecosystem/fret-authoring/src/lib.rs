@@ -10,8 +10,34 @@
 
 use std::hash::Hash;
 
+use fret_core::Rect;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
+
+/// Minimal interaction result for immediate-style authoring helpers.
+///
+/// This type is intentionally small and ecosystem-friendly. Higher-level authoring facades may
+/// extend or wrap it with richer signals (drag lifecycle, click variants, etc.), but this core
+/// contract should remain stable once third-party widget crates depend on it.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Response {
+    pub hovered: bool,
+    pub pressed: bool,
+    pub focused: bool,
+    pub clicked: bool,
+    pub changed: bool,
+    pub rect: Option<Rect>,
+}
+
+impl Response {
+    pub fn clicked(self) -> bool {
+        self.clicked
+    }
+
+    pub fn changed(self) -> bool {
+        self.changed
+    }
+}
 
 /// Minimal authoring surface for immediate-style composition.
 ///
