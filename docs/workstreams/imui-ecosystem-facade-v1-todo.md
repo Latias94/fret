@@ -131,7 +131,7 @@ Exit criteria:
 - [x] IMUIECO-float-032d Add bring-to-front z-order management for floating windows (ImGui-style activation).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_layer`, `KEY_FLOAT_WINDOW_ACTIVATE`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_layer_bring_to_front_updates_hit_test_order`).
-- [x] IMUIECO-float-032e Add minimal resize handles for floating windows (v1: edges + corners; no diagonal cursor yet).
+- [x] IMUIECO-float-032e Add minimal resize handles for floating windows (v1: edges + corners; diagonal cursor supported; min/max configurable).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window_resizable`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_resizes_when_dragging_corner_handle`).
 - [ ] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
