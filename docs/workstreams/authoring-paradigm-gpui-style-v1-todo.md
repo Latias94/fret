@@ -89,9 +89,14 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Document and enforce query key conventions (namespace + structured key).
-- `[ ]` Add optional retry/backoff policy and error taxonomy helpers.
-- `[ ]` Add `prefetch` and explicit `refetch` APIs (TanStack Query parity subset).
+- `[x]` Document query key conventions (namespace + structured key).
+  - Evidence: `docs/query-key-conventions.md`
+- `[ ]` Add debug-only guardrails for keying misuse (optional):
+  - warn on suspicious namespaces (too generic / missing version suffix),
+  - consider optional debug key labels for diagnostics.
+- `[ ]` Add optional retry/backoff helpers and an error taxonomy.
+- `[x]` Add `prefetch` and explicit `refetch` APIs (TanStack Query parity subset).
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
 
 ## Milestone M4 — Async ecosystem adapters (tokio/wasm without kernel coupling)
 

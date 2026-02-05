@@ -103,7 +103,8 @@ Implementation:
 Open adoption work:
 
 - migrate “hand-rolled async caches” in ecosystem crates to `fret-query` (starting with demos)
-- define a consistent keying story (`QueryKey::new(namespace, key_hash)`)
+- define a consistent keying story (`QueryKey::new(namespace, &key)`); see
+  `docs/query-key-conventions.md`
 
 ## Typed message routing (remove string parsing in demos/templates)
 

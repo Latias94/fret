@@ -9,6 +9,17 @@
 //! - query state is stored in a `Model<QueryState<T>>` so UI can observe it,
 //! - background work produces typed values, marshaled back via an inbox,
 //! - completion applies only if the inflight token still matches (stale results are ignored).
+//!
+//! ## Query keys
+//!
+//! Keys are typed (`QueryKey<T>`) and consist of:
+//! - a `'static` namespace (used for bulk invalidation),
+//! - a 64-bit stable hash of a structured key value.
+//!
+//! Recommended conventions:
+//! - Use a dot-separated namespace like `"my_crate.feature.query_name.v1"`.
+//! - Ensure the hashed key value is deterministic and only contains the parameters that affect
+//!   the fetch result (avoid `HashMap` iteration order, pointer addresses, random IDs, etc.).
 
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
@@ -329,6 +340,46 @@ impl QueryClient {
         }
 
         QueryHandle { key, model }
+    }
+
+    /// Prefetch a query into the cache.
+    ///
+    /// This is semantically equivalent to calling [`QueryClient::use_query`] at least once, but is
+    /// intended for non-render paths (e.g. hover prefetch, navigation intent, service warmup).
+    pub fn prefetch<H, T>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Result<T, Arc<str>> + Send + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+    {
+        self.use_query(app, window, key, policy, fetch)
+    }
+
+    /// Force a refetch for the given key (even if the cached value is still fresh).
+    ///
+    /// Note: inflight behavior is still controlled by [`QueryPolicy`]:
+    /// - if `dedupe_inflight=true`, an inflight request will not be duplicated.
+    /// - if `cancel_mode=CancelInFlight`, the previous inflight task is canceled before starting.
+    pub fn refetch<H, T>(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        key: QueryKey<T>,
+        policy: QueryPolicy,
+        fetch: impl FnOnce(CancellationToken) -> Result<T, Arc<str>> + Send + 'static,
+    ) -> QueryHandle<T>
+    where
+        H: UiHost,
+        T: Any + Send + Sync + 'static,
+    {
+        self.invalidate(app, key);
+        self.use_query(app, window, key, policy, fetch)
     }
 
     pub fn invalidate<H, T>(&mut self, _app: &mut H, key: QueryKey<T>)
@@ -797,6 +848,53 @@ mod tests {
 
         let tasks = dispatcher.take_background();
         assert_eq!(tasks.len(), 1);
+    }
+
+    #[test]
+    fn refetch_forces_fetch_when_fresh() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test", &999u32);
+        let policy = QueryPolicy {
+            stale_time: Duration::from_secs(60),
+            ..Default::default()
+        };
+
+        let handle = with_query_client(&mut app, |client, app| {
+            client.use_query(app, window, key, policy.clone(), |_token| Ok(1u32))
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
+        assert_eq!(state.status, QueryStatus::Success);
+        assert_eq!(state.data.as_deref().copied(), Some(1));
+
+        with_query_client(&mut app, |client, app| {
+            let _ = client.refetch(app, window, key, policy.clone(), |_token| Ok(2u32));
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
+        assert_eq!(state.status, QueryStatus::Success);
+        assert_eq!(state.data.as_deref().copied(), Some(2));
     }
 
     #[test]
