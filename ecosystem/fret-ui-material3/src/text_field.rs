@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
+    Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
     TextWrap, Transform2D,
 };
 use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
@@ -810,6 +810,12 @@ impl TextField {
                                 let input_id_for_focus = input_id;
                                 let handler = on_trailing_icon_pointer_down.clone();
                                 let enabled = !disabled;
+                                let hover_opacity = theme
+                                    .number_by_key("md.sys.state.hover.state-layer-opacity")
+                                    .unwrap_or(0.08);
+                                let pressed_opacity = theme
+                                    .number_by_key("md.sys.state.pressed.state-layer-opacity")
+                                    .unwrap_or(0.1);
 
                                 let mut layout = fret_ui::element::LayoutStyle::default();
                                 layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -832,7 +838,7 @@ impl TextField {
                                         },
                                         ..Default::default()
                                     },
-                                    move |cx, _state| {
+                                    move |cx, state| {
                                         if enabled {
                                             cx.pressable_on_pointer_down(Arc::new(
                                                 move |host, action_cx, down: PointerDownCx| {
@@ -845,13 +851,30 @@ impl TextField {
                                             ));
                                         }
 
+                                        let state_layer = if enabled && state.pressed {
+                                            Some(alpha_mul(color, pressed_opacity))
+                                        } else if enabled && state.hovered {
+                                            Some(alpha_mul(color, hover_opacity))
+                                        } else {
+                                            None
+                                        };
+
+                                        let state_layer = {
+                                            let mut props = ContainerProps::default();
+                                            props.layout.size.width = Length::Fill;
+                                            props.layout.size.height = Length::Fill;
+                                            props.background = state_layer;
+                                            props.corner_radii = Corners::all(Px(24.0));
+                                            cx.container(props, |_cx| Vec::new())
+                                        };
+
                                         let mut row = FlexProps::default();
                                         row.direction = Axis::Horizontal;
                                         row.justify = MainAlign::Center;
                                         row.align = CrossAlign::Center;
                                         row.layout.size.width = Length::Fill;
                                         row.layout.size.height = Length::Fill;
-                                        vec![cx.flex(row, move |_cx| vec![icon_el])]
+                                        vec![state_layer, cx.flex(row, move |_cx| vec![icon_el])]
                                     },
                                 )
                             });
