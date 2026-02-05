@@ -1926,81 +1926,128 @@ impl<'a, TData> Table<'a, TData> {
         self.pinned_total_sizes().2
     }
 
-    /// TanStack-aligned: return the start offset (x) for a column within a pinned region.
+    /// TanStack-aligned: return the start offset (x) for a column within a sizing region.
+    ///
+    /// Notes:
+    /// - For `All`, this is `column.getStart()` over TanStack's `_getVisibleLeafColumns(table)`.
+    /// - For `Left`/`Center`/`Right`, this corresponds to `column.getStart(position)` with
+    ///   fixture parity gating that only records values for columns that are pinned to that
+    ///   region (or are in the center region).
+    /// - When the column is not present in the visible list for the given region (e.g. hidden),
+    ///   TanStack's `getIndex` returns `-1`, which results in `slice(0, -1)` behavior. We mirror
+    ///   that by summing all but the last column in that region for `start`, and summing the
+    ///   entire region for `after`.
     pub fn column_start(&self, column_id: &str, region: super::ColumnSizingRegion) -> Option<f32> {
         let col = self.column(column_id)?;
         let sizing = &self.state.column_sizing;
 
+        let pin_pos = self.column_pin_position(column_id);
         let (left, center, right) = self.pinned_visible_columns();
-        let mut offset = 0.0;
+
+        fn tanstack_start_for<'a, TData: 'a>(
+            cols: impl IntoIterator<Item = &'a super::ColumnDef<TData>>,
+            target: &super::ColumnDef<TData>,
+            sizing: &super::ColumnSizingState,
+        ) -> f32 {
+            let cols: Vec<&super::ColumnDef<TData>> = cols.into_iter().collect();
+            let idx = cols
+                .iter()
+                .position(|c| c.id.as_ref() == target.id.as_ref())
+                .map(|i| i as isize)
+                .unwrap_or(-1);
+
+            let end = if idx == -1 {
+                cols.len().saturating_sub(1)
+            } else {
+                idx as usize
+            };
+
+            let mut sum = 0.0;
+            for c in cols.into_iter().take(end) {
+                sum += super::resolved_column_size(sizing, c);
+            }
+            sum
+        }
 
         match region {
-            super::ColumnSizingRegion::All => {
-                for c in left.into_iter().chain(center).chain(right) {
-                    if c.id.as_ref() == col.id.as_ref() {
-                        return Some(offset);
-                    }
-                    offset += super::resolved_column_size(sizing, c);
-                }
-            }
+            super::ColumnSizingRegion::All => Some(tanstack_start_for(
+                left.into_iter().chain(center).chain(right),
+                col,
+                sizing,
+            )),
             super::ColumnSizingRegion::Left => {
-                for c in left {
-                    if c.id.as_ref() == col.id.as_ref() {
-                        return Some(offset);
-                    }
-                    offset += super::resolved_column_size(sizing, c);
+                if pin_pos != Some(super::ColumnPinPosition::Left) {
+                    return None;
                 }
+                Some(tanstack_start_for(left, col, sizing))
             }
             super::ColumnSizingRegion::Center => {
-                for c in center {
-                    if c.id.as_ref() == col.id.as_ref() {
-                        return Some(offset);
-                    }
-                    offset += super::resolved_column_size(sizing, c);
+                if pin_pos.is_some() {
+                    return None;
                 }
+                Some(tanstack_start_for(center, col, sizing))
             }
             super::ColumnSizingRegion::Right => {
-                for c in right {
-                    if c.id.as_ref() == col.id.as_ref() {
-                        return Some(offset);
-                    }
-                    offset += super::resolved_column_size(sizing, c);
+                if pin_pos != Some(super::ColumnPinPosition::Right) {
+                    return None;
                 }
+                Some(tanstack_start_for(right, col, sizing))
             }
         }
-        None
     }
 
-    /// TanStack-aligned: return the after offset (remaining width) for a column within a pinned region.
+    /// TanStack-aligned: return the after offset (remaining width) for a column within a sizing region.
     pub fn column_after(&self, column_id: &str, region: super::ColumnSizingRegion) -> Option<f32> {
         let col = self.column(column_id)?;
         let sizing = &self.state.column_sizing;
 
+        let pin_pos = self.column_pin_position(column_id);
         let (left, center, right) = self.pinned_visible_columns();
 
-        fn after_for<'a, TData: 'a>(
+        fn tanstack_after_for<'a, TData: 'a>(
             cols: impl IntoIterator<Item = &'a super::ColumnDef<TData>>,
             target: &super::ColumnDef<TData>,
             sizing: &super::ColumnSizingState,
-        ) -> Option<f32> {
+        ) -> f32 {
             let cols: Vec<&super::ColumnDef<TData>> = cols.into_iter().collect();
-            let index = cols
+            let idx = cols
                 .iter()
-                .position(|c| c.id.as_ref() == target.id.as_ref())?;
+                .position(|c| c.id.as_ref() == target.id.as_ref())
+                .map(|i| i as isize)
+                .unwrap_or(-1);
+
+            let start = (idx + 1).max(0) as usize;
             let mut sum = 0.0;
-            for c in cols.into_iter().skip(index + 1) {
+            for c in cols.into_iter().skip(start) {
                 sum += super::resolved_column_size(sizing, c);
             }
-            Some(sum)
+            sum
         }
 
         match region {
-            super::ColumnSizingRegion::All => {
-                after_for(left.into_iter().chain(center).chain(right), col, sizing)
+            super::ColumnSizingRegion::All => Some(tanstack_after_for(
+                left.into_iter().chain(center).chain(right),
+                col,
+                sizing,
+            )),
+            super::ColumnSizingRegion::Left => {
+                if pin_pos != Some(super::ColumnPinPosition::Left) {
+                    return None;
+                }
+                Some(tanstack_after_for(left, col, sizing))
             }
-            super::ColumnSizingRegion::Left => after_for(left, col, sizing),
-            super::ColumnSizingRegion::Center => after_for(center, col, sizing),
-            super::ColumnSizingRegion::Right => after_for(right, col, sizing),
+            super::ColumnSizingRegion::Center => {
+                if pin_pos.is_some() {
+                    return None;
+                }
+                Some(tanstack_after_for(center, col, sizing))
+            }
+            super::ColumnSizingRegion::Right => {
+                if pin_pos != Some(super::ColumnPinPosition::Right) {
+                    return None;
+                }
+                Some(tanstack_after_for(right, col, sizing))
+            }
         }
     }
 

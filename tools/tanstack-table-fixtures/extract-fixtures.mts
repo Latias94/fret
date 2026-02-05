@@ -334,7 +334,9 @@ type TanStackOptions = {
   __onColumnSizingInfoChange?: "noop"
   __onExpandedChange?: "noop"
   __onPaginationChange?: "noop"
+  __onColumnVisibilityChange?: "noop"
   __onColumnPinningChange?: "noop"
+  __onColumnOrderChange?: "noop"
   __onRowPinningChange?: "noop"
   __onRowSelectionChange?: "noop"
 }
@@ -1685,6 +1687,9 @@ async function main(): Promise<void> {
         currentState.pagination = next ?? currentState.pagination
       },
       onColumnVisibilityChange: (updater: any) => {
+        if (options.__onColumnVisibilityChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function"
             ? updater(currentState.columnVisibility)
@@ -1716,6 +1721,9 @@ async function main(): Promise<void> {
         currentState.columnPinning = next ?? { left: [], right: [] }
       },
       onColumnOrderChange: (updater: any) => {
+        if (options.__onColumnOrderChange === "noop") {
+          return
+        }
         const next =
           typeof updater === "function" ? updater(currentState.columnOrder) : updater
         currentState.columnOrder = next ?? []
@@ -3859,6 +3867,7 @@ function snapshotColumnPinning(
       state,
       expect: {
         ...snapshotForState(options, state),
+        ...snapshotColumnSizing(buildTable(options, state).table),
         core_model: coreModelForState(options, state),
       },
     })
@@ -3894,6 +3903,15 @@ function snapshotColumnPinning(
       mkActions("visord_toggle_column_a_off", base, {}, [
         { type: "toggleColumnVisibility", column_id: "a", value: false },
       ]),
+      mkActions("visord_toggle_column_a_off_enable_hiding_false_noops", { enableHiding: false }, {}, [
+        { type: "toggleColumnVisibility", column_id: "a", value: false },
+      ]),
+      mkActions(
+        "visord_toggle_column_a_off_on_column_visibility_change_noop_ignores",
+        { ...base, __onColumnVisibilityChange: "noop" },
+        {},
+        [{ type: "toggleColumnVisibility", column_id: "a", value: false }],
+      ),
       mkActions("visord_toggle_all_off_keeps_non_hideable", base, {}, [
         { type: "toggleAllColumnsVisible", value: false },
       ]),
@@ -3906,6 +3924,12 @@ function snapshotColumnPinning(
       mkActions("visord_set_column_order_reorders", base, {}, [
         { type: "setColumnOrder", order: ["c", "a", "b"] },
       ]),
+      mkActions(
+        "visord_set_column_order_on_column_order_change_noop_ignores",
+        { ...base, __onColumnOrderChange: "noop" },
+        {},
+        [{ type: "setColumnOrder", order: ["c", "a", "b"] }],
+      ),
       mkActions("visord_set_column_order_with_duplicates", base, {}, [
         { type: "setColumnOrder", order: ["c", "a", "c", "b"] },
       ]),

@@ -398,15 +398,21 @@ ColumnDef keys referenced by upstream feature implementations:
       `column_pinning_action_reset_column_pinning_default_true_clears`)
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_pinning_parity.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::reset_column_pinning`)
-- [~] HTP-colvis-010 Align column visibility option gates and hooks:
+- [x] HTP-colvis-010 Align column visibility option gates and hooks:
   - `enableHiding`, `onColumnVisibilityChange`.
   - Parity-gated (state transition outcomes + derived visible leaf order): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`.
-- [~] HTP-colord-010 Align column ordering hook:
+  - Covered: controlled-hook noop semantics (`onColumnVisibilityChange` ignores updater).
+    - Fixture snapshots: `visord_toggle_column_a_off_on_column_visibility_change_noop_ignores`
+    - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnVisibilityChange`)
+- [x] HTP-colord-010 Align column ordering hook:
   - `onColumnOrderChange` (state transition outcomes + derived leaf order).
   - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs`.
   - Remaining: `groupedColumnMode` interactions (covered by future `grouping` gates).
+  - Covered: controlled-hook noop semantics (`onColumnOrderChange` ignores updater).
+    - Fixture snapshots: `visord_set_column_order_on_column_order_change_noop_ignores`
+    - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnOrderChange`)
 
 ---
 
