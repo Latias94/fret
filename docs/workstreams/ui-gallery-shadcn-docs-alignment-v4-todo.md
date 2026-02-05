@@ -92,7 +92,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] navigation-menu
 - [x] pagination — examples mirrored (Demo/Simple/Icons Only/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_pagination`, `ecosystem/fret-ui-shadcn/src/pagination.rs`)
 - [x] popover — examples mirrored (Demo/Basic/Align/With Form/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_popover`, `ecosystem/fret-ui-shadcn/src/popover.rs`)
-- [ ] progress
+- [x] progress — examples mirrored (Demo/Label/Controlled/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_progress`, `ecosystem/fret-ui-shadcn/src/progress.rs`)
 - [ ] radio-group
 - [ ] resizable
 - [ ] scroll-area
