@@ -309,8 +309,14 @@ ColumnDef keys referenced by upstream feature implementations:
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::should_auto_reset_page_index`, `Table::reset_page_index`)
   - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`mkActionsAutoReset` + snapshots)
-- [ ] HTP-page-030 Align `paginateExpandedRows` interactions with expansion and page bounds.
-  - Note: TanStack `getPaginationRowModel` can yield duplicated `flatRows` entries when `paginateExpandedRows=false`.
+- [x] HTP-page-030 Align `paginateExpandedRows` interactions with expansion and page bounds.
+  - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs`.
+  - Covered: TanStack-specific `flatRows` duplication when `paginateExpandedRows=false`
+    (`expanding_paginate_expanded_rows_false_expands_within_page` snapshot).
+  - Covered: `pageCount`/`rowCount`/page bounds derived from `getPrePaginationRowModel()` under
+    `paginateExpandedRows` true/false (fixture asserts `page_count`, `row_count`, `can_next_page`,
+    `page_options`).
 - [~] HTP-sel-010 Align selection state shape and semantics (including sub-row selection defaults).
   - Done (parity-gated): `getSelectedRowModel` / `getFilteredSelectedRowModel` / `getGroupedSelectedRowModel` equivalents,
     plus basic toggle behaviors for flat rows (including `enableMultiRowSelection=false` clearing semantics).

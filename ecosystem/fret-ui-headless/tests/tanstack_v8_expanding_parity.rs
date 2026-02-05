@@ -34,6 +34,16 @@ struct FixtureExpect {
     paginated: RowModelSnapshot,
     row_model: RowModelSnapshot,
     #[serde(default)]
+    page_count: i32,
+    #[serde(default)]
+    row_count: usize,
+    #[serde(default)]
+    can_previous_page: bool,
+    #[serde(default)]
+    can_next_page: bool,
+    #[serde(default)]
+    page_options: Vec<usize>,
+    #[serde(default)]
     is_all_rows_expanded: bool,
     #[serde(default)]
     is_some_rows_expanded: bool,
@@ -291,6 +301,37 @@ fn tanstack_v8_expanding_parity() {
         assert_eq!(
             paginated.flat, snap.expect.paginated.flat,
             "snapshot {} paginated flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.page_count(),
+            snap.expect.page_count,
+            "snapshot {} page_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.row_count(),
+            snap.expect.row_count,
+            "snapshot {} row_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_previous_page(),
+            snap.expect.can_previous_page,
+            "snapshot {} can_previous_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_next_page(),
+            snap.expect.can_next_page,
+            "snapshot {} can_next_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.page_options(),
+            snap.expect.page_options,
+            "snapshot {} page_options mismatch",
             snap.id
         );
 
