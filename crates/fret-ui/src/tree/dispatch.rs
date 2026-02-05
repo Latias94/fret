@@ -901,16 +901,24 @@ impl<H: UiHost> UiTree<H> {
         // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
         // hit-testing.
         if matches!(event, Event::Pointer(_)) {
+            let started = self.debug_enabled.then(Instant::now);
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
             );
+            if let Some(started) = started {
+                self.debug_stats.dispatch_scroll_handle_invalidation_time += started.elapsed();
+            }
         }
 
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
+        let started = self.debug_enabled.then(Instant::now);
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
+        if let Some(started) = started {
+            self.debug_stats.dispatch_active_layers_time += started.elapsed();
+        }
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
         // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
@@ -960,6 +968,7 @@ impl<H: UiHost> UiTree<H> {
         self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
+        let started = self.debug_enabled.then(Instant::now);
         let caps = app
             .global::<PlatformCapabilities>()
             .cloned()
@@ -1009,6 +1018,9 @@ impl<H: UiHost> UiTree<H> {
                     },
                 );
             }
+        }
+        if let Some(started) = started {
+            self.debug_stats.dispatch_input_context_time += started.elapsed();
         }
 
         let mut invalidation_visited = std::mem::take(&mut self.invalidation_dedup);
@@ -1652,6 +1664,7 @@ impl<H: UiHost> UiTree<H> {
 
         if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
             if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                let started = self.debug_enabled.then(Instant::now);
                 self.dispatch_pointer_move_layer_observers(
                     app,
                     services,
@@ -1661,6 +1674,10 @@ impl<H: UiHost> UiTree<H> {
                     &mut needs_redraw,
                     invalidation_visited,
                 );
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_pointer_move_layer_observers_time +=
+                        started.elapsed();
+                }
             }
             if needs_redraw {
                 self.request_redraw_coalesced(app);
@@ -1673,8 +1690,12 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(hit) = pointer_hit
         {
+            let started = self.debug_enabled.then(Instant::now);
             cursor_choice = self.cursor_icon_query_for_pointer_hit(hit, &input_ctx, event);
             cursor_choice_from_query = cursor_choice.is_some();
+            if let Some(started) = started {
+                self.debug_stats.dispatch_cursor_query_time += started.elapsed();
+            }
         }
 
         if !suppress_pointer_dispatch
@@ -1686,11 +1707,15 @@ impl<H: UiHost> UiTree<H> {
                     | Event::InternalDrag(_)
             )
         {
+            let chain_started = self.debug_enabled.then(Instant::now);
             let chain = if event_position(event).is_some() {
                 self.build_mapped_event_chain(node_id, event)
             } else {
                 self.build_unmapped_event_chain(node_id, event)
             };
+            if let Some(started) = chain_started {
+                self.debug_stats.dispatch_event_chain_build_time += started.elapsed();
+            }
             let should_run_capture_phase = match event {
                 Event::Pointer(PointerEvent::Down { .. })
                 | Event::Pointer(PointerEvent::Up { .. })
@@ -1704,6 +1729,7 @@ impl<H: UiHost> UiTree<H> {
             };
             let mut stopped_in_capture = false;
             if should_run_capture_phase {
+                let started = self.debug_enabled.then(Instant::now);
                 let mut capture_ctx = input_ctx.clone();
                 capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
@@ -1820,9 +1846,13 @@ impl<H: UiHost> UiTree<H> {
                         break;
                     }
                 }
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_widget_capture_time += started.elapsed();
+                }
             }
 
             if !stopped_in_capture {
+                let started = self.debug_enabled.then(Instant::now);
                 let mut bubble_ctx = input_ctx.clone();
                 bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
@@ -1949,6 +1979,9 @@ impl<H: UiHost> UiTree<H> {
                     if captured_now.is_some() || stop_propagation {
                         break;
                     }
+                }
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_widget_bubble_time += started.elapsed();
                 }
             }
         } else {

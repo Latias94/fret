@@ -6193,6 +6193,22 @@ pub struct UiFrameStatsV1 {
     pub hit_test_fallback_traversal_time_us: u64,
     #[serde(default)]
     pub dispatch_hover_update_time_us: u64,
+    #[serde(default)]
+    pub dispatch_scroll_handle_invalidation_time_us: u64,
+    #[serde(default)]
+    pub dispatch_active_layers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_input_context_time_us: u64,
+    #[serde(default)]
+    pub dispatch_event_chain_build_time_us: u64,
+    #[serde(default)]
+    pub dispatch_widget_capture_time_us: u64,
+    #[serde(default)]
+    pub dispatch_widget_bubble_time_us: u64,
+    #[serde(default)]
+    pub dispatch_cursor_query_time_us: u64,
+    #[serde(default)]
+    pub dispatch_pointer_move_layer_observers_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6481,6 +6497,19 @@ impl UiFrameStatsV1 {
             hit_test_fallback_traversal_time_us: stats.hit_test_fallback_traversal_time.as_micros()
                 as u64,
             dispatch_hover_update_time_us: stats.dispatch_hover_update_time.as_micros() as u64,
+            dispatch_scroll_handle_invalidation_time_us: stats
+                .dispatch_scroll_handle_invalidation_time
+                .as_micros() as u64,
+            dispatch_active_layers_time_us: stats.dispatch_active_layers_time.as_micros() as u64,
+            dispatch_input_context_time_us: stats.dispatch_input_context_time.as_micros() as u64,
+            dispatch_event_chain_build_time_us: stats.dispatch_event_chain_build_time.as_micros()
+                as u64,
+            dispatch_widget_capture_time_us: stats.dispatch_widget_capture_time.as_micros() as u64,
+            dispatch_widget_bubble_time_us: stats.dispatch_widget_bubble_time.as_micros() as u64,
+            dispatch_cursor_query_time_us: stats.dispatch_cursor_query_time.as_micros() as u64,
+            dispatch_pointer_move_layer_observers_time_us: stats
+                .dispatch_pointer_move_layer_observers_time
+                .as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
             prepaint_nodes_visited: stats.prepaint_nodes_visited,

@@ -238,6 +238,22 @@ pub struct UiDebugFrameStats {
     pub hit_test_fallback_traversal_time: Duration,
     /// Total wall time spent updating hover state from pointer hit-testing in the current frame.
     pub dispatch_hover_update_time: Duration,
+    /// Total wall time spent applying scroll-handle binding invalidations during event dispatch.
+    pub dispatch_scroll_handle_invalidation_time: Duration,
+    /// Total wall time spent computing active input layers and enforcing modal barrier scope.
+    pub dispatch_active_layers_time: Duration,
+    /// Total wall time spent constructing and publishing the window input context snapshot.
+    pub dispatch_input_context_time: Duration,
+    /// Total wall time spent building the event chain during dispatch.
+    pub dispatch_event_chain_build_time: Duration,
+    /// Total wall time spent delivering capture-phase widget events during dispatch.
+    pub dispatch_widget_capture_time: Duration,
+    /// Total wall time spent delivering bubble-phase widget events during dispatch.
+    pub dispatch_widget_bubble_time: Duration,
+    /// Total wall time spent computing the cursor icon from the pointer hit during dispatch.
+    pub dispatch_cursor_query_time: Duration,
+    /// Total wall time spent dispatching pointer-move layer observers (when pointer dispatch is suppressed).
+    pub dispatch_pointer_move_layer_observers_time: Duration,
     pub layout_time: Duration,
     pub layout_collect_roots_time: Duration,
     pub layout_invalidate_scroll_handle_bindings_time: Duration,
@@ -1886,6 +1902,14 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.hit_test_candidate_self_only_time = Duration::default();
         self.debug_stats.hit_test_fallback_traversal_time = Duration::default();
         self.debug_stats.dispatch_hover_update_time = Duration::default();
+        self.debug_stats.dispatch_scroll_handle_invalidation_time = Duration::default();
+        self.debug_stats.dispatch_active_layers_time = Duration::default();
+        self.debug_stats.dispatch_input_context_time = Duration::default();
+        self.debug_stats.dispatch_event_chain_build_time = Duration::default();
+        self.debug_stats.dispatch_widget_capture_time = Duration::default();
+        self.debug_stats.dispatch_widget_bubble_time = Duration::default();
+        self.debug_stats.dispatch_cursor_query_time = Duration::default();
+        self.debug_stats.dispatch_pointer_move_layer_observers_time = Duration::default();
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();

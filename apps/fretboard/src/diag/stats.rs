@@ -228,6 +228,15 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_time_us: u64,
     pub(super) dispatch_time_us: u64,
     pub(super) hit_test_time_us: u64,
+    pub(super) dispatch_hover_update_time_us: u64,
+    pub(super) dispatch_scroll_handle_invalidation_time_us: u64,
+    pub(super) dispatch_active_layers_time_us: u64,
+    pub(super) dispatch_input_context_time_us: u64,
+    pub(super) dispatch_event_chain_build_time_us: u64,
+    pub(super) dispatch_widget_capture_time_us: u64,
+    pub(super) dispatch_widget_bubble_time_us: u64,
+    pub(super) dispatch_cursor_query_time_us: u64,
+    pub(super) dispatch_pointer_move_layer_observers_time_us: u64,
     pub(super) dispatch_events: u32,
     pub(super) hit_test_queries: u32,
     pub(super) hit_test_bounds_tree_queries: u32,
@@ -1127,6 +1136,42 @@ impl BundleStatsReport {
                 obj.insert(
                     "hit_test_time_us".to_string(),
                     Value::from(row.hit_test_time_us),
+                );
+                obj.insert(
+                    "dispatch_hover_update_time_us".to_string(),
+                    Value::from(row.dispatch_hover_update_time_us),
+                );
+                obj.insert(
+                    "dispatch_scroll_handle_invalidation_time_us".to_string(),
+                    Value::from(row.dispatch_scroll_handle_invalidation_time_us),
+                );
+                obj.insert(
+                    "dispatch_active_layers_time_us".to_string(),
+                    Value::from(row.dispatch_active_layers_time_us),
+                );
+                obj.insert(
+                    "dispatch_input_context_time_us".to_string(),
+                    Value::from(row.dispatch_input_context_time_us),
+                );
+                obj.insert(
+                    "dispatch_event_chain_build_time_us".to_string(),
+                    Value::from(row.dispatch_event_chain_build_time_us),
+                );
+                obj.insert(
+                    "dispatch_widget_capture_time_us".to_string(),
+                    Value::from(row.dispatch_widget_capture_time_us),
+                );
+                obj.insert(
+                    "dispatch_widget_bubble_time_us".to_string(),
+                    Value::from(row.dispatch_widget_bubble_time_us),
+                );
+                obj.insert(
+                    "dispatch_cursor_query_time_us".to_string(),
+                    Value::from(row.dispatch_cursor_query_time_us),
+                );
+                obj.insert(
+                    "dispatch_pointer_move_layer_observers_time_us".to_string(),
+                    Value::from(row.dispatch_pointer_move_layer_observers_time_us),
                 );
                 obj.insert(
                     "dispatch_events".to_string(),
@@ -4149,6 +4194,42 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("hit_test_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let dispatch_hover_update_time_us = stats
+                .and_then(|m| m.get("dispatch_hover_update_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_scroll_handle_invalidation_time_us = stats
+                .and_then(|m| m.get("dispatch_scroll_handle_invalidation_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_active_layers_time_us = stats
+                .and_then(|m| m.get("dispatch_active_layers_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_input_context_time_us = stats
+                .and_then(|m| m.get("dispatch_input_context_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_event_chain_build_time_us = stats
+                .and_then(|m| m.get("dispatch_event_chain_build_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_widget_capture_time_us = stats
+                .and_then(|m| m.get("dispatch_widget_capture_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_widget_bubble_time_us = stats
+                .and_then(|m| m.get("dispatch_widget_bubble_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_cursor_query_time_us = stats
+                .and_then(|m| m.get("dispatch_cursor_query_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let dispatch_pointer_move_layer_observers_time_us = stats
+                .and_then(|m| m.get("dispatch_pointer_move_layer_observers_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let dispatch_events = stats
                 .and_then(|m| m.get("dispatch_events"))
                 .and_then(|v| v.as_u64())
@@ -4749,6 +4830,15 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_time_us,
                 dispatch_time_us,
                 hit_test_time_us,
+                dispatch_hover_update_time_us,
+                dispatch_scroll_handle_invalidation_time_us,
+                dispatch_active_layers_time_us,
+                dispatch_input_context_time_us,
+                dispatch_event_chain_build_time_us,
+                dispatch_widget_capture_time_us,
+                dispatch_widget_bubble_time_us,
+                dispatch_cursor_query_time_us,
+                dispatch_pointer_move_layer_observers_time_us,
                 dispatch_events,
                 hit_test_queries,
                 hit_test_bounds_tree_queries,
