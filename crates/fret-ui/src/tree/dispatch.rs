@@ -2603,6 +2603,7 @@ impl<H: UiHost> UiTree<H> {
             //
             // We intentionally use observer dispatch to avoid allowing the previous target to
             // mutate focus/capture/cursor routing on the transition frame.
+            let started = self.debug_enabled.then(Instant::now);
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
@@ -2611,6 +2612,9 @@ impl<H: UiHost> UiTree<H> {
                 event,
                 invalidation_visited,
             );
+            if let Some(started) = started {
+                self.debug_stats.dispatch_synth_hover_observer_time += started.elapsed();
+            }
             needs_redraw = true;
         }
 

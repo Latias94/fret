@@ -254,6 +254,8 @@ pub struct UiDebugFrameStats {
     pub dispatch_cursor_query_time: Duration,
     /// Total wall time spent dispatching pointer-move layer observers (when pointer dispatch is suppressed).
     pub dispatch_pointer_move_layer_observers_time: Duration,
+    /// Total wall time spent dispatching the synthetic hover-move observer chain when the pointer crosses targets.
+    pub dispatch_synth_hover_observer_time: Duration,
     pub layout_time: Duration,
     pub layout_collect_roots_time: Duration,
     pub layout_invalidate_scroll_handle_bindings_time: Duration,
@@ -1910,6 +1912,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.dispatch_widget_bubble_time = Duration::default();
         self.debug_stats.dispatch_cursor_query_time = Duration::default();
         self.debug_stats.dispatch_pointer_move_layer_observers_time = Duration::default();
+        self.debug_stats.dispatch_synth_hover_observer_time = Duration::default();
         self.debug_stats.layout_roots_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();
