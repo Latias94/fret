@@ -377,6 +377,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     menu_bar: &MenuBar,
     opts: MenubarFromRuntimeOptions,
 ) -> (AnyElement, InWindowMenubarFocusHandle) {
+    let normalized_menu_bar = menu_bar.clone().normalized();
     let group = cx.root_id();
 
     let theme = Theme::global(&*cx.app).clone();
@@ -393,7 +394,7 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
     let gating =
         best_effort_snapshot_for_window_with_input_ctx_fallback(cx.app, cx.window, fallback_ctx);
     let shortcut_base_ctx = menu_shortcut_display_input_context(&gating, opts.platform);
-    let menus: Vec<InWindowMenu> = menu_bar
+    let menus: Vec<InWindowMenu> = normalized_menu_bar
         .menus
         .iter()
         .enumerate()

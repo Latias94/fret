@@ -56,16 +56,14 @@ Exit criteria:
 - [x] MENU-MVP0-kbd-004 Keyboard-open initial focus prefers first enabled item, otherwise content root.
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (first-item focus tracking)
 
-- [ ] MENU-MVP0-sanitize-010 Centralize menu normalization so OS and in-window share the same sanitize rules.
-  - Candidate locations:
-    - `crates/fret-runtime/src/menu.rs` (pure data transforms), or
-    - `crates/fret-app` (consumer-side helper), or
-    - `ecosystem/fret-kit` (bridge helper used by multiple surfaces).
-  - Decision needed: which layer owns “sanitize” as a contract.
-- [ ] MENU-MVP0-parity-011 Ensure Windows/macOS OS menubar mapping also applies sanitize consistently (no trailing separators, no empty submenus).
-  - Evidence target: `crates/fret-launch/src/runner/desktop/windows_menu.rs`, `crates/fret-launch/src/runner/desktop/macos_menu.rs`
-- [ ] MENU-MVP0-gating-012 Add a unit test that asserts widget-scope action availability disables a menu item consistently across surfaces.
-  - Evidence target: `crates/fret-runtime/src/window_command_gating.rs` + a minimal menu surface test harness.
+- [x] MENU-MVP0-sanitize-010 Centralize menu normalization so OS and in-window share the same sanitize rules.
+  - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuBar::normalize`, `normalize_menu_items`)
+  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (normalizes before building in-window entries)
+- [x] MENU-MVP0-parity-011 Ensure Windows/macOS OS menubar mapping also applies sanitize consistently (no trailing separators, no empty submenus).
+  - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` (normalizes before building `HMENU`)
+  - Evidence: `crates/fret-launch/src/runner/desktop/macos_menu.rs` (normalizes before building `NSMenu`)
+- [x] MENU-MVP0-gating-012 Add a unit test that asserts widget-scope action availability disables a menu item consistently across surfaces.
+  - Evidence: `crates/fret-runtime/src/window_command_gating.rs` (`action_availability_disables_widget_scope_commands_only`)
 
 ---
 
@@ -137,4 +135,3 @@ Exit criteria:
 
 - [ ] MENU-MVP0-docs-900 Pick the canonical layer for menu normalization (see `MENU-MVP0-sanitize-010`).
 - [ ] MENU-MVP1-docs-901 Decide Alt activation behavior and document trade-offs.
-

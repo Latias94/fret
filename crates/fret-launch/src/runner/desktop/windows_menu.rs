@@ -396,6 +396,8 @@ fn build_menu_bar(
     keymap: Option<&fret_runtime::Keymap>,
     input_ctx: &InputContext,
 ) -> Option<(WindowsMenuBar, HashMap<u16, WindowsMenuItemDef>)> {
+    let normalized_menu_bar = menu_bar.clone().normalized();
+
     let root = unsafe { CreateMenu() };
     if root.is_null() {
         return None;
@@ -404,7 +406,7 @@ fn build_menu_bar(
     let mut next_id: u16 = 1;
     let mut defs_by_id: HashMap<u16, WindowsMenuItemDef> = HashMap::new();
 
-    for menu in &menu_bar.menus {
+    for menu in &normalized_menu_bar.menus {
         let popup = unsafe { CreatePopupMenu() };
         if popup.is_null() {
             continue;

@@ -189,6 +189,8 @@ pub(crate) fn sync_command_gating_from_app(app: &fret_app::App) {
 pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
     let delegate_class: &'static Class = *MENU_DELEGATE_CLASS.get_or_init(menu_delegate_class);
 
+    let normalized_menu_bar = menu_bar.clone().normalized();
+
     let (commands, keymap, caps) = {
         let commands = app.commands().clone();
         let keymap = app
@@ -233,7 +235,7 @@ pub(crate) fn set_app_menu_bar(app: &fret_app::App, menu_bar: &MenuBar) {
 
             let mut app_menu: Option<&fret_runtime::Menu> = None;
             let mut other_menus: Vec<&fret_runtime::Menu> = Vec::new();
-            for menu in &menu_bar.menus {
+            for menu in &normalized_menu_bar.menus {
                 if menu.role == Some(MenuRole::App) && app_menu.is_none() {
                     app_menu = Some(menu);
                 } else {
