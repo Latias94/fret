@@ -20,7 +20,7 @@ use crate::ui::commands::CMD_NODE_GRAPH_ZOOM_IN;
 use crate::ui::{
     NodeGraphControlsBindings, NodeGraphControlsCommandBinding, NodeGraphControlsOverlay,
     NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
-    NodeGraphStyle,
+    NodeGraphStyle, NodeGraphViewQueue, NodeGraphViewRequest,
 };
 
 use super::{NullServices, TestUiHostImpl};
@@ -714,6 +714,121 @@ fn minimap_drag_updates_view_state_and_store_when_attached() {
             .any(|n| n.test_id.as_deref() == Some("node_graph.minimap")),
         "expected minimap overlay to contribute a stable semantics test_id"
     );
+}
+
+#[test]
+fn minimap_supports_view_queue_navigation_binding_for_b_layer_wiring() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let style = test_style();
+    let minimap = minimap_rect(bounds(), &style);
+
+    let underlay_downs = Arc::new(AtomicUsize::new(0));
+    let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
+
+    let graph = host.models.insert(Graph::new(GraphId::new()));
+    let view = host.models.insert(NodeGraphViewState::default());
+
+    let queue = host.models.insert(NodeGraphViewQueue::default());
+
+    let internals = Arc::new(NodeGraphInternalsStore::new());
+    let mut snap = NodeGraphInternalsSnapshot::default();
+    snap.transform.bounds_size = bounds().size;
+    internals.update(snap);
+
+    let minimap_widget =
+        NodeGraphMiniMapOverlay::new(underlay, graph, view.clone(), internals, style)
+            .with_view_queue(queue.clone());
+    let minimap_node = ui.create_node_retained(minimap_widget);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, minimap_node]);
+    ui.set_root(editor);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.set_focus(Some(minimap_node));
+    assert_eq!(ui.focus(), Some(minimap_node));
+
+    let start = Point::new(
+        Px(minimap.origin.x.0 + 0.5 * minimap.size.width.0),
+        Px(minimap.origin.y.0 + 0.5 * minimap.size.height.0),
+    );
+    let moved = Point::new(Px(start.x.0 + 10.0), Px(start.y.0));
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id: fret_core::PointerId::default(),
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: moved,
+            buttons: MouseButtons {
+                left: true,
+                right: false,
+                middle: false,
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id: fret_core::PointerId::default(),
+            position: moved,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    // With empty graphs, world == viewport. scale = min(w/800, h/600) = min(0.25, 0.2) = 0.2.
+    // Moving +10px in minimap maps to +50 canvas units, so pan shifts by -50.
+    let expected_pan_x = -50.0_f32;
+
+    // View-state should remain unchanged in view-queue mode (B-layer controlled integration).
+    let pan_x = view
+        .read_ref(&host, |s| s.pan.x)
+        .ok()
+        .expect("view state pan");
+    assert_eq!(pan_x, 0.0);
+
+    let pending = queue
+        .read_ref(&host, |q| q.pending.clone())
+        .ok()
+        .expect("queue");
+    assert!(
+        !pending.is_empty(),
+        "expected minimap navigation to enqueue a view request"
+    );
+
+    let got = pending
+        .iter()
+        .rev()
+        .find_map(|req| match req {
+            NodeGraphViewRequest::SetViewport { pan, zoom, .. } => Some((pan, *zoom)),
+            _ => None,
+        })
+        .expect("set viewport request");
+
+    assert!((got.0.x - expected_pan_x).abs() <= 1.0e-4);
 }
 
 #[test]

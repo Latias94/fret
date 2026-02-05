@@ -108,3 +108,5 @@ Planned additions (M2):
   `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
 - Controls overlay supports B-layer command injection:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+- MiniMap supports B-layer navigation wiring via `NodeGraphViewQueue`:
+  `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`

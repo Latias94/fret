@@ -67,7 +67,8 @@ pub use viewport_helper::NodeGraphViewportHelper;
 
 pub use overlays::{
     GroupRenameOverlay, NodeGraphControlsBindings, NodeGraphControlsCommandBinding,
-    NodeGraphControlsOverlay, NodeGraphEdgeToolbar, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
+    NodeGraphControlsOverlay, NodeGraphEdgeToolbar, NodeGraphMiniMapBindings,
+    NodeGraphMiniMapNavigationBinding, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
     NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
     NodeGraphToolbarSize, NodeGraphToolbarVisibility,
 };

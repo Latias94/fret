@@ -12,7 +12,9 @@ mod toolbars;
 pub use controls::NodeGraphControlsOverlay;
 pub use controls::{NodeGraphControlsBindings, NodeGraphControlsCommandBinding};
 pub use group_rename::{GroupRenameOverlay, NodeGraphOverlayHost, NodeGraphOverlayState};
-pub use minimap::NodeGraphMiniMapOverlay;
+pub use minimap::{
+    NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding, NodeGraphMiniMapOverlay,
+};
 pub use toolbars::{
     NodeGraphEdgeToolbar, NodeGraphNodeToolbar, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
     NodeGraphToolbarSize, NodeGraphToolbarVisibility,

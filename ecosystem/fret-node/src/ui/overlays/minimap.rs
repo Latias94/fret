@@ -11,6 +11,9 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::view_queue::{
+    NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
+};
 use crate::ui::{NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphStyle};
 
 use super::OverlayPlacement;
@@ -21,6 +24,35 @@ struct MiniMapDragState {
     start_pan: crate::core::CanvasPoint,
 }
 
+/// Navigation wiring knobs for the minimap overlay.
+///
+/// This is intentionally policy-light: it only affects how viewport updates are emitted.
+#[derive(Clone)]
+pub enum NodeGraphMiniMapNavigationBinding {
+    /// Uses the overlay's default behavior (updates `NodeGraphViewState`, and `NodeGraphStore` when attached).
+    Default,
+    /// Disables navigation (no viewport updates).
+    Disabled,
+    /// Sends viewport updates through a UI-side view queue.
+    ///
+    /// This is useful for B-layer controlled integrations that want the canvas to consume a
+    /// message surface rather than allowing widgets to mutate the view model directly.
+    ViewQueue(Model<NodeGraphViewQueue>),
+}
+
+#[derive(Clone)]
+pub struct NodeGraphMiniMapBindings {
+    pub navigation: NodeGraphMiniMapNavigationBinding,
+}
+
+impl Default for NodeGraphMiniMapBindings {
+    fn default() -> Self {
+        Self {
+            navigation: NodeGraphMiniMapNavigationBinding::Default,
+        }
+    }
+}
+
 pub struct NodeGraphMiniMapOverlay {
     canvas_node: fret_core::NodeId,
     graph: Model<crate::Graph>,
@@ -28,6 +60,7 @@ pub struct NodeGraphMiniMapOverlay {
     store: Option<Model<NodeGraphStore>>,
     internals: Arc<NodeGraphInternalsStore>,
     style: NodeGraphStyle,
+    bindings: NodeGraphMiniMapBindings,
 
     drag: Option<MiniMapDragState>,
     placement: OverlayPlacement,
@@ -51,6 +84,7 @@ impl NodeGraphMiniMapOverlay {
             store: None,
             internals,
             style,
+            bindings: NodeGraphMiniMapBindings::default(),
             drag: None,
             placement: OverlayPlacement::FloatingInCanvas,
         }
@@ -67,6 +101,16 @@ impl NodeGraphMiniMapOverlay {
     /// When set, minimap-driven panning also updates the store view-state.
     pub fn with_store(mut self, store: Model<NodeGraphStore>) -> Self {
         self.store = Some(store);
+        self
+    }
+
+    pub fn with_bindings(mut self, bindings: NodeGraphMiniMapBindings) -> Self {
+        self.bindings = bindings;
+        self
+    }
+
+    pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
+        self.bindings.navigation = NodeGraphMiniMapNavigationBinding::ViewQueue(queue);
         self
     }
 
@@ -228,17 +272,30 @@ impl NodeGraphMiniMapOverlay {
             1.0
         };
 
-        let _ = self.view_state.update(host, |s, _cx| {
-            s.pan = pan;
-            s.zoom = z;
-        });
+        match &self.bindings.navigation {
+            NodeGraphMiniMapNavigationBinding::Disabled => {}
+            NodeGraphMiniMapNavigationBinding::ViewQueue(queue) => {
+                let _ = queue.update(host, |q, _cx| {
+                    q.push(NodeGraphViewRequest::SetViewport {
+                        pan,
+                        zoom: z,
+                        options: NodeGraphSetViewportOptions::default(),
+                    });
+                });
+            }
+            NodeGraphMiniMapNavigationBinding::Default => {
+                let _ = self.view_state.update(host, |s, _cx| {
+                    s.pan = pan;
+                    s.zoom = z;
+                });
 
-        let Some(store) = self.store.as_ref() else {
-            return;
-        };
-        let _ = store.update(host, |store, _cx| {
-            store.set_viewport(pan, z);
-        });
+                if let Some(store) = self.store.as_ref() {
+                    let _ = store.update(host, |store, _cx| {
+                        store.set_viewport(pan, z);
+                    });
+                }
+            }
+        }
     }
 }
 
