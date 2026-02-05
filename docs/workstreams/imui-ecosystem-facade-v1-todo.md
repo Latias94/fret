@@ -122,6 +122,9 @@ Exit criteria:
 - [x] IMUIECO-float-032a Add a minimal floating window skeleton (in-window) with a draggable title bar.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_moves_when_dragging_title_bar`).
+- [x] IMUIECO-float-032b Add ImGui-style `open` model + close button for floating windows.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window_open`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_close_button_sets_open_false`).
 - [ ] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
   - title bar, close button, Esc-to-close,
   - resize handles + resize session state,

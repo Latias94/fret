@@ -16,7 +16,7 @@ use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PositionStyle,
+    PointerRegionProps, PositionStyle, PressableA11y, PressableProps, RowProps,
 };
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
@@ -267,6 +267,8 @@ impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUiFacade<'cx, 'a, H> {
 struct FloatWindowState {
     position: Point,
     last_drag_position: Option<Point>,
+    title_bar_test_id: Arc<str>,
+    close_button_test_id: Arc<str>,
 }
 
 /// Immediate-mode facade helpers for any authoring frontend that implements `UiWriter`.
@@ -661,10 +663,44 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         initial_position: Point,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let title = title.into();
+        self.floating_window_impl(id, title.into(), None, initial_position, f);
+    }
+
+    /// Render a floating window controlled by an `open` model (ImGui-style `bool* p_open`).
+    ///
+    /// When the close button is activated, the model is set to `false`.
+    fn floating_window_open(
+        &mut self,
+        id: &str,
+        title: impl Into<Arc<str>>,
+        open: &fret_runtime::Model<bool>,
+        initial_position: Point,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.floating_window_impl(id, title.into(), Some(open), initial_position, f);
+    }
+
+    fn floating_window_impl(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        if let Some(open) = open {
+            let is_open = self
+                .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
+                .unwrap_or(false);
+            if !is_open {
+                return;
+            }
+        }
 
         let element = self.with_cx_mut(|cx| {
             cx.named(id, |cx| {
+                let open_model = open.map(|m| m.clone());
+
                 let window_id = cx.root_id();
                 let drag_kind = float_window_drag_kind_for_element(window_id);
 
@@ -679,11 +715,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     .filter(|drag| drag.kind == drag_kind)
                     .map(|drag| (drag.dragging, drag.position, drag.start_position));
 
-                let position = cx.with_state_for(
+                let (position, title_bar_test_id, close_button_test_id) = cx.with_state_for(
                     window_id,
                     || FloatWindowState {
                         position: initial_position,
                         last_drag_position: None,
+                        title_bar_test_id: Arc::from(format!("imui.float_window.title_bar:{id}")),
+                        close_button_test_id: Arc::from(format!("imui.float_window.close:{id}")),
                     },
                     |st| {
                         if let Some((dragging, current, start)) = drag_snapshot {
@@ -697,7 +735,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         } else {
                             st.last_drag_position = None;
                         }
-                        st.position
+                        (
+                            st.position,
+                            st.title_bar_test_id.clone(),
+                            st.close_button_test_id.clone(),
+                        )
                     },
                 );
 
@@ -731,114 +773,161 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     col.layout.size.width = Length::Auto;
                     col.layout.size.height = Length::Auto;
 
-                    let title = title.clone();
-                    let title_bar = cx.pressable_with_id(
+                    let title_bar = cx.container(
                         {
-                            let mut props = fret_ui::element::PressableProps::default();
-                            props.focusable = false;
-                            props.a11y = fret_ui::element::PressableA11y {
-                                role: Some(SemanticsRole::Button),
-                                label: Some(title.clone()),
-                                test_id: Some(Arc::from(format!(
-                                    "imui.float_window.title_bar:{id}"
-                                ))),
-                                ..Default::default()
-                            };
+                            let mut props = ContainerProps::default();
                             props.layout.size.width = Length::Fill;
                             props.layout.size.height = Length::Px(Px(24.0));
-                            props
-                        },
-                        move |cx, _state, _title_bar_id| {
-                            cx.pressable_clear_on_activate();
-                            cx.pressable_clear_on_pointer_down();
-                            cx.pressable_clear_on_pointer_move();
-                            cx.pressable_clear_on_pointer_up();
-
-                            cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
-                                if down.button != MouseButton::Left {
-                                    return PressablePointerDownResult::Continue;
-                                }
-
-                                host.capture_pointer();
-                                if host.drag(down.pointer_id).is_none() {
-                                    host.begin_drag_with_kind(
-                                        down.pointer_id,
-                                        drag_kind,
-                                        acx.window,
-                                        down.position,
-                                    );
-                                }
-
-                                PressablePointerDownResult::Continue
-                            }));
-
-                            cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
-                                let Some(drag) = host.drag_mut(mv.pointer_id) else {
-                                    return false;
-                                };
-                                if drag.kind != drag_kind || drag.source_window != acx.window {
-                                    return false;
-                                }
-
-                                drag.current_window = acx.window;
-                                drag.position = mv.position;
-
-                                if !mv.buttons.left {
-                                    drag.phase = DragPhase::Canceled;
-                                    host.cancel_drag(mv.pointer_id);
-                                    host.release_pointer_capture();
-                                    host.notify(acx);
-                                    return false;
-                                }
-
-                                let d = point_sub(drag.position, drag.start_position);
-                                let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
-                                if !drag.dragging
-                                    && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX
-                                {
-                                    drag.dragging = true;
-                                    drag.phase = DragPhase::Dragging;
-                                }
-
-                                host.notify(acx);
-                                false
-                            }));
-
-                            cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
-                                if let Some(drag) = host.drag(up.pointer_id)
-                                    && drag.kind == drag_kind
-                                    && drag.source_window == acx.window
-                                {
-                                    host.cancel_drag(up.pointer_id);
-                                }
-                                host.release_pointer_capture();
-                                host.notify(acx);
-                                PressablePointerUpResult::Continue
-                            }));
-
-                            let mut title_container = ContainerProps::default();
-                            title_container.padding = Edges {
+                            props.padding = Edges {
                                 left: Px(8.0),
-                                right: Px(8.0),
+                                right: Px(6.0),
                                 top: Px(4.0),
                                 bottom: Px(4.0),
                             };
-                            title_container.background = Some(muted);
-                            title_container.border = Edges {
+                            props.background = Some(muted);
+                            props.border = Edges {
                                 left: Px(0.0),
                                 right: Px(0.0),
                                 top: Px(0.0),
                                 bottom: Px(1.0),
                             };
-                            title_container.border_color = Some(border);
-                            title_container.corner_radii = Corners {
+                            props.border_color = Some(border);
+                            props.corner_radii = Corners {
                                 top_left: Px(8.0),
                                 top_right: Px(8.0),
                                 bottom_left: Px(0.0),
                                 bottom_right: Px(0.0),
                             };
+                            props
+                        },
+                        |cx| {
+                            let mut row = RowProps::default();
+                            row.layout.size.width = Length::Fill;
+                            row.layout.size.height = Length::Fill;
+                            row.gap = Px(6.0);
 
-                            vec![cx.container(title_container, |cx| vec![cx.text(title.clone())])]
+                            let title = title.clone();
+                            let title_bar_test_id = title_bar_test_id.clone();
+                            let drag_surface = cx.pointer_region(
+                                PointerRegionProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Fill;
+                                        layout
+                                    },
+                                    ..Default::default()
+                                },
+                                move |cx| {
+                                    cx.pointer_region_on_pointer_down(Arc::new(
+                                        move |host, acx, down| {
+                                            if down.button != MouseButton::Left {
+                                                return false;
+                                            }
+
+                                            host.capture_pointer();
+                                            if host.drag(down.pointer_id).is_none() {
+                                                host.begin_drag_with_kind(
+                                                    down.pointer_id,
+                                                    drag_kind,
+                                                    acx.window,
+                                                    down.position,
+                                                );
+                                            }
+                                            host.notify(acx);
+                                            false
+                                        },
+                                    ));
+
+                                    cx.pointer_region_on_pointer_move(Arc::new(
+                                        move |host, acx, mv| {
+                                            let Some(drag) = host.drag_mut(mv.pointer_id) else {
+                                                return false;
+                                            };
+                                            if drag.kind != drag_kind
+                                                || drag.source_window != acx.window
+                                            {
+                                                return false;
+                                            }
+
+                                            drag.current_window = acx.window;
+                                            drag.position = mv.position;
+
+                                            if !mv.buttons.left {
+                                                drag.phase = DragPhase::Canceled;
+                                                host.cancel_drag(mv.pointer_id);
+                                                host.release_pointer_capture();
+                                                host.notify(acx);
+                                                return false;
+                                            }
+
+                                            let d = point_sub(drag.position, drag.start_position);
+                                            let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
+                                            if !drag.dragging
+                                                && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX
+                                            {
+                                                drag.dragging = true;
+                                                drag.phase = DragPhase::Dragging;
+                                            }
+
+                                            host.notify(acx);
+                                            false
+                                        },
+                                    ));
+
+                                    cx.pointer_region_on_pointer_up(Arc::new(
+                                        move |host, acx, up| {
+                                            if let Some(drag) = host.drag(up.pointer_id)
+                                                && drag.kind == drag_kind
+                                                && drag.source_window == acx.window
+                                            {
+                                                host.cancel_drag(up.pointer_id);
+                                            }
+                                            host.release_pointer_capture();
+                                            host.notify(acx);
+                                            false
+                                        },
+                                    ));
+
+                                    vec![
+                                        cx.text(title.clone()).attach_semantics(
+                                            fret_ui::element::SemanticsDecoration::default()
+                                                .test_id(title_bar_test_id.clone()),
+                                        ),
+                                    ]
+                                },
+                            );
+
+                            let close = open_model.clone().map(|open| {
+                                let mut props = PressableProps::default();
+                                props.a11y = PressableA11y {
+                                    role: Some(SemanticsRole::Button),
+                                    label: Some(Arc::from("Close")),
+                                    test_id: Some(close_button_test_id.clone()),
+                                    ..Default::default()
+                                };
+                                props.layout.size.width = Length::Px(Px(20.0));
+                                props.layout.size.height = Length::Px(Px(20.0));
+                                cx.pressable(props, move |cx, _state| {
+                                    cx.pressable_on_activate(Arc::new(
+                                        move |host, acx, _reason| {
+                                            let _ = host.update_model(&open, |v: &mut bool| {
+                                                *v = false;
+                                            });
+                                            host.notify(acx);
+                                        },
+                                    ));
+                                    vec![cx.text("\u{00D7}")]
+                                })
+                            });
+
+                            vec![cx.row(row, move |_cx| {
+                                let mut out = vec![drag_surface];
+                                if let Some(close) = close {
+                                    out.push(close);
+                                }
+                                out
+                            })]
                         },
                     );
 

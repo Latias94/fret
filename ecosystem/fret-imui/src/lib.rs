@@ -1322,6 +1322,26 @@ mod tests {
         (window, title_bar)
     }
 
+    fn point_for_test_id(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        bounds: Rect,
+        test_id: &str,
+    ) -> Point {
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
+            .id;
+        let bounds = ui.debug_node_bounds(node).expect("node bounds");
+        Point::new(Px(bounds.origin.x.0 + 1.0), Px(bounds.origin.y.0 + 1.0))
+    }
+
     #[test]
     fn floating_window_moves_when_dragging_title_bar() {
         let window = AppWindowId::default();
@@ -1353,14 +1373,14 @@ mod tests {
             },
         );
 
-        let (window_node, title_bar_node) = floating_window_nodes(&ui, root);
+        let (window_node, _title_bar_node) = floating_window_nodes(&ui, root);
         let before = ui.debug_node_bounds(window_node).expect("window bounds");
-        let title_bounds = ui
-            .debug_node_bounds(title_bar_node)
-            .expect("title bar bounds");
-        let start = Point::new(
-            Px(title_bounds.origin.x.0 + 2.0),
-            Px(title_bounds.origin.y.0 + 2.0),
+        let start = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:demo",
         );
 
         pointer_down_at(&mut ui, &mut app, &mut services, start);
@@ -1401,6 +1421,57 @@ mod tests {
         );
 
         pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, moved, false);
+    }
+
+    #[test]
+    fn floating_window_close_button_sets_open_false() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = app.models_mut().insert(true);
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-close",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_open(
+                        "demo",
+                        "Demo",
+                        &open,
+                        Point::new(Px(10.0), Px(10.0)),
+                        |ui| {
+                            ui.text("Hello");
+                        },
+                    );
+                })
+            },
+        );
+
+        let _ = floating_window_nodes(&ui, root);
+        let close = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.close:demo",
+        );
+        click_at(&mut ui, &mut app, &mut services, close);
+        assert!(!app.models().get_copied(&open).unwrap_or(true));
     }
 
     #[test]
