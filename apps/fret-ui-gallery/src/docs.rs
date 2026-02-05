@@ -931,6 +931,34 @@ let select = m3::Select::new(model)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_AUTOCOMPLETE: &str = r#"
+## Material 3 Autocomplete (MVP)
+
+This page validates a Material 3 autocomplete surface:
+
+- token-driven input + menu outcomes via `md.comp.{outlined,filled}-autocomplete.*`
+- combobox semantics (ADR 0073): `active_descendant` + `controls` ↔ `labelled_by`
+- non-modal popover menu that stays interactive while typing (click-through)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_AUTOCOMPLETE: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+
+let query = app.models_mut().insert(String::new());
+let items = [
+    m3::AutocompleteItem::new("alpha", "Alpha"),
+    m3::AutocompleteItem::new("beta", "Beta"),
+];
+
+let ac = m3::Autocomplete::new(query)
+    .label("Search")
+    .placeholder("Type to filter")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 ## Material 3 Text Field (MVP)
 
