@@ -20,6 +20,11 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.paint_cache_hits = 0;
             self.debug_stats.paint_cache_misses = 0;
             self.debug_stats.paint_cache_replayed_ops = 0;
+            self.debug_stats.paint_cache_replay_time = Duration::default();
+            self.debug_stats.paint_cache_bounds_translate_time = Duration::default();
+            self.debug_stats.paint_cache_bounds_translated_nodes = 0;
+            self.debug_stats.paint_record_visual_bounds_time = Duration::default();
+            self.debug_stats.paint_record_visual_bounds_calls = 0;
             self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
@@ -224,8 +229,19 @@ impl<H: UiHost> UiTree<H> {
         if let Some(window) = self.window
             && let Some(element) = self.nodes.get(node).and_then(|n| n.element)
         {
+            let record_started = self.debug_enabled.then(Instant::now);
             let visual = rect_aabb_transformed(bounds, current_transform);
             crate::elements::record_visual_bounds_for_element(app, window, element, visual);
+            if let Some(record_started) = record_started {
+                self.debug_stats.paint_record_visual_bounds_time = self
+                    .debug_stats
+                    .paint_record_visual_bounds_time
+                    .saturating_add(record_started.elapsed());
+                self.debug_stats.paint_record_visual_bounds_calls = self
+                    .debug_stats
+                    .paint_record_visual_bounds_calls
+                    .saturating_add(1);
+            }
         }
 
         let theme_revision = Theme::global(&*app).revision();
@@ -260,7 +276,14 @@ impl<H: UiHost> UiTree<H> {
                         tracing::Span::none()
                     };
                     let _replay_guard = replay_span.enter();
+                    let replay_started = self.debug_enabled.then(Instant::now);
                     scene.replay_ops_translated(&self.paint_cache.prev_ops[range.clone()], delta);
+                    if let Some(replay_started) = replay_started {
+                        self.debug_stats.paint_cache_replay_time = self
+                            .debug_stats
+                            .paint_cache_replay_time
+                            .saturating_add(replay_started.elapsed());
+                    }
                     let end = scene.ops_len();
                     replay_span.record("ops", (end - start) as u64);
                     self.debug_record_paint_cache_replay(node, (end - start) as u32);
@@ -288,6 +311,8 @@ impl<H: UiHost> UiTree<H> {
                         // Without this, cached subtrees that move (e.g. due to parent layout changes)
                         // can render correctly while their descendant bounds remain stale, causing
                         // incorrect pointer routing and stale semantics geometry.
+                        let translate_started = self.debug_enabled.then(Instant::now);
+                        let mut translated_nodes: u32 = 0;
                         let window = self.window;
                         let mut stack = self.take_scratch_node_stack();
                         stack.clear();
@@ -309,6 +334,7 @@ impl<H: UiHost> UiTree<H> {
                             let Some(n) = self.nodes.get_mut(id) else {
                                 continue;
                             };
+                            translated_nodes = translated_nodes.saturating_add(1);
                             n.bounds.origin = Point::new(
                                 n.bounds.origin.x + delta.x,
                                 n.bounds.origin.y + delta.y,
@@ -325,6 +351,16 @@ impl<H: UiHost> UiTree<H> {
                             }
                         }
                         self.restore_scratch_node_stack(stack);
+                        if let Some(translate_started) = translate_started {
+                            self.debug_stats.paint_cache_bounds_translate_time = self
+                                .debug_stats
+                                .paint_cache_bounds_translate_time
+                                .saturating_add(translate_started.elapsed());
+                            self.debug_stats.paint_cache_bounds_translated_nodes = self
+                                .debug_stats
+                                .paint_cache_bounds_translated_nodes
+                                .saturating_add(translated_nodes);
+                        }
                     }
 
                     self.paint_cache.hits = self.paint_cache.hits.saturating_add(1);

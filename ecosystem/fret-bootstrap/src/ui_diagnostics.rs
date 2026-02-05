@@ -6158,6 +6158,10 @@ pub struct UiFrameStatsV1 {
     pub prepaint_time_us: u64,
     pub paint_time_us: u64,
     #[serde(default)]
+    pub paint_record_visual_bounds_time_us: u64,
+    #[serde(default)]
+    pub paint_record_visual_bounds_calls: u32,
+    #[serde(default)]
     pub dispatch_time_us: u64,
     #[serde(default)]
     pub dispatch_pointer_events: u32,
@@ -6256,6 +6260,12 @@ pub struct UiFrameStatsV1 {
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    #[serde(default)]
+    pub paint_cache_replay_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_bounds_translate_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_bounds_translated_nodes: u32,
     #[serde(default)]
     pub interaction_cache_hits: u32,
     #[serde(default)]
@@ -6513,6 +6523,9 @@ impl UiFrameStatsV1 {
             layout_deferred_cleanup_time_us: stats.layout_deferred_cleanup_time.as_micros() as u64,
             prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
+            paint_record_visual_bounds_time_us: stats.paint_record_visual_bounds_time.as_micros()
+                as u64,
+            paint_record_visual_bounds_calls: stats.paint_record_visual_bounds_calls,
             dispatch_time_us: stats.dispatch_time.as_micros() as u64,
             dispatch_pointer_events: stats.dispatch_pointer_events,
             dispatch_pointer_event_time_us: stats.dispatch_pointer_event_time.as_micros() as u64,
@@ -6587,6 +6600,11 @@ impl UiFrameStatsV1 {
             paint_cache_hits: stats.paint_cache_hits,
             paint_cache_misses: stats.paint_cache_misses,
             paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            paint_cache_replay_time_us: stats.paint_cache_replay_time.as_micros() as u64,
+            paint_cache_bounds_translate_time_us: stats
+                .paint_cache_bounds_translate_time
+                .as_micros() as u64,
+            paint_cache_bounds_translated_nodes: stats.paint_cache_bounds_translated_nodes,
             interaction_cache_hits: stats.interaction_cache_hits,
             interaction_cache_misses: stats.interaction_cache_misses,
             interaction_cache_replayed_records: stats.interaction_cache_replayed_records,

@@ -226,6 +226,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_skipped_engine_frame: bool,
     pub(super) prepaint_time_us: u64,
     pub(super) paint_time_us: u64,
+    pub(super) paint_record_visual_bounds_time_us: u64,
+    pub(super) paint_record_visual_bounds_calls: u32,
     pub(super) dispatch_time_us: u64,
     pub(super) dispatch_pointer_events: u32,
     pub(super) dispatch_pointer_event_time_us: u64,
@@ -271,6 +273,9 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
     pub(super) paint_cache_misses: u32,
+    pub(super) paint_cache_replay_time_us: u64,
+    pub(super) paint_cache_bounds_translate_time_us: u64,
+    pub(super) paint_cache_bounds_translated_nodes: u32,
     pub(super) renderer_tick_id: u64,
     pub(super) renderer_frame_id: u64,
     pub(super) renderer_encode_scene_us: u64,
@@ -599,7 +604,7 @@ impl BundleStatsReport {
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "-".to_string());
             println!(
-                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} cache_roots={} cache.reused={} cache.replayed_ops={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
+                "  window={} tick={} frame={} ts={} time.us(total/layout/prepaint/paint)={}/{}/{}/{} layout.solve_us={} paint.cache_misses={} layout.nodes={} paint.nodes={} paint.elem_bounds_us={} paint.elem_bounds_calls={} cache_roots={} cache.reused={} cache.replayed_ops={} cache.replay_us={} cache.translate_us={} cache.translate_nodes={} contained_relayouts={} cache.contained_relayout_roots={} barrier(set_children/scheduled/performed)={}/{}/{} vlist(range_checks/refreshes)={}/{} inv.calls={} inv.nodes={} by_src.calls(hover/focus/other)={}/{}/{} by_src.nodes(hover/focus/other)={}/{}/{} hover.decl_inv(layout/hit/paint)={}/{}/{} roots.model={} roots.global={} changed.models={} changed.globals={} propagated.models={} propagated.edges={} unobs.models={} propagated.globals={} propagated.global_edges={} unobs.globals={}",
                 row.window,
                 row.tick_id,
                 row.frame_id,
@@ -612,9 +617,14 @@ impl BundleStatsReport {
                 row.paint_cache_misses,
                 row.layout_nodes_performed,
                 row.paint_nodes_performed,
+                row.paint_record_visual_bounds_time_us,
+                row.paint_record_visual_bounds_calls,
                 row.cache_roots,
                 row.cache_roots_reused,
                 row.cache_replayed_ops,
+                row.paint_cache_replay_time_us,
+                row.paint_cache_bounds_translate_time_us,
+                row.paint_cache_bounds_translated_nodes,
                 row.view_cache_contained_relayouts,
                 row.cache_roots_contained_relayout,
                 row.set_children_barrier_writes,
@@ -1387,6 +1397,26 @@ impl BundleStatsReport {
                 obj.insert(
                     "cache_replayed_ops".to_string(),
                     Value::from(row.cache_replayed_ops),
+                );
+                obj.insert(
+                    "paint_record_visual_bounds_time_us".to_string(),
+                    Value::from(row.paint_record_visual_bounds_time_us),
+                );
+                obj.insert(
+                    "paint_record_visual_bounds_calls".to_string(),
+                    Value::from(row.paint_record_visual_bounds_calls),
+                );
+                obj.insert(
+                    "paint_cache_replay_time_us".to_string(),
+                    Value::from(row.paint_cache_replay_time_us),
+                );
+                obj.insert(
+                    "paint_cache_bounds_translate_time_us".to_string(),
+                    Value::from(row.paint_cache_bounds_translate_time_us),
+                );
+                obj.insert(
+                    "paint_cache_bounds_translated_nodes".to_string(),
+                    Value::from(row.paint_cache_bounds_translated_nodes),
                 );
                 obj.insert(
                     "changed_models".to_string(),
@@ -4283,6 +4313,15 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("paint_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let paint_record_visual_bounds_time_us = stats
+                .and_then(|m| m.get("paint_record_visual_bounds_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_record_visual_bounds_calls = stats
+                .and_then(|m| m.get("paint_record_visual_bounds_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
             let dispatch_time_us = stats
                 .and_then(|m| m.get("dispatch_time_us"))
                 .and_then(|v| v.as_u64())
@@ -4476,6 +4515,19 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .min(u32::MAX as u64) as u32;
             let paint_cache_misses = stats
                 .and_then(|m| m.get("paint_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64) as u32;
+            let paint_cache_replay_time_us = stats
+                .and_then(|m| m.get("paint_cache_replay_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_cache_bounds_translate_time_us = stats
+                .and_then(|m| m.get("paint_cache_bounds_translate_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_cache_bounds_translated_nodes = stats
+                .and_then(|m| m.get("paint_cache_bounds_translated_nodes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
@@ -5007,6 +5059,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_skipped_engine_frame,
                 prepaint_time_us,
                 paint_time_us,
+                paint_record_visual_bounds_time_us,
+                paint_record_visual_bounds_calls,
                 dispatch_time_us,
                 dispatch_pointer_events,
                 dispatch_pointer_event_time_us,
@@ -5052,6 +5106,9 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_nodes_performed,
                 paint_nodes_performed,
                 paint_cache_misses,
+                paint_cache_replay_time_us,
+                paint_cache_bounds_translate_time_us,
+                paint_cache_bounds_translated_nodes,
                 renderer_tick_id,
                 renderer_frame_id,
                 renderer_encode_scene_us,
