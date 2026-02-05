@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, KeyCode};
+use fret_core::{Axis, Edges, FontWeight, KeyCode};
 use fret_kit::prelude::*;
 use fret_ui::ThemeConfig;
 use fret_ui::action::PressablePointerDownResult;
@@ -281,12 +281,25 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
     let muted_fg = theme.color_required("muted-foreground");
 
     let kbd_label = |cx: &mut ElementContext<'_, App>, text: &'static str| {
-        ui::text(cx, text)
+        let label = ui::label(cx, text)
             .text_size_px(kbd_px)
             .line_height_px(kbd_line_height)
-            .h_px(kbd_line_height)
+            .font_weight(FontWeight::MEDIUM)
             .text_color(ColorRef::Color(muted_fg))
-            .into_element(cx)
+            .h_px(kbd_line_height)
+            .into_element(cx);
+
+        ui::container(cx, |cx| {
+            [ui::h_flex(cx, |_cx| [label])
+                .w_full()
+                .h_full()
+                .justify_center()
+                .items_center()
+                .into_element(cx)]
+        })
+        .h_px(Px(20.0))
+        .min_h(Px(20.0))
+        .into_element(cx)
     };
 
     let footer = shadcn::CardFooter::new([ui::h_flex(cx, |cx| {
@@ -304,16 +317,29 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                 .items_center()
                 .into_element(cx);
 
-            let help = shadcn::KbdGroup::new([
-                shadcn::Kbd::new("Enter").into_element(cx),
-                kbd_label(cx, "添加"),
-                shadcn::Kbd::new("↑/↓").into_element(cx),
-                kbd_label(cx, "移动"),
-                shadcn::Kbd::new("Space").into_element(cx),
-                kbd_label(cx, "切换完成"),
-                shadcn::Kbd::new("Del").into_element(cx),
-                kbd_label(cx, "删除"),
-            ])
+            let shortcut_hint =
+                |cx: &mut ElementContext<'_, App>, kbd: &'static str, label: &'static str| {
+                    ui::h_flex(cx, |cx| {
+                        [shadcn::Kbd::new(kbd).into_element(cx), kbd_label(cx, label)]
+                    })
+                    .gap(Space::N1)
+                    .items_center()
+                    .flex_none()
+                    .into_element(cx)
+                };
+
+            let help = ui::h_flex(cx, |cx| {
+                [
+                    shortcut_hint(cx, "Enter", "添加"),
+                    shortcut_hint(cx, "↑/↓", "移动"),
+                    shortcut_hint(cx, "Space", "切换完成"),
+                    shortcut_hint(cx, "Del", "删除"),
+                ]
+            })
+            .gap(Space::N2)
+            .wrap()
+            .justify_end()
+            .items_center()
             .into_element(cx);
 
             [row, help]
@@ -617,7 +643,7 @@ fn todo_row(
                 );
 
                 let label = ui::text(cx, text.clone())
-                    .flex_1()
+                    .flex_grow(1.0)
                     .min_w_0()
                     .nowrap()
                     .truncate()
@@ -625,7 +651,7 @@ fn todo_row(
                     .into_element(cx);
 
                 let left = ui::h_flex(cx, |_cx| [indicator, label])
-                    .flex_1()
+                    .flex_grow(1.0)
                     .min_w_0()
                     .gap(Space::N3)
                     .items_center()
