@@ -161,6 +161,11 @@ Fret mapping (planned):
   - `MessageActions` + `MessageAction` (tooltip-ready shadcn icon buttons).
 - Branch selector: only implement once there is an app consumer; keep the contract in docs first.
 
+Implementation notes (current):
+
+- `MessageActions` and `MessageAction` exist in `fret-ui-ai` and are used by UI Gallery as a
+  tooltip-gated example.
+
 ### `tool.tsx` (Tool call disclosure)
 
 Upstream behavior:
