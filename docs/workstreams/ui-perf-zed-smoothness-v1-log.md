@@ -3746,3 +3746,69 @@ Takeaway:
   O(10us) each on this probe).
 - Next: time the remaining host-widget paint overhead candidates (child traversal / bounds queries / clip setup), then
   only attempt an aggressive refactor once the sub-slice is confirmed.
+
+## 2026-02-05 13:31:54 (commit `c80525b9`)
+
+Change:
+- Add `ElementInstance` kind strings to exported widget paint hotspots (so `ElementHostWidget` hotspots can be
+  attributed to `Text` vs `Container` vs `ViewCache`, etc).
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Worst bundle:
+  - `target/fret-diag/1770298314770-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2727/13`
+- `paint_widget_hotspots` (top 3):
+  - `us=1205 kind=Text type=ElementHostWidget ops(excl/incl)=1/1`
+  - `us=1033 kind=Text type=ElementHostWidget ops(excl/incl)=1/1`
+  - `us=421  kind=Text type=ElementHostWidget ops(excl/incl)=1/1`
+
+Takeaway:
+- The stable-frame `ElementHostWidget` hotspots are specifically `ElementInstance::Text` paint paths (not generic
+  container/bookkeeping).
+
+## 2026-02-05 13:42:10 (commit `07d2ccf2`)
+
+Change:
+- Export paint-phase counters for text blob preparation:
+  - `paint_text_prepare_time_us`
+  - `paint_text_prepare_calls`
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Worst bundle:
+  - `target/fret-diag/1770298930506-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2617/13`
+- `paint_text_prepare.us(time/calls)=2543/3`
+- `paint_widget_hotspots` (top 3) remain `kind=Text` and sum to ~2.44ms.
+
+Takeaway:
+- Stable frames are spending ~2.5ms in `TextService::prepare` (3 calls) on this probe, which largely explains the
+  paint hotspots.
+
+## 2026-02-05 14:13:54 (commit `80a46d49`)
+
+Change:
+- Export per-reason counters for text prepares (why `needs_prepare` fired).
+- Also quantize paint-time text `max_width` to device pixel boundaries when building `TextConstraints` (to reduce
+  cache churn from subpixel widths; expected to help some cases).
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json`
+- Worst bundle:
+  - `target/fret-diag/1770300835921-ui-gallery-menubar-file-escape-steady/bundle.json`
+
+Worst-frame paint breakdown (from `fretboard diag stats --sort time --top 1`):
+- `paint_node.us(cache_key/hit_check/widget/obs_record)=3/0/2517/14`
+- `paint_text_prepare.us(time/calls)=2447/3`
+- `paint_text_prepare.reasons(blob/scale/text/rich/style/wrap/overflow/width/font)=3/3/0/0/0/0/0/3/0`
+
+Takeaway:
+- The repeated per-frame text prepares are dominated by `blob_missing` (and derived "key changed" fields), i.e. the
+  `ElementHostWidget` text blob cache is not persisting across frames for these nodes.
+- Next: explain why the text blob cache is missing on stable frames (most likely node/widget churn driven by
+  view-cache liveness/GC bookkeeping) and fix that so warm stable frames reach `paint_text_prepare_calls==0`.

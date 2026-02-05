@@ -37,6 +37,8 @@ Conventions:
 - [x] Export top-N widget paint hotspots (exclusive time) so `paint_widget_time_us` is attributable.
   - Evidence: `feat(diag): export paint widget hotspots` (commit `e1132c95`).
   - Evidence bundle: `target/fret-diag-perf/menubar-kbd-nav.after-paint-widget-hotspots.1770292980/.../bundle.json`
+- [x] Include the `ElementInstance` kind name in paint widget hotspots (so we can distinguish `Text` vs `Container`).
+  - Evidence: `feat(diag): add element kind to paint hotspots` (commit `c80525b9`).
 - [x] Add `ElementHostWidget` paint sub-timers so we can explain the top hotspots:
   - obs-models iteration,
   - obs-globals iteration,
@@ -45,6 +47,11 @@ Conventions:
   - Evidence: `feat(diag): add host-widget paint sub-timers` (commit `188d7da1`).
   - Result (menubar steady probe): obs-models/globals/instance lookup are each O(10us) and do not explain the ~1ms+
     `ElementHostWidget` hotspots; next step is to time child traversal / bounds queries / clip setup overhead.
+- [x] Export text prepare attribution so `Text` paint hotspots are explainable:
+  - Evidence: `feat(diag): export text prepare paint timers` (commit `07d2ccf2`).
+  - Evidence: `feat(diag): attribute text prepare triggers` (commit `80a46d49`).
+  - Result (menubar steady probe): stable frames still pay ~2.4–2.5ms in `TextService::prepare` (3 calls), and
+    `paint_text_prepare.reasons` is dominated by `blob_missing`, suggesting cache churn / node churn.
 - [ ] Add paint-phase micro timers for the remaining dominant candidates:
   - per-node traversal overhead on stable frames (excluding widget code),
   - observation merging/collapse costs beyond the already-timed “collapse observations” step.
@@ -56,6 +63,10 @@ Conventions:
 ### P1: Reduce stable-frame paint overhead (first real win)
 
 - [ ] Pick one evidence bundle where paint is dominated by a single sub-slice and fix it.
+- [ ] Fix stable-frame `TextService::prepare` churn in the menubar steady probe:
+  - Target gate: after warmup, stable frames should have `paint_text_prepare_calls==0` (or near-zero) and
+    `paint_widget_time_us` should no longer be dominated by `kind=Text` `ElementHostWidget` hotspots.
+  - Suspected root cause: view-cache liveness/GC bookkeeping causing text nodes/widgets to churn (cache missing).
 - [ ] Remove per-frame allocations in the `ElementHostWidget` paint path.
   - Hypothesis: element-runtime observation accessors clone per-element dependency vectors each frame.
   - Candidate fix: replace `elements::{observed_models_for_element, observed_globals_for_element}` returning `Vec<_>`

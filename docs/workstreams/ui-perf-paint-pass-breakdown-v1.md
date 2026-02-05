@@ -191,11 +191,19 @@ Follow-up instrumentation:
 Updated interpretation:
 
 - Observed deps + instance lookup are **not** the cause of the ~1ms+ `ElementHostWidget` hotspots (they are O(10us)).
-- Next: time the remaining “host-widget paint overhead” candidates:
-  - child traversal overhead in `paint_children_clipped_if` (clip push/pop + `child_bounds` queries + `cx.paint` call
-    overhead),
-  - per-instance-variant overhead (e.g. `Container` vs `ViewCache`),
-  - any per-frame “first paint” work hidden behind element instance properties (e.g. cache keys, transforms).
+- Follow-up: export `ElementInstance` kind names for paint hotspots and attribute text prepares:
+  - Commit: `c80525b9` (`feat(diag): add element kind to paint hotspots`)
+    - Finding: the top `ElementHostWidget` paint hotspots are `kind=Text` on this probe.
+  - Commit: `07d2ccf2` (`feat(diag): export text prepare paint timers`)
+    - Finding: stable frames spend ~2.4–2.5ms in `TextService::prepare` (3 calls), matching the top-3 `Text` hotspots.
+  - Commit: `80a46d49` (`feat(diag): attribute text prepare triggers`)
+    - Finding: `paint_text_prepare.reasons` is dominated by `blob_missing`, meaning the widget-level text blob cache is
+      not persisting across frames for these nodes.
+
+Next:
+
+- Explain and fix why the cached text blob is missing on stable frames (suspected view-cache liveness/GC bookkeeping
+  causing node/widget churn), so warm stable frames reach `paint_text_prepare_calls==0`.
 
 ---
 
