@@ -769,6 +769,7 @@ canonical data flow and invalidation boundaries:
     - alt+drag wire opens the insert-node picker on release (optional): `NodeGraphInteractionState.edge_insert_on_alt_drag`
       - start gesture: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
       - threshold + pointer-up completion: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
 
 ---
 
