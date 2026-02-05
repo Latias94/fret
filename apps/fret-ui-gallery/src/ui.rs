@@ -14127,6 +14127,21 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         },
     );
 
+    let actions_demo = {
+        let copy = ui_ai::MessageAction::new("Copy")
+            .tooltip("Copy")
+            .test_id("ui-gallery-ai-chat-action-copy")
+            .children([shadcn::icon::icon(
+                cx,
+                fret_icons::IconId::new_static("lucide.copy"),
+            )])
+            .into_element(cx);
+
+        ui_ai::MessageActions::new([copy])
+            .test_id("ui-gallery-ai-chat-actions")
+            .into_element(cx)
+    };
+
     let chat = ui_ai::AiChat::new(messages.clone(), prompt)
         .loading_model(loading.clone())
         .content_revision_model(content_revision.clone())
@@ -14160,7 +14175,12 @@ fn preview_ai_chat_demo(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec
         )
     });
 
-    vec![header, chat, exported.unwrap_or_else(|| cx.text(""))]
+    vec![
+        header,
+        actions_demo,
+        chat,
+        exported.unwrap_or_else(|| cx.text("")),
+    ]
 }
 
 fn preview_inspector_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
