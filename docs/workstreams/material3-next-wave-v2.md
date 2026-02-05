@@ -315,6 +315,21 @@ Non-goals:
           - Evidence: `ecosystem/fret-ui-material3/src/autocomplete.rs`, `ecosystem/fret-ui-material3/src/lib.rs`.
         - [x] Add a Compose-style composition surface (`ExposedDropdown`) for searchable select policy.
           - Evidence: `ecosystem/fret-ui-material3/src/exposed_dropdown.rs`, `apps/fret-ui-gallery/src/ui.rs`.
+        - [x] Exposed dropdown: trailing icon toggles the overlay (click-through safe).
+          - Notes:
+            - `DismissiblePopover` treats the trigger element as an implicit dismissable branch in
+              click-through mode. Exposed dropdowns have a wider interactive trigger surface than
+              the text input node alone (e.g. the trailing dropdown icon), so `Autocomplete` wires
+              the full field container as an additional dismissable branch to avoid the
+              "dismiss then immediately re-open" toggle race.
+          - Evidence:
+            - `ecosystem/fret-ui-material3/src/text_field.rs` (`TextField::{trailing_icon,field_id_out}`)
+            - `ecosystem/fret-ui-material3/src/autocomplete.rs` (popover request `dismissable_branches`)
+            - `ecosystem/fret-ui-material3/src/exposed_dropdown.rs` (`Autocomplete::trailing_dropdown_icon(true)`)
+            - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+              (`material3_exposed_dropdown_trailing_icon_toggles_overlay_v1`)
+            - `tools/diag-scripts/ui-gallery-material3-exposed-dropdown-filtering.json`
+              (run with `FRET_UI_GALLERY_START_PAGE=material3_autocomplete` when launching the gallery)
   - References:
     - Material Web tokens:
       `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-outlined-autocomplete.scss`,
