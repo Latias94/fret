@@ -34,7 +34,7 @@
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
     },
-    { "type": "type_text", "text": "hello citations" },
+    { "type": "type_text", "text": "hello citations hover" },
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-send" }
@@ -43,36 +43,30 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" }
+        "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1" }
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-msg-4-sources-2-trigger" }
+        "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1-card" }
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-4-sources-2-trigger" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1-next" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1-prev" } },
+    { "type": "wait_frames", "n": 10 },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-msg-4-source-row-2-0" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" } },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-msg-4-source-row-2-0-active" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-ai-chat-demo-citation-highlight" }
+      "type": "capture_bundle",
+      "label": "ui-gallery-ai-chat-demo-inline-citation-hovercard"
+    }
   ]
 }
+

@@ -34,18 +34,10 @@
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-textarea" }
     },
-    { "type": "type_text", "text": "hello citations" },
+    { "type": "type_text", "text": "hello sources" },
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-ai-chat-prompt-send" }
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" }
-      },
-      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -60,19 +52,14 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-msg-4-source-row-2-0" }
+        "target": { "kind": "test_id", "id": "ui-ai-msg-4-sources-2-content" }
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-0" } },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-msg-4-source-row-2-0-active" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-ai-chat-demo-citation-highlight" }
+      "type": "capture_bundle",
+      "label": "ui-gallery-ai-chat-demo-sources-collapsible"
+    }
   ]
 }
+
