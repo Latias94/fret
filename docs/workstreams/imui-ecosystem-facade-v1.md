@@ -22,6 +22,7 @@ Status snapshot (2026-02-05):
   - optional ImGui-style `open` model + close button,
   - `Esc`-to-close when the title bar is focused,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.
+  - optional v1 resize handles via `floating_window_resizable(...)` (right/bottom/corner).
 
 Tracking:
 
