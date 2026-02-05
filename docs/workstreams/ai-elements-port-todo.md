@@ -25,9 +25,9 @@ Each TODO is labeled:
 - [x] AIEL-MVP0-foundation-001 Define `fret-ui-ai` public module layout (elements + model).
 - [~] AIEL-MVP0-foundation-002 Add crate-level docs and a small “usage” section for each exported surface.
 - [x] AIEL-MVP0-foundation-003 Add baseline `test_id` conventions (roots/rows/actions) for diag automation.
-- [ ] AIEL-MVP0-foundation-004 Add at least one `fretboard diag` script that targets the transcript torture page (`ai_transcript_torture`).
+- [x] AIEL-MVP0-foundation-004 Add at least one `fretboard diag` script that targets the transcript torture page (`ai_transcript_torture`).
 - [x] AIEL-MVP0-foundation-005 Define the `fret-ui-ai` data model v0 (message parts, tool calls, sources, citations).
-- [ ] AIEL-MVP0-foundation-006 Define the `fret.ai.*` theme token v0 list (keep small; document defaults + usage rules).
+- [x] AIEL-MVP0-foundation-006 Define the `fret.ai.*` theme token v0 list (keep small; document defaults + usage rules).
 
 ## Component inventory (upstream baseline)
 
@@ -119,10 +119,11 @@ Existing gates (UI Gallery `ai_chat_demo`):
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-toolcall-collapse.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
 
 Planned next gate:
 
-- `AIEL-MVP0-foundation-004`: long transcript scroll stability gate on `ai_transcript_torture`.
+- `tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json`
 
 ### M3 — Code artifacts (developer-facing outputs)
 
