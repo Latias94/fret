@@ -6206,6 +6206,18 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub paint_observation_record_time_us: u64,
     #[serde(default)]
+    pub paint_host_widget_observed_models_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_models_items: u32,
+    #[serde(default)]
+    pub paint_host_widget_observed_globals_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_globals_items: u32,
+    #[serde(default)]
+    pub paint_host_widget_instance_lookup_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_instance_lookup_calls: u32,
+    #[serde(default)]
     pub paint_input_context_time_us: u64,
     #[serde(default)]
     pub paint_scroll_handle_invalidation_time_us: u64,
@@ -6585,6 +6597,19 @@ impl UiFrameStatsV1 {
             paint_widget_time_us: stats.paint_widget_time.as_micros() as u64,
             paint_observation_record_time_us: stats.paint_observation_record_time.as_micros()
                 as u64,
+            paint_host_widget_observed_models_time_us: stats
+                .paint_host_widget_observed_models_time
+                .as_micros() as u64,
+            paint_host_widget_observed_models_items: stats.paint_host_widget_observed_models_items,
+            paint_host_widget_observed_globals_time_us: stats
+                .paint_host_widget_observed_globals_time
+                .as_micros() as u64,
+            paint_host_widget_observed_globals_items: stats
+                .paint_host_widget_observed_globals_items,
+            paint_host_widget_instance_lookup_time_us: stats
+                .paint_host_widget_instance_lookup_time
+                .as_micros() as u64,
+            paint_host_widget_instance_lookup_calls: stats.paint_host_widget_instance_lookup_calls,
             paint_input_context_time_us: stats.paint_input_context_time.as_micros() as u64,
             paint_scroll_handle_invalidation_time_us: stats
                 .paint_scroll_handle_invalidation_time

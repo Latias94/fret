@@ -323,6 +323,18 @@ pub struct UiDebugFrameStats {
     pub paint_widget_time: Duration,
     /// Total wall time spent recording paint observations (`observed_in_paint` + globals).
     pub paint_observation_record_time: Duration,
+    /// Total wall time spent iterating element-runtime observed models inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_models_time: Duration,
+    /// Total observed-model edges iterated inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_models_items: u32,
+    /// Total wall time spent iterating element-runtime observed globals inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_globals_time: Duration,
+    /// Total observed-global edges iterated inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_observed_globals_items: u32,
+    /// Total wall time spent resolving the element instance (`ElementInstance`) inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_instance_lookup_time: Duration,
+    /// Number of `ElementInstance` lookups performed inside `ElementHostWidget::paint_impl`.
+    pub paint_host_widget_instance_lookup_calls: u32,
     pub paint_input_context_time: Duration,
     pub paint_scroll_handle_invalidation_time: Duration,
     pub paint_collect_roots_time: Duration,
@@ -2149,6 +2161,56 @@ impl<H: UiHost> UiTree<H> {
             .paint_widget_time
             .saturating_add(started.elapsed());
         true
+    }
+
+    pub(crate) fn debug_record_paint_host_widget_observed_models(
+        &mut self,
+        elapsed: Duration,
+        items: usize,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_host_widget_observed_models_time = self
+            .debug_stats
+            .paint_host_widget_observed_models_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_host_widget_observed_models_items = self
+            .debug_stats
+            .paint_host_widget_observed_models_items
+            .saturating_add(items.min(u32::MAX as usize) as u32);
+    }
+
+    pub(crate) fn debug_record_paint_host_widget_observed_globals(
+        &mut self,
+        elapsed: Duration,
+        items: usize,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_host_widget_observed_globals_time = self
+            .debug_stats
+            .paint_host_widget_observed_globals_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_host_widget_observed_globals_items = self
+            .debug_stats
+            .paint_host_widget_observed_globals_items
+            .saturating_add(items.min(u32::MAX as usize) as u32);
+    }
+
+    pub(crate) fn debug_record_paint_host_widget_instance_lookup(&mut self, elapsed: Duration) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_host_widget_instance_lookup_time = self
+            .debug_stats
+            .paint_host_widget_instance_lookup_time
+            .saturating_add(elapsed);
+        self.debug_stats.paint_host_widget_instance_lookup_calls = self
+            .debug_stats
+            .paint_host_widget_instance_lookup_calls
+            .saturating_add(1);
     }
 
     pub(crate) fn debug_record_hover_edge_pressable(&mut self) {

@@ -2,6 +2,7 @@ use super::super::frame::*;
 use super::super::paint_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
+use std::time::Instant;
 
 impl ElementHostWidget {
     pub(super) fn paint_impl<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
@@ -10,19 +11,37 @@ impl ElementHostWidget {
             return;
         };
 
+        let models_started = cx.tree.debug_enabled().then(Instant::now);
         crate::elements::with_observed_models_for_element(cx.app, window, self.element, |items| {
             for &(model, invalidation) in items {
                 (cx.observe_model)(model, invalidation);
             }
+            if let Some(started) = models_started.as_ref() {
+                cx.tree
+                    .debug_record_paint_host_widget_observed_models(started.elapsed(), items.len());
+            }
         });
 
+        let globals_started = cx.tree.debug_enabled().then(Instant::now);
         crate::elements::with_observed_globals_for_element(cx.app, window, self.element, |items| {
             for &(global, invalidation) in items {
                 (cx.observe_global)(global, invalidation);
             }
+            if let Some(started) = globals_started.as_ref() {
+                cx.tree.debug_record_paint_host_widget_observed_globals(
+                    started.elapsed(),
+                    items.len(),
+                );
+            }
         });
 
-        let Some(instance) = self.instance(cx.app, window, cx.node) else {
+        let instance_started = cx.tree.debug_enabled().then(Instant::now);
+        let instance = self.instance(cx.app, window, cx.node);
+        if let Some(instance_started) = instance_started {
+            cx.tree
+                .debug_record_paint_host_widget_instance_lookup(instance_started.elapsed());
+        }
+        let Some(instance) = instance else {
             return;
         };
 

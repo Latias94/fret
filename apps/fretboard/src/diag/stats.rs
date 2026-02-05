@@ -232,6 +232,12 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) paint_cache_hit_check_time_us: u64,
     pub(super) paint_widget_time_us: u64,
     pub(super) paint_observation_record_time_us: u64,
+    pub(super) paint_host_widget_observed_models_time_us: u64,
+    pub(super) paint_host_widget_observed_models_items: u32,
+    pub(super) paint_host_widget_observed_globals_time_us: u64,
+    pub(super) paint_host_widget_observed_globals_items: u32,
+    pub(super) paint_host_widget_instance_lookup_time_us: u64,
+    pub(super) paint_host_widget_instance_lookup_calls: u32,
     pub(super) paint_input_context_time_us: u64,
     pub(super) paint_scroll_handle_invalidation_time_us: u64,
     pub(super) paint_collect_roots_time_us: u64,
@@ -703,6 +709,20 @@ impl BundleStatsReport {
                     row.paint_cache_hit_check_time_us,
                     row.paint_widget_time_us,
                     row.paint_observation_record_time_us
+                );
+            }
+            if row.paint_host_widget_observed_models_time_us > 0
+                || row.paint_host_widget_observed_globals_time_us > 0
+                || row.paint_host_widget_instance_lookup_time_us > 0
+            {
+                println!(
+                    "    paint_host_widget.us(models/globals/instance)={}/{}/{} items={}/{} calls={}",
+                    row.paint_host_widget_observed_models_time_us,
+                    row.paint_host_widget_observed_globals_time_us,
+                    row.paint_host_widget_instance_lookup_time_us,
+                    row.paint_host_widget_observed_models_items,
+                    row.paint_host_widget_observed_globals_items,
+                    row.paint_host_widget_instance_lookup_calls,
                 );
             }
             if !row.paint_widget_hotspots.is_empty() {
@@ -1504,6 +1524,30 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_observation_record_time_us".to_string(),
                     Value::from(row.paint_observation_record_time_us),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_models_time_us".to_string(),
+                    Value::from(row.paint_host_widget_observed_models_time_us),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_models_items".to_string(),
+                    Value::from(row.paint_host_widget_observed_models_items),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_globals_time_us".to_string(),
+                    Value::from(row.paint_host_widget_observed_globals_time_us),
+                );
+                obj.insert(
+                    "paint_host_widget_observed_globals_items".to_string(),
+                    Value::from(row.paint_host_widget_observed_globals_items),
+                );
+                obj.insert(
+                    "paint_host_widget_instance_lookup_time_us".to_string(),
+                    Value::from(row.paint_host_widget_instance_lookup_time_us),
+                );
+                obj.insert(
+                    "paint_host_widget_instance_lookup_calls".to_string(),
+                    Value::from(row.paint_host_widget_instance_lookup_calls),
                 );
                 obj.insert(
                     "paint_input_context_time_us".to_string(),
@@ -4503,6 +4547,36 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("paint_observation_record_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let paint_host_widget_observed_models_time_us = stats
+                .and_then(|m| m.get("paint_host_widget_observed_models_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_host_widget_observed_models_items = stats
+                .and_then(|m| m.get("paint_host_widget_observed_models_items"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_observed_globals_time_us = stats
+                .and_then(|m| m.get("paint_host_widget_observed_globals_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_host_widget_observed_globals_items = stats
+                .and_then(|m| m.get("paint_host_widget_observed_globals_items"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_host_widget_instance_lookup_time_us = stats
+                .and_then(|m| m.get("paint_host_widget_instance_lookup_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let paint_host_widget_instance_lookup_calls = stats
+                .and_then(|m| m.get("paint_host_widget_instance_lookup_calls"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let paint_input_context_time_us = stats
                 .and_then(|m| m.get("paint_input_context_time_us"))
                 .and_then(|v| v.as_u64())
@@ -5267,6 +5341,12 @@ pub(super) fn bundle_stats_from_json_with_options(
                 paint_cache_hit_check_time_us,
                 paint_widget_time_us,
                 paint_observation_record_time_us,
+                paint_host_widget_observed_models_time_us,
+                paint_host_widget_observed_models_items,
+                paint_host_widget_observed_globals_time_us,
+                paint_host_widget_observed_globals_items,
+                paint_host_widget_instance_lookup_time_us,
+                paint_host_widget_instance_lookup_calls,
                 paint_input_context_time_us,
                 paint_scroll_handle_invalidation_time_us,
                 paint_collect_roots_time_us,
