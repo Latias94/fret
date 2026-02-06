@@ -11,7 +11,7 @@ pub(super) use crate::ui::canvas::geometry::CanvasGeometry;
 pub(super) use crate::ui::canvas::spatial::CanvasSpatialIndex;
 pub(super) use crate::ui::canvas::state::{ViewSnapshot, WireDrag, WireDragKind};
 
-pub(super) use super::super::diagnostics::severity_rank;
+pub(super) use crate::ui::canvas::widget::wire_drag::diagnostics::severity_rank;
 pub(super) use crate::ui::canvas::widget::{
     HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
 };

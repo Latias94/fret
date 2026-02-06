@@ -255,6 +255,12 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_drop_conformance.rs`
+- [x] Normalize widget pipeline prelude imports to `crate::ui::canvas::widget::*` paths to reduce relative-path drift.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/prelude.rs`
 - [x] Split measured-geometry module into small modules to reduce drift (store vs presenter wrappers).
   - Evidence: `ecosystem/fret-node/src/ui/measured/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/measured/store.rs`
