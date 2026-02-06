@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 - TODO Tracker
 
-Status: Draft
+Status: In progress (M0 complete; M1+ pending)
 Last updated: 2026-02-06
 
 This tracker covers:
@@ -41,9 +41,12 @@ Exit criteria:
 - v1 baseline is captured and referenced.
 - v2 contribution admission criteria are documented.
 
-- [ ] IMUIECO2-scope-000 Capture v1 frozen baseline and change policy.
-- [ ] IMUIECO2-scope-001 Define "breaking response behavior" criteria.
-- [ ] IMUIECO2-docs-002 Publish wrapper contribution checklist (tests + docs + delegation evidence).
+- [x] IMUIECO2-scope-000 Capture v1 frozen baseline and change policy.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md` (sections 1 and 2).
+- [x] IMUIECO2-scope-001 Define "breaking response behavior" criteria.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md` (section 3).
+- [x] IMUIECO2-docs-002 Publish wrapper contribution checklist (tests + docs + delegation evidence).
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md` (sections 4 and 5).
 
 ---
 

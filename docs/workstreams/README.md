@@ -30,6 +30,7 @@ Active workstreams:
 - `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-v2.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md`
 - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/imui-authoring-facade-v1.md` (baseline / historical reference)

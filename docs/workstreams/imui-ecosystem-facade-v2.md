@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 (Stabilization + Authoring Alignment)
 
-Status: Draft (planning note; not an ADR)
+Status: In progress (M0 locked; M1+ pending; planning note, not an ADR)
 Last updated: 2026-02-06
 
 This workstream starts after `imui` ecosystem facade v1 is functionally complete.
@@ -50,6 +50,7 @@ Main goals:
 
 ### M0 - Baseline lock and admission criteria
 
+- M0 lock details are normative in `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md`.
 - Snapshot current v1 behavior as the reference baseline.
 - Define what counts as a "breaking" `ResponseExt` change.
 - Define contribution requirements for new wrappers (tests + docs + no duplicated policy).
