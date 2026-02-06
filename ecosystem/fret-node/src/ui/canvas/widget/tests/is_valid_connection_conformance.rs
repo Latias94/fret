@@ -2,6 +2,7 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind};
 
+use super::prelude::wire_drag;
 use crate::ui::NodeGraphCanvas;
 
 use super::{
@@ -73,7 +74,7 @@ fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {
         bounds,
         &mut prevented_default_actions,
     );
-    assert!(super::super::wire_drag::handle_wire_drag_move(
+    assert!(wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -142,7 +143,7 @@ fn wire_drag_hover_tracks_non_connectable_end_port_as_invalid() {
         bounds,
         &mut prevented_default_actions,
     );
-    assert!(super::super::wire_drag::handle_wire_drag_move(
+    assert!(wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -207,7 +208,7 @@ fn wire_drag_hover_marks_valid_target_port_as_valid() {
         bounds,
         &mut prevented_default_actions,
     );
-    assert!(super::super::wire_drag::handle_wire_drag_move(
+    assert!(wire_drag::handle_wire_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,

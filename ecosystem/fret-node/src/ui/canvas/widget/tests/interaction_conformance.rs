@@ -9,9 +9,9 @@ use crate::io::NodeGraphViewState;
 use crate::rules::EdgeEndpoint;
 use crate::ui::edge_types::{EdgeTypeKey, NodeGraphEdgeTypes};
 
-use super::super::{
-    NodeGraphCanvas, edge_drag, group_resize, left_click, marquee, node_drag, node_resize,
-    pending_drag, pointer_up,
+use super::prelude::{
+    HitTestCtx, HitTestScratch, NodeGraphCanvas, edge_drag, group_resize, left_click, marquee,
+    node_drag, node_resize, pending_drag, pointer_up, wire_drag,
 };
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_view, make_test_graph_two_nodes_with_size,
@@ -231,7 +231,7 @@ fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
         .unwrap();
     assert_eq!(group_rect_after_move.size.width, 100.0);
 
-    assert!(super::super::pointer_up::handle_pointer_up(
+    assert!(pointer_up::handle_pointer_up(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -366,7 +366,7 @@ fn child_node_drag_expands_group_when_expand_parent_is_true() {
         .unwrap();
     assert_eq!(group_rect_after_move.size.width, 100.0);
 
-    assert!(super::super::pointer_up::handle_pointer_up(
+    assert!(pointer_up::handle_pointer_up(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -485,7 +485,7 @@ fn node_drag_respects_per_node_extent_rect() {
         .unwrap();
     assert_eq!(preview.x, 20.0);
 
-    assert!(super::super::pointer_up::handle_pointer_up(
+    assert!(pointer_up::handle_pointer_up(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -2387,8 +2387,8 @@ fn pick_target_port_respects_port_connectable_end() {
     let hit = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch = super::super::HitTestScratch::default();
-            let mut ctx = super::super::HitTestCtx::new(
+            let mut scratch = HitTestScratch::default();
+            let mut ctx = HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
                 snapshot.zoom,
@@ -2515,15 +2515,13 @@ fn connectable_false_prevents_connecting_to_target_port() {
         pos: Point::new(Px(0.0), Px(0.0)),
     });
 
-    assert!(
-        super::super::wire_drag::handle_wire_left_up_with_forced_target(
-            &mut canvas,
-            &mut cx,
-            &snapshot,
-            snapshot.zoom,
-            Some(inn),
-        )
-    );
+    assert!(wire_drag::handle_wire_left_up_with_forced_target(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        snapshot.zoom,
+        Some(inn),
+    ));
 
     assert_eq!(graph.read_ref(&host, |g| g.edges.len()).unwrap_or(0), 0);
 }
@@ -2689,8 +2687,8 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
     let hit_source = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch = super::super::HitTestScratch::default();
-            let mut ctx = super::super::HitTestCtx::new(
+            let mut scratch = HitTestScratch::default();
+            let mut ctx = HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
                 snapshot.zoom,
@@ -2705,8 +2703,8 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
     let hit_target = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch = super::super::HitTestScratch::default();
-            let mut ctx = super::super::HitTestCtx::new(
+            let mut scratch = HitTestScratch::default();
+            let mut ctx = HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
                 snapshot.zoom,
@@ -2756,8 +2754,8 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
     let hit_source = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch = super::super::HitTestScratch::default();
-            let mut ctx = super::super::HitTestCtx::new(
+            let mut scratch = HitTestScratch::default();
+            let mut ctx = HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
                 snapshot.zoom,
@@ -2772,8 +2770,8 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
     let hit_target = canvas
         .graph
         .read_ref(&host, |g| {
-            let mut scratch = super::super::HitTestScratch::default();
-            let mut ctx = super::super::HitTestCtx::new(
+            let mut scratch = HitTestScratch::default();
+            let mut ctx = HitTestCtx::new(
                 derived.as_ref(),
                 index.as_ref(),
                 snapshot.zoom,
@@ -2822,8 +2820,8 @@ fn edge_reconnectable_bool_false_disables_anchors_even_when_global_enabled() {
         let hit = canvas
             .graph
             .read_ref(&host, |g| {
-                let mut scratch = super::super::HitTestScratch::default();
-                let mut ctx = super::super::HitTestCtx::new(
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(
                     derived.as_ref(),
                     index.as_ref(),
                     snapshot.zoom,
@@ -2867,8 +2865,8 @@ fn edge_reconnectable_none_follows_global_gate_for_anchors() {
         let hit = canvas
             .graph
             .read_ref(&host, |g| {
-                let mut scratch = super::super::HitTestScratch::default();
-                let mut ctx = super::super::HitTestCtx::new(
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(
                     derived.as_ref(),
                     index.as_ref(),
                     snapshot.zoom,
@@ -2916,7 +2914,7 @@ fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
         bounds,
         &mut prevented_default_actions,
     );
-    assert!(super::super::wire_drag::handle_wire_left_up(
+    assert!(wire_drag::handle_wire_left_up(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -3068,7 +3066,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
         start_pos: Point::new(Px(0.0), Px(0.0)),
     });
 
-    assert!(super::super::node_drag::handle_node_drag_move(
+    assert!(node_drag::handle_node_drag_move(
         &mut canvas,
         &mut cx,
         &snapshot,
