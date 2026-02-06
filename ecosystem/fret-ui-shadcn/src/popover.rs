@@ -26,20 +26,23 @@ use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 
-fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
-    fn visit(node: &AnyElement, best: &mut Option<Size>) {
+#[derive(Debug, Clone, Copy, Default)]
+struct FixedSizeHintPx {
+    width: Option<Px>,
+    height: Option<Px>,
+}
+
+fn fixed_size_hint_px(element: &AnyElement) -> FixedSizeHintPx {
+    fn visit(node: &AnyElement, best: &mut FixedSizeHintPx) {
         if let ElementKind::Container(ContainerProps { layout, .. }) = &node.kind {
             if let Length::Px(w) = layout.size.width {
-                let h = match layout.size.height {
-                    Length::Px(h) => h,
-                    _ => Px(160.0),
-                };
-                let candidate = Size::new(w, h);
-                if best
-                    .map(|cur| candidate.width.0 > cur.width.0)
-                    .unwrap_or(true)
-                {
-                    *best = Some(candidate);
+                let replace = best.width.map(|cur| w.0 > cur.0).unwrap_or(true);
+                if replace {
+                    best.width = Some(w);
+                    best.height = match layout.size.height {
+                        Length::Px(h) => Some(h),
+                        _ => None,
+                    };
                 }
             }
         }
@@ -49,7 +52,7 @@ fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
         }
     }
 
-    let mut best: Option<Size> = None;
+    let mut best = FixedSizeHintPx::default();
     visit(element, &mut best);
     best
 }
@@ -395,7 +398,8 @@ impl Popover {
                     let inner_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                         Rc::new(Cell::new(None));
                     let inner_id_for_scope = inner_id.clone();
-                    let inner_size_hint: Rc<Cell<Option<Size>>> = Rc::new(Cell::new(None));
+                    let inner_size_hint: Rc<Cell<FixedSizeHintPx>> =
+                        Rc::new(Cell::new(FixedSizeHintPx::default()));
                     let inner_size_hint_for_scope = inner_size_hint.clone();
                     let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
                         let inner = with_surface_slot_provider(
@@ -412,10 +416,15 @@ impl Popover {
                     let measure_id = inner_id.get().unwrap_or(content.id);
                     let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
                     let estimated = Size::new(Px(288.0), Px(160.0));
-                    let content_size = inner_size_hint
-                        .get()
-                        .or(last_content_size)
-                        .unwrap_or(estimated);
+                    let hint = inner_size_hint.get();
+                    let content_size = Size::new(
+                        hint.width
+                            .or(last_content_size.map(|s| s.width))
+                            .unwrap_or(estimated.width),
+                        hint.height
+                            .or(last_content_size.map(|s| s.height))
+                            .unwrap_or(estimated.height),
+                    );
 
                     let align = match align {
                         PopoverAlign::Start => Align::Start,
@@ -460,15 +469,27 @@ impl Popover {
                     let border = theme.color_required("border");
 
                     let anchor = anchor_fallback.unwrap_or_default();
-                    let layout =
-                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                    let layout = popper::popper_content_layout_size_unclamped(
+                        outer,
+                        anchor,
+                        content_size,
+                        placement,
+                    );
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
 
-                    let panel = popper_content::popper_panel_at(
-                        cx,
+                    let mut panel_layout = popper_content::popper_panel_layout(
                         layout.rect,
                         wrapper_insets,
                         Overflow::Visible,
+                    );
+                    if hint.height.is_none() && last_content_size.is_none() {
+                        panel_layout.size.height = Length::Auto;
+                    }
+                    let panel = cx.container(
+                        ContainerProps {
+                            layout: panel_layout,
+                            ..Default::default()
+                        },
                         move |_cx| vec![content],
                     );
 

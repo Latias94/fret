@@ -14294,16 +14294,25 @@ fn preview_select(
         .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
         .into_element(cx);
 
-    let selected = cx
-        .watch_model(&value)
-        .cloned()
-        .unwrap_or_default()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let selected_label = cx
+        .scope(|cx| {
+            let selected: Arc<str> = cx
+                .get_model_cloned(&value, fret_ui::Invalidation::Paint)
+                .unwrap_or_default()
+                .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let selected_label = cx.text(format!("Selected: {selected}")).attach_semantics(
-        fret_ui::element::SemanticsDecoration::default()
-            .test_id("ui-gallery-select-selected-label"),
-    );
+            fret_ui::element::AnyElement::new(
+                cx.root_id(),
+                fret_ui::element::ElementKind::Text(fret_ui::element::TextProps::new(format!(
+                    "Selected: {selected}"
+                ))),
+                Vec::new(),
+            )
+        })
+        .attach_semantics(
+            fret_ui::element::SemanticsDecoration::default()
+                .test_id("ui-gallery-select-selected-label"),
+        );
 
     vec![select, selected_label]
 }

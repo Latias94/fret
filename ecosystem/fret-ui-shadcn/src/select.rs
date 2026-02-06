@@ -1002,10 +1002,6 @@ fn select_impl<H: UiHost>(
         }
 
         let theme = Theme::global(&*cx.app).clone();
-        // Read the current selected/open state for rendering. The *observations* are registered on
-        // the mounted trigger element below so model changes can be mapped to a `NodeId` for
-        // invalidation (paint-cache correctness).
-        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
         let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
         let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
             cx,
@@ -1043,11 +1039,6 @@ fn select_impl<H: UiHost>(
 
         let radius = resolved.radius;
         let mut ring = decl_style::focus_ring(&theme, radius);
-
-        let label = selected
-            .as_ref()
-            .and_then(|v| find_item_label(entries, v.as_ref()))
-            .unwrap_or(placeholder);
 
         let text_style = TextStyle {
             font: FontId::default(),
@@ -1188,8 +1179,9 @@ fn select_impl<H: UiHost>(
             }
         }
 
-        // `control_chrome_pressable_with_id_props` stores handlers; keep a dedicated `open` clone
-        // for trigger-owned hooks.
+        // `control_chrome_pressable_with_id_props` stores handlers; keep dedicated clones for
+        // trigger-owned hooks.
+        let model_for_trigger = model.clone();
         let open_for_trigger = open.clone();
         let trigger_test_id_for_trigger = trigger_test_id.clone();
 
@@ -1197,7 +1189,7 @@ fn select_impl<H: UiHost>(
             // `selected` affects rendered structure (label text + indicator visibility). Observe it as
             // a paint dependency on the mounted trigger element so model changes drive invalidation
             // (and won't be dropped when `select_impl` is wrapped in an unmounted `cx.scope`).
-            cx.watch_model(&model).paint().observe();
+            cx.watch_model(&model_for_trigger).paint().observe();
             cx.watch_model(&open_for_trigger).paint().observe();
 
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
@@ -1841,6 +1833,7 @@ fn select_impl<H: UiHost>(
                     let mouse_open_guard_for_overlay = mouse_open_guard.clone();
                     let on_dismiss_request_for_overlay_children = on_dismiss_request.clone();
                     let on_value_change_for_overlay_children = on_value_change.clone();
+                    let model_for_overlay = model.clone();
 
                     let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
                         let trigger_state_for_overlay = trigger_state_for_overlay_for_children.clone();
@@ -1848,7 +1841,11 @@ fn select_impl<H: UiHost>(
                         let open_for_barrier_children = open_for_overlay.clone();
                         let mouse_open_guard_for_barrier_children = mouse_open_guard_for_overlay.clone();
 
-                        let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+                        let model = model_for_overlay.clone();
+                        let selected = cx
+                            .watch_model(&model)
+                            .cloned()
+                            .unwrap_or_default();
                         let on_value_change = on_value_change_for_overlay_children.clone();
 
                         #[derive(Clone)]
@@ -2041,7 +2038,7 @@ fn select_impl<H: UiHost>(
                                         let state_for_key =
                                             trigger_state_for_overlay_in_content.clone();
                                         let open_for_key = open_for_content.clone();
-                                        let model_for_key = model.clone();
+                                        let model_for_key = model_for_overlay.clone();
                                         let loop_navigation_for_key = loop_navigation;
 
                                         cx.key_on_key_down_for(
@@ -2980,6 +2977,8 @@ fn select_impl<H: UiHost>(
             }
 
             let state_for_value_node = trigger_state.clone();
+            let placeholder_for_value_node = placeholder.clone();
+            let model_for_value_node = model.clone();
 
             let content = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
@@ -3019,6 +3018,17 @@ fn select_impl<H: UiHost>(
                                         ..Default::default()
                                     },
                                     move |cx| {
+                                        let selected = cx
+                                            .get_model_cloned(
+                                                &model_for_value_node,
+                                                fret_ui::Invalidation::Paint,
+                                            )
+                                            .unwrap_or_default();
+                                        let label = selected
+                                            .as_ref()
+                                            .and_then(|v| find_item_label(entries, v.as_ref()))
+                                            .unwrap_or_else(|| placeholder_for_value_node.clone());
+
                                         let mut text = ui::text(cx, label)
                                             .text_size_px(text_style.size)
                                             .font_weight(text_style.weight)
