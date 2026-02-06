@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
 use crate::docs;
+use fret_runtime::CommandId;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
@@ -89,8 +91,8 @@ fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
     ui_gallery_start_page_from_id(&id)
 }
 
-pub(crate) const CMD_NAV_SELECT_PREFIX: &str = "ui_gallery.nav.select.";
 pub(crate) const CMD_DATA_GRID_ROW_PREFIX: &str = "ui_gallery.data_grid.row.";
+pub(crate) const DATA_GRID_ROWS: usize = 200;
 
 pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
@@ -360,8 +362,6 @@ pub(crate) const CMD_VIRTUAL_LIST_TORTURE_SCROLL_BOTTOM: &str =
     "ui_gallery.virtual_list_torture.scroll_bottom";
 pub(crate) const CMD_VIRTUAL_LIST_TORTURE_CLEAR_EDIT: &str =
     "ui_gallery.virtual_list_torture.clear_edit";
-pub(crate) const CMD_VIRTUAL_LIST_TORTURE_ROW_EDIT_PREFIX: &str =
-    "ui_gallery.virtual_list_torture.row.edit.";
 
 pub(crate) const CMD_MENU_DROPDOWN_APPLE: &str = "ui_gallery.menu.dropdown.apple";
 pub(crate) const CMD_MENU_DROPDOWN_ORANGE: &str = "ui_gallery.menu.dropdown.orange";
@@ -1783,6 +1783,53 @@ pub(crate) fn page_spec(id: &str) -> Option<&'static PageSpec> {
         .iter()
         .flat_map(|group| group.items.iter())
         .find(|item| item.id == id)
+}
+
+pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
+    static BY_COMMAND: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
+    let by_command = BY_COMMAND.get_or_init(|| {
+        let mut map: HashMap<&'static str, &'static str> = HashMap::new();
+        for group in PAGE_GROUPS {
+            for page in group.items {
+                map.insert(page.command, page.id);
+            }
+        }
+        map
+    });
+
+    by_command.get(command).copied()
+}
+
+struct DataGridCommands {
+    by_row: Vec<CommandId>,
+    row_by_command: HashMap<Arc<str>, u64>,
+}
+
+fn data_grid_commands() -> &'static DataGridCommands {
+    static COMMANDS: OnceLock<DataGridCommands> = OnceLock::new();
+    COMMANDS.get_or_init(|| {
+        let mut by_row: Vec<CommandId> = Vec::with_capacity(DATA_GRID_ROWS);
+        let mut row_by_command: HashMap<Arc<str>, u64> = HashMap::with_capacity(DATA_GRID_ROWS);
+
+        for row in 0..DATA_GRID_ROWS {
+            let cmd = CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}"));
+            row_by_command.insert(cmd.0.clone(), row as u64);
+            by_row.push(cmd);
+        }
+
+        DataGridCommands {
+            by_row,
+            row_by_command,
+        }
+    })
+}
+
+pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
+    data_grid_commands().by_row.get(row).cloned()
+}
+
+pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
+    data_grid_commands().row_by_command.get(command).copied()
 }
 
 pub(crate) fn page_meta(

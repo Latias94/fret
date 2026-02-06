@@ -130,6 +130,16 @@ Plan:
   - keep **stable** `CommandId`s for keybindable actions (e.g. `todo.add`)
   - use `MessageRouter` for per-item/per-row actions (remove/toggle/etc.)
 
+Caveat (view-cache reuse):
+
+- `MessageRouter` is **per-frame**: it relies on rebuilding the view to (re)register dynamic
+  commands in the current router map.
+- `view_cache(...)` roots can **reuse** a subtree and skip running the subtree builder closure.
+  This means per-frame routing tables will not be refreshed.
+- For dynamic commands inside a view-cached subtree, prefer **stable** command IDs and a persistent
+  lookup table (`CommandId -> message`) owned by the window/app state.
+  - Example: UI Gallery keeps stable command→payload helpers in `apps/fret-ui-gallery/src/spec.rs`.
+
 ## User experience target (“what app authors should feel”)
 
 - A new app can be written with:
