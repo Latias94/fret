@@ -245,11 +245,9 @@ pub fn sort_grouped_row_indices_in_place<TData>(
     }
 
     indices.sort_by(|&a, &b| {
-        let ra = model.row(a);
-        let rb = model.row(b);
-        let (Some(ra), Some(rb)) = (ra, rb) else {
+        if model.row(a).is_none() || model.row(b).is_none() {
             return Ordering::Equal;
-        };
+        }
 
         for spec in sorting {
             let Some(col) = columns
@@ -275,7 +273,7 @@ pub fn sort_grouped_row_indices_in_place<TData>(
             }
         }
 
-        ra.key.cmp(&rb.key)
+        a.cmp(&b)
     });
 }
 

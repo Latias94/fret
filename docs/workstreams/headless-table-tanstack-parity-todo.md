@@ -71,7 +71,7 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## Next execution plan (functional parity first)
 
-- Step 1: Integrate sorted grouped output into the main row-model pipeline (`HTP-grp-030` remaining).
+- Step 1: Close grouped placeholder/aggregated cell inventory parity (`HTP-grp-010`).
 - Step 2: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
 - Step 3: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
 - Step 4: Expand filtering `getCanFilter`/controlled hooks parity surface.
@@ -81,7 +81,7 @@ ColumnDef keys referenced by upstream feature implementations:
 
 P0 (core behavior parity, highest user-visible risk):
 
-- HTP-grp-030: integrate sorted grouped output into `row_model()` pipeline for grouped mode parity.
+- HTP-grp-010: complete grouped placeholder/aggregated cell inventories for deep nesting cases.
 
 P1 (capability breadth parity):
 
@@ -102,8 +102,9 @@ P2 (engineering guardrails for sustained parity):
 - Milestone B (grouped pinning semantics, done): `HTP-ui-rowpin-020` + `HTP-rowpin-015` closed with fixture-backed assertions.
 - Milestone C (manual pipeline parity, done): `HTP-sort-050` closed with fixture-backed manualSorting/getSortedRowModel override assertions.
 - Milestone D (filter depth/meta parity, done): `HTP-filt-050` + `HTP-filt-060` + `HTP-filt-070` are parity-gated.
-- Milestone E (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
-- Milestone F (guardrails): close HTP-cap-010, HTP-base-004, HTP-memo-020, and HTP-perf-010.
+- Milestone E (grouped row-model pipeline parity, done): `HTP-grp-030` closed with fixture-backed pipeline assertions.
+- Milestone F (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
+- Milestone G (guardrails): close HTP-cap-010, HTP-base-004, HTP-memo-020, and HTP-perf-010.
 
 ---
 
@@ -373,14 +374,17 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_aggregation_fns_parity.rs`.
   - Done (sorting integration over aggregation-any values): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_sorting_precedence.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_sorting_precedence_parity.rs`.
-- [~] HTP-grp-030 Implement grouped sorting parity (group rows ordering + child ordering).
+- [x] HTP-grp-030 Implement grouped sorting parity (group rows ordering + child ordering).
   - Done (parity-gated for 1-column and 2-column grouping, single sort spec): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
   - Done (parity-gated): multi-sort precedence + non-u64 aggregated sort keys (`mean` + secondary tie-break) via
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_sorting_precedence.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_sorting_precedence_parity.rs`.
-  - Evidence: `ecosystem/fret-ui-headless/src/table/grouped_sorting.rs`.
-  - Remaining: fully integrate sorted grouped output into the main row-model pipeline (`Table::row_model()` grouped path).
+  - Done (parity-gated): grouped row-model pipeline handoff (`pre_sorted` -> `sorted` -> `expanded`) with sorted grouped output integration.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_row_model_pipeline.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_row_model_pipeline_parity.rs`
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`,
+    `ecosystem/fret-ui-headless/src/table/grouped_sorting.rs`.
 - [x] HTP-grp-040 Align option gates and hooks:
   - Parity-gated: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
@@ -662,6 +666,7 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json` | `expanding` | `RowExpanding` (expanded row model + pagination interactions) | `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` | `grouping` | `ColumnGrouping` (grouped model + flat row ordering) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_sorting_precedence.json` | `grouping_sorting_precedence` | `ColumnGrouping` + `RowSorting` (grouped multi-sort precedence + aggregation-any sort keys) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_sorting_precedence_parity.rs` | Partial |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_row_model_pipeline.json` | `grouping_row_model_pipeline` | `ColumnGrouping` + `RowSorting` + `RowExpanding` (grouped row-model pipeline composition in `Table::row_model()`) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_row_model_pipeline_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` | `visibility_ordering` | `ColumnVisibility` + `ColumnOrdering` (state transitions + derived leaf column order) | `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json` | `faceting` | `ColumnFaceting` / `GlobalFaceting` | `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |

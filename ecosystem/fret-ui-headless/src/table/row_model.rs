@@ -531,6 +531,8 @@ pub struct Table<'a, TData> {
     core_row_model: OnceCell<RowModel<'a, TData>>,
     filtered_row_model: OnceCell<RowModel<'a, TData>>,
     grouped_row_model: OnceCell<super::GroupedRowModel>,
+    grouped_pre_sorted_row_model: OnceCell<RowModel<'a, TData>>,
+    grouped_sorted_row_model: OnceCell<RowModel<'a, TData>>,
     grouped_u64_aggregations: OnceCell<HashMap<RowKey, Arc<[(super::ColumnId, u64)]>>>,
     grouped_any_aggregations:
         OnceCell<HashMap<RowKey, Arc<[(super::ColumnId, super::TanStackValue)]>>>,
@@ -640,6 +642,8 @@ impl<'a, TData> Table<'a, TData> {
             core_row_model: OnceCell::new(),
             filtered_row_model: OnceCell::new(),
             grouped_row_model: OnceCell::new(),
+            grouped_pre_sorted_row_model: OnceCell::new(),
+            grouped_sorted_row_model: OnceCell::new(),
             grouped_u64_aggregations: OnceCell::new(),
             grouped_any_aggregations: OnceCell::new(),
             sorted_row_model: OnceCell::new(),
@@ -1194,8 +1198,23 @@ impl<'a, TData> Table<'a, TData> {
         self.filtered_row_model()
     }
 
+    fn can_compute_grouped_row_model(&self) -> bool {
+        if self.state.grouping.is_empty() {
+            return false;
+        }
+
+        self.state.grouping.iter().all(|column_id| {
+            self.column(column_id.as_ref()).is_some_and(|column| {
+                column.facet_key_fn.is_some() || column.facet_str_fn.is_some()
+            })
+        })
+    }
+
     pub fn grouped_row_model(&self) -> &super::GroupedRowModel {
-        if self.options.manual_grouping || self.state.grouping.is_empty() {
+        if self.options.manual_grouping
+            || self.state.grouping.is_empty()
+            || !self.can_compute_grouped_row_model()
+        {
             return self
                 .grouped_row_model
                 .get_or_init(|| super::grouped_row_model_from_leaf(self.pre_grouped_row_model()));
@@ -1215,6 +1234,257 @@ impl<'a, TData> Table<'a, TData> {
                 &self.columns,
                 &self.state.grouping,
             )
+        })
+    }
+
+    fn grouped_row_original(&self, grouped_row: &super::GroupedRow) -> Option<&'a TData> {
+        let row_key = match &grouped_row.kind {
+            super::GroupedRowKind::Leaf { row_key } => *row_key,
+            super::GroupedRowKind::Group {
+                first_leaf_row_key, ..
+            } => *first_leaf_row_key,
+        };
+        let core = self.core_row_model();
+        core.row_by_key(row_key)
+            .and_then(|index| core.row(index).map(|row| row.original))
+    }
+
+    fn grouped_row_index_in_core(&self, grouped_row: &super::GroupedRow, fallback: usize) -> usize {
+        let row_key = match &grouped_row.kind {
+            super::GroupedRowKind::Leaf { row_key } => *row_key,
+            super::GroupedRowKind::Group {
+                first_leaf_row_key, ..
+            } => *first_leaf_row_key,
+        };
+        let core = self.core_row_model();
+        core.row_by_key(row_key)
+            .and_then(|index| core.row(index).map(|row| row.index))
+            .unwrap_or(fallback)
+    }
+
+    fn build_grouped_row_model_as_row_model(
+        &self,
+        sorting: &[super::SortSpec],
+        preserve_grouped_flat_rows: bool,
+    ) -> RowModel<'a, TData> {
+        let grouped = self.grouped_row_model();
+
+        let mut row_model = RowModel {
+            root_rows: Vec::new(),
+            flat_rows: Vec::new(),
+            rows_by_key: HashMap::new(),
+            rows_by_id: HashMap::new(),
+            arena: Vec::new(),
+        };
+
+        if grouped.root_rows().is_empty() {
+            return row_model;
+        }
+
+        let mut root_grouped_rows: Vec<super::GroupedRowIndex> = grouped.root_rows().to_vec();
+        let mut sorted_children_by_grouped_index: HashMap<
+            super::GroupedRowIndex,
+            Vec<super::GroupedRowIndex>,
+        > = HashMap::new();
+
+        let mut row_index_by_key: HashMap<RowKey, usize> = HashMap::new();
+        let core = self.core_row_model();
+        for &index in core.flat_rows() {
+            let Some(row) = core.row(index) else {
+                continue;
+            };
+            row_index_by_key.entry(row.key).or_insert(row.index);
+        }
+
+        if !sorting.is_empty() {
+            super::sort_grouped_row_indices_in_place(
+                grouped,
+                root_grouped_rows.as_mut_slice(),
+                sorting,
+                self.columns.as_slice(),
+                self.data,
+                &row_index_by_key,
+                self.grouped_u64_aggregations(),
+                self.grouped_aggregations_any(),
+            );
+
+            fn sort_children_recursive<TData>(
+                table: &Table<'_, TData>,
+                grouped: &super::GroupedRowModel,
+                node: super::GroupedRowIndex,
+                sorting: &[super::SortSpec],
+                columns: &[super::ColumnDef<TData>],
+                data: &[TData],
+                row_index_by_key: &HashMap<RowKey, usize>,
+                sorted_children_by_grouped_index: &mut HashMap<
+                    super::GroupedRowIndex,
+                    Vec<super::GroupedRowIndex>,
+                >,
+            ) {
+                let Some(row) = grouped.row(node) else {
+                    return;
+                };
+                if row.sub_rows.is_empty() {
+                    return;
+                }
+
+                let mut children = row.sub_rows.clone();
+                super::sort_grouped_row_indices_in_place(
+                    grouped,
+                    children.as_mut_slice(),
+                    sorting,
+                    columns,
+                    data,
+                    row_index_by_key,
+                    table.grouped_u64_aggregations(),
+                    table.grouped_aggregations_any(),
+                );
+
+                for &child in &children {
+                    sort_children_recursive(
+                        table,
+                        grouped,
+                        child,
+                        sorting,
+                        columns,
+                        data,
+                        row_index_by_key,
+                        sorted_children_by_grouped_index,
+                    );
+                }
+
+                sorted_children_by_grouped_index.insert(node, children);
+            }
+
+            for &root in &root_grouped_rows {
+                sort_children_recursive(
+                    self,
+                    grouped,
+                    root,
+                    sorting,
+                    self.columns.as_slice(),
+                    self.data,
+                    &row_index_by_key,
+                    &mut sorted_children_by_grouped_index,
+                );
+            }
+        }
+
+        let mut grouped_to_row_index: HashMap<super::GroupedRowIndex, RowIndex> = HashMap::new();
+
+        fn materialize_grouped_row<'a, TData>(
+            table: &Table<'a, TData>,
+            grouped: &super::GroupedRowModel,
+            grouped_index: super::GroupedRowIndex,
+            parent: Option<RowIndex>,
+            parent_key: Option<RowKey>,
+            sorted_children_by_grouped_index: &HashMap<
+                super::GroupedRowIndex,
+                Vec<super::GroupedRowIndex>,
+            >,
+            row_model: &mut RowModel<'a, TData>,
+            grouped_to_row_index: &mut HashMap<super::GroupedRowIndex, RowIndex>,
+        ) -> Option<RowIndex> {
+            let grouped_row = grouped.row(grouped_index)?;
+            let original = table.grouped_row_original(grouped_row)?;
+            let depth = u16::try_from(grouped_row.depth).unwrap_or(u16::MAX);
+            let index = match &grouped_row.kind {
+                super::GroupedRowKind::Leaf { .. } => {
+                    table.grouped_row_index_in_core(grouped_row, grouped_index)
+                }
+                super::GroupedRowKind::Group { .. } => grouped_index,
+            };
+
+            let row_index = row_model.arena.len();
+            row_model.arena.push(Row {
+                id: grouped_row.id.clone(),
+                key: grouped_row.key,
+                original,
+                index,
+                depth,
+                parent,
+                parent_key,
+                sub_rows: Vec::new(),
+            });
+
+            row_model.rows_by_key.insert(grouped_row.key, row_index);
+            row_model
+                .rows_by_id
+                .insert(grouped_row.id.clone(), row_index);
+            grouped_to_row_index.insert(grouped_index, row_index);
+
+            if parent.is_none() {
+                row_model.root_rows.push(row_index);
+            }
+
+            row_model.flat_rows.push(row_index);
+
+            let grouped_children = sorted_children_by_grouped_index
+                .get(&grouped_index)
+                .map(|children| children.as_slice())
+                .unwrap_or_else(|| grouped_row.sub_rows.as_slice());
+
+            let mut row_children: Vec<RowIndex> = Vec::with_capacity(grouped_children.len());
+            for &child_grouped_index in grouped_children {
+                let Some(child_row_index) = materialize_grouped_row(
+                    table,
+                    grouped,
+                    child_grouped_index,
+                    Some(row_index),
+                    Some(grouped_row.key),
+                    sorted_children_by_grouped_index,
+                    row_model,
+                    grouped_to_row_index,
+                ) else {
+                    continue;
+                };
+                row_children.push(child_row_index);
+            }
+
+            if let Some(row) = row_model.arena.get_mut(row_index) {
+                row.sub_rows = row_children;
+            }
+
+            Some(row_index)
+        }
+
+        for &root_grouped_index in &root_grouped_rows {
+            let _ = materialize_grouped_row(
+                self,
+                grouped,
+                root_grouped_index,
+                None,
+                None,
+                &sorted_children_by_grouped_index,
+                &mut row_model,
+                &mut grouped_to_row_index,
+            );
+        }
+
+        if preserve_grouped_flat_rows {
+            row_model.flat_rows.clear();
+            for &grouped_index in grouped.flat_rows() {
+                let Some(row_index) = grouped_to_row_index.get(&grouped_index).copied() else {
+                    continue;
+                };
+                row_model.flat_rows.push(row_index);
+            }
+        }
+
+        row_model
+    }
+
+    fn grouped_pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        self.grouped_pre_sorted_row_model
+            .get_or_init(|| self.build_grouped_row_model_as_row_model(&[], true))
+    }
+
+    fn grouped_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        if self.state.sorting.is_empty() {
+            return self.grouped_pre_sorted_row_model();
+        }
+        self.grouped_sorted_row_model.get_or_init(|| {
+            self.build_grouped_row_model_as_row_model(self.state.sorting.as_slice(), false)
         })
     }
 
@@ -2622,12 +2892,18 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
+        if !self.options.manual_grouping && !self.state.grouping.is_empty() {
+            return self.grouped_pre_sorted_row_model();
+        }
         self.filtered_row_model()
     }
 
     pub fn sorted_row_model(&self) -> &RowModel<'a, TData> {
         if self.options.manual_sorting || self.sorted_row_model_override_pre_sorted {
             return self.pre_sorted_row_model();
+        }
+        if !self.options.manual_grouping && !self.state.grouping.is_empty() {
+            return self.grouped_sorted_row_model();
         }
         self.sorted_row_model.get_or_init(|| {
             super::sort_row_model(
@@ -2653,6 +2929,9 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn expanded_row_model(&self) -> &RowModel<'a, TData> {
         if !self.options.paginate_expanded_rows {
+            return self.pre_expanded_row_model();
+        }
+        if !self.options.manual_grouping && !self.state.grouping.is_empty() {
             return self.pre_expanded_row_model();
         }
         if self.options.manual_expanding {
