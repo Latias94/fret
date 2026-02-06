@@ -7,7 +7,7 @@ use crate::core::{
 };
 use crate::ui::canvas::state::{GroupDrag, GroupResize};
 
-use super::prelude::NodeGraphCanvas;
+use super::prelude::{NodeGraphCanvas, group_resize};
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,
@@ -577,7 +577,7 @@ fn group_resize_clamps_to_children() {
         &mut prevented_default_actions,
     );
 
-    assert!(super::super::group_resize::handle_group_resize_move(
+    assert!(group_resize::handle_group_resize_move(
         &mut canvas,
         &mut cx,
         &snapshot,

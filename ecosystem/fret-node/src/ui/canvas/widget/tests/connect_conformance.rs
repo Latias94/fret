@@ -12,7 +12,7 @@ use crate::interaction::NodeGraphConnectionMode;
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::prelude::NodeGraphCanvas;
+use super::prelude::{NodeGraphCanvas, wire_drag};
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,
@@ -264,15 +264,13 @@ fn connect_drop_opens_conversion_picker_when_multiple_conversions() {
             pos,
         });
 
-        assert!(
-            super::super::wire_drag::handle_wire_left_up_with_forced_target(
-                &mut canvas,
-                &mut cx,
-                &snapshot,
-                snapshot.zoom,
-                Some(b_in),
-            )
-        );
+        assert!(wire_drag::handle_wire_left_up_with_forced_target(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            snapshot.zoom,
+            Some(b_in),
+        ));
 
         assert!(canvas.interaction.suspended_wire_drag.is_some());
 
@@ -342,15 +340,13 @@ fn connect_drop_auto_inserts_conversion_when_single_choice() {
             pos,
         });
 
-        assert!(
-            super::super::wire_drag::handle_wire_left_up_with_forced_target(
-                &mut canvas,
-                &mut cx,
-                &snapshot,
-                snapshot.zoom,
-                Some(b_in),
-            )
-        );
+        assert!(wire_drag::handle_wire_left_up_with_forced_target(
+            &mut canvas,
+            &mut cx,
+            &snapshot,
+            snapshot.zoom,
+            Some(b_in),
+        ));
 
         assert!(canvas.interaction.searcher.is_none());
         assert!(canvas.interaction.suspended_wire_drag.is_none());
@@ -458,15 +454,13 @@ fn reconnect_preserves_edge_identity_and_updates_endpoint() {
         pos,
     });
 
-    assert!(
-        super::super::wire_drag::handle_wire_left_up_with_forced_target(
-            &mut canvas,
-            &mut cx,
-            &snapshot,
-            snapshot.zoom,
-            Some(new_to),
-        )
-    );
+    assert!(wire_drag::handle_wire_left_up_with_forced_target(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        snapshot.zoom,
+        Some(new_to),
+    ));
 
     let (edge_count, from_after, to_after) = graph
         .read_ref(&host, |g| {
