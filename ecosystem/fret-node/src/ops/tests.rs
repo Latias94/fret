@@ -1,7 +1,7 @@
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, GraphImport,
     Group, GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
-    PortKind, StickyNote, StickyNoteId, Symbol, SymbolId,
+    PortKind, SYMBOL_REF_NODE_KIND, StickyNote, StickyNoteId, Symbol, SymbolId,
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
@@ -593,6 +593,33 @@ fn fragment_paste_transaction_is_deterministic_for_seed() {
     assert_eq!(dst.ports.len(), 2);
     assert_eq!(dst.edges.len(), 1);
     assert_eq!(dst.groups.len(), 1);
+}
+
+#[test]
+fn fragment_from_nodes_includes_referenced_symbols() {
+    let mut graph = Graph::default();
+
+    let symbol_id = SymbolId::from_u128(10);
+    graph.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "S".to_string(),
+            ty: None,
+            default_value: None,
+            meta: serde_json::Value::Null,
+        },
+    );
+
+    let node_id = NodeId::new();
+    let mut node = make_node(SYMBOL_REF_NODE_KIND);
+    node.data = serde_json::json!({ "symbol_id": symbol_id });
+    graph.nodes.insert(node_id, node);
+
+    let fragment = GraphFragment::from_nodes(&graph, [node_id]);
+    assert!(
+        fragment.symbols.contains_key(&symbol_id),
+        "fragment must include referenced symbols for symbol-ref nodes"
+    );
 }
 
 #[test]

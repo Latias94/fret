@@ -180,6 +180,11 @@ Legend:
 - [~] Blackboard variables + typed symbol references (domain-ready).
   - Symbol edit ops (name/type/default/meta): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
   - Tests: `ecosystem/fret-node/src/ops/tests.rs`
+  - Symbol reference nodes (baseline contract + validation):
+    - Contract helpers: `ecosystem/fret-node/src/core/symbol_ref.rs` (`SYMBOL_REF_NODE_KIND`)
+    - Structural validation: `ecosystem/fret-node/src/core/validate.rs`
+    - Tests: `ecosystem/fret-node/src/core/tests.rs`
+    - Copy/paste includes referenced symbols: `ecosystem/fret-node/src/ops/fragment.rs` + `ecosystem/fret-node/src/ops/tests.rs`
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
