@@ -105,7 +105,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] sonner — examples mirrored (Demo/Types/Description/Position, with runtime toaster position binding) (`apps/fret-ui-gallery/src/ui.rs::preview_sonner`, `apps/fret-ui-gallery/src/driver.rs`)
 - [x] spinner — examples mirrored (Demo/Customization/Size/Button/Badge/Input Group/Empty/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_spinner`)
 - [x] switch ? examples mirrored (Demo/Description/Choice Card/Disabled/Invalid/Size/RTL; size + invalid are style approximations in current API) (`apps/fret-ui-gallery/src/ui.rs::preview_switch`, `ecosystem/fret-ui-shadcn/src/switch.rs`)
-- [ ] table
+- [x] table ? examples mirrored (Demo/Footer/Actions/RTL; action trigger uses text icon approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_table`, `ecosystem/fret-ui-shadcn/src/table.rs`)
 - [ ] tabs
 - [ ] textarea
 - [ ] toast
