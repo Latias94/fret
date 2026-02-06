@@ -286,11 +286,14 @@ ColumnDef keys referenced by upstream feature implementations:
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Bugfix: TanStack option defaults are `true` for `keepPinnedRows` and `paginateExpandedRows` when omitted.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_options.rs`
-- [ ] HTP-rowpin-015 Gate row pinning × grouping interactions (grouped model + pagination).
-  - Goal: prevent regressions where pinned leaf rows disappear or reorder unexpectedly once grouping is enabled.
-  - Planned gate: extend `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` to include `row_pinning`
-    snapshots (keepPinnedRows true/false + pagination), and assert them in
+- [~] HTP-rowpin-015 Gate row pinning × grouping interactions (grouped model + pagination).
+  - Parity-gated (leaf-row pinning semantics): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Covered: `keepPinnedRows` now respects grouping parents’ expansion state (TanStack’s
+    `row.getIsAllParentsExpanded()` behavior) for leaf pinned rows.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::pinned_row_keys`).
+  - Note: TanStack’s `getCenterRows()` returns grouped “root rows” (string IDs like `role:1`). Until grouping is fully
+    integrated into the main `RowModel` pipeline, we do not parity-gate `row_pinning.center` under grouping.
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
