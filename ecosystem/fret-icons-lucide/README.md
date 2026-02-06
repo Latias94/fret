@@ -32,6 +32,9 @@ Generated vendor constants are exposed under `generated_ids::lucide::*`.
 
 - Generate full Lucide list and Rust constants:
   - Windows/macOS/Linux: `python3 tools/gen_lucide.py`
+- Generate one/all packs with a single entrypoint:
+  - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack lucide`
+  - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack all`
 - Sync SVGs from upstream sources into `assets/icons`:
   - Windows: `pwsh tools/sync_icons.ps1 -Pack lucide -Clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`
@@ -40,3 +43,4 @@ Generated vendor constants are exposed under `generated_ids::lucide::*`.
 - Release-time one-shot checks:
   - Icons only: `pwsh tools/pre_release_icons.ps1`
   - Aggregate entrypoint: `pwsh tools/pre_release.ps1`
+  - Pack-aware check entrypoint: `pwsh tools/check_icons_generation.ps1 -Pack lucide`

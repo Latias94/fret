@@ -35,6 +35,9 @@ Generated vendor constants are exposed under `generated_ids::radix::*`.
 
 - Generate full Radix list and Rust constants:
   - Windows/macOS/Linux: `python3 tools/gen_radix.py`
+- Generate one/all packs with a single entrypoint:
+  - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack radix`
+  - Windows/macOS/Linux: `python3 tools/gen_icons.py --pack all`
 - Sync SVGs from upstream sources into `assets/icons`:
   - Windows: `pwsh tools/sync_icons.ps1 -Pack radix -Clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack radix --clean`
@@ -43,3 +46,4 @@ Generated vendor constants are exposed under `generated_ids::radix::*`.
 - Release-time one-shot checks:
   - Icons only: `pwsh tools/pre_release_icons.ps1`
   - Aggregate entrypoint: `pwsh tools/pre_release.ps1`
+  - Pack-aware check entrypoint: `pwsh tools/check_icons_generation.ps1 -Pack radix`

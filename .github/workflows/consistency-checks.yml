@@ -36,10 +36,6 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File tools/check_stringly_command_parsing.ps1
 
-      - name: Check Lucide generated artifacts
+      - name: Check generated icon artifacts
         shell: pwsh
-        run: pwsh -NoProfile -File tools/check_lucide_generation.ps1
-
-      - name: Check Radix generated artifacts
-        shell: pwsh
-        run: pwsh -NoProfile -File tools/check_radix_generation.ps1
+        run: pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack all

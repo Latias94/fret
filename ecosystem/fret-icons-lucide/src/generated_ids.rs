@@ -17,28 +17,45 @@ pub mod lucide {
     pub const ALARM_CLOCK_PLUS: IconId = IconId::new_static("lucide.alarm-clock-plus");
     pub const ALARM_SMOKE: IconId = IconId::new_static("lucide.alarm-smoke");
     pub const ALBUM: IconId = IconId::new_static("lucide.album");
-    pub const ALIGN_CENTER_HORIZONTAL: IconId = IconId::new_static("lucide.align-center-horizontal");
+    pub const ALIGN_CENTER_HORIZONTAL: IconId =
+        IconId::new_static("lucide.align-center-horizontal");
     pub const ALIGN_CENTER_VERTICAL: IconId = IconId::new_static("lucide.align-center-vertical");
     pub const ALIGN_END_HORIZONTAL: IconId = IconId::new_static("lucide.align-end-horizontal");
     pub const ALIGN_END_VERTICAL: IconId = IconId::new_static("lucide.align-end-vertical");
-    pub const ALIGN_HORIZONTAL_DISTRIBUTE_CENTER: IconId = IconId::new_static("lucide.align-horizontal-distribute-center");
-    pub const ALIGN_HORIZONTAL_DISTRIBUTE_END: IconId = IconId::new_static("lucide.align-horizontal-distribute-end");
-    pub const ALIGN_HORIZONTAL_DISTRIBUTE_START: IconId = IconId::new_static("lucide.align-horizontal-distribute-start");
-    pub const ALIGN_HORIZONTAL_JUSTIFY_CENTER: IconId = IconId::new_static("lucide.align-horizontal-justify-center");
-    pub const ALIGN_HORIZONTAL_JUSTIFY_END: IconId = IconId::new_static("lucide.align-horizontal-justify-end");
-    pub const ALIGN_HORIZONTAL_JUSTIFY_START: IconId = IconId::new_static("lucide.align-horizontal-justify-start");
-    pub const ALIGN_HORIZONTAL_SPACE_AROUND: IconId = IconId::new_static("lucide.align-horizontal-space-around");
-    pub const ALIGN_HORIZONTAL_SPACE_BETWEEN: IconId = IconId::new_static("lucide.align-horizontal-space-between");
+    pub const ALIGN_HORIZONTAL_DISTRIBUTE_CENTER: IconId =
+        IconId::new_static("lucide.align-horizontal-distribute-center");
+    pub const ALIGN_HORIZONTAL_DISTRIBUTE_END: IconId =
+        IconId::new_static("lucide.align-horizontal-distribute-end");
+    pub const ALIGN_HORIZONTAL_DISTRIBUTE_START: IconId =
+        IconId::new_static("lucide.align-horizontal-distribute-start");
+    pub const ALIGN_HORIZONTAL_JUSTIFY_CENTER: IconId =
+        IconId::new_static("lucide.align-horizontal-justify-center");
+    pub const ALIGN_HORIZONTAL_JUSTIFY_END: IconId =
+        IconId::new_static("lucide.align-horizontal-justify-end");
+    pub const ALIGN_HORIZONTAL_JUSTIFY_START: IconId =
+        IconId::new_static("lucide.align-horizontal-justify-start");
+    pub const ALIGN_HORIZONTAL_SPACE_AROUND: IconId =
+        IconId::new_static("lucide.align-horizontal-space-around");
+    pub const ALIGN_HORIZONTAL_SPACE_BETWEEN: IconId =
+        IconId::new_static("lucide.align-horizontal-space-between");
     pub const ALIGN_START_HORIZONTAL: IconId = IconId::new_static("lucide.align-start-horizontal");
     pub const ALIGN_START_VERTICAL: IconId = IconId::new_static("lucide.align-start-vertical");
-    pub const ALIGN_VERTICAL_DISTRIBUTE_CENTER: IconId = IconId::new_static("lucide.align-vertical-distribute-center");
-    pub const ALIGN_VERTICAL_DISTRIBUTE_END: IconId = IconId::new_static("lucide.align-vertical-distribute-end");
-    pub const ALIGN_VERTICAL_DISTRIBUTE_START: IconId = IconId::new_static("lucide.align-vertical-distribute-start");
-    pub const ALIGN_VERTICAL_JUSTIFY_CENTER: IconId = IconId::new_static("lucide.align-vertical-justify-center");
-    pub const ALIGN_VERTICAL_JUSTIFY_END: IconId = IconId::new_static("lucide.align-vertical-justify-end");
-    pub const ALIGN_VERTICAL_JUSTIFY_START: IconId = IconId::new_static("lucide.align-vertical-justify-start");
-    pub const ALIGN_VERTICAL_SPACE_AROUND: IconId = IconId::new_static("lucide.align-vertical-space-around");
-    pub const ALIGN_VERTICAL_SPACE_BETWEEN: IconId = IconId::new_static("lucide.align-vertical-space-between");
+    pub const ALIGN_VERTICAL_DISTRIBUTE_CENTER: IconId =
+        IconId::new_static("lucide.align-vertical-distribute-center");
+    pub const ALIGN_VERTICAL_DISTRIBUTE_END: IconId =
+        IconId::new_static("lucide.align-vertical-distribute-end");
+    pub const ALIGN_VERTICAL_DISTRIBUTE_START: IconId =
+        IconId::new_static("lucide.align-vertical-distribute-start");
+    pub const ALIGN_VERTICAL_JUSTIFY_CENTER: IconId =
+        IconId::new_static("lucide.align-vertical-justify-center");
+    pub const ALIGN_VERTICAL_JUSTIFY_END: IconId =
+        IconId::new_static("lucide.align-vertical-justify-end");
+    pub const ALIGN_VERTICAL_JUSTIFY_START: IconId =
+        IconId::new_static("lucide.align-vertical-justify-start");
+    pub const ALIGN_VERTICAL_SPACE_AROUND: IconId =
+        IconId::new_static("lucide.align-vertical-space-around");
+    pub const ALIGN_VERTICAL_SPACE_BETWEEN: IconId =
+        IconId::new_static("lucide.align-vertical-space-between");
     pub const AMBULANCE: IconId = IconId::new_static("lucide.ambulance");
     pub const AMPERSAND: IconId = IconId::new_static("lucide.ampersand");
     pub const AMPERSANDS: IconId = IconId::new_static("lucide.ampersands");
@@ -167,7 +184,8 @@ pub mod lucide {
     pub const BELL_PLUS: IconId = IconId::new_static("lucide.bell-plus");
     pub const BELL_RING: IconId = IconId::new_static("lucide.bell-ring");
     pub const BETWEEN_HORIZONTAL_END: IconId = IconId::new_static("lucide.between-horizontal-end");
-    pub const BETWEEN_HORIZONTAL_START: IconId = IconId::new_static("lucide.between-horizontal-start");
+    pub const BETWEEN_HORIZONTAL_START: IconId =
+        IconId::new_static("lucide.between-horizontal-start");
     pub const BETWEEN_VERTICAL_END: IconId = IconId::new_static("lucide.between-vertical-end");
     pub const BETWEEN_VERTICAL_START: IconId = IconId::new_static("lucide.between-vertical-start");
     pub const BICEPS_FLEXED: IconId = IconId::new_static("lucide.biceps-flexed");
@@ -238,7 +256,8 @@ pub mod lucide {
     pub const BRICK_WALL_SHIELD: IconId = IconId::new_static("lucide.brick-wall-shield");
     pub const BRIEFCASE: IconId = IconId::new_static("lucide.briefcase");
     pub const BRIEFCASE_BUSINESS: IconId = IconId::new_static("lucide.briefcase-business");
-    pub const BRIEFCASE_CONVEYOR_BELT: IconId = IconId::new_static("lucide.briefcase-conveyor-belt");
+    pub const BRIEFCASE_CONVEYOR_BELT: IconId =
+        IconId::new_static("lucide.briefcase-conveyor-belt");
     pub const BRIEFCASE_MEDICAL: IconId = IconId::new_static("lucide.briefcase-medical");
     pub const BRING_TO_FRONT: IconId = IconId::new_static("lucide.bring-to-front");
     pub const BRUSH: IconId = IconId::new_static("lucide.brush");
@@ -310,15 +329,19 @@ pub mod lucide {
     pub const CHART_CANDLESTICK: IconId = IconId::new_static("lucide.chart-candlestick");
     pub const CHART_COLUMN: IconId = IconId::new_static("lucide.chart-column");
     pub const CHART_COLUMN_BIG: IconId = IconId::new_static("lucide.chart-column-big");
-    pub const CHART_COLUMN_DECREASING: IconId = IconId::new_static("lucide.chart-column-decreasing");
-    pub const CHART_COLUMN_INCREASING: IconId = IconId::new_static("lucide.chart-column-increasing");
+    pub const CHART_COLUMN_DECREASING: IconId =
+        IconId::new_static("lucide.chart-column-decreasing");
+    pub const CHART_COLUMN_INCREASING: IconId =
+        IconId::new_static("lucide.chart-column-increasing");
     pub const CHART_COLUMN_STACKED: IconId = IconId::new_static("lucide.chart-column-stacked");
     pub const CHART_GANTT: IconId = IconId::new_static("lucide.chart-gantt");
     pub const CHART_LINE: IconId = IconId::new_static("lucide.chart-line");
     pub const CHART_NETWORK: IconId = IconId::new_static("lucide.chart-network");
     pub const CHART_NO_AXES_COLUMN: IconId = IconId::new_static("lucide.chart-no-axes-column");
-    pub const CHART_NO_AXES_COLUMN_DECREASING: IconId = IconId::new_static("lucide.chart-no-axes-column-decreasing");
-    pub const CHART_NO_AXES_COLUMN_INCREASING: IconId = IconId::new_static("lucide.chart-no-axes-column-increasing");
+    pub const CHART_NO_AXES_COLUMN_DECREASING: IconId =
+        IconId::new_static("lucide.chart-no-axes-column-decreasing");
+    pub const CHART_NO_AXES_COLUMN_INCREASING: IconId =
+        IconId::new_static("lucide.chart-no-axes-column-increasing");
     pub const CHART_NO_AXES_COMBINED: IconId = IconId::new_static("lucide.chart-no-axes-combined");
     pub const CHART_NO_AXES_GANTT: IconId = IconId::new_static("lucide.chart-no-axes-gantt");
     pub const CHART_PIE: IconId = IconId::new_static("lucide.chart-pie");
@@ -339,7 +362,8 @@ pub mod lucide {
     pub const CHEVRONS_DOWN_UP: IconId = IconId::new_static("lucide.chevrons-down-up");
     pub const CHEVRONS_LEFT: IconId = IconId::new_static("lucide.chevrons-left");
     pub const CHEVRONS_LEFT_RIGHT: IconId = IconId::new_static("lucide.chevrons-left-right");
-    pub const CHEVRONS_LEFT_RIGHT_ELLIPSIS: IconId = IconId::new_static("lucide.chevrons-left-right-ellipsis");
+    pub const CHEVRONS_LEFT_RIGHT_ELLIPSIS: IconId =
+        IconId::new_static("lucide.chevrons-left-right-ellipsis");
     pub const CHEVRONS_RIGHT: IconId = IconId::new_static("lucide.chevrons-right");
     pub const CHEVRONS_RIGHT_LEFT: IconId = IconId::new_static("lucide.chevrons-right-left");
     pub const CHEVRONS_UP: IconId = IconId::new_static("lucide.chevrons-up");
@@ -358,10 +382,14 @@ pub mod lucide {
     pub const CIRCLE_ALERT: IconId = IconId::new_static("lucide.circle-alert");
     pub const CIRCLE_ARROW_DOWN: IconId = IconId::new_static("lucide.circle-arrow-down");
     pub const CIRCLE_ARROW_LEFT: IconId = IconId::new_static("lucide.circle-arrow-left");
-    pub const CIRCLE_ARROW_OUT_DOWN_LEFT: IconId = IconId::new_static("lucide.circle-arrow-out-down-left");
-    pub const CIRCLE_ARROW_OUT_DOWN_RIGHT: IconId = IconId::new_static("lucide.circle-arrow-out-down-right");
-    pub const CIRCLE_ARROW_OUT_UP_LEFT: IconId = IconId::new_static("lucide.circle-arrow-out-up-left");
-    pub const CIRCLE_ARROW_OUT_UP_RIGHT: IconId = IconId::new_static("lucide.circle-arrow-out-up-right");
+    pub const CIRCLE_ARROW_OUT_DOWN_LEFT: IconId =
+        IconId::new_static("lucide.circle-arrow-out-down-left");
+    pub const CIRCLE_ARROW_OUT_DOWN_RIGHT: IconId =
+        IconId::new_static("lucide.circle-arrow-out-down-right");
+    pub const CIRCLE_ARROW_OUT_UP_LEFT: IconId =
+        IconId::new_static("lucide.circle-arrow-out-up-left");
+    pub const CIRCLE_ARROW_OUT_UP_RIGHT: IconId =
+        IconId::new_static("lucide.circle-arrow-out-up-right");
     pub const CIRCLE_ARROW_RIGHT: IconId = IconId::new_static("lucide.circle-arrow-right");
     pub const CIRCLE_ARROW_UP: IconId = IconId::new_static("lucide.circle-arrow-up");
     pub const CIRCLE_CHECK: IconId = IconId::new_static("lucide.circle-check");
@@ -599,7 +627,8 @@ pub mod lucide {
     pub const FILE_BRACES: IconId = IconId::new_static("lucide.file-braces");
     pub const FILE_BRACES_CORNER: IconId = IconId::new_static("lucide.file-braces-corner");
     pub const FILE_CHART_COLUMN: IconId = IconId::new_static("lucide.file-chart-column");
-    pub const FILE_CHART_COLUMN_INCREASING: IconId = IconId::new_static("lucide.file-chart-column-increasing");
+    pub const FILE_CHART_COLUMN_INCREASING: IconId =
+        IconId::new_static("lucide.file-chart-column-increasing");
     pub const FILE_CHART_LINE: IconId = IconId::new_static("lucide.file-chart-line");
     pub const FILE_CHART_PIE: IconId = IconId::new_static("lucide.file-chart-pie");
     pub const FILE_CHECK: IconId = IconId::new_static("lucide.file-check");
@@ -744,9 +773,12 @@ pub mod lucide {
     pub const GIT_MERGE: IconId = IconId::new_static("lucide.git-merge");
     pub const GIT_PULL_REQUEST: IconId = IconId::new_static("lucide.git-pull-request");
     pub const GIT_PULL_REQUEST_ARROW: IconId = IconId::new_static("lucide.git-pull-request-arrow");
-    pub const GIT_PULL_REQUEST_CLOSED: IconId = IconId::new_static("lucide.git-pull-request-closed");
-    pub const GIT_PULL_REQUEST_CREATE: IconId = IconId::new_static("lucide.git-pull-request-create");
-    pub const GIT_PULL_REQUEST_CREATE_ARROW: IconId = IconId::new_static("lucide.git-pull-request-create-arrow");
+    pub const GIT_PULL_REQUEST_CLOSED: IconId =
+        IconId::new_static("lucide.git-pull-request-closed");
+    pub const GIT_PULL_REQUEST_CREATE: IconId =
+        IconId::new_static("lucide.git-pull-request-create");
+    pub const GIT_PULL_REQUEST_CREATE_ARROW: IconId =
+        IconId::new_static("lucide.git-pull-request-create-arrow");
     pub const GIT_PULL_REQUEST_DRAFT: IconId = IconId::new_static("lucide.git-pull-request-draft");
     pub const GLASSES: IconId = IconId::new_static("lucide.glasses");
     pub const GLASS_WATER: IconId = IconId::new_static("lucide.glass-water");
@@ -977,7 +1009,8 @@ pub mod lucide {
     pub const MESSAGE_CIRCLE_MORE: IconId = IconId::new_static("lucide.message-circle-more");
     pub const MESSAGE_CIRCLE_OFF: IconId = IconId::new_static("lucide.message-circle-off");
     pub const MESSAGE_CIRCLE_PLUS: IconId = IconId::new_static("lucide.message-circle-plus");
-    pub const MESSAGE_CIRCLE_QUESTION_MARK: IconId = IconId::new_static("lucide.message-circle-question-mark");
+    pub const MESSAGE_CIRCLE_QUESTION_MARK: IconId =
+        IconId::new_static("lucide.message-circle-question-mark");
     pub const MESSAGE_CIRCLE_REPLY: IconId = IconId::new_static("lucide.message-circle-reply");
     pub const MESSAGE_CIRCLE_WARNING: IconId = IconId::new_static("lucide.message-circle-warning");
     pub const MESSAGE_CIRCLE_X: IconId = IconId::new_static("lucide.message-circle-x");
@@ -1103,13 +1136,15 @@ pub mod lucide {
     pub const PANEL_LEFT_CLOSE: IconId = IconId::new_static("lucide.panel-left-close");
     pub const PANEL_LEFT_DASHED: IconId = IconId::new_static("lucide.panel-left-dashed");
     pub const PANEL_LEFT_OPEN: IconId = IconId::new_static("lucide.panel-left-open");
-    pub const PANEL_LEFT_RIGHT_DASHED: IconId = IconId::new_static("lucide.panel-left-right-dashed");
+    pub const PANEL_LEFT_RIGHT_DASHED: IconId =
+        IconId::new_static("lucide.panel-left-right-dashed");
     pub const PANEL_RIGHT: IconId = IconId::new_static("lucide.panel-right");
     pub const PANEL_RIGHT_CLOSE: IconId = IconId::new_static("lucide.panel-right-close");
     pub const PANEL_RIGHT_DASHED: IconId = IconId::new_static("lucide.panel-right-dashed");
     pub const PANEL_RIGHT_OPEN: IconId = IconId::new_static("lucide.panel-right-open");
     pub const PANEL_TOP: IconId = IconId::new_static("lucide.panel-top");
-    pub const PANEL_TOP_BOTTOM_DASHED: IconId = IconId::new_static("lucide.panel-top-bottom-dashed");
+    pub const PANEL_TOP_BOTTOM_DASHED: IconId =
+        IconId::new_static("lucide.panel-top-bottom-dashed");
     pub const PANEL_TOP_CLOSE: IconId = IconId::new_static("lucide.panel-top-close");
     pub const PANEL_TOP_DASHED: IconId = IconId::new_static("lucide.panel-top-dashed");
     pub const PANEL_TOP_OPEN: IconId = IconId::new_static("lucide.panel-top-open");
@@ -1378,18 +1413,24 @@ pub mod lucide {
     pub const SQUARE_ACTIVITY: IconId = IconId::new_static("lucide.square-activity");
     pub const SQUARE_ARROW_DOWN: IconId = IconId::new_static("lucide.square-arrow-down");
     pub const SQUARE_ARROW_DOWN_LEFT: IconId = IconId::new_static("lucide.square-arrow-down-left");
-    pub const SQUARE_ARROW_DOWN_RIGHT: IconId = IconId::new_static("lucide.square-arrow-down-right");
+    pub const SQUARE_ARROW_DOWN_RIGHT: IconId =
+        IconId::new_static("lucide.square-arrow-down-right");
     pub const SQUARE_ARROW_LEFT: IconId = IconId::new_static("lucide.square-arrow-left");
-    pub const SQUARE_ARROW_OUT_DOWN_LEFT: IconId = IconId::new_static("lucide.square-arrow-out-down-left");
-    pub const SQUARE_ARROW_OUT_DOWN_RIGHT: IconId = IconId::new_static("lucide.square-arrow-out-down-right");
-    pub const SQUARE_ARROW_OUT_UP_LEFT: IconId = IconId::new_static("lucide.square-arrow-out-up-left");
-    pub const SQUARE_ARROW_OUT_UP_RIGHT: IconId = IconId::new_static("lucide.square-arrow-out-up-right");
+    pub const SQUARE_ARROW_OUT_DOWN_LEFT: IconId =
+        IconId::new_static("lucide.square-arrow-out-down-left");
+    pub const SQUARE_ARROW_OUT_DOWN_RIGHT: IconId =
+        IconId::new_static("lucide.square-arrow-out-down-right");
+    pub const SQUARE_ARROW_OUT_UP_LEFT: IconId =
+        IconId::new_static("lucide.square-arrow-out-up-left");
+    pub const SQUARE_ARROW_OUT_UP_RIGHT: IconId =
+        IconId::new_static("lucide.square-arrow-out-up-right");
     pub const SQUARE_ARROW_RIGHT: IconId = IconId::new_static("lucide.square-arrow-right");
     pub const SQUARE_ARROW_UP: IconId = IconId::new_static("lucide.square-arrow-up");
     pub const SQUARE_ARROW_UP_LEFT: IconId = IconId::new_static("lucide.square-arrow-up-left");
     pub const SQUARE_ARROW_UP_RIGHT: IconId = IconId::new_static("lucide.square-arrow-up-right");
     pub const SQUARE_ASTERISK: IconId = IconId::new_static("lucide.square-asterisk");
-    pub const SQUARE_BOTTOM_DASHED_SCISSORS: IconId = IconId::new_static("lucide.square-bottom-dashed-scissors");
+    pub const SQUARE_BOTTOM_DASHED_SCISSORS: IconId =
+        IconId::new_static("lucide.square-bottom-dashed-scissors");
     pub const SQUARE_CHART_GANTT: IconId = IconId::new_static("lucide.square-chart-gantt");
     pub const SQUARE_CHECK: IconId = IconId::new_static("lucide.square-check");
     pub const SQUARE_CHECK_BIG: IconId = IconId::new_static("lucide.square-check-big");
@@ -1400,10 +1441,13 @@ pub mod lucide {
     pub const SQUARE_CODE: IconId = IconId::new_static("lucide.square-code");
     pub const SQUARE_DASHED: IconId = IconId::new_static("lucide.square-dashed");
     pub const SQUARE_DASHED_BOTTOM: IconId = IconId::new_static("lucide.square-dashed-bottom");
-    pub const SQUARE_DASHED_BOTTOM_CODE: IconId = IconId::new_static("lucide.square-dashed-bottom-code");
+    pub const SQUARE_DASHED_BOTTOM_CODE: IconId =
+        IconId::new_static("lucide.square-dashed-bottom-code");
     pub const SQUARE_DASHED_KANBAN: IconId = IconId::new_static("lucide.square-dashed-kanban");
-    pub const SQUARE_DASHED_MOUSE_POINTER: IconId = IconId::new_static("lucide.square-dashed-mouse-pointer");
-    pub const SQUARE_DASHED_TOP_SOLID: IconId = IconId::new_static("lucide.square-dashed-top-solid");
+    pub const SQUARE_DASHED_MOUSE_POINTER: IconId =
+        IconId::new_static("lucide.square-dashed-mouse-pointer");
+    pub const SQUARE_DASHED_TOP_SOLID: IconId =
+        IconId::new_static("lucide.square-dashed-top-solid");
     pub const SQUARE_DIVIDE: IconId = IconId::new_static("lucide.square-divide");
     pub const SQUARE_DOT: IconId = IconId::new_static("lucide.square-dot");
     pub const SQUARE_EQUAL: IconId = IconId::new_static("lucide.square-equal");
@@ -1429,7 +1473,8 @@ pub mod lucide {
     pub const SQUARE_SCISSORS: IconId = IconId::new_static("lucide.square-scissors");
     pub const SQUARE_SIGMA: IconId = IconId::new_static("lucide.square-sigma");
     pub const SQUARE_SLASH: IconId = IconId::new_static("lucide.square-slash");
-    pub const SQUARE_SPLIT_HORIZONTAL: IconId = IconId::new_static("lucide.square-split-horizontal");
+    pub const SQUARE_SPLIT_HORIZONTAL: IconId =
+        IconId::new_static("lucide.square-split-horizontal");
     pub const SQUARE_SPLIT_VERTICAL: IconId = IconId::new_static("lucide.square-split-vertical");
     pub const SQUARE_SQUARE: IconId = IconId::new_static("lucide.square-square");
     pub const SQUARE_STACK: IconId = IconId::new_static("lucide.square-stack");

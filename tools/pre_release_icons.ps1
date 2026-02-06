@@ -20,25 +20,16 @@ function Invoke-Checked(
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 
 Invoke-Checked `
-  "lucide generate + sync + verify" `
+  "check all icon packs generation" `
   "powershell.exe" `
   @(
     "-NoProfile",
     "-ExecutionPolicy",
     "Bypass",
     "-File",
-    (Join-Path $repoRoot "tools/check_lucide_generation.ps1")
-  )
-
-Invoke-Checked `
-  "radix generate + sync + verify" `
-  "powershell.exe" `
-  @(
-    "-NoProfile",
-    "-ExecutionPolicy",
-    "Bypass",
-    "-File",
-    (Join-Path $repoRoot "tools/check_radix_generation.ps1")
+    (Join-Path $repoRoot "tools/check_icons_generation.ps1"),
+    "-Pack",
+    "all"
   )
 
 if (-not $SkipDiffCheck) {
