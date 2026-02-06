@@ -25,6 +25,8 @@ use time::Date;
 
 use crate::spec::*;
 
+mod pages;
+
 fn matches_query(query: &str, item: &PageSpec) -> bool {
     let q = query.trim();
     if q.is_empty() {
@@ -9810,79 +9812,11 @@ fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct ToggleModels {
-        pressed: Option<Model<bool>>,
-    }
-
-    let pressed = cx.with_state(ToggleModels::default, |st| st.pressed.clone());
-    let pressed = match pressed {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(ToggleModels::default, |st| st.pressed = Some(model.clone()));
-            model
-        }
-    };
-
-    vec![stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            vec![
-                shadcn::Toggle::new(pressed.clone())
-                    .label("Bold")
-                    .a11y_label("Bold")
-                    .into_element(cx),
-                shadcn::Toggle::new(pressed.clone())
-                    .label("Outline")
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .a11y_label("Bold (outline)")
-                    .into_element(cx),
-            ]
-        },
-    )]
+    pages::preview_toggle(cx)
 }
 
 fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct ToggleGroupModels {
-        value: Option<Model<Option<Arc<str>>>>,
-    }
-
-    let value = cx.with_state(ToggleGroupModels::default, |st| st.value.clone());
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(ToggleGroupModels::default, |st| {
-                st.value = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let group = shadcn::ToggleGroup::single(value.clone())
-        .item(shadcn::ToggleGroupItem::new(
-            "bold",
-            [ui::label(cx, "B").into_element(cx)],
-        ))
-        .item(shadcn::ToggleGroupItem::new(
-            "italic",
-            [ui::label(cx, "I").into_element(cx)],
-        ))
-        .item(shadcn::ToggleGroupItem::new(
-            "underline",
-            [ui::label(cx, "U").into_element(cx)],
-        ))
-        .into_element(cx);
-
-    let selected = cx
-        .get_model_cloned(&value, Invalidation::Layout)
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    vec![group, cx.text(format!("selected={}", selected.as_ref()))]
+    pages::preview_toggle_group(cx)
 }
 
 fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -15962,45 +15896,7 @@ fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    shadcn::TooltipProvider::new()
-        .with_elements(cx, |cx| {
-            let mk = |cx: &mut ElementContext<'_, App>, label: &str, side: shadcn::TooltipSide| {
-                shadcn::Tooltip::new(
-                    shadcn::Button::new(label)
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .into_element(cx),
-                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                        cx,
-                        format!("Tooltip on {label}"),
-                    )])
-                    .into_element(cx),
-                )
-                .arrow(true)
-                .side(side)
-                .open_delay_frames(10)
-                .close_delay_frames(10)
-                .into_element(cx)
-            };
-
-            vec![
-            stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| {
-                    vec![
-                        mk(cx, "Top", shadcn::TooltipSide::Top),
-                        mk(cx, "Right", shadcn::TooltipSide::Right),
-                        mk(cx, "Bottom", shadcn::TooltipSide::Bottom),
-                        mk(cx, "Left", shadcn::TooltipSide::Left),
-                    ]
-                },
-            ),
-            cx.text(
-                "Hover the buttons to validate hover intent, delay group, and overlay placement.",
-            ),
-        ]
-        })
-        .into_vec()
+    pages::preview_tooltip(cx)
 }
 
 fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
