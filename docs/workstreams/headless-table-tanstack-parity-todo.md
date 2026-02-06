@@ -84,7 +84,7 @@ P0 (core behavior parity, highest user-visible risk):
 
 P1 (capability breadth parity):
 
-- HTP-id-013/014/015/016: complete rowsById + grouped/string RowId parity across all feature paths.
+- HTP-id-014/015: promote grouped/string RowId through remaining feature paths and state conversions.
 - HTP-filt-080/090: complete `getCanFilter` option-gate + controlled filtering hook parity surfaces.
 - HTP-state-020: lossless omitted-vs-explicit-default JSON round-trip semantics.
 
@@ -142,10 +142,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - [x] HTP-id-012 Add `TableBuilder::get_row_id` (TanStack `_getRowId` equivalent) and default behavior.
       - Done: `TableBuilder::get_row_id` is plumbed and the default RowId strategy matches TanStack (index-path).
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
-    - [~] HTP-id-013 Store and gate `rows_by_id` (TanStack `rowsById`) for core/pre-pagination/final models.
+    - [x] HTP-id-013 Store and gate `rows_by_id` (TanStack `rowsById`) for core/pre-pagination/final models.
       - Done (engine scaffolding): `rows_by_id` is carried through the main row model pipeline for leaf rows.
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
-      - Remaining (gate): add a fixture-backed gate that asserts `rowsById` semantics beyond smoke coverage.
+      - Done (fixture parity gate): core/pre-pagination/final `rowsById` semantics (custom RowId + grouped ids + lookup parity).
+        - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_lookup.json`
+        - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_lookup_parity.rs`
     - [~] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
       - Done (partial): grouped rows now carry TanStack-style ids (`col:value` with `>` parent chain),
         and id 鈫?rowKey lookup can resolve grouped ids.
@@ -162,9 +164,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_row_id_updaters_cover_selection_and_expanding`)
       - Done (grouped edges): grouped-row selection propagation is parity-gated for select-children/clear/two-level-group cases.
         - Snapshots: `row_id_state_ops_group_selection_select_children_false`, `row_id_state_ops_group_selection_toggle_off`, `row_id_state_ops_nested_group_selection`
-    - [~] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
+    - [x] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
       - Done (smoke): grouped id lookup + pinning-by-id gate exists.
       - Done (smoke): id-keyed selection/expanding updater coverage exists for leaf rows.
+      - Done (fixture parity, rowsById + getRow lookup): grouped ids + custom RowId lookup semantics are gated.
+        - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_lookup.json`
+        - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_lookup_parity.rs`
       - Done (fixture parity): added dedicated fixture + parity gate for id-keyed selection/expanding/pinning,
         including grouped row ids and nested grouped ids.
         - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_state_ops.json`
@@ -673,6 +678,8 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` | `visibility_ordering` | `ColumnVisibility` + `ColumnOrdering` (state transitions + derived leaf column order) | `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json` | `faceting` | `ColumnFaceting` / `GlobalFaceting` | `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_state_ops.json` | `row_id_state_ops` | Row identity/state ops (`RowSelection` + `RowExpanding` + `RowPinning` by string RowId, grouped/nested grouped ids) | `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_state_ops_parity.rs` | Partial |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_lookup.json` | `row_id_lookup` | Row identity lookup (`table.getRow(id, searchAll?)`) + `rowsById` parity across core/pre-pagination/final models (custom RowId + grouped ids) | `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_lookup_parity.rs` | Partial |
 
 
 

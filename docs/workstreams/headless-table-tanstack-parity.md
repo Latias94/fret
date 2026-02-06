@@ -94,9 +94,9 @@ Initial mapping snapshot (keep updated):
 
 | Upstream API | Fret surface (today) | Status | Notes |
 | --- | --- | --- | --- |
-| `table.getRow(id, searchAll?)` | `Table::row_by_id(&str, search_all)` + grouped `RowId` fallback via `Table::row_key_for_id` | Partial | Leaf `RowId` lookup is in place and grouped ids can resolve in grouped row model paths; full grouped `searchAll` parity still needs broader fixture gates. |
+| `table.getRow(id, searchAll?)` | `Table::row_by_id(&str, search_all)` + grouped `RowId` fallback via `Table::row_key_for_id` | Partial | Lookup parity is fixture-gated for custom RowId + grouped ids via `tanstack_v8_row_id_lookup_parity.rs` (`row_id_lookup.json`) and grouped state-op fixtures; remaining gap is broad feature-surface propagation of string RowId maps. |
 | `row.id: string` | `Row::id: RowId` (`Arc<str>`) + `GroupedRow::id` | Partial | Leaf and grouped rows both carry string ids; grouped ids are still being promoted through all feature surfaces. |
-| `RowModel.rowsById` | `RowModel::rows_by_id()` | Partial | Present for leaf rows; grouped row ids + “searchAll” coverage still needs broader gates. |
+| `RowModel.rowsById` | `RowModel::rows_by_id()` | Partial | Fixture-gated for core/pre-pagination/final models across custom RowId + grouped ids (`tanstack_v8_row_id_lookup_parity.rs`, `row_id_lookup.json`); remaining work is non-option capability inventory expansion. |
 | `table.getHeaderGroups()` (+ pinned variants) | `Table::header_groups/left_header_groups/center_header_groups/right_header_groups` | Aligned (core) | Fixture-gated via `headers_cells.json`. |
 | `header.getSize()` / `header.getStart()` | `Table::header_size/header_start` | Aligned (core) | Fixture-gated via column sizing/header tests. |
 | `column.getSize()` / `column.getStart()` / `column.getAfter()` | `Table::column_size/column_start/column_after` | Aligned (core) | Fixture-gated via column sizing tests. |
