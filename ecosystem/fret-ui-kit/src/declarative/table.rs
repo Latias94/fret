@@ -3871,6 +3871,7 @@ where
                                                 };
 
                                             let data_row = Row {
+                                                id: row_key.0.to_string().into(),
                                                 key: row_key,
                                                 original: &data[data_index],
                                                 index: data_index,
