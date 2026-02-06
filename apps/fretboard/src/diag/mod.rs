@@ -3662,6 +3662,12 @@ See: `docs/tracy.md`.\n";
                         let top_view_cache_roots_layout_invalidated = top
                             .map(|r| r.view_cache_roots_layout_invalidated)
                             .unwrap_or(0);
+                        let top_paint_cache_hit_test_only_replay_allowed = top
+                            .map(|r| r.paint_cache_hit_test_only_replay_allowed)
+                            .unwrap_or(0);
+                        let top_paint_cache_hit_test_only_replay_rejected_key_mismatch = top
+                            .map(|r| r.paint_cache_hit_test_only_replay_rejected_key_mismatch)
+                            .unwrap_or(0);
                         let top_cache_roots_contained_relayout =
                             top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                         let top_set_children_barrier_writes =
@@ -3802,6 +3808,8 @@ See: `docs/tracy.md`.\n";
                                 "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
                                 "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                                 "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                                "top_paint_cache_hit_test_only_replay_allowed": top_paint_cache_hit_test_only_replay_allowed,
+                                "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": top_paint_cache_hit_test_only_replay_rejected_key_mismatch,
                                 "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                                 "top_set_children_barrier_writes": top_set_children_barrier_writes,
                                 "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
@@ -4426,6 +4434,11 @@ See: `docs/tracy.md`.\n";
                             Vec::with_capacity(repeat);
                         let mut top_view_cache_roots_layout_invalidated: Vec<u64> =
                             Vec::with_capacity(repeat);
+                        let mut top_paint_cache_hit_test_only_replay_allowed: Vec<u64> =
+                            Vec::with_capacity(repeat);
+                        let mut top_paint_cache_hit_test_only_replay_rejected_key_mismatch: Vec<
+                            u64,
+                        > = Vec::with_capacity(repeat);
                         let mut top_cache_roots_contained_relayout: Vec<u64> =
                             Vec::with_capacity(repeat);
                         let mut top_set_children_barrier_writes: Vec<u64> =
@@ -4535,6 +4548,18 @@ See: `docs/tracy.md`.\n";
                                 run.get("top_view_cache_roots_layout_invalidated")
                                     .and_then(|v| v.as_u64())
                                     .unwrap_or(0),
+                            );
+                            top_paint_cache_hit_test_only_replay_allowed.push(
+                                run.get("top_paint_cache_hit_test_only_replay_allowed")
+                                    .and_then(|v| v.as_u64())
+                                    .unwrap_or(0),
+                            );
+                            top_paint_cache_hit_test_only_replay_rejected_key_mismatch.push(
+                                run.get(
+                                    "top_paint_cache_hit_test_only_replay_rejected_key_mismatch",
+                                )
+                                .and_then(|v| v.as_u64())
+                                .unwrap_or(0),
                             );
                             top_cache_roots_contained_relayout.push(
                                 run.get("top_cache_roots_contained_relayout")
@@ -4718,6 +4743,8 @@ See: `docs/tracy.md`.\n";
 	                                "top_view_cache_roots_cache_key_mismatch": summarize_times_us(&top_view_cache_roots_cache_key_mismatch),
 	                                "top_view_cache_roots_needs_rerender": summarize_times_us(&top_view_cache_roots_needs_rerender),
 	                                "top_view_cache_roots_layout_invalidated": summarize_times_us(&top_view_cache_roots_layout_invalidated),
+	                                "top_paint_cache_hit_test_only_replay_allowed": summarize_times_us(&top_paint_cache_hit_test_only_replay_allowed),
+	                                "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": summarize_times_us(&top_paint_cache_hit_test_only_replay_rejected_key_mismatch),
 	                                "top_cache_roots_contained_relayout": summarize_times_us(&top_cache_roots_contained_relayout),
 	                                "top_set_children_barrier_writes": summarize_times_us(&top_set_children_barrier_writes),
 	                                "top_barrier_relayouts_scheduled": summarize_times_us(&top_barrier_relayouts_scheduled),
