@@ -24,13 +24,13 @@ If you are looking for an API-level guide, see `docs/node-graph-how-to-build-lik
 
 ## Focus window (current refactor target)
 
-Last audited: 2026-02-05
+Last audited: 2026-02-06
 
 This document is intentionally exhaustive. During large refactors, keep a small “focus window” so
 work remains coherent and measurable. For the execution plan + gates, see:
 `docs/workstreams/fret-node-xyflow-parity.md`.
 
-Current top gaps (aligned to workstream M0/M5):
+Current top gaps (aligned to workstream M0/M6):
 
 - **Derived internals invalidation discipline** (`updateNodeInternals`-style semantics): avoid over/under invalidation.
 - **Internals update pipeline determinism** (batching + stable ordering): ensure repeatable results.
@@ -344,9 +344,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 1.3 View constraints and persistence
 
-- [~] **Translate extent (world bounds) constraint**
+- [x] **Translate extent (world bounds) constraint**
   - XyFlow: `translateExtent` in `XYPanZoom` constrain pipeline
   - fret-node: `NodeGraphInteractionState.translate_extent` clamped in `NodeGraphCanvas::update_view_state(...)`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
 
 - [x] **Fit view / frame all / frame selection**
   - XyFlow: `fitViewport(...)` from `@xyflow/system`, surfaced via `useReactFlow().fitView()` and `<Controls />`

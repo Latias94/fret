@@ -286,6 +286,24 @@ pub enum GraphOp {
     AddStickyNote { id: StickyNoteId, note: StickyNote },
     /// Removes a sticky note.
     RemoveStickyNote { id: StickyNoteId, note: StickyNote },
+    /// Sets a sticky note text body.
+    SetStickyNoteText {
+        id: StickyNoteId,
+        from: String,
+        to: String,
+    },
+    /// Sets a sticky note bounds.
+    SetStickyNoteRect {
+        id: StickyNoteId,
+        from: CanvasRect,
+        to: CanvasRect,
+    },
+    /// Sets a sticky note color override.
+    SetStickyNoteColor {
+        id: StickyNoteId,
+        from: Option<String>,
+        to: Option<String>,
+    },
 }
 
 /// A batch of edit operations that should be applied and undone as one unit.

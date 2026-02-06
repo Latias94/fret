@@ -85,6 +85,7 @@ mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod spatial_index_equivalence_conformance;
 mod threshold_zoom_conformance;
+mod translate_extent_conformance;
 mod viewport_animation_conformance;
 mod viewport_helper_conformance;
 mod xyflow_style_conformance;

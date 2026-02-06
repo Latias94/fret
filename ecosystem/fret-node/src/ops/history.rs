@@ -405,5 +405,20 @@ fn invert_op(op: &GraphOp) -> Vec<GraphOp> {
             id: *id,
             note: note.clone(),
         }],
+        GraphOp::SetStickyNoteText { id, from, to } => vec![GraphOp::SetStickyNoteText {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
+        GraphOp::SetStickyNoteRect { id, from, to } => vec![GraphOp::SetStickyNoteRect {
+            id: *id,
+            from: *to,
+            to: *from,
+        }],
+        GraphOp::SetStickyNoteColor { id, from, to } => vec![GraphOp::SetStickyNoteColor {
+            id: *id,
+            from: to.clone(),
+            to: from.clone(),
+        }],
     }
 }
