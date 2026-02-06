@@ -293,6 +293,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_drop_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/middleware_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache_prune_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/threshold_zoom_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
