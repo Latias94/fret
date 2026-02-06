@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, FilteringFnSpec, RowKey, Table, TableState, TanStackTableOptions,
+    ColumnDef, FilteringFnSpec, RowId, RowKey, Table, TableState, TanStackTableOptions,
     TanStackTableState, TanStackValue, toggle_sorting_tanstack,
 };
 use serde::Deserialize;
@@ -191,6 +191,7 @@ fn tanstack_v8_auto_reset_parity() {
                 let table_post = Table::builder(&data)
                     .columns(columns.clone())
                     .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                    .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                     .initial_state(initial_state.clone())
                     .state(state.clone())
                     .options(options)
@@ -232,6 +233,7 @@ fn tanstack_v8_auto_reset_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .global_filter_fn(FilteringFnSpec::Auto)

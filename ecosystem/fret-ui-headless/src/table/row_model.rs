@@ -24,8 +24,24 @@ impl RowKey {
 pub struct RowId(pub Arc<str>);
 
 impl RowId {
+    pub fn new(id: impl Into<Arc<str>>) -> Self {
+        Self(id.into())
+    }
+
     pub fn as_str(&self) -> &str {
         self.0.as_ref()
+    }
+}
+
+impl From<String> for RowId {
+    fn from(value: String) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<&str> for RowId {
+    fn from(value: &str) -> Self {
+        Self::new(Arc::<str>::from(value))
     }
 }
 
@@ -2803,7 +2819,10 @@ fn build_core_row_model<'a, TData>(
         for (index, original) in original_rows.iter().enumerate() {
             let key = get_row_key(original, index, parent_key);
             let id = match get_row_id {
-                None => RowId(Arc::<str>::from(key.0.to_string())),
+                None => match parent_id.as_ref() {
+                    None => RowId::new(index.to_string()),
+                    Some(parent_id) => RowId::new(format!("{}.{}", parent_id.as_str(), index)),
+                },
                 Some(f) => f(original, index, parent_id.as_ref()),
             };
             let row_index = arena.len();
@@ -2826,10 +2845,7 @@ fn build_core_row_model<'a, TData>(
                 && let Some(sub) = get_sub_rows(original, index)
                 && !sub.is_empty()
             {
-                let next_parent_id = arena
-                    .get(row_index)
-                    .map(|r| r.id.clone())
-                    .unwrap_or_else(|| RowId(Arc::<str>::from(key.0.to_string())));
+                let next_parent_id = arena[row_index].id.clone();
                 let children = access_rows(
                     sub,
                     depth.saturating_add(1),

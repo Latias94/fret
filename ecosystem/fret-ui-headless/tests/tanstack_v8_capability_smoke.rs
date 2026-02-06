@@ -2,8 +2,6 @@ use fret_ui_headless::table::{
     ColumnDef, ColumnPinPosition, ColumnSizingRegion, RowId, RowKey, RowPinPosition, Table,
     TableState,
 };
-use std::sync::Arc;
-
 #[derive(Debug, Clone)]
 struct DemoRow {
     id: u64,
@@ -39,6 +37,7 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     let table = Table::builder(&data)
         .columns(columns)
         .get_row_key(|row, _idx, _parent| RowKey(row.id))
+        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
         .state(TableState::default())
         .build();
 
@@ -95,7 +94,7 @@ fn tanstack_v8_capability_smoke_custom_row_id_affects_lookup_and_cell_ids() {
     let table = Table::builder(&data)
         .columns(columns)
         .get_row_key(|row, _idx, _parent| RowKey(row.id))
-        .get_row_id(|row, _idx, _parent| RowId(Arc::<str>::from(format!("row:{}", row.id))))
+        .get_row_id(|row, _idx, _parent| RowId::new(format!("row:{}", row.id)))
         .state(TableState::default())
         .build();
 
