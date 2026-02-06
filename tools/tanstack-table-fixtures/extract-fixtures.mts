@@ -189,6 +189,9 @@ type SnapshotId =
   | "row_id_state_ops_group_pinning_on_row_pinning_change_noop"
   | "row_id_state_ops_group_pinning"
   | "row_id_state_ops_nested_group_pinning"
+  | "row_id_state_ops_group_mixed_select_expand_pin"
+  | "row_id_state_ops_nested_group_mixed_select_expand_pin"
+  | "row_id_state_ops_group_mixed_selection_noop_expand_pin"
   | "pagination_baseline"
   | "pagination_set_page_index_out_of_range_uncontrolled"
   | "pagination_set_page_index_clamps_when_page_count_is_set"
@@ -3976,6 +3979,58 @@ function snapshotColumnPinning(
             position: "top",
             include_leaf_rows: false,
             include_parent_rows: true,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_mixed_select_expand_pin",
+        {},
+        { grouping: ["status"] },
+        [
+          { type: "toggleRowSelected", row_id: "status:Running", value: true },
+          { type: "toggleRowExpanded", row_id: "status:Running", value: true },
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_nested_group_mixed_select_expand_pin",
+        {},
+        { grouping: ["status", "name"] },
+        [
+          {
+            type: "toggleRowSelected",
+            row_id: "status:Running>name:Renderer",
+            value: true,
+          },
+          { type: "toggleRowExpanded", row_id: "status:Running", value: true },
+          {
+            type: "pinRow",
+            row_id: "status:Running>name:Renderer",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: true,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_mixed_selection_noop_expand_pin",
+        { __onRowSelectionChange: "noop" },
+        { grouping: ["status"] },
+        [
+          { type: "toggleRowSelected", row_id: "status:Running", value: true },
+          { type: "toggleRowExpanded", row_id: "status:Running", value: true },
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
           },
         ],
       ),

@@ -135,6 +135,8 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
       - Done (fixture parity, grouped selection edges): `select_children=false`, toggle-off clearing, and nested grouped selection.
       - Done (fixture parity, controlled hooks): grouped RowId no-op hook paths are covered for selection/expanding/pinning.
         - Snapshots: `row_id_state_ops_group_selection_on_row_selection_change_noop`, `row_id_state_ops_group_expanding_on_expanded_change_noop`, `row_id_state_ops_group_pinning_on_row_pinning_change_noop`
+      - Done (fixture parity, mixed action sequences): grouped/nested grouped selection+expanding+pinning cross-feature ordering is gated.
+        - Snapshots: `row_id_state_ops_group_mixed_select_expand_pin`, `row_id_state_ops_nested_group_mixed_select_expand_pin`, `row_id_state_ops_group_mixed_selection_noop_expand_pin`
   - Note: current TanStack JSON state round-trip for row-keyed maps (rowSelection/expanded/rowPinning)
     still assumes numeric ids; this must be generalized to `RowId` strings as part of `HTP-id-015`.
 

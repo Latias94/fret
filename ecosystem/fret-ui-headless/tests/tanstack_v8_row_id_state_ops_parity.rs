@@ -488,5 +488,23 @@ fn tanstack_v8_row_id_state_ops_parity() {
                 snap.id
             );
         }
+
+        if snap.id == "row_id_state_ops_group_mixed_selection_noop_expand_pin" {
+            assert!(
+                state.row_selection.is_empty(),
+                "snapshot {} expected selection to remain empty under onRowSelectionChange noop",
+                snap.id
+            );
+            assert!(
+                matches!(state.expanding, ExpandingState::Keys(ref keys) if !keys.is_empty()),
+                "snapshot {} expected expanding update to remain effective",
+                snap.id
+            );
+            assert!(
+                !state.row_pinning.top.is_empty(),
+                "snapshot {} expected pinning update to remain effective",
+                snap.id
+            );
+        }
     }
 }
