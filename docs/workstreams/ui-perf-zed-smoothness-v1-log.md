@@ -4244,3 +4244,29 @@ Interpretation:
 - On this workload, renderer CPU time is ~1.1–1.2ms/frame in the steady regime (encode + text prepare), while UI paint
   stays sub-millisecond p95. End-to-end 120Hz feel will likely require keeping this renderer slice stable (avoid upload
   churn) and making present timing observable (GPU/present hitches can dominate even when CPU is stable).
+
+## 2026-02-06 12:04:00 (commit `f21a0aa82`)
+
+Change:
+- Add `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` to the `ui-gallery-steady` suite.
+- Refresh the suite baseline to include the new editor-grade row.
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v11.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v11 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v11.json`
+- Added row:
+  - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+  - `measured_max.top_total_time_us=7772`
+  - Evidence bundle: `target/fret-diag-codex-perf-v11/1770350649172-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Drift vs v10:
+- Existing rows are broadly stable (max `top_total_time_us` drift is small; see `v11 - v10` diff summary in local notes).
+- Worst overall script remains `ui-gallery-window-resize-stress-steady` with `top_total_time_us=16136`
+  (bundle: `target/fret-diag-codex-perf-v11/1770350673752-ui-gallery-window-resize-stress-steady/bundle.json`).
