@@ -910,12 +910,18 @@ where
     let cell_px = resolve_cell_padding_x(theme);
     let cell_py = resolve_cell_padding_y(theme);
 
-    let sorting = cx
-        .watch_model(&state)
-        .layout()
-        .read_ref(|s| s.sorting.clone())
-        .ok()
-        .unwrap_or_default();
+    let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
+    let sorting = state_value.sorting.clone();
+
+    let col_widths: Arc<[Px]> = Arc::from(
+        columns
+            .iter()
+            .map(|col| resolve_column_width(col, &state_value, &props))
+            .collect::<Vec<_>>(),
+    );
+    let total_width = Px(col_widths.iter().map(|w| w.0).sum::<f32>());
+
+    let scroll_x = cx.with_state(ScrollHandle::default, |h| h.clone());
 
     let entries = cx.with_state(RetainedTableRowsState::default, |st| {
         if st.last_items_revision != Some(items_revision) {
@@ -981,6 +987,9 @@ where
         let columns = columns.clone();
         let header_label = Arc::clone(&header_label);
         let debug_header_cell_test_id_prefix = debug_header_cell_test_id_prefix.clone();
+        let col_widths = col_widths.clone();
+        let scroll_x = scroll_x.clone();
+        let sorting = sorting.clone();
 
         cx.container(
             ContainerProps {
@@ -995,60 +1004,160 @@ where
                     top_right: radius,
                     ..Default::default()
                 },
-                padding: Edges::symmetric(cell_px, cell_py),
+                layout: LayoutStyle {
+                    size: fret_ui::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(row_h),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
                 ..Default::default()
             },
             move |cx| {
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap_x(Space::N2)
-                        .justify(Justify::Start)
-                        .items(Items::Center),
-                    move |cx| {
-                        columns
-                            .iter()
-                            .map(|col| {
-                                let label = (header_label)(col);
-                                let sort_state = sort_for_column(&sorting, &col.id);
-                                let col_id = col.id.clone();
-                                let state = state.clone();
-                                let debug_test_id: Option<Arc<str>> =
-                                    debug_header_cell_test_id_prefix.as_ref().map(|prefix| {
-                                        Arc::<str>::from(format!(
-                                            "{prefix}{id}",
-                                            id = col_id.as_ref()
-                                        ))
-                                    });
-
-                                cx.pressable(
-                                    PressableProps {
-                                        enabled: true,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(label.clone()),
-                                            test_id: debug_test_id.clone(),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    move |cx, _st| {
-                                        cx.pressable_update_model(&state, move |st| {
-                                            apply_single_sort_toggle(st, &col_id);
-                                            st.pagination.page_index = 0;
-                                        });
-
-                                        let indicator: Arc<str> = match sort_state {
-                                            None => Arc::from(""),
-                                            Some(false) => Arc::from(" ▲"),
-                                            Some(true) => Arc::from(" ▼"),
-                                        };
-                                        vec![cx.text(format!("{}{}", label, indicator))]
-                                    },
-                                )
-                            })
-                            .collect::<Vec<_>>()
+                let row = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: fret_ui::element::SizeStyle {
+                                width: Length::Px(total_width),
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
                     },
+                    move |cx| {
+                        vec![stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .gap_x(Space::N0)
+                                .justify(Justify::Start)
+                                .items(Items::Center),
+                            move |cx| {
+                                columns
+                                    .iter()
+                                    .zip(col_widths.iter().copied())
+                                    .map(|(col, col_w)| {
+                                        let label = (header_label)(col);
+                                        let sort_state = sort_for_column(&sorting, &col.id);
+                                        let col_id = col.id.clone();
+                                        let state = state.clone();
+                                        let debug_test_id: Option<Arc<str>> =
+                                            debug_header_cell_test_id_prefix.as_ref().map(
+                                                |prefix| {
+                                                    Arc::<str>::from(format!(
+                                                        "{prefix}{id}",
+                                                        id = col_id.as_ref()
+                                                    ))
+                                                },
+                                            );
+
+                                        cx.container(
+                                            ContainerProps {
+                                                border: Edges {
+                                                    right: Px(1.0),
+                                                    ..Default::default()
+                                                },
+                                                border_color: Some(border),
+                                                layout: LayoutStyle {
+                                                    size: fret_ui::element::SizeStyle {
+                                                        width: Length::Px(col_w),
+                                                        min_width: Some(col_w),
+                                                        max_width: Some(col_w),
+                                                        height: Length::Fill,
+                                                        ..Default::default()
+                                                    },
+                                                    flex: fret_ui::element::FlexItemStyle {
+                                                        shrink: 0.0,
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                vec![cx.pressable(
+                                                    PressableProps {
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.width = Length::Fill;
+                                                            layout.size.height = Length::Fill;
+                                                            layout
+                                                        },
+                                                        enabled: true,
+                                                        a11y: PressableA11y {
+                                                            role: Some(SemanticsRole::Button),
+                                                            label: Some(label.clone()),
+                                                            test_id: debug_test_id.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    move |cx, _st| {
+                                                        cx.pressable_update_model(
+                                                            &state,
+                                                            move |st| {
+                                                                apply_single_sort_toggle(
+                                                                    st, &col_id,
+                                                                );
+                                                                st.pagination.page_index = 0;
+                                                            },
+                                                        );
+
+                                                        let indicator: Arc<str> = match sort_state {
+                                                            None => Arc::from(""),
+                                                            Some(false) => Arc::from(" ▲"),
+                                                            Some(true) => Arc::from(" ▼"),
+                                                        };
+
+                                                        vec![cx.container(
+                                                            ContainerProps {
+                                                                padding: Edges::symmetric(
+                                                                    cell_px, cell_py,
+                                                                ),
+                                                                layout: {
+                                                                    let mut layout =
+                                                                        LayoutStyle::default();
+                                                                    layout.size.width =
+                                                                        Length::Fill;
+                                                                    layout.size.height =
+                                                                        Length::Fill;
+                                                                    layout
+                                                                },
+                                                                ..Default::default()
+                                                            },
+                                                            move |_cx| {
+                                                                vec![_cx.text(format!(
+                                                                    "{}{}",
+                                                                    label, indicator
+                                                                ))]
+                                                            },
+                                                        )]
+                                                    },
+                                                )]
+                                            },
+                                        )
+                                    })
+                                    .collect::<Vec<_>>()
+                            },
+                        )]
+                    },
+                );
+
+                vec![cx.scroll(
+                    ScrollProps {
+                        axis: ScrollAxis::X,
+                        scroll_handle: Some(scroll_x.clone()),
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |_cx| vec![row],
                 )]
             },
         )
@@ -1136,6 +1245,7 @@ where
         let entries = entries.clone();
         let data = data.clone();
         let columns = columns.clone();
+        let col_widths = col_widths.clone();
         let cell_at = Arc::clone(&cell_at);
         let debug_row_test_id_prefix = debug_row_test_id_prefix.clone();
 
@@ -1159,9 +1269,11 @@ where
                 let state_model = state.clone();
                 let data_for_row = Arc::clone(&data);
                 let columns_for_row = Arc::clone(&columns);
+                let col_widths_for_row = col_widths.clone();
                 let cell_at_for_row = Arc::clone(&cell_at);
                 let key_handler_for_row = key_handler.clone();
                 let focus_target_for_row = focus_target;
+                let row_cell_test_id_prefix = debug_row_test_id_prefix.clone();
 
                 cx.pressable(
                     PressableProps {
@@ -1205,25 +1317,83 @@ where
                         };
 
                         let original = &data_for_row[data_index];
-                        let cells = columns_for_row
-                            .iter()
-                            .map(|col| (cell_at_for_row)(cx, col, original))
-                            .collect::<Vec<_>>();
 
                         vec![cx.container(
                             ContainerProps {
                                 background: bg,
-                                padding: Edges::symmetric(cell_px, cell_py),
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: Length::Px(total_width),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             move |cx| {
                                 vec![stack::hstack(
                                     cx,
                                     stack::HStackProps::default()
-                                        .gap_x(Space::N2)
+                                        .gap_x(Space::N0)
                                         .justify(Justify::Start)
                                         .items(Items::Center),
-                                    move |_cx| cells,
+                                    move |cx| {
+                                        columns_for_row
+                                            .iter()
+                                            .zip(col_widths_for_row.iter().copied())
+                                            .map(|(col, col_w)| {
+                                                let cell = (cell_at_for_row)(cx, col, original);
+
+                                                let cell_test_id = row_cell_test_id_prefix
+                                                    .as_ref()
+                                                    .map(|prefix| {
+                                                        Arc::<str>::from(format!(
+                                                            "{prefix}{row}-cell-{col}",
+                                                            row = row_key.0,
+                                                            col = col.id.as_ref()
+                                                        ))
+                                                    });
+
+                                                let cell = cx.container(
+                                                    ContainerProps {
+                                                        border: Edges {
+                                                            right: Px(1.0),
+                                                            ..Default::default()
+                                                        },
+                                                        border_color: Some(border),
+                                                        padding: Edges::symmetric(cell_px, cell_py),
+                                                        layout: LayoutStyle {
+                                                            size: fret_ui::element::SizeStyle {
+                                                                width: Length::Px(col_w),
+                                                                min_width: Some(col_w),
+                                                                max_width: Some(col_w),
+                                                                ..Default::default()
+                                                            },
+                                                            flex: fret_ui::element::FlexItemStyle {
+                                                                shrink: 0.0,
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    move |_cx| vec![cell],
+                                                );
+
+                                                if let Some(test_id) = cell_test_id {
+                                                    cx.semantics(
+                                                        SemanticsProps {
+                                                            test_id: Some(test_id),
+                                                            ..Default::default()
+                                                        },
+                                                        move |_cx| vec![cell],
+                                                    )
+                                                } else {
+                                                    cell
+                                                }
+                                            })
+                                            .collect::<Vec<_>>()
+                                    },
                                 )]
                             },
                         )]
@@ -1417,13 +1587,38 @@ where
                         move |cx| {
                             vec![
                                 header,
-                                cx.virtual_list_keyed_retained_with_layout(
-                                    fill_layout,
-                                    entries_for_list.len(),
-                                    options,
-                                    vertical_scroll,
-                                    key_at,
-                                    row,
+                                cx.scroll(
+                                    ScrollProps {
+                                        axis: ScrollAxis::X,
+                                        scroll_handle: Some(scroll_x.clone()),
+                                        layout: fill_layout,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![cx.container(
+                                            ContainerProps {
+                                                layout: LayoutStyle {
+                                                    size: fret_ui::element::SizeStyle {
+                                                        width: Length::Px(total_width),
+                                                        height: Length::Fill,
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                vec![cx.virtual_list_keyed_retained_with_layout(
+                                                    fill_layout,
+                                                    entries_for_list.len(),
+                                                    options,
+                                                    vertical_scroll,
+                                                    key_at,
+                                                    row,
+                                                )]
+                                            },
+                                        )]
+                                    },
                                 ),
                             ]
                         },

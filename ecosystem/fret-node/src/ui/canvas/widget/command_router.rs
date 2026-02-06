@@ -54,28 +54,28 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             "edit.paste" => self.cmd_paste(cx, snapshot),
 
             CMD_NODE_GRAPH_NUDGE_LEFT => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: -1.0, y: 0.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: -1.0, y: 0.0 }, false)
             }
             CMD_NODE_GRAPH_NUDGE_RIGHT => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 1.0, y: 0.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 1.0, y: 0.0 }, false)
             }
             CMD_NODE_GRAPH_NUDGE_UP => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: -1.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: -1.0 }, false)
             }
             CMD_NODE_GRAPH_NUDGE_DOWN => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: 1.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: 1.0 }, false)
             }
             CMD_NODE_GRAPH_NUDGE_LEFT_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: -10.0, y: 0.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: -1.0, y: 0.0 }, true)
             }
             CMD_NODE_GRAPH_NUDGE_RIGHT_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 10.0, y: 0.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 1.0, y: 0.0 }, true)
             }
             CMD_NODE_GRAPH_NUDGE_UP_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: -10.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: -1.0 }, true)
             }
             CMD_NODE_GRAPH_NUDGE_DOWN_FAST => {
-                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: 10.0 })
+                self.cmd_nudge_selection(cx, snapshot, CanvasPoint { x: 0.0, y: 1.0 }, true)
             }
 
             CMD_NODE_GRAPH_ALIGN_LEFT => {

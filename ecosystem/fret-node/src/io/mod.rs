@@ -365,6 +365,17 @@ impl NodeGraphDeleteKey {
     }
 }
 
+/// Nudge step semantics for keyboard-driven movement.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeGraphNudgeStepMode {
+    /// Interprets the step as screen-space pixels (converted to canvas units by dividing by zoom).
+    #[default]
+    ScreenPx,
+    /// Uses the editor snap grid (`snap_grid`) as the step (canvas-space).
+    Grid,
+}
+
 /// Auto-pan tuning for drag/connect/focus workflows.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeGraphAutoPanTuning {
@@ -689,6 +700,18 @@ pub struct NodeGraphInteractionState {
     #[serde(default)]
     pub delete_key: NodeGraphDeleteKey,
 
+    /// Nudge step mode for keyboard arrow movement (screen px vs snap grid step).
+    #[serde(default)]
+    pub nudge_step_mode: NodeGraphNudgeStepMode,
+
+    /// Base nudge step in screen pixels when `nudge_step_mode` is `screen_px`.
+    #[serde(default = "default_nudge_step_px")]
+    pub nudge_step_px: f32,
+
+    /// Fast nudge step in screen pixels when `nudge_step_mode` is `screen_px`.
+    #[serde(default = "default_nudge_fast_step_px")]
+    pub nudge_fast_step_px: f32,
+
     /// Disable keyboard-driven accessibility and focus traversal (XyFlow `disableKeyboardA11y`).
     ///
     /// When enabled, the canvas will avoid handling keyboard a11y navigation such as:
@@ -892,6 +915,9 @@ impl Default for NodeGraphInteractionState {
             selection_key: default_selection_key(),
             multi_selection_key: default_multi_selection_key(),
             delete_key: NodeGraphDeleteKey::default(),
+            nudge_step_mode: NodeGraphNudgeStepMode::default(),
+            nudge_step_px: default_nudge_step_px(),
+            nudge_fast_step_px: default_nudge_fast_step_px(),
             disable_keyboard_a11y: false,
             pane_click_distance: default_pane_click_distance(),
             pan_activation_key_code: default_pan_activation_key_code(),
@@ -930,6 +956,14 @@ fn default_elevate_nodes_on_select() -> bool {
 
 fn default_elevate_edges_on_select() -> bool {
     true
+}
+
+fn default_nudge_step_px() -> f32 {
+    1.0
+}
+
+fn default_nudge_fast_step_px() -> f32 {
+    10.0
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

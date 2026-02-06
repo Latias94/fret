@@ -2,6 +2,7 @@
 
 mod apply;
 mod build;
+mod diff;
 mod fragment;
 mod history;
 mod normalize;
@@ -9,13 +10,17 @@ mod tx_sanity;
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::EdgeReconnectable;
 use crate::core::{
-    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Group, GroupId, Node, NodeId,
-    NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol, SymbolId,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, GraphId, GraphImport, Group,
+    GroupId, Node, NodeExtent, NodeId, NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol,
+    SymbolId,
 };
+use crate::types::TypeDesc;
 
 pub use apply::{ApplyError, apply_op, apply_transaction};
 pub use build::GraphOpBuilderExt;
+pub use diff::graph_diff;
 pub use fragment::{GraphFragment, IdRemapSeed, IdRemapper, PasteTuning};
 pub use history::{DEFAULT_HISTORY_LIMIT, GraphHistory, invert_transaction};
 pub(crate) use normalize::normalize_transaction;
@@ -62,11 +67,47 @@ pub enum GraphOp {
     },
     /// Sets a node kind version (for per-kind migrations).
     SetNodeKindVersion { id: NodeId, from: u32, to: u32 },
+    /// Sets a node selectable override.
+    SetNodeSelectable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a node draggable override.
+    SetNodeDraggable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a node connectable override.
+    SetNodeConnectable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a node deletable override.
+    SetNodeDeletable {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
     /// Sets a node parent container (group frame).
     SetNodeParent {
         id: NodeId,
         from: Option<GroupId>,
         to: Option<GroupId>,
+    },
+    /// Sets a node extent override.
+    SetNodeExtent {
+        id: NodeId,
+        from: Option<NodeExtent>,
+        to: Option<NodeExtent>,
+    },
+    /// Sets a node expand-parent override.
+    SetNodeExpandParent {
+        id: NodeId,
+        from: Option<bool>,
+        to: Option<bool>,
     },
     /// Sets a node explicit size.
     SetNodeSize {
@@ -74,6 +115,8 @@ pub enum GraphOp {
         from: Option<CanvasSize>,
         to: Option<CanvasSize>,
     },
+    /// Sets a node hidden state.
+    SetNodeHidden { id: NodeId, from: bool, to: bool },
     /// Sets a node collapsed state.
     SetNodeCollapsed { id: NodeId, from: bool, to: bool },
     /// Sets a node's port ordering.
@@ -103,6 +146,36 @@ pub enum GraphOp {
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         edges: Vec<(EdgeId, Edge)>,
     },
+    /// Sets a port connectable override.
+    SetPortConnectable {
+        id: PortId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a port start-connectable override.
+    SetPortConnectableStart {
+        id: PortId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a port end-connectable override.
+    SetPortConnectableEnd {
+        id: PortId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets a port type descriptor.
+    SetPortType {
+        id: PortId,
+        from: Option<TypeDesc>,
+        to: Option<TypeDesc>,
+    },
+    /// Sets a port domain-owned data payload.
+    SetPortData {
+        id: PortId,
+        from: serde_json::Value,
+        to: serde_json::Value,
+    },
 
     /// Adds an edge.
     AddEdge { id: EdgeId, edge: Edge },
@@ -114,6 +187,24 @@ pub enum GraphOp {
         from: EdgeKind,
         to: EdgeKind,
     },
+    /// Sets an edge selectable override.
+    SetEdgeSelectable {
+        id: EdgeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets an edge deletable override.
+    SetEdgeDeletable {
+        id: EdgeId,
+        from: Option<bool>,
+        to: Option<bool>,
+    },
+    /// Sets an edge reconnectable override.
+    SetEdgeReconnectable {
+        id: EdgeId,
+        from: Option<EdgeReconnectable>,
+        to: Option<EdgeReconnectable>,
+    },
     /// Sets an edge's endpoints (preserving edge identity for reconnection workflows).
     SetEdgeEndpoints {
         id: EdgeId,
@@ -121,10 +212,39 @@ pub enum GraphOp {
         to: EdgeEndpoints,
     },
 
+    /// Adds a graph import reference.
+    AddImport { id: GraphId, import: GraphImport },
+    /// Removes a graph import reference.
+    RemoveImport { id: GraphId, import: GraphImport },
+    /// Sets an import alias.
+    SetImportAlias {
+        id: GraphId,
+        from: Option<String>,
+        to: Option<String>,
+    },
+
     /// Adds a symbol.
     AddSymbol { id: SymbolId, symbol: Symbol },
     /// Removes a symbol.
     RemoveSymbol { id: SymbolId, symbol: Symbol },
+    /// Sets a symbol name.
+    SetSymbolName {
+        id: SymbolId,
+        from: String,
+        to: String,
+    },
+    /// Sets a symbol type descriptor.
+    SetSymbolType {
+        id: SymbolId,
+        from: Option<TypeDesc>,
+        to: Option<TypeDesc>,
+    },
+    /// Sets a symbol default value.
+    SetSymbolDefaultValue {
+        id: SymbolId,
+        from: Option<serde_json::Value>,
+        to: Option<serde_json::Value>,
+    },
     /// Updates a symbol metadata payload (domain-owned).
     SetSymbolMeta {
         id: SymbolId,
@@ -154,6 +274,12 @@ pub enum GraphOp {
         id: GroupId,
         from: String,
         to: String,
+    },
+    /// Sets a group color override.
+    SetGroupColor {
+        id: GroupId,
+        from: Option<String>,
+        to: Option<String>,
     },
 
     /// Adds a sticky note.

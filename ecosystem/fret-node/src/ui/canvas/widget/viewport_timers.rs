@@ -54,69 +54,23 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     pub(super) fn auto_pan_delta(snapshot: &ViewSnapshot, pos: Point, bounds: Rect) -> CanvasPoint {
-        let zoom = snapshot.zoom;
-        if !zoom.is_finite() || zoom <= 0.0 {
-            return CanvasPoint::default();
-        }
+        let view = Self::viewport_from_snapshot(bounds, snapshot).view;
+        let tuning = fret_canvas::view::AutoPanTuning {
+            margin_screen_px: snapshot.interaction.auto_pan.margin,
+            speed_screen_px_per_s: snapshot.interaction.auto_pan.speed,
+        };
 
-        let margin_screen = snapshot.interaction.auto_pan.margin;
-        let speed_screen_per_s = snapshot.interaction.auto_pan.speed;
-        if !margin_screen.is_finite() || margin_screen <= 0.0 {
-            return CanvasPoint::default();
-        }
-        if !speed_screen_per_s.is_finite() || speed_screen_per_s <= 0.0 {
-            return CanvasPoint::default();
-        }
-
-        let viewport_w = bounds.size.width.0;
-        let viewport_h = bounds.size.height.0;
-        if !viewport_w.is_finite()
-            || viewport_w <= 0.0
-            || !viewport_h.is_finite()
-            || viewport_h <= 0.0
-        {
-            return CanvasPoint::default();
-        }
-
-        let pan = snapshot.pan;
-        let pos_screen_x = (pos.x.0 + pan.x) * zoom;
-        let pos_screen_y = (pos.y.0 + pan.y) * zoom;
-
-        let dist_left = pos_screen_x;
-        let dist_right = viewport_w - pos_screen_x;
-        let dist_top = pos_screen_y;
-        let dist_bottom = viewport_h - pos_screen_y;
-
-        let step_screen = speed_screen_per_s / Self::AUTO_PAN_TICK_HZ;
-        let step_graph = step_screen / zoom;
-
-        let mut delta_x = 0.0;
-        let mut delta_y = 0.0;
-
-        if dist_left.is_finite() && dist_left < margin_screen {
-            let factor = ((margin_screen - dist_left) / margin_screen).clamp(0.0, 1.0);
-            delta_x += step_graph * factor;
-        }
-        if dist_right.is_finite() && dist_right < margin_screen {
-            let factor = ((margin_screen - dist_right) / margin_screen).clamp(0.0, 1.0);
-            delta_x -= step_graph * factor;
-        }
-        if dist_top.is_finite() && dist_top < margin_screen {
-            let factor = ((margin_screen - dist_top) / margin_screen).clamp(0.0, 1.0);
-            delta_y += step_graph * factor;
-        }
-        if dist_bottom.is_finite() && dist_bottom < margin_screen {
-            let factor = ((margin_screen - dist_bottom) / margin_screen).clamp(0.0, 1.0);
-            delta_y -= step_graph * factor;
-        }
-
-        if !delta_x.is_finite() || !delta_y.is_finite() {
-            return CanvasPoint::default();
-        }
+        let delta = fret_canvas::view::auto_pan_delta_per_tick(
+            bounds,
+            view,
+            pos,
+            tuning,
+            Self::AUTO_PAN_TICK_HZ,
+        );
 
         CanvasPoint {
-            x: delta_x,
-            y: delta_y,
+            x: delta.x.0,
+            y: delta.y.0,
         }
     }
 

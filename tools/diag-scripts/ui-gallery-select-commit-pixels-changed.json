@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "select" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-select" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-select" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-select-commit-before" },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-commit-before" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-item-banana" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-select-item-banana" } },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "ui-gallery-select-commit-after" },
+    { "type": "capture_screenshot", "label": "ui-gallery-select-commit-after" },
+    { "type": "capture_bundle", "label": "ui-gallery-select-commit" }
+  ]
+}
