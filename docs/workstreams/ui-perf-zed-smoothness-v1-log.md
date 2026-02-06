@@ -4182,3 +4182,65 @@ Results (from 240 captured snapshots; `paint_time_us` p50/p95/max):
 Notes:
 - The probe remains in the “sub-millisecond paint” regime after pulling upstream. Any further “Zed feel” work should
   focus on reducing tail outliers and on end-to-end GPU/present timing, not on baseline CPU paint throughput.
+
+## 2026-02-06 11:47:00 (commit `09ecac494`)
+
+Change:
+- Refresh the `ui-gallery-steady` baseline using the **steady-state protocol** (`--reuse-launch`).
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --reuse-launch --repeat 7 --warmup-frames 5 --timeout-ms 300000 --sort time --top 15 --json --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v10.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v10 --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v10.json`
+- Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=16307` (baseline is max-based; see the suite JSON output for p95/max)
+  - Evidence bundle: `target/fret-diag-codex-perf-v10/1770349612209-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- This baseline is **not directly comparable** to v9 because the protocol changed:
+  - v9: per-script launches (more cold-start noise).
+  - v10: `--reuse-launch` (intended steady-state).
+- The purpose of v10 is to reduce noise so future regressions are explainable and stable.
+
+## 2026-02-06 11:50:00 (commit `09ecac494`)
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command (repro; renderer perf snapshots recorded by the runner):
+```bash
+cargo run -p fretboard -- diag repro tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json \
+  --dir target/fret-diag-codex-renderer-perf-09ecac494/editor-autoscroll.r2 \
+  --timeout-ms 240000 --poll-ms 50 \
+  --env FRET_DIAG_RENDERER_PERF=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_DIAG_MAX_SNAPSHOTS=240 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- stdout log: `target/fret-diag-codex-renderer-perf-09ecac494/editor-autoscroll.r2.stdout.log`
+- bundle: `target/fret-diag-codex-renderer-perf-09ecac494/editor-autoscroll.r2/1770349792705-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Results (from 240 captured snapshots; per-frame values from `debug.stats.*`):
+- `paint_time_us` p50/p95/max: `826 / 916 / 5967`
+- `renderer_encode_scene_us` p50/p95/max: `~600 / 655 / 935`
+- `renderer_prepare_text_us` p50/p95/max: `472 / 568 / 593`
+- `renderer_draw_calls`: `69` (stable)
+- `renderer_pipeline_switches`: `47` (stable)
+- `renderer_text_atlas_upload_bytes`: `0` (no churn in this run)
+- `renderer_text_atlas_evicted_pages`: `0`
+
+Interpretation:
+- On this workload, renderer CPU time is ~1.1–1.2ms/frame in the steady regime (encode + text prepare), while UI paint
+  stays sub-millisecond p95. End-to-end 120Hz feel will likely require keeping this renderer slice stable (avoid upload
+  churn) and making present timing observable (GPU/present hitches can dominate even when CPU is stable).
