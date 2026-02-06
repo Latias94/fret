@@ -65,6 +65,8 @@ pub use fret_core::{
     ImageEncoding, TransferFunction, YuvMatrix,
 };
 pub use fret_core::{ClipboardToken, ExternalDropToken, FileDialogToken, TimerToken};
+pub use fret_i18n;
+pub use fret_i18n_fluent;
 pub use input::{
     DefaultAction, DefaultActionSet, InputContext, InputDispatchPhase, KeyChord, Platform,
     TextBoundaryMode, format_chord, format_sequence,

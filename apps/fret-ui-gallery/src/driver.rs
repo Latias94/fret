@@ -2170,8 +2170,7 @@ pub fn build_app() -> App {
 
     let config_paths = LayeredConfigPaths::for_project_root(".");
     if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
-        app.set_global(settings.clone());
-        app.set_global(settings.docking_interaction_settings());
+        fret_app::settings::apply_settings_globals(&mut app, &settings);
     }
 
     // Minimal command surface for `CommandDialog::new_with_host_commands`.
@@ -2823,8 +2822,7 @@ impl WinitAppDriver for UiGalleryDriver {
                             let paths = LayeredConfigPaths::for_project_root(".");
                             let (settings, _report) = load_layered_settings(&paths)
                                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-                            app.set_global(settings.clone());
-                            app.set_global(settings.docking_interaction_settings());
+                            fret_app::settings::apply_settings_globals(app, &settings);
                             fret_app::sync_os_menu_bar(app);
                             Ok(())
                         });
@@ -2900,6 +2898,14 @@ impl WinitAppDriver for UiGalleryDriver {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.preferences");
                 });
+            }
+            fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
+                if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
+                    app.request_redraw(window);
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("cmd.locale.switch_next");
+                    });
+                }
             }
             fret_app::core_commands::APP_QUIT => {
                 app.push_effect(Effect::QuitApp);
