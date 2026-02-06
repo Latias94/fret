@@ -1480,6 +1480,18 @@ impl<'a, TData> Table<'a, TData> {
         }))
     }
 
+    pub fn row_pinning_updater_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        position: Option<super::RowPinPosition>,
+        include_leaf_rows: bool,
+        include_parent_rows: bool,
+    ) -> Option<super::Updater<super::RowPinningState>> {
+        let row_key = self.row_key_for_id(row_id, search_all)?;
+        Some(self.row_pinning_updater(row_key, position, include_leaf_rows, include_parent_rows))
+    }
+
     pub fn top_row_keys(&self) -> Vec<RowKey> {
         self.pinned_row_keys(super::RowPinPosition::Top)
     }

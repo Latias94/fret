@@ -1,7 +1,8 @@
 use fret_ui_headless::table::{
-    ColumnDef, ColumnPinPosition, ColumnSizingRegion, RowId, RowKey, RowPinPosition, Table,
-    TableState,
+    ColumnDef, ColumnPinPosition, ColumnSizingRegion, ExpandingState, RowId, RowKey,
+    RowPinPosition, Table, TableState, TanStackTableState,
 };
+
 #[derive(Debug, Clone)]
 struct DemoRow {
     id: u64,
@@ -107,4 +108,45 @@ fn tanstack_v8_capability_smoke_custom_row_id_affects_lookup_and_cell_ids() {
             .iter()
             .any(|c| c.id.as_ref() == "row:1_a" && c.column_id.as_ref() == "a")
     );
+}
+
+#[test]
+fn tanstack_v8_capability_smoke_tanstack_state_can_resolve_string_row_ids() {
+    let data = vec![DemoRow {
+        id: 1,
+        a: 10,
+        b: 100,
+    }];
+    let columns = vec![
+        ColumnDef::<DemoRow>::new("a").value_u64_by(|r| r.a),
+        ColumnDef::<DemoRow>::new("b").value_u64_by(|r| r.b),
+    ];
+
+    let table = Table::builder(&data)
+        .columns(columns)
+        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+        .get_row_id(|row, _idx, _parent| RowId::new(format!("row:{}", row.id)))
+        .state(TableState::default())
+        .build();
+
+    let tanstack = TanStackTableState::from_json(&serde_json::json!({
+        "rowPinning": { "top": ["row:1"], "bottom": [] },
+        "rowSelection": { "row:1": true },
+        "expanded": { "row:1": true }
+    }))
+    .expect("tanstack state json");
+
+    let state = tanstack
+        .to_table_state_with_row_model(table.core_row_model())
+        .expect("resolved state");
+
+    assert_eq!(state.row_pinning.top, vec![RowKey(1)]);
+    assert!(state.row_selection.contains(&RowKey(1)));
+    assert!(matches!(state.expanding, ExpandingState::Keys(keys) if keys.contains(&RowKey(1))));
+
+    let updater = table
+        .row_pinning_updater_by_id("row:1", true, Some(RowPinPosition::Top), false, false)
+        .expect("row exists");
+    let next = updater.apply(&TableState::default().row_pinning);
+    assert_eq!(next.top, vec![RowKey(1)]);
 }
