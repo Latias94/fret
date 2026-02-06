@@ -521,8 +521,10 @@ Perf acceptance:
   - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
   - Commit: `e50173f13`
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 16:12.
-- [ ] Add diagnostics counters for the new gate path before deciding default behavior.
+- [x] Add diagnostics counters for the new gate path before deciding default behavior.
   - Export at least: “paint replay allowed by hit-test-only gate” and “hit-test-only replay attempts rejected by key mismatch”.
+  - Implemented by `feat(diag): export hit-test-only paint-cache replay counters` (commit `f38f8c1d5`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 17:32.
   - Add a focused script where `HitTestOnly` dominates and layout stays stable; current resize probes are too noisy.
 - [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` should ever become default.
   - Current status: keep opt-in only; A/B evidence is mixed across repeated resize probes.

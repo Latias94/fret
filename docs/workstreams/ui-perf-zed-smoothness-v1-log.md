@@ -4642,3 +4642,103 @@ Notes:
 - Keep `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` as an experiment-only gate.
 - Next step: add diagnostics counters for “replay permitted by hit-test-only gate” and build a
   focused script where `HitTestOnly` dominates but layout is stable.
+
+## 2026-02-06 17:32:00 (commit `f38f8c1d5`)
+
+Change:
+- Export two hit-test-only paint-cache gate counters end-to-end:
+  - `paint_cache_hit_test_only_replay_allowed`
+  - `paint_cache_hit_test_only_replay_rejected_key_mismatch`
+- Wire counters through diagnostics and perf summaries:
+  - `fret-ui` frame stats
+  - `fret-bootstrap` bundle export
+  - `fretboard diag` bundle parser + `--json` top metrics
+- Add targeted unit assertions for both counter paths:
+  - replay-allowed case
+  - key-mismatch rejection case
+
+Validation:
+- `cargo nextest run -p fret-ui paint_cache_hit_test_only_invalidation_replays_when_toggle_on paint_cache_hit_test_only_replay_reject_counter_tracks_key_mismatch`
+- `cargo check -q -p fret-ui -p fret-bootstrap -p fretboard`
+
+Probe A: hit-test move sweep (counter visibility check)
+- Script: `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
+
+Command (gate off):
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+  --dir target/fret-diag-codex-paint-hit-test-counter-off-v3 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Command (gate on):
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+  --dir target/fret-diag-codex-paint-hit-test-counter-on-v3 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Gate off (`target/fret-diag-codex-paint-hit-test-counter-off-v3`):
+  - `total_time_us`: `1647/1688/2104/2104` (min/p50/p95/max)
+  - `layout_time_us`: `1140/1442/1504/1504`
+  - `paint_time_us`: `188/197/964/964`
+- Gate on (`target/fret-diag-codex-paint-hit-test-counter-on-v3`):
+  - `total_time_us`: `1597/1681/1749/1749`
+  - `layout_time_us`: `1376/1459/1525/1525`
+  - `paint_time_us`: `187/192/194/194`
+
+Counter evidence:
+- For all 14 runs (off + on):
+  - `top_paint_cache_hit_test_only_replay_allowed = 0`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch = 0`
+
+Probe B: resize stress recheck with counters
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- Env includes resize-defer probe:
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2`
+
+Results (us):
+- Gate off (`target/fret-diag-codex-paint-hit-test-counter-resize-off-v2`):
+  - `total_time_us`: `11319/11413/11499/11499`
+  - `layout_time_us`: `8036/8112/8190/8190`
+  - `paint_time_us`: `3172/3195/3222/3222`
+- Gate on (`target/fret-diag-codex-paint-hit-test-counter-resize-on-v2`):
+  - `total_time_us`: `11649/11722/12257/12257`
+  - `layout_time_us`: `8281/8372/8696/8696`
+  - `paint_time_us`: `3214/3315/3513/3513`
+
+Counter evidence:
+- For all 14 runs (off + on):
+  - `top_paint_cache_hit_test_only_replay_allowed = 0`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch = 0`
+
+Worst bundles:
+- Hit-test off worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-off-v3/1770367752601-ui-gallery-hit-test-move-sweep-steady/bundle.json`
+- Hit-test on worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-on-v3/1770367829971-ui-gallery-hit-test-move-sweep-steady/bundle.json`
+- Resize off worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-resize-off-v2/1770367861503-ui-gallery-window-resize-stress-steady/bundle.json`
+- Resize on worst:
+  - `target/fret-diag-codex-paint-hit-test-counter-resize-on-v2/1770367893335-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Interpretation:
+- The new counters prove these two current gallery probes do **not** exercise the hit-test-only replay gate path.
+- Therefore, observed on/off timing deltas here are not causal evidence for the gate itself.
+- Keep `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` experiment-only until we add a dedicated script that
+  deterministically drives `HitTestOnly` invalidation on cache-eligible nodes.
