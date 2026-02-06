@@ -8327,6 +8327,505 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_json(
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-selection-wrap-gate-viewport";
+    const WRAP_COLS: u64 = 80;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    let mut expected_len_bytes: Option<u64> = None;
+
+    // State machine (single long line, wrap at 80 cols):
+    //
+    // 0: waiting for caret=0
+    // 1: waiting for caret=80 (End over visual row)
+    // 2: waiting for caret=len (Ctrl+End clamps to document bounds)
+    // 3: waiting for selection=0..len (Ctrl+A)
+    // 4: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let len_bytes = text_field
+                .get("value")
+                .and_then(|v| v.as_str())
+                .and_then(|s| {
+                    parse_redacted_len_bytes(s).or_else(|| {
+                        let trimmed = s.trim_start();
+                        if trimmed.starts_with("<redacted") {
+                            return None;
+                        }
+                        Some(s.len() as u64)
+                    })
+                });
+            if let Some(len_bytes) = len_bytes {
+                if expected_len_bytes.is_none() {
+                    expected_len_bytes = Some(len_bytes);
+                }
+            }
+            let Some(len_bytes) = expected_len_bytes else {
+                continue;
+            };
+            if len_bytes <= WRAP_COLS {
+                continue;
+            }
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "len_bytes": len_bytes,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (lo, hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+
+            match state {
+                0 => {
+                    if lo == 0 && hi == 0 {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if lo == WRAP_COLS && hi == WRAP_COLS {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if lo == len_bytes && hi == len_bytes {
+                        state = 3;
+                    }
+                }
+                3 => {
+                    if lo == 0 && hi == len_bytes {
+                        state = 4;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path = evidence_dir.join("check.ui_gallery_code_editor_a11y_selection_wrap.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_selection_wrap",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "wrap_cols": WRAP_COLS,
+        "expected_len_bytes": expected_len_bytes,
+        "expected_sequence_template": [
+            {"min":0,"max":0},
+            {"min":WRAP_COLS,"max":WRAP_COLS},
+            {"min":"len_bytes","max":"len_bytes"},
+            {"min":0,"max":"len_bytes"}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-selection-wrap gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if expected_len_bytes.is_none() {
+        return Err(format!(
+            "ui-gallery code-editor a11y-selection-wrap gate requires a text_field semantics node with a value/len, but none was observed\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if expected_len_bytes.unwrap_or(0) <= WRAP_COLS {
+        return Err(format!(
+            "ui-gallery code-editor a11y-selection-wrap gate requires len_bytes > {WRAP_COLS}, but observed len_bytes={:?}\n  bundle: {}\n  evidence: {}",
+            expected_len_bytes,
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 4 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-selection-wrap gate failed (expected: caret 0..0 -> caret {WRAP_COLS}..{WRAP_COLS} (End) -> caret len..len (Ctrl+End) -> selection 0..len (Ctrl+A))\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-composition-wrap-gate-viewport";
+    const PREEDIT_START: u64 = 78;
+    const PREEDIT_END: u64 = 80;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    // State machine:
+    //
+    // 0: waiting for caret=78 (collapsed), no composition
+    // 1: waiting for caret=80 (collapsed), composition=78..80
+    // 2: waiting for caret=78 (collapsed), no composition
+    // 3: success
+    let mut state: u8 = 0;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let text_composition = text_field.get("text_composition");
+            let composition = text_composition.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("start").and_then(|v| v.as_u64())?;
+                    let b = obj.get("end").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "text_composition": composition.map(|(a,b)| serde_json::json!([a,b])),
+                "state": state,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (sel_lo, sel_hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+            let comp_norm = composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+            match state {
+                0 => {
+                    if sel_lo == PREEDIT_START && sel_hi == PREEDIT_START && comp_norm.is_none() {
+                        state = 1;
+                    }
+                }
+                1 => {
+                    if sel_lo == PREEDIT_END
+                        && sel_hi == PREEDIT_END
+                        && comp_norm == Some((PREEDIT_START, PREEDIT_END))
+                    {
+                        state = 2;
+                    }
+                }
+                2 => {
+                    if sel_lo == PREEDIT_START && sel_hi == PREEDIT_START && comp_norm.is_none() {
+                        state = 3;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_a11y_composition_wrap.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_composition_wrap",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "state": state,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_sequence_normalized": [
+            {"text_selection":[PREEDIT_START,PREEDIT_START],"text_composition":null},
+            {"text_selection":[PREEDIT_END,PREEDIT_END],"text_composition":[PREEDIT_START,PREEDIT_END]},
+            {"text_selection":[PREEDIT_START,PREEDIT_START],"text_composition":null}
+        ],
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if state == 3 {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-composition-wrap gate failed (expected selection/composition sequence: caret 78..78 (no composition) -> caret 80..80 (composition 78..80) -> caret 78..78 (no composition))\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
+fn parse_redacted_len_bytes(value: &str) -> Option<u64> {
+    let value = value.trim();
+    if !value.starts_with("<redacted") {
+        return None;
+    }
+    let idx = value.find("len=")?;
+    let digits = value[(idx + "len=".len())..]
+        .chars()
+        .take_while(|c| c.is_ascii_digit())
+        .collect::<String>();
+    if digits.is_empty() {
+        return None;
+    }
+    digits.parse::<u64>().ok()
+}
+
 fn unescape_json_pointer_token(raw: &str) -> String {
     let mut out = String::with_capacity(raw.len());
     let mut it = raw.chars();
