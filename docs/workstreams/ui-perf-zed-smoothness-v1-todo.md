@@ -442,19 +442,27 @@ TODO:
 
 ### M4: Windowed surfaces (prepaint-driven visible windows)
 
-- [ ] Pick the first “editor-class” migration target:
-  - Option A: VirtualList visible window derivation in prepaint (ADR 0190 alignment).
-  - Option B: Code view visible-line window derivation in prepaint (code editor feel).
+- [x] Pick the first “editor-class” migration target: **Option A (VirtualList)**.
+  - Rationale: fastest path to validate retained prepaint-window behavior and rerender suppression under wheel traffic.
+  - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`,
+    `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:46.
 - [ ] Reduce editor-class per-frame scene construction when scrolling/animating.
   - Baseline hotspot: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` can be dominated by
     `paint_widget_hotspots kind=Canvas` (see perf log entry 2026-02-05 15:43:55).
   - Goal: translate/replay cached ranges where possible instead of re-emitting large display lists each frame.
 - [ ] Ensure cache-root reuse remains stable under steady scroll/pan.
-- [ ] Add a “window boundary crossing” script that fails if it triggers full rerender too often.
+- [x] Add a “window boundary crossing” probe script for retained VirtualList scrolling.
+  - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`
+  - Sampling status: with `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
+    `FRET_UI_GALLERY_VLIST_MINIMAL=1`, runs `r3..r6` show `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`.
+- [ ] Promote the boundary-crossing probe into a stable acceptance gate recipe (repeat runs + threshold rationale).
 
 Perf acceptance:
 
 - [ ] `ui-gallery-virtual-list-torture.json`: steady scroll should avoid cache-root rerender in most frames.
+- [ ] `ui-gallery-virtual-list-window-boundary-crossing-steady.json`:
+  - Gate target: `prefetch<=3`, `escape<=0`, `non_retained<=0`
+  - Command profile: enable view-cache env (`FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`)
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
 - [x] `ui-gallery-code-editor-torture-autoscroll-steady.json`: eliminate the post-merge Canvas paint hotspot.
   - Root cause: accidental per-row `Theme` clone in syntax paint (allocator churn).

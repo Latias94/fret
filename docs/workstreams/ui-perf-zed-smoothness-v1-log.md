@@ -5451,3 +5451,59 @@ Interpretation:
 - Candidate selection recovers stability and avoids promoting resize-outlier baselines.
 - v18 is both stable (`failures=0` in sampled validations) and tighter than v15/v17 at the suite aggregate level.
 - This workflow is a better default for baseline refreshes than single-pass generation.
+
+## 2026-02-07 00:46:00 (working tree)
+
+Change:
+- Added a dedicated retained-virtual-list boundary-crossing probe script:
+  - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`
+- Calibrated how this probe should be executed for meaningful window-shift diagnostics.
+
+Initial run (insufficient env; counters stayed zero):
+```bash
+cargo run -q -p fretboard -- diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json \
+  --dir target/fret-diag-codex-window-boundary-crossing-steady-sample-r1 \
+  --timeout-ms 300000 \
+  --check-vlist-window-shifts-explainable \
+  --check-vlist-window-shifts-have-prepaint-actions \
+  --check-vlist-window-shifts-non-retained-max 9999 \
+  --check-vlist-window-shifts-prefetch-max 9999 \
+  --check-vlist-window-shifts-escape-max 9999 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Observation from `r1`/`r2`:
+- `virtual_list_window_shifts_total = 0`
+- `virtual_list_visible_range_refreshes = 0`
+- Root cause: view-cache env was not enabled, so this probe did not exercise the intended retained-window path.
+
+Calibrated sampling command (meaningful path):
+```bash
+cargo run -q -p fretboard -- diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json \
+  --dir target/fret-diag-codex-window-boundary-crossing-steady-sample-r3 \
+  --timeout-ms 300000 \
+  --check-vlist-window-shifts-explainable \
+  --check-vlist-window-shifts-have-prepaint-actions \
+  --check-vlist-window-shifts-non-retained-max 9999 \
+  --check-vlist-window-shifts-prefetch-max 9999 \
+  --check-vlist-window-shifts-escape-max 9999 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_VLIST_MINIMAL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Sampled runs:
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r3`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r4`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r5`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-window-boundary-crossing-steady-sample-r6`: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+
+Interpretation:
+- The script consistently exercises one retained prefetch window shift when launched with view-cache env enabled.
+- A practical first gate target is:
+  - `prefetch <= 3`
+  - `escape <= 0`
+  - `non_retained <= 0`
+- Next step: promote this command profile into the M4 acceptance recipe and require repeated `failures=0` validation runs.
