@@ -75,7 +75,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] date-picker - docs-order examples + Component/Code/Notes scaffold landed (apps/fret-ui-gallery/src/ui/pages/date_picker.rs)
 - [~] dialog - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/dialog.rs`)
 - [ ] direction
-- [ ] drawer
+- [~] drawer - docs-order examples + Component/Code/Notes scaffold landed (apps/fret-ui-gallery/src/ui/pages/drawer.rs)
 - [ ] dropdown-menu
 - [ ] empty
 - [ ] field

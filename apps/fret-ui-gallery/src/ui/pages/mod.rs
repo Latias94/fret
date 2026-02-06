@@ -14,6 +14,7 @@ mod context_menu;
 mod data_table;
 mod date_picker;
 mod dialog;
+mod drawer;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -103,6 +104,12 @@ pub(super) fn preview_dialog(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     dialog::preview_dialog(cx, open)
+}
+
+pub(super) fn preview_drawer(
+    cx: &mut ElementContext<'_, App>,
+) -> Vec<AnyElement> {
+    drawer::preview_drawer(cx)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

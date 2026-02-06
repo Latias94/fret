@@ -7624,25 +7624,7 @@ fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    vec![
-        shadcn::Drawer::new_controllable(cx, None, false).into_element(
-            cx,
-            |cx| shadcn::Button::new("Open drawer").into_element(cx),
-            |cx| {
-                shadcn::DrawerContent::new(vec![
-                    shadcn::DrawerHeader::new(vec![
-                        shadcn::DrawerTitle::new("Drawer").into_element(cx),
-                        shadcn::DrawerDescription::new("A bottom sheet-style overlay.")
-                            .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::DrawerFooter::new(vec![shadcn::Button::new("Done").into_element(cx)])
-                        .into_element(cx),
-                ])
-                .into_element(cx)
-            },
-        ),
-    ]
+    pages::preview_drawer(cx)
 }
 
 fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
