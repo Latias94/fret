@@ -63,6 +63,46 @@ Non-goals:
 This is the “not weaker than TanStack” checklist. Each item should map to a concrete Rust surface
 and be covered by parity fixtures when behavior overlap exists.
 
+### Instance-level surface (Table/Row/Column/Header/Cell)
+
+Upstream source of truth:
+
+- Table: `repo-ref/table/packages/table-core/src/core/table.ts` (`CoreInstance`)
+- Row: `repo-ref/table/packages/table-core/src/core/row.ts` (`CoreRow`)
+- Column: `repo-ref/table/packages/table-core/src/core/column.ts` (`CoreColumn`)
+- Header/Cell: `repo-ref/table/packages/table-core/src/core/headers.ts` and `core/cell.ts`
+- Feature methods: `repo-ref/table/packages/table-core/src/features/*.ts` (`createTable/createRow/createColumn`)
+
+Inventory scope (initial; expand as we hit consumers):
+
+- Table:
+  - Column trees: `getAllColumns/getAllFlatColumns/getAllLeafColumns/getColumn`.
+  - Row models: `getCoreRowModel/getRowModel` + intermediate row model helpers (pre-pagination, etc).
+  - Identity/lookup: `getRow(rowId, searchAll?)` and `rowsById`-equivalent map.
+  - Header groups: `getHeaderGroups` + pin-family variants.
+- Row:
+  - Identity: `id` (string), parent/leaf relations, `getLeafRows/getParentRows`.
+  - Cells: `getAllCells/getVisibleCells` + pinned splits.
+  - Behaviors: selection/expanding/pinning helpers + “getXHandler” style updaters.
+- Column:
+  - Visibility/ordering/pinning/sizing/grouping/sorting/filtering helper methods + handler updaters.
+- Header/Cell:
+  - Stable IDs and the minimal accessors required by `DataTable` UI recipes (`getSize/getStart` for headers,
+    `getValue/renderValue` for cells, etc).
+
+Initial mapping snapshot (keep updated):
+
+| Upstream API | Fret surface (today) | Status | Notes |
+| --- | --- | --- | --- |
+| `table.getRow(id, searchAll?)` | `Table::row(RowKey, search_all)` | Partial | Requires `RowId`-based lookup (`HTP-id-010`). |
+| `row.id: string` | `row.key.0.to_string()` | Partial | Leaf-only; grouped row ids are not first-class in main model yet. |
+| `RowModel.rowsById` | `RowModel::rows_by_key()` | Partial | Keyed by `RowKey(u64)`; add `rows_by_id` for capability parity. |
+| `table.getHeaderGroups()` (+ pinned variants) | `Table::header_groups/left_header_groups/center_header_groups/right_header_groups` | Aligned (core) | Fixture-gated via `headers_cells.json`. |
+| `header.getSize()` / `header.getStart()` | `Table::header_size/header_start` | Aligned (core) | Fixture-gated via column sizing/header tests. |
+| `column.getSize()` / `column.getStart()` / `column.getAfter()` | `Table::column_size/column_start/column_after` | Aligned (core) | Fixture-gated via column sizing tests. |
+| `column.getIsPinned()` / `column.pin()` | `Table::column_pin_position` + `Table::toggled_column_pinning` | Aligned (core) | Column pinning fixtures gate state transitions + derived splits. |
+| `table.getTopRows/getCenterRows/getBottomRows` | `Table::top_row_keys/center_row_keys/bottom_row_keys` | Partial | Keys-only; group-root semantics under grouping require `RowId` integration. |
+
 ### Row identity (`RowId`) and lookup
 
 Upstream:
@@ -77,6 +117,11 @@ Fret status:
   `RowModel` pipeline.
 - Planned: promote TanStack-style `RowId` and maintain `rows_by_id` alongside `rows_by_key`.
   - Tracked in TODO: `HTP-id-010` / `HTP-cap-010`.
+
+Compatibility requirement:
+
+- Fret must be able to address rows by a stable string id without loss of capability (pin/select/expand/lookup),
+  even if a Rust-native `RowKey(u64)` is kept as an optimization.
 
 ### Row pinning over grouped rows
 
