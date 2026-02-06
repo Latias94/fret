@@ -121,6 +121,9 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_extended_fab_text_styles(cfg);
     inject_comp_outlined_segmented_button_text_styles(cfg);
     inject_comp_top_app_bar_text_styles(cfg);
+    inject_comp_text_field_text_styles(cfg);
+    inject_comp_menu_text_styles(cfg);
+    inject_comp_primary_navigation_tab_text_styles(cfg);
     inject_comp_date_picker_text_styles(cfg);
     inject_comp_time_picker_text_styles(cfg);
     inject_comp_time_input_text_styles(cfg);
@@ -312,6 +315,53 @@ fn inject_comp_top_app_bar_text_styles(cfg: &mut ThemeConfig) {
     cfg.text_styles.insert(
         "md.comp.top-app-bar.large.headline".to_string(),
         headline_medium,
+    );
+}
+
+fn inject_comp_text_field_text_styles(cfg: &mut ThemeConfig) {
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+    let Some(body_small) = cfg.text_styles.get("md.sys.typescale.body-small").cloned() else {
+        return;
+    };
+
+    for key in [
+        "md.comp.filled-text-field.input-text",
+        "md.comp.filled-text-field.label-text",
+        "md.comp.outlined-text-field.input-text",
+        "md.comp.outlined-text-field.label-text",
+    ] {
+        cfg.text_styles.insert(key.to_string(), body_large.clone());
+    }
+
+    for key in [
+        "md.comp.filled-text-field.supporting-text",
+        "md.comp.filled-text-field.label-text.populated",
+        "md.comp.outlined-text-field.supporting-text",
+        "md.comp.outlined-text-field.label-text.populated",
+    ] {
+        cfg.text_styles.insert(key.to_string(), body_small.clone());
+    }
+}
+
+fn inject_comp_menu_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles
+        .insert("md.comp.menu.list-item.label-text".to_string(), label_large);
+}
+
+fn inject_comp_primary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
+    let Some(title_small) = cfg.text_styles.get("md.sys.typescale.title-small").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.primary-navigation-tab.with-label-text.label-text".to_string(),
+        title_small,
     );
 }
 
@@ -3766,6 +3816,21 @@ mod tests {
         assert!(
             cfg.text_styles.contains_key("md.sys.typescale.body-large"),
             "expected composed body-large text style"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.filled-text-field.input-text"),
+            "expected text field input text style token"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.menu.list-item.label-text"),
+            "expected menu list-item label text style token"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.primary-navigation-tab.with-label-text.label-text"),
+            "expected primary navigation tab label text style token"
         );
 
         let title_medium = cfg
