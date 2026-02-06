@@ -1,28 +1,33 @@
 use std::sync::Arc;
+use std::time::{Duration, SystemTime};
 
-use fret_core::{Axis, Edges, KeyCode};
 use fret_kit::prelude::*;
+use fret_query::ui::QueryElementContextExt as _;
+use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
-use fret_ui::ThemeConfig;
-use fret_ui::action::PressablePointerDownResult;
-use fret_ui::element::{
-    CrossAlign, FlexProps, LayoutStyle, MainAlign, PressableProps, RovingFlexProps,
-    RovingFocusProps, SemanticsDecoration,
-};
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::primitives::roving_focus_group;
+use fret_ui::element::SemanticsDecoration;
 
 const CMD_ADD: &str = "todo.add";
-const CMD_CLEAR_COMPLETED: &str = "todo.clear_completed";
+const CMD_CLEAR_DONE: &str = "todo.clear_done";
+const CMD_REFRESH_TIP: &str = "todo.refresh_tip";
+const CMD_FILTER_ALL: &str = "todo.filter.all";
+const CMD_FILTER_ACTIVE: &str = "todo.filter.active";
+const CMD_FILTER_COMPLETED: &str = "todo.filter.completed";
 
 const TEST_ID_INPUT: &str = "todo-input";
 const TEST_ID_ADD: &str = "todo-add";
-const TEST_ID_SHORTCUTS: &str = "todo-shortcuts";
-const TEST_ID_VISUAL_TOGGLE: &str = "todo-visual-toggle";
-const TEST_ID_VISUAL_PANEL: &str = "todo-visual-panel";
+const TEST_ID_CLEAR_DONE: &str = "todo-clear-done";
+const TEST_ID_FILTER_ALL: &str = "todo-filter-all";
+const TEST_ID_FILTER_ACTIVE: &str = "todo-filter-active";
+const TEST_ID_FILTER_COMPLETED: &str = "todo-filter-completed";
+const TEST_ID_REFRESH_TIP: &str = "todo-refresh-tip";
 
-fn todo_item_test_id(id: u64, suffix: &str) -> Arc<str> {
-    Arc::from(format!("todo-item-{id}-{suffix}"))
+fn todo_row_test_id(id: u64) -> Arc<str> {
+    Arc::from(format!("todo-row-{id}"))
+}
+
+fn todo_remove_test_id(id: u64) -> Arc<str> {
+    Arc::from(format!("todo-remove-{id}"))
 }
 
 #[derive(Clone)]
@@ -35,113 +40,124 @@ struct TodoItem {
 struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
-    filter: Model<Option<Arc<str>>>,
-    router: MessageRouter<TodoMsg>,
+    filter: Model<TodoFilter>,
+    router: MessageRouter<Msg>,
     next_id: u64,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone)]
+enum Msg {
+    Remove(u64),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TodoFilter {
     All,
     Active,
     Completed,
 }
 
-#[derive(Debug, Clone)]
-enum TodoMsg {
-    Remove(u64),
-    Toggle(u64),
+impl TodoFilter {
+    fn matches(self, done: bool) -> bool {
+        match self {
+            Self::All => true,
+            Self::Active => !done,
+            Self::Completed => done,
+        }
+    }
+
+    fn as_label(self) -> &'static str {
+        match self {
+            Self::All => "All",
+            Self::Active => "Active",
+            Self::Completed => "Completed",
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]
 struct TodoDerivedDeps {
     todos_rev: u64,
     done_revs: Vec<u64>,
+    filter: TodoFilter,
 }
 
 #[derive(Clone)]
 struct TodoDerived {
     rows: Arc<[TodoRowSnapshot]>,
-    completed: usize,
+    total: usize,
     active: usize,
+    completed: usize,
 }
 
 #[derive(Clone)]
 struct TodoRowSnapshot {
     id: u64,
-    text: Arc<str>,
     done: bool,
+    done_model: Model<bool>,
+    text: Arc<str>,
+}
+
+#[derive(Debug)]
+struct TipData {
+    text: Arc<str>,
+}
+
+fn tip_key() -> QueryKey<TipData> {
+    QueryKey::new("todo.tip.v1", &0u8)
+}
+
+fn tip_policy() -> QueryPolicy {
+    QueryPolicy {
+        stale_time: Duration::from_secs(10),
+        cache_time: Duration::from_secs(60),
+        keep_previous_data_while_loading: true,
+        ..Default::default()
+    }
 }
 
 pub fn run() -> anyhow::Result<()> {
     fret_kit::app_with_hooks("todo-demo", init_window, view, |d| d.on_command(on_command))?
         .with_main_window("todo_demo", (560.0, 520.0))
-        .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
-        .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-            );
-
-            let cfg = ThemeConfig::from_slice(include_bytes!("todo_theme_overrides.json")).expect(
-                "todo_demo theme overrides must be valid ThemeConfig JSON (see ThemeConfig)",
-            );
-            Theme::with_global_mut(app, |theme| theme.apply_config_patch(&cfg));
-        })
         .run()?;
     Ok(())
 }
 
 fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
-    let done_1 = app.models_mut().insert(true);
-    let done_2 = app.models_mut().insert(false);
+    let done_1 = app.models_mut().insert(false);
+    let done_2 = app.models_mut().insert(true);
     let done_3 = app.models_mut().insert(false);
-
     let todos = app.models_mut().insert(vec![
         TodoItem {
             id: 1,
             done: done_1,
-            text: Arc::from("体验 Shadcn UI 设计风格"),
+            text: Arc::from("Try the shadcn New York style"),
         },
         TodoItem {
             id: 2,
             done: done_2,
-            text: Arc::from("构建一个极简待办清单"),
+            text: Arc::from("Validate selector derived state"),
         },
         TodoItem {
             id: 3,
             done: done_3,
-            text: Arc::from("学习布局与交互组合"),
+            text: Arc::from("Use query invalidation for async tips"),
         },
     ]);
-    let draft = app.models_mut().insert(String::new());
-    let filter = app.models_mut().insert(Some(Arc::from("all")));
+
     let prefix = format!("todo-demo.{window:?}.");
     TodoState {
         todos,
-        draft,
-        filter,
+        draft: app.models_mut().insert(String::new()),
+        filter: app.models_mut().insert(TodoFilter::All),
         router: MessageRouter::new(prefix),
         next_id: 4,
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewElements {
-    let theme = Theme::global(&*cx.app).clone();
+fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     st.router.clear();
-
-    let filter_value = cx
-        .watch_model(&st.filter)
-        .layout()
-        .cloned()
-        .unwrap_or_default();
-
-    let done_invalidation = if filter_value.as_deref() == Some("all") {
-        Invalidation::Paint
-    } else {
-        Invalidation::Layout
-    };
+    let theme = Theme::global(&*cx.app).clone();
 
     let draft_value = cx
         .watch_model(&st.draft)
@@ -149,23 +165,131 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         .cloned()
         .unwrap_or_default();
 
-    let add_enabled = !draft_value.trim().is_empty();
+    let filter_value = cx
+        .watch_model(&st.filter)
+        .layout()
+        .copied()
+        .unwrap_or(TodoFilter::All);
 
-    let add_btn = shadcn::Button::new("")
+    let derived = cx.use_selector(
+        |cx| {
+            let filter = cx
+                .watch_model(&st.filter)
+                .layout()
+                .copied()
+                .unwrap_or(TodoFilter::All);
+            let (todos_rev, done_revs) = cx
+                .watch_model(&st.todos)
+                .layout()
+                .read(|host, todos| {
+                    let todos_rev = st.todos.revision(host).unwrap_or(0);
+                    let done_revs = todos
+                        .iter()
+                        .map(|todo| (todo.done.id(), todo.done.revision(host).unwrap_or(0)))
+                        .collect::<Vec<_>>();
+                    (todos_rev, done_revs)
+                })
+                .ok()
+                .unwrap_or((0, Vec::new()));
+
+            for (id, _rev) in &done_revs {
+                cx.observe_model_id(*id, Invalidation::Layout);
+            }
+
+            TodoDerivedDeps {
+                todos_rev,
+                done_revs: done_revs.into_iter().map(|(_, rev)| rev).collect(),
+                filter,
+            }
+        },
+        |cx| {
+            cx.watch_model(&st.todos)
+                .layout()
+                .read(|host, todos| {
+                    let filter = host
+                        .models()
+                        .get_copied(&st.filter)
+                        .unwrap_or(TodoFilter::All);
+                    let mut rows = Vec::new();
+                    let mut completed = 0usize;
+                    for todo in todos {
+                        let done = host.models().get_copied(&todo.done).unwrap_or(false);
+                        if done {
+                            completed += 1;
+                        }
+                        if filter.matches(done) {
+                            rows.push(TodoRowSnapshot {
+                                id: todo.id,
+                                done,
+                                done_model: todo.done.clone(),
+                                text: todo.text.clone(),
+                            });
+                        }
+                    }
+                    let total = todos.len();
+                    TodoDerived {
+                        rows: rows.into(),
+                        total,
+                        active: total.saturating_sub(completed),
+                        completed,
+                    }
+                })
+                .ok()
+                .unwrap_or_else(|| TodoDerived {
+                    rows: Arc::from([]),
+                    total: 0,
+                    active: 0,
+                    completed: 0,
+                })
+        },
+    );
+
+    let tip_handle = cx.use_query(tip_key(), tip_policy(), move |_token| {
+        #[cfg(not(target_arch = "wasm32"))]
+        std::thread::sleep(Duration::from_millis(120));
+
+        Ok(TipData {
+            text: Arc::from(format!("Tip fetched at {:?}", SystemTime::now())),
+        })
+    });
+    let tip_state = cx
+        .watch_model(tip_handle.model())
+        .layout()
+        .cloned()
+        .unwrap_or_else(QueryState::<TipData>::default);
+
+    let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
+        QueryStatus::Idle | QueryStatus::Loading => {
+            (Arc::from("Tip: loading..."), "muted-foreground")
+        }
+        QueryStatus::Error => {
+            let err = tip_state
+                .error
+                .as_ref()
+                .map(ToString::to_string)
+                .unwrap_or_else(|| String::from("unknown error"));
+            (Arc::from(format!("Tip error: {err}")), "destructive")
+        }
+        QueryStatus::Success => {
+            let text = tip_state
+                .data
+                .as_ref()
+                .map(|value| value.text.clone())
+                .unwrap_or_else(|| Arc::from("Tip: no data"));
+            (text, "muted-foreground")
+        }
+    };
+
+    let tip_line = ui::text(cx, tip_text)
+        .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
+        .into_element(cx);
+
+    let add_enabled = !draft_value.trim().is_empty();
+    let add_button = shadcn::Button::new("")
         .size(shadcn::ButtonSize::Icon)
-        .variant(shadcn::ButtonVariant::Secondary)
         .disabled(!add_enabled)
         .on_click(CMD_ADD)
-        .children([icon::icon_with(
-            cx,
-            IconId::new("lucide.plus"),
-            Some(Px(16.0)),
-            Some(ColorRef::Color(if add_enabled {
-                theme.color_required("secondary-foreground")
-            } else {
-                theme.color_required("muted-foreground")
-            })),
-        )])
+        .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()
@@ -174,8 +298,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
         );
 
     let input = shadcn::Input::new(st.draft.clone())
-        .a11y_label("Todo")
-        .placeholder("添加新任务...")
+        .placeholder("Add a task")
         .submit_command(CommandId::new(CMD_ADD))
         .into_element(cx)
         .attach_semantics(
@@ -184,226 +307,120 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
                 .test_id(TEST_ID_INPUT),
         );
 
-    let derived = cx.use_selector(
-        |cx| {
-            let (todos_rev, done) = cx
-                .watch_model(&st.todos)
-                .layout()
-                .read(|host, todos| {
-                    let todos_rev = st.todos.revision(host).unwrap_or(0);
-                    let done = todos
-                        .iter()
-                        .map(|t| (t.done.id(), t.done.revision(host).unwrap_or(0)))
-                        .collect::<Vec<(fret_runtime::ModelId, u64)>>();
-                    (todos_rev, done)
-                })
-                .ok()
-                .unwrap_or((0, Vec::new()));
+    let input_row = ui::h_flex(cx, |_cx| [input, add_button])
+        .gap(Space::N2)
+        .items_center()
+        .w_full()
+        .into_element(cx);
 
-            for (id, _rev) in &done {
-                cx.observe_model_id(*id, done_invalidation);
-            }
-
-            TodoDerivedDeps {
-                todos_rev,
-                done_revs: done.into_iter().map(|(_, rev)| rev).collect(),
-            }
-        },
-        |cx| {
-            cx.watch_model(&st.todos)
-                .layout()
-                .read(|host, todos| {
-                    let mut rows = Vec::with_capacity(todos.len());
-                    let mut completed = 0usize;
-
-                    for t in todos {
-                        let done = host.models().get_copied(&t.done).unwrap_or(false);
-                        if done {
-                            completed += 1;
-                        }
-                        rows.push(TodoRowSnapshot {
-                            id: t.id,
-                            text: t.text.clone(),
-                            done,
-                        });
-                    }
-
-                    let active = rows.len().saturating_sub(completed);
-                    TodoDerived {
-                        rows: Arc::from(rows.into_boxed_slice()),
-                        completed,
-                        active,
-                    }
-                })
-                .ok()
-                .unwrap_or_else(|| TodoDerived {
-                    rows: Arc::from([]),
-                    completed: 0,
-                    active: 0,
-                })
-        },
+    let filter_all = filter_chip(
+        cx,
+        "All",
+        CMD_FILTER_ALL,
+        filter_value == TodoFilter::All,
+        TEST_ID_FILTER_ALL,
+    );
+    let filter_active = filter_chip(
+        cx,
+        "Active",
+        CMD_FILTER_ACTIVE,
+        filter_value == TodoFilter::Active,
+        TEST_ID_FILTER_ACTIVE,
+    );
+    let filter_completed = filter_chip(
+        cx,
+        "Completed",
+        CMD_FILTER_COMPLETED,
+        filter_value == TodoFilter::Completed,
+        TEST_ID_FILTER_COMPLETED,
     );
 
-    let TodoDerived {
-        rows: todos,
-        completed,
-        active,
-    } = derived;
-
-    let clear_completed_enabled = completed > 0;
-
-    let header = shadcn::CardHeader::new([ui::h_flex(cx, |cx| {
-        let left = ui::v_flex(cx, |cx| {
-            [
-                shadcn::CardTitle::new("待办事项").into_element(cx),
-                shadcn::CardDescription::new("用键盘更高效地管理任务。").into_element(cx),
-            ]
-        })
-        .gap(Space::N1)
-        .items_start()
-        .into_element(cx);
-
-        let right = ui::h_flex(cx, |cx| {
-            let clear_completed_btn = shadcn::Button::new("清除已完成")
-                .size(shadcn::ButtonSize::Sm)
-                .variant(shadcn::ButtonVariant::Secondary)
-                .disabled(!clear_completed_enabled)
-                .on_click(CMD_CLEAR_COMPLETED)
-                .into_element(cx)
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Button)
-                        .test_id("todo-clear-completed"),
-                );
-
-            let progress = shadcn::Badge::new(format!("{completed}/{total}", total = todos.len()))
-                .variant(shadcn::BadgeVariant::Secondary)
-                .into_element(cx);
-
-            [progress, clear_completed_btn]
-        })
+    let filter_row = ui::h_flex(cx, |_cx| [filter_all, filter_active, filter_completed])
         .gap(Space::N2)
         .items_center()
-        .into_element(cx);
-
-        [left, right]
-    })
-    .w_full()
-    .justify_between()
-    .items_start()
-    .into_element(cx)])
-    .into_element(cx);
-
-    let input_row = ui::h_flex(cx, |_cx| [input, add_btn])
         .w_full()
-        .gap(Space::N2)
-        .items_center()
         .into_element(cx);
 
-    let list_max_h: MetricRef = Px(260.0).into();
+    let rows = ui::v_flex_build(cx, |cx, out| {
+        for row in derived.rows.iter() {
+            let remove_cmd = st.router.cmd(Msg::Remove(row.id));
+            out.push(cx.keyed(row.id, |cx| todo_row(cx, &theme, row, remove_cmd.clone())));
+        }
 
-    let tabs = shadcn::Tabs::new(st.filter.clone())
-        .refine_layout(LayoutRefinement::default().w_full())
-        .list_full_width(true)
-        .items([
-            shadcn::TabsItem::new(
-                "all",
-                "全部",
-                [todo_list_panel(
+        if derived.rows.is_empty() {
+            out.push(
+                ui::text(
                     cx,
-                    &theme,
-                    &todos,
-                    TodoFilter::All,
-                    list_max_h.clone(),
-                    &mut st.router,
-                )],
-            ),
-            shadcn::TabsItem::new(
-                "active",
-                "进行中",
-                [todo_list_panel(
-                    cx,
-                    &theme,
-                    &todos,
-                    TodoFilter::Active,
-                    list_max_h.clone(),
-                    &mut st.router,
-                )],
-            ),
-            shadcn::TabsItem::new(
-                "completed",
-                "已完成",
-                [todo_list_panel(
-                    cx,
-                    &theme,
-                    &todos,
-                    TodoFilter::Completed,
-                    list_max_h.clone(),
-                    &mut st.router,
-                )],
-            ),
-        ])
-        .into_element(cx);
-
-    let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [input_row, tabs])
-        .gap(Space::N4)
-        .w_full()
-        .into_element(cx)])
-    .into_element(cx);
-
-    let footer = shadcn::CardFooter::new([ui::h_flex(cx, |cx| {
-        let left = cx.text(format!("{active} 个进行中"));
-
-        let completed_badge = (completed > 0).then(|| {
-            shadcn::Badge::new(format!("已完成 {completed}"))
-                .variant(shadcn::BadgeVariant::Secondary)
-                .into_element(cx)
-        });
-
-        let right = ui::v_flex(cx, |cx| {
-            let row = ui::h_flex(cx, |_cx| completed_badge.into_iter())
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx);
-
-            let help = ui::h_flex(cx, |cx| {
-                [
-                    shadcn::ShortcutHint::new("Enter", "添加").into_element(cx),
-                    shadcn::ShortcutHint::new("↑/↓", "移动").into_element(cx),
-                    shadcn::ShortcutHint::new("Space", "切换完成").into_element(cx),
-                    shadcn::ShortcutHint::new("Del", "删除").into_element(cx),
-                ]
-            })
-            .gap(Space::N2)
-            .wrap()
-            .justify_end()
-            .items_center()
-            .into_element(cx)
-            .attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Panel)
-                    .test_id(TEST_ID_SHORTCUTS),
+                    format!("No {} tasks", filter_value.as_label().to_lowercase()),
+                )
+                .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+                .into_element(cx),
             );
-
-            [row, help]
-        })
-        .gap(Space::N2)
-        .items_end()
-        .into_element(cx);
-
-        [left, right]
+        }
     })
+    .gap(Space::N3)
     .w_full()
-    .justify_between()
-    .items_center()
-    .into_element(cx)])
     .into_element(cx);
 
-    let card = shadcn::Card::new([header, content, footer])
-        .ui()
-        .w_full()
-        .max_w(Px(460.0))
-        .into_element(cx);
+    let clear_done = shadcn::Button::new("Clear completed")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .disabled(derived.completed == 0)
+        .on_click(CMD_CLEAR_DONE)
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(TEST_ID_CLEAR_DONE),
+        );
+
+    let refresh_tip = shadcn::Button::new("Refresh tip")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(CMD_REFRESH_TIP)
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(TEST_ID_REFRESH_TIP),
+        );
+
+    let summary = ui::text(
+        cx,
+        format!(
+            "{} total 璺?{} active 璺?{} completed",
+            derived.total, derived.active, derived.completed
+        ),
+    )
+    .text_color(ColorRef::Color(theme.color_required("muted-foreground")))
+    .into_element(cx);
+
+    let card = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Todo").into_element(cx),
+            shadcn::CardDescription::new(
+                "Official best-practice baseline: model + selector + query.",
+            )
+            .into_element(cx),
+            ui::h_flex(cx, |_cx| [clear_done, refresh_tip])
+                .gap(Space::N2)
+                .into_element(cx),
+            summary,
+            tip_line,
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new([ui::v_flex(cx, |_cx| [input_row, filter_row, rows])
+            .gap(Space::N4)
+            .w_full()
+            .into_element(cx)])
+        .into_element(cx),
+    ])
+    .ui()
+    .bg(ColorRef::Color(theme.color_required("background")))
+    .rounded(Radius::Lg)
+    .border_1()
+    .border_color(ColorRef::Color(theme.color_required("border")))
+    .w_full()
+    .max_w(Px(560.0))
+    .into_element(cx);
 
     let page = ui::container(cx, |cx| {
         [ui::v_flex(cx, |_cx| [card])
@@ -411,642 +428,181 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> fret_kit::ViewE
             .h_full()
             .justify_center()
             .items_center()
-            .gap(Space::N6)
             .into_element(cx)]
     })
-    .bg(ColorRef::Color(theme.color_required("background")))
-    .p(Space::N4)
+    .bg(ColorRef::Color(theme.color_required("muted")))
+    .p(Space::N6)
     .w_full()
     .h_full()
     .into_element(cx);
 
-    ViewElements::from([page])
+    vec![page].into()
 }
 
-fn todo_list_panel(
+fn filter_chip(
     cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-    todos: &[TodoRowSnapshot],
-    filter: TodoFilter,
-    max_h: MetricRef,
-    router: &mut MessageRouter<TodoMsg>,
+    label: &'static str,
+    cmd: &'static str,
+    selected: bool,
+    test_id: &'static str,
 ) -> AnyElement {
-    let filtered: Vec<(u64, Arc<str>, bool, CommandId, CommandId)> = todos
-        .iter()
-        .filter_map(|t| {
-            let id = t.id;
-            let done = t.done;
-            let include = match filter {
-                TodoFilter::All => true,
-                TodoFilter::Active => !done,
-                TodoFilter::Completed => done,
-            };
-            if !include {
-                return None;
-            }
-
-            let toggle_cmd = router.cmd(TodoMsg::Toggle(id));
-            let remove_cmd = router.cmd(TodoMsg::Remove(id));
-            Some((id, t.text.clone(), done, toggle_cmd, remove_cmd))
+    shadcn::Button::new(label)
+        .variant(if selected {
+            shadcn::ButtonVariant::Secondary
+        } else {
+            shadcn::ButtonVariant::Ghost
         })
-        .collect();
-
-    if filtered.is_empty() {
-        let label = match filter {
-            TodoFilter::All => "暂无任务，开始添加吧",
-            TodoFilter::Active => "太棒了！所有任务已完成",
-            TodoFilter::Completed => "没有已完成的任务",
-        };
-
-        let chrome = ChromeRefinement::default()
-            .border_1()
-            .border_color(ColorRef::Color(theme.color_required("border")))
-            .rounded(Radius::Lg)
-            .px(Space::N4)
-            .py(Space::N10);
-        return ui::container(cx, |cx| {
-            [ui::v_flex(cx, |cx| [cx.text(label)])
-                .w_full()
-                .items_center()
-                .into_element(cx)]
-        })
-        .style(chrome)
-        .w_full()
-        .into_element(cx);
-    }
-
-    let disabled: Arc<[bool]> = Arc::from(vec![false; filtered.len()].into_boxed_slice());
-    let labels: Arc<[Arc<str>]> = Arc::from(
-        filtered
-            .iter()
-            .map(|(_, text, _, _, _)| text.clone())
-            .collect::<Vec<_>>()
-            .into_boxed_slice(),
-    );
-
-    let mut rows_layout = LayoutStyle::default();
-    rows_layout.size.width = Length::Fill;
-    let rows = roving_focus_group::roving_focus_group_apg(
-        cx,
-        RovingFlexProps {
-            flex: FlexProps {
-                layout: rows_layout,
-                direction: Axis::Vertical,
-                gap: MetricRef::space(Space::N2).resolve(theme),
-                padding: Edges::all(Px(0.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Start,
-                wrap: false,
-            },
-            roving: RovingFocusProps {
-                enabled: true,
-                wrap: true,
-                disabled,
-            },
-        },
-        roving_focus_group::TypeaheadPolicy::Prefix {
-            labels,
-            timeout_ticks: 30,
-        },
-        move |cx| {
-            filtered
-                .iter()
-                .map(|(id, text, done, toggle_cmd, remove_cmd)| {
-                    let text = text.clone();
-                    cx.keyed(*id, |cx| {
-                        todo_row(
-                            cx,
-                            theme,
-                            *id,
-                            text,
-                            *done,
-                            toggle_cmd.clone(),
-                            remove_cmd.clone(),
-                        )
-                    })
-                })
-                .collect::<Vec<_>>()
-        },
-    );
-
-    shadcn::ScrollArea::new([rows])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .max_h(max_h)
-                .overflow_hidden(),
-        )
+        .size(shadcn::ButtonSize::Sm)
+        .on_click(cmd)
         .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(test_id),
+        )
 }
 
 fn todo_row(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
-    id: u64,
-    text: Arc<str>,
-    done: bool,
-    toggle_cmd: CommandId,
+    row: &TodoRowSnapshot,
     remove_cmd: CommandId,
 ) -> AnyElement {
-    let radius = MetricRef::radius(Radius::Lg).resolve(theme);
-    let focus_ring = shadcn::decl_style::focus_ring(theme, radius);
+    let checkbox = shadcn::Checkbox::new(row.done_model.clone()).into_element(cx);
+    let remove_btn = shadcn::Button::new("")
+        .size(shadcn::ButtonSize::Icon)
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(remove_cmd)
+        .children([icon::icon(cx, IconId::new("lucide.trash"))])
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::Button)
+                .test_id(todo_remove_test_id(row.id)),
+        );
 
-    let border = theme.color_required("border");
-    let bg = theme.color_required("background");
-    let accent = theme.color_required("accent");
-    let bg_hover = {
-        let mut c = accent;
-        c.a = (c.a * 0.45).clamp(0.0, 1.0);
-        c
-    };
-    let bg_pressed = {
-        let mut c = accent;
-        c.a = (c.a * 0.7).clamp(0.0, 1.0);
-        c
-    };
+    let label = cx.text_props(TextProps {
+        layout: Default::default(),
+        text: row.text.clone(),
+        style: None,
+        color: Some(theme.color_required(if row.done {
+            "muted-foreground"
+        } else {
+            "foreground"
+        })),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+    });
 
-    let delete_zone_w = theme
-        .metric_by_key("component.size.md.icon_button.size")
-        .unwrap_or(Px(32.0));
+    let left = ui::h_flex(cx, |_cx| [checkbox, label])
+        .gap(Space::N3)
+        .items_center()
+        .flex_1()
+        .min_w_0()
+        .into_element(cx);
 
-    let row = fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props(
-        cx,
-        move |cx, st, element_id| {
-            let remove_cmd_for_key = remove_cmd.clone();
-            cx.key_prepend_on_key_down_for(
-                element_id,
-                Arc::new(move |host, acx, down| {
-                    if matches!(down.key, KeyCode::Delete | KeyCode::Backspace) {
-                        host.dispatch_command(Some(acx.window), remove_cmd_for_key.clone());
-                        return true;
-                    }
-                    false
-                }),
-            );
+    let row_body = ui::h_flex(cx, |_cx| [left, remove_btn])
+        .w_full()
+        .justify_between()
+        .items_center()
+        .into_element(cx);
 
-            cx.pressable_dispatch_command_if_enabled(toggle_cmd);
-
-            let remove_cmd_for_ptr = remove_cmd.clone();
-            cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
-                let bounds = host.bounds();
-                let x1 = bounds.origin.x.0 + bounds.size.width.0;
-                if down.position.x.0 >= x1 - delete_zone_w.0 {
-                    host.dispatch_command(Some(acx.window), remove_cmd_for_ptr.clone());
-                    return PressablePointerDownResult::SkipDefaultAndStopPropagation;
-                }
-                PressablePointerDownResult::Continue
-            }));
-
-            let mut a11y = fret_ui::element::PressableA11y::default();
-            a11y.role = Some(SemanticsRole::Checkbox);
-            a11y.label = Some(text.clone());
-            a11y.checked = Some(done);
-            a11y.test_id = Some(todo_item_test_id(id, "done"));
-
-            let mut pressable_layout = LayoutStyle::default();
-            pressable_layout.size.width = Length::Fill;
-            pressable_layout.size.min_height = Some(
-                theme
-                    .metric_by_key("component.size.md.button.h")
-                    .unwrap_or(Px(36.0)),
-            );
-
-            let pressable_props = PressableProps {
-                layout: pressable_layout,
-                enabled: true,
-                focus_ring: Some(focus_ring),
-                a11y,
-                ..Default::default()
-            };
-
-            let row_bg = if st.pressed {
-                bg_pressed
-            } else if st.hovered || st.focused {
-                bg_hover
-            } else {
-                bg
-            };
-
-            let chrome_props = shadcn::decl_style::container_props(
-                theme,
-                ChromeRefinement::default()
-                    .rounded(Radius::Lg)
-                    .border_1()
-                    .border_color(ColorRef::Color(border))
-                    .bg(ColorRef::Color(row_bg))
-                    .px(Space::N3)
-                    .py(Space::N2),
-                LayoutRefinement::default(),
-            );
-
-            let children = move |cx: &mut ElementContext<'_, App>| {
-                let fg = if done {
-                    theme.color_required("muted-foreground")
-                } else {
-                    theme.color_required("foreground")
-                };
-
-                let checkbox_size = theme
-                    .metric_by_key("component.checkbox.size")
-                    .unwrap_or(Px(16.0));
-                let checkbox_bg = if done {
-                    theme.color_required("primary")
-                } else {
-                    theme.color_required("background")
-                };
-                let checkbox_border = theme
-                    .color_by_key("input")
-                    .or_else(|| theme.color_by_key("border"))
-                    .unwrap_or(border);
-                let checkbox_fg = theme.color_required("primary-foreground");
-                let checkbox_icon_size = Px((checkbox_size.0 - 4.0).max(10.0));
-                let checkbox_border = if done {
-                    theme.color_required("primary")
-                } else {
-                    checkbox_border
-                };
-
-                let indicator = ui::container(cx, |cx| {
-                    let icon = done.then(|| {
-                        icon::icon_with(
-                            cx,
-                            IconId::new("lucide.check"),
-                            Some(checkbox_icon_size),
-                            Some(ColorRef::Color(checkbox_fg)),
-                        )
-                    });
-                    [ui::h_flex(cx, |_cx| icon.into_iter())
-                        .w_full()
-                        .h_full()
-                        .justify_center()
-                        .items_center()
-                        .into_element(cx)]
-                })
-                .w_px(checkbox_size)
-                .h_px(checkbox_size)
-                .flex_shrink_0()
-                .rounded(Radius::Sm)
-                .border_1()
-                .border_color(ColorRef::Color(checkbox_border))
-                .bg(ColorRef::Color(checkbox_bg))
-                .into_element(cx);
-
-                let indicator = indicator.attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Panel)
-                        .test_id(todo_item_test_id(id, "indicator")),
-                );
-
-                let label = ui::text(cx, text.clone())
-                    .flex_grow(1.0)
-                    .min_w_0()
-                    .nowrap()
-                    .truncate()
-                    .text_color(ColorRef::Color(fg))
-                    .into_element(cx);
-
-                let left = ui::h_flex(cx, |_cx| [indicator, label])
-                    .flex_grow(1.0)
-                    .min_w_0()
-                    .gap(Space::N3)
-                    .items_center()
-                    .into_element(cx);
-
-                let remove_zone = {
-                    let remove_icon = icon::icon_with(
-                        cx,
-                        IconId::new("lucide.trash"),
-                        Some(Px(16.0)),
-                        Some(ColorRef::Color(theme.color_required("muted-foreground"))),
-                    );
-
-                    ui::container(cx, |cx| {
-                        [ui::h_flex(cx, |_cx| [remove_icon])
-                            .w_full()
-                            .h_full()
-                            .justify_center()
-                            .items_center()
-                            .into_element(cx)]
-                    })
-                    .w_px(delete_zone_w)
-                    .h_full()
-                    .into_element(cx)
-                    .attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(SemanticsRole::Button)
-                            .test_id(todo_item_test_id(id, "remove")),
-                    )
-                };
-
-                [ui::h_flex(cx, |_cx| [left, remove_zone.into()])
-                    .w_full()
-                    .items_center()
-                    .into_element(cx)]
-            };
-
-            (pressable_props, chrome_props, children)
-        },
-    );
-
-    row
+    ui::container(cx, |_cx| [row_body])
+        .border_1()
+        .border_color(ColorRef::Color(theme.color_required("border")))
+        .rounded(Radius::Md)
+        .p(Space::N3)
+        .w_full()
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::ListItem)
+                .test_id(todo_row_test_id(row.id)),
+        )
 }
 
 fn on_command(
     app: &mut App,
-    services: &mut dyn UiServices,
+    _services: &mut dyn UiServices,
     window: AppWindowId,
     _ui: &mut UiTree<App>,
     state: &mut TodoState,
     cmd: &CommandId,
 ) {
-    let _ = services;
-
     match cmd.as_str() {
         CMD_ADD => {
-            let text = app
+            let draft = app
                 .models()
-                .read(&state.draft, |s| s.trim().to_string())
+                .read(&state.draft, Clone::clone)
                 .ok()
                 .unwrap_or_default();
+            let text = draft.trim();
             if text.is_empty() {
                 return;
             }
 
-            let id = state.next_id;
+            let item = TodoItem {
+                id: state.next_id,
+                done: app.models_mut().insert(false),
+                text: Arc::from(text),
+            };
             state.next_id = state.next_id.saturating_add(1);
 
-            let done = app.models_mut().insert(false);
-
             let _ = app.models_mut().update(&state.todos, |todos| {
-                todos.insert(
-                    0,
-                    TodoItem {
-                        id,
-                        done,
-                        text: Arc::from(text),
-                    },
-                );
+                todos.insert(0, item);
             });
-            let _ = app.models_mut().update(&state.draft, |s| s.clear());
-            app.push_effect(Effect::Redraw(window));
+            let _ = app.models_mut().update(&state.draft, String::clear);
+            app.request_redraw(window);
         }
-        CMD_CLEAR_COMPLETED => {
+        CMD_CLEAR_DONE => {
             let snapshot = app
                 .models()
-                .read(&state.todos, |v| v.clone())
+                .read(&state.todos, Clone::clone)
                 .ok()
                 .unwrap_or_default();
-            let keep: Vec<TodoItem> = snapshot
+            let keep = snapshot
                 .into_iter()
-                .filter(|t| !app.models().read(&t.done, |v| *v).ok().unwrap_or(false))
-                .collect();
+                .filter(|todo| app.models().get_copied(&todo.done).is_none_or(|done| !done))
+                .collect::<Vec<_>>();
             let _ = app.models_mut().update(&state.todos, |todos| *todos = keep);
-            app.push_effect(Effect::Redraw(window));
+            app.request_redraw(window);
+        }
+        CMD_REFRESH_TIP => {
+            let _ = with_query_client(app, |client, app| {
+                client.invalidate(app, tip_key());
+            });
+            app.request_redraw(window);
+        }
+        CMD_FILTER_ALL => {
+            let _ = app
+                .models_mut()
+                .update(&state.filter, |filter| *filter = TodoFilter::All);
+            app.request_redraw(window);
+        }
+        CMD_FILTER_ACTIVE => {
+            let _ = app
+                .models_mut()
+                .update(&state.filter, |filter| *filter = TodoFilter::Active);
+            app.request_redraw(window);
+        }
+        CMD_FILTER_COMPLETED => {
+            let _ = app
+                .models_mut()
+                .update(&state.filter, |filter| *filter = TodoFilter::Completed);
+            app.request_redraw(window);
         }
         _ => {
             let Some(msg) = state.router.try_take(cmd) else {
                 return;
             };
-
             match msg {
-                TodoMsg::Remove(id) => {
+                Msg::Remove(id) => {
                     let _ = app.models_mut().update(&state.todos, |todos| {
-                        todos.retain(|t| t.id != id);
+                        todos.retain(|todo| todo.id != id);
                     });
-                    app.push_effect(Effect::Redraw(window));
-                }
-                TodoMsg::Toggle(id) => {
-                    let done_model = app
-                        .models()
-                        .read(&state.todos, |todos| {
-                            todos.iter().find(|t| t.id == id).map(|t| t.done.clone())
-                        })
-                        .ok()
-                        .flatten();
-                    if let Some(done_model) = done_model {
-                        let _ = app.models_mut().update(&done_model, |v| *v = !*v);
-                        app.push_effect(Effect::Redraw(window));
-                    }
+                    app.request_redraw(window);
                 }
             }
         }
     }
-}
-
-fn todo_visual_debug_panel(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-    draft_value: &str,
-    add_enabled: bool,
-) -> AnyElement {
-    let border = theme.color_required("border");
-    let muted_fg = theme.color_required("muted-foreground");
-
-    let primary = theme.color_required("primary");
-    let primary_fg = theme.color_required("primary-foreground");
-    let foreground = theme.color_required("foreground");
-    let background = theme.color_required("background");
-
-    let token_line: Arc<str> = Arc::from(format!(
-        "tokens(primary={primary:?} primary-foreground={primary_fg:?} foreground={foreground:?} background={background:?})",
-    ));
-    let draft_line: Arc<str> = Arc::from(format!(
-        "draft(len={} enabled={}) value={:?}",
-        draft_value.len(),
-        add_enabled,
-        draft_value
-    ));
-
-    shadcn::Collapsible::uncontrolled(false)
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element_with_open_model(
-            cx,
-            move |cx, open, is_open| {
-                let caret = if is_open {
-                    IconId::new("lucide.chevron-up")
-                } else {
-                    IconId::new("lucide.chevron-down")
-                };
-
-                shadcn::Button::new("视觉自检")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .toggle_model(open)
-                    .test_id(TEST_ID_VISUAL_TOGGLE)
-                    .children([icon::icon_with(
-                        cx,
-                        caret,
-                        Some(Px(16.0)),
-                        Some(ColorRef::Color(muted_fg)),
-                    )])
-                    .into_element(cx)
-            },
-            move |cx| {
-                let token_dbg = ui::raw_text(cx, token_line.clone())
-                    .text_color(ColorRef::Color(muted_fg))
-                    .into_element(cx);
-                let draft_dbg = ui::raw_text(cx, draft_line.clone())
-                    .text_color(ColorRef::Color(muted_fg))
-                    .into_element(cx);
-
-                let swatch = |cx: &mut ElementContext<'_, App>,
-                              bg: fret_core::Color,
-                              fg: fret_core::Color,
-                              label: &'static str| {
-                    ui::container(cx, |cx| {
-                        [ui::raw_text(cx, label)
-                            .text_color(ColorRef::Color(fg))
-                            .into_element(cx)]
-                    })
-                    .bg(ColorRef::Color(bg))
-                    .border_1()
-                    .border_color(ColorRef::Color(border))
-                    .rounded(Radius::Md)
-                    .px(Space::N2)
-                    .py(Space::N1)
-                    .into_element(cx)
-                };
-
-                let primary_swatch =
-                    swatch(cx, primary, primary_fg, "primary on primary-foreground");
-                let fg_swatch = swatch(cx, primary, foreground, "primary on foreground");
-
-                let icon_sample = |cx: &mut ElementContext<'_, App>,
-                                   icon_id: IconId,
-                                   color: fret_core::Color,
-                                   size: Px| {
-                    ui::container(cx, |cx| {
-                        let icon =
-                            icon::icon_with(cx, icon_id, Some(size), Some(ColorRef::Color(color)));
-                        [ui::h_flex(cx, |_cx| [icon])
-                            .w_full()
-                            .h_full()
-                            .justify_center()
-                            .items_center()
-                            .into_element(cx)]
-                    })
-                    .w_px(Px(28.0))
-                    .h_px(Px(28.0))
-                    .border_1()
-                    .border_color(ColorRef::Color(border))
-                    .rounded(Radius::Md)
-                    .into_element(cx)
-                };
-
-                let checkbox_probe =
-                    |cx: &mut ElementContext<'_, App>, done: bool, label: &'static str| {
-                        let checkbox_size = Px(16.0);
-                        let checkbox_bg = if done { primary } else { background };
-                        let checkbox_border = theme
-                            .color_by_key("input")
-                            .or_else(|| theme.color_by_key("border"))
-                            .unwrap_or(border);
-                        let checkbox_fg = primary_fg;
-
-                        let indicator = ui::container(cx, |cx| {
-                            let icon = done.then(|| {
-                                icon::icon_with(
-                                    cx,
-                                    IconId::new("lucide.check"),
-                                    Some(checkbox_size),
-                                    Some(ColorRef::Color(checkbox_fg)),
-                                )
-                            });
-                            [ui::h_flex(cx, |_cx| icon.into_iter())
-                                .w_full()
-                                .h_full()
-                                .justify_center()
-                                .items_center()
-                                .into_element(cx)]
-                        })
-                        .w_px(checkbox_size)
-                        .h_px(checkbox_size)
-                        .flex_shrink_0()
-                        .rounded(Radius::Sm)
-                        .border_1()
-                        .border_color(ColorRef::Color(checkbox_border))
-                        .bg(ColorRef::Color(checkbox_bg))
-                        .into_element(cx);
-
-                        let label = ui::text(cx, label)
-                            .nowrap()
-                            .truncate()
-                            .text_color(ColorRef::Color(foreground))
-                            .into_element(cx);
-
-                        ui::h_flex(cx, |_cx| [indicator, label])
-                            .gap(Space::N2)
-                            .items_center()
-                            .into_element(cx)
-                    };
-
-                let content = ui::v_flex(cx, |cx| {
-                    let row1 = ui::h_flex(cx, |_cx| [token_dbg, draft_dbg])
-                        .gap(Space::N2)
-                        .w_full()
-                        .into_element(cx);
-
-                    let row2 = ui::h_flex(cx, |_cx| [primary_swatch, fg_swatch])
-                        .gap(Space::N2)
-                        .w_full()
-                        .items_center()
-                        .into_element(cx);
-
-                    let row3 = ui::h_flex(cx, |cx| {
-                        [
-                            icon_sample(cx, IconId::new("lucide.plus"), primary_fg, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.check"), primary_fg, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.check"), foreground, Px(16.0)),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .w_full()
-                    .items_center()
-                    .into_element(cx);
-
-                    let row4 = ui::h_flex(cx, |cx| {
-                        [
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(12.0)),
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(16.0)),
-                            icon_sample(cx, IconId::new("lucide.plus"), foreground, Px(20.0)),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .w_full()
-                    .items_center()
-                    .into_element(cx);
-
-                    let row5 = ui::h_flex(cx, |cx| {
-                        [
-                            checkbox_probe(cx, false, "align probe"),
-                            checkbox_probe(cx, true, "align probe (checked)"),
-                        ]
-                    })
-                    .gap(Space::N3)
-                    .w_full()
-                    .items_center()
-                    .into_element(cx);
-
-                    [row1, row2, row3, row4, row5]
-                })
-                .gap(Space::N2)
-                .w_full()
-                .into_element(cx);
-
-                let panel = ui::container(cx, |_cx| [content])
-                    .border_1()
-                    .border_color(ColorRef::Color(border))
-                    .rounded(Radius::Lg)
-                    .p(Space::N3)
-                    .w_full()
-                    .into_element(cx);
-
-                panel.attach_semantics(
-                    SemanticsDecoration::default()
-                        .role(SemanticsRole::Panel)
-                        .test_id(TEST_ID_VISUAL_PANEL),
-                )
-            },
-        )
 }
