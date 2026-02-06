@@ -23,6 +23,7 @@ mod input_otp;
 mod item;
 mod kbd;
 mod label;
+mod menubar;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -160,6 +161,10 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
 pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     label::preview_label(cx)
+}
+
+pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    menubar::preview_menubar(cx)
 }
 
 pub(super) fn preview_drawer(
