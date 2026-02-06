@@ -16206,42 +16206,7 @@ fn preview_combobox(
     open: Model<bool>,
     query: Model<String>,
 ) -> Vec<AnyElement> {
-    let combo = shadcn::Combobox::new(value.clone(), open)
-        .a11y_label("Combobox")
-        .width(Px(240.0))
-        .placeholder("Pick a fruit")
-        .query_model(query.clone())
-        .items([
-            shadcn::ComboboxItem::new("apple", "Apple"),
-            shadcn::ComboboxItem::new("banana", "Banana"),
-            shadcn::ComboboxItem::new("orange", "Orange"),
-            shadcn::ComboboxItem::new("disabled", "Disabled").disabled(true),
-        ])
-        .into_element(cx);
-    let combo = combo.attach_semantics(
-        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-combobox-trigger"),
-    );
-
-    let selected = cx
-        .app
-        .models()
-        .read(&value, |v| v.clone())
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-    let query_text = cx
-        .get_model_cloned(&query, Invalidation::Layout)
-        .unwrap_or_default();
-
-    let selected_label = cx.text(format!("Selected: {selected}")).attach_semantics(
-        fret_ui::element::SemanticsDecoration::default()
-            .test_id("ui-gallery-combobox-selected-label"),
-    );
-    let query_label = cx.text(format!("Query: {query_text}")).attach_semantics(
-        fret_ui::element::SemanticsDecoration::default().test_id("ui-gallery-combobox-query-label"),
-    );
-
-    vec![combo, selected_label, query_label]
+    pages::preview_combobox(cx, value, open, query)
 }
 
 fn preview_date_picker(

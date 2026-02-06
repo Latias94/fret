@@ -8,6 +8,7 @@ mod checkbox;
 mod carousel;
 mod chart;
 mod collapsible;
+mod combobox;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -49,6 +50,15 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
 pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     collapsible::preview_collapsible(cx)
+}
+
+pub(super) fn preview_combobox(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Option<Arc<str>>>,
+    open: Model<bool>,
+    query: Model<String>,
+) -> Vec<AnyElement> {
+    combobox::preview_combobox(cx, value, open, query)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
