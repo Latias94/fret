@@ -644,7 +644,7 @@ impl Default for EffectLayerProps {
 ///
 /// This is a mechanism-only primitive intended to support GPUI-style view caching experiments
 /// without committing to a stable authoring API.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ViewCacheProps {
     pub layout: LayoutStyle,
     /// Whether the subtree should be treated as layout-contained by the runtime when view caching is enabled.
@@ -654,16 +654,6 @@ pub struct ViewCacheProps {
     /// The runtime will reuse cached output for this view-cache root only when the computed key is
     /// unchanged. This mirrors GPUI's `ViewCacheKey` gating behavior.
     pub cache_key: u64,
-}
-
-impl Default for ViewCacheProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            contained_layout: false,
-            cache_key: 0,
-        }
-    }
 }
 
 /// Paint-only transform wrapper for declarative element subtrees.

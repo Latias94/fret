@@ -972,8 +972,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let mut targets: Vec<(NodeId, Rect, Point)> = Vec::new();
-        targets.reserve(16);
+        let mut targets: Vec<(NodeId, Rect, Point)> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled {
                 continue;
@@ -1268,8 +1267,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let mut targets: Vec<(NodeId, Rect)> = Vec::new();
-        targets.reserve(16);
+        let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled || !node.view_cache.contained_layout {
                 continue;
@@ -1360,10 +1358,10 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT") {
-            if !format!("{root:?}").contains(&filter) {
-                return;
-            }
+        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT")
+            && !format!("{root:?}").contains(&filter)
+        {
+            return;
         }
 
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
@@ -1440,9 +1438,8 @@ impl<H: UiHost> UiTree<H> {
 
         let result = std::fs::create_dir_all(&out_dir)
             .and_then(|_| {
-                serde_json::to_vec_pretty(&wrapped).map_err(|e| {
-                    std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
-                })
+                serde_json::to_vec_pretty(&wrapped)
+                    .map_err(|e| std::io::Error::other(format!("serialize: {e}")))
             })
             .and_then(|bytes| {
                 std::fs::write(std::path::Path::new(&out_dir).join(&filename), bytes)
@@ -1473,6 +1470,7 @@ impl<H: UiHost> UiTree<H> {
     /// This is a debug-only escape hatch intended for diagnosing layout regressions and scroll /
     /// clipping issues. The output is JSON and is written to `out_dir`.
     #[cfg(not(target_arch = "wasm32"))]
+    #[allow(clippy::too_many_arguments)]
     pub fn debug_write_taffy_subtree_json(
         &self,
         app: &mut H,
@@ -1562,9 +1560,8 @@ impl<H: UiHost> UiTree<H> {
         let out_dir = out_dir.as_ref();
         std::fs::create_dir_all(out_dir)?;
         let path = out_dir.join(filename);
-        let bytes = serde_json::to_vec_pretty(&wrapped).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
-        })?;
+        let bytes = serde_json::to_vec_pretty(&wrapped)
+            .map_err(|e| std::io::Error::other(format!("serialize: {e}")))?;
         std::fs::write(&path, bytes)?;
         Ok(path)
     }
@@ -1602,10 +1599,10 @@ impl<H: UiHost> UiTree<H> {
         let phase1_started = profile_layout.then(Instant::now);
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
-            if !self
+            if self
                 .nodes
                 .get(root)
-                .is_some_and(|node| node.element.is_some())
+                .is_none_or(|node| node.element.is_none())
             {
                 continue;
             }
@@ -1773,10 +1770,10 @@ impl<H: UiHost> UiTree<H> {
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
                 for item in &batch {
-                    if !self
+                    if self
                         .nodes
                         .get(item.root)
-                        .is_some_and(|node| node.element.is_some())
+                        .is_none_or(|node| node.element.is_none())
                     {
                         continue;
                     }
@@ -2047,8 +2044,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let mut batch: Vec<(NodeId, Rect)> = Vec::new();
-        batch.reserve(roots.len());
+        let mut batch: Vec<(NodeId, Rect)> = Vec::with_capacity(roots.len());
         for &(root, root_bounds) in roots {
             let Some(node) = self.nodes.get(root) else {
                 continue;

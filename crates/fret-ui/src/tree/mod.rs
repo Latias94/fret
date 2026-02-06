@@ -1329,8 +1329,7 @@ impl LayoutNodeProfileConfig {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(16)
-            .max(1)
-            .min(128);
+            .clamp(1, 128);
 
         let min_us = std::env::var("FRET_LAYOUT_NODE_PROFILE_MIN_US")
             .ok()
@@ -1463,8 +1462,7 @@ impl MeasureNodeProfileConfig {
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(16)
-            .max(1)
-            .min(128);
+            .clamp(1, 128);
 
         let min_us = std::env::var("FRET_MEASURE_NODE_PROFILE_MIN_US")
             .ok()
@@ -2290,6 +2288,7 @@ impl<H: UiHost> UiTree<H> {
     }
 
     #[track_caller]
+    #[allow(clippy::too_many_arguments)]
     pub fn debug_record_overlay_policy_decision(
         &mut self,
         frame_id: FrameId,
@@ -4124,11 +4123,11 @@ impl<H: UiHost> UiTree<H> {
                 None => continue,
             };
 
-            if current_parent != expected_parent {
-                if let Some(n) = self.nodes.get_mut(node) {
-                    n.parent = expected_parent;
-                    repaired = repaired.saturating_add(1);
-                }
+            if current_parent != expected_parent
+                && let Some(n) = self.nodes.get_mut(node)
+            {
+                n.parent = expected_parent;
+                repaired = repaired.saturating_add(1);
             }
 
             for child in children {
@@ -5639,11 +5638,8 @@ impl<H: UiHost> UiTree<H> {
                 .sort_by(|a, b| a.model.data().as_ffi().cmp(&b.model.data().as_ffi()));
             self.debug_model_change_unobserved.truncate(5);
         }
-        did_invalidate |= self.propagate_observation_masks(
-            app,
-            combined.into_iter(),
-            UiDebugInvalidationSource::ModelChange,
-        );
+        did_invalidate |=
+            self.propagate_observation_masks(app, combined, UiDebugInvalidationSource::ModelChange);
         did_invalidate |= self.propagate_model_changes_from_elements(app, changed);
         did_invalidate
     }
@@ -5747,7 +5743,7 @@ impl<H: UiHost> UiTree<H> {
         }
         did_invalidate |= self.propagate_observation_masks(
             app,
-            combined.into_iter(),
+            combined,
             UiDebugInvalidationSource::GlobalChange,
         );
         did_invalidate |= self.propagate_global_changes_from_elements(app, changed);

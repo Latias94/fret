@@ -288,6 +288,7 @@ pub struct TextShape {
 pub struct TextLine {
     pub start: usize,
     pub end: usize,
+    #[allow(dead_code)]
     pub width: Px,
     pub y_top: Px,
     /// Baseline Y for this line (y=0 at top of text box).
@@ -993,6 +994,7 @@ impl GlyphAtlas {
     }
 }
 
+#[allow(dead_code)]
 fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(data.len() / 4);
     for rgba in data.chunks_exact(4) {
@@ -1260,7 +1262,7 @@ impl TextSystem {
         }
         let after_faces = self.font_system.db().faces().count();
         let added = after_faces.saturating_sub(before_faces);
-        let parley_added = self.parley_shaper.add_fonts(fonts.into_iter());
+        let parley_added = self.parley_shaper.add_fonts(fonts);
 
         if added > 0 || parley_added > 0 {
             self.font_db_revision = self.font_db_revision.saturating_add(1);
@@ -1789,6 +1791,7 @@ impl TextSystem {
         self.blobs.get(id)
     }
 
+    #[allow(dead_code)]
     pub fn prepare_input(
         &mut self,
         input: TextInputRef<'_>,
@@ -3388,15 +3391,17 @@ mod tests {
         };
 
         let left = super::hit_test_point_from_lines(
-            &[line.clone()],
+            std::slice::from_ref(&line),
             fret_core::Point::new(Px(0.0), Px(5.0)),
         )
         .expect("hit test");
         assert_eq!(left.index, 4);
 
-        let right =
-            super::hit_test_point_from_lines(&[line], fret_core::Point::new(Px(40.0), Px(5.0)))
-                .expect("hit test");
+        let right = super::hit_test_point_from_lines(
+            std::slice::from_ref(&line),
+            fret_core::Point::new(Px(40.0), Px(5.0)),
+        )
+        .expect("hit test");
         assert_eq!(right.index, 0);
     }
 
@@ -3597,7 +3602,7 @@ mod tests {
         assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
         assert_eq!(sanitized.len(), 2);
         assert_eq!(sanitized[0].len, 2);
-        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+        assert!(sanitized[0].paint.fg.is_some());
         assert_eq!(sanitized[1].len, 3);
         assert_eq!(sanitized[1].paint.fg, None);
     }
@@ -3629,7 +3634,7 @@ mod tests {
         assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
         assert_eq!(sanitized.len(), 1);
         assert_eq!(sanitized[0].len, text.len());
-        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+        assert!(sanitized[0].paint.fg.is_some());
     }
 
     #[test]
@@ -4210,8 +4215,10 @@ mod tests {
             "expected {family_cjk} to be present after loading cjk-lite fonts"
         );
 
-        let mut config = fret_core::TextFontFamilyConfig::default();
-        config.ui_sans = vec![family_inter.to_string()];
+        let config = fret_core::TextFontFamilyConfig {
+            ui_sans: vec![family_inter.to_string()],
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config);
 
         let noto_blob_id = super::stable_font_blob_id(fret_fonts::cjk_lite_fonts()[0]);
@@ -4308,8 +4315,10 @@ mod tests {
             "expected {family_emoji} to be present after loading emoji fonts"
         );
 
-        let mut config = fret_core::TextFontFamilyConfig::default();
-        config.ui_sans = vec![family_inter.to_string()];
+        let config = fret_core::TextFontFamilyConfig {
+            ui_sans: vec![family_inter.to_string()],
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config);
 
         let emoji_blob_id = super::stable_font_blob_id(fret_fonts::emoji_fonts()[0]);

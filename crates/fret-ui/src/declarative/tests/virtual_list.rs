@@ -1433,11 +1433,13 @@ fn virtual_list_triggers_visible_range_rerender_on_scrollbar_wheel_when_cached()
                 );
                 list_element_id = Some(list.id);
 
-                let mut scrollbar = crate::element::ScrollbarProps::default();
-                scrollbar.layout = scrollbar_layout;
-                scrollbar.axis = crate::element::ScrollbarAxis::Vertical;
-                scrollbar.scroll_handle = handle.base_handle().clone();
-                scrollbar.scroll_target = list_element_id;
+                let scrollbar = crate::element::ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: crate::element::ScrollbarAxis::Vertical,
+                    scroll_handle: handle.base_handle().clone(),
+                    scroll_target: list_element_id,
+                    ..Default::default()
+                };
 
                 vec![list, cx.scrollbar(scrollbar)]
             })]
@@ -2576,8 +2578,10 @@ fn virtual_list_row_view_cache_reuses_rows_across_small_scroll_deltas() {
                 let key = index as u64;
                 let render_counts = Arc::clone(&render_counts);
 
-                let mut view_cache = crate::element::ViewCacheProps::default();
-                view_cache.cache_key = key;
+                let view_cache = crate::element::ViewCacheProps {
+                    cache_key: key,
+                    ..Default::default()
+                };
                 cx.view_cache(view_cache, move |cx| {
                     render_counts
                         .lock()

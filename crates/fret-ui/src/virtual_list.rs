@@ -135,10 +135,7 @@ pub(crate) fn prefetch_virtual_range_step(
         // Both sides are "near" (small windows, small overscan, or being close to the list start/end).
         // Prefer the caller's scroll direction hint to avoid prefetch oscillation during slow scroll.
         // If we don't have a direction hint, skip prefetch (the caller can fall back to escape logic).
-        let Some(prefer_forward) = prefer_forward else {
-            return None;
-        };
-        prefer_forward
+        prefer_forward?
     };
 
     let mut start = rendered.start_index;

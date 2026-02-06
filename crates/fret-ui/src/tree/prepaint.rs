@@ -780,15 +780,13 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let end = self.interaction_cache.records.len();
-        if is_view_cache_root {
-            if let Some(n) = self.nodes.get_mut(node) {
-                n.interaction_cache = Some(InteractionCacheEntry {
-                    generation: self.interaction_cache.target_generation,
-                    key,
-                    start: start as u32,
-                    end: end as u32,
-                });
-            }
+        if is_view_cache_root && let Some(n) = self.nodes.get_mut(node) {
+            n.interaction_cache = Some(InteractionCacheEntry {
+                generation: self.interaction_cache.target_generation,
+                key,
+                start: start as u32,
+                end: end as u32,
+            });
         }
     }
 }

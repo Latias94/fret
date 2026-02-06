@@ -61,7 +61,7 @@ struct ScrollLayoutProbeCacheState {
 
 fn available_space_cache_key(space: AvailableSpace) -> u64 {
     match space {
-        AvailableSpace::Definite(px) => (0 << 62) | (px.0.to_bits() as u64),
+        AvailableSpace::Definite(px) => px.0.to_bits() as u64,
         AvailableSpace::MinContent => 1 << 62,
         AvailableSpace::MaxContent => 2 << 62,
     }

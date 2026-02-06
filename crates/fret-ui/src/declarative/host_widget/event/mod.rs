@@ -156,11 +156,8 @@ impl ElementHostWidget {
             return;
         };
 
-        match instance {
-            ElementInstance::DismissibleLayer(props) => {
-                dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
-            }
-            _ => {}
+        if let ElementInstance::DismissibleLayer(props) = instance {
+            dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
         }
     }
 }
