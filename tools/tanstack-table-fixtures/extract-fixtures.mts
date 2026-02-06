@@ -4287,6 +4287,7 @@ function snapshotColumnPinning(
           grouped_row_model: snapshotGroupedRowModel(table),
           grouped_aggregations_u64: snapshotGroupedAggregationsU64(table),
           sorted_grouped_row_model,
+          row_pinning: snapshotRowPinning(table),
         },
       }
     }
@@ -4318,6 +4319,7 @@ function snapshotColumnPinning(
           grouped_row_model: snapshotGroupedRowModel(table),
           grouped_aggregations_u64: snapshotGroupedAggregationsU64(table),
           sorted_grouped_row_model,
+          row_pinning: snapshotRowPinning(table),
         },
       }
     }
@@ -4349,6 +4351,7 @@ function snapshotColumnPinning(
           grouped_row_model: snapshotGroupedRowModel(table),
           grouped_aggregations_u64: snapshotGroupedAggregationsU64(table),
           sorted_grouped_row_model,
+          row_pinning: snapshotRowPinning(table),
         },
       }
     }
@@ -4357,6 +4360,24 @@ function snapshotColumnPinning(
       mk("grouping_baseline", {}, {}),
       mk("grouping_state_one_column", {}, { grouping: ["role"] }),
       mk("grouping_state_two_columns", {}, { grouping: ["role", "team"] }),
+      mk(
+        "grouping_state_one_column_row_pinning_keep_true_page_1",
+        { enableRowPinning: true, keepPinnedRows: true },
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 1, pageSize: 1 },
+          rowPinning: { top: ["4"], bottom: ["5"] },
+        },
+      ),
+      mk(
+        "grouping_state_one_column_row_pinning_keep_false_page_1",
+        { enableRowPinning: true, keepPinnedRows: false },
+        {
+          grouping: ["role"],
+          pagination: { pageIndex: 1, pageSize: 1 },
+          rowPinning: { top: ["4"], bottom: ["5"] },
+        },
+      ),
       mk("grouping_manual_grouping_true_noops", { manualGrouping: true }, { grouping: ["role"] }),
       mk(
         "grouping_enable_grouping_false_state_noops",

@@ -286,6 +286,11 @@ ColumnDef keys referenced by upstream feature implementations:
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Bugfix: TanStack option defaults are `true` for `keepPinnedRows` and `paginateExpandedRows` when omitted.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_options.rs`
+- [ ] HTP-rowpin-015 Gate row pinning × grouping interactions (grouped model + pagination).
+  - Goal: prevent regressions where pinned leaf rows disappear or reorder unexpectedly once grouping is enabled.
+  - Planned gate: extend `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` to include `row_pinning`
+    snapshots (keepPinnedRows true/false + pagination), and assert them in
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
@@ -424,18 +429,19 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ### UI integration notes (workstream hygiene)
 
-- [~] HTP-ui-rowpin-010 Wire `TableState.row_pinning` into `table_virtualized` (flat rows path).
+- [x] HTP-ui-rowpin-010 Wire `TableState.row_pinning` into `table_virtualized` (flat rows + grouped path).
   - Done (initial integration): when row pinning is active, `ecosystem/fret-ui-kit` now computes
-    top/center/bottom display rows via the headless engine’s pinned row helpers so “keepPinnedRows”
-    and pagination interactions match the engine contract.
-    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
-  - Done (grouped rows path, initial): when grouping is active, the grouped display cache now
-    surfaces pinned rows outside pagination by reordering the flattened visible list into
-    `top + center(page slice) + bottom`.
-    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
-  - Remaining: reconcile keepPinnedRows semantics with filtering for grouped mode and decide whether
-    pinning should remove leaf rows from within their group subtrees (TanStack’s row pinning API is
-    rooted in `getRowModel().rows`, so grouped interactions are subtle and require explicit UI policy).
+     top/center/bottom display rows via the headless engine’s pinned row helpers so “keepPinnedRows”
+     and pagination interactions match the engine contract.
+     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+   - Done (grouped rows path, initial): when grouping is active, the grouped display cache now
+     surfaces pinned rows outside pagination by reordering the flattened visible list into
+     `top + center(page slice) + bottom`.
+     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+- [ ] HTP-ui-rowpin-020 Decide grouped-mode pinning policy and align remaining semantics.
+  - Topics:
+    - Filtering semantics in grouped mode (`keepPinnedRows` vs. “visible-only” pinning).
+    - Whether pinning should remove leaf rows from within their group subtrees (UI policy decision).
 
 ---
 
