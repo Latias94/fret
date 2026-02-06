@@ -1719,6 +1719,7 @@ impl<'a, TData> Table<'a, TData> {
             self.data,
             &row_index_by_key,
             self.grouped_u64_aggregations(),
+            self.grouped_aggregations_any(),
         );
 
         let visible_roots: &[super::GroupedRowIndex] = if self.options.manual_pagination {

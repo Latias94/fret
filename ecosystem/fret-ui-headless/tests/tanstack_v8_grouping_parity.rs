@@ -278,6 +278,10 @@ fn snapshot_sorted_grouped_row_model<TData>(
     data: &[TData],
     row_index_by_key: &std::collections::HashMap<RowKey, usize>,
     group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(Arc<str>, u64)]>>,
+    group_aggs_any: &std::collections::HashMap<
+        RowKey,
+        Arc<[(Arc<str>, fret_ui_headless::table::TanStackValue)]>,
+    >,
 ) -> (Vec<GroupedRowNodeExpect>, Vec<GroupedRowNodeExpect>) {
     let mut roots: Vec<usize> = model.root_rows().to_vec();
 
@@ -289,6 +293,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
         data,
         row_index_by_key,
         group_aggs_u64,
+        group_aggs_any,
     );
 
     fn walk_root<TData>(
@@ -299,6 +304,10 @@ fn snapshot_sorted_grouped_row_model<TData>(
         data: &[TData],
         row_index_by_key: &std::collections::HashMap<RowKey, usize>,
         group_aggs_u64: &std::collections::HashMap<RowKey, Arc<[(Arc<str>, u64)]>>,
+        group_aggs_any: &std::collections::HashMap<
+            RowKey,
+            Arc<[(Arc<str>, fret_ui_headless::table::TanStackValue)]>,
+        >,
         out: &mut Vec<GroupedRowNodeExpect>,
     ) {
         for &index in indices {
@@ -318,6 +327,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
                 data,
                 row_index_by_key,
                 group_aggs_u64,
+                group_aggs_any,
             );
             walk_root(
                 model,
@@ -327,6 +337,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
                 data,
                 row_index_by_key,
                 group_aggs_u64,
+                group_aggs_any,
                 out,
             );
         }
@@ -341,6 +352,7 @@ fn snapshot_sorted_grouped_row_model<TData>(
         data,
         row_index_by_key,
         group_aggs_u64,
+        group_aggs_any,
         &mut root,
     );
 
@@ -780,6 +792,7 @@ fn tanstack_v8_grouping_parity() {
                     data.as_slice(),
                     &row_index_by_key,
                     actual_aggs,
+                    table.grouped_aggregations_any(),
                 );
 
                 assert_eq!(
