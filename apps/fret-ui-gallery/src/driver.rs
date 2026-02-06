@@ -153,6 +153,7 @@ struct UiGalleryWindowState {
     accordion_value: Model<Option<Arc<str>>>,
     avatar_demo_image: Model<Option<ImageId>>,
     avatar_demo_image_token: Option<ImageUploadToken>,
+    avatar_demo_image_retry_count: u8,
     progress: Model<f32>,
     checkbox: Model<bool>,
     switch: Model<bool>,
@@ -197,6 +198,29 @@ struct UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    const AVATAR_DEMO_IMAGE_WIDTH: u32 = 96;
+    const AVATAR_DEMO_IMAGE_HEIGHT: u32 = 96;
+    const AVATAR_DEMO_IMAGE_RETRY_MAX: u8 = 8;
+
+    fn enqueue_avatar_demo_image_register(
+        app: &mut App,
+        window: AppWindowId,
+        token: ImageUploadToken,
+    ) {
+        app.push_effect(Effect::ImageRegisterRgba8 {
+            window,
+            token,
+            width: Self::AVATAR_DEMO_IMAGE_WIDTH,
+            height: Self::AVATAR_DEMO_IMAGE_HEIGHT,
+            bytes: Self::generate_avatar_demo_image_rgba8(
+                Self::AVATAR_DEMO_IMAGE_WIDTH,
+                Self::AVATAR_DEMO_IMAGE_HEIGHT,
+            ),
+            color_info: ImageColorInfo::srgb_rgba(),
+            alpha_mode: AlphaMode::Opaque,
+        });
+    }
+
     fn sync_undo_availability(app: &mut App, window: AppWindowId, doc: &DocumentId) {
         let mut edit_can_undo = false;
         let mut edit_can_redo = false;
@@ -459,15 +483,7 @@ impl UiGalleryDriver {
 
         let avatar_demo_image = app.models_mut().insert(None::<ImageId>);
         let avatar_demo_image_token = app.next_image_upload_token();
-        app.push_effect(Effect::ImageRegisterRgba8 {
-            window,
-            token: avatar_demo_image_token,
-            width: 96,
-            height: 96,
-            bytes: Self::generate_avatar_demo_image_rgba8(96, 96),
-            color_info: ImageColorInfo::srgb_rgba(),
-            alpha_mode: AlphaMode::Opaque,
-        });
+        Self::enqueue_avatar_demo_image_register(app, window, avatar_demo_image_token);
 
         let progress = app.models_mut().insert(35.0f32);
         let checkbox = app.models_mut().insert(false);
@@ -600,6 +616,7 @@ impl UiGalleryDriver {
             accordion_value,
             avatar_demo_image,
             avatar_demo_image_token: Some(avatar_demo_image_token),
+            avatar_demo_image_retry_count: 0,
             progress,
             checkbox,
             switch,
@@ -3065,6 +3082,7 @@ impl WinitAppDriver for UiGalleryDriver {
             Event::ImageRegistered { token, image, .. } => {
                 if state.avatar_demo_image_token == Some(*token) {
                     state.avatar_demo_image_token = None;
+                    state.avatar_demo_image_retry_count = 0;
                     let _ = app
                         .models_mut()
                         .update(&state.avatar_demo_image, |v| *v = Some(*image));
@@ -3073,9 +3091,19 @@ impl WinitAppDriver for UiGalleryDriver {
             }
             Event::ImageRegisterFailed { token, message } => {
                 if state.avatar_demo_image_token == Some(*token) {
-                    state.avatar_demo_image_token = None;
-                    tracing::error!(message, "ui-gallery avatar demo image register failed");
-                    app.request_redraw(window);
+                    let transient_not_ready = message.contains("not initialized");
+                    if transient_not_ready
+                        && state.avatar_demo_image_retry_count < Self::AVATAR_DEMO_IMAGE_RETRY_MAX
+                    {
+                        state.avatar_demo_image_retry_count =
+                            state.avatar_demo_image_retry_count.saturating_add(1);
+                        Self::enqueue_avatar_demo_image_register(app, window, *token);
+                        app.request_redraw(window);
+                    } else {
+                        state.avatar_demo_image_token = None;
+                        tracing::error!(message, "ui-gallery avatar demo image register failed");
+                        app.request_redraw(window);
+                    }
                 }
             }
             Event::WindowCloseRequested => {
