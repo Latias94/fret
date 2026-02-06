@@ -206,6 +206,9 @@ Current verification includes a wasm browser test harness (`wasm-bindgen-test`) 
   - `hashchange` subscription attach/detach behavior
 - base path:
   - `current_location_in_base_path` path stripping behavior
+- nested direct-link parsing:
+  - path-history direct links (`/a/b/c?x=1#frag`) into `RouteLocation`
+  - hash-routing direct links (`#/a/b/c?x=1`) into `RouteLocation`
 
 The refresh/direct-link nested-route behavior remains tracked in the Phase 2 TODO.
 

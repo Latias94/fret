@@ -148,3 +148,44 @@ fn current_location_in_base_path_strips_prefix() {
     assert_eq!(location.search, "?tab=profile");
     assert_eq!(location.hash, "#section-1");
 }
+
+#[cfg(feature = "web-history")]
+#[wasm_bindgen_test]
+fn current_route_location_reads_nested_direct_link() {
+    let _guard = UrlRestoreGuard::capture().expect("window location should be available");
+
+    assert!(web::navigate_with_history(
+        fret_router::NavigationAction::Replace,
+        Some("/app/projects/42/files/7"),
+        Some("tab=preview&lang=zh"),
+        Some("line-120"),
+    ));
+
+    let location = web::current_route_location().expect("route location should be available");
+    assert_eq!(
+        location.to_url(),
+        "/app/projects/42/files/7?lang=zh&tab=preview#line-120"
+    );
+
+    let relative = web::current_route_location_in_base_path("/app")
+        .expect("route location in base path should be available");
+    assert_eq!(
+        relative.to_url(),
+        "/projects/42/files/7?lang=zh&tab=preview#line-120"
+    );
+}
+
+#[cfg(feature = "hash-routing")]
+#[wasm_bindgen_test]
+fn current_hash_route_location_reads_nested_direct_link() {
+    let _guard = UrlRestoreGuard::capture().expect("window location should be available");
+
+    assert!(web::navigate_hash(
+        fret_router::NavigationAction::Replace,
+        "/docs/guides/getting-started?tab=api",
+    ));
+
+    let location =
+        web::current_hash_route_location().expect("hash route location should be available");
+    assert_eq!(location.to_url(), "/docs/guides/getting-started?tab=api");
+}

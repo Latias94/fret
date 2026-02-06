@@ -1,6 +1,6 @@
 use crate::{
-    NavigationAction, apply_base_path, first_query_value_from_search_or_hash,
-    strip_base_path as strip_base_path_from_path,
+    NavigationAction, RouteLocation, apply_base_path, first_query_value_from_search_or_hash,
+    parse_query_pairs, strip_base_path as strip_base_path_from_path,
 };
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 
@@ -66,6 +66,61 @@ pub fn current_location_in_base_path(base_path: &str) -> Option<WebLocationSnaps
     let mut location = current_location()?;
     location.pathname = strip_base_path_from_path(location.pathname.as_str(), base_path)?;
     Some(location)
+}
+
+pub fn route_location_from_snapshot(snapshot: &WebLocationSnapshot) -> RouteLocation {
+    let mut location = RouteLocation::from_path(snapshot.pathname.as_str());
+    location.query = parse_query_pairs(snapshot.search.as_str());
+    location.fragment = snapshot
+        .hash
+        .strip_prefix('#')
+        .map(str::to_string)
+        .filter(|fragment| !fragment.trim().is_empty());
+    location.canonicalize();
+    location
+}
+
+pub fn current_route_location() -> Option<RouteLocation> {
+    let snapshot = current_location()?;
+    Some(route_location_from_snapshot(&snapshot))
+}
+
+pub fn current_route_location_in_base_path(base_path: &str) -> Option<RouteLocation> {
+    let snapshot = current_location_in_base_path(base_path)?;
+    Some(route_location_from_snapshot(&snapshot))
+}
+
+pub fn hash_route_location_from_snapshot(snapshot: &WebLocationSnapshot) -> Option<RouteLocation> {
+    let hash = snapshot.hash.strip_prefix('#')?.trim();
+    if hash.is_empty() {
+        return Some(RouteLocation::default());
+    }
+
+    let (path_part, query_part) = if let Some((path, query)) = hash.split_once('?') {
+        (path, query)
+    } else if let Some(query) = hash.strip_prefix('?') {
+        ("/", query)
+    } else {
+        (hash, "")
+    };
+
+    let path = if path_part.trim().is_empty() {
+        "/".to_string()
+    } else if path_part.starts_with('/') {
+        path_part.to_string()
+    } else {
+        format!("/{path_part}")
+    };
+
+    let mut location = RouteLocation::from_path(path);
+    location.query = parse_query_pairs(query_part);
+    location.canonicalize();
+    Some(location)
+}
+
+pub fn current_hash_route_location() -> Option<RouteLocation> {
+    let snapshot = current_location()?;
+    hash_route_location_from_snapshot(&snapshot)
 }
 
 pub fn build_url(pathname: &str, search: &str, hash: &str) -> String {
@@ -291,7 +346,10 @@ fn normalize_hash(hash: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_url, build_url_in_base_path, current_location_in_base_path};
+    use super::{
+        WebLocationSnapshot, build_url, build_url_in_base_path, current_location_in_base_path,
+        hash_route_location_from_snapshot, route_location_from_snapshot,
+    };
 
     #[test]
     fn build_url_normalizes_components() {
@@ -312,5 +370,33 @@ mod tests {
     fn current_location_in_base_path_is_none_without_window() {
         // Native test environment does not provide `window`.
         assert!(current_location_in_base_path("/app").is_none());
+    }
+
+    #[test]
+    fn route_location_from_snapshot_preserves_nested_path_query_and_fragment() {
+        let snapshot = WebLocationSnapshot {
+            pathname: "/app/projects/42/files/7".to_string(),
+            search: "?tab=preview&lang=zh".to_string(),
+            hash: "#line-120".to_string(),
+        };
+
+        let location = route_location_from_snapshot(&snapshot);
+        assert_eq!(
+            location.to_url(),
+            "/app/projects/42/files/7?lang=zh&tab=preview#line-120"
+        );
+    }
+
+    #[test]
+    fn hash_route_location_from_snapshot_handles_nested_direct_link() {
+        let snapshot = WebLocationSnapshot {
+            pathname: "/app".to_string(),
+            search: String::new(),
+            hash: "#/docs/guides/getting-started?tab=api".to_string(),
+        };
+
+        let location = hash_route_location_from_snapshot(&snapshot)
+            .expect("hash route should parse from snapshot");
+        assert_eq!(location.to_url(), "/docs/guides/getting-started?tab=api");
     }
 }

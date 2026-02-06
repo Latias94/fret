@@ -74,9 +74,16 @@ Status legend:
   - Progress:
     - added wasm browser harness tests for `popstate`/`hashchange` subscriptions
     - added location/base-path restore checks under wasm target build
+    - added nested route direct-link parse checks for path-history and hash-routing
   - Evidence:
     - `ecosystem/fret-router/tests/web_wasm.rs`
-- `[ ]` Verify behavior under browser refresh and direct-link open for nested routes.
+- `[~]` Verify behavior under browser refresh and direct-link open for nested routes.
+  - Progress:
+    - direct-link open for nested routes is covered by snapshot-to-route conversion tests
+    - browser hard-refresh parity remains to be validated in end-to-end app harness
+  - Evidence:
+    - `ecosystem/fret-router/src/web.rs`
+    - `ecosystem/fret-router/tests/web_wasm.rs`
 
 ## Phase 3 - UI and state integration
 
