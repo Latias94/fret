@@ -4421,7 +4421,7 @@ Notes:
   - assert scroll offset remains stable across a resize stress sequence, and
   - validate scrollbar thumb sizing does not glitch (or at least stays within an acceptable tolerance).
 
-## 2026-02-06 14:26:00 (correctness gate; commit pending)
+## 2026-02-06 14:26:00 (correctness gate; commit `6c248d9e1`)
 
 Change:
 - Add per-frame scroll telemetry in UI diagnostics bundles (`debug.scroll_nodes[]`):
