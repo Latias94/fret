@@ -5974,23 +5974,8 @@ fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    vec![stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            vec![
-                shadcn::Kbd::new("Ctrl").into_element(cx),
-                shadcn::Kbd::new("K").into_element(cx),
-                shadcn::KbdGroup::new([
-                    shadcn::Kbd::new("⌘").into_element(cx),
-                    shadcn::Kbd::new("P").into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    )]
+    pages::preview_kbd(cx)
 }
-
 fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).clone();
 

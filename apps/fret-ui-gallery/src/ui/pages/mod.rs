@@ -21,6 +21,7 @@ mod input;
 mod input_group;
 mod input_otp;
 mod item;
+mod kbd;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -150,6 +151,10 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
 
 pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     item::preview_item(cx)
+}
+
+pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    kbd::preview_kbd(cx)
 }
 
 pub(super) fn preview_drawer(
