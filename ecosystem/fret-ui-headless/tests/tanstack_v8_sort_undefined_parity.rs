@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use fret_ui_headless::table::{ColumnDef, RowKey, SortUndefined, Table, TanStackValue};
+use fret_ui_headless::table::{ColumnDef, RowId, RowKey, SortUndefined, Table, TanStackValue};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -104,6 +104,7 @@ fn tanstack_v8_sort_undefined_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .build();
 

@@ -116,12 +116,15 @@ fn build_flat_core_row_model<'a, TData>(
     let mut root_rows: Vec<RowIndex> = Vec::with_capacity(data.len());
     let mut flat_rows: Vec<RowIndex> = Vec::with_capacity(data.len());
     let mut rows_by_key: HashMap<RowKey, RowIndex> = HashMap::with_capacity(data.len());
+    let mut rows_by_id: HashMap<super::RowId, RowIndex> = HashMap::with_capacity(data.len());
     let mut arena: Vec<Row<'a, TData>> = Vec::with_capacity(data.len());
 
     for (index, original) in data.iter().enumerate() {
         let key = get_row_key(original, index, None);
+        let id = super::RowId(Arc::<str>::from(key.0.to_string()));
         let row_index = arena.len();
         arena.push(Row {
+            id: id.clone(),
             key,
             original,
             index,
@@ -133,12 +136,14 @@ fn build_flat_core_row_model<'a, TData>(
         root_rows.push(row_index);
         flat_rows.push(row_index);
         rows_by_key.insert(key, row_index);
+        rows_by_id.insert(id, row_index);
     }
 
     RowModel {
         root_rows,
         flat_rows,
         rows_by_key,
+        rows_by_id,
         arena,
     }
 }

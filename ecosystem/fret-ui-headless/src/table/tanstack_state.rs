@@ -6,8 +6,8 @@ use serde_json::Value;
 
 use super::{
     ColumnFilter, ColumnId, ColumnPinningState, ColumnSizingInfoState, ColumnSizingState,
-    ColumnVisibilityState, ExpandingState, GroupingState, PaginationState, RowKey, RowPinningState,
-    SortSpec, TableState,
+    ColumnVisibilityState, ExpandingState, GroupingState, PaginationState, RowKey, RowModel,
+    RowPinningState, SortSpec, TableState,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +114,7 @@ pub enum TanStackStateError {
     InvalidRowSelectionKey { row_id: String },
     InvalidExpandedKey { row_id: String },
     InvalidRowPinningKey { row_id: String },
+    UnresolvedRowId { field: &'static str, row_id: String },
     InvalidIsResizingColumnValue { value: Value },
 }
 
@@ -136,6 +137,12 @@ impl std::fmt::Display for TanStackStateError {
                 write!(
                     f,
                     "tanstack rowPinning key must parse as u64 (row_id={row_id})"
+                )
+            }
+            Self::UnresolvedRowId { field, row_id } => {
+                write!(
+                    f,
+                    "tanstack row id must resolve via row model (field={field}, row_id={row_id})"
                 )
             }
             Self::InvalidIsResizingColumnValue { value } => {
@@ -496,6 +503,77 @@ impl TanStackTableState {
             .iter()
             .map(|s| ColumnId::from(s.as_str()))
             .collect();
+
+        Ok(out)
+    }
+
+    pub fn to_table_state_with_row_model<'a, TData>(
+        &self,
+        core_row_model: &RowModel<'a, TData>,
+    ) -> Result<TableState, TanStackStateError> {
+        fn resolve_row_key<'a, TData>(
+            core: &RowModel<'a, TData>,
+            field: &'static str,
+            row_id: &str,
+        ) -> Result<RowKey, TanStackStateError> {
+            if let Some(index) = core.row_by_id(row_id) {
+                let row = core
+                    .row(index)
+                    .ok_or_else(|| TanStackStateError::UnresolvedRowId {
+                        field,
+                        row_id: row_id.to_string(),
+                    })?;
+                return Ok(row.key);
+            }
+            if let Ok(parsed) = row_id.parse::<u64>() {
+                return Ok(RowKey(parsed));
+            }
+            Err(TanStackStateError::UnresolvedRowId {
+                field,
+                row_id: row_id.to_string(),
+            })
+        }
+
+        let mut base = self.clone();
+        base.expanded = None;
+        base.row_pinning = None;
+        base.row_selection = None;
+
+        let mut out = base.to_table_state()?;
+
+        if let Some(sel) = self.row_selection.as_ref() {
+            out.row_selection = sel
+                .iter()
+                .filter(|(_k, v)| **v)
+                .map(|(k, _)| resolve_row_key(core_row_model, "rowSelection", k))
+                .collect::<Result<_, _>>()?;
+        }
+
+        if let Some(expanded) = self.expanded.as_ref() {
+            out.expanding = match expanded {
+                TanStackExpandedState::All(true) => ExpandingState::All,
+                TanStackExpandedState::All(false) => ExpandingState::default(),
+                TanStackExpandedState::Map(map) => ExpandingState::from_iter(
+                    map.iter()
+                        .filter(|(_k, v)| **v)
+                        .map(|(k, _)| resolve_row_key(core_row_model, "expanded", k))
+                        .collect::<Result<Vec<_>, _>>()?,
+                ),
+            };
+        }
+
+        if let Some(pinning) = self.row_pinning.as_ref() {
+            let mut next = RowPinningState::default();
+            for id in &pinning.top {
+                next.top
+                    .push(resolve_row_key(core_row_model, "rowPinning.top", id)?);
+            }
+            for id in &pinning.bottom {
+                next.bottom
+                    .push(resolve_row_key(core_row_model, "rowPinning.bottom", id)?);
+            }
+            out.row_pinning = next;
+        }
 
         Ok(out)
     }

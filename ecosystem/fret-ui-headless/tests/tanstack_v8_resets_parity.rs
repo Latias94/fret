@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, RowKey, Table, TableState, TanStackTableOptions, TanStackTableState,
+    ColumnDef, RowId, RowKey, Table, TableState, TanStackTableOptions, TanStackTableState,
     contains_ascii_case_insensitive,
 };
 use serde::Deserialize;
@@ -134,6 +134,7 @@ fn tanstack_v8_resets_parity() {
             let table = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options)

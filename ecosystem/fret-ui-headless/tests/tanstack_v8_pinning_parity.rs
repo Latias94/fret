@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    ColumnDef, ColumnSizingRegion, FilteringFnSpec, RowKey, RowPinPosition, Table, TableState,
-    TanStackTableOptions, TanStackTableState, TanStackValue,
+    ColumnDef, ColumnSizingRegion, FilteringFnSpec, RowId, RowKey, RowPinPosition, Table,
+    TableState, TanStackTableOptions, TanStackTableState, TanStackValue,
 };
 use serde::Deserialize;
 
@@ -261,6 +261,7 @@ fn tanstack_v8_pinning_parity() {
                 .columns(columns.clone())
                 .global_filter_fn(FilteringFnSpec::Auto)
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options);
@@ -321,6 +322,7 @@ fn tanstack_v8_pinning_parity() {
             .columns(columns.clone())
             .global_filter_fn(FilteringFnSpec::Auto)
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .initial_state(initial_state)
             .state(state)
             .options(options);

@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, RowKey, Table, TableState, TanStackTableOptions, TanStackTableState, TanStackValue,
+    ColumnDef, RowId, RowKey, Table, TableState, TanStackTableOptions, TanStackTableState,
+    TanStackValue,
 };
 use serde::Deserialize;
 
@@ -109,6 +110,7 @@ fn tanstack_v8_faceting_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .build();

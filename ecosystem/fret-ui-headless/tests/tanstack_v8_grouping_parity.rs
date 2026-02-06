@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    Aggregation, ColumnDef, GroupedRowKind, GroupedRowModel, RowKey, RowPinPosition, Table,
+    Aggregation, ColumnDef, GroupedRowKind, GroupedRowModel, RowId, RowKey, RowPinPosition, Table,
     TableState, TanStackTableOptions, TanStackTableState, grouped_row_model_from_leaf,
     sort_grouped_row_indices_in_place,
 };
@@ -402,6 +402,7 @@ fn tanstack_v8_grouping_parity() {
             let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options);
@@ -483,6 +484,7 @@ fn tanstack_v8_grouping_parity() {
         let mut builder = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options);
 
