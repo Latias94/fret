@@ -17,6 +17,7 @@ mod dialog;
 mod field;
 mod form;
 mod hover_card;
+mod input;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -127,6 +128,13 @@ pub(super) fn preview_forms(
 
 pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     hover_card::preview_hover_card(cx)
+}
+
+pub(super) fn preview_input(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<String>,
+) -> Vec<AnyElement> {
+    input::preview_input(cx, value)
 }
 
 pub(super) fn preview_drawer(

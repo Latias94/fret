@@ -5732,20 +5732,7 @@ fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<A
 }
 
 fn preview_input(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2).items_start(),
-        move |cx| {
-            vec![
-                shadcn::Label::new("Email").into_element(cx),
-                shadcn::Input::new(value)
-                    .a11y_label("Email")
-                    .placeholder("name@example.com")
-                    .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
-                    .into_element(cx),
-            ]
-        },
-    )]
+    pages::preview_input(cx, value)
 }
 
 fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
