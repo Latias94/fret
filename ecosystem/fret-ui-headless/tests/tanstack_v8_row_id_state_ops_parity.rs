@@ -30,6 +30,12 @@ struct FixtureExpect {
     expanded: RowModelSnapshot,
     paginated: RowModelSnapshot,
     row_model: RowModelSnapshot,
+    selected: RowModelSnapshot,
+    filtered_selected: RowModelSnapshot,
+    is_all_rows_selected: bool,
+    is_some_rows_selected: bool,
+    is_all_page_rows_selected: bool,
+    is_some_page_rows_selected: bool,
     #[serde(default)]
     next_state: Option<serde_json::Value>,
 }
@@ -398,6 +404,57 @@ fn tanstack_v8_row_id_state_ops_parity() {
             assert_eq!(
                 paginated.flat, snap.expect.row_model.flat,
                 "snapshot {} row_model flat mismatch",
+                snap.id
+            );
+        }
+
+        let selected = snapshot_row_model(table.selected_row_model());
+        assert_eq!(
+            selected.root, snap.expect.selected.root,
+            "snapshot {} selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            selected.flat, snap.expect.selected.flat,
+            "snapshot {} selected flat mismatch",
+            snap.id
+        );
+
+        let filtered_selected = snapshot_row_model(table.filtered_selected_row_model());
+        assert_eq!(
+            filtered_selected.root, snap.expect.filtered_selected.root,
+            "snapshot {} filtered_selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            filtered_selected.flat, snap.expect.filtered_selected.flat,
+            "snapshot {} filtered_selected flat mismatch",
+            snap.id
+        );
+
+        if !grouping_active {
+            assert_eq!(
+                table.is_all_rows_selected(),
+                snap.expect.is_all_rows_selected,
+                "snapshot {} is_all_rows_selected mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.is_some_rows_selected(),
+                snap.expect.is_some_rows_selected,
+                "snapshot {} is_some_rows_selected mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.is_all_page_rows_selected(),
+                snap.expect.is_all_page_rows_selected,
+                "snapshot {} is_all_page_rows_selected mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.is_some_page_rows_selected(),
+                snap.expect.is_some_page_rows_selected,
+                "snapshot {} is_some_page_rows_selected mismatch",
                 snap.id
             );
         }

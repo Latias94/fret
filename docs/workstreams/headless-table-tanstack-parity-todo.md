@@ -122,7 +122,8 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
       - Done (leaf rows): selection/expanding by-id updaters are available alongside existing key paths.
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_selection_updater_by_id`, `row_expanding_updater_by_id`)
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_row_id_updaters_cover_selection_and_expanding`)
-      - Remaining: grouped-row selection propagation semantics are still pending.
+      - Done (grouped edges): grouped-row selection propagation is parity-gated for select-children/clear/two-level-group cases.
+        - Snapshots: `row_id_state_ops_group_selection_select_children_false`, `row_id_state_ops_group_selection_toggle_off`, `row_id_state_ops_nested_group_selection`
     - [~] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
       - Done (smoke): grouped id lookup + pinning-by-id gate exists.
       - Done (smoke): id-keyed selection/expanding updater coverage exists for leaf rows.
@@ -131,7 +132,8 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
         - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_state_ops.json`
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_state_ops_parity.rs`
         - Fixture generator: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`--case row_id_state_ops`)
-      - Remaining: broaden parity gates to grouped-row selection propagation edge cases and controlled-hook variants.
+      - Done (fixture parity, grouped selection edges): `select_children=false`, toggle-off clearing, and nested grouped selection.
+      - Remaining: controlled-hook variants for grouped RowId paths (`onRowSelectionChange` / `onExpandedChange` / `onRowPinningChange`).
   - Note: current TanStack JSON state round-trip for row-keyed maps (rowSelection/expanded/rowPinning)
     still assumes numeric ids; this must be generalized to `RowId` strings as part of `HTP-id-015`.
 

@@ -180,6 +180,9 @@ type SnapshotId =
   | "expanding_action_toggle_all"
   | "row_id_state_ops_leaf_selection_prefixed"
   | "row_id_state_ops_group_selection"
+  | "row_id_state_ops_group_selection_select_children_false"
+  | "row_id_state_ops_group_selection_toggle_off"
+  | "row_id_state_ops_nested_group_selection"
   | "row_id_state_ops_group_expanding"
   | "row_id_state_ops_group_pinning"
   | "row_id_state_ops_nested_group_pinning"
@@ -3878,6 +3881,40 @@ function snapshotColumnPinning(
         {},
         { grouping: ["status"] },
         [{ type: "toggleRowSelected", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_selection_select_children_false",
+        {},
+        { grouping: ["status"] },
+        [
+          {
+            type: "toggleRowSelected",
+            row_id: "status:Running",
+            value: true,
+            select_children: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_selection_toggle_off",
+        {},
+        { grouping: ["status"] },
+        [
+          { type: "toggleRowSelected", row_id: "status:Running", value: true },
+          { type: "toggleRowSelected", row_id: "status:Running", value: false },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_nested_group_selection",
+        {},
+        { grouping: ["status", "name"] },
+        [
+          {
+            type: "toggleRowSelected",
+            row_id: "status:Running>name:Renderer",
+            value: true,
+          },
+        ],
       ),
       mkActions(
         "row_id_state_ops_group_expanding",
