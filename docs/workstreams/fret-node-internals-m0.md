@@ -1,4 +1,4 @@
-﻿# fret-node Internals M0 (Derived Internals / Geometry / Hit-Testing)
+# fret-node Internals M0 (Derived Internals / Geometry / Hit-Testing)
 
 This document is the **contract + execution plan** for fearless refactors of `ecosystem/fret-node`
 internals: derived geometry, spatial indexing, coordinate-space conversions, and deterministic
@@ -276,6 +276,10 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_menu_searcher_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_animation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_helper_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
