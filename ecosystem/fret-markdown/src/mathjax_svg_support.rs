@@ -1,22 +1,18 @@
-use std::{
-    collections::HashMap,
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
-};
+use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{
     Edges, FontId, FontWeight, Px, SvgFit, TextOverflow, TextSlant, TextStyle, TextWrap,
 };
+use fret_query::ui::QueryElementContextExt as _;
+use fret_query::{QueryError, QueryKey, QueryPolicy, QueryStatus};
 use fret_ui::SvgSource;
 use fret_ui::element::{
     AnyElement, ContainerProps, Length, ScrollAxis, ScrollProps, SvgIconProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-
-use fret_executor::{Executors, Inbox, InboxDrainer, InboxSender};
-use fret_runtime::DispatcherHandle;
+use fret_ui_kit::declarative::ModelWatchExt as _;
 
 use super::{InlineMathInfo, MarkdownTheme};
 
@@ -26,11 +22,7 @@ enum MathJaxMode {
     Display,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct MathJaxKey {
-    mode: MathJaxMode,
-    latex: String,
-}
+const MATHJAX_SVG_NAMESPACE: &str = "fret-markdown.mathjax_svg.v1";
 
 #[derive(Debug, Clone)]
 struct MathJaxSvgReady {
@@ -45,72 +37,15 @@ enum MathJaxSvgEntry {
     Error(Arc<str>),
 }
 
-#[derive(Debug, Clone)]
-struct MathJaxInboxMsg {
-    window: fret_core::AppWindowId,
-    key: MathJaxKey,
-    result: Result<MathJaxSvgReady, Arc<str>>,
-}
-
-#[derive(Clone)]
-struct MathJaxRuntime {
-    inner: Arc<MathJaxRuntimeInner>,
-}
-
-struct MathJaxRuntimeInner {
-    exec: Executors,
-    inbox: Inbox<MathJaxInboxMsg>,
-    cache: Mutex<HashMap<MathJaxKey, MathJaxSvgEntry>>,
-    registered: AtomicBool,
-}
-
-impl MathJaxRuntime {
-    fn new(dispatcher: DispatcherHandle) -> Self {
-        Self {
-            inner: Arc::new(MathJaxRuntimeInner {
-                exec: Executors::new(dispatcher),
-                inbox: Inbox::new(Default::default()),
-                cache: Mutex::new(HashMap::new()),
-                registered: AtomicBool::new(false),
-            }),
-        }
+fn mathjax_svg_query_policy() -> QueryPolicy {
+    // MathJax SVG conversion is deterministic and purely local, so we treat it as "fresh" for a
+    // long time and rely on cache eviction to bound memory usage.
+    QueryPolicy {
+        stale_time: Duration::from_secs(60 * 60 * 24 * 365),
+        cache_time: Duration::from_secs(60 * 10),
+        keep_previous_data_while_loading: true,
+        ..Default::default()
     }
-}
-
-fn mathjax_inbox_drainer(runtime: Arc<MathJaxRuntimeInner>) -> InboxDrainer<MathJaxInboxMsg> {
-    InboxDrainer::new(runtime.inbox.clone(), move |host, _window, msg| {
-        if let Ok(mut cache) = runtime.cache.lock() {
-            match msg.result {
-                Ok(ready) => {
-                    cache.insert(msg.key, MathJaxSvgEntry::Ready(ready));
-                }
-                Err(err) => {
-                    cache.insert(msg.key, MathJaxSvgEntry::Error(err));
-                }
-            }
-        }
-        host.request_redraw(msg.window);
-    })
-}
-
-fn mathjax_runtime<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Option<MathJaxRuntime> {
-    let dispatcher = cx.app.global::<DispatcherHandle>()?.clone();
-    let runtime = cx.app.with_global_mut_untracked(
-        || MathJaxRuntime::new(dispatcher),
-        |runtime, _host| runtime.clone(),
-    );
-
-    if !runtime.inner.registered.swap(true, Ordering::SeqCst) {
-        let inner = runtime.inner.clone();
-        cx.app.with_global_mut_untracked(
-            fret_runtime::InboxDrainRegistry::default,
-            |registry, _host| {
-                registry.register(Arc::new(mathjax_inbox_drainer(inner)));
-            },
-        );
-    }
-
-    Some(runtime)
 }
 
 pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
@@ -119,7 +54,7 @@ pub(super) fn render_math_block_mathjax_svg<H: UiHost>(
     markdown_theme: MarkdownTheme,
     latex: Arc<str>,
 ) -> AnyElement {
-    let entry = mathjax_svg_entry(cx, MathJaxMode::Display, latex.as_ref());
+    let entry = mathjax_svg_entry(cx, MathJaxMode::Display, latex.clone());
 
     let mut scroll_props = ScrollProps::default();
     scroll_props.axis = ScrollAxis::X;
@@ -182,7 +117,7 @@ pub(super) fn render_inline_math_mathjax_svg<H: UiHost>(
     markdown_theme: MarkdownTheme,
     info: InlineMathInfo,
 ) -> AnyElement {
-    let entry = mathjax_svg_entry(cx, MathJaxMode::Inline, info.latex.as_ref());
+    let entry = mathjax_svg_entry(cx, MathJaxMode::Inline, info.latex.clone());
     match entry {
         MathJaxSvgEntry::Ready(ready) => render_inline_math_svg(
             cx,
@@ -270,128 +205,102 @@ fn render_inline_math_source<H: UiHost>(
 fn mathjax_svg_entry<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     mode: MathJaxMode,
-    latex: &str,
+    latex: Arc<str>,
 ) -> MathJaxSvgEntry {
-    fn spawn_mathjax_svg(
-        runtime: &MathJaxRuntime,
-        window: fret_core::AppWindowId,
-        key: MathJaxKey,
-        inbox: InboxSender<MathJaxInboxMsg>,
-    ) {
-        let latex = key.latex.clone();
-        runtime
-            .inner
-            .exec
-            .spawn_background_to_inbox(Some(window), inbox, move |_| {
-                tracing::debug!(
-                    target: "fret_markdown::math",
-                    mode = ?key.mode,
-                    latex_len = latex.len(),
-                    "mathjax svg: convert queued"
-                );
-
-                let result = std::panic::catch_unwind(|| match key.mode {
-                    MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(&latex),
-                    MathJaxMode::Display => mathjax_svg::convert_to_svg(&latex),
-                });
-
-                match result {
-                    Ok(Ok(svg)) => {
-                        let has_current_color =
-                            svg.contains("currentColor") || svg.contains("currentcolor");
-                        let svg = if has_current_color {
-                            svg.replace("currentColor", "#000000")
-                                .replace("currentcolor", "#000000")
-                        } else {
-                            svg
-                        };
-
-                        tracing::debug!(
-                            target: "fret_markdown::math",
-                            mode = ?key.mode,
-                            latex_len = latex.len(),
-                            has_current_color,
-                            "mathjax svg: converted"
-                        );
-
-                        let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
-                        MathJaxInboxMsg {
-                            window,
-                            key,
-                            result: Ok(MathJaxSvgReady {
-                                svg_bytes: Arc::<[u8]>::from(svg.into_bytes()),
-                                aspect_ratio,
-                            }),
-                        }
-                    }
-                    Ok(Err(err)) => {
-                        tracing::warn!(
-                            target: "fret_markdown::math",
-                            mode = ?key.mode,
-                            latex_len = latex.len(),
-                            error = %err,
-                            "mathjax svg: convert failed"
-                        );
-                        MathJaxInboxMsg {
-                            window,
-                            key,
-                            result: Err(Arc::<str>::from(err.to_string())),
-                        }
-                    }
-                    Err(_) => MathJaxInboxMsg {
-                        window,
-                        key,
-                        result: Err(Arc::<str>::from("mathjax svg: panic")),
-                    },
-                }
-            })
-            .detach();
-    }
-
-    let latex = latex.trim();
-    if latex.is_empty() {
+    let latex_trimmed = latex.trim();
+    if latex_trimmed.is_empty() {
         return MathJaxSvgEntry::Error(Arc::<str>::from("empty latex"));
     }
 
-    let key = MathJaxKey {
-        mode,
-        latex: latex.to_string(),
+    let key = QueryKey::<MathJaxSvgReady>::new_named(
+        MATHJAX_SVG_NAMESPACE,
+        &(mode, latex_trimmed),
+        "mathjax_svg",
+    );
+    let policy = mathjax_svg_query_policy();
+
+    let latex_owned: Arc<str> = if latex_trimmed.len() == latex.len() {
+        latex.clone()
+    } else {
+        Arc::<str>::from(latex_trimmed.to_string())
     };
 
-    let Some(runtime) = mathjax_runtime(cx) else {
-        return MathJaxSvgEntry::Error(Arc::<str>::from("mathjax svg: dispatcher unavailable"));
-    };
+    let handle = cx.use_query(key, policy, move |_token| {
+        let latex: &str = latex_owned.as_ref();
 
-    let mut needs_redraw = false;
-    let mut should_spawn = false;
+        tracing::debug!(
+            target: "fret_markdown::math",
+            mode = ?mode,
+            latex_len = latex.len(),
+            "mathjax svg: convert queued"
+        );
 
-    let entry = match runtime.inner.cache.lock() {
-        Ok(mut cache) => match cache.get(&key) {
-            Some(existing) => {
-                if matches!(existing, MathJaxSvgEntry::Loading) {
-                    needs_redraw = true;
-                }
-                existing.clone()
+        let result = catch_unwind(AssertUnwindSafe(|| match mode {
+            MathJaxMode::Inline => mathjax_svg::convert_to_svg_inline(latex),
+            MathJaxMode::Display => mathjax_svg::convert_to_svg(latex),
+        }));
+
+        match result {
+            Ok(Ok(svg)) => {
+                let has_current_color =
+                    svg.contains("currentColor") || svg.contains("currentcolor");
+                let svg = if has_current_color {
+                    svg.replace("currentColor", "#000000")
+                        .replace("currentcolor", "#000000")
+                } else {
+                    svg
+                };
+
+                tracing::debug!(
+                    target: "fret_markdown::math",
+                    mode = ?mode,
+                    latex_len = latex.len(),
+                    has_current_color,
+                    "mathjax svg: converted"
+                );
+
+                let aspect_ratio = svg_viewbox_aspect_ratio(&svg);
+                Ok(MathJaxSvgReady {
+                    svg_bytes: Arc::<[u8]>::from(svg.into_bytes()),
+                    aspect_ratio,
+                })
             }
-            None => {
-                cache.insert(key.clone(), MathJaxSvgEntry::Loading);
-                needs_redraw = true;
-                should_spawn = true;
+            Ok(Err(err)) => {
+                tracing::warn!(
+                    target: "fret_markdown::math",
+                    mode = ?mode,
+                    latex_len = latex.len(),
+                    error = %err,
+                    "mathjax svg: convert failed"
+                );
+                Err(QueryError::permanent(err.to_string()))
+            }
+            Err(_) => Err(QueryError::permanent("mathjax svg: panic")),
+        }
+    });
+
+    let state = cx
+        .watch_model(handle.model())
+        .layout()
+        .cloned()
+        .unwrap_or_default();
+
+    let Some(data) = state.data else {
+        return match state.status {
+            QueryStatus::Error => MathJaxSvgEntry::Error(
+                state
+                    .error
+                    .as_ref()
+                    .map(|e| e.message().clone())
+                    .unwrap_or_else(|| Arc::<str>::from("mathjax svg: error")),
+            ),
+            QueryStatus::Idle | QueryStatus::Loading | QueryStatus::Success => {
                 MathJaxSvgEntry::Loading
             }
-        },
-        Err(_) => MathJaxSvgEntry::Error(Arc::<str>::from("mathjax svg cache lock poisoned")),
+        };
     };
 
-    if needs_redraw {
-        cx.app.request_redraw(cx.window);
-    }
-
-    if should_spawn {
-        spawn_mathjax_svg(&runtime, cx.window, key, runtime.inner.inbox.sender());
-    }
-
-    entry
+    MathJaxSvgEntry::Ready((*data).clone())
 }
 
 fn svg_viewbox_aspect_ratio(svg: &str) -> Option<f32> {
@@ -433,110 +342,24 @@ fn svg_viewbox_aspect_ratio(svg: &str) -> Option<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 
-    use fret_runtime::{
-        DispatchPriority, Dispatcher, ExecCapabilities, InboxDrain, InboxDrainHost, Runnable,
-    };
-
-    #[derive(Default)]
-    struct TestDispatcher {
-        background: Mutex<Vec<Runnable>>,
-        wakes: AtomicUsize,
-    }
-
-    impl TestDispatcher {
-        fn drain_background(&self) {
-            let tasks = {
-                let Ok(mut guard) = self.background.lock() else {
-                    return;
-                };
-                std::mem::take(&mut *guard)
-            };
-            for task in tasks {
-                task();
-            }
-        }
-    }
-
-    impl Dispatcher for TestDispatcher {
-        fn dispatch_on_main_thread(&self, _task: Runnable) {}
-
-        fn dispatch_background(&self, task: Runnable, _priority: DispatchPriority) {
-            let Ok(mut guard) = self.background.lock() else {
-                return;
-            };
-            guard.push(task);
-        }
-
-        fn dispatch_after(&self, _delay: std::time::Duration, _task: Runnable) {}
-
-        fn wake(&self, _window: Option<fret_core::AppWindowId>) {
-            self.wakes.fetch_add(1, AtomicOrdering::Relaxed);
-        }
-
-        fn exec_capabilities(&self) -> ExecCapabilities {
-            ExecCapabilities::default()
-        }
-    }
-
-    #[derive(Default)]
-    struct TestDrainHost {
-        models: fret_runtime::ModelStore,
-        redraws: Vec<fret_core::AppWindowId>,
-        effects: Vec<fret_runtime::Effect>,
-    }
-
-    impl InboxDrainHost for TestDrainHost {
-        fn request_redraw(&mut self, window: fret_core::AppWindowId) {
-            self.redraws.push(window);
-        }
-
-        fn push_effect(&mut self, effect: fret_runtime::Effect) {
-            self.effects.push(effect);
-        }
-
-        fn models_mut(&mut self) -> &mut fret_runtime::ModelStore {
-            &mut self.models
-        }
+    #[test]
+    fn svg_viewbox_aspect_ratio_parses_basic_dimensions() {
+        let svg = "<svg viewBox=\"0 0 4 2\"/>";
+        assert_eq!(svg_viewbox_aspect_ratio(svg), Some(2.0));
     }
 
     #[test]
-    fn mathjax_background_to_inbox_wakes_and_drains_deterministically() {
-        let dispatcher = Arc::new(TestDispatcher::default());
-        let runtime = MathJaxRuntime::new(dispatcher.clone());
-        let drainer = mathjax_inbox_drainer(runtime.inner.clone());
+    fn svg_viewbox_aspect_ratio_handles_single_quotes_and_commas() {
+        let svg = "<svg viewBox='0,0, 9, 3'/>";
+        assert_eq!(svg_viewbox_aspect_ratio(svg), Some(3.0));
+    }
 
-        let window = fret_core::AppWindowId::default();
-        let key = MathJaxKey {
-            mode: MathJaxMode::Inline,
-            latex: "x".to_string(),
-        };
-
-        let svg_bytes: Arc<[u8]> = Arc::from("<svg viewBox=\"0 0 1 1\"/>".as_bytes());
-        let msg = MathJaxInboxMsg {
-            window,
-            key: key.clone(),
-            result: Ok(MathJaxSvgReady {
-                svg_bytes,
-                aspect_ratio: Some(1.0),
-            }),
-        };
-
-        runtime
-            .inner
-            .exec
-            .spawn_background_to_inbox(Some(window), runtime.inner.inbox.sender(), move |_| msg)
-            .detach();
-
-        dispatcher.drain_background();
-        assert_eq!(dispatcher.wakes.load(AtomicOrdering::Relaxed), 1);
-
-        let mut host = TestDrainHost::default();
-        assert!(drainer.drain(&mut host, None));
-        assert_eq!(host.redraws, vec![window]);
-
-        let cache = runtime.inner.cache.lock().unwrap();
-        assert!(matches!(cache.get(&key), Some(MathJaxSvgEntry::Ready(_))));
+    #[test]
+    fn svg_viewbox_aspect_ratio_rejects_missing_or_invalid_values() {
+        assert_eq!(svg_viewbox_aspect_ratio("<svg/>"), None);
+        assert_eq!(svg_viewbox_aspect_ratio("<svg viewBox=\"0 0 0 1\"/>"), None);
+        assert_eq!(svg_viewbox_aspect_ratio("<svg viewBox=\"0 0 1 0\"/>"), None);
+        assert_eq!(svg_viewbox_aspect_ratio("<svg viewBox=\"0 0 x 1\"/>"), None);
     }
 }

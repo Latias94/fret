@@ -57,7 +57,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] alert
 - [ ] alert-dialog
 - [ ] aspect-ratio
-- [ ] avatar
+- [~] avatar — base demo present; still missing upstream examples (badge/group/sizes/dropdown/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_avatar`, `ecosystem/fret-ui-shadcn/src/avatar.rs`)
 - [~] badge — examples mirrored; missing upstream variants (`apps/fret-ui-gallery/src/ui.rs::preview_badge`)
 - [ ] breadcrumb
 - [~] button (page examples re-ordered + expanded; still validating interactions)
@@ -90,10 +90,10 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] menubar
 - [ ] native-select
 - [ ] navigation-menu
-- [ ] pagination
-- [ ] popover
-- [ ] progress
-- [ ] radio-group
+- [x] pagination — examples mirrored (Demo/Simple/Icons Only/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_pagination`, `ecosystem/fret-ui-shadcn/src/pagination.rs`)
+- [x] popover — examples mirrored (Demo/Basic/Align/With Form/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_popover`, `ecosystem/fret-ui-shadcn/src/popover.rs`)
+- [x] progress — examples mirrored (Demo/Label/Controlled/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_progress`, `ecosystem/fret-ui-shadcn/src/progress.rs`)
+- [x] radio-group — examples mirrored (Demo/Description/Choice Card/Fieldset/Disabled/Invalid/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_radio_group`, `ecosystem/fret-ui-shadcn/src/radio_group.rs`, `ecosystem/fret-ui-shadcn/src/radio_group.rs::tests::*radio_group_*`)
 - [ ] resizable
 - [ ] scroll-area
 - [~] select (group semantics + default alignment audited; needs full docs example order)
@@ -101,7 +101,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [ ] sheet
 - [ ] sidebar
 - [ ] skeleton
-- [ ] slider
+- [~] slider — demo/range/disabled/RTL/vertical wired; still needs upstream example ordering + multiple thumbs + controlled example (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
 - [ ] sonner
 - [ ] spinner
 - [ ] switch

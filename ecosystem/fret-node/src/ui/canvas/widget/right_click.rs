@@ -3,7 +3,6 @@ use std::sync::Arc;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use crate::core::EdgeId;
 use crate::ui::commands::{
     CMD_NODE_GRAPH_CREATE_GROUP, CMD_NODE_GRAPH_DELETE_SELECTION,
     CMD_NODE_GRAPH_GROUP_BRING_TO_FRONT, CMD_NODE_GRAPH_GROUP_RENAME,
@@ -14,7 +13,7 @@ use crate::ui::commands::{
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
 use super::super::state::{ContextMenuState, ContextMenuTarget, ViewSnapshot};
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -128,16 +127,9 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
         let index = index.clone();
         this.graph
             .read_ref(cx.app, |graph| {
-                let mut scratch: Vec<EdgeId> = Vec::new();
-                this.hit_edge(
-                    graph,
-                    snapshot,
-                    geom.as_ref(),
-                    index.as_ref(),
-                    position,
-                    zoom,
-                    &mut scratch,
-                )
+                let mut scratch = HitTestScratch::default();
+                let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
+                this.hit_edge(graph, snapshot, &mut ctx, position)
             })
             .ok()
             .flatten()

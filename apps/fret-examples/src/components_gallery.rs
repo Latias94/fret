@@ -1380,36 +1380,6 @@ impl ComponentsGalleryDriver {
         state.root = Some(root);
     }
 
-    fn handle_tree_command(
-        app: &mut App,
-        items: Model<Vec<TreeItem>>,
-        state: Model<TreeState>,
-        command: &CommandId,
-    ) -> bool {
-        if let Some(id) = command.as_str().strip_prefix("tree.select.") {
-            let Ok(id) = id.parse::<TreeItemId>() else {
-                return true;
-            };
-            let _ = app.models_mut().update(&state, |s| s.selected = Some(id));
-            return true;
-        }
-
-        if let Some(id) = command.as_str().strip_prefix("tree.toggle.") {
-            let Ok(id) = id.parse::<TreeItemId>() else {
-                return true;
-            };
-            let _ = app.models_mut().update(&state, |s| {
-                if !s.expanded.insert(id) {
-                    s.expanded.remove(&id);
-                }
-            });
-            return true;
-        }
-
-        let _ = items;
-        false
-    }
-
     fn handle_tree_key_event(
         app: &mut App,
         items: Model<Vec<TreeItem>>,
@@ -1629,25 +1599,6 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             return;
         }
 
-        if ComponentsGalleryDriver::handle_tree_command(
-            app,
-            state.items.clone(),
-            state.tree_state.clone(),
-            &command,
-        ) {
-            return;
-        }
-
-        if let Some(id) = command.as_str().strip_prefix("gallery.tree.action.") {
-            tracing::info!(%id, "gallery tree row action");
-            return;
-        }
-
-        if let Some(id) = command.as_str().strip_prefix("app.tree.action.") {
-            tracing::info!(%id, "app tree row action");
-            return;
-        }
-
         if command.as_str() == "gallery.close" {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
@@ -1669,15 +1620,50 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             let _ = app.models_mut().update(&state.progress, |v| *v = 35.0);
         }
 
-        if let Some(item) = command.as_str().strip_prefix("gallery.dropdown.select.") {
-            let msg: Arc<str> = Arc::from(format!("dropdown.select.{item}").into_boxed_str());
-            let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
-        }
-
-        if let Some(item) = command.as_str().strip_prefix("gallery.cmdk.select.") {
-            let msg: Arc<str> = Arc::from(format!("cmdk.select.{item}").into_boxed_str());
-            let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
-            return;
+        match command.as_str() {
+            "gallery.dropdown.select.apple" => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("dropdown.select.apple");
+                });
+                return;
+            }
+            "gallery.dropdown.select.banana" => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("dropdown.select.banana");
+                });
+                return;
+            }
+            "gallery.cmdk.select.open" => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmdk.select.open");
+                });
+                return;
+            }
+            "gallery.cmdk.select.save" => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmdk.select.save");
+                });
+                return;
+            }
+            "gallery.cmdk.select.close" => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmdk.select.close");
+                });
+                return;
+            }
+            "gallery.cmdk.select.settings" => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmdk.select.settings");
+                });
+                return;
+            }
+            "gallery.cmdk.select.disabled" => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("cmdk.select.disabled");
+                });
+                return;
+            }
+            _ => {}
         }
 
         if command.as_str() == "gallery.context_menu.action" {

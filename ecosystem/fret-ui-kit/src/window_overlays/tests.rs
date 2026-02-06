@@ -726,6 +726,121 @@ fn render_base_with_trigger_and_underlay(
     )
 }
 
+fn render_base_with_compound_trigger(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    open: Model<bool>,
+) -> (GlobalElementId, GlobalElementId, GlobalElementId) {
+    begin_frame(app, window);
+
+    let mut field_id: Option<GlobalElementId> = None;
+    let mut input_trigger_id: Option<GlobalElementId> = None;
+    let mut trailing_icon_id: Option<GlobalElementId> = None;
+
+    let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+        vec![cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout.size.height = Length::Fill;
+                    layout
+                },
+                ..Default::default()
+            },
+            |cx| {
+                let field = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                left: Some(Px(0.0)),
+                                top: Some(Px(0.0)),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(Px(160.0)),
+                                height: Length::Px(Px(32.0)),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    |cx| {
+                        vec![
+                            cx.pressable_with_id(
+                                PressableProps {
+                                    layout: LayoutStyle {
+                                        position: PositionStyle::Absolute,
+                                        inset: InsetStyle {
+                                            left: Some(Px(0.0)),
+                                            top: Some(Px(0.0)),
+                                            ..Default::default()
+                                        },
+                                        size: SizeStyle {
+                                            width: Length::Px(Px(112.0)),
+                                            height: Length::Px(Px(32.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    cx.pressable_toggle_bool(&open);
+                                    input_trigger_id = Some(id);
+                                    Vec::new()
+                                },
+                            ),
+                            cx.pressable_with_id(
+                                PressableProps {
+                                    layout: LayoutStyle {
+                                        position: PositionStyle::Absolute,
+                                        inset: InsetStyle {
+                                            left: Some(Px(112.0)),
+                                            top: Some(Px(0.0)),
+                                            ..Default::default()
+                                        },
+                                        size: SizeStyle {
+                                            width: Length::Px(Px(48.0)),
+                                            height: Length::Px(Px(32.0)),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    enabled: true,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                |cx, _st, id| {
+                                    cx.pressable_toggle_bool(&open);
+                                    trailing_icon_id = Some(id);
+                                    Vec::new()
+                                },
+                            ),
+                        ]
+                    },
+                );
+                field_id = Some(field.id);
+                vec![field]
+            },
+        )]
+    });
+    ui.set_root(root);
+
+    (
+        field_id.expect("field id"),
+        input_trigger_id.expect("input trigger id"),
+        trailing_icon_id.expect("trailing icon id"),
+    )
+}
+
 fn render_base_with_trigger_and_underlay_pointer_move(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -1575,6 +1690,128 @@ fn dismissible_popover_treats_trigger_as_implicit_branch() {
         }),
     );
 
+    assert_eq!(app.models().get_copied(&open), Some(false));
+}
+
+#[test]
+fn dismissible_popover_compound_trigger_branches_prevent_toggle_race() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    let open = app.models_mut().insert(false);
+
+    let mut services = FakeServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(300.0), Px(200.0)),
+    );
+
+    // First frame: base layer with a compound trigger surface (input + trailing icon).
+    let (_field, _input_trigger, _icon) = render_base_with_compound_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Open via click on the input portion (left).
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+    assert_eq!(app.models().get_copied(&open), Some(true));
+
+    // Second frame: request a dismissible popover with an explicit branch that covers the full
+    // compound trigger surface.
+    begin_frame(&mut app, window);
+    let (field, input_trigger, _icon) = render_base_with_compound_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        open.clone(),
+    );
+
+    request_dismissible_popover_for_window(
+        &mut app,
+        window,
+        DismissiblePopoverRequest {
+            id: input_trigger,
+            root_name: popover_root_name(input_trigger),
+            trigger: input_trigger,
+            dismissable_branches: vec![field],
+            consume_outside_pointer_events: false,
+            disable_outside_pointer_events: false,
+            close_on_window_focus_lost: false,
+            close_on_window_resize: false,
+            open: open.clone(),
+            present: true,
+            initial_focus: None,
+            on_open_auto_focus: None,
+            on_close_auto_focus: None,
+            on_dismiss_request: None,
+            on_pointer_move: None,
+            children: Vec::new(),
+        },
+    );
+
+    render(&mut ui, &mut app, &mut services, window, bounds);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    // Clicking the trailing icon should close the overlay (toggle), not dismiss and immediately
+    // re-open due to the outside-press observer pass.
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(140.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: Point::new(Px(140.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_id: PointerId(0),
+            pointer_type: Default::default(),
+        }),
+    );
     assert_eq!(app.models().get_copied(&open), Some(false));
 }
 

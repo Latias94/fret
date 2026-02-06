@@ -8,6 +8,7 @@ use crate::types::TypeDesc;
 use super::ids::{
     EdgeId, GraphId, GroupId, NodeId, NodeKindKey, PortId, PortKey, StickyNoteId, SymbolId,
 };
+use super::imports::GraphImport;
 
 fn is_false(v: &bool) -> bool {
     !*v
@@ -51,6 +52,10 @@ pub struct Graph {
     /// Schema version for migrations.
     pub graph_version: u32,
 
+    /// Transitive graph dependencies (semantic subgraphs / libraries).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub imports: BTreeMap<GraphId, GraphImport>,
+
     /// Graph-scoped symbols (blackboard/variables).
     pub symbols: BTreeMap<SymbolId, Symbol>,
 
@@ -84,6 +89,7 @@ impl Graph {
         Self {
             graph_id,
             graph_version: GRAPH_VERSION,
+            imports: BTreeMap::new(),
             symbols: BTreeMap::new(),
             nodes: BTreeMap::new(),
             ports: BTreeMap::new(),

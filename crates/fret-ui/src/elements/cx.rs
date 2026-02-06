@@ -599,6 +599,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         })
     }
 
+    /// Creates a `Semantics` layout wrapper around the subtree.
+    ///
+    /// `Semantics` is intentionally input- and paint-transparent, but it **does** participate in
+    /// layout via `SemanticsProps.layout`. Use it when you need a semantics node boundary (tree
+    /// structure) or wrapper-only semantics features (e.g. a focusable semantics node).
+    ///
+    /// If you only need to stamp `test_id` / `label` / `role` / `value` for diagnostics or UI
+    /// automation, prefer attaching `SemanticsDecoration` to an existing element via
+    /// `AnyElement::attach_semantics(...)` to avoid introducing a layout node.
     #[track_caller]
     pub fn semantics<I>(
         &mut self,
@@ -726,6 +735,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         })
     }
 
+    /// Creates a `Semantics` layout wrapper around the subtree and passes its element id.
+    ///
+    /// See [`Self::semantics`] for guidance on when to use `Semantics` vs `attach_semantics`
+    /// (`SemanticsDecoration`).
     #[track_caller]
     pub fn semantics_with_id<I>(
         &mut self,

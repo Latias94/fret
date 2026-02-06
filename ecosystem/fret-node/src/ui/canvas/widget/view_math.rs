@@ -2,6 +2,27 @@ use super::*;
 use fret_canvas::view::{PanZoomConstraints2D, clamp_pan_zoom_view};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    pub(super) fn viewport_from_pan_zoom(
+        bounds: Rect,
+        pan: CanvasPoint,
+        zoom: f32,
+    ) -> CanvasViewport2D {
+        CanvasViewport2D::new(
+            bounds,
+            PanZoom2D {
+                pan: Point::new(Px(pan.x), Px(pan.y)),
+                zoom,
+            },
+        )
+    }
+
+    pub(super) fn viewport_from_snapshot(
+        bounds: Rect,
+        snapshot: &ViewSnapshot,
+    ) -> CanvasViewport2D {
+        Self::viewport_from_pan_zoom(bounds, snapshot.pan, snapshot.zoom)
+    }
+
     pub(super) fn close_button_rect(pan: CanvasPoint, zoom: f32) -> Rect {
         let margin = 12.0 / zoom;
         let w = 64.0 / zoom;
@@ -69,13 +90,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         pan: CanvasPoint,
         zoom: f32,
     ) -> CanvasPoint {
-        let viewport = CanvasViewport2D::new(
-            bounds,
-            PanZoom2D {
-                pan: Point::new(Px(pan.x), Px(pan.y)),
-                zoom,
-            },
-        );
+        let viewport = Self::viewport_from_pan_zoom(bounds, pan, zoom);
         let p = viewport.screen_to_canvas(screen);
         CanvasPoint { x: p.x.0, y: p.y.0 }
     }

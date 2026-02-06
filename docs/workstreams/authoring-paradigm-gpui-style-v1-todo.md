@@ -28,7 +28,8 @@ Tasks:
 
 - `[x]` Draft ADR for the authoring paradigm and first-party state helpers.
   - Evidence: `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
-- `[ ]` Review + accept ADR (flip status to Accepted once locked).
+- `[x]` Review + accept ADR (flip status to Accepted once locked).
+  - Evidence: `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 - `[x]` Add `fret-authoring` state adapters for authoring frontends:
   - `UiWriterQueryExt` (feature: `fret-authoring/query`)
   - `UiWriterSelectorExt` (feature: `fret-authoring/selector`)
@@ -127,8 +128,10 @@ Tasks:
 
 - `[x]` Add a doc: “Integrating tokio/reqwest” (background fetch → inbox → model update).
   - Evidence: `docs/integrating-tokio-and-reqwest.md`
-- `[ ]` Add a doc: “Integrating persistence (sqlite/sqlx)” with driver-boundary apply.
-- `[ ]` Document a recommended service injection/override pattern for ecosystem crates.
+- `[x]` Add a doc: “Integrating persistence (sqlite/sqlx)” with driver-boundary apply.
+  - Evidence: `docs/integrating-sqlite-and-sqlx.md`
+- `[x]` Document a recommended service injection/override pattern for ecosystem crates.
+  - Evidence: `docs/service-injection-and-overrides.md`
 
 ## Milestone M6 — Adoption + cleanup
 
@@ -138,6 +141,14 @@ Exit criteria:
 
 Tasks:
 
-- `[ ]` Migrate remaining stringly command parsing patterns in demos/templates.
-- `[ ]` Migrate additional ad-hoc async caches in ecosystem crates to `fret-query`.
-- `[ ]` Add a lint-style checklist or CI grep gate for `"strip_prefix(\"...\""` patterns in demos.
+- `[x]` Migrate remaining stringly command parsing patterns in demos/templates.
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs`
+- `[~]` Migrate additional ad-hoc async caches in ecosystem crates to `fret-query`.
+  - Evidence: `ecosystem/fret-markdown/src/mathjax_svg_support.rs`
+- `[x]` Add a lint-style checklist or CI grep gate for `"strip_prefix(\"...\""` patterns in demos.
+  - Evidence: `.github/workflows/consistency-checks.yml`
+  - Evidence: `tools/check_stringly_command_parsing.ps1`
+- `[ ]` Document a view-cache-safe pattern for dynamic command routing.
+  - Motivation: `MessageRouter` is per-frame and view-cache reuse can skip subtree re-builds.
+  - Goal: a recommended stable `CommandId` → message lookup for cached subtrees.
