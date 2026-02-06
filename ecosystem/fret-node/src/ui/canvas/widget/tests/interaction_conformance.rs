@@ -13,7 +13,9 @@ use super::super::{
     NodeGraphCanvas, edge_drag, group_resize, left_click, marquee, node_drag, node_resize,
     pending_drag, pointer_up,
 };
-use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_size};
+use super::{
+    NullServices, TestUiHostImpl, event_cx, insert_view, make_test_graph_two_nodes_with_size,
+};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
 use fret_ui::retained_bridge::Widget as _;
@@ -167,7 +169,7 @@ fn child_node_drag_is_clamped_to_group_when_expand_parent_is_false() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -294,7 +296,7 @@ fn child_node_drag_expands_group_when_expand_parent_is_true() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -427,7 +429,7 @@ fn node_drag_respects_per_node_extent_rect() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -712,7 +714,7 @@ fn node_resize_expands_group_when_expand_parent_is_true() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -861,7 +863,7 @@ fn group_resize_is_previewed_and_committed_on_pointer_up() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -932,7 +934,7 @@ fn background_click_does_not_start_marquee_when_elements_not_selectable() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
@@ -989,7 +991,7 @@ fn background_click_starts_pending_marquee_and_clears_selection_on_up() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
@@ -1045,7 +1047,7 @@ fn shift_clicking_a_node_does_not_clear_selection() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
@@ -1109,7 +1111,7 @@ fn marquee_replace_mode_replaces_selection_even_with_ctrl_pressed() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.selected_nodes = vec![a];
@@ -1180,7 +1182,7 @@ fn marquee_selects_connected_edges_for_selected_nodes() {
         .ok()
         .flatten()
         .expect("from port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1261,7 +1263,7 @@ fn marquee_selects_connected_edges_for_selected_nodes_with_store() {
         .models
         .insert(NodeGraphStore::new(graph_value, store_view));
     let graph = host.models.insert(Graph::default());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_store(store.clone());
     let snapshot = canvas.sync_view_state(&mut host);
@@ -1326,7 +1328,7 @@ fn marquee_does_not_select_edges_when_edge_selectable_is_false() {
         .ok()
         .flatten()
         .expect("from port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1394,7 +1396,7 @@ fn marquee_does_not_select_edges_when_box_select_edges_is_none() {
         .ok()
         .flatten()
         .expect("from port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1473,7 +1475,7 @@ fn marquee_selects_edges_only_when_both_endpoints_selected_in_both_endpoints_mod
         .ok()
         .flatten()
         .expect("to port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1586,7 +1588,7 @@ fn multi_selection_active_does_not_clear_edge_selection_when_clicking_node() {
         .ok()
         .flatten()
         .expect("port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1661,7 +1663,7 @@ fn edge_click_clears_node_selection_when_not_in_multi_select_mode() {
         .ok()
         .flatten()
         .expect("from port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1750,7 +1752,7 @@ fn edge_click_does_not_select_edge_when_edge_selectable_is_false() {
         .ok()
         .flatten()
         .expect("from port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1842,7 +1844,7 @@ fn node_click_does_not_select_node_when_node_selectable_is_false() {
         .ok()
         .flatten()
         .expect("to port exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1905,7 +1907,7 @@ fn node_drag_does_not_start_when_node_draggable_is_false() {
         .draggable = Some(false);
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -1964,7 +1966,7 @@ fn node_drag_does_not_start_when_nodes_draggable_is_false() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -2044,7 +2046,7 @@ fn marquee_does_not_select_nodes_when_node_selectable_is_false() {
         .ok()
         .flatten()
         .expect("to node exists");
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.elements_selectable = true;
@@ -2108,7 +2110,7 @@ fn port_click_does_not_start_wire_drag_when_nodes_connectable_is_false() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.nodes_connectable = false;
@@ -2161,7 +2163,7 @@ fn port_click_starts_wire_drag_when_node_connectable_true_even_if_nodes_connecta
         .connectable = Some(true);
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.nodes_connectable = false;
@@ -2209,7 +2211,7 @@ fn port_click_does_not_start_wire_drag_when_port_connectable_start_is_false() {
         .connectable_start = Some(false);
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.nodes_connectable = true;
@@ -2262,7 +2264,7 @@ fn ctrl_click_port_yanks_edges_and_starts_reconnect_with_store() {
         .models
         .insert(NodeGraphStore::new(graph_value.clone(), store_view));
     let graph = host.models.insert(Graph::default());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_store(store);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -2321,7 +2323,7 @@ fn port_connectable_override_allows_start_even_when_nodes_connectable_is_false()
         .connectable = Some(true);
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.nodes_connectable = false;
@@ -2369,7 +2371,7 @@ fn pick_target_port_respects_port_connectable_end() {
         .connectable_end = Some(false);
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.nodes_connectable = true;
@@ -2488,7 +2490,7 @@ fn connectable_false_prevents_connecting_to_target_port() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -2531,7 +2533,7 @@ fn edge_reconnect_requires_drag_threshold_before_starting_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -2610,7 +2612,7 @@ fn edge_reconnect_drag_cancels_when_endpoint_not_reconnectable() {
     ));
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -2664,7 +2666,7 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
     ));
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edges_reconnectable = false;
@@ -2731,7 +2733,7 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
     ));
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edges_reconnectable = false;
@@ -2796,7 +2798,7 @@ fn edge_reconnectable_bool_false_disables_anchors_even_when_global_enabled() {
         .reconnectable = Some(EdgeReconnectable::Bool(false));
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edges_reconnectable = true;
@@ -2841,7 +2843,7 @@ fn edge_reconnectable_none_follows_global_gate_for_anchors() {
 
     let (graph_value, edge, from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edges_reconnectable = false;
@@ -2885,7 +2887,7 @@ fn edge_reconnect_drop_on_empty_can_disconnect_edge() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.reconnect_on_drop_empty = true;
@@ -2931,7 +2933,7 @@ fn window_focus_lost_cancels_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
@@ -2975,7 +2977,7 @@ fn pointer_left_cancels_wire_drag() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
@@ -3032,7 +3034,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.snaplines = false;
@@ -3103,7 +3105,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_wire_reconnec
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
@@ -3158,7 +3160,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_new_wire_drag
     let mut host = TestUiHostImpl::default();
     let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     canvas.interaction.wire_drag = Some(crate::ui::canvas::state::WireDrag {
@@ -3215,7 +3217,7 @@ fn right_click_cancels_wire_drag_and_opens_context_menu() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
@@ -3261,7 +3263,7 @@ fn right_pan_defers_context_menu_until_pointer_up() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_drag.right = true;
@@ -3317,7 +3319,7 @@ fn right_pan_drag_does_not_open_context_menu() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_on_drag.right = true;

@@ -210,6 +210,7 @@ After M0A gates are green:
 - [x] Centralize hit-testing candidate collection + scoring (explicit broad-phase vs narrow-phase).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/hit_test/score.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
 - [x] Bundle hit-testing parameters into a single context to avoid call-site drift.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` (`HitTestCtx`)
 - [x] Split “derived geometry build” from “spatial index build” into explicit stages.
@@ -323,6 +324,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`
@@ -364,6 +366,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`

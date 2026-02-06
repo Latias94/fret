@@ -5,12 +5,12 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Node,
 };
-use crate::io::NodeGraphViewState;
 use crate::ui::canvas::state::{GroupDrag, GroupResize};
 
 use super::super::NodeGraphCanvas;
 use super::{
-    NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 
 fn assert_near(a: f32, b: f32) {
@@ -40,7 +40,7 @@ fn group_rect_with_preview_prefers_group_resize_over_group_drag() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let drag_rect = CanvasRect {
@@ -99,7 +99,7 @@ fn group_rect_with_preview_uses_group_drag_current_rect() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let drag_rect = CanvasRect {
@@ -172,7 +172,7 @@ fn group_drag_drives_canvas_derived_preview_and_edge_index() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view);
 
     let snapshot = canvas.sync_view_state(&mut host);
@@ -309,7 +309,7 @@ fn group_drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
         .replace(group_id);
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
 
     let snapshot0 = canvas.sync_view_state(&mut host);
@@ -455,7 +455,7 @@ fn group_resize_does_not_rebuild_canvas_derived_geometry() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -552,7 +552,7 @@ fn group_resize_clamps_to_children() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
