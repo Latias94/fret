@@ -227,6 +227,66 @@ impl UiGalleryDriver {
         cmds
     }
 
+    fn recent_menu_items(app: &App) -> Vec<Arc<str>> {
+        app.global::<UiGalleryRecentItemsService>()
+            .map(|svc| svc.items.clone())
+            .unwrap_or_default()
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn window_menu_items(app: &App) -> Vec<AppWindowId> {
+        let Some(store) = app.global::<UiGalleryHarnessDiagnosticsStore>() else {
+            return Vec::new();
+        };
+        let mut windows: Vec<AppWindowId> = store.per_window.keys().copied().collect();
+        windows.sort_by_key(|window| format!("{window:?}"));
+        windows
+    }
+
+    fn recent_open_command(index: usize) -> CommandId {
+        CommandId::new(format!("{CMD_GALLERY_RECENT_OPEN_PREFIX}{}", index + 1))
+    }
+
+    fn window_activate_command(index: usize) -> CommandId {
+        CommandId::new(format!("{CMD_GALLERY_WINDOW_ACTIVATE_PREFIX}{}", index + 1))
+    }
+
+    fn parse_dynamic_command_index(command: &CommandId, prefix: &str) -> Option<usize> {
+        command
+            .as_str()
+            .strip_prefix(prefix)?
+            .parse::<usize>()
+            .ok()?
+            .checked_sub(1)
+    }
+
+    fn sync_dynamic_menu_command_metadata(app: &mut App) {
+        for (index, title) in Self::recent_menu_items(app)
+            .into_iter()
+            .take(10)
+            .enumerate()
+        {
+            app.commands_mut().register(
+                Self::recent_open_command(index),
+                CommandMeta::new(title)
+                    .with_category("Menu")
+                    .with_keywords(["menu", "recent", "open"])
+                    .hidden(),
+            );
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        for (index, _window) in Self::window_menu_items(app).into_iter().enumerate() {
+            app.commands_mut().register(
+                Self::window_activate_command(index),
+                CommandMeta::new(format!("Window {}", index + 1))
+                    .with_category("Window")
+                    .with_keywords(["menu", "window", "activate"])
+                    .hidden(),
+            );
+        }
+    }
+
     fn build_menu_bar(app: &App) -> MenuBar {
         let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
         let os = settings.menu_bar.os;
@@ -235,10 +295,7 @@ impl UiGalleryDriver {
         let mut menu_bar =
             fret_workspace::menu::workspace_default_menu_bar(Self::build_workspace_menu_commands());
 
-        let recent_items = app
-            .global::<UiGalleryRecentItemsService>()
-            .map(|svc| svc.items.clone())
-            .unwrap_or_default();
+        let recent_items = Self::recent_menu_items(app);
 
         if let Some(menu) = menu_bar
             .menus
@@ -258,17 +315,20 @@ impl UiGalleryDriver {
                     recent_items
                         .iter()
                         .take(10)
-                        .cloned()
-                        .map(|title| MenuItem::Label { title })
+                        .enumerate()
+                        .map(|(index, _title)| MenuItem::Command {
+                            command: Self::recent_open_command(index),
+                            when: None,
+                            toggle: None,
+                        })
                         .collect()
                 };
             }
         }
 
         #[cfg(not(target_arch = "wasm32"))]
-        if let Some(store) = app.global::<UiGalleryHarnessDiagnosticsStore>() {
-            let mut windows: Vec<AppWindowId> = store.per_window.keys().copied().collect();
-            windows.sort_by_key(|w| format!("{w:?}"));
+        {
+            let windows = Self::window_menu_items(app);
             if !windows.is_empty() {
                 if let Some(menu) = menu_bar
                     .menus
@@ -283,8 +343,10 @@ impl UiGalleryDriver {
                         *items = windows
                             .into_iter()
                             .enumerate()
-                            .map(|(idx, _w)| MenuItem::Label {
-                                title: Arc::<str>::from(format!("Window {}", idx + 1)),
+                            .map(|(index, _window)| MenuItem::Command {
+                                command: Self::window_activate_command(index),
+                                when: None,
+                                toggle: None,
                             })
                             .collect();
                     }
@@ -971,6 +1033,44 @@ impl UiGalleryDriver {
         window: AppWindowId,
         command: &CommandId,
     ) -> bool {
+        if let Some(index) =
+            Self::parse_dynamic_command_index(command, CMD_GALLERY_RECENT_OPEN_PREFIX)
+        {
+            let Some(title) = Self::recent_menu_items(app).into_iter().nth(index) else {
+                return false;
+            };
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from(format!("recent.open({})", title.as_ref()));
+            });
+            return true;
+        }
+
+        if let Some(index) =
+            Self::parse_dynamic_command_index(command, CMD_GALLERY_WINDOW_ACTIVATE_PREFIX)
+        {
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let Some(target_window) = Self::window_menu_items(app).into_iter().nth(index)
+                else {
+                    return false;
+                };
+                app.push_effect(Effect::Window(WindowRequest::Raise {
+                    window: target_window,
+                    sender: Some(window),
+                }));
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from(format!("window.activate({})", index + 1));
+                });
+                return true;
+            }
+
+            #[cfg(target_arch = "wasm32")]
+            {
+                let _ = index;
+                return false;
+            }
+        }
+
         match command.as_str() {
             CMD_GALLERY_DEBUG_RECENT_ADD => {
                 let mut label: Option<Arc<str>> = None;
@@ -1199,6 +1299,7 @@ impl UiGalleryDriver {
     }
 
     fn sync_menu_bar_after_state_change(app: &mut App, window: AppWindowId) {
+        Self::sync_dynamic_menu_command_metadata(app);
         let menu_bar = Self::build_menu_bar(app);
         fret_app::set_menu_bar_baseline(app, menu_bar);
         fret_app::sync_os_menu_bar(app);
@@ -2069,11 +2170,21 @@ impl UiGalleryDriver {
                             right_items.push(cx.text(format!("inspect: {}", text.as_ref())));
                         }
 
+                        let status_last_action_label =
+                            Arc::<str>::from(format!("last action: {}", status_last_action.as_ref()));
+                        let status_last_action_text = status_last_action_label.clone();
+                        let status_last_action_item = cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Text,
+                                label: Some(status_last_action_label),
+                                test_id: Some(Arc::from("ui-gallery-status-last-action")),
+                                ..Default::default()
+                            },
+                            move |cx| vec![cx.text(status_last_action_text.as_ref())],
+                        );
+
                         WorkspaceStatusBar::new()
-                            .left(vec![cx.text(format!(
-                                "last action: {}",
-                                status_last_action.as_ref()
-                            ))])
+                            .left(vec![status_last_action_item])
                             .right(right_items)
                             .into_element(cx)
                     });
@@ -2611,6 +2722,7 @@ pub fn build_app() -> App {
 
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(&mut app);
+    UiGalleryDriver::sync_dynamic_menu_command_metadata(&mut app);
     app.push_effect(Effect::SetMenuBar {
         window: None,
         menu_bar: UiGalleryDriver::build_menu_bar(&app),
@@ -3432,6 +3544,11 @@ impl WinitAppDriver for UiGalleryDriver {
                 }
             }
             Event::WindowCloseRequested => {
+                #[cfg(not(target_arch = "wasm32"))]
+                app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
+                    store.per_window.remove(&window);
+                });
+                Self::sync_menu_bar_after_state_change(app, window);
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
             _ => {

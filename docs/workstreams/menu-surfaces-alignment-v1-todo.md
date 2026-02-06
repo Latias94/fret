@@ -144,21 +144,39 @@ Exit criteria:
 - Dynamic submenus can update without unstable IDs or excessive rebuild churn.
 - Contribution/override strategy is defined without turning menus into a plugin API prematurely.
 
-- [~] MENU-MVP3-dyn-040 Define a stable “dynamic submenu” contract (IDs, update frequency, ordering rules).
-  - Implemented (MVP): data-only `MenuItem::Label` for placeholder/dynamic rows (no `CommandId`), rendered
-    consistently as a disabled item across in-window and OS menubars.
+- [x] MENU-MVP3-dyn-040 Define a stable “dynamic submenu” contract (IDs, update frequency, ordering rules).
+  - Implemented (MVP):
+    - placeholder rows use data-only `MenuItem::Label` (e.g. `No recent items`), rendered consistently
+      as disabled text across in-window and OS menubars;
+    - dynamic actionable rows use command IDs with stable prefixes
+      (`ui_gallery.recent.open.{n}`, `ui_gallery.window.activate.{n}`),
+      so they remain addressable by command surfaces while keeping menu topology app-owned.
+  - Contract (MVP):
+    - Stable anchors: app baseline owns long-lived submenu anchors (`File > Recent`, `Window > Windows`).
+    - Stable addressing: `menubar.json` patch targets submenus by path (`menu: ["File", "Recent"]`) and
+      non-command rows by typed selectors (`{"type":"label","title":"..."}`), with index fallback.
+    - Update frequency: menu trees rebuild on explicit state transitions (command handlers / window-registry changes),
+      not on every frame.
+    - Identity refresh: in-window menubar identity is sequence-keyed on menu updates to avoid stale subtree retention.
+    - Ordering: dynamic lists are deterministic (`Recent` newest-first capped list; `Window` sorted + `Window N` labels).
+    - Dynamic command metadata: command titles are synchronized on menu rebuild so command-backed dynamic
+      rows display user-facing labels (`Recent N`, `Window N`) instead of raw IDs.
   - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuItem::Label`)
+  - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuItemFileV2::Label`, `ItemSelectorTyped::Label`)
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (in-window bridge for `Label`)
   - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` + `crates/fret-launch/src/runner/desktop/macos_menu.rs` (OS mapping for `Label`)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`menu_bar_seq` keyed refresh + dynamic command prefixes/metadata sync)
 - [x] MENU-MVP3-dyn-041 Implement `Recent` menu MVP (placeholder list + disabled state + later wiring).
-  - Implemented: stable `File > Recent` submenu anchor with placeholder; UI Gallery can rebuild the submenu items
-    from app state (debug add/clear).
+  - Implemented: stable `File > Recent` submenu anchor with placeholder; when recent entries exist,
+    UI Gallery emits command-backed dynamic rows (`ui_gallery.recent.open.{n}`) and handles activation
+    through the normal command routing path.
   - Evidence: `ecosystem/fret-workspace/src/menu.rs` (default `Recent` submenu anchor)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`UiGalleryRecentItemsService` + dynamic menu rebuild)
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-recent-dynamic-updates.json`
 - [x] MENU-MVP3-dyn-042 Implement a `Window` list MVP for multi-window apps (align with `MenuRole::Window` semantics).
   - Implemented: stable `Window > Windows` submenu anchor; UI Gallery derives a per-run stable `Window N` list from
-    `UiGalleryHarnessDiagnosticsStore` (non-wasm).
+    `UiGalleryHarnessDiagnosticsStore` (non-wasm), emits command-backed rows (`ui_gallery.window.activate.{n}`),
+    and raises the target window via `WindowRequest::Raise`.
   - Evidence: `ecosystem/fret-workspace/src/menu.rs` (default `Windows` submenu anchor)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (dynamic window list rebuild)
 - [x] MENU-MVP3-conf-043 Decide how dynamic items interact with layered `menubar.json` patch ops (what is addressable?).
@@ -200,6 +218,9 @@ Exit criteria:
 - [x] MENU-MVP4-test-054 Add a diag script that proves dynamic menu content updates (Recent + Window list).
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-recent-dynamic-updates.json`
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`menu_select_path` intent step)
+- [x] MENU-MVP4-test-055 Add a diag script that proves dynamic command-backed items execute and update state.
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-recent-window-commands.json`
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`recent.open(...)`, `window.activate(...)`, `ui-gallery-status-last-action`)
 
 ---
 

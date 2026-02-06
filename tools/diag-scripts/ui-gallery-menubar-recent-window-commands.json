@@ -1,0 +1,79 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-gallery" },
+        { "kind": "test_id", "id": "menubar-item-menu-gallery-submenu-debug" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-debug-recent-clear" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 6 },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-gallery" },
+        { "kind": "test_id", "id": "menubar-item-menu-gallery-submenu-debug" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-debug-recent-add" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 6 },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-file" },
+        { "kind": "test_id", "id": "menubar-item-menu-file-submenu-recent" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-recent-open-1" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text",
+          "name": "last action: recent.open(Recent 1)"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-window" },
+        { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-1" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "role_and_name",
+          "role": "text",
+          "name": "last action: window.activate(1)"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-recent-window-commands" }
+  ]
+}
