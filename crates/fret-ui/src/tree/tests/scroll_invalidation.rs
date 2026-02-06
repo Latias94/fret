@@ -520,9 +520,9 @@ fn virtual_list_window_shift_detail_classifies_items_revision() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let cache_root = ui.create_node(TestStack::default());
-    let child = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![cache_root]);

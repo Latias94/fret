@@ -153,10 +153,10 @@ fn escape_cancels_dock_drag_and_does_not_dismiss_overlays() {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let base = ui.create_node(TestStack::default());
+    let base = ui.create_node(TestStack);
     ui.set_root(base);
 
-    let overlay = ui.create_node(TestStack::default());
+    let overlay = ui.create_node(TestStack);
     let overlay_element = crate::GlobalElementId(0xdead_beef);
     ui.set_node_element(overlay, Some(overlay_element));
     let _layer = ui.push_overlay_root_ex(overlay, false, true);
@@ -176,7 +176,7 @@ fn escape_cancels_dock_drag_and_does_not_dismiss_overlays() {
     );
 
     // Establish a drag route anchor so capture rules can resolve it deterministically.
-    let anchor = ui.create_node(TestStack::default());
+    let anchor = ui.create_node(TestStack);
     crate::internal_drag::set_route(&mut app, window, fret_runtime::DRAG_KIND_DOCK_PANEL, anchor);
 
     let mut services = FakeUiServices;

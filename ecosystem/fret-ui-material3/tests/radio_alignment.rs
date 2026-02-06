@@ -5023,6 +5023,135 @@ fn tooltip_opens_and_closes_on_hover_across_schemes() {
 }
 
 #[test]
+fn rich_tooltip_opens_and_closes_on_hover_smoke() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Button, RichTooltip, TooltipProvider};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(320.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            TooltipProvider::new()
+                .delay_duration_frames(0)
+                .skip_delay_duration_frames(0)
+                .with_elements(cx, |cx| {
+                    let trigger = Button::new("Trigger")
+                        .test_id("tooltip-trigger")
+                        .into_element(cx);
+                    let tooltip = RichTooltip::new(trigger, "Supporting text")
+                        .title("Title")
+                        .open_delay_frames(Some(0))
+                        .close_delay_frames(Some(0))
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(24.0), tooltip)]
+                })
+        })
+    };
+
+    run_overlay_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let trigger_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                if node.test_id.as_deref() == Some("tooltip-trigger") {
+                    Some(node.id)
+                } else {
+                    None
+                }
+            })
+        })
+        .expect("expected tooltip-trigger in semantics snapshot");
+    let trigger_bounds = ui
+        .debug_node_visual_bounds(trigger_node)
+        .expect("expected tooltip-trigger bounds");
+    let hover_at = Point::new(
+        Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+        Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), hover_at),
+    );
+
+    let mut opened = false;
+    for _ in 0..6 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.visible)
+        {
+            opened = true;
+            break;
+        }
+    }
+    assert!(opened, "expected rich tooltip to open on hover");
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_move(PointerId(1), Point::new(Px(0.0), Px(0.0))),
+    );
+
+    let mut closed = false;
+    for _ in 0..10 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            false,
+            |ui, app, services| render(ui, app, services),
+        );
+
+        let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        if !stack
+            .stack
+            .iter()
+            .any(|entry| entry.kind == OverlayStackEntryKind::Tooltip && entry.visible)
+        {
+            closed = true;
+            break;
+        }
+    }
+    assert!(closed, "expected rich tooltip to close after unhover");
+}
+
+#[test]
 fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_schemes() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::{Button, PlainTooltip, TooltipProvider};

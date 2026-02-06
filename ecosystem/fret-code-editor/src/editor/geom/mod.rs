@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use fret_code_editor_buffer::TextBuffer;
 use fret_code_editor_view::DisplayPoint;
-use fret_core::{Px, Rect, Size};
+use fret_core::{Px, Rect, Size, TextBlobId};
 
 use super::{CodeEditorState, PreeditState};
 
@@ -20,6 +20,8 @@ pub(super) struct RowPreeditMapping {
 pub(super) struct RowGeom {
     /// Display-row range within the buffer (UTF-8 byte indices).
     pub(super) row_range: Range<usize>,
+    /// Prepared text blob that backs `caret_stops` and caret metrics.
+    pub(super) blob: TextBlobId,
     /// Caret stop table for the displayed row text (byte index -> x offset).
     pub(super) caret_stops: Vec<(usize, Px)>,
     /// Optional caret rectangle vertical metrics derived from the renderer text system.

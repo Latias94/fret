@@ -70,6 +70,9 @@ impl cosmic_text::Fallback for FretFallback {
                 "Hiragino Sans",
                 // Emoji
                 "Apple Color Emoji",
+                // Bundled/portable fallbacks (if available)
+                "Noto Sans CJK SC",
+                "Noto Color Emoji",
             ]
         }
         #[cfg(all(unix, not(any(target_os = "macos", target_os = "android"))))]
@@ -288,6 +291,7 @@ pub struct TextShape {
 pub struct TextLine {
     pub start: usize,
     pub end: usize,
+    #[allow(dead_code)]
     pub width: Px,
     pub y_top: Px,
     /// Baseline Y for this line (y=0 at top of text box).
@@ -621,6 +625,26 @@ struct PendingUpload {
     data: Vec<u8>,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct GlyphAtlasPerfSnapshot {
+    uploads: u64,
+    upload_bytes: u64,
+    evicted_glyphs: u64,
+    evicted_pages: u64,
+    evicted_page_glyphs: u64,
+    resets: u64,
+}
+
+#[derive(Debug, Default)]
+struct GlyphAtlasPerfStats {
+    uploads: u64,
+    upload_bytes: u64,
+    evicted_glyphs: u64,
+    evicted_pages: u64,
+    evicted_page_glyphs: u64,
+    resets: u64,
+}
+
 struct GlyphAtlasPage {
     allocator: etagere::BucketedAtlasAllocator,
     pending: Vec<PendingUpload>,
@@ -645,6 +669,7 @@ struct GlyphAtlas {
     revision: u64,
     used_px: u64,
     perf_frame: GlyphAtlasFramePerf,
+    perf: GlyphAtlasPerfStats,
 }
 
 impl GlyphAtlas {
@@ -715,6 +740,7 @@ impl GlyphAtlas {
             revision: 0,
             used_px: 0,
             perf_frame: GlyphAtlasFramePerf::default(),
+            perf: GlyphAtlasPerfStats::default(),
         }
     }
 
@@ -747,7 +773,21 @@ impl GlyphAtlas {
         }
     }
 
+    fn take_perf_snapshot(&mut self) -> GlyphAtlasPerfSnapshot {
+        let snap = GlyphAtlasPerfSnapshot {
+            uploads: self.perf.uploads,
+            upload_bytes: self.perf.upload_bytes,
+            evicted_glyphs: self.perf.evicted_glyphs,
+            evicted_pages: self.perf.evicted_pages,
+            evicted_page_glyphs: self.perf.evicted_page_glyphs,
+            resets: self.perf.resets,
+        };
+        self.perf = GlyphAtlasPerfStats::default();
+        snap
+    }
+
     fn reset(&mut self) {
+        self.perf.resets = self.perf.resets.saturating_add(1);
         self.revision = self.revision.saturating_add(1);
         self.glyphs.clear();
         self.used_px = 0;
@@ -857,6 +897,7 @@ impl GlyphAtlas {
             .allocator
             .deallocate(victim_entry.alloc_id);
         self.glyphs.remove(&victim_key);
+        self.perf.evicted_glyphs = self.perf.evicted_glyphs.saturating_add(1);
         self.revision = self.revision.saturating_add(1);
         self.perf_frame.evict_glyphs = self.perf_frame.evict_glyphs.saturating_add(1);
         true
@@ -896,6 +937,11 @@ impl GlyphAtlas {
             .filter_map(|(k, e)| (e.page == victim_page).then_some(*k))
             .collect();
         let pad = self.padding_px;
+        self.perf.evicted_pages = self.perf.evicted_pages.saturating_add(1);
+        self.perf.evicted_page_glyphs = self
+            .perf
+            .evicted_page_glyphs
+            .saturating_add(keys_to_remove.len() as u64);
         for k in keys_to_remove {
             if let Some(entry) = self.glyphs.remove(&k) {
                 let w_pad = entry.w.saturating_add(pad.saturating_mul(2));
@@ -952,11 +998,10 @@ impl GlyphAtlas {
                     &owned
                 };
 
-                self.perf_frame.upload_bytes = self.perf_frame.upload_bytes.saturating_add(
-                    u64::from(upload.w)
-                        .saturating_mul(u64::from(upload.h))
-                        .saturating_mul(u64::from(upload.bytes_per_pixel)),
-                );
+                self.perf.uploads = self.perf.uploads.saturating_add(1);
+                self.perf.upload_bytes = self.perf.upload_bytes.saturating_add(bytes.len() as u64);
+                self.perf_frame.upload_bytes =
+                    self.perf_frame.upload_bytes.saturating_add(bytes.len() as u64);
 
                 queue.write_texture(
                     wgpu::TexelCopyTextureInfo {
@@ -1084,6 +1129,7 @@ impl GlyphAtlas {
     }
 }
 
+#[allow(dead_code)]
 fn subpixel_mask_to_alpha(data: &[u8]) -> Vec<u8> {
     let mut out = Vec::with_capacity(data.len() / 4);
     for rgba in data.chunks_exact(4) {
@@ -1137,7 +1183,13 @@ struct TextMeasureKey {
 
 impl TextMeasureKey {
     fn new(style: &TextStyle, constraints: TextConstraints, font_stack_key: u64) -> Self {
-        let max_width_bits = constraints.max_width.map(|w| w.0.to_bits());
+        let max_width_bits = match constraints.wrap {
+            // `TextWrap::None` does not change shaping results based on width; callers clamp or
+            // apply overflow policy at higher levels. Normalize away width so repeated measurements
+            // (e.g. layout engine intrinsic probes) can reuse cached metrics.
+            TextWrap::None => None,
+            TextWrap::Word | TextWrap::Grapheme => constraints.max_width.map(|w| w.0.to_bits()),
+        };
         Self {
             font: style.font.clone(),
             font_stack_key,
@@ -1165,6 +1217,31 @@ struct TextMeasureEntry {
     text: Arc<str>,
     spans: Option<Arc<[TextSpan]>>,
     metrics: TextMetrics,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+struct TextMeasureShapingKey {
+    text_hash: u64,
+    text_len: usize,
+    spans_shaping_key: u64,
+    font: fret_core::FontId,
+    font_stack_key: u64,
+    size_bits: u32,
+    weight: u16,
+    slant: u8,
+    line_height_bits: Option<u32>,
+    letter_spacing_bits: Option<u32>,
+    scale_bits: u32,
+}
+
+#[derive(Debug, Clone)]
+struct TextMeasureShapingEntry {
+    text: Arc<str>,
+    spans: Option<Arc<[TextSpan]>>,
+    width_px: f32,
+    baseline_px: f32,
+    line_height_px: f32,
+    clusters: Arc<[parley_shaper::ShapedCluster]>,
 }
 
 fn hash_text(text: &str) -> u64 {
@@ -1248,6 +1325,8 @@ pub struct TextSystem {
     blob_key_by_id: HashMap<TextBlobId, TextBlobKey>,
     shape_cache: HashMap<TextShapeKey, Arc<TextShape>>,
     measure_cache: HashMap<TextMeasureKey, VecDeque<TextMeasureEntry>>,
+    measure_shaping_cache: HashMap<TextMeasureShapingKey, TextMeasureShapingEntry>,
+    measure_shaping_fifo: VecDeque<TextMeasureShapingKey>,
 
     mask_atlas: GlyphAtlas,
     color_atlas: GlyphAtlas,
@@ -1267,6 +1346,16 @@ pub struct TextSystem {
     perf_frame_shape_cache_hits: u64,
     perf_frame_shape_cache_misses: u64,
     perf_frame_shapes_created: u64,
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub(crate) struct TextAtlasPerfSnapshot {
+    pub(crate) uploads: u64,
+    pub(crate) upload_bytes: u64,
+    pub(crate) evicted_glyphs: u64,
+    pub(crate) evicted_pages: u64,
+    pub(crate) evicted_page_glyphs: u64,
+    pub(crate) resets: u64,
 }
 
 pub type TextFontFamilyConfig = fret_core::TextFontFamilyConfig;
@@ -1311,6 +1400,249 @@ fn metrics_from_wrapped_lines(
         ),
         baseline: Px((first_baseline_px / scale).max(0.0)),
     }
+}
+
+fn metrics_for_uniform_lines(
+    max_w_px: f32,
+    line_count: usize,
+    baseline_px: f32,
+    line_height_px: f32,
+    scale: f32,
+) -> TextMetrics {
+    let snap_vertical = scale.is_finite() && scale.fract().abs() > 1e-4 && scale >= 1.0;
+
+    let mut first_baseline_px = baseline_px.max(0.0);
+    if snap_vertical {
+        let top_px = 0.0_f32;
+        let bottom_px = (top_px + line_height_px.max(0.0)).round().max(top_px);
+        let height_px = (bottom_px - top_px).max(0.0);
+        first_baseline_px = (top_px + baseline_px.max(0.0))
+            .round()
+            .clamp(top_px, top_px + height_px);
+    }
+
+    let total_h_px = if snap_vertical {
+        let mut top_px = 0.0_f32;
+        for _ in 0..line_count.max(1) {
+            let bottom_px = (top_px + line_height_px.max(0.0)).round().max(top_px);
+            top_px = bottom_px;
+        }
+        top_px
+    } else {
+        line_height_px.max(0.0) * (line_count.max(1) as f32)
+    };
+
+    TextMetrics {
+        size: Size::new(
+            Px((max_w_px / scale).max(0.0)),
+            Px((total_h_px / scale).max(0.0)),
+        ),
+        baseline: Px((first_baseline_px / scale).max(0.0)),
+    }
+}
+
+fn is_word_char_for_wrap(c: char) -> bool {
+    c.is_ascii_alphanumeric()
+        || matches!(c, '\u{00C0}'..='\u{00FF}')
+        || matches!(c, '\u{0100}'..='\u{017F}')
+        || matches!(c, '\u{0180}'..='\u{024F}')
+        || matches!(c, '\u{0400}'..='\u{04FF}')
+        || matches!(c, '\u{1E00}'..='\u{1EFF}')
+        || matches!(c, '\u{0300}'..='\u{036F}')
+        || matches!(
+            c,
+            '-' | '_' | '.' | '\'' | '$' | '%' | '@' | '#' | '^' | '~' | ',' | '=' | ':' | '?'
+        )
+}
+
+fn word_wrap_line_stats(
+    text: &str,
+    clusters: &[parley_shaper::ShapedCluster],
+    max_width_px: f32,
+) -> (usize, f32) {
+    let end = text.len();
+    if end == 0 || clusters.is_empty() {
+        return (1, 0.0);
+    }
+
+    let mut line_count: usize = 0;
+    let mut max_w_px: f32 = 0.0;
+
+    let mut line_start_byte: usize = 0;
+    let mut cluster_idx: usize = 0;
+
+    while line_start_byte < end && cluster_idx < clusters.len() {
+        let line_start_x = clusters[cluster_idx].x0;
+
+        let mut last_fit_cluster_idx: Option<usize> = None;
+        let mut last_fit_end_byte: usize = line_start_byte;
+
+        let mut last_candidate_cluster_idx: Option<usize> = None;
+        let mut last_candidate_byte: usize = line_start_byte;
+
+        let mut first_non_whitespace: Option<usize> = None;
+        let mut prev_ch: char = '\0';
+
+        for (i, c) in clusters.iter().enumerate().skip(cluster_idx) {
+            if c.text_range.start >= end {
+                break;
+            }
+            if c.text_range.start < line_start_byte {
+                continue;
+            }
+
+            let rel_x1 = c.x1 - line_start_x;
+            if rel_x1 > max_width_px + 0.5 {
+                break;
+            }
+
+            last_fit_cluster_idx = Some(i);
+            last_fit_end_byte = c.text_range.end.min(end);
+
+            let Some(ch) = text[c.text_range.start..].chars().next() else {
+                continue;
+            };
+
+            if ch != ' ' && first_non_whitespace.is_none() {
+                first_non_whitespace = Some(c.text_range.start);
+            }
+
+            if first_non_whitespace.is_some() {
+                if is_word_char_for_wrap(ch) {
+                    if prev_ch == ' ' && ch != ' ' {
+                        last_candidate_cluster_idx = Some(i);
+                        last_candidate_byte = c.text_range.start;
+                    }
+                } else if ch != ' ' {
+                    last_candidate_cluster_idx = Some(i);
+                    last_candidate_byte = c.text_range.start;
+                }
+            }
+
+            prev_ch = ch;
+        }
+
+        let (cut_byte, next_cluster_idx, line_w_px) = if last_fit_end_byte >= end {
+            let fit_idx = last_fit_cluster_idx.unwrap_or(cluster_idx);
+            let end_x = clusters[fit_idx].x1;
+            (end, clusters.len(), (end_x - line_start_x).max(0.0))
+        } else if let Some(candidate_idx) = last_candidate_cluster_idx
+            && last_candidate_byte > line_start_byte
+        {
+            let end_cluster_idx = candidate_idx.saturating_sub(1).max(cluster_idx);
+            let end_x = clusters[end_cluster_idx].x1;
+            (
+                last_candidate_byte,
+                candidate_idx,
+                (end_x - line_start_x).max(0.0),
+            )
+        } else if let Some(fit_idx) = last_fit_cluster_idx {
+            let end_x = clusters[fit_idx].x1;
+            (
+                last_fit_end_byte,
+                fit_idx.saturating_add(1),
+                (end_x - line_start_x).max(0.0),
+            )
+        } else {
+            let c = &clusters[cluster_idx];
+            let cut = c
+                .text_range
+                .end
+                .min(end)
+                .max(line_start_byte.saturating_add(1));
+            let end_x = c.x1;
+            (
+                cut,
+                cluster_idx.saturating_add(1),
+                (end_x - line_start_x).max(0.0),
+            )
+        };
+
+        max_w_px = max_w_px.max(line_w_px);
+        line_count = line_count.saturating_add(1);
+
+        if cut_byte <= line_start_byte {
+            break;
+        }
+        line_start_byte = cut_byte;
+        cluster_idx = next_cluster_idx;
+    }
+
+    (line_count.max(1), max_w_px)
+}
+
+fn grapheme_wrap_line_stats(
+    text: &str,
+    clusters: &[parley_shaper::ShapedCluster],
+    max_width_px: f32,
+) -> (usize, f32) {
+    let end = text.len();
+    if end == 0 || clusters.is_empty() {
+        return (1, 0.0);
+    }
+
+    let mut line_count: usize = 0;
+    let mut max_w_px: f32 = 0.0;
+
+    let mut line_start_byte: usize = 0;
+    let mut cluster_idx: usize = 0;
+
+    while line_start_byte < end && cluster_idx < clusters.len() {
+        let line_start_x = clusters[cluster_idx].x0;
+
+        let mut last_fit_cluster_idx: Option<usize> = None;
+        let mut last_fit_end_byte: usize = line_start_byte;
+
+        for (i, c) in clusters.iter().enumerate().skip(cluster_idx) {
+            if c.text_range.start >= end {
+                break;
+            }
+            if c.text_range.start < line_start_byte {
+                continue;
+            }
+
+            let rel_x1 = c.x1 - line_start_x;
+            if rel_x1 > max_width_px + 0.5 {
+                break;
+            }
+
+            last_fit_cluster_idx = Some(i);
+            last_fit_end_byte = c.text_range.end.min(end);
+        }
+
+        let (cut_byte, next_cluster_idx, line_w_px) = if let Some(fit_idx) = last_fit_cluster_idx {
+            let end_x = clusters[fit_idx].x1;
+            (
+                last_fit_end_byte,
+                fit_idx.saturating_add(1),
+                (end_x - line_start_x).max(0.0),
+            )
+        } else {
+            let c = &clusters[cluster_idx];
+            let cut = c
+                .text_range
+                .end
+                .min(end)
+                .max(line_start_byte.saturating_add(1));
+            let end_x = c.x1;
+            (
+                cut,
+                cluster_idx.saturating_add(1),
+                (end_x - line_start_x).max(0.0),
+            )
+        };
+
+        max_w_px = max_w_px.max(line_w_px);
+        line_count = line_count.saturating_add(1);
+
+        if cut_byte <= line_start_byte {
+            break;
+        }
+        line_start_byte = cut_byte;
+        cluster_idx = next_cluster_idx;
+    }
+
+    (line_count.max(1), max_w_px)
 }
 
 impl TextSystem {
@@ -1397,7 +1729,7 @@ impl TextSystem {
         }
         let after_faces = self.font_system.db().faces().count();
         let added = after_faces.saturating_sub(before_faces);
-        let parley_added = self.parley_shaper.add_fonts(fonts.into_iter());
+        let parley_added = self.parley_shaper.add_fonts(fonts);
 
         if added > 0 || parley_added > 0 {
             self.font_db_revision = self.font_db_revision.saturating_add(1);
@@ -1413,6 +1745,8 @@ impl TextSystem {
             self.blob_key_by_id.clear();
             self.shape_cache.clear();
             self.measure_cache.clear();
+            self.measure_shaping_cache.clear();
+            self.measure_shaping_fifo.clear();
             self.mask_atlas.reset();
             self.color_atlas.reset();
             self.subpixel_atlas.reset();
@@ -1562,6 +1896,8 @@ impl TextSystem {
             blob_key_by_id: HashMap::new(),
             shape_cache: HashMap::new(),
             measure_cache: HashMap::new(),
+            measure_shaping_cache: HashMap::new(),
+            measure_shaping_fifo: VecDeque::new(),
 
             mask_atlas,
             color_atlas,
@@ -1696,6 +2032,8 @@ impl TextSystem {
         self.blob_key_by_id.clear();
         self.shape_cache.clear();
         self.measure_cache.clear();
+        self.measure_shaping_cache.clear();
+        self.measure_shaping_fifo.clear();
         self.mask_atlas.reset();
         self.color_atlas.reset();
         self.subpixel_atlas.reset();
@@ -1727,6 +2065,23 @@ impl TextSystem {
         self.mask_atlas.flush_uploads(queue);
         self.color_atlas.flush_uploads(queue);
         self.subpixel_atlas.flush_uploads(queue);
+    }
+
+    pub(crate) fn take_atlas_perf_snapshot(&mut self) -> TextAtlasPerfSnapshot {
+        let mask = self.mask_atlas.take_perf_snapshot();
+        let color = self.color_atlas.take_perf_snapshot();
+        let subpixel = self.subpixel_atlas.take_perf_snapshot();
+
+        TextAtlasPerfSnapshot {
+            uploads: mask.uploads + color.uploads + subpixel.uploads,
+            upload_bytes: mask.upload_bytes + color.upload_bytes + subpixel.upload_bytes,
+            evicted_glyphs: mask.evicted_glyphs + color.evicted_glyphs + subpixel.evicted_glyphs,
+            evicted_pages: mask.evicted_pages + color.evicted_pages + subpixel.evicted_pages,
+            evicted_page_glyphs: mask.evicted_page_glyphs
+                + color.evicted_page_glyphs
+                + subpixel.evicted_page_glyphs,
+            resets: mask.resets + color.resets + subpixel.resets,
+        }
     }
 
     pub(crate) fn atlas_revision(&self) -> u64 {
@@ -1936,6 +2291,7 @@ impl TextSystem {
         self.blobs.get(id)
     }
 
+    #[allow(dead_code)]
     pub fn prepare_input(
         &mut self,
         input: TextInputRef<'_>,
@@ -2259,23 +2615,123 @@ impl TextSystem {
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
 
-        let key = TextMeasureKey::new(style, constraints, self.font_stack_key);
+        let mut normalized_constraints = constraints;
+        if normalized_constraints.wrap == TextWrap::None {
+            normalized_constraints.max_width = None;
+        }
+
+        let key = TextMeasureKey::new(style, normalized_constraints, self.font_stack_key);
         let text_hash = hash_text(text);
         if let Some(bucket) = self.measure_cache.get_mut(&key)
             && let Some(hit) = bucket
                 .iter()
                 .find(|e| e.text_hash == text_hash && e.spans_hash == 0 && e.text.as_ref() == text)
         {
-            return hit.metrics;
+            let mut metrics = hit.metrics;
+            if constraints.wrap == TextWrap::None
+                && constraints.overflow == TextOverflow::Ellipsis
+                && let Some(max_width) = constraints.max_width
+            {
+                metrics.size.width = max_width;
+            }
+            return metrics;
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-            &mut self.parley_shaper,
-            TextInputRef::plain(text, style),
-            constraints,
-        );
-        let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
+        let max_width_for_fast = match constraints {
+            TextConstraints {
+                max_width: Some(max_width),
+                wrap: TextWrap::Word | TextWrap::Grapheme,
+                overflow: TextOverflow::Clip,
+                ..
+            } if !text.contains('\n') => Some(max_width),
+            _ => None,
+        };
+
+        let metrics = if let Some(max_width) = max_width_for_fast {
+            const MEASURE_SHAPING_CACHE_LIMIT: usize = 512;
+
+            let shaping_key = TextMeasureShapingKey {
+                text_hash,
+                text_len: text.len(),
+                spans_shaping_key: 0,
+                font: style.font.clone(),
+                font_stack_key: self.font_stack_key,
+                size_bits: style.size.0.to_bits(),
+                weight: style.weight.0,
+                slant: match style.slant {
+                    TextSlant::Normal => 0,
+                    TextSlant::Italic => 1,
+                    TextSlant::Oblique => 2,
+                },
+                line_height_bits: style.line_height.map(|px| px.0.to_bits()),
+                letter_spacing_bits: style.letter_spacing_em.map(|v| v.to_bits()),
+                scale_bits: constraints.scale_factor.to_bits(),
+            };
+
+            let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
+                self.measure_shaping_cache.get(&shaping_key)
+                && hit.text.as_ref() == text
+                && hit.spans.is_none()
+            {
+                (
+                    hit.width_px,
+                    hit.baseline_px,
+                    hit.line_height_px,
+                    hit.clusters.clone(),
+                )
+            } else {
+                let line = self
+                    .parley_shaper
+                    .shape_single_line_metrics(TextInputRef::plain(text, style), scale);
+                let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+
+                let existed = self.measure_shaping_cache.contains_key(&shaping_key);
+                self.measure_shaping_cache.insert(
+                    shaping_key.clone(),
+                    TextMeasureShapingEntry {
+                        text: Arc::<str>::from(text),
+                        spans: None,
+                        width_px: line.width,
+                        baseline_px: line.baseline,
+                        line_height_px: line.line_height,
+                        clusters: clusters.clone(),
+                    },
+                );
+                if !existed {
+                    self.measure_shaping_fifo.push_back(shaping_key.clone());
+                    while self.measure_shaping_fifo.len() > MEASURE_SHAPING_CACHE_LIMIT {
+                        let Some(evict) = self.measure_shaping_fifo.pop_front() else {
+                            break;
+                        };
+                        self.measure_shaping_cache.remove(&evict);
+                    }
+                }
+
+                (line.width, line.baseline, line.line_height, clusters)
+            };
+
+            let max_width_px = max_width.0 * scale;
+            let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
+                (1, width_px.max(0.0))
+            } else {
+                match constraints.wrap {
+                    TextWrap::Word => word_wrap_line_stats(text, clusters.as_ref(), max_width_px),
+                    TextWrap::Grapheme => {
+                        grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
+                    }
+                    TextWrap::None => unreachable!(),
+                }
+            };
+            metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+        } else {
+            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                &mut self.parley_shaper,
+                TextInputRef::plain(text, style),
+                normalized_constraints,
+            );
+            metrics_from_wrapped_lines(&wrapped.lines, scale)
+        };
 
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
@@ -2289,6 +2745,13 @@ impl TextSystem {
             bucket.pop_front();
         }
 
+        let mut metrics = metrics;
+        if constraints.wrap == TextWrap::None
+            && constraints.overflow == TextOverflow::Ellipsis
+            && let Some(max_width) = constraints.max_width
+        {
+            metrics.size.width = max_width;
+        }
         metrics
     }
 
@@ -2300,7 +2763,12 @@ impl TextSystem {
     ) -> TextMetrics {
         const MEASURE_CACHE_PER_BUCKET_LIMIT: usize = 256;
 
-        let key = TextMeasureKey::new(base_style, constraints, self.font_stack_key);
+        let mut normalized_constraints = constraints;
+        if normalized_constraints.wrap == TextWrap::None {
+            normalized_constraints.max_width = None;
+        }
+
+        let key = TextMeasureKey::new(base_style, normalized_constraints, self.font_stack_key);
         let text_hash = hash_text(rich.text.as_ref());
         let spans_hash = spans_shaping_fingerprint(rich.spans.as_ref());
 
@@ -2314,20 +2782,122 @@ impl TextSystem {
                     })
             })
         {
-            return hit.metrics;
+            let mut metrics = hit.metrics;
+            if constraints.wrap == TextWrap::None
+                && constraints.overflow == TextOverflow::Ellipsis
+                && let Some(max_width) = constraints.max_width
+            {
+                metrics.size.width = max_width;
+            }
+            return metrics;
         }
 
         let scale = constraints.scale_factor.max(1.0);
-        let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
-            &mut self.parley_shaper,
-            TextInputRef::Attributed {
-                text: rich.text.as_ref(),
-                base: base_style,
-                spans: rich.spans.as_ref(),
-            },
-            constraints,
-        );
-        let metrics = metrics_from_wrapped_lines(&wrapped.lines, scale);
+        let max_width_for_fast = match constraints {
+            TextConstraints {
+                max_width: Some(max_width),
+                wrap: TextWrap::Word | TextWrap::Grapheme,
+                overflow: TextOverflow::Clip,
+                ..
+            } if !rich.text.as_ref().contains('\n') => Some(max_width),
+            _ => None,
+        };
+
+        let metrics = if let Some(max_width) = max_width_for_fast {
+            const MEASURE_SHAPING_CACHE_LIMIT: usize = 512;
+
+            let shaping_key = TextMeasureShapingKey {
+                text_hash,
+                text_len: rich.text.len(),
+                spans_shaping_key: spans_hash,
+                font: base_style.font.clone(),
+                font_stack_key: self.font_stack_key,
+                size_bits: base_style.size.0.to_bits(),
+                weight: base_style.weight.0,
+                slant: match base_style.slant {
+                    TextSlant::Normal => 0,
+                    TextSlant::Italic => 1,
+                    TextSlant::Oblique => 2,
+                },
+                line_height_bits: base_style.line_height.map(|px| px.0.to_bits()),
+                letter_spacing_bits: base_style.letter_spacing_em.map(|v| v.to_bits()),
+                scale_bits: constraints.scale_factor.to_bits(),
+            };
+
+            let (width_px, baseline_px, line_height_px, clusters) = if let Some(hit) =
+                self.measure_shaping_cache.get(&shaping_key)
+                && hit.text.as_ref() == rich.text.as_ref()
+                && hit.spans.as_ref().is_some_and(|s| {
+                    Arc::ptr_eq(s, &rich.spans) || s.as_ref() == rich.spans.as_ref()
+                }) {
+                (
+                    hit.width_px,
+                    hit.baseline_px,
+                    hit.line_height_px,
+                    hit.clusters.clone(),
+                )
+            } else {
+                let line = self.parley_shaper.shape_single_line_metrics(
+                    TextInputRef::Attributed {
+                        text: rich.text.as_ref(),
+                        base: base_style,
+                        spans: rich.spans.as_ref(),
+                    },
+                    scale,
+                );
+                let clusters: Arc<[parley_shaper::ShapedCluster]> = Arc::from(line.clusters);
+
+                let existed = self.measure_shaping_cache.contains_key(&shaping_key);
+                self.measure_shaping_cache.insert(
+                    shaping_key.clone(),
+                    TextMeasureShapingEntry {
+                        text: rich.text.clone(),
+                        spans: Some(rich.spans.clone()),
+                        width_px: line.width,
+                        baseline_px: line.baseline,
+                        line_height_px: line.line_height,
+                        clusters: clusters.clone(),
+                    },
+                );
+                if !existed {
+                    self.measure_shaping_fifo.push_back(shaping_key.clone());
+                    while self.measure_shaping_fifo.len() > MEASURE_SHAPING_CACHE_LIMIT {
+                        let Some(evict) = self.measure_shaping_fifo.pop_front() else {
+                            break;
+                        };
+                        self.measure_shaping_cache.remove(&evict);
+                    }
+                }
+
+                (line.width, line.baseline, line.line_height, clusters)
+            };
+
+            let max_width_px = max_width.0 * scale;
+            let text = rich.text.as_ref();
+            let (line_count, max_w_px) = if width_px <= max_width_px + 0.5 {
+                (1, width_px.max(0.0))
+            } else {
+                match constraints.wrap {
+                    TextWrap::Word => word_wrap_line_stats(text, clusters.as_ref(), max_width_px),
+                    TextWrap::Grapheme => {
+                        grapheme_wrap_line_stats(text, clusters.as_ref(), max_width_px)
+                    }
+                    TextWrap::None => unreachable!(),
+                }
+            };
+            metrics_for_uniform_lines(max_w_px, line_count, baseline_px, line_height_px, scale)
+        } else {
+            let wrapped = crate::text::wrapper::wrap_with_constraints_measure_only(
+                &mut self.parley_shaper,
+                TextInputRef::Attributed {
+                    text: rich.text.as_ref(),
+                    base: base_style,
+                    spans: rich.spans.as_ref(),
+                },
+                normalized_constraints,
+            );
+            metrics_from_wrapped_lines(&wrapped.lines, scale)
+        };
 
         let bucket = self.measure_cache.entry(key).or_default();
         bucket.push_back(TextMeasureEntry {
@@ -2341,6 +2911,13 @@ impl TextSystem {
             bucket.pop_front();
         }
 
+        let mut metrics = metrics;
+        if constraints.wrap == TextWrap::None
+            && constraints.overflow == TextOverflow::Ellipsis
+            && let Some(max_width) = constraints.max_width
+        {
+            metrics.size.width = max_width;
+        }
         metrics
     }
 
@@ -3375,9 +3952,9 @@ fn decorations_for_lines(
 #[cfg(test)]
 mod tests {
     use super::{
-        ResolvedSpan, TextBlobKey, TextDecorationKind, TextShapeKey, collect_font_names,
-        paint_span_for_text_range, spans_paint_fingerprint, spans_shaping_fingerprint,
-        subpixel_mask_to_alpha,
+        ResolvedSpan, TextBlobKey, TextDecorationKind, TextMeasureKey, TextShapeKey,
+        collect_font_names, paint_span_for_text_range, spans_paint_fingerprint,
+        spans_shaping_fingerprint, subpixel_mask_to_alpha,
     };
     use cosmic_text::Family;
     use fret_core::{
@@ -3497,6 +4074,24 @@ mod tests {
     }
 
     #[test]
+    fn word_wrap_stats_do_not_wrap_when_full_line_fits() {
+        let text = "hello world";
+        let clusters = synthetic_clusters_for_text(text, 10.0);
+        let (lines, max_w) = super::word_wrap_line_stats(text, &clusters, 1000.0);
+        assert_eq!(lines, 1);
+        assert_eq!(max_w, 110.0);
+    }
+
+    #[test]
+    fn word_wrap_stats_wrap_at_space_boundary() {
+        let text = "hello world";
+        let clusters = synthetic_clusters_for_text(text, 10.0);
+        let (lines, max_w) = super::word_wrap_line_stats(text, &clusters, 60.0);
+        assert_eq!(lines, 2);
+        assert_eq!(max_w, 60.0);
+    }
+
+    #[test]
     fn selection_rects_for_rtl_line_has_positive_width() {
         let clusters = vec![crate::text::parley_shaper::ShapedCluster {
             text_range: 0..4,
@@ -3542,15 +4137,17 @@ mod tests {
         };
 
         let left = super::hit_test_point_from_lines(
-            &[line.clone()],
+            std::slice::from_ref(&line),
             fret_core::Point::new(Px(0.0), Px(5.0)),
         )
         .expect("hit test");
         assert_eq!(left.index, 4);
 
-        let right =
-            super::hit_test_point_from_lines(&[line], fret_core::Point::new(Px(40.0), Px(5.0)))
-                .expect("hit test");
+        let right = super::hit_test_point_from_lines(
+            std::slice::from_ref(&line),
+            fret_core::Point::new(Px(40.0), Px(5.0)),
+        )
+        .expect("hit test");
         assert_eq!(right.index, 0);
     }
 
@@ -3725,6 +4322,52 @@ mod tests {
     }
 
     #[test]
+    fn text_measure_key_ignores_width_for_wrap_none() {
+        let style = TextStyle::default();
+
+        let a = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let b = TextConstraints {
+            max_width: Some(Px(320.0)),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        assert_eq!(
+            TextMeasureKey::new(&style, a, 7),
+            TextMeasureKey::new(&style, b, 7)
+        );
+    }
+
+    #[test]
+    fn text_measure_key_includes_width_for_wrap_word() {
+        let style = TextStyle::default();
+
+        let a = TextConstraints {
+            max_width: Some(Px(120.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+        let b = TextConstraints {
+            max_width: Some(Px(320.0)),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            scale_factor: 1.0,
+        };
+
+        assert_ne!(
+            TextMeasureKey::new(&style, a, 7),
+            TextMeasureKey::new(&style, b, 7)
+        );
+    }
+
+    #[test]
     fn sanitize_spans_extends_missing_tail() {
         let text = "hello";
         let spans = vec![TextSpan {
@@ -3751,7 +4394,7 @@ mod tests {
         assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
         assert_eq!(sanitized.len(), 2);
         assert_eq!(sanitized[0].len, 2);
-        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+        assert!(sanitized[0].paint.fg.is_some());
         assert_eq!(sanitized[1].len, 3);
         assert_eq!(sanitized[1].paint.fg, None);
     }
@@ -3783,7 +4426,7 @@ mod tests {
         assert_eq!(sanitized.iter().map(|s| s.len).sum::<usize>(), text.len());
         assert_eq!(sanitized.len(), 1);
         assert_eq!(sanitized[0].len, text.len());
-        assert_eq!(sanitized[0].paint.fg.is_some(), true);
+        assert!(sanitized[0].paint.fg.is_some());
     }
 
     #[test]
@@ -4364,8 +5007,10 @@ mod tests {
             "expected {family_cjk} to be present after loading cjk-lite fonts"
         );
 
-        let mut config = fret_core::TextFontFamilyConfig::default();
-        config.ui_sans = vec![family_inter.to_string()];
+        let config = fret_core::TextFontFamilyConfig {
+            ui_sans: vec![family_inter.to_string()],
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config);
 
         let noto_blob_id = super::stable_font_blob_id(fret_fonts::cjk_lite_fonts()[0]);
@@ -4462,8 +5107,10 @@ mod tests {
             "expected {family_emoji} to be present after loading emoji fonts"
         );
 
-        let mut config = fret_core::TextFontFamilyConfig::default();
-        config.ui_sans = vec![family_inter.to_string()];
+        let config = fret_core::TextFontFamilyConfig {
+            ui_sans: vec![family_inter.to_string()],
+            ..Default::default()
+        };
         let _ = text.set_font_families(&config);
 
         let emoji_blob_id = super::stable_font_blob_id(fret_fonts::emoji_fonts()[0]);

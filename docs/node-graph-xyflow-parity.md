@@ -24,13 +24,13 @@ If you are looking for an API-level guide, see `docs/node-graph-how-to-build-lik
 
 ## Focus window (current refactor target)
 
-Last audited: 2026-02-05
+Last audited: 2026-02-06
 
 This document is intentionally exhaustive. During large refactors, keep a small “focus window” so
 work remains coherent and measurable. For the execution plan + gates, see:
 `docs/workstreams/fret-node-xyflow-parity.md`.
 
-Current top gaps (aligned to workstream M0/M5):
+Current top gaps (aligned to workstream M0/M6):
 
 - **Derived internals invalidation discipline** (`updateNodeInternals`-style semantics): avoid over/under invalidation.
 - **Internals update pipeline determinism** (batching + stable ordering): ensure repeatable results.
@@ -344,9 +344,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 1.3 View constraints and persistence
 
-- [~] **Translate extent (world bounds) constraint**
+- [x] **Translate extent (world bounds) constraint**
   - XyFlow: `translateExtent` in `XYPanZoom` constrain pipeline
   - fret-node: `NodeGraphInteractionState.translate_extent` clamped in `NodeGraphCanvas::update_view_state(...)`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
 
 - [x] **Fit view / frame all / frame selection**
   - XyFlow: `fitViewport(...)` from `@xyflow/system`, surfaced via `useReactFlow().fitView()` and `<Controls />`
@@ -426,9 +427,12 @@ canonical data flow and invalidation boundaries:
     - `MeasuredGeometryStore` as the mechanism for publishing measured node sizes and port anchor bounds
     - Batch update API (XyFlow-like action): `MeasuredGeometryStore::apply_batch_if_changed(...)` /
       `MeasuredGeometryStore::apply_exclusive_batch_if_changed(...)` in `ecosystem/fret-node/src/ui/measured.rs`
+    - Portal measurement source publishes growth-only node size hints:
+      - `NodeGraphPortalHost` in `ecosystem/fret-node/src/ui/portal.rs`
+      - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
   - TODO: extend measurement sources:
     - canvas-rendered node chrome geometry (ports, header/body)
-    - optional portal-provided measured sizes
+    - portal-provided port anchor bounds (if/when portals render custom handles)
 
 - [~] **Handle/port bounds in window coordinates**
   - XyFlow: `handleBounds` is part of internal node update pipeline (`updateNodeInternalsSystem(...)`)
@@ -437,6 +441,8 @@ canonical data flow and invalidation boundaries:
     - `CanvasGeometry.ports[*].bounds` is the canonical port anchor rect in canvas space.
     - `NodeGraphInternalsStore.snapshot().ports_window` is the canonical port anchor rect in window space.
     - hit-testing and connection candidate selection use the derived port anchor rect (not ad-hoc center-only heuristics).
+  - Conformance:
+    - measured hint influences strict hit-testing: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_port_anchor_conformance.rs`
 
 ## 2.3 Z-order (draw order) and elevation
 

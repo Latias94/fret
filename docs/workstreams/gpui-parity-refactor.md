@@ -280,7 +280,7 @@ as the source of truth:
 - Caching:
   - Paint-stream replay caching: `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
   - Cache roots (ViewCache v1): `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
-  - View-cache subtree reuse + state retention: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`
+  - View-cache subtree reuse + state retention: `docs/adr/1163-view-cache-subtree-reuse-and-state-retention.md`
   - Prepaint + interaction stream range reuse (GPUI-aligned target): `docs/adr/0182-prepaint-interaction-stream-and-range-reuse.md`
 - Interactivity:
   - Pseudoclasses + structural stability (paint-only by default): `docs/adr/0181-interactivity-pseudoclasses-and-structural-stability.md`
@@ -1101,3 +1101,4 @@ When implementing MVP0–MVP2 work, enforce the following:
 - Any new caching/dispatch APIs must be designed so MVP3 (prepaint/multi-stream) can be added without breaking semantics.
 - Any new “helper” in ecosystem should be a thin layer over stable primitives, not a pile of bespoke runtime hooks.
 - Any new “locked contract” should include a short “future v2 note”: what is invariant vs what may change.
+

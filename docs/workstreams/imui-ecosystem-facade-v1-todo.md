@@ -1,7 +1,7 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1 - TODO Tracker
 
 Status: Draft
-Last updated: 2026-02-05
+Last updated: 2026-02-06
 
 This tracker covers the work described in:
 
@@ -124,10 +124,19 @@ Exit criteria:
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigger_focus`).
 - [x] IMUIECO-overlays-032 Add a minimal `BeginPopupModal`-style primitive (ImGui-aligned).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`open_popup`, `begin_popup_modal(_ex)`, `PopupModalOptions`).
-- [ ] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
+- [x] IMUIECO-overlays-033 Add minimal menu keyboard navigation (roving focus) for imui popups.
+  - Target: ArrowUp/ArrowDown + Home/End to move focus between menu items.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`menu_item_impl`: key handlers + `ImUiMenuNavState`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_arrow_keys_move_focus_between_items`).
+- [x] IMUIECO-overlays-034 Add checkbox/radio menu items (ImGui-style) with semantics.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`menu_item_checkbox_ex`, `menu_item_radio_ex`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`menu_item_checkbox_stamps_semantics_checked_state`).
+- [x] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
   - move (drag) + z-order + focus activation,
   - predictable hit-testing with overlays,
   - degrade cleanly when multi-window is unavailable (always in-window).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{floating_area,floating_area_drag_surface_ex}`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_area_moves_when_dragging_drag_surface`, `floating_area_bring_to_front_updates_hit_test_order`).
 - [x] IMUIECO-float-032a Add a minimal floating window skeleton (in-window) with a draggable title bar.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_moves_when_dragging_title_bar`).
@@ -143,14 +152,16 @@ Exit criteria:
 - [x] IMUIECO-float-032e Add minimal resize handles for floating windows (v1: edges + corners; diagonal cursor supported; min/max configurable).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window_resizable`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_resizes_when_dragging_corner_handle`).
-- [ ] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
-  - title bar, close button, Esc-to-close,
+- [x] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
+  - title bar (drag surface), close button, Esc-to-close,
   - resize handles + resize session state,
-  - focus trap/restore when appropriate (aligned with overlay policy).
-  - Note: title bar + close button + `Esc`-to-close are implemented for `floating_window_open`.
-  - Note: resize is v1-minimal today (right/bottom/corner). Left/top/corner variants remain open.
-- [~] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
+  - z-order activation when nested in `floating_layer(...)`.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`floating_window_impl_on_area` using `floating_area_ex`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (`render_floating_window_in_area`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (floating window tests still pass under nextest).
+- [x] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingAreaResponse`, `FloatingWindowResponse`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{area,window,window_open,window_resizable}`).
 - [ ] IMUIECO-float-034 Decide OS-window promotion scope:
   - docking-only for v1 (recommended), or
   - generalized capability-gated promotion later.
@@ -166,7 +177,9 @@ Exit criteria:
 - Perf guidance is written down (allocation patterns, caching boundaries, virtualization).
 
 - [ ] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
-- [ ] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
+- [x] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
+  - Evidence: `apps/fret-demo/src/bin/imui_floating_windows_demo.rs`
+  - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
 - [ ] IMUIECO-test-042 Add nextest coverage for facade crates (smoke + key behavior tests):
   - click variants are delivered once (clear-on-read),
   - drag lifecycle is consistent across frames,
@@ -174,4 +187,5 @@ Exit criteria:
 - [ ] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
 - [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
 - [ ] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
-- [ ] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
+- [x] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
+  - Evidence: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`

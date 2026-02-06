@@ -21,7 +21,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::Theme;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, Widget};
+use fret_ui::retained_bridge::{EventCx, Invalidation, LayoutCx, PaintCx, PrepaintCx, Widget};
 use slotmap::Key;
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
@@ -167,6 +167,7 @@ pub struct ChartCanvas {
     style_source: ChartStyleSource,
     last_theme_revision: u64,
     force_uncached_paint: bool,
+    last_sampling_window_key: u64,
     text_cache_prune: ChartTextCachePruneTuning,
     tooltip_formatter: Box<dyn TooltipFormatter>,
     input_map: ChartInputMap,
@@ -254,6 +255,7 @@ impl ChartCanvas {
             style_source: ChartStyleSource::Theme,
             last_theme_revision: 0,
             force_uncached_paint: true,
+            last_sampling_window_key: 0,
             text_cache_prune: ChartTextCachePruneTuning::default(),
             tooltip_formatter: Box::new(DefaultTooltipFormatter::default()),
             input_map: ChartInputMap::default(),
@@ -294,6 +296,24 @@ impl ChartCanvas {
             output_model: None,
             output: ChartCanvasOutput::default(),
         })
+    }
+
+    fn sampling_window_key(&self, plot: Rect, scale_factor: f32) -> u64 {
+        let output = self.engine.output();
+        let mut key = KeyBuilder::new();
+
+        key.mix_f32_bits(plot.size.width.0);
+        key.mix_f32_bits(plot.size.height.0);
+        key.mix_f32_bits(scale_factor);
+
+        key.mix_u64(output.axis_windows.len() as u64);
+        for (axis, window) in &output.axis_windows {
+            key.mix_u64(axis.0 as u64);
+            key.mix_f64_bits(window.min);
+            key.mix_f64_bits(window.max);
+        }
+
+        key.finish()
     }
 
     pub fn set_text_cache_prune_tuning(&mut self, tuning: ChartTextCachePruneTuning) {
@@ -3878,6 +3898,46 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
         cx.available
     }
 
+    fn prepaint(&mut self, cx: &mut PrepaintCx<'_, H>) {
+        let mut measurer = NullTextMeasurer::default();
+
+        // P0: run the engine synchronously, but allow multiple internal steps per frame so that
+        // medium-sized datasets can produce the first set of marks without relying on external
+        // redraw triggers.
+        let start = Instant::now();
+        let mut unfinished = true;
+        let mut steps_ran = 0u32;
+        while unfinished && steps_ran < 8 && start.elapsed() < Duration::from_millis(4) {
+            let budget = if self.cached_paths.is_empty() && self.cached_rects.is_empty() {
+                WorkBudget::new(262_144, 0, 32)
+            } else {
+                WorkBudget::new(32_768, 0, 8)
+            };
+
+            let step = self.engine.step(&mut measurer, budget);
+            match step {
+                Ok(step) => {
+                    unfinished = step.unfinished;
+                }
+                Err(EngineError::MissingViewport) => {
+                    unfinished = false;
+                }
+            }
+            steps_ran = steps_ran.saturating_add(1);
+        }
+
+        self.force_uncached_paint = unfinished;
+        if unfinished {
+            cx.request_animation_frame();
+        }
+
+        let next_key = self.sampling_window_key(self.last_layout.plot, cx.scale_factor);
+        if next_key != self.last_sampling_window_key {
+            cx.debug_record_chart_sampling_window_shift(next_key);
+            self.last_sampling_window_key = next_key;
+        }
+    }
+
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
         let theme = Theme::global(&*cx.app);
         let style_changed = self.sync_style_from_theme(theme);
@@ -3958,39 +4018,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         legend_text_stats,
                     );
                 });
-        }
-
-        let mut measurer = NullTextMeasurer::default();
-
-        // P0: run the engine synchronously, but allow multiple internal steps per paint so that
-        // medium-sized datasets can produce the first set of marks without relying on external
-        // redraw triggers.
-        let start = Instant::now();
-        let mut unfinished = true;
-        let mut steps_ran = 0u32;
-        while unfinished && steps_ran < 8 && start.elapsed() < Duration::from_millis(4) {
-            let budget = if self.cached_paths.is_empty() && self.cached_rects.is_empty() {
-                WorkBudget::new(262_144, 0, 32)
-            } else {
-                WorkBudget::new(32_768, 0, 8)
-            };
-
-            let step = self.engine.step(&mut measurer, budget);
-            match step {
-                Ok(step) => {
-                    unfinished = step.unfinished;
-                }
-                Err(EngineError::MissingViewport) => {
-                    unfinished = false;
-                }
-            }
-            steps_ran = steps_ran.saturating_add(1);
-        }
-
-        self.force_uncached_paint = unfinished;
-
-        if unfinished {
-            cx.request_animation_frame();
         }
 
         self.rebuild_paths_if_needed(cx);

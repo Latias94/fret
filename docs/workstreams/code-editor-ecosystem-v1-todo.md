@@ -9,7 +9,7 @@ This is the checkbox tracker companion to:
 
 Normative contracts:
 
-- `docs/adr/0193-code-editor-ecosystem-v1.md`
+- `docs/adr/0200-code-editor-ecosystem-v1.md`
 - `docs/adr/0194-text-navigation-and-word-boundaries-v1.md`
 - `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
 
@@ -252,3 +252,4 @@ Evidence anchors:
 
 - [ ] Decide whether we need composable per-row subtrees (embedded widgets, rich gutters).
 - [ ] If yes, adopt the retained host direction (ADR 0192) so window boundary crossings do not force parent rerenders.
+

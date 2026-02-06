@@ -405,6 +405,23 @@ Non-goals:
     - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TimePicker.kt`
     - `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/TimePickerDialog.kt`
 
+- [x] Tooltip token alignment: prefer component typography keys over direct sys typescale reads.
+  - Notes:
+    - Material Web v30 exposes tooltip typography as discrete properties plus `*.type` mixins; in
+      Fret we model these as a single `TextStyle` token per text role.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/tokens/v30.rs` (`inject_comp_tooltip_text_styles`)
+    - `ecosystem/fret-ui-material3/src/tooltip.rs` (uses `md.comp.plain-tooltip.supporting-text`)
+
+- [x] Rich tooltip (non-interactive) MVP surface.
+  - Notes:
+    - In Fret, `OverlayKind::Tooltip` is click-through (`layer.hit_testable=false`), so rich
+      tooltip actions are out-of-scope until we have a concrete consumer that requires an
+      interactive outcome (mechanism follow-up candidate).
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/tooltip.rs` (`RichTooltip`)
+    - `ecosystem/fret-ui-material3/src/tokens/tooltip.rs` (rich tooltip token mapping)
+
 ## Mechanism follow-ups (only if required)
 
 - [x] Semantics role coverage: add `SemanticsRole::Toolbar` (and validate with a concrete consumer).

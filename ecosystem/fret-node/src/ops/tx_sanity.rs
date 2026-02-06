@@ -49,6 +49,9 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
 
         GraphOp::SetNodePos { to, .. } => (!point_is_finite(*to)).then_some("SetNodePos.to"),
         GraphOp::SetGroupRect { to, .. } => (!rect_is_finite(*to)).then_some("SetGroupRect.to"),
+        GraphOp::SetStickyNoteRect { to, .. } => {
+            (!rect_is_finite(*to)).then_some("SetStickyNoteRect.to")
+        }
         GraphOp::SetNodeSize { to, .. } => {
             to.and_then(|s| (!size_is_finite(s)).then_some("SetNodeSize.to"))
         }
@@ -92,6 +95,8 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         | GraphOp::SetNodeData { .. }
         | GraphOp::SetGroupTitle { .. }
         | GraphOp::SetGroupColor { .. }
+        | GraphOp::SetStickyNoteText { .. }
+        | GraphOp::SetStickyNoteColor { .. }
         | GraphOp::AddPort { .. }
         | GraphOp::RemovePort { .. }
         | GraphOp::AddEdge { .. }

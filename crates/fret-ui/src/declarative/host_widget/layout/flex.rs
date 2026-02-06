@@ -159,14 +159,13 @@ impl ElementHostWidget {
                         // Preserve the explicit `gap` between the auto-margin item and the next
                         // sibling. Some layout-engine outcomes collapse that gap when `ml-auto`
                         // is present, but web flexbox keeps it intact.
-                        if let Some(&next_child) = cx.children.get(child_index + 1) {
-                            if let Some(next_layout) =
+                        if let Some(&next_child) = cx.children.get(child_index + 1)
+                            && let Some(next_layout) =
                                 cx.tree.layout_engine_child_local_rect(cx.node, next_child)
-                            {
-                                let next_x = next_layout.origin.x.0 - pad_left;
-                                let desired = (next_x - props.gap.0 - layout.size.width.0).max(0.0);
-                                x = x.min(desired);
-                            }
+                        {
+                            let next_x = next_layout.origin.x.0 - pad_left;
+                            let desired = (next_x - props.gap.0 - layout.size.width.0).max(0.0);
+                            x = x.min(desired);
                         }
                     }
 
@@ -210,14 +209,10 @@ impl ElementHostWidget {
                                 .max(0.0);
                                 x = x.max(desired);
                             }
-                        } else if margin_right_auto {
-                            if single_child {
-                                let free = auto_margin_inner_size.width.0
-                                    - layout.size.width.0
-                                    - left
-                                    - right;
-                                x = left.max(0.0).min((left + free.max(0.0)).max(0.0));
-                            }
+                        } else if margin_right_auto && single_child {
+                            let free =
+                                auto_margin_inner_size.width.0 - layout.size.width.0 - left - right;
+                            x = left.max(0.0).min((left + free.max(0.0)).max(0.0));
                         }
                     }
 

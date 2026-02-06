@@ -45,7 +45,7 @@ Now / Next / Later (high level):
   - Detailed contract checklist: `docs/workstreams/fret-node-internals-m0.md`
 - **Next**: stabilize built-in add-ons API (minimap/controls/background theming) without policy bleed (workstream M2).
   - Workstream: `docs/workstreams/fret-node-addons-api-m2.md`
-- **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M5 + future milestones).
+- **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M6 + future milestones).
 
 ### Headless substrate (present)
 
@@ -108,7 +108,7 @@ Suggested mapping (high level):
 - NG0 (Contracts + Harness) ↔ workstream M0/M1
 - NG1 (Editor Usability) ↔ workstream M2 (add-ons stabilization) + selected A-layer fixes
 - NG2 (Domain Readiness) ↔ typed connections + profile pipeline hardening (domain demos)
-- NG3 (Scale + Collaboration) ↔ derived geometry invalidation + culling + deterministic patch units
+- NG3 (Scale + Collaboration) ↔ derived geometry invalidation + culling + deterministic patch units (workstream M6)
 
 ## Milestones and Exit Criteria
 
@@ -180,11 +180,23 @@ Legend:
 - [~] Blackboard variables + typed symbol references (domain-ready).
   - Symbol edit ops (name/type/default/meta): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
   - Tests: `ecosystem/fret-node/src/ops/tests.rs`
+  - Symbol reference nodes (baseline contract + validation):
+    - Contract helpers: `ecosystem/fret-node/src/core/symbol_ref.rs` (`SYMBOL_REF_NODE_KIND`)
+    - Structural validation: `ecosystem/fret-node/src/core/validate.rs`
+    - Tests: `ecosystem/fret-node/src/core/tests.rs`
+    - Copy/paste includes referenced symbols: `ecosystem/fret-node/src/ops/fragment.rs` + `ecosystem/fret-node/src/ops/tests.rs`
+  - Profile concretization (Dataflow demo): `ecosystem/fret-node/src/kit/profiles/dataflow.rs` (ensures symbol-ref nodes have a typed `out` port)
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
-- [~] Deterministic graph diff/patch set for collaboration.
+- [x] Deterministic graph diff/patch set for collaboration (MVP).
   - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
-  - Patch units: ports use setter ops for soft fields (connectable/ty/data) and fall back to remove+add only for structural changes.
-  - Tests: `ecosystem/fret-node/src/ops/tests.rs`
+  - Patch units:
+    - Ports: setter ops for soft fields (`connectable*`, `ty`, `data`); structural changes use remove+add (and restore `SetNodePorts` + re-add incident edges when needed).
+    - Groups: setters for common edits (`title`, `rect`, `color`) to preserve identity.
+    - Sticky notes: setters for common edits (`text`, `rect`, `color`) to preserve identity.
+  - Tests: `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`, `graph_diff_roundtrips_when_a_port_changes_structurally`, `graph_diff_roundtrips_when_deleting_a_port_with_incident_edges`)
+- [ ] Patch unit minimality follow-ups (optional, deferred).
+  - Consider port structural setter ops (key/dir/kind/capacity) if we need more minimal collaboration diffs.
+  - Workstream: `docs/workstreams/fret-node-deterministic-patch-units-m6.md`

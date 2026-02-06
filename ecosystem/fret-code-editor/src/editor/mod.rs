@@ -241,7 +241,7 @@ struct CodeEditorState {
     row_text_cache_rev: fret_code_editor_buffer::Revision,
     row_text_cache_wrap_cols: Option<usize>,
     row_text_cache_tick: u64,
-    row_text_cache: HashMap<usize, (Arc<str>, u64)>,
+    row_text_cache: HashMap<usize, (RowTextCacheEntry, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
     row_geom_cache_rev: fret_code_editor_buffer::Revision,
     row_geom_cache_wrap_cols: Option<usize>,
@@ -249,6 +249,7 @@ struct CodeEditorState {
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
     selection_rect_scratch: Vec<Rect>,
+    baseline_measure_cache: Option<BaselineMeasureCache>,
     #[cfg(feature = "syntax")]
     language: Option<Arc<str>>,
     #[cfg(feature = "syntax")]
@@ -261,6 +262,22 @@ struct CodeEditorState {
     syntax_row_cache: HashMap<usize, (Arc<[SyntaxSpan]>, u64)>,
     #[cfg(feature = "syntax")]
     syntax_row_cache_queue: VecDeque<(usize, u64)>,
+}
+
+#[derive(Debug, Clone)]
+struct RowTextCacheEntry {
+    text: Arc<str>,
+    range: Range<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct BaselineMeasureCache {
+    max_width: Px,
+    row_h: Px,
+    scale_bits: u32,
+    text_style: TextStyle,
+    metrics: fret_core::TextMetrics,
+    measured_h: Px,
 }
 
 impl CodeEditorState {
@@ -310,6 +327,7 @@ impl CodeEditorHandle {
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
                 selection_rect_scratch: Vec::new(),
+                baseline_measure_cache: None,
                 #[cfg(feature = "syntax")]
                 language: None,
                 #[cfg(feature = "syntax")]

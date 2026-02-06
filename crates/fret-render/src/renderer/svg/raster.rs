@@ -18,6 +18,9 @@ impl Renderer {
     ) -> Option<(fret_core::ImageId, fret_core::UvRect, (u32, u32))> {
         let key = Self::svg_raster_key(svg, rect, scale_factor, kind, fit);
         if self.svg_rasters.contains_key(&key) {
+            if self.perf_enabled {
+                self.perf_svg_raster_cache_hits = self.perf_svg_raster_cache_hits.saturating_add(1);
+            }
             if self.svg_perf_enabled {
                 self.svg_perf.cache_hits = self.svg_perf.cache_hits.saturating_add(1);
             }
@@ -36,6 +39,9 @@ impl Renderer {
                 page.last_used_epoch = self.svg_raster_epoch;
             }
             return Some((image, uv, size_px));
+        }
+        if self.perf_enabled {
+            self.perf_svg_raster_cache_misses = self.perf_svg_raster_cache_misses.saturating_add(1);
         }
         if self.svg_perf_enabled {
             self.svg_perf.cache_misses = self.svg_perf.cache_misses.saturating_add(1);

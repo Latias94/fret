@@ -367,6 +367,25 @@ impl OverlayRequest {
         self
     }
 
+    pub fn add_dismissable_branch(mut self, branch: GlobalElementId) -> Self {
+        if !self.dismissable_branches.contains(&branch) {
+            self.dismissable_branches.push(branch);
+        }
+        self
+    }
+
+    pub fn extend_dismissable_branches(
+        mut self,
+        branches: impl IntoIterator<Item = GlobalElementId>,
+    ) -> Self {
+        for branch in branches {
+            if !self.dismissable_branches.contains(&branch) {
+                self.dismissable_branches.push(branch);
+            }
+        }
+        self
+    }
+
     pub fn consume_outside_pointer_events(mut self, consume: bool) -> Self {
         self.consume_outside_pointer_events = consume;
         self

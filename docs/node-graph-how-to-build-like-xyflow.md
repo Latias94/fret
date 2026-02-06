@@ -95,3 +95,21 @@ Use `NodeGraphEdgeTypes` to register custom edge path builders and keep hit-test
 Stable contract:
 
 - `docs/node-graph-addons-minimap-controls.md`
+
+## Blackboard variables (symbols) and symbol references
+
+`fret-node` treats graph-scoped symbols as first-class (`Graph.symbols`), and standardizes a
+built-in symbol reference node kind:
+
+- `fret.symbol_ref`
+
+Contract (baseline):
+
+- A symbol reference node's `Node.data` must be an object with a `symbol_id` string (UUID).
+- The referenced `symbol_id` must exist in `Graph.symbols`.
+
+Code pointers:
+
+- Contract helpers: `core::symbol_ref` (`SYMBOL_REF_NODE_KIND`)
+- Structural validation: `core::validate_graph_structural`
+- Copy/paste fragment captures referenced symbols: `ops::GraphFragment`

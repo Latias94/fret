@@ -14,6 +14,7 @@ pub(crate) struct WrappedLayout {
 }
 
 impl WrappedLayout {
+    #[allow(dead_code)]
     pub fn hit_test_x(&self, line_index: usize, x: f32) -> (usize, CaretAffinity) {
         let Some(line) = self.lines.get(line_index) else {
             return (0, CaretAffinity::Downstream);
@@ -61,7 +62,10 @@ pub(crate) fn wrap_with_constraints(
             WrappedLayout {
                 text_len,
                 kept_end: out.kept_end,
-                line_ranges: vec![0..out.kept_end],
+                line_ranges: vec![Range {
+                    start: 0,
+                    end: out.kept_end,
+                }],
                 lines: vec![out.line],
             }
         }
@@ -78,7 +82,10 @@ pub(crate) fn wrap_with_constraints(
         _ => WrappedLayout {
             text_len,
             kept_end: text_len,
-            line_ranges: vec![0..text_len],
+            line_ranges: vec![Range {
+                start: 0,
+                end: text_len,
+            }],
             lines: vec![shaper.shape_single_line(input, scale)],
         },
     }
@@ -118,7 +125,10 @@ pub(crate) fn wrap_with_constraints_measure_only(
             WrappedLayout {
                 text_len,
                 kept_end: text_len,
-                line_ranges: vec![0..text_len],
+                line_ranges: vec![Range {
+                    start: 0,
+                    end: text_len,
+                }],
                 lines: vec![line],
             }
         }
@@ -130,7 +140,10 @@ pub(crate) fn wrap_with_constraints_measure_only(
         _ => WrappedLayout {
             text_len,
             kept_end: text_len,
-            line_ranges: vec![0..text_len],
+            line_ranges: vec![Range {
+                start: 0,
+                end: text_len,
+            }],
             lines: vec![shaper.shape_single_line_metrics(input, scale)],
         },
     }
@@ -573,7 +586,7 @@ fn wrap_grapheme_range(
 
     if start >= end {
         return (
-            vec![start..start],
+            vec![Range { start, end: start }],
             vec![shape_slice(shaper, text, base, spans, start..start, scale)],
         );
     }
@@ -640,7 +653,7 @@ fn wrap_word_range(
 
     if start >= end {
         return (
-            vec![start..start],
+            vec![Range { start, end: start }],
             vec![shape_slice(shaper, text, base, spans, start..start, scale)],
         );
     }
@@ -740,7 +753,7 @@ fn wrap_word_range_measure_only(
 
     if start >= end {
         return (
-            vec![start..start],
+            vec![Range { start, end: start }],
             vec![shape_slice_measure_only(
                 shaper,
                 text,
@@ -1121,6 +1134,7 @@ fn empty_range_at(idx: usize) -> Range<usize> {
     idx..idx
 }
 
+#[allow(dead_code)]
 fn hit_test_x(clusters: &[ShapedCluster], x: f32, text_len: usize) -> (usize, CaretAffinity) {
     if clusters.is_empty() {
         return (0, CaretAffinity::Downstream);

@@ -734,6 +734,12 @@ Rules:
   - drag a symbol into the graph to create a reference node at a location,
   - copy/paste across graphs copies symbols into the destination graph when needed.
 
+Reserved node kind (baseline contract):
+
+- `fret.symbol_ref`: a built-in "symbol reference" node.
+  - `Node.data` must be an object with a `symbol_id` string (UUID).
+  - The referenced `symbol_id` must exist in `Graph.symbols`.
+
 Implementation note:
 
 - Symbols are a **built-in** graph section (not an optional extension), because they are required
