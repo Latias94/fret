@@ -1,7 +1,8 @@
 Status: Active (workstream note; not a contract)
 
 This workstream targets **full capability parity** with **TanStack Table v8 `table-core`** (engine
-layer, not React integration):
+layer, not React integration). “Capability parity” means: for every upstream feature and public API
+surface that exists in `table-core`, Fret’s headless engine can express it without losing power.
 
 - Upstream reference (local checkout): `repo-ref/table/packages/table-core`
 - Fret implementation: `ecosystem/fret-ui-headless/src/table/`
@@ -27,9 +28,13 @@ captures the exact upstream version and commit:
 “Parity” in this workstream means:
 
 1. **Feature coverage parity**: every `table-core` feature is represented and behaves equivalently.
-2. **Semantic parity**: default behaviors, edge-cases, and option interactions match upstream.
-3. **State-shape parity**: state can be round-tripped to/from a TanStack-equivalent JSON shape.
-4. **Performance parity (at the engine level)**: derived models are computed via dependency-driven
+2. **Compatibility by default**: for overlapping behaviors, the default configuration matches
+   upstream semantics (fixtures gate the observable outcomes).
+3. **Superset allowances**: behavior may differ *only* when it unlocks extra capabilities, and
+   should be opt-in and/or policy-configurable so consumers can still choose TanStack-compatible
+   outcomes.
+4. **State-shape parity**: state can be round-tripped to/from a TanStack-equivalent JSON shape.
+5. **Performance parity (at the engine level)**: derived models are computed via dependency-driven
    memoization (TanStack `memo(getDeps, fn)`-style), so large tables remain predictable.
 
 Non-goals:
