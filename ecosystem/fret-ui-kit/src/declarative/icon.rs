@@ -27,19 +27,6 @@ impl IconSvgRegistry {
     pub fn resolve(&self, icon: &IconId) -> Option<SvgId> {
         self.icons.get(icon).copied().or(self.missing)
     }
-
-    pub fn clear(&mut self) {
-        self.icons.clear();
-        self.missing = None;
-    }
-
-    pub fn set_missing(&mut self, missing: SvgId) {
-        self.missing = Some(missing);
-    }
-
-    pub fn insert(&mut self, icon: IconId, svg: SvgId) {
-        self.icons.insert(icon, svg);
-    }
 }
 
 /// Pre-register all SVG icons in the global `IconRegistry` and store their `SvgId`s in

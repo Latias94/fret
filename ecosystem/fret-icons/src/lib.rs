@@ -173,22 +173,9 @@ impl IconRegistry {
         self.resolve(id).map(ResolvedSvg::into_owned)
     }
 
-    pub fn resolve_or_missing(&self, id: &IconId) -> ResolvedSvg<'_> {
-        self.resolve(id)
-            .unwrap_or(ResolvedSvg::Static(MISSING_ICON_SVG))
-    }
-
     pub fn resolve_or_missing_owned(&self, id: &IconId) -> ResolvedSvgOwned {
         self.resolve_owned(id)
             .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
-    }
-
-    pub fn collect_resolved_owned(&self) -> Vec<(IconId, ResolvedSvgOwned)> {
-        let mut ids: Vec<IconId> = self.icon_ids().cloned().collect();
-        ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
-        ids.into_iter()
-            .filter_map(|id| self.resolve_owned(&id).ok().map(|resolved| (id, resolved)))
-            .collect()
     }
 
     pub fn freeze(&self) -> Result<FrozenIconRegistry, Vec<ResolveError>> {
