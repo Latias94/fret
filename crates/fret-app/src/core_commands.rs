@@ -588,6 +588,7 @@ fn core_i18n_lookup() -> Arc<dyn fret_runtime::fret_i18n::I18nLookup + 'static> 
 
 const CORE_COMMANDS_FTL_EN_US: &str = r#"
 core-command-category-app = App
+workspace-menu-view = View
 
 core-command-title-app-command-palette = Command Palette
 core-command-title-app-about = About
@@ -601,6 +602,7 @@ core-command-title-app-quit = Quit
 
 const CORE_COMMANDS_FTL_ZH_CN: &str = r#"
 core-command-category-app = 应用
+workspace-menu-view = 视图
 
 core-command-title-app-command-palette = 命令面板
 core-command-title-app-about = 关于

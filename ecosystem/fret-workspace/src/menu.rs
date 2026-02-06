@@ -22,6 +22,8 @@ pub struct WorkspaceMenuCommands {
 
     pub command_palette: Option<CommandId>,
     pub switch_locale: Option<CommandId>,
+    /// Optional override for the top-level "View" menu title.
+    pub view_menu_title: Option<Arc<str>>,
 
     pub open: Option<CommandId>,
     pub save: Option<CommandId>,
@@ -70,6 +72,7 @@ impl Default for WorkspaceMenuCommands {
 
             command_palette: None,
             switch_locale: None,
+            view_menu_title: None,
 
             open: None,
             save: None,
@@ -222,6 +225,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         quit_app: _,
         command_palette,
         switch_locale,
+        view_menu_title,
         open,
         save,
         save_as,
@@ -296,7 +300,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     }
     if !view_items.is_empty() {
         menus.push(Menu {
-            title: Arc::from("View"),
+            title: view_menu_title.unwrap_or_else(|| Arc::from("View")),
             role: Some(MenuRole::View),
             items: view_items,
         });
@@ -488,5 +492,21 @@ mod tests {
             }),
             "view menu should contain locale switch command"
         );
+    }
+
+    #[test]
+    fn workspace_default_menu_uses_custom_view_title_when_provided() {
+        let mut cmds = WorkspaceMenuCommands::default();
+        cmds.command_palette = Some(CommandId::new("app.command_palette"));
+        cmds.view_menu_title = Some(Arc::from("视图"));
+
+        let menu_bar = workspace_default_menu_bar(cmds);
+        let view_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::View))
+            .expect("view menu should be present");
+
+        assert_eq!(view_menu.title.as_ref(), "视图");
     }
 }

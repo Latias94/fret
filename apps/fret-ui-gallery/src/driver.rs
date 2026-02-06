@@ -2250,6 +2250,18 @@ pub fn build_app() -> App {
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(&mut app);
 
+    let view_menu_title = app
+        .global::<fret_runtime::fret_i18n::I18nService>()
+        .map(|i18n| {
+            let text = i18n.t("workspace.menu.view".to_string());
+            if text == "workspace.menu.view" {
+                Arc::from("View")
+            } else {
+                Arc::from(text)
+            }
+        })
+        .unwrap_or_else(|| Arc::from("View"));
+
     let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
     cmds.open = Some(CommandId::new(CMD_APP_OPEN));
     cmds.save = Some(CommandId::new(CMD_APP_SAVE));
@@ -2263,6 +2275,7 @@ pub fn build_app() -> App {
     cmds.switch_locale = Some(CommandId::new(
         fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
     ));
+    cmds.view_menu_title = Some(view_menu_title);
 
     if Platform::current() == Platform::Macos {
         cmds.app_menu_title = Some(Arc::from("Fret"));
@@ -2904,6 +2917,7 @@ impl WinitAppDriver for UiGalleryDriver {
             }
             fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
                 if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
+                    create_app_menu_bar(app);
                     app.request_redraw(window);
                     let _ = app.models_mut().update(&state.last_action, |v| {
                         *v = Arc::<str>::from("cmd.locale.switch_next");
