@@ -1,20 +1,3 @@
-use fret_core::{
-    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
-    TextBlobId,
-};
-use fret_runtime::ui_host::{
-    CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
-};
-use fret_runtime::{
-    ClipboardToken, CommandId, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect,
-    FrameId, ModelHost, ModelStore, TickId, TimerToken,
-};
-use fret_ui::retained_bridge::Widget as _;
-use serde_json::Value;
-use std::any::{Any, TypeId};
-use std::collections::{HashMap, HashSet};
-use std::time::Instant;
-
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
@@ -27,6 +10,13 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
     CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
 };
+use fret_core::{
+    AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
+};
+use fret_runtime::{CommandId, DragSession, DragSessionId, Effect};
+use fret_ui::retained_bridge::Widget as _;
+use serde_json::Value;
+use std::time::Instant;
 
 mod a11y_active_descendant_conformance;
 mod background_style_conformance;
@@ -60,6 +50,7 @@ mod fit_view_options_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
 mod group_preview_conformance;
+mod harness;
 mod hit_testing_conformance;
 mod hit_testing_semantic_zoom_conformance;
 mod hot_state_invalidation_conformance;
@@ -103,6 +94,12 @@ mod viewport_animation_conformance;
 mod viewport_helper_conformance;
 mod xyflow_style_conformance;
 mod z_order_conformance;
+
+use harness::{
+    NullServices, TestUiHostImpl, command_cx, event_cx, make_test_graph_two_nodes,
+    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
+    make_test_graph_two_nodes_with_size, read_node_pos,
+};
 
 use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
 use super::NodeGraphCanvas;
