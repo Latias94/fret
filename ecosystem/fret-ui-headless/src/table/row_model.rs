@@ -173,6 +173,7 @@ pub struct TableBuilder<'a, TData> {
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     filtered_row_model_override_pre_filtered: bool,
+    sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
     pagination_row_model_override_pre_pagination: bool,
     initial_state: Option<super::TableState>,
@@ -202,6 +203,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_sub_rows: None,
             get_grouped_row_model: None,
             filtered_row_model_override_pre_filtered: false,
+            sorted_row_model_override_pre_sorted: false,
             expanded_row_model_override_pre_expanded: false,
             pagination_row_model_override_pre_pagination: false,
             initial_state: None,
@@ -328,6 +330,12 @@ impl<'a, TData> TableBuilder<'a, TData> {
 
     pub fn manual_sorting(mut self, manual: bool) -> Self {
         self.options.manual_sorting = manual;
+        self
+    }
+
+    /// TanStack-aligned: override `getSortedRowModel` to return `getPreSortedRowModel()`.
+    pub fn override_sorted_row_model_pre_sorted(mut self) -> Self {
+        self.sorted_row_model_override_pre_sorted = true;
         self
     }
 
@@ -512,6 +520,7 @@ pub struct Table<'a, TData> {
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     filtered_row_model_override_pre_filtered: bool,
+    sorted_row_model_override_pre_sorted: bool,
     expanded_row_model_override_pre_expanded: bool,
     pagination_row_model_override_pre_pagination: bool,
     /// TanStack-aligned `initialState` snapshot (used by table-level reset APIs).
@@ -619,6 +628,7 @@ impl<'a, TData> Table<'a, TData> {
             get_grouped_row_model: builder.get_grouped_row_model,
             filtered_row_model_override_pre_filtered: builder
                 .filtered_row_model_override_pre_filtered,
+            sorted_row_model_override_pre_sorted: builder.sorted_row_model_override_pre_sorted,
             expanded_row_model_override_pre_expanded: builder
                 .expanded_row_model_override_pre_expanded,
             pagination_row_model_override_pre_pagination: builder
@@ -2615,7 +2625,7 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn sorted_row_model(&self) -> &RowModel<'a, TData> {
-        if self.options.manual_sorting {
+        if self.options.manual_sorting || self.sorted_row_model_override_pre_sorted {
             return self.pre_sorted_row_model();
         }
         self.sorted_row_model.get_or_init(|| {
@@ -3831,6 +3841,35 @@ mod tests {
                 manual_sorting: true,
                 ..Default::default()
             })
+            .build();
+
+        assert!(std::ptr::eq(
+            table.sorted_row_model(),
+            table.pre_sorted_row_model()
+        ));
+    }
+
+    #[test]
+    fn sorted_row_model_override_skips_sorted_row_model() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            value: i32,
+        }
+
+        let data = vec![Item { value: 2 }, Item { value: 1 }];
+        let helper = create_column_helper::<Item>();
+        let columns = vec![helper.accessor("value", |it| it.value)];
+
+        let mut state = TableState::default();
+        state.sorting = vec![SortSpec {
+            column: "value".into(),
+            desc: false,
+        }];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .override_sorted_row_model_pre_sorted()
             .build();
 
         assert!(std::ptr::eq(

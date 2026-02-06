@@ -71,22 +71,22 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## Next execution plan (functional parity first)
 
-- Step 1: Complete manual sorting override parity in `HTP-sort-050`.
-- Step 2: Complete grouped aggregation/sorting depth in `HTP-grp-020` + `HTP-grp-030`.
-- Step 3: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
-- Step 4: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
-- Step 5: Expand filtering `getCanFilter`/controlled hooks parity surface.
+- Step 1: Complete grouped aggregation/sorting depth in `HTP-grp-020` + `HTP-grp-030`.
+- Step 2: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
+- Step 3: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
+- Step 4: Expand filtering `getCanFilter`/controlled hooks parity surface.
+- Step 5: Extend API inventory coverage (`HTP-base-004` + `HTP-cap-010`) for non-option surfaces.
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
 P0 (core behavior parity, highest user-visible risk):
 
-- HTP-sort-050: manualSorting + getSortedRowModel override semantics need final parity lock.
+- HTP-grp-020 + HTP-grp-030: grouped aggregation depth and grouped sorting precedence still have highest functional risk.
 
 P1 (capability breadth parity):
 
 - HTP-id-013/014/015/016: complete rowsById + grouped/string RowId parity across all feature paths.
-- HTP-grp-020 + HTP-grp-030: non-u64 aggregations, custom aggregation coverage, and grouped sorting precedence/integration.
+- HTP-filt-080/090: complete `getCanFilter` option-gate + controlled filtering hook parity surfaces.
 - HTP-state-020: lossless omitted-vs-explicit-default JSON round-trip semantics.
 
 P2 (engineering guardrails for sustained parity):
@@ -100,7 +100,7 @@ P2 (engineering guardrails for sustained parity):
 
 - Milestone A (UI pinning correctness, done): HTP-ui-colpin-010 closed with retained split alignment + dedicated parity gate.
 - Milestone B (grouped pinning semantics, done): `HTP-ui-rowpin-020` + `HTP-rowpin-015` closed with fixture-backed assertions.
-- Milestone C (manual pipeline parity, in progress): close `HTP-sort-050`, then lock cross-feature interactions with pagination/grouping.
+- Milestone C (manual pipeline parity, done): `HTP-sort-050` closed with fixture-backed manualSorting/getSortedRowModel override assertions.
 - Milestone D (filter depth/meta parity, done): `HTP-filt-050` + `HTP-filt-060` + `HTP-filt-070` are parity-gated.
 - Milestone E (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
 - Milestone F (guardrails): close HTP-cap-010, HTP-base-004, HTP-memo-020, and HTP-perf-010.
@@ -306,8 +306,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_fns.json`
   - Remaining: broader edge-case coverage (mixed types / nullish behaviors).
-- [ ] HTP-sort-050 Align 鈥渕anual sorting鈥?semantics:
-  - `manualSorting` (and `getSortedRowModel` override) behavior matches upstream.
+- [x] HTP-sort-050 Align manual sorting semantics:
+  - Done (parity-gated): `manualSorting=true` returns `pre_sorted` row model.
+  - Done (parity-gated): `getSortedRowModel` override to `pre_sorted` matches upstream behavior.
+  - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_manual_parity.rs`
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_manual.json`
+  - Hook surface: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`TableBuilder::override_sorted_row_model_pre_sorted`)
 
 ---
 
@@ -640,6 +644,7 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json` | `column_sizing` | `ColumnSizing` (totals, start/after offsets, clamp, resize lifecycle + `columnSizingInfo`, RTL delta sign flip) | `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json` | `column_resizing_group_headers` | `ColumnSizing` (group header resize fan-out + group entry in `columnSizingStart`) | `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_fns.json` | `sorting_fns` | `RowSorting` (sortingFn resolution: `auto` + built-ins + registry/custom) | `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs` | Partial |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_manual.json` | `sorting_manual` | `RowSorting` (`manualSorting` + `getSortedRowModel` override semantics) | `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_manual_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json` | `filtering_fns` | `ColumnFiltering` / `GlobalFiltering` (`filterFns`, `resolveFilterValue`, `autoRemove`, gates) | `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_meta.json` | `filtering_meta` | `ColumnFiltering` (`row.columnFiltersMeta` / custom `addMeta` callback semantics) | `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_meta_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json` | `headers_cells` | `core/*` (header groups + cell ids, including pinning split families) | `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` | Partial |
