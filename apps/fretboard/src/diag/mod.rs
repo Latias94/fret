@@ -22,16 +22,26 @@ use gates::{
 };
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
+    apply_pick_to_script, bundle_stats_from_path,
+    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_layout_fast_path_min, check_bundle_for_notify_hotspot_file_max,
+    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
+    check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_budget,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
-    check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
+    check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_a11y_composition,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_drag,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+    check_bundle_for_ui_gallery_code_editor_a11y_selection,
+    check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_present,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
+    check_bundle_for_ui_gallery_code_editor_word_boundary, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
     check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
     check_bundle_for_vlist_visible_range_refreshes_max,
@@ -40,7 +50,8 @@ use stats::{
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
     check_bundle_for_vlist_window_shifts_kind_max,
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
-    check_bundle_for_wheel_scroll_hit_changes, check_report_for_hover_layout_invalidations,
+    check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
+    check_report_for_hover_layout_invalidations,
     clear_script_result_files, report_pick_result_and_exit, report_result_and_exit,
     run_pick_and_wait, run_script_and_wait, wait_for_failure_dump_bundle, write_pick_script,
 };
@@ -89,6 +100,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut stats_json: bool = false;
     let mut warmup_frames: u64 = 0;
     let mut perf_repeat: u64 = 1;
+    let mut reuse_launch: bool = false;
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
@@ -107,6 +119,15 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_scene_test_id: Option<String> = None;
     let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_pixels_changed_test_id: Option<String> = None;
+    let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
+    let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
+    let mut check_ui_gallery_code_editor_word_boundary: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_selection: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_selection_wrap: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_wrap: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_drag: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
@@ -114,6 +135,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
+    let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
+    let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
+    let mut check_node_graph_cull_window_shifts_max: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
     let mut check_vlist_window_shifts_explainable: bool = false;
@@ -122,6 +146,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_vlist_window_shifts_prefetch_max: Option<u64> = None;
     let mut check_vlist_window_shifts_escape_max: Option<u64> = None;
     let mut check_vlist_policy_key_stable: bool = false;
+    let mut check_windowed_rows_offset_changes_min: Option<u64> = None;
+    let mut check_windowed_rows_offset_changes_eps: f32 = 0.5;
     let mut check_layout_fast_path_min: Option<u64> = None;
     let mut check_gc_sweep_liveness: bool = false;
     let mut check_notify_hotspot_file_max: Vec<(String, u64)> = Vec::new();
@@ -556,6 +582,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_pixels_changed_test_id = Some(v);
                 i += 1;
             }
+            "--check-ui-gallery-code-editor-torture-marker-present" => {
+                check_ui_gallery_code_editor_torture_marker_present = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-torture-undo-redo" => {
+                check_ui_gallery_code_editor_torture_undo_redo = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-word-boundary" => {
+                check_ui_gallery_code_editor_word_boundary = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-selection" => {
+                check_ui_gallery_code_editor_a11y_selection = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition" => {
+                check_ui_gallery_code_editor_a11y_composition = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-selection-wrap" => {
+                check_ui_gallery_code_editor_a11y_selection_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-wrap" => {
+                check_ui_gallery_code_editor_a11y_composition_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-wrap-scroll" => {
+                check_ui_gallery_code_editor_a11y_composition_wrap_scroll = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-drag" => {
+                check_ui_gallery_code_editor_a11y_composition_drag = true;
+                i += 1;
+            }
             "--check-semantics-changed-repainted" => {
                 check_semantics_changed_repainted = true;
                 i += 1;
@@ -655,6 +717,30 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_vlist_policy_key_stable = true;
                 i += 1;
             }
+            "--check-windowed-rows-offset-changes-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-min".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-windowed-rows-offset-changes-eps" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-windowed-rows-offset-changes-eps".to_string()
+                    );
+                };
+                check_windowed_rows_offset_changes_eps = v.parse::<f32>().map_err(|_| {
+                    "invalid value for --check-windowed-rows-offset-changes-eps".to_string()
+                })?;
+                i += 1;
+            }
             "--check-layout-fast-path-min" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -675,6 +761,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-prepaint-actions-min".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-chart-sampling-window-shifts-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-chart-sampling-window-shifts-min".to_string()
+                    );
+                };
+                check_chart_sampling_window_shifts_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-chart-sampling-window-shifts-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-node-graph-cull-window-shifts-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-node-graph-cull-window-shifts-min".to_string(),
+                    );
+                };
+                check_node_graph_cull_window_shifts_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-node-graph-cull-window-shifts-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-node-graph-cull-window-shifts-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-node-graph-cull-window-shifts-max".to_string(),
+                    );
+                };
+                check_node_graph_cull_window_shifts_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-node-graph-cull-window-shifts-max".to_string()
+                })?);
                 i += 1;
             }
             "--check-drag-cache-root-paint-only" => {
@@ -946,6 +1068,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("invalid value for --env (empty KEY)".to_string());
                 }
                 launch_env.push((key.to_string(), value.to_string()));
+                i += 1;
+            }
+            "--reuse-launch" => {
+                reuse_launch = true;
                 i += 1;
             }
             "--launch" => {
@@ -1371,10 +1497,22 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
+                    || check_ui_gallery_code_editor_a11y_composition
+                    || check_ui_gallery_code_editor_a11y_selection_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                    || check_ui_gallery_code_editor_a11y_composition_drag
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_max.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
@@ -1383,6 +1521,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_vlist_window_shifts_prefetch_max.is_some()
                     || check_vlist_window_shifts_escape_max.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_hover_layout_max.is_some()
@@ -1419,11 +1558,23 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                        check_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
                         check_wheel_scroll_hit_changes_test_id.as_deref(),
                         check_prepaint_actions_min,
+                        check_chart_sampling_window_shifts_min,
+                        check_node_graph_cull_window_shifts_min,
+                        check_node_graph_cull_window_shifts_max,
                         check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
                         check_vlist_window_shifts_explainable,
@@ -1432,6 +1583,8 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_vlist_window_shifts_prefetch_max,
                         check_vlist_window_shifts_escape_max,
                         check_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min,
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -1716,10 +1869,22 @@ See: `docs/tracy.md`.\n";
                         || check_stale_scene_test_id.is_some()
                         || check_idle_no_paint_min.is_some()
                         || check_pixels_changed_test_id.is_some()
+                        || check_ui_gallery_code_editor_torture_marker_present
+                        || check_ui_gallery_code_editor_torture_undo_redo
+                        || check_ui_gallery_code_editor_word_boundary
+                        || check_ui_gallery_code_editor_a11y_selection
+                        || check_ui_gallery_code_editor_a11y_composition
+                        || check_ui_gallery_code_editor_a11y_selection_wrap
+                        || check_ui_gallery_code_editor_a11y_composition_wrap
+                        || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                        || check_ui_gallery_code_editor_a11y_composition_drag
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
                         || check_prepaint_actions_min.is_some()
+                        || check_chart_sampling_window_shifts_min.is_some()
+                        || check_node_graph_cull_window_shifts_min.is_some()
+                        || check_node_graph_cull_window_shifts_max.is_some()
                         || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
                         || check_vlist_window_shifts_explainable
@@ -1728,6 +1893,7 @@ See: `docs/tracy.md`.\n";
                         || check_vlist_window_shifts_prefetch_max.is_some()
                         || check_vlist_window_shifts_escape_max.is_some()
                         || check_vlist_policy_key_stable
+                        || check_windowed_rows_offset_changes_min.is_some()
                         || check_layout_fast_path_min.is_some()
                         || check_drag_cache_root_paint_only_test_id.is_some()
                         || check_hover_layout_max.is_some()
@@ -1762,11 +1928,23 @@ See: `docs/tracy.md`.\n";
                             check_stale_scene_test_id.as_deref(),
                             check_stale_scene_eps,
                             check_pixels_changed_test_id.as_deref(),
+                            check_ui_gallery_code_editor_torture_marker_present,
+                            check_ui_gallery_code_editor_torture_undo_redo,
+                            check_ui_gallery_code_editor_word_boundary,
+                            check_ui_gallery_code_editor_a11y_selection,
+                            check_ui_gallery_code_editor_a11y_composition,
+                            check_ui_gallery_code_editor_a11y_selection_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                            check_ui_gallery_code_editor_a11y_composition_drag,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
                             check_wheel_scroll_hit_changes_test_id.as_deref(),
                             check_prepaint_actions_min,
+                            check_chart_sampling_window_shifts_min,
+                            check_node_graph_cull_window_shifts_min,
+                            check_node_graph_cull_window_shifts_max,
                             check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
                             check_vlist_window_shifts_explainable,
@@ -1775,6 +1953,8 @@ See: `docs/tracy.md`.\n";
                             check_vlist_window_shifts_prefetch_max,
                             check_vlist_window_shifts_escape_max,
                             check_vlist_policy_key_stable,
+                            check_windowed_rows_offset_changes_min,
+                            check_windowed_rows_offset_changes_eps,
                             check_layout_fast_path_min,
                             check_drag_cache_root_paint_only_test_id.as_deref(),
                             check_hover_layout_max,
@@ -2720,7 +2900,7 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
-            let reuse_process = launch.is_none();
+            let reuse_process = launch.is_none() || reuse_launch;
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
@@ -2830,14 +3010,28 @@ See: `docs/tracy.md`.\n";
                     || check_stale_scene_test_id.is_some()
                     || check_idle_no_paint_min.is_some()
                     || check_pixels_changed_test_id.is_some()
+                    || check_ui_gallery_code_editor_torture_marker_present
+                    || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
+                    || check_ui_gallery_code_editor_a11y_composition
+                    || check_ui_gallery_code_editor_a11y_selection_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                    || check_ui_gallery_code_editor_a11y_composition_drag
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
+                    || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_max.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
                     || check_drag_cache_root_paint_only_test_id.is_some()
                     || check_vlist_policy_key_stable
+                    || check_windowed_rows_offset_changes_min.is_some()
                     || check_layout_fast_path_min.is_some()
                     || check_hover_layout_max.is_some()
                     || check_gc_sweep_liveness
@@ -3034,6 +3228,15 @@ See: `docs/tracy.md`.\n";
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
                         check_pixels_changed_test_id.as_deref(),
+                        check_ui_gallery_code_editor_torture_marker_present,
+                        check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+                        check_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -3041,6 +3244,9 @@ See: `docs/tracy.md`.\n";
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
+                        check_chart_sampling_window_shifts_min,
+                        check_node_graph_cull_window_shifts_min,
+                        check_node_graph_cull_window_shifts_max,
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
@@ -3056,6 +3262,8 @@ See: `docs/tracy.md`.\n";
                         check_vlist_window_shifts_escape_max
                             .or(suite_vlist_window_shifts_escape_max),
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
+                        check_windowed_rows_offset_changes_min,
+                        check_windowed_rows_offset_changes_eps,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
                         check_hover_layout_max,
@@ -3123,7 +3331,7 @@ See: `docs/tracy.md`.\n";
 
             let sort = sort_override.unwrap_or(BundleStatsSort::Time);
             let repeat = perf_repeat.max(1) as usize;
-            let reuse_process = launch.is_none();
+            let reuse_process = launch.is_none() || reuse_launch;
             let cli_thresholds = PerfThresholds {
                 max_top_total_us,
                 max_top_layout_us,
@@ -5710,11 +5918,23 @@ fn apply_post_run_checks(
     check_stale_scene_test_id: Option<&str>,
     check_stale_scene_eps: f32,
     check_pixels_changed_test_id: Option<&str>,
+    check_ui_gallery_code_editor_torture_marker_present: bool,
+    check_ui_gallery_code_editor_torture_undo_redo: bool,
+    check_ui_gallery_code_editor_word_boundary: bool,
+    check_ui_gallery_code_editor_a11y_selection: bool,
+    check_ui_gallery_code_editor_a11y_composition: bool,
+    check_ui_gallery_code_editor_a11y_selection_wrap: bool,
+    check_ui_gallery_code_editor_a11y_composition_wrap: bool,
+    check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool,
+    check_ui_gallery_code_editor_a11y_composition_drag: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
     check_wheel_scroll_hit_changes_test_id: Option<&str>,
     check_prepaint_actions_min: Option<u64>,
+    check_chart_sampling_window_shifts_min: Option<u64>,
+    check_node_graph_cull_window_shifts_min: Option<u64>,
+    check_node_graph_cull_window_shifts_max: Option<u64>,
     check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
     check_vlist_window_shifts_explainable: bool,
@@ -5723,6 +5943,8 @@ fn apply_post_run_checks(
     check_vlist_window_shifts_prefetch_max: Option<u64>,
     check_vlist_window_shifts_escape_max: Option<u64>,
     check_vlist_policy_key_stable: bool,
+    check_windowed_rows_offset_changes_min: Option<u64>,
+    check_windowed_rows_offset_changes_eps: f32,
     check_layout_fast_path_min: Option<u64>,
     check_drag_cache_root_paint_only_test_id: Option<&str>,
     check_hover_layout_max: Option<u32>,
@@ -5752,6 +5974,39 @@ fn apply_post_run_checks(
     if let Some(test_id) = check_pixels_changed_test_id {
         check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
     }
+    if check_ui_gallery_code_editor_torture_marker_present {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_present(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_torture_undo_redo {
+        check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_word_boundary {
+        check_bundle_for_ui_gallery_code_editor_word_boundary(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_selection {
+        check_bundle_for_ui_gallery_code_editor_a11y_selection(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_selection_wrap {
+        check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_wrap {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_wrap_scroll {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+            bundle_path,
+            warmup_frames,
+        )?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_drag {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(bundle_path, warmup_frames)?;
+    }
     if check_semantics_changed_repainted {
         check_bundle_for_semantics_changed_repainted(
             bundle_path,
@@ -5767,6 +6022,30 @@ fn apply_post_run_checks(
     }
     if let Some(min) = check_prepaint_actions_min {
         check_bundle_for_prepaint_actions_min(bundle_path, out_dir, min, warmup_frames)?;
+    }
+    if let Some(min) = check_chart_sampling_window_shifts_min {
+        check_bundle_for_chart_sampling_window_shifts_min(
+            bundle_path,
+            out_dir,
+            min,
+            warmup_frames,
+        )?;
+    }
+    if let Some(min) = check_node_graph_cull_window_shifts_min {
+        check_bundle_for_node_graph_cull_window_shifts_min(
+            bundle_path,
+            out_dir,
+            min,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max) = check_node_graph_cull_window_shifts_max {
+        check_bundle_for_node_graph_cull_window_shifts_max(
+            bundle_path,
+            out_dir,
+            max,
+            warmup_frames,
+        )?;
     }
     if let Some(min_total_refreshes) = check_vlist_visible_range_refreshes_min {
         check_bundle_for_vlist_visible_range_refreshes_min(
@@ -5822,6 +6101,15 @@ fn apply_post_run_checks(
     }
     if check_vlist_policy_key_stable {
         check_bundle_for_vlist_policy_key_stable(bundle_path, out_dir, warmup_frames)?;
+    }
+    if let Some(min_total_offset_changes) = check_windowed_rows_offset_changes_min {
+        check_bundle_for_windowed_rows_offset_changes_min(
+            bundle_path,
+            out_dir,
+            min_total_offset_changes,
+            warmup_frames,
+            check_windowed_rows_offset_changes_eps,
+        )?;
     }
     if let Some(min_frames) = check_layout_fast_path_min {
         check_bundle_for_layout_fast_path_min(bundle_path, out_dir, min_frames, warmup_frames)?;
