@@ -919,6 +919,21 @@ pub struct UiDebugScrollNodeTelemetry {
     pub content: fret_core::Size,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollbarTelemetry {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub axis: UiDebugScrollAxis,
+    pub scroll_target: Option<GlobalElementId>,
+    pub offset: fret_core::Point,
+    pub viewport: fret_core::Size,
+    pub content: fret_core::Size,
+    pub track: Rect,
+    pub thumb: Option<Rect>,
+    pub hovered: bool,
+    pub dragging: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct UiDebugScrollHandleChange {
     pub handle_key: usize,
@@ -1587,6 +1602,7 @@ pub struct UiTree<H: UiHost> {
     debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
     debug_scroll_nodes: Vec<UiDebugScrollNodeTelemetry>,
+    debug_scrollbars: Vec<UiDebugScrollbarTelemetry>,
     debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
@@ -2018,6 +2034,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
             debug_scroll_nodes: Vec::new(),
+            debug_scrollbars: Vec::new(),
             debug_prepaint_actions: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
@@ -2363,6 +2380,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
         self.debug_scroll_nodes.clear();
+        self.debug_scrollbars.clear();
         self.debug_prepaint_actions.clear();
         #[cfg(feature = "diagnostics")]
         {
@@ -2862,6 +2880,18 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.debug_scroll_nodes.push(record);
+    }
+
+    pub(crate) fn debug_record_scrollbar_telemetry(&mut self, record: UiDebugScrollbarTelemetry) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many scrollbars.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_scrollbars.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_scrollbars.push(record);
     }
 
     pub(crate) fn debug_record_retained_virtual_list_reconcile(
@@ -3614,6 +3644,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_scroll_nodes.as_slice()
+    }
+
+    pub fn debug_scrollbars(&self) -> &[UiDebugScrollbarTelemetry] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scrollbars.as_slice()
     }
 
     pub fn debug_prepaint_actions(&self) -> &[UiDebugPrepaintAction] {

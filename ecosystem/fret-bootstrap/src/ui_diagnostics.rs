@@ -4105,6 +4105,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub scroll_nodes: Vec<UiScrollNodeTelemetryV1>,
     #[serde(default)]
+    pub scrollbars: Vec<UiScrollbarTelemetryV1>,
+    #[serde(default)]
     pub prepaint_actions: Vec<UiPrepaintActionV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
@@ -4342,6 +4344,12 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .copied()
                 .map(UiScrollNodeTelemetryV1::from_telemetry)
+                .collect(),
+            scrollbars: ui
+                .debug_scrollbars()
+                .iter()
+                .copied()
+                .map(UiScrollbarTelemetryV1::from_telemetry)
                 .collect(),
             prepaint_actions: ui
                 .debug_prepaint_actions()
@@ -5154,6 +5162,50 @@ impl UiScrollNodeTelemetryV1 {
             viewport_h: telemetry.viewport.height.0,
             content_w: telemetry.content.width.0,
             content_h: telemetry.content.height.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiScrollbarTelemetryV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    pub axis: UiScrollAxisV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scroll_target: Option<u64>,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub viewport_w: f32,
+    pub viewport_h: f32,
+    pub content_w: f32,
+    pub content_h: f32,
+    pub track: RectV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thumb: Option<RectV1>,
+    #[serde(default)]
+    pub hovered: bool,
+    #[serde(default)]
+    pub dragging: bool,
+}
+
+impl UiScrollbarTelemetryV1 {
+    fn from_telemetry(telemetry: fret_ui::tree::UiDebugScrollbarTelemetry) -> Self {
+        Self {
+            node: key_to_u64(telemetry.node),
+            element: telemetry.element.map(|e| e.0),
+            axis: UiScrollAxisV1::from_axis(telemetry.axis),
+            scroll_target: telemetry.scroll_target.map(|e| e.0),
+            offset_x: telemetry.offset.x.0,
+            offset_y: telemetry.offset.y.0,
+            viewport_w: telemetry.viewport.width.0,
+            viewport_h: telemetry.viewport.height.0,
+            content_w: telemetry.content.width.0,
+            content_h: telemetry.content.height.0,
+            track: telemetry.track.into(),
+            thumb: telemetry.thumb.map(RectV1::from),
+            hovered: telemetry.hovered,
+            dragging: telemetry.dragging,
         }
     }
 }
