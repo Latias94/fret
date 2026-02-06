@@ -128,6 +128,8 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_date_picker_text_styles(cfg);
     inject_comp_time_picker_text_styles(cfg);
     inject_comp_time_input_text_styles(cfg);
+    inject_comp_search_bar_text_styles(cfg);
+    inject_comp_search_view_text_styles(cfg);
     inject_comp_badge_scalars(cfg);
     inject_comp_button_scalars(cfg);
     inject_comp_fab_scalars(cfg);
@@ -158,6 +160,8 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_plain_tooltip_scalars(cfg);
     inject_comp_rich_tooltip_scalars(cfg);
     inject_comp_snackbar_scalars(cfg);
+    inject_comp_search_bar_scalars(cfg);
+    inject_comp_search_view_scalars(cfg);
     inject_comp_dialog_scalars(cfg);
     inject_comp_full_screen_dialog_scalars(cfg);
     inject_comp_divider_scalars(cfg);
@@ -517,6 +521,34 @@ fn inject_comp_time_input_text_styles(cfg: &mut ThemeConfig) {
     );
 }
 
+fn inject_comp_search_bar_text_styles(cfg: &mut ThemeConfig) {
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.search-bar.input-text".to_string(),
+        body_large.clone(),
+    );
+    cfg.text_styles
+        .insert("md.comp.search-bar.supporting-text".to_string(), body_large);
+}
+
+fn inject_comp_search_view_text_styles(cfg: &mut ThemeConfig) {
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.search-view.header.input-text".to_string(),
+        body_large.clone(),
+    );
+    cfg.text_styles.insert(
+        "md.comp.search-view.header.supporting-text".to_string(),
+        body_large,
+    );
+}
+
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
 ///
 /// This uses `material-colors` (material-color-utilities port) to generate a dynamic scheme from a
@@ -764,6 +796,8 @@ pub fn theme_config_with_colors(
     inject_comp_plain_tooltip_colors_from_sys(&mut cfg);
     inject_comp_rich_tooltip_colors_from_sys(&mut cfg);
     inject_comp_snackbar_colors_from_sys(&mut cfg);
+    inject_comp_search_bar_colors_from_sys(&mut cfg);
+    inject_comp_search_view_colors_from_sys(&mut cfg);
     inject_comp_dialog_colors_from_sys(&mut cfg);
     inject_comp_full_screen_dialog_colors_from_sys(&mut cfg);
     inject_comp_divider_colors_from_sys(&mut cfg);
@@ -2109,6 +2143,14 @@ fn inject_comp_rich_tooltip_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_snackbar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_snackbar_scalars(cfg);
+}
+
+fn inject_comp_search_bar_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_bar_scalars(cfg);
+}
+
+fn inject_comp_search_view_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_view_scalars(cfg);
 }
 
 fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
@@ -3462,6 +3504,14 @@ fn inject_comp_rich_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.color.on-surface-variant",
     );
     material_web_v30::inject_comp_rich_tooltip_colors_from_sys(cfg);
+}
+
+fn inject_comp_search_bar_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_bar_colors_from_sys(cfg);
+}
+
+fn inject_comp_search_view_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_view_colors_from_sys(cfg);
 }
 
 fn inject_comp_snackbar_colors_from_sys(cfg: &mut ThemeConfig) {
