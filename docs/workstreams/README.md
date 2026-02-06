@@ -36,6 +36,8 @@ Active workstreams:
 - `docs/workstreams/imui-ecosystem-facade-v2-m3-popup-floating-polish.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-m4-perf-gates.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-m5-readiness-review.md`
+- `docs/workstreams/imui-ecosystem-facade-v3.md`
+- `docs/workstreams/imui-ecosystem-facade-v3-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/imui-authoring-facade-v1.md` (baseline / historical reference)
