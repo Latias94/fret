@@ -1,16 +1,14 @@
 use std::sync::Arc;
 
-use crate::io::NodeGraphViewState;
-
 use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[test]
 fn selection_updates_do_not_rebuild_geometry_when_elevate_nodes_on_select_is_enabled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.draw_order = vec![a, b];
@@ -45,7 +43,7 @@ fn draw_order_updates_rebuild_derived_geometry_and_spatial_index() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.draw_order = vec![a, b];
