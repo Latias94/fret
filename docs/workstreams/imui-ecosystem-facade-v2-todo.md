@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 - TODO Tracker
 
-Status: In progress (M0 complete; M1+ pending)
+Status: In progress (M0-M1 complete; M2+ pending)
 Last updated: 2026-02-06
 
 This tracker covers:
@@ -57,9 +57,13 @@ Exit criteria:
 - Stable vs experimental response signals are explicitly partitioned.
 - Potential `fret-authoring` graduation path is concrete.
 
-- [ ] IMUIECO2-resp-010 Define stable-core candidate response fields.
-- [ ] IMUIECO2-resp-011 Define compatibility/deprecation policy for stable core.
-- [ ] IMUIECO2-test-012 Add compile smoke checks around shared response boundaries.
+- [x] IMUIECO2-resp-010 Define stable-core candidate response fields.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md` (section 1).
+- [x] IMUIECO2-resp-011 Define compatibility/deprecation policy for stable core.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md` (sections 2 and 3).
+- [x] IMUIECO2-test-012 Add compile smoke checks around shared response boundaries.
+  - Evidence: `ecosystem/fret-ui-kit/tests/imui_response_contract_smoke.rs`
+  - Evidence (local): `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke`
 
 ---
 

@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 (Stabilization + Authoring Alignment)
 
-Status: In progress (M0 locked; M1+ pending; planning note, not an ADR)
+Status: In progress (M0-M1 locked; M2+ pending; planning note, not an ADR)
 Last updated: 2026-02-06
 
 This workstream starts after `imui` ecosystem facade v1 is functionally complete.
@@ -17,6 +17,8 @@ Related:
 
 - `docs/workstreams/imui-ecosystem-facade-v1.md`
 - `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md`
 - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity.md`
@@ -57,6 +59,7 @@ Main goals:
 
 ### M1 - `ResponseExt` stabilization and graduation
 
+- M1 response partition and compatibility policy are normative in `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md`.
 - Partition `ResponseExt` into:
   - stable core candidates (possible `fret-authoring` graduation),
   - facade-only experimental signals.
