@@ -405,6 +405,11 @@ Update:
 
 - Desktop runner now coalesces resize application to once per frame (commit `beb2fa315`), closer to GPUI’s
   “resize marks dirty; draw happens at the frame boundary” model.
+  - GPUI reference: `repo-ref/zed/crates/gpui/src/window.rs` wires `platform_window.on_resize(...)` to
+    `Window::bounds_changed(cx)`, which updates `viewport_size` and calls `refresh()`; layout/paint happens later
+    during `Window::draw` at the frame boundary.
+  - Implication: during an interactive drag-resize, it is expected to “re-layout every frame” (because constraints
+    are changing), but not expected to re-layout multiple times per frame due to resize spam.
 - Evidence (macOS Apple M4):
   - Single-script probe worst `top_total_time_us`: `16935` (v12 baseline era) → `14219` (post-coalesce run)
   - Suite baseline worst `top_total_time_us`: `16935` (v12) → `15532` (v13)
@@ -414,6 +419,9 @@ Update:
     improves the same single-script resize probe further to `top_total_time_us=11810` (repeat=7).
   - This suggests a non-trivial portion of the resize tail is `Scroll` “unbounded probe” measurement work.
   - Evidence and command are recorded in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-06 13:45).
+- Correctness gates added to make the resize policy safe to iterate:
+  - Scroll offset stability: `--check-scroll-offset-stable <test_id>` (commit `6c248d9e1`).
+  - Scrollbar thumb geometry validity: `--check-scrollbar-thumb-valid all` (commit `e20637f92`).
 
 #### Gap C.1: Stable-frame paint overhead is still opaque (even with cache reuse)
 
