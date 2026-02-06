@@ -4,10 +4,9 @@ use fret_ui::layout_pass::LayoutPassKind;
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 
 use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_size};
 
 fn layout_once(
     canvas: &mut NodeGraphCanvas,
@@ -51,7 +50,7 @@ fn fit_view_on_mount_frames_all_nodes_once() {
     // Expected viewport by direct framing (immediate).
     let mut host_expected = TestUiHostImpl::default();
     let graph_expected = host_expected.models.insert(graph_value.clone());
-    let view_expected = host_expected.models.insert(NodeGraphViewState::default());
+    let view_expected = insert_view(&mut host_expected);
     let _ = view_expected.update(&mut host_expected, |s, _cx| {
         s.interaction.frame_view_duration_ms = 0;
     });
@@ -62,7 +61,7 @@ fn fit_view_on_mount_frames_all_nodes_once() {
     // Actual via one-shot fit-view on mount (layout).
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.frame_view_duration_ms = 0;
     });

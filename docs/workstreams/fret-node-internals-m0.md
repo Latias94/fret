@@ -287,6 +287,16 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/z_order_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_hit_width_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_nodes_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_on_mount_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_padding_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/focus_auto_pan_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/op_batching_determinism_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/xyflow_style_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`

@@ -4,11 +4,11 @@ use fret_core::{Point, Px, Rect, Size};
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
+
 use crate::ui::commands::CMD_NODE_GRAPH_FOCUS_NEXT;
 
 use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, command_cx, make_test_graph_two_nodes};
+use super::{NullServices, TestUiHostImpl, command_cx, insert_view, make_test_graph_two_nodes};
 
 #[test]
 fn focus_next_can_pan_viewport_when_auto_pan_on_node_focus_is_enabled() {
@@ -22,7 +22,7 @@ fn focus_next_can_pan_viewport_when_auto_pan_on_node_focus_is_enabled() {
 
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     canvas.sync_view_state(&mut host);

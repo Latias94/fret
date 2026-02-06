@@ -1,6 +1,5 @@
 use fret_core::{Point, Px, Rect, Size};
 
-use crate::io::NodeGraphViewState;
 use crate::ui::presenter::EdgeRouteKind;
 
 use super::*;
@@ -41,7 +40,7 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
         s.interaction.edge_interaction_width = edge_interaction_width;

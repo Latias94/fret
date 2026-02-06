@@ -9,7 +9,7 @@ use fret_ui::element::{LayoutStyle, Length, SemanticsProps, SizeStyle};
 use fret_ui::retained_bridge::{UiTreeRetainedExt as _, Widget as _};
 
 use crate::core::{CanvasPoint, Graph, GraphId, Node, NodeId, NodeKindKey};
-use crate::io::NodeGraphViewState;
+
 use crate::ui::canvas::geometry::node_size_default_px;
 use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::{MeasuredGeometryStore, MeasuredNodeGraphPresenter};
@@ -18,7 +18,7 @@ use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
 use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_view};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -113,7 +113,7 @@ fn portal_measured_node_sizes_are_observed_by_canvas_internals_on_next_paint() {
     set_portal_content_size(&mut graph_value, node_id, 320.0, 180.0);
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let internals = Arc::new(NodeGraphInternalsStore::new());
