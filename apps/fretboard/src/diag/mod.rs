@@ -107,6 +107,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
     let mut perf_baseline_headroom_pct: u32 = 20;
+    let mut perf_baseline_seed_rule_specs: Vec<String> = Vec::new();
     let mut check_idle_no_paint_min: Option<u64> = None;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
@@ -535,6 +536,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 perf_baseline_headroom_pct = v
                     .parse::<u32>()
                     .map_err(|_| "invalid value for --perf-baseline-headroom-pct".to_string())?;
+                i += 1;
+            }
+            "--perf-baseline-seed" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-seed".to_string());
+                };
+                perf_baseline_seed_rule_specs.push(v);
                 i += 1;
             }
             "--check-idle-no-paint-min" => {
@@ -3483,6 +3492,8 @@ See: `docs/tracy.md`.\n";
             let perf_baseline_out = perf_baseline_out
                 .clone()
                 .map(|p| resolve_path(&workspace_root, p));
+            let baseline_seed_policy =
+                build_perf_baseline_seed_policy(&workspace_root, &perf_baseline_seed_rule_specs)?;
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
             let mut child: Option<LaunchedDemo> = None;
             let launched_by_fretboard = reuse_launch && launch.is_some();
@@ -3912,6 +3923,16 @@ See: `docs/tracy.md`.\n";
                             perf_baseline_rows.push(serde_json::json!({
 	                                "script": script_key.clone(),
 	                                "max": {
+	                                    "top_total_time_us": top_total,
+	                                    "top_layout_time_us": top_layout,
+	                                    "top_layout_engine_solve_time_us": top_solve,
+	                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+	                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+	                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+	                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+	                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+	                                },
+	                                "p90": {
 	                                    "top_total_time_us": top_total,
 	                                    "top_layout_time_us": top_layout,
 	                                    "top_layout_engine_solve_time_us": top_solve,
@@ -4943,6 +4964,33 @@ See: `docs/tracy.md`.\n";
                             .iter()
                             .max()
                             .unwrap_or(&0);
+                    let p90_total =
+                        percentile_linear_interpolated(&runs_total, 0.90).unwrap_or(max_total);
+                    let p90_layout =
+                        percentile_linear_interpolated(&runs_layout, 0.90).unwrap_or(max_layout);
+                    let p90_solve =
+                        percentile_linear_interpolated(&runs_solve, 0.90).unwrap_or(max_solve);
+                    let p90_pointer_move_dispatch =
+                        percentile_linear_interpolated(&runs_pointer_move_dispatch, 0.90)
+                            .unwrap_or(max_pointer_move_dispatch);
+                    let p90_pointer_move_hit_test =
+                        percentile_linear_interpolated(&runs_pointer_move_hit_test, 0.90)
+                            .unwrap_or(max_pointer_move_hit_test);
+                    let p90_pointer_move_global_changes =
+                        percentile_linear_interpolated(&runs_pointer_move_global_changes, 0.90)
+                            .unwrap_or(max_pointer_move_global_changes);
+                    let p90_run_paint_cache_hit_test_only_replay_allowed =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_allowed_max,
+                            0.90,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_allowed);
+                    let p90_run_paint_cache_hit_test_only_replay_rejected_key_mismatch =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            0.90,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch);
                     let p95_total =
                         percentile_linear_interpolated(&runs_total, 0.95).unwrap_or(max_total);
                     let p95_layout =
@@ -4984,6 +5032,16 @@ See: `docs/tracy.md`.\n";
 	                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
 	                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed,
 	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+	                            },
+	                            "p90": {
+	                                "top_total_time_us": p90_total,
+	                                "top_layout_time_us": p90_layout,
+	                                "top_layout_engine_solve_time_us": p90_solve,
+	                                "pointer_move_max_dispatch_time_us": p90_pointer_move_dispatch,
+	                                "pointer_move_max_hit_test_time_us": p90_pointer_move_hit_test,
+	                                "pointer_move_snapshots_with_global_changes": p90_pointer_move_global_changes,
+	                                "run_paint_cache_hit_test_only_replay_allowed_max": p90_run_paint_cache_hit_test_only_replay_allowed,
+	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": p90_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
 	                            },
 	                            "p95": {
 	                                "top_total_time_us": p95_total,
@@ -5133,6 +5191,19 @@ See: `docs/tracy.md`.\n";
                             .get("run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max")
                             .and_then(|v| v.as_u64())
                             .unwrap_or(0);
+                        let p90 = row.get("p90");
+                        let p90_total = p90
+                            .and_then(|m| m.get("top_total_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_total);
+                        let p90_layout = p90
+                            .and_then(|m| m.get("top_layout_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_layout);
+                        let p90_solve = p90
+                            .and_then(|m| m.get("top_layout_engine_solve_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_solve);
                         let p95 = row.get("p95");
                         let p95_total = p95
                             .and_then(|m| m.get("top_total_time_us"))
@@ -5147,21 +5218,27 @@ See: `docs/tracy.md`.\n";
                             .and_then(|v| v.as_u64())
                             .unwrap_or(max_solve);
                         let (seed_total, seed_total_source) = baseline_threshold_seed_for_metric(
+                            &baseline_seed_policy,
                             script.as_str(),
                             "top_total_time_us",
                             max_total,
+                            p90_total,
                             p95_total,
                         );
                         let (seed_layout, seed_layout_source) = baseline_threshold_seed_for_metric(
+                            &baseline_seed_policy,
                             script.as_str(),
                             "top_layout_time_us",
                             max_layout,
+                            p90_layout,
                             p95_layout,
                         );
                         let (seed_solve, seed_solve_source) = baseline_threshold_seed_for_metric(
+                            &baseline_seed_policy,
                             script.as_str(),
                             "top_layout_engine_solve_time_us",
                             max_solve,
+                            p90_solve,
                             p95_solve,
                         );
                         let thr_total =
@@ -5220,6 +5297,11 @@ See: `docs/tracy.md`.\n";
 	                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed,
 	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
 	                            },
+	                            "measured_p90": {
+	                                "top_total_time_us": p90_total,
+	                                "top_layout_time_us": p90_layout,
+	                                "top_layout_engine_solve_time_us": p90_solve,
+	                            },
 	                            "measured_p95": {
 	                                "top_total_time_us": p95_total,
 	                                "top_layout_time_us": p95_layout,
@@ -5247,6 +5329,7 @@ See: `docs/tracy.md`.\n";
                     "sort": sort.as_str(),
                     "repeat": repeat,
                     "headroom_pct": perf_baseline_headroom_pct,
+                    "threshold_seed_policy": baseline_seed_policy.to_json(),
                     "rows": rows,
                 });
                 write_json_value(out_path, &payload)?;
@@ -7888,21 +7971,192 @@ fn summarize_times_us(values: &[u64]) -> serde_json::Value {
     })
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BaselineSeedKind {
+    Max,
+    P90,
+    P95,
+}
+
+impl BaselineSeedKind {
+    fn parse(raw: &str) -> Option<Self> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "max" => Some(Self::Max),
+            "p90" => Some(Self::P90),
+            "p95" => Some(Self::P95),
+            _ => None,
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Max => "max",
+            Self::P90 => "p90",
+            Self::P95 => "p95",
+        }
+    }
+
+    fn pick_value(self, max_value: u64, p90_value: u64, p95_value: u64) -> u64 {
+        match self {
+            Self::Max => max_value,
+            Self::P90 => p90_value,
+            Self::P95 => p95_value,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct BaselineSeedRule {
+    script: String,
+    metric: String,
+    seed: BaselineSeedKind,
+    source: &'static str,
+}
+
+#[derive(Debug, Clone)]
+struct BaselineSeedPolicy {
+    default_seed: BaselineSeedKind,
+    rules: Vec<BaselineSeedRule>,
+}
+
+impl BaselineSeedPolicy {
+    fn to_json(&self) -> serde_json::Value {
+        serde_json::json!({
+            "schema_version": 1,
+            "default_seed": self.default_seed.as_str(),
+            "rules": self
+                .rules
+                .iter()
+                .map(|rule| serde_json::json!({
+                    "script": rule.script,
+                    "metric": rule.metric,
+                    "seed": rule.seed.as_str(),
+                    "source": rule.source,
+                }))
+                .collect::<Vec<_>>(),
+        })
+    }
+}
+
+fn default_perf_baseline_seed_rules() -> Vec<BaselineSeedRule> {
+    [
+        "top_total_time_us",
+        "top_layout_time_us",
+        "top_layout_engine_solve_time_us",
+    ]
+    .into_iter()
+    .map(|metric| BaselineSeedRule {
+        script: "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json".to_string(),
+        metric: metric.to_string(),
+        seed: BaselineSeedKind::P95,
+        source: "default",
+    })
+    .collect::<Vec<_>>()
+}
+
+fn build_perf_baseline_seed_policy(
+    workspace_root: &Path,
+    specs: &[String],
+) -> Result<BaselineSeedPolicy, String> {
+    let mut rules = default_perf_baseline_seed_rules();
+    for spec in specs {
+        rules.push(parse_perf_baseline_seed_rule_spec(workspace_root, spec)?);
+    }
+    Ok(BaselineSeedPolicy {
+        default_seed: BaselineSeedKind::Max,
+        rules,
+    })
+}
+
+fn parse_perf_baseline_seed_rule_spec(
+    workspace_root: &Path,
+    spec: &str,
+) -> Result<BaselineSeedRule, String> {
+    let (lhs, seed_raw) = spec.split_once('=').ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed spec `{spec}` (expected <script>@<metric>=<max|p90|p95>)"
+        )
+    })?;
+    let (script_raw, metric_raw) = lhs.rsplit_once('@').ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed spec `{spec}` (expected <script>@<metric>=<max|p90|p95>)"
+        )
+    })?;
+
+    let seed = BaselineSeedKind::parse(seed_raw).ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed seed `{}` (expected max|p90|p95)",
+            seed_raw.trim()
+        )
+    })?;
+
+    let metric = metric_raw.trim();
+    if metric.is_empty() {
+        return Err(format!(
+            "invalid --perf-baseline-seed spec `{spec}` (metric cannot be empty)"
+        ));
+    }
+
+    let script = script_raw.trim();
+    if script.is_empty() {
+        return Err(format!(
+            "invalid --perf-baseline-seed spec `{spec}` (script cannot be empty)"
+        ));
+    }
+
+    let script_key = if script == "*" {
+        "*".to_string()
+    } else {
+        let resolved = resolve_path(workspace_root, PathBuf::from(script));
+        normalize_repo_relative_path(workspace_root, &resolved)
+    };
+
+    Ok(BaselineSeedRule {
+        script: script_key,
+        metric: metric.to_string(),
+        seed,
+        source: "cli",
+    })
+}
+
+fn baseline_seed_rule_matches_script(rule_script: &str, script: &str) -> bool {
+    if rule_script == "*" || rule_script == script {
+        return true;
+    }
+    if !rule_script.contains('/') && !rule_script.contains('\\') {
+        return script.ends_with(&format!("/{rule_script}"));
+    }
+    false
+}
+
+fn baseline_threshold_seed_kind_for_metric(
+    policy: &BaselineSeedPolicy,
+    script: &str,
+    metric: &str,
+) -> BaselineSeedKind {
+    let mut seed = policy.default_seed;
+    for rule in &policy.rules {
+        if rule.metric == metric && baseline_seed_rule_matches_script(rule.script.as_str(), script)
+        {
+            seed = rule.seed;
+        }
+    }
+    seed
+}
+
 fn baseline_threshold_seed_for_metric(
+    policy: &BaselineSeedPolicy,
     script: &str,
     metric: &str,
     max_value: u64,
+    p90_value: u64,
     p95_value: u64,
-) -> (u64, &'static str) {
-    let uses_p95 = script.ends_with("ui-gallery-window-resize-stress-steady.json")
-        && matches!(
-            metric,
-            "top_total_time_us" | "top_layout_time_us" | "top_layout_engine_solve_time_us"
-        );
-    if uses_p95 {
-        return (p95_value, "p95");
-    }
-    (max_value, "max")
+) -> (u64, String) {
+    let seed_kind = baseline_threshold_seed_kind_for_metric(policy, script, metric);
+    (
+        seed_kind.pick_value(max_value, p90_value, p95_value),
+        seed_kind.as_str().to_string(),
+    )
 }
 
 fn percentile_linear_interpolated(values: &[u64], percentile: f64) -> Option<u64> {
@@ -8251,33 +8505,76 @@ mod tests {
 
     #[test]
     fn baseline_threshold_seed_policy_for_resize_script() {
+        let policy = build_perf_baseline_seed_policy(Path::new("."), &[]).unwrap();
         assert_eq!(
             baseline_threshold_seed_for_metric(
+                &policy,
                 "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
                 "top_total_time_us",
                 22645,
+                15000,
                 15856,
             ),
-            (15856, "p95")
+            (15856, "p95".to_string())
         );
         assert_eq!(
             baseline_threshold_seed_for_metric(
+                &policy,
                 "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
                 "pointer_move_max_dispatch_time_us",
                 3673,
+                3400,
                 3200,
             ),
-            (3673, "max")
+            (3673, "max".to_string())
         );
         assert_eq!(
             baseline_threshold_seed_for_metric(
+                &policy,
                 "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
                 "top_total_time_us",
                 7153,
                 7000,
+                7000,
             ),
-            (7153, "max")
+            (7153, "max".to_string())
         );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_can_override_with_p90() {
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &[
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90"
+                    .to_string(),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_rejects_bad_spec() {
+        let err = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &[
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p80"
+                    .to_string(),
+            ],
+        )
+        .unwrap_err();
+        assert!(err.contains("expected max|p90|p95"));
     }
 
     #[test]

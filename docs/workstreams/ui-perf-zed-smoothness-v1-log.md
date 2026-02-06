@@ -5119,3 +5119,78 @@ Interpretation:
   outliers while keeping repeat=3 validation stable on the current machine profile.
 - Follow-up: if suite noise rises again, tune seed policy per script (e.g., p90/p95 or higher repeat for
   specific workloads) and record the policy update in this log.
+
+## 2026-02-06 21:35:00 (working tree)
+
+Change:
+- Added configurable baseline seed policy for `diag perf --perf-baseline-out`:
+  - new CLI flag: `--perf-baseline-seed <script@metric=max|p90|p95>` (repeatable)
+  - default policy remains max-seeded globally, with built-in resize override:
+    - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+    - metrics `top_total/layout/solve` default to `p95`
+- Baseline payload now records policy header:
+  - `threshold_seed_policy.default_seed`
+  - `threshold_seed_policy.rules[]`
+- Baseline row now records both `measured_p90` and `measured_p95` (for seed provenance and future tuning).
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Baseline command (v15 refresh with policy header):
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15h20seed \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15-validate-seed \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `target/fret-diag-codex-perf-v15-validate-seed/check.perf_thresholds.json`: `failures = 0`.
+- Baseline header includes policy metadata:
+  - `threshold_seed_policy.default_seed = "max"`
+  - resize steady `top_total/layout/solve` rules seeded by `p95`.
+- Baseline v15 resize row (`tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`):
+  - `measured_max.top_total_time_us = 15763`
+  - `measured_p90.top_total_time_us = 15683`
+  - `measured_p95.top_total_time_us = 15723`
+  - `threshold_seed_source.top_total_time_us = "p95"`
+  - `thresholds.max_top_total_us = 18868`
+- Drift vs v14 baseline (`docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`):
+  - resize measured max top-total: `22645 -> 15763` (`-30.39%`)
+  - resize threshold max-top-total: `27174 -> 18868` (`-30.56%`)
+- Validation run tightest total-time margin:
+  - script: `tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json`
+  - observed `2170` vs threshold `2552` (margin `382` us)
+- CLI override smoke check (`--perf-baseline-seed`):
+  - command: `target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-overlay-torture-steady.json --repeat 1 --perf-baseline-out target/fret-diag-codex-summaries/perf-seed-flag-smoke-baseline.json --perf-baseline-seed tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90 ...`
+  - baseline header adds a `source="cli"` rule for the override.
+  - row seed source reports `threshold_seed_source.top_total_time_us = "p90"`.
+
+Interpretation:
+- Seed policy is now explicit and versioned in baseline JSON, so threshold provenance is auditable.
+- With `--perf-baseline-seed`, we can tighten or relax noisy scripts without code changes and still keep a
+  reproducible evidence trail in the baseline artifact.
