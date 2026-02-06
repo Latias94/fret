@@ -759,9 +759,7 @@ fn page_preview(
         PAGE_CHART => preview_chart(cx),
         PAGE_CHECKBOX => preview_checkbox(cx, checkbox),
         PAGE_COLLAPSIBLE => preview_collapsible(cx),
-        PAGE_CONTEXT_MENU => {
-            preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
-        }
+        PAGE_CONTEXT_MENU => preview_context_menu(cx, context_menu_open, last_action.clone()),
         PAGE_DIALOG => preview_dialog(cx, dialog_open),
         PAGE_DRAWER => preview_drawer(cx),
         PAGE_DROPDOWN_MENU => {
@@ -19269,6 +19267,14 @@ fn preview_menus(
         ),
         cx.text(format!("last action: {last}")),
     ]
+}
+
+fn preview_context_menu(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    pages::preview_context_menu(cx, open, last_action)
 }
 
 fn preview_command_palette(

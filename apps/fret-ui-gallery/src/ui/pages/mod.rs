@@ -10,6 +10,7 @@ mod chart;
 mod collapsible;
 mod combobox;
 mod command;
+mod context_menu;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -69,6 +70,14 @@ pub(super) fn preview_command_palette(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     command::preview_command_palette(cx, open, query, last_action)
+}
+
+pub(super) fn preview_context_menu(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    context_menu::preview_context_menu(cx, open, last_action)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
