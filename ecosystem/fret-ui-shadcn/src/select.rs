@@ -1002,10 +1002,11 @@ fn select_impl<H: UiHost>(
         }
 
         let theme = Theme::global(&*cx.app).clone();
-        // `selected` affects rendered structure (label text + indicator visibility). Observe it as
-        // a layout dependency so view-cache reuse does not freeze the displayed value.
-        let selected = cx.watch_model(&model).layout().cloned().unwrap_or_default();
-        let is_open = cx.watch_model(&open).layout().copied().unwrap_or(false);
+        // Read the current selected/open state for rendering. The *observations* are registered on
+        // the mounted trigger element below so model changes can be mapped to a `NodeId` for
+        // invalidation (paint-cache correctness).
+        let selected = cx.app.models().get_cloned(&model).unwrap_or_default();
+        let is_open = cx.app.models().get_copied(&open).unwrap_or(false);
         let motion = radix_presence::scale_fade_presence_with_durations_and_easing(
             cx,
             is_open,
@@ -1193,6 +1194,12 @@ fn select_impl<H: UiHost>(
         let trigger_test_id_for_trigger = trigger_test_id.clone();
 
         let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
+            // `selected` affects rendered structure (label text + indicator visibility). Observe it as
+            // a paint dependency on the mounted trigger element so model changes drive invalidation
+            // (and won't be dropped when `select_impl` is wrapped in an unmounted `cx.scope`).
+            cx.watch_model(&model).paint().observe();
+            cx.watch_model(&open_for_trigger).paint().observe();
+
             let mut typeahead_values: Vec<Arc<str>> = Vec::new();
             let mut typeahead_labels: Vec<Arc<str>> = Vec::new();
             let mut typeahead_disabled: Vec<bool> = Vec::new();
