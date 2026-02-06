@@ -192,6 +192,8 @@ pub(super) struct BundleStatsReport {
     max_prepaint_time_us: u64,
     max_paint_time_us: u64,
     max_total_time_us: u64,
+    pub(super) max_paint_cache_hit_test_only_replay_allowed: u32,
+    pub(super) max_paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
     pub(super) max_invalidation_walk_calls: u32,
     pub(super) max_invalidation_walk_nodes: u32,
     max_model_change_invalidation_roots: u32,
@@ -7780,6 +7782,12 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_prepaint_time_us = out.max_prepaint_time_us.max(prepaint_time_us);
             out.max_paint_time_us = out.max_paint_time_us.max(paint_time_us);
             out.max_total_time_us = out.max_total_time_us.max(total_time_us);
+            out.max_paint_cache_hit_test_only_replay_allowed = out
+                .max_paint_cache_hit_test_only_replay_allowed
+                .max(paint_cache_hit_test_only_replay_allowed);
+            out.max_paint_cache_hit_test_only_replay_rejected_key_mismatch = out
+                .max_paint_cache_hit_test_only_replay_rejected_key_mismatch
+                .max(paint_cache_hit_test_only_replay_rejected_key_mismatch);
 
             rows.push(BundleStatsSnapshotRow {
                 window: window_id,
