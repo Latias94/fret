@@ -481,6 +481,7 @@ pub struct CodeEditor {
     torture: Option<CodeEditorTorture>,
     soft_wrap_cols: Option<usize>,
     key: u64,
+    a11y_label: Option<Arc<str>>,
     viewport_test_id: Option<Arc<str>>,
 }
 
@@ -511,6 +512,7 @@ impl CodeEditor {
             torture: None,
             soft_wrap_cols: None,
             key: 0,
+            a11y_label: None,
             viewport_test_id: None,
         }
     }
@@ -544,6 +546,11 @@ impl CodeEditor {
         self
     }
 
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let scroll_handle = cx.with_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
         let cell_w = cx.with_state(|| Cell::new(Px(0.0)), |c| c.clone());
@@ -555,7 +562,7 @@ impl CodeEditor {
         let soft_wrap_cols = self.soft_wrap_cols;
         let key = self.key;
         let viewport_test_id = self.viewport_test_id;
-        let a11y_label: Arc<str> = Arc::from("Code editor");
+        let a11y_label: Arc<str> = self.a11y_label.unwrap_or_else(|| Arc::from("Code editor"));
 
         cx.keyed(("code-editor", key), move |cx| {
             let theme = cx.theme().clone();

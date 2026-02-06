@@ -717,6 +717,41 @@ fn delete_word_forward_removes_next_word() {
     assert_eq!(st.selection.caret(), 0);
 }
 
+#[test]
+fn move_word_right_respects_text_boundary_mode_for_apostrophe() {
+    let handle = CodeEditorHandle::new("can't");
+
+    handle.set_text_boundary_mode(TextBoundaryMode::UnicodeWord);
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        input::move_word(&mut st, 1, false);
+        assert_eq!(
+            st.selection.caret(),
+            "can't".len(),
+            "UnicodeWord should treat \"can't\" as a single word"
+        );
+    }
+
+    handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        input::move_word(&mut st, 1, false);
+        assert_eq!(
+            st.selection.caret(),
+            3,
+            "Identifier should split \"can't\" around the apostrophe"
+        );
+    }
+}
+
 #[cfg(feature = "syntax-rust")]
 #[test]
 fn rust_syntax_spans_are_materialized_for_rows() {
