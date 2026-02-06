@@ -62,6 +62,7 @@ mod internals_conformance;
 mod invalidation_ordering_conformance;
 mod is_valid_connection_conformance;
 mod measured_output_store_conformance;
+mod measured_port_anchor_conformance;
 mod middleware_conformance;
 mod node_origin_conformance;
 mod node_resize_preview_conformance;

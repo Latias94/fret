@@ -438,6 +438,8 @@ canonical data flow and invalidation boundaries:
     - `CanvasGeometry.ports[*].bounds` is the canonical port anchor rect in canvas space.
     - `NodeGraphInternalsStore.snapshot().ports_window` is the canonical port anchor rect in window space.
     - hit-testing and connection candidate selection use the derived port anchor rect (not ad-hoc center-only heuristics).
+  - Conformance:
+    - measured hint influences strict hit-testing: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_port_anchor_conformance.rs`
 
 ## 2.3 Z-order (draw order) and elevation
 
