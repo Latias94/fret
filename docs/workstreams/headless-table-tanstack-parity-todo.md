@@ -445,6 +445,9 @@ ColumnDef keys referenced by upstream feature implementations:
   - Topics:
     - Filtering semantics in grouped mode (`keepPinnedRows` vs. “visible-only” pinning).
     - Whether pinning should remove leaf rows from within their group subtrees (UI policy decision).
+- [ ] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
+  - Goal: keep header/body column splits (`left/center/right`) and column start/after offsets stable so pinned columns
+    cannot drift and cause misalignment in the UI gallery.
 
 ---
 
