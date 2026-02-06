@@ -612,29 +612,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.drain_effects(event_loop);
             }
             WindowEvent::SurfaceResized(size) => {
-                self.resize_surface(app_window, size.width, size.height);
-                // Keep delivering size/scale events for consistency with the existing runner
-                // behavior, but generate them via the backend mapping where possible.
-                let (mapped, scale_factor) = {
-                    let Some(state) = self.windows.get_mut(app_window) else {
-                        return;
-                    };
-                    let mut mapped = Vec::new();
-                    state.platform.handle_window_event(
-                        state.window.scale_factor(),
-                        &WindowEvent::SurfaceResized(size),
-                        &mut mapped,
-                    );
-                    (mapped, state.window.scale_factor() as f32)
-                };
-
-                for evt in mapped {
-                    self.deliver_window_event_now(app_window, &evt);
+                if let Some(state) = self.windows.get_mut(app_window) {
+                    state.pending_surface_resize = Some(size);
                 }
-                self.deliver_window_event_now(
-                    app_window,
-                    &Event::WindowScaleFactorChanged(scale_factor),
-                );
                 self.app.request_redraw(app_window);
             }
             ref ev @ WindowEvent::PointerMoved { .. } => {
@@ -800,6 +780,38 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 #[cfg(feature = "diag-screenshots")]
                 if let Some(diag) = self.diag_screenshots.as_mut() {
                     diag.poll();
+                }
+
+                if let Some(size) = self
+                    .windows
+                    .get_mut(app_window)
+                    .and_then(|state| state.pending_surface_resize.take())
+                {
+                    self.resize_surface(app_window, size.width, size.height);
+
+                    // Keep delivering size/scale events for consistency with the existing runner
+                    // behavior, but apply them once per frame so interactive resizes don't spam
+                    // surface reconfigures and relayouts.
+                    let (mapped, scale_factor) = {
+                        let Some(state) = self.windows.get_mut(app_window) else {
+                            return;
+                        };
+                        let mut mapped = Vec::new();
+                        state.platform.handle_window_event(
+                            state.window.scale_factor(),
+                            &WindowEvent::SurfaceResized(size),
+                            &mut mapped,
+                        );
+                        (mapped, state.window.scale_factor() as f32)
+                    };
+
+                    for evt in mapped {
+                        self.deliver_window_event_now(app_window, &evt);
+                    }
+                    self.deliver_window_event_now(
+                        app_window,
+                        &Event::WindowScaleFactorChanged(scale_factor),
+                    );
                 }
 
                 {

@@ -1121,6 +1121,12 @@ struct WindowRuntime<S> {
     surface: SurfaceState<'static>,
     scene: Scene,
     platform: fret_runner_winit::WinitPlatform,
+    /// Coalesced resizes awaiting application at the next frame boundary.
+    ///
+    /// During interactive window resize, platforms may emit multiple size updates per vblank.
+    /// We keep only the latest physical size and apply it once per `RedrawRequested` to avoid
+    /// reconfiguring the surface and recomputing layout more often than we can present.
+    pending_surface_resize: Option<winit::dpi::PhysicalSize<u32>>,
     is_focused: bool,
     external_drag_files: Vec<std::path::PathBuf>,
     external_drag_token: Option<fret_runtime::ExternalDropToken>,
@@ -2908,6 +2914,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     },
                     ..Default::default()
                 },
+                pending_surface_resize: None,
                 is_focused: false,
                 external_drag_files: Vec::new(),
                 external_drag_token: None,
@@ -2974,6 +2981,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(state) = self.windows.get_mut(window) else {
             return;
         };
+        let (cur_w, cur_h) = state.surface.size();
+        if cur_w == width.max(1) && cur_h == height.max(1) {
+            return;
+        }
         state.surface.resize(&context.device, width, height);
     }
 
