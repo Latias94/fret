@@ -264,7 +264,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
-    /// Configure the table-level “can global filter” hook (TanStack `getColumnCanGlobalFilter`).
+    /// Configure the table-level 閳ユ竷an global filter閳?hook (TanStack `getColumnCanGlobalFilter`).
     pub fn get_column_can_global_filter(
         mut self,
         f: impl Fn(&super::ColumnDef<TData>, &TData) -> bool + 'static,
@@ -1651,8 +1651,59 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn center_row_keys(&self) -> Vec<RowKey> {
-        let model = self.row_model();
-        super::center_row_keys(model.root_rows(), model, &self.state.row_pinning)
+        if self.state.grouping.is_empty() || self.options.manual_grouping {
+            let model = self.row_model();
+            return super::center_row_keys(model.root_rows(), model, &self.state.row_pinning);
+        }
+
+        let grouped = self.grouped_row_model();
+        let mut roots: Vec<super::GroupedRowIndex> = grouped.root_rows().to_vec();
+
+        let core = self.core_row_model();
+        let mut row_index_by_key: HashMap<RowKey, usize> = HashMap::new();
+        for &index in core.flat_rows() {
+            let Some(row) = core.row(index) else {
+                continue;
+            };
+            row_index_by_key.entry(row.key).or_insert(row.index);
+        }
+
+        super::sort_grouped_row_indices_in_place(
+            grouped,
+            &mut roots,
+            self.state.sorting.as_slice(),
+            self.columns.as_slice(),
+            self.data,
+            &row_index_by_key,
+            self.grouped_u64_aggregations(),
+        );
+
+        let visible_roots: &[super::GroupedRowIndex] = if self.options.manual_pagination {
+            roots.as_slice()
+        } else if self.state.pagination.page_size == 0 {
+            &[]
+        } else {
+            let page_start = self
+                .state
+                .pagination
+                .page_index
+                .saturating_mul(self.state.pagination.page_size);
+            let page_end = page_start.saturating_add(self.state.pagination.page_size);
+            let start = page_start.min(roots.len());
+            let end = page_end.min(roots.len());
+            roots.get(start..end).unwrap_or_default()
+        };
+
+        let mut pinned: HashSet<RowKey> = HashSet::new();
+        pinned.extend(self.state.row_pinning.top.iter().copied());
+        pinned.extend(self.state.row_pinning.bottom.iter().copied());
+
+        visible_roots
+            .iter()
+            .filter_map(|&i| grouped.row(i))
+            .map(|row| row.key)
+            .filter(|key| !pinned.contains(key))
+            .collect()
     }
 
     fn pinned_row_keys(&self, position: super::RowPinPosition) -> Vec<RowKey> {

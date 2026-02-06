@@ -73,7 +73,7 @@ ColumnDef keys referenced by upstream feature implementations:
 
 - Step 1: Deliver `HTP-ui-colpin-010` so header/body left-center-right splits and offsets stay aligned in `table_virtualized`.
 - Step 2: Close string/grouped `RowId` round-trip gaps under `HTP-state-020` + `HTP-id-015` (remove numeric-id-only assumptions).
-- Step 3: Finish grouped pinning semantics under `HTP-rowpin-015` (policy settled; complete remaining engine parity gates).
+- Step 3: Grouped pinning is closed; move focus to filtering/sorting remaining parity backlog.
 - Step 4: Complete filtering parity backlog: `HTP-filt-050`, `HTP-filt-060`, `HTP-filt-070`.
 - Step 5: Complete remaining sorting/grouping depth: `HTP-sort-050` + `HTP-grp-020` + `HTP-grp-030`.
 
@@ -81,7 +81,7 @@ ColumnDef keys referenced by upstream feature implementations:
 
 P0 (core behavior parity, highest user-visible risk):
 
-- HTP-rowpin-015: grouped-mode row pinning still needs full engine-level center/root parity gating under grouping.
+- HTP-filt-050 + HTP-filt-060 + HTP-filt-070: filter depth/meta/manual-filtering semantics remain incomplete.
 - HTP-filt-050 + HTP-filt-060 + HTP-filt-070: filter depth/meta/manual-filtering semantics remain incomplete.
 - HTP-sort-050: manualSorting + getSortedRowModel override semantics need final parity lock.
 
@@ -101,7 +101,7 @@ P2 (engineering guardrails for sustained parity):
 ## Next milestone plan (functional parity first)
 
 - Milestone A (UI pinning correctness, done): HTP-ui-colpin-010 closed with retained split alignment + dedicated parity gate.
-- Milestone B (grouped pinning semantics, in progress): `HTP-ui-rowpin-020` closed; complete remaining `HTP-rowpin-015` fixture-backed assertions.
+- Milestone B (grouped pinning semantics, done): `HTP-ui-rowpin-020` + `HTP-rowpin-015` closed with fixture-backed assertions.
 - Milestone C (manual pipeline parity): close HTP-filt-070 + HTP-sort-050, then lock cross-feature interactions with pagination/grouping.
 - Milestone D (filter depth/meta parity): close HTP-filt-050 + HTP-filt-060 and verify no capability regression in grouped datasets.
 - Milestone E (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
@@ -399,14 +399,17 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Bugfix: TanStack option defaults are `true` for `keepPinnedRows` and `paginateExpandedRows` when omitted.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_options.rs`
-- [~] HTP-rowpin-015 Gate row pinning 脳 grouping interactions (grouped model + pagination).
-  - Parity-gated (leaf-row pinning semantics): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+- [x] HTP-rowpin-015 Gate row pinning × grouping interactions (grouped model + pagination).
+  - Parity-gated (grouped pinning + pagination root-row semantics):
+    `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
-  - Covered: `keepPinnedRows` now respects grouping parents鈥?expansion state (TanStack鈥檚
+  - Covered: `keepPinnedRows` respects grouping parents’ expansion state (TanStack
     `row.getIsAllParentsExpanded()` behavior) for leaf pinned rows.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::pinned_row_keys`).
-  - Note: TanStack鈥檚 `getCenterRows()` returns grouped 鈥渞oot rows鈥?(string IDs like `role:1`). Until grouping is fully
-    integrated into the main `RowModel` pipeline, we do not parity-gate `row_pinning.center` under grouping.
+  - Covered: grouped `row_pinning.center` now follows grouped root ordering + pagination
+    (including sorted grouped roots) and is parity-asserted by fixture snapshots.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::center_row_keys`),
+      `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` (`row_id_for_key`, row pinning assertions).
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
@@ -640,5 +643,7 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` | `visibility_ordering` | `ColumnVisibility` + `ColumnOrdering` (state transitions + derived leaf column order) | `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json` | `faceting` | `ColumnFaceting` / `GlobalFaceting` | `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |
+
+
 
 
