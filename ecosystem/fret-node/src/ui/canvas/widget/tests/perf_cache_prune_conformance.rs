@@ -18,7 +18,7 @@ use crate::core::{
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, NodeGraphPresenter};
 
 use super::super::NodeGraphCanvas;
-use super::TestUiHostImpl;
+use super::{TestUiHostImpl, insert_graph_view};
 
 #[derive(Default)]
 struct CountingServices {
@@ -229,8 +229,7 @@ fn make_graph_chain_edges(edge_count: usize, spacing: f32) -> Graph {
 #[test]
 fn paint_cache_prune_releases_old_path_and_text_entries() {
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_chain_edges(220, 80.0));
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, make_graph_chain_edges(220, 80.0));
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.paint_cache_prune.max_age_frames = 2;
@@ -278,8 +277,7 @@ fn paint_cache_prune_releases_old_path_and_text_entries() {
 #[test]
 fn static_scene_tile_cache_does_not_grow_unbounded_while_panning_across_many_tiles() {
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(make_graph_chain_edges(80, 260.0));
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, make_graph_chain_edges(80, 260.0));
     let mut canvas =
         NodeGraphCanvas::new(graph, view.clone()).with_presenter(UniqueEdgeLabelPresenter);
 

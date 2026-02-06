@@ -12,7 +12,10 @@ use crate::ui::{
 };
 
 use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, command_cx, make_test_graph_two_nodes, read_node_pos};
+use super::{
+    NullServices, TestUiHostImpl, command_cx, insert_graph_view, make_test_graph_two_nodes,
+    read_node_pos,
+};
 
 #[derive(Debug, Clone, Copy)]
 struct SelectAllOverride {
@@ -72,8 +75,7 @@ impl NodeGraphCanvasMiddleware for RejectNudgeCommit {
 fn middleware_can_override_select_all_command() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     view.update(&mut host, |s, _cx| {
         s.selected_nodes.clear();
@@ -103,8 +105,7 @@ fn middleware_can_override_select_all_command() {
 fn middleware_can_reject_commits_before_apply() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas =
         NodeGraphCanvas::new(graph.clone(), view.clone()).with_middleware(RejectNudgeCommit);

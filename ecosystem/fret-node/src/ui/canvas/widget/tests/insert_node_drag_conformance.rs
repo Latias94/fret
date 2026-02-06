@@ -7,15 +7,14 @@ use crate::ui::presenter::InsertNodeCandidate;
 
 use super::super::NodeGraphCanvas;
 use super::super::insert_node_drag::InsertNodeDragPayload;
-use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes};
+use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 use crate::ui::canvas::state::PendingInsertNodeDrag;
 
 #[test]
 fn insert_node_drag_does_not_start_until_threshold() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
@@ -69,8 +68,7 @@ fn insert_node_drag_does_not_start_until_threshold() {
 fn insert_node_drag_starts_after_threshold() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _b) = make_test_graph_two_nodes();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
 
