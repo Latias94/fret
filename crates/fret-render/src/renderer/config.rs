@@ -2,6 +2,17 @@ use super::*;
 use crate::text::{TextFontFamilyConfig, TextQualitySettings};
 
 impl Renderer {
+    pub fn begin_text_diagnostics_frame(&mut self) {
+        self.text_system.begin_frame_diagnostics();
+    }
+
+    pub fn text_diagnostics_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextPerfSnapshot {
+        self.text_system.diagnostics_snapshot(frame_id)
+    }
+
     pub fn set_perf_enabled(&mut self, enabled: bool) {
         self.perf_enabled = enabled;
         self.perf = RenderPerfStats::default();
