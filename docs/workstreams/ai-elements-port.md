@@ -15,6 +15,8 @@ This workstream tracks the port of Vercel's **AI Elements** component taxonomy i
 
 This is an **outcomes-first** port: we align behavior and composition outcomes, not React/DOM APIs.
 
+Milestone board (one-screen): `docs/workstreams/ai-elements-port-milestones.md`.
+
 ## Version stamp (upstream reference)
 
 The upstream spec for this workstream is the pinned local checkout under
@@ -486,6 +488,13 @@ Symptoms:
   occluded by sticky chrome.
 - A subsequent `click(test_id=...)` can hit a non-pressable container at the same location, so the
   intended pressable does not activate and follow-up `wait_until` steps time out.
+
+Concrete evidence:
+
+- Diag bundle example: `target/fret-diag-ai-elements-port4/1770379213331-script-step-0011-wait_until-timeout/bundle.json`
+- Snapshot evidence (same bundle): `debug.hit_test.hit_semantics_actionable_ancestor` reports the
+  intended button (`test_id=ui-ai-msg-4-sources-2-trigger`), but `debug.hit_test.hit` resolves to a
+  different non-actionable node in a sibling subtree — consistent with an occluding sticky container.
 
 Short-term mitigations:
 

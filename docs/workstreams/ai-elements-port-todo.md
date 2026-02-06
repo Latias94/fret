@@ -10,6 +10,7 @@ Upstream reference:
 - Docs: `repo-ref/ai-elements/apps/docs/content/components/*/*.mdx`
 
 Workstream narrative: `docs/workstreams/ai-elements-port.md`
+Milestone board (one-screen): `docs/workstreams/ai-elements-port-milestones.md`
 
 ## Tracking format
 
@@ -271,12 +272,16 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 ### Sources / Citations (parity pass)
 
-- [ ] AIEL-MVP2-tooling-010 Align `Sources` to upstream Collapsible behavior (`Used N sources` trigger, hidden-by-default content).
-- [ ] AIEL-MVP2-tooling-011 Align `InlineCitation` to upstream HoverCard behavior (delay 0, pager with prev/next + `current/count`).
+- [x] AIEL-MVP2-tooling-010 Align `Sources` to upstream Collapsible behavior (`Used N sources` trigger, hidden-by-default content).
+- [x] AIEL-MVP2-tooling-011 Align `InlineCitation` to upstream HoverCard behavior (delay 0, pager with prev/next + `current/count`).
 - [!] AIEL-MVP2-tooling-012 Gate hover + pager with `fretboard diag` (open hover card, next/prev).
   - Blocker: pointer targeting can be occluded by sticky prompt chrome when the target lands near the bottom edge.
 - [!] AIEL-MVP2-tooling-013 Gate sources Collapsible with `fretboard diag` (open, verify rows).
   - Blocker: `click(test_id=...sources-*-trigger)` can hit a non-pressable container at the same location; see workstream “Known blockers”.
+- [ ] AIEL-MVP2-tooling-014 Fix/mitigate occlusion for pointer-driven gates.
+  - Option A (preferred): improve diag `scroll_into_view` to exclude known occluding chrome targets.
+  - Option B (workaround): add `click_with_insets` or a multi-point click strategy (validate hit-test path, retry).
+  - Option C (escape hatch): add a semantics-level `invoke(test_id=...)` step (bypasses pointer hit-test; use sparingly).
 
 ### Tool calls / Sources / Citations
 

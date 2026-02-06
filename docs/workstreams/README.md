@@ -18,6 +18,7 @@ Active workstreams:
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
 - `docs/workstreams/ai-elements-port.md`
 - `docs/workstreams/ai-elements-port-todo.md`
+- `docs/workstreams/ai-elements-port-milestones.md`
 - `docs/workstreams/ui-gallery-visual-parity.md`
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
 - `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
