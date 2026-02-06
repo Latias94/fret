@@ -321,6 +321,22 @@ before continuing component surface work:
     - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_view_suite_goldens_v1`)
     - `goldens/material3-headless/v1/material3-search-view.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
 
+- [x] Carousel item (MVP) surface.
+  - Goal: add a low-coupling `CarouselItem` primitive aligned with Material Web v30
+    `md.comp.carousel-item.*` tokens.
+  - Notes:
+    - Scope (v1): the item surface only (container + outline + state layer + ripple + focus ring).
+    - Out of scope (v1): a full carousel layout policy (snap points, pager-like behavior, or auto
+      sizing). Consumers can build higher-level carousels using horizontal scrolling until we have
+      a concrete product need for snap behavior.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/carousel_item.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/carousel_item.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_carousel_item_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-carousel-item.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+  - References:
+    - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-carousel-item.scss`
+
 - [x] Autocomplete (outlined + filled) MVP surface.
   - Goal: provide an editable trigger with a listbox overlay using Material Web autocomplete tokens,
     aligned with Compose exposed dropdown menus at the outcome level.
