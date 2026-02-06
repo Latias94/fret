@@ -2052,7 +2052,8 @@ mod tests {
         root: fret_core::NodeId,
     ) -> (fret_core::NodeId, fret_core::NodeId) {
         let window = ui.children(root)[0];
-        let col = ui.children(window)[0];
+        let chrome = ui.children(window)[0];
+        let col = ui.children(chrome)[0];
         let title_bar = ui.children(col)[0];
         (window, title_bar)
     }

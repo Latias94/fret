@@ -28,7 +28,7 @@ Status snapshot (2026-02-06):
   - drag move + element-local position state,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.
 - A minimal in-window floating window primitive exists (`floating_window` / `floating_window_open`):
-  - draggable title bar + element-local position state (built on the same area state),
+  - draggable title bar + element-local position state (window chrome layered on top of the same floating area state),
   - optional ImGui-style `open` model + close button,
   - `Esc`-to-close when the title bar is focused,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.

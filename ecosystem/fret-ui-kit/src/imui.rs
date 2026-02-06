@@ -32,6 +32,8 @@ use crate::primitives::popper;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::{UiIntoElement, UiPatchTarget};
 
+mod floating_window_on_area;
+
 /// A value that can be rendered into a declarative element within an `ElementContext`.
 ///
 /// This is used to bridge the `UiBuilder<T>` ecosystem authoring surface (ADR 0175) into
@@ -2064,6 +2066,70 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn floating_window_impl(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.floating_window_impl_on_area(
+            id,
+            title,
+            open,
+            initial_position,
+            initial_size,
+            resize,
+            f,
+        );
+    }
+
+    fn floating_window_impl_on_area(
+        &mut self,
+        id: &str,
+        title: Arc<str>,
+        open: Option<&fret_runtime::Model<bool>>,
+        initial_position: Point,
+        initial_size: Option<Size>,
+        resize: Option<FloatingWindowResizeOptions>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        if let Some(open) = open {
+            let is_open = self
+                .with_cx_mut(|cx| cx.read_model(open, fret_ui::Invalidation::Paint, |_app, v| *v))
+                .unwrap_or(false);
+            if !is_open {
+                return;
+            }
+        }
+
+        let open_model = open.map(|m| m.clone());
+        self.floating_area_ex(
+            id,
+            initial_position,
+            FloatingAreaOptions {
+                test_id_prefix: "imui.float_window.window:",
+                test_id: None,
+            },
+            move |ui, area| {
+                floating_window_on_area::render_floating_window_in_area(
+                    ui,
+                    area,
+                    id,
+                    title,
+                    open_model.clone(),
+                    initial_position,
+                    initial_size,
+                    resize,
+                    f,
+                );
+            },
+        );
+    }
+
+    fn floating_window_impl_legacy(
         &mut self,
         id: &str,
         title: Arc<str>,

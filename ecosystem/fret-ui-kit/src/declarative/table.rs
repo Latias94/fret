@@ -308,6 +308,38 @@ mod tests {
         );
     }
 
+    #[test]
+    fn apply_row_pinning_to_paged_rows_surfaces_pinned_outside_page_and_dedupes() {
+        let visible_all = vec![
+            DisplayRow::Leaf {
+                data_index: 0,
+                row_key: RowKey(1),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 1,
+                row_key: RowKey(2),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 2,
+                row_key: RowKey(3),
+                depth: 0,
+            },
+        ];
+
+        let page_rows = vec![visible_all[1].clone(), visible_all[2].clone()];
+
+        let row_pinning = crate::headless::table::RowPinningState {
+            top: vec![RowKey(1)],
+            bottom: vec![RowKey(3)],
+        };
+
+        let out = apply_row_pinning_to_paged_rows(&visible_all, &page_rows, &row_pinning);
+        let keys = out.into_iter().map(|r| r.row_key()).collect::<Vec<_>>();
+        assert_eq!(keys, vec![RowKey(1), RowKey(2), RowKey(3)]);
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -615,6 +647,50 @@ impl DisplayRow {
     }
 }
 
+fn apply_row_pinning_to_paged_rows(
+    visible_all: &[DisplayRow],
+    page_rows: &[DisplayRow],
+    row_pinning: &crate::headless::table::RowPinningState,
+) -> Vec<DisplayRow> {
+    if row_pinning.top.is_empty() && row_pinning.bottom.is_empty() {
+        return page_rows.to_vec();
+    }
+
+    let mut pinned: std::collections::HashSet<RowKey> = Default::default();
+    pinned.extend(row_pinning.top.iter().copied());
+    pinned.extend(row_pinning.bottom.iter().copied());
+
+    let mut by_key: std::collections::HashMap<RowKey, DisplayRow> =
+        std::collections::HashMap::new();
+    for row in visible_all {
+        by_key.entry(row.row_key()).or_insert_with(|| row.clone());
+    }
+
+    let mut out: Vec<DisplayRow> =
+        Vec::with_capacity(row_pinning.top.len() + page_rows.len() + row_pinning.bottom.len());
+
+    for row_key in &row_pinning.top {
+        if let Some(row) = by_key.get(row_key) {
+            out.push(row.clone());
+        }
+    }
+
+    out.extend(
+        page_rows
+            .iter()
+            .filter(|row| !pinned.contains(&row.row_key()))
+            .cloned(),
+    );
+
+    for row_key in &row_pinning.bottom {
+        if let Some(row) = by_key.get(row_key) {
+            out.push(row.clone());
+        }
+    }
+
+    out
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct GroupedBaseDeps {
     items_revision: u64,
@@ -630,6 +706,7 @@ struct GroupedDisplayDeps {
     base: GroupedBaseDeps,
     sorting: crate::headless::table::SortingState,
     expanding: ExpandingState,
+    row_pinning: crate::headless::table::RowPinningState,
     page_index: usize,
     page_size: usize,
 }
@@ -1884,6 +1961,7 @@ where
             },
             sorting: state_value.sorting.clone(),
             expanding: state_value.expanding.clone(),
+            row_pinning: state_value.row_pinning.clone(),
             page_index: state_value.pagination.page_index,
             page_size: state_value.pagination.page_size,
         };
@@ -1946,7 +2024,7 @@ where
                     pagination: bounds,
                 };
 
-                let page_rows: Vec<DisplayRow> = if bounds.page_count == 0 {
+                let page_rows_center: Vec<DisplayRow> = if bounds.page_count == 0 {
                     Vec::new()
                 } else {
                     visible
@@ -1954,6 +2032,9 @@ where
                         .unwrap_or_default()
                         .to_vec()
                 };
+
+                let page_rows =
+                    apply_row_pinning_to_paged_rows(&visible, &page_rows_center, &deps.row_pinning);
 
                 cache.deps = Some(deps.clone());
                 cache.page_rows = page_rows.clone();
@@ -2200,7 +2281,7 @@ where
                 pagination: bounds,
             };
 
-            let page_rows: Vec<DisplayRow> = if bounds.page_count == 0 {
+            let page_rows_center: Vec<DisplayRow> = if bounds.page_count == 0 {
                 Vec::new()
             } else {
                 visible
@@ -2208,6 +2289,9 @@ where
                     .unwrap_or_default()
                     .to_vec()
             };
+
+            let page_rows =
+                apply_row_pinning_to_paged_rows(&visible, &page_rows_center, &deps.row_pinning);
 
             cache.base_deps = Some(deps.base.clone());
             cache.grouped = grouped;
