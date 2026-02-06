@@ -174,11 +174,27 @@ fn diff_nodes(
                 });
             }
             if node_from.parent != node_to.parent {
-                tx.ops.push(GraphOp::SetNodeParent {
-                    id: *id,
-                    from: node_from.parent,
-                    to: node_to.parent,
-                });
+                if let Some(group_id) = node_from.parent
+                    && from.groups.contains_key(&group_id)
+                    && !to.groups.contains_key(&group_id)
+                {
+                    // Group diffs are emitted before node diffs. When a parent group is removed,
+                    // `RemoveGroup` detaches the child node to `None`, so the node parent change
+                    // must be expressed relative to that intermediate state.
+                    if node_to.parent.is_some() {
+                        tx.ops.push(GraphOp::SetNodeParent {
+                            id: *id,
+                            from: None,
+                            to: node_to.parent,
+                        });
+                    }
+                } else {
+                    tx.ops.push(GraphOp::SetNodeParent {
+                        id: *id,
+                        from: node_from.parent,
+                        to: node_to.parent,
+                    });
+                }
             }
             if node_from.extent != node_to.extent {
                 tx.ops.push(GraphOp::SetNodeExtent {

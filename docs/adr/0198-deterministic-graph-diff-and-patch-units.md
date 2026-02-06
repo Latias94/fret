@@ -56,15 +56,16 @@ The diff emits ops in the following high-level order:
 
 1) Imports (add/remove + alias)
 2) Symbols (add/remove + setters)
-3) Nodes (add/remove + setters)
-4) Ports (add/remove + setters)
-5) Edges (add/remove + setters)
-6) Groups (add/remove + setters, including color)
+3) Groups (add/remove + setters, including color)
+4) Nodes (add/remove + setters)
+5) Ports (add/remove + setters)
+6) Edges (add/remove + setters)
 7) Sticky notes (add/remove + setters)
 
 Rationale:
 
 - This order reduces "referenced id missing" apply failures during forward apply.
+- Groups are emitted before nodes because nodes may reference a parent group.
 - Edges are emitted last because they reference ports.
 
 ### 4) Setter strategy
@@ -105,3 +106,7 @@ Note (MVP compromise):
 - Structural port changes (owner node, key, dir, kind, capacity) are represented as remove+add
   (the owning node `ports` ordering is restored and incident edges are re-added afterwards).
   This preserves correctness and determinism but is not minimal.
+- Group removals detach child nodes as part of `RemoveGroup`:
+  - Diffs must not emit redundant `SetNodeParent(Some(group), None)` ops.
+  - If a node is re-parented away from a removed group, the diff emits `SetNodeParent(None, Some(new))`
+    (because the intermediate state after `RemoveGroup` is detached).

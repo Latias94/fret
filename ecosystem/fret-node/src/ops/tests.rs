@@ -1226,3 +1226,127 @@ fn graph_diff_roundtrips_when_a_port_changes_structurally() {
         "diff must roundtrip"
     );
 }
+
+#[test]
+fn graph_diff_roundtrips_when_deleting_a_group_with_child_nodes() {
+    let mut from = Graph::default();
+    let group_id = GroupId(Uuid::from_u128(10));
+    from.groups.insert(
+        group_id,
+        Group {
+            title: "Group".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+
+    let child_a = NodeId(Uuid::from_u128(200));
+    let child_b = NodeId(Uuid::from_u128(100));
+    let mut node_a = make_node("core.a");
+    node_a.parent = Some(group_id);
+    from.nodes.insert(child_a, node_a);
+    let mut node_b = make_node("core.b");
+    node_b.parent = Some(group_id);
+    from.nodes.insert(child_b, node_b);
+
+    from.nodes
+        .insert(NodeId(Uuid::from_u128(300)), make_node("core.c"));
+
+    let mut to = from.clone();
+    to.groups.remove(&group_id);
+    to.nodes.get_mut(&child_a).unwrap().parent = None;
+    to.nodes.get_mut(&child_b).unwrap().parent = None;
+
+    let tx = graph_diff(&from, &to);
+    let expected_detached = vec![(child_b, Some(group_id)), (child_a, Some(group_id))];
+    assert!(
+        tx.ops.iter().any(|op| match op {
+            GraphOp::RemoveGroup { id, detached, .. } if *id == group_id => {
+                detached == &expected_detached
+            }
+            _ => false,
+        }),
+        "diff must use reversible RemoveGroup and detach child nodes deterministically"
+    );
+    assert!(
+        !tx.ops.iter().any(|op| matches!(
+            op,
+            GraphOp::SetNodeParent { id, .. } if *id == child_a || *id == child_b
+        )),
+        "diff must not emit SetNodeParent when the parent group is being removed"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
+}
+
+#[test]
+fn graph_diff_roundtrips_when_edge_endpoints_change() {
+    let mut from = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    from.nodes.insert(a, make_node("core.a"));
+    from.nodes.insert(b, make_node("core.b"));
+
+    let out1 = PortId::from_u128(50);
+    let out2 = PortId::from_u128(51);
+    let inn = PortId::from_u128(52);
+    from.ports
+        .insert(out1, make_port(a, "out1", PortDirection::Out));
+    from.ports
+        .insert(out2, make_port(a, "out2", PortDirection::Out));
+    from.ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    from.nodes.get_mut(&a).unwrap().ports.extend([out1, out2]);
+    from.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::from_u128(2020);
+    from.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out1,
+            to: inn,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let mut to = from.clone();
+    to.edges.get_mut(&edge_id).unwrap().from = out2;
+
+    let tx = graph_diff(&from, &to);
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetEdgeEndpoints { id, .. } if *id == edge_id)),
+        "diff must preserve edge identity when endpoints change"
+    );
+    assert!(
+        !tx.ops.iter().any(|op| {
+            matches!(op, GraphOp::RemoveEdge { id, .. } if *id == edge_id)
+                || matches!(op, GraphOp::AddEdge { id, .. } if *id == edge_id)
+        }),
+        "diff must not fall back to remove+add for edge endpoint changes"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
+}

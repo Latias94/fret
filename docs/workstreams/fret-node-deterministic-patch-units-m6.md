@@ -102,7 +102,6 @@ These are "nice to have" improvements once the MVP contracts are stable:
 
 - [ ] Consider port structural setter ops (key/dir/kind/capacity) if/when we need more minimal
   collaboration diffs (ensure apply-safe detaching/reattaching semantics stay explicit).
-- [ ] Add dedicated conformance tests for:
+- [x] Add dedicated conformance tests for:
   - group removal detaches nodes deterministically,
   - edge endpoint changes preserve identity (`SetEdgeEndpoints`) across reconnect flows.
-
