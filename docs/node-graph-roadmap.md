@@ -186,5 +186,8 @@ Legend:
 - [~] Deterministic graph diff/patch set for collaboration.
   - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
-  - Patch units: ports use setter ops for soft fields (connectable/ty/data) and fall back to remove+add only for structural changes.
-  - Tests: `ecosystem/fret-node/src/ops/tests.rs`
+  - Patch units:
+    - Ports: setter ops for soft fields (`connectable*`, `ty`, `data`); structural changes use remove+add (and restore `SetNodePorts` + re-add incident edges when needed).
+    - Groups: setters for common edits (`title`, `rect`, `color`) to preserve identity.
+    - Sticky notes: setters for common edits (`text`, `rect`, `color`) to preserve identity.
+  - Tests: `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`, `graph_diff_roundtrips_when_a_port_changes_structurally`, `graph_diff_roundtrips_when_deleting_a_port_with_incident_edges`)
