@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::core::{
     CanvasPoint, Edge, EdgeId, Graph, Group, GroupId, Node, NodeId, Port, PortId, StickyNote,
-    StickyNoteId, Symbol, SymbolId, symbol_ref_target_symbol_id,
+    StickyNoteId, Symbol, SymbolId, symbol_ref_node_data, symbol_ref_target_symbol_id,
 };
 use crate::ops::{GraphOp, GraphTransaction};
 
@@ -429,6 +429,13 @@ impl GraphFragment {
         for (old_id, old_node) in &self.nodes {
             let new_id = node_map[old_id];
             let mut node = old_node.clone();
+
+            if let Ok(Some(old_symbol_id)) = symbol_ref_target_symbol_id(*old_id, old_node)
+                && let Some(new_symbol_id) = symbol_map.get(&old_symbol_id)
+            {
+                node.data = symbol_ref_node_data(*new_symbol_id);
+            }
+
             node.pos = CanvasPoint {
                 x: node.pos.x + tuning.offset.x,
                 y: node.pos.y + tuning.offset.y,
