@@ -831,9 +831,71 @@ impl<'a, TData> Table<'a, TData> {
         row_key: RowKey,
         value: Option<bool>,
     ) -> super::ExpandingState {
-        let mut next = self.state.expanding.clone();
-        super::toggle_row_expanded(&mut next, self.row_model(), row_key, value);
-        next
+        self.row_expanding_updater(row_key, value)
+            .apply(&self.state.expanding)
+    }
+
+    pub fn row_expanding_updater(
+        &self,
+        row_key: RowKey,
+        value: Option<bool>,
+    ) -> super::Updater<super::ExpandingState> {
+        let visible_row_keys: Vec<RowKey> = if self.state.grouping.is_empty() {
+            self.row_model().rows_by_key().keys().copied().collect()
+        } else {
+            let grouped = self.grouped_row_model();
+            grouped
+                .flat_rows()
+                .iter()
+                .filter_map(|&index| grouped.row(index).map(|row| row.key))
+                .collect()
+        };
+        super::Updater::Func(Arc::new(move |old| {
+            let mut next = old.clone();
+            let exists = super::is_row_expanded(row_key, &next);
+            let expanded_value = value.unwrap_or(!exists);
+
+            match &mut next {
+                super::ExpandingState::All => {
+                    if expanded_value {
+                        return next;
+                    }
+
+                    let mut keys: HashSet<RowKey> = visible_row_keys.iter().copied().collect();
+                    keys.remove(&row_key);
+                    next = super::ExpandingState::Keys(keys);
+                }
+                super::ExpandingState::Keys(keys) => {
+                    if expanded_value {
+                        keys.insert(row_key);
+                    } else {
+                        keys.remove(&row_key);
+                    }
+                }
+            }
+
+            next
+        }))
+    }
+
+    pub fn row_expanding_updater_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+    ) -> Option<super::Updater<super::ExpandingState>> {
+        let row_key = self.row_key_for_id(row_id, search_all)?;
+        Some(self.row_expanding_updater(row_key, value))
+    }
+
+    pub fn toggled_row_expanded_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+    ) -> Option<super::ExpandingState> {
+        let updater = self.row_expanding_updater_by_id(row_id, search_all, value)?;
+        Some(updater.apply(&self.state.expanding))
     }
 
     /// TanStack-aligned: `autoResetAll ?? autoResetExpanded ?? !manualExpanding`.
@@ -1477,12 +1539,89 @@ impl<'a, TData> Table<'a, TData> {
         include_leaf_rows: bool,
         include_parent_rows: bool,
     ) -> super::Updater<super::RowPinningState> {
-        let keys = super::pin_row_keys(
-            self.core_row_model(),
-            row_key,
-            include_leaf_rows,
-            include_parent_rows,
-        );
+        fn pin_grouped_row_keys(
+            grouped: &super::GroupedRowModel,
+            row_key: RowKey,
+            include_leaf_rows: bool,
+            include_parent_rows: bool,
+        ) -> Vec<RowKey> {
+            let Some(row_index) = grouped.row_by_key(row_key) else {
+                return vec![row_key];
+            };
+
+            let mut keys: Vec<RowKey> = Vec::new();
+
+            if include_parent_rows {
+                let mut parents_rev: Vec<RowKey> = Vec::new();
+                let mut current = grouped.row(row_index);
+                while let Some(row) = current {
+                    let Some(parent) = row.parent else {
+                        break;
+                    };
+                    let Some(parent_row) = grouped.row(parent) else {
+                        break;
+                    };
+                    parents_rev.push(parent_row.key);
+                    current = Some(parent_row);
+                }
+                parents_rev.reverse();
+                keys.extend(parents_rev);
+            }
+
+            keys.push(row_key);
+
+            if include_leaf_rows {
+                fn push_descendant_keys(
+                    grouped: &super::GroupedRowModel,
+                    row: usize,
+                    out: &mut Vec<RowKey>,
+                ) {
+                    let Some(r) = grouped.row(row) else {
+                        return;
+                    };
+                    for &child in &r.sub_rows {
+                        let Some(child_row) = grouped.row(child) else {
+                            continue;
+                        };
+                        out.push(child_row.key);
+                        push_descendant_keys(grouped, child, out);
+                    }
+                }
+
+                push_descendant_keys(grouped, row_index, &mut keys);
+            }
+
+            let mut deduped: Vec<RowKey> = Vec::with_capacity(keys.len());
+            let mut seen: HashSet<RowKey> = HashSet::new();
+            for key in keys {
+                if seen.insert(key) {
+                    deduped.push(key);
+                }
+            }
+
+            deduped
+        }
+
+        let keys = if self.state.grouping.is_empty() {
+            super::pin_row_keys(
+                self.core_row_model(),
+                row_key,
+                include_leaf_rows,
+                include_parent_rows,
+            )
+        } else {
+            let grouped = self.grouped_row_model();
+            if grouped.row_by_key(row_key).is_some() {
+                pin_grouped_row_keys(grouped, row_key, include_leaf_rows, include_parent_rows)
+            } else {
+                super::pin_row_keys(
+                    self.core_row_model(),
+                    row_key,
+                    include_leaf_rows,
+                    include_parent_rows,
+                )
+            }
+        };
 
         super::Updater::Func(Arc::new(move |old| {
             let mut next = old.clone();
@@ -2555,29 +2694,192 @@ impl<'a, TData> Table<'a, TData> {
         })
     }
 
+    pub fn row_selection_updater(
+        &self,
+        row_key: RowKey,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> super::Updater<super::RowSelectionState> {
+        #[derive(Clone)]
+        struct SelectionRowMeta {
+            sub_rows: Vec<RowKey>,
+            can_select: bool,
+            can_multi_select: bool,
+            can_select_sub_rows: bool,
+        }
+
+        fn mutate_row_selection(
+            row_meta_by_key: &HashMap<RowKey, SelectionRowMeta>,
+            selection: &mut super::RowSelectionState,
+            row_key: RowKey,
+            value: bool,
+            include_children: bool,
+        ) {
+            let Some(row_meta) = row_meta_by_key.get(&row_key) else {
+                return;
+            };
+
+            if value {
+                if !row_meta.can_multi_select {
+                    selection.clear();
+                }
+                if row_meta.can_select {
+                    selection.insert(row_key);
+                }
+            } else {
+                selection.remove(&row_key);
+            }
+
+            if include_children && row_meta.can_select_sub_rows {
+                for child_key in &row_meta.sub_rows {
+                    mutate_row_selection(
+                        row_meta_by_key,
+                        selection,
+                        *child_key,
+                        value,
+                        include_children,
+                    );
+                }
+            }
+        }
+
+        let mut row_meta_by_key: HashMap<RowKey, SelectionRowMeta> = HashMap::new();
+        let core = self.core_row_model();
+        for row in core.arena() {
+            let sub_rows = row
+                .sub_rows
+                .iter()
+                .filter_map(|&index| core.row(index).map(|child| child.key))
+                .collect::<Vec<_>>();
+            row_meta_by_key.insert(
+                row.key,
+                SelectionRowMeta {
+                    sub_rows,
+                    can_select: self.row_can_select_for_row(row.key, row),
+                    can_multi_select: self.row_can_multi_select_for_row(row.key, row),
+                    can_select_sub_rows: self.row_can_select_sub_rows_for_row(row.key, row),
+                },
+            );
+        }
+
+        if !self.state.grouping.is_empty() {
+            let grouped = self.grouped_row_model();
+            for &row_index in grouped.flat_rows() {
+                let Some(row) = grouped.row(row_index) else {
+                    continue;
+                };
+                let sub_rows = row
+                    .sub_rows
+                    .iter()
+                    .filter_map(|&index| grouped.row(index).map(|child| child.key))
+                    .collect::<Vec<_>>();
+
+                let leaf_original = match &row.kind {
+                    super::GroupedRowKind::Leaf { row_key } => core
+                        .row_by_key(*row_key)
+                        .and_then(|index| core.row(index).map(|row| row.original)),
+                    super::GroupedRowKind::Group {
+                        first_leaf_row_key, ..
+                    } => core
+                        .row_by_key(*first_leaf_row_key)
+                        .and_then(|index| core.row(index).map(|row| row.original)),
+                };
+
+                let can_select = match leaf_original {
+                    Some(original) => {
+                        if let Some(enable_row_selection) = self.enable_row_selection.as_ref() {
+                            enable_row_selection(row.key, original)
+                        } else {
+                            self.options.enable_row_selection
+                        }
+                    }
+                    None => self.options.enable_row_selection,
+                };
+                let can_multi_select = match leaf_original {
+                    Some(original) => {
+                        if let Some(enable_multi_row_selection) =
+                            self.enable_multi_row_selection.as_ref()
+                        {
+                            enable_multi_row_selection(row.key, original)
+                        } else {
+                            self.options.enable_multi_row_selection
+                        }
+                    }
+                    None => self.options.enable_multi_row_selection,
+                };
+                let can_select_sub_rows = match leaf_original {
+                    Some(original) => {
+                        if let Some(enable_sub_row_selection) =
+                            self.enable_sub_row_selection.as_ref()
+                        {
+                            enable_sub_row_selection(row.key, original)
+                        } else {
+                            self.options.enable_sub_row_selection
+                        }
+                    }
+                    None => self.options.enable_sub_row_selection,
+                };
+
+                row_meta_by_key.insert(
+                    row.key,
+                    SelectionRowMeta {
+                        sub_rows,
+                        can_select,
+                        can_multi_select,
+                        can_select_sub_rows,
+                    },
+                );
+            }
+        }
+
+        super::Updater::Func(Arc::new(move |old| {
+            let current = old.contains(&row_key);
+            let value = value.unwrap_or(!current);
+
+            let mut next = old.clone();
+
+            if let Some(row_meta) = row_meta_by_key.get(&row_key) {
+                if row_meta.can_select && current == value {
+                    return next;
+                }
+            }
+
+            mutate_row_selection(&row_meta_by_key, &mut next, row_key, value, select_children);
+            next
+        }))
+    }
+
+    pub fn row_selection_updater_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> Option<super::Updater<super::RowSelectionState>> {
+        let row_key = self.row_key_for_id(row_id, search_all)?;
+        Some(self.row_selection_updater(row_key, value, select_children))
+    }
+
+    pub fn toggled_row_selected_by_id(
+        &self,
+        row_id: &str,
+        search_all: bool,
+        value: Option<bool>,
+        select_children: bool,
+    ) -> Option<super::RowSelectionState> {
+        let updater =
+            self.row_selection_updater_by_id(row_id, search_all, value, select_children)?;
+        Some(updater.apply(&self.state.row_selection))
+    }
+
     pub fn toggled_row_selected(
         &self,
         row_key: RowKey,
         value: Option<bool>,
         select_children: bool,
     ) -> super::RowSelectionState {
-        let can_select =
-            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_select_for_row(row_key, row);
-        let can_multi =
-            |row_key: RowKey, row: &Row<'a, TData>| self.row_can_multi_select_for_row(row_key, row);
-        let can_sub = |row_key: RowKey, row: &Row<'a, TData>| {
-            self.row_can_select_sub_rows_for_row(row_key, row)
-        };
-        super::toggle_row_selected(
-            self.core_row_model(),
-            &self.state.row_selection,
-            row_key,
-            value,
-            select_children,
-            &can_select,
-            &can_multi,
-            &can_sub,
-        )
+        self.row_selection_updater(row_key, value, select_children)
+            .apply(&self.state.row_selection)
     }
 
     pub fn is_all_rows_selected(&self) -> bool {

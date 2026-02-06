@@ -25,6 +25,7 @@ type CaseId =
   | "expanding"
   | "grouping"
   | "grouping_aggregation_fns"
+  | "row_id_state_ops"
   | "render_fallback"
 
 type SnapshotId =
@@ -177,6 +178,11 @@ type SnapshotId =
   | "expanding_action_toggle_row_on_expanded_change_noop_ignores"
   | "expanding_action_toggle_row_enable_expanding_false_still_updates_state"
   | "expanding_action_toggle_all"
+  | "row_id_state_ops_leaf_selection_prefixed"
+  | "row_id_state_ops_group_selection"
+  | "row_id_state_ops_group_expanding"
+  | "row_id_state_ops_group_pinning"
+  | "row_id_state_ops_nested_group_pinning"
   | "pagination_baseline"
   | "pagination_set_page_index_out_of_range_uncontrolled"
   | "pagination_set_page_index_clamps_when_page_count_is_set"
@@ -356,6 +362,8 @@ type TanStackOptions = {
   __onColumnOrderChange?: "noop"
   __onRowPinningChange?: "noop"
   __onRowSelectionChange?: "noop"
+  // Fixture-only: choose a deterministic custom row id strategy.
+  __getRowId?: "prefixed"
 }
 
 type RowModelSnapshot = { root: string[]; flat: string[] }
@@ -837,6 +845,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
         v !== "expanding" &&
         v !== "grouping" &&
         v !== "grouping_aggregation_fns" &&
+        v !== "row_id_state_ops" &&
         v !== "render_fallback"
       ) {
         throw new Error(`unknown --case ${v}`)
@@ -848,7 +857,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|row_id_state_ops|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1073,7 +1082,8 @@ async function main(): Promise<void> {
     case_id === "pagination" ||
     case_id === "state_shapes" ||
     case_id === "selection" ||
-    case_id === "pinning"
+    case_id === "pinning" ||
+    case_id === "row_id_state_ops"
   ) {
     const demo: DemoProcessRow[] = [
       { id: 1, name: "Renderer", status: "Running", cpu: 12, mem_mb: 420 },
@@ -1632,10 +1642,15 @@ async function main(): Promise<void> {
       ...state,
     }
 
+    const getRowId =
+      options.__getRowId === "prefixed"
+        ? (row: DemoProcessRow) => `row:${String(row.id)}`
+        : (row: DemoProcessRow) => String(row.id)
+
     const table = tableCore.createTable<DemoProcessRow>({
     data,
     columns,
-    getRowId: (row: DemoProcessRow) => String(row.id),
+    getRowId,
     getSubRows: (row: DemoProcessRow) => (row as any).subRows,
       initialState: options.initialState,
       autoResetAll: options.autoResetAll,
@@ -1744,7 +1759,7 @@ async function main(): Promise<void> {
             getFacetedMinMaxValues: tableCore.getFacetedMinMaxValues(),
           }
         : {}),
-      ...(case_id === "grouping" || case_id === "grouping_aggregation_fns"
+      ...(case_id === "grouping" || case_id === "grouping_aggregation_fns" || case_id === "row_id_state_ops"
         ? {
             getGroupedRowModel:
               options.__getGroupedRowModel === "pre_grouped"
@@ -3833,6 +3848,71 @@ function snapshotColumnPinning(
           { type: "toggleAllRowsExpanded" },
         ]),
       },
+    ]
+  } else if (case_id === "row_id_state_ops") {
+    const mkActions = (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = snapshotForActions(options, state, actions)
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect,
+      }
+    }
+
+    snapshots = [
+      mkActions(
+        "row_id_state_ops_leaf_selection_prefixed",
+        { __getRowId: "prefixed" },
+        {},
+        [{ type: "toggleRowSelected", row_id: "row:1", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_selection",
+        {},
+        { grouping: ["status"] },
+        [{ type: "toggleRowSelected", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_expanding",
+        {},
+        { grouping: ["status"] },
+        [{ type: "toggleRowExpanded", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
+        "row_id_state_ops_group_pinning",
+        {},
+        { grouping: ["status"] },
+        [
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_nested_group_pinning",
+        {},
+        { grouping: ["status", "name"] },
+        [
+          {
+            type: "pinRow",
+            row_id: "status:Running>name:Renderer",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: true,
+          },
+        ],
+      ),
     ]
   } else if (case_id === "sorting_fns") {
     snapshots = [

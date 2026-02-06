@@ -108,18 +108,30 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
       - Done (engine scaffolding): `rows_by_id` is carried through the main row model pipeline for leaf rows.
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
       - Remaining (gate): add a fixture-backed gate that asserts `rowsById` semantics beyond smoke coverage.
-    - [ ] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
+    - [~] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
       - Done (partial): grouped rows now carry TanStack-style ids (`col:value` with `>` parent chain),
         and id → rowKey lookup can resolve grouped ids.
         - Evidence: `ecosystem/fret-ui-headless/src/table/grouping.rs` (`GroupedRow.id`, `GroupedRowModel::row_by_id`)
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_key_for_id` grouped fallback)
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_grouped_row_ids_exist_*`)
+      - Remaining: promote grouped ids into feature paths that still walk leaf-only `RowModel`s.
     - [~] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
       - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
         - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_pinning_updater_by_id`)
-      - Remaining: apply the same pattern across selection/expanding updaters and add grouped-row coverage.
-    - [ ] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
+      - Done (leaf rows): selection/expanding by-id updaters are available alongside existing key paths.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_selection_updater_by_id`, `row_expanding_updater_by_id`)
+        - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_row_id_updaters_cover_selection_and_expanding`)
+      - Remaining: grouped-row selection propagation semantics are still pending.
+    - [~] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
+      - Done (smoke): grouped id lookup + pinning-by-id gate exists.
+      - Done (smoke): id-keyed selection/expanding updater coverage exists for leaf rows.
+      - Done (fixture parity): added dedicated fixture + parity gate for id-keyed selection/expanding/pinning,
+        including grouped row ids and nested grouped ids.
+        - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/row_id_state_ops.json`
+        - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_state_ops_parity.rs`
+        - Fixture generator: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`--case row_id_state_ops`)
+      - Remaining: broaden parity gates to grouped-row selection propagation edge cases and controlled-hook variants.
   - Note: current TanStack JSON state round-trip for row-keyed maps (rowSelection/expanded/rowPinning)
     still assumes numeric ids; this must be generalized to `RowId` strings as part of `HTP-id-015`.
 

@@ -153,6 +153,54 @@ fn tanstack_v8_capability_smoke_tanstack_state_can_resolve_string_row_ids() {
 }
 
 #[test]
+fn tanstack_v8_capability_smoke_row_id_updaters_cover_selection_and_expanding() {
+    let data = vec![DemoRow {
+        id: 1,
+        a: 10,
+        b: 100,
+    }];
+    let columns = vec![
+        ColumnDef::<DemoRow>::new("a").value_u64_by(|r| r.a),
+        ColumnDef::<DemoRow>::new("b").value_u64_by(|r| r.b),
+    ];
+
+    let table = Table::builder(&data)
+        .columns(columns)
+        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+        .get_row_id(|row, _idx, _parent| RowId::new(format!("row:{}", row.id)))
+        .state(TableState::default())
+        .build();
+
+    let selection_updater = table
+        .row_selection_updater_by_id("row:1", true, Some(true), true)
+        .expect("row selection updater by id");
+    let next_selection = selection_updater.apply(&TableState::default().row_selection);
+    assert!(next_selection.contains(&RowKey(1)));
+
+    let next_selection_toggled = table
+        .toggled_row_selected_by_id("row:1", true, Some(true), true)
+        .expect("row selection toggle by id");
+    assert!(next_selection_toggled.contains(&RowKey(1)));
+
+    let expanding_updater = table
+        .row_expanding_updater_by_id("row:1", true, Some(true))
+        .expect("row expanding updater by id");
+    let next_expanding = expanding_updater.apply(&TableState::default().expanding);
+    assert!(matches!(
+        next_expanding,
+        ExpandingState::Keys(keys) if keys.contains(&RowKey(1))
+    ));
+
+    let next_expanding_toggled = table
+        .toggled_row_expanded_by_id("row:1", true, Some(true))
+        .expect("row expanding toggle by id");
+    assert!(matches!(
+        next_expanding_toggled,
+        ExpandingState::Keys(keys) if keys.contains(&RowKey(1))
+    ));
+}
+
+#[test]
 fn tanstack_v8_capability_smoke_grouped_row_ids_exist_and_resolve_to_row_keys() {
     #[derive(Debug, Clone)]
     struct GroupRow {
@@ -196,4 +244,12 @@ fn tanstack_v8_capability_smoke_grouped_row_ids_exist_and_resolve_to_row_keys() 
         .expect("group row pin updater");
     let next = updater.apply(&TableState::default().row_pinning);
     assert_eq!(next.top, vec![root_row.key]);
+
+    let next_expanding = table
+        .toggled_row_expanded_by_id("role:1", true, Some(true))
+        .expect("group row expand updater");
+    assert!(matches!(
+        next_expanding,
+        ExpandingState::Keys(keys) if keys.contains(&root_row.key)
+    ));
 }
