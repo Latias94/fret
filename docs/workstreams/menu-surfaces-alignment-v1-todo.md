@@ -1,6 +1,6 @@
 # Menu Surfaces Alignment v1 — TODO Tracker
 
-Status: Draft
+Status: Completed (v1 scope delivered)
 Last updated: 2026-02-06
 
 This tracker covers the work described in:
@@ -240,3 +240,15 @@ Exit criteria:
   - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuBar::normalize`, `MenuBar::normalized`)
 - [x] MENU-MVP1-docs-901 Decide Alt activation behavior and document trade-offs.
   - Decision: Alt-up focuses menubar triggers via `focus.menu_bar` on Windows/Linux; see `MENU-MVP1-kbd-020`.
+
+---
+
+## Closure sign-off (2026-02-06)
+
+- [x] MENU-MVP4-docs-990 Mark Menu Surfaces Alignment v1 as complete.
+  - Evidence: all `MENU-*` entries in this tracker are checked (`[x]`).
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-windows-radio-mutual-exclusive.json`
+    passes in closure verification (run_id `1770380950760`, `stage: passed`).
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` includes diag-stability hardening
+    (`FRET_DIAG` focused-window sync + `DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER`).
+

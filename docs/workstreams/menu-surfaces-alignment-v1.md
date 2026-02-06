@@ -1,7 +1,7 @@
 # Menu Surfaces Alignment v1 (OS menubar + in-window menubar + context menus)
 
-Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-05
+Status: Completed (v1 scope delivered; workstream note, not an ADR)
+Last updated: 2026-02-06
 
 This workstream is about preventing **behavior drift** between Fret’s menu surfaces:
 
@@ -250,3 +250,40 @@ incremental tweaks.
 - **Window list**
   - Multi-window editors need a “Window” list that reflects open windows/tabs; align with
     `MenuRole::Window` semantics where possible.
+
+MVP contract now in place:
+
+- **Anchors**
+  - Keep stable submenu anchors in app baseline menus (`File > Recent`, `Window > Windows`).
+- **Dynamic row model**
+  - Use data-only `MenuItem::Label` for non-command placeholder/dynamic rows; render as disabled
+    text consistently across OS/in-window surfaces.
+- **Patch addressing**
+  - Use submenu path targeting for dynamic branches: `menu: ["File", "Recent"]`.
+  - For non-command rows, use typed selectors (`{"type":"label","title":"..."}` /
+    `{"type":"submenu","title":"..."}`) or index anchors when titles are not unique.
+- **Update trigger + identity**
+  - Rebuild menus on explicit state transitions (command handlers, window registration changes),
+    not per-frame.
+  - In-window menubar should refresh identity on menu update to avoid stale retained subtrees.
+- **Deterministic ordering**
+  - Keep dynamic list ordering deterministic (e.g. Recent newest-first with fixed cap;
+    Window list sorted and mapped to stable `Window N` labels for diagnostics).
+
+## 9) v1 closure summary (2026-02-06)
+
+- Scope status: all `MENU-MVP0`..`MENU-MVP4` milestones in
+  `docs/workstreams/menu-surfaces-alignment-v1-todo.md` are complete.
+- Regression status: menu keyboard/pointer/semantics/dynamic-menu gates are covered by
+  nextest + `fretboard diag` scripts, including multi-window `Window > Windows`
+  mutual-exclusion checks.
+- Verification note: latest local closure run passed
+  (`tools/diag-scripts/ui-gallery-menubar-windows-radio-mutual-exclusive.json`,
+  run_id `1770380950760`).
+
+Non-blocking follow-ups for a future v2 track:
+
+- Hover-switch delay tuning across top-level menubar triggers.
+- `Menu` key / `Shift+F10` context-menu parity hardening across shells.
+- CI bundling strategy for full menu-surface diag suite.
+
