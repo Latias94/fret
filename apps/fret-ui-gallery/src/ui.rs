@@ -2564,12 +2564,18 @@ fn preview_code_editor_mvp(
                     .viewport_test_id("ui-gallery-code-editor-a11y-composition-gate-viewport")
                     .into_element(cx);
 
+                    const COMPOSITION_CARET: usize = 2;
+
                     let inject = {
                         let handle = a11y_composition_gate_handle_for_harness.clone();
                         Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                            handle.set_caret(COMPOSITION_CARET);
                             handle.set_preedit_debug("ab", None);
+                            if let Some(region_id) = handle.region_id() {
+                                host.request_focus(region_id);
+                            }
                             host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             true
@@ -2581,7 +2587,11 @@ fn preview_code_editor_mvp(
                         Arc::new(move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                       action_cx: fret_ui::action::ActionCx,
                                       _up: fret_ui::action::PointerUpCx| {
+                            handle.set_caret(COMPOSITION_CARET);
                             handle.set_preedit_debug("", None);
+                            if let Some(region_id) = handle.region_id() {
+                                host.request_focus(region_id);
+                            }
                             host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             true
@@ -2659,7 +2669,7 @@ fn preview_code_editor_mvp(
                         stack::VStackProps::default()
                             .layout(LayoutRefinement::default().w_full())
                             .gap(Space::N1),
-                        |_cx| vec![panel, controls],
+                        |_cx| vec![controls, panel],
                     )
                 }),
                 cx.keyed("a11y-selection-wrap-gate", |cx| {
@@ -2707,6 +2717,9 @@ fn preview_code_editor_mvp(
                                   _up: fret_ui::action::PointerUpCx| {
                                 handle.set_caret(WRAP_CARET);
                                 handle.set_preedit_debug("ab", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
                                 host.notify(action_cx);
                                 host.request_redraw(action_cx.window);
                                 true
@@ -2720,7 +2733,11 @@ fn preview_code_editor_mvp(
                             move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                   action_cx: fret_ui::action::ActionCx,
                                   _up: fret_ui::action::PointerUpCx| {
+                                handle.set_caret(WRAP_CARET);
                                 handle.set_preedit_debug("", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
                                 host.notify(action_cx);
                                 host.request_redraw(action_cx.window);
                                 true
@@ -2799,7 +2816,7 @@ fn preview_code_editor_mvp(
                         stack::VStackProps::default()
                             .layout(LayoutRefinement::default().w_full())
                             .gap(Space::N1),
-                        |_cx| vec![panel, controls],
+                        |_cx| vec![controls, panel],
                     )
                 }),
                 cx.keyed("a11y-composition-drag-gate", |cx| {
@@ -2823,6 +2840,9 @@ fn preview_code_editor_mvp(
                                   _up: fret_ui::action::PointerUpCx| {
                                 handle.set_caret(WRAP_CARET);
                                 handle.set_preedit_debug("ab", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
                                 host.notify(action_cx);
                                 host.request_redraw(action_cx.window);
                                 true
@@ -2836,7 +2856,11 @@ fn preview_code_editor_mvp(
                             move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                                   action_cx: fret_ui::action::ActionCx,
                                   _up: fret_ui::action::PointerUpCx| {
+                                handle.set_caret(WRAP_CARET);
                                 handle.set_preedit_debug("", None);
+                                if let Some(region_id) = handle.region_id() {
+                                    host.request_focus(region_id);
+                                }
                                 host.notify(action_cx);
                                 host.request_redraw(action_cx.window);
                                 true
@@ -2911,7 +2935,7 @@ fn preview_code_editor_mvp(
                         stack::VStackProps::default()
                             .layout(LayoutRefinement::default().w_full())
                             .gap(Space::N1),
-                        |_cx| vec![panel, controls],
+                        |_cx| vec![controls, panel],
                     )
                 }),
                 stack::hstack(

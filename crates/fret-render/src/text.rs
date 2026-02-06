@@ -1000,8 +1000,10 @@ impl GlyphAtlas {
 
                 self.perf.uploads = self.perf.uploads.saturating_add(1);
                 self.perf.upload_bytes = self.perf.upload_bytes.saturating_add(bytes.len() as u64);
-                self.perf_frame.upload_bytes =
-                    self.perf_frame.upload_bytes.saturating_add(bytes.len() as u64);
+                self.perf_frame.upload_bytes = self
+                    .perf_frame
+                    .upload_bytes
+                    .saturating_add(bytes.len() as u64);
 
                 queue.write_texture(
                     wgpu::TexelCopyTextureInfo {

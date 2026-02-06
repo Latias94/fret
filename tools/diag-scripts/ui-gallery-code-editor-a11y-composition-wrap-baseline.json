@@ -5,35 +5,74 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-search"
+        }
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "code_editor_mvp" },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-search"
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      }
+    },
+    {
+      "type": "press_key",
+      "key": "backspace"
+    },
+    {
+      "type": "type_text",
+      "text": "code_editor_mvp"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-mvp" },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-code-editor-mvp"
+        },
         "padding_px": 8.0,
         "eps_px": 1.0
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-code-editor-mvp" } },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-code-editor-mvp"
+      }
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-code-editor-mvp" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-code-editor-mvp"
+        }
       },
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "wait_frames",
+      "n": 30
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -45,7 +84,6 @@
       },
       "timeout_frames": 240
     },
-
     {
       "type": "type_text_into",
       "target": {
@@ -56,12 +94,29 @@
       "text": "",
       "timeout_frames": 240
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-code-editor-a11y-composition-wrap-before"
     },
-
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-inject-preedit"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
     {
       "type": "click",
       "target": {
@@ -69,7 +124,10 @@
         "id": "ui-gallery-code-editor-a11y-composition-wrap-inject-preedit"
       }
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -86,7 +144,21 @@
       "type": "capture_bundle",
       "label": "ui-gallery-code-editor-a11y-composition-wrap-preedit"
     },
-
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-clear-preedit"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
     {
       "type": "click",
       "target": {
@@ -94,7 +166,10 @@
         "id": "ui-gallery-code-editor-a11y-composition-wrap-clear-preedit"
       }
     },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
     {
       "type": "wait_until",
       "predicate": {

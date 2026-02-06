@@ -36,6 +36,7 @@ use stats::{
     check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_a11y_composition,
     check_bundle_for_ui_gallery_code_editor_a11y_composition_drag,
     check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap,
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll,
     check_bundle_for_ui_gallery_code_editor_a11y_selection,
     check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap,
     check_bundle_for_ui_gallery_code_editor_torture_marker_present,
@@ -125,6 +126,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_code_editor_a11y_composition: bool = false;
     let mut check_ui_gallery_code_editor_a11y_selection_wrap: bool = false;
     let mut check_ui_gallery_code_editor_a11y_composition_wrap: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool = false;
     let mut check_ui_gallery_code_editor_a11y_composition_drag: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
@@ -606,6 +608,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-code-editor-a11y-composition-wrap" => {
                 check_ui_gallery_code_editor_a11y_composition_wrap = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-composition-wrap-scroll" => {
+                check_ui_gallery_code_editor_a11y_composition_wrap_scroll = true;
                 i += 1;
             }
             "--check-ui-gallery-code-editor-a11y-composition-drag" => {
@@ -1503,6 +1509,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_code_editor_a11y_composition
                     || check_ui_gallery_code_editor_a11y_selection_wrap
                     || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1562,6 +1569,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_a11y_composition,
                         check_ui_gallery_code_editor_a11y_selection_wrap,
                         check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
                         check_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
@@ -1883,6 +1891,7 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_code_editor_a11y_composition
                         || check_ui_gallery_code_editor_a11y_selection_wrap
                         || check_ui_gallery_code_editor_a11y_composition_wrap
+                        || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
                         || check_ui_gallery_code_editor_a11y_composition_drag
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
@@ -1941,6 +1950,7 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_code_editor_a11y_composition,
                             check_ui_gallery_code_editor_a11y_selection_wrap,
                             check_ui_gallery_code_editor_a11y_composition_wrap,
+                            check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
                             check_ui_gallery_code_editor_a11y_composition_drag,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
@@ -3057,7 +3067,7 @@ See: `docs/tracy.md`.\n";
 
             let suite_launch_env = launch_env.clone();
 
-            let reuse_process = launch.is_none();
+            let reuse_process = launch.is_none() || reuse_launch;
             let mut child = if reuse_process {
                 maybe_launch_demo(
                     &launch,
@@ -3174,6 +3184,7 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_code_editor_a11y_composition
                     || check_ui_gallery_code_editor_a11y_selection_wrap
                     || check_ui_gallery_code_editor_a11y_composition_wrap
+                    || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
                     || check_ui_gallery_code_editor_a11y_composition_drag
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
@@ -3298,7 +3309,7 @@ See: `docs/tracy.md`.\n";
                     let suite_view_cache_reuse_stable_min = ai_transcript_suite
                         .then_some(10u64)
                         .filter(|_| check_view_cache_reuse_stable_min.is_none());
-                    let suite_pixels_changed_test_id = is_ui_gallery_canvas_cull_suite
+                    let suite_default_pixels_changed_test_id = is_ui_gallery_canvas_cull_suite
                         .then_some("ui-gallery-canvas-cull-root")
                         .or_else(|| {
                             is_ui_gallery_chart_torture_suite
@@ -3408,6 +3419,10 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_a11y_composition_wrap =
                         ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(&src)
                             && !check_ui_gallery_code_editor_a11y_composition_wrap;
+                    let suite_ui_gallery_code_editor_a11y_composition_wrap_scroll =
+                        ui_gallery_script_requires_code_editor_a11y_composition_wrap_scroll_gate(
+                            &src,
+                        ) && !check_ui_gallery_code_editor_a11y_composition_wrap_scroll;
                     let suite_ui_gallery_code_editor_a11y_composition_drag =
                         ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(&src)
                             && !check_ui_gallery_code_editor_a11y_composition_drag;
@@ -3473,7 +3488,8 @@ See: `docs/tracy.md`.\n";
                         check_stale_scene_eps,
                         check_pixels_changed_test_id
                             .as_deref()
-                            .or(suite_pixels_changed_test_id),
+                            .or(suite_pixels_changed_test_id)
+                            .or(suite_default_pixels_changed_test_id),
                         check_ui_gallery_code_editor_torture_marker_present
                             || suite_ui_gallery_code_editor_torture_marker_present,
                         check_ui_gallery_code_editor_torture_undo_redo
@@ -3488,6 +3504,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_a11y_selection_wrap,
                         check_ui_gallery_code_editor_a11y_composition_wrap
                             || suite_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+                            || suite_ui_gallery_code_editor_a11y_composition_wrap_scroll,
                         check_ui_gallery_code_editor_a11y_composition_drag
                             || suite_ui_gallery_code_editor_a11y_composition_drag,
                         check_semantics_changed_repainted,
@@ -6677,7 +6695,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 19] {
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 10] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 11] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
@@ -6689,6 +6707,7 @@ fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 10] {
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-soft-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-selection-wrap-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-scroll-baseline.json",
     ]
 }
 
@@ -6887,6 +6906,17 @@ fn ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(script: &Pa
     matches!(
         name,
         "ui-gallery-code-editor-a11y-composition-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_a11y_composition_wrap_scroll_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-a11y-composition-wrap-scroll-baseline.json"
     )
 }
 
@@ -7115,6 +7145,7 @@ fn apply_post_run_checks(
     check_ui_gallery_code_editor_a11y_composition: bool,
     check_ui_gallery_code_editor_a11y_selection_wrap: bool,
     check_ui_gallery_code_editor_a11y_composition_wrap: bool,
+    check_ui_gallery_code_editor_a11y_composition_wrap_scroll: bool,
     check_ui_gallery_code_editor_a11y_composition_drag: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
@@ -7267,6 +7298,12 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_a11y_composition_wrap {
         check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_composition_wrap_scroll {
+        check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+            bundle_path,
+            warmup_frames,
+        )?;
     }
     if check_ui_gallery_code_editor_a11y_composition_drag {
         check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(bundle_path, warmup_frames)?;

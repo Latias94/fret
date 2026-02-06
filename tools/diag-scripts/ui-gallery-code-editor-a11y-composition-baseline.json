@@ -60,6 +60,19 @@
     { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-before" },
 
     {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-inject-preedit"
+      },
+      "delta_y": 240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
+
+    {
       "type": "click",
       "target": {
         "kind": "test_id",
@@ -80,6 +93,19 @@
       "timeout_frames": 240
     },
     { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-preedit" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-clear-preedit"
+      },
+      "delta_y": 240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
 
     {
       "type": "click",
@@ -104,4 +130,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-code-editor-a11y-composition-after" }
   ]
 }
-

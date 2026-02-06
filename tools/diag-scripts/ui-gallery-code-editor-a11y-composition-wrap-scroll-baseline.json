@@ -79,7 +79,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-code-editor-a11y-composition-drag-gate-viewport"
+          "id": "ui-gallery-code-editor-a11y-composition-wrap-gate-viewport"
         }
       },
       "timeout_frames": 240
@@ -89,7 +89,7 @@
       "target": {
         "kind": "role_and_name",
         "role": "text_field",
-        "name": "Code editor a11y composition drag gate"
+        "name": "Code editor a11y composition wrap gate"
       },
       "text": "",
       "timeout_frames": 240
@@ -100,7 +100,7 @@
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-a11y-composition-drag-before"
+      "label": "ui-gallery-code-editor-a11y-composition-wrap-scroll-before"
     },
     {
       "type": "scroll_into_view",
@@ -110,7 +110,7 @@
       },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-code-editor-a11y-composition-drag-inject-preedit"
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-inject-preedit"
       },
       "delta_y": -240.0,
       "require_fully_within_window": true,
@@ -121,7 +121,7 @@
       "type": "click",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-code-editor-a11y-composition-drag-inject-preedit"
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-inject-preedit"
       }
     },
     {
@@ -135,36 +135,34 @@
         "target": {
           "kind": "role_and_name",
           "role": "text_field",
-          "name": "Code editor a11y composition drag gate"
+          "name": "Code editor a11y composition wrap gate"
         }
       },
       "timeout_frames": 240
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-a11y-composition-drag-preedit"
+      "label": "ui-gallery-code-editor-a11y-composition-wrap-scroll-preedit"
     },
     {
       "type": "wheel",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-code-editor-a11y-composition-drag-gate-viewport"
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-gate-viewport"
       },
-      "delta_y": 120.0
+      "delta_y": 240.0
     },
     {
       "type": "wait_frames",
       "n": 2
     },
     {
-      "type": "drag_pointer",
+      "type": "wheel",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-code-editor-a11y-composition-drag-gate-viewport"
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-gate-viewport"
       },
-      "delta_x": -160.0,
-      "delta_y": 36.0,
-      "steps": 12
+      "delta_y": 240.0
     },
     {
       "type": "wait_frames",
@@ -172,7 +170,37 @@
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-a11y-composition-drag-after"
+      "label": "ui-gallery-code-editor-a11y-composition-wrap-scroll-after-scroll"
+    },
+    {
+      "type": "scroll_into_view",
+      "container": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-clear-preedit"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-a11y-composition-wrap-clear-preedit"
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-code-editor-a11y-composition-wrap-scroll-after-clear"
     }
   ]
 }

@@ -11212,6 +11212,258 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_json
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-a11y-composition-wrap-gate-viewport";
+    const PREEDIT_START: u64 = 78;
+    const PREEDIT_END: u64 = 80;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut examined_snapshots: u64 = 0;
+    let mut matched_snapshots: u64 = 0;
+    let mut last_observed: Option<serde_json::Value> = None;
+
+    let mut preedit_observed_frame: Option<u64> = None;
+    let mut scroll_after_preedit_frame: Option<u64> = None;
+    let mut preedit_observed_after_scroll_frame: Option<u64> = None;
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
+            let Some(viewport_node_id) = viewport_node_id else {
+                continue;
+            };
+            matched_snapshots = matched_snapshots.saturating_add(1);
+
+            let nodes = s
+                .get("debug")
+                .and_then(|v| v.get("semantics"))
+                .and_then(|v| v.get("nodes"))
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+            if nodes.is_empty() {
+                continue;
+            }
+
+            let parents = semantics_parent_map(s);
+
+            let mut cur = viewport_node_id;
+            let mut text_field: Option<&serde_json::Value> = None;
+            for _ in 0..128 {
+                let node = nodes
+                    .iter()
+                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                let Some(node) = node else {
+                    break;
+                };
+                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                    text_field = Some(node);
+                    break;
+                }
+                let Some(parent) = parents.get(&cur).copied() else {
+                    break;
+                };
+                cur = parent;
+            }
+
+            let Some(text_field) = text_field else {
+                continue;
+            };
+
+            let text_selection = text_field.get("text_selection");
+            let selection = text_selection.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let text_composition = text_field.get("text_composition");
+            let composition = text_composition.and_then(|v| {
+                if let Some(arr) = v.as_array()
+                    && arr.len() == 2
+                {
+                    let a = arr[0].as_u64()?;
+                    let b = arr[1].as_u64()?;
+                    return Some((a, b));
+                }
+                if let Some(obj) = v.as_object() {
+                    let a = obj.get("start").and_then(|v| v.as_u64())?;
+                    let b = obj.get("end").and_then(|v| v.as_u64())?;
+                    return Some((a, b));
+                }
+                None
+            });
+
+            let focused = text_field
+                .get("flags")
+                .and_then(|v| v.get("focused"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let scroll_offset_changed = s
+                .get("debug")
+                .and_then(|v| v.get("scroll_handle_changes"))
+                .and_then(|v| v.as_array())
+                .is_some_and(|changes| {
+                    changes.iter().any(|c| {
+                        c.get("offset_changed")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false)
+                    })
+                });
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "viewport_node": viewport_node_id,
+                "text_field_node": cur,
+                "focused": focused,
+                "scroll_offset_changed": scroll_offset_changed,
+                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                "text_composition": composition.map(|(a,b)| serde_json::json!([a,b])),
+                "preedit_observed_frame": preedit_observed_frame,
+                "scroll_after_preedit_frame": scroll_after_preedit_frame,
+                "preedit_observed_after_scroll_frame": preedit_observed_after_scroll_frame,
+            }));
+
+            let Some((anchor, focus)) = selection else {
+                continue;
+            };
+            let (sel_lo, sel_hi) = if anchor <= focus {
+                (anchor, focus)
+            } else {
+                (focus, anchor)
+            };
+            let comp_norm = composition.map(|(a, b)| if a <= b { (a, b) } else { (b, a) });
+
+            let is_expected_preedit = sel_lo == PREEDIT_END
+                && sel_hi == PREEDIT_END
+                && comp_norm == Some((PREEDIT_START, PREEDIT_END));
+
+            if preedit_observed_frame.is_none() && is_expected_preedit {
+                preedit_observed_frame = Some(frame_id);
+            }
+
+            if scroll_after_preedit_frame.is_none()
+                && preedit_observed_frame.is_some()
+                && scroll_offset_changed
+            {
+                scroll_after_preedit_frame = Some(frame_id);
+            }
+
+            if preedit_observed_after_scroll_frame.is_none()
+                && scroll_after_preedit_frame.is_some()
+                && is_expected_preedit
+            {
+                preedit_observed_after_scroll_frame = Some(frame_id);
+            }
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_a11y_composition_wrap_scroll.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_a11y_composition_wrap_scroll",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "matched_snapshots": matched_snapshots,
+        "preedit_observed_frame": preedit_observed_frame,
+        "scroll_after_preedit_frame": scroll_after_preedit_frame,
+        "preedit_observed_after_scroll_frame": preedit_observed_after_scroll_frame,
+        "last_observed": last_observed,
+        "viewport_test_id": VIEWPORT_TEST_ID,
+        "expected_preedit": {"text_selection":[PREEDIT_END,PREEDIT_END],"text_composition":[PREEDIT_START,PREEDIT_END]},
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if matched_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap-scroll gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if preedit_observed_frame.is_none() {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap-scroll gate requires observing an inline preedit (selection 80..80, composition 78..80), but none was observed\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if scroll_after_preedit_frame.is_none() {
+        return Err(format!(
+            "ui-gallery code-editor a11y-composition-wrap-scroll gate requires observing a scroll offset change after preedit is active, but none was observed\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    if preedit_observed_after_scroll_frame.is_some() {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor a11y-composition-wrap-scroll gate failed (expected preedit to remain active after scroll while composing)\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(
     bundle_path: &Path,
     warmup_frames: u64,

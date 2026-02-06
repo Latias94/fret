@@ -225,6 +225,7 @@ struct CodeEditorState {
     buffer: TextBuffer,
     selection: Selection,
     preedit: Option<PreeditState>,
+    region_id: Option<fret_ui::GlobalElementId>,
     text_boundary_mode_override: Option<TextBoundaryMode>,
     active_text_boundary_mode: TextBoundaryMode,
     display_wrap_cols: Option<usize>,
@@ -303,6 +304,7 @@ impl CodeEditorHandle {
                 buffer,
                 selection: Selection::default(),
                 preedit: None,
+                region_id: None,
                 text_boundary_mode_override: Some(TextBoundaryMode::Identifier),
                 active_text_boundary_mode: TextBoundaryMode::Identifier,
                 display_wrap_cols: None,
@@ -395,6 +397,10 @@ impl CodeEditorHandle {
             st.preedit = Some(PreeditState { text, cursor });
         }
         st.caret_preferred_x = None;
+    }
+
+    pub fn region_id(&self) -> Option<fret_ui::GlobalElementId> {
+        self.state.borrow().region_id
     }
 
     pub fn text_boundary_mode(&self) -> TextBoundaryMode {
@@ -839,6 +845,7 @@ impl CodeEditor {
                 // must target this id (not the outer keyed scope), otherwise Web/WASM input routing
                 // will never attach to the focused text region.
                 let region_id = cx.root_id();
+                editor_state.borrow_mut().region_id = Some(region_id);
 
                 let key_state = editor_state.clone();
                 let key_scroll = scroll_handle.clone();
