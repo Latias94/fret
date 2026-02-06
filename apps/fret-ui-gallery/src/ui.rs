@@ -14156,12 +14156,16 @@ fn preview_select(
 
     let selected = cx
         .watch_model(&value)
-        .layout()
         .cloned()
         .unwrap_or_default()
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    vec![select, cx.text(format!("Selected: {selected}"))]
+    let selected_label = cx.text(format!("Selected: {selected}")).attach_semantics(
+        fret_ui::element::SemanticsDecoration::default()
+            .test_id("ui-gallery-select-selected-label"),
+    );
+
+    vec![select, selected_label]
 }
 
 fn preview_combobox(
