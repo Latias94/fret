@@ -1,4 +1,4 @@
-﻿use std::any::{Any, TypeId};
+use std::any::{Any, TypeId};
 use std::collections::{HashMap, HashSet};
 
 use fret_core::{AppWindowId, Point, Px, Rect, Size, TextBlobId};
@@ -305,6 +305,46 @@ pub(super) fn command_cx<'a>(
     }
 }
 
+fn test_node(
+    kind: NodeKindKey,
+    pos: CanvasPoint,
+    size: Option<CanvasSize>,
+    ports: Vec<PortId>,
+) -> Node {
+    Node {
+        kind,
+        kind_version: 1,
+        pos,
+        selectable: None,
+        draggable: None,
+        connectable: None,
+        deletable: None,
+        parent: None,
+        extent: None,
+        expand_parent: None,
+        size,
+        hidden: false,
+        collapsed: false,
+        ports,
+        data: Value::Null,
+    }
+}
+
+fn test_data_port(node: NodeId, key: &str, dir: PortDirection, capacity: PortCapacity) -> Port {
+    Port {
+        node,
+        key: PortKey::new(key),
+        dir,
+        kind: PortKind::Data,
+        capacity,
+        connectable: None,
+        connectable_start: None,
+        connectable_end: None,
+        ty: None,
+        data: Value::Null,
+    }
+}
+
 pub(super) fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
     let mut graph = Graph::new(GraphId::new());
     let kind = NodeKindKey::new("test.node");
@@ -314,43 +354,16 @@ pub(super) fn make_test_graph_two_nodes() -> (Graph, NodeId, NodeId) {
 
     graph.nodes.insert(
         a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
+        test_node(
+            kind.clone(),
+            CanvasPoint { x: 0.0, y: 0.0 },
+            None,
+            Vec::new(),
+        ),
     );
     graph.nodes.insert(
         b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 10.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
+        test_node(kind, CanvasPoint { x: 10.0, y: 0.0 }, None, Vec::new()),
     );
 
     (graph, a, b)
@@ -365,49 +378,27 @@ pub(super) fn make_test_graph_two_nodes_with_size() -> (Graph, NodeId, NodeId) {
 
     graph.nodes.insert(
         a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: Some(CanvasSize {
+        test_node(
+            kind.clone(),
+            CanvasPoint { x: 0.0, y: 0.0 },
+            Some(CanvasSize {
                 width: 40.0,
                 height: 20.0,
             }),
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
+            Vec::new(),
+        ),
     );
     graph.nodes.insert(
         b,
-        Node {
+        test_node(
             kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 10.0, y: 5.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: Some(CanvasSize {
+            CanvasPoint { x: 10.0, y: 5.0 },
+            Some(CanvasSize {
                 width: 40.0,
                 height: 20.0,
             }),
-            hidden: false,
-            collapsed: false,
-            ports: Vec::new(),
-            data: Value::Null,
-        },
+            Vec::new(),
+        ),
     );
 
     (graph, a, b)
@@ -423,91 +414,31 @@ pub(super) fn make_test_graph_two_nodes_with_ports()
     let a_out = PortId::new();
     graph.nodes.insert(
         a,
-        Node {
-            kind: kind.clone(),
-            kind_version: 1,
-            pos: CanvasPoint { x: 0.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: vec![a_in, a_out],
-            data: Value::Null,
-        },
+        test_node(
+            kind.clone(),
+            CanvasPoint { x: 0.0, y: 0.0 },
+            None,
+            vec![a_in, a_out],
+        ),
     );
     graph.ports.insert(
         a_in,
-        Port {
-            node: a,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
+        test_data_port(a, "in", PortDirection::In, PortCapacity::Single),
     );
     graph.ports.insert(
         a_out,
-        Port {
-            node: a,
-            key: PortKey::new("out"),
-            dir: PortDirection::Out,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Multi,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
+        test_data_port(a, "out", PortDirection::Out, PortCapacity::Multi),
     );
 
     let b = NodeId::new();
     let b_in = PortId::new();
     graph.nodes.insert(
         b,
-        Node {
-            kind,
-            kind_version: 1,
-            pos: CanvasPoint { x: 200.0, y: 0.0 },
-            selectable: None,
-            draggable: None,
-            connectable: None,
-            deletable: None,
-            parent: None,
-            extent: None,
-            expand_parent: None,
-            size: None,
-            hidden: false,
-            collapsed: false,
-            ports: vec![b_in],
-            data: Value::Null,
-        },
+        test_node(kind, CanvasPoint { x: 200.0, y: 0.0 }, None, vec![b_in]),
     );
     graph.ports.insert(
         b_in,
-        Port {
-            node: b,
-            key: PortKey::new("in"),
-            dir: PortDirection::In,
-            kind: PortKind::Data,
-            capacity: PortCapacity::Single,
-            connectable: None,
-            connectable_start: None,
-            connectable_end: None,
-            ty: None,
-            data: Value::Null,
-        },
+        test_data_port(b, "in", PortDirection::In, PortCapacity::Single),
     );
 
     (graph, a, a_in, a_out, b, b_in)
