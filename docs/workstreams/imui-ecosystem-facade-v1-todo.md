@@ -63,11 +63,21 @@ Exit criteria:
 - Delegation strategy for `Response` is chosen (no duplicated widget policy).
 - Scope is documented: what lives in `fret-imui` vs `fret-ui-kit` (imui facade) vs `fret-ui-shadcn` (visuals).
 
-- [ ] IMUIECO-scope-010 Decide whether shadcn integration is via an optional feature or a dedicated adapter module/crate.
-- [ ] IMUIECO-scope-011 Choose a canonical delegation seam for returning `Response` from canonical components.
-- [ ] IMUIECO-scope-012 Decide whether “tear-off to OS window” is docking-only for v1 (recommended) or generalized.
-- [ ] IMUIECO-scope-013 Define the `ResponseExt` signal storage model (transient vs element-local state) and document it.
-- [ ] IMUIECO-scope-014 Define a tiered delegation rule for official widgets (primitive wrappers vs canonical component adapters).
+- [x] IMUIECO-scope-010 Decide whether shadcn integration is via an optional feature or a dedicated adapter module/crate.
+  - Decision: dedicated adapter module under `fret-ui-kit` imui facade (`fret_ui_kit::imui::adapters::shadcn`), not a frontend feature toggle on `fret-imui`.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.1).
+- [x] IMUIECO-scope-011 Choose a canonical delegation seam for returning `Response` from canonical components.
+  - Decision: element-id based delegation + reporter hook; canonical components own state machines, facade only maps signals to `ResponseExt`.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.2).
+- [x] IMUIECO-scope-012 Decide whether “tear-off to OS window” is docking-only for v1 (recommended) or generalized.
+  - Decision: docking-only for v1; non-docking `ui.window(...)` / `ui.area(...)` stay in-window.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.3).
+- [x] IMUIECO-scope-013 Define the `ResponseExt` signal storage model (transient vs element-local state) and document it.
+  - Decision: hybrid model (clear-on-read transients for edge events, element-local state for sessions, last-bounds two-frame stabilization for geometry).
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.4).
+- [x] IMUIECO-scope-014 Define a tiered delegation rule for official widgets (primitive wrappers vs canonical component adapters).
+  - Decision: Tier 1 canonical adapters by default, Tier 2 primitive fallback only when necessary, Tier 3 parallel complex-policy implementation disallowed in v1.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.5).
 
 ---
 
