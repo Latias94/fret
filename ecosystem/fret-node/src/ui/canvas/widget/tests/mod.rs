@@ -85,6 +85,7 @@ mod portal_measured_geometry_conformance;
 mod portal_measured_internals_conformance;
 mod portal_pointer_passthrough_conformance;
 mod prelude;
+mod render_culling_metrics_conformance;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
 mod spatial_index_equivalence_conformance;

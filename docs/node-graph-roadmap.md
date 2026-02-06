@@ -198,6 +198,10 @@ Legend:
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
+  - [x] Culling metrics gate: node candidate/visible counts are exported from render-data collection and tested to decrease under `only_render_visible_elements=true`.
+    - Metrics plumbing: `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/types.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs`
+    - Test hook + shared cull-rect helper: `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`
+    - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/render_culling_metrics_conformance.rs`
 - [x] Deterministic graph diff/patch set for collaboration (MVP).
   - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
