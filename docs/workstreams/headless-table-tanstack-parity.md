@@ -94,9 +94,9 @@ Initial mapping snapshot (keep updated):
 
 | Upstream API | Fret surface (today) | Status | Notes |
 | --- | --- | --- | --- |
-| `table.getRow(id, searchAll?)` | `Table::row(RowKey, search_all)` | Partial | Requires `RowId`-based lookup (`HTP-id-010`). |
-| `row.id: string` | `row.key.0.to_string()` | Partial | Leaf-only; grouped row ids are not first-class in main model yet. |
-| `RowModel.rowsById` | `RowModel::rows_by_key()` | Partial | Keyed by `RowKey(u64)`; add `rows_by_id` for capability parity. |
+| `table.getRow(id, searchAll?)` | `Table::row_by_id(&str, search_all)` | Partial | Leaf rows are addressable by `RowId`; grouped row ids + state-keyed behaviors are still tracked under `HTP-id-010`. |
+| `row.id: string` | `Row::id: RowId` (`Arc<str>`) | Partial | Leaf rows have a string id; grouped row ids are not first-class in the main pipeline yet. |
+| `RowModel.rowsById` | `RowModel::rows_by_id()` | Partial | Present for leaf rows; grouped row ids + “searchAll” coverage still needs broader gates. |
 | `table.getHeaderGroups()` (+ pinned variants) | `Table::header_groups/left_header_groups/center_header_groups/right_header_groups` | Aligned (core) | Fixture-gated via `headers_cells.json`. |
 | `header.getSize()` / `header.getStart()` | `Table::header_size/header_start` | Aligned (core) | Fixture-gated via column sizing/header tests. |
 | `column.getSize()` / `column.getStart()` / `column.getAfter()` | `Table::column_size/column_start/column_after` | Aligned (core) | Fixture-gated via column sizing tests. |
@@ -113,10 +113,13 @@ Upstream:
 
 Fret status:
 
-- Leaf identity is `RowKey(u64)` (fast), but grouped row ids are not yet first-class in the main
-  `RowModel` pipeline.
-- Planned: promote TanStack-style `RowId` and maintain `rows_by_id` alongside `rows_by_key`.
-  - Tracked in TODO: `HTP-id-010` / `HTP-cap-010`.
+- Leaf rows now carry a stable string `RowId` alongside the existing numeric `RowKey(u64)` fast path.
+- `RowModel` maintains both `rows_by_key` and `rows_by_id` for lookup, and `Table::row_by_id` mirrors
+  TanStack `getRow(id, searchAll?)` shape for leaf rows.
+- Remaining capability gap: grouped row ids (e.g. `role:1`) and all id-keyed feature state surfaces
+  (selection/expanded/pinning maps keyed by string ids) must be promoted to `RowId` without losing
+  existing `RowKey` optimizations.
+  - Tracked in TODO: `HTP-id-010`.
 
 Compatibility requirement:
 
