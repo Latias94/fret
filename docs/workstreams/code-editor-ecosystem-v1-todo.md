@@ -233,6 +233,11 @@ Evidence anchors:
 ## M8 — Display Map Expansion (wrap/fold/inlay) (optional v1 → v2)
 
 - [~] Soft wrap with stable coordinate mapping (buffer ↔ display ↔ pixels) (column-based baseline; pixel-accurate caret/selection/hit-test is migrating to renderer caret stops).
+  - [x] Add wrap-boundary semantics regression gates (UI Gallery harness + fretboard diag):
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-selection-wrap-baseline.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json`
+    - `apps/fret-ui-gallery/src/ui.rs` (wrap gate viewports + preedit inject/clear buttons)
+    - `apps/fretboard/src/diag/stats.rs` (wrap gate checkers + evidence JSON)
 - [ ] Fold regions + placeholders without breaking caret/selection.
 - [ ] Inlays (injected display fragments) without mutating the underlying buffer.
 
