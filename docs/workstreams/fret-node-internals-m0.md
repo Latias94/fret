@@ -312,6 +312,10 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_types_invalidation_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_output_store_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_drag_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_semantic_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
@@ -339,5 +343,9 @@ After M0A gates are green:
   `MeasuredGeometryStore`.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_output_store_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_drag_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_semantic_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
 
 
