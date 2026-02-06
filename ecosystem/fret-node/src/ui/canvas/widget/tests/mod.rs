@@ -1607,6 +1607,7 @@ fn read_node_pos(
         .flatten()
         .unwrap_or_default()
 }
+
 #[test]
 fn distance_sq_point_to_rect_is_zero_inside_and_positive_outside() {
     let rect = Rect::new(

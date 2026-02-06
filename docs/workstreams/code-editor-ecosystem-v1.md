@@ -6,6 +6,10 @@ Last updated: 2026-02-04
 Recent changes (2026-02-04):
 
 - Editor paint: anchor caret Y to the actual row text blob baseline (fixes caret drifting above glyphs in mixed-font / rich-span lines).
+- Editor selection: clamp windowed row hit-testing during drags, and add timer-driven edge autoscroll while drag-selecting (continues even when the pointer is stationary at the viewport edge).
+- Editor caret: when the text backend doesn't provide `caret_rect`, fall back to the blob box for caret top/height so the caret doesn't render from the row top.
+- Diagnostics: add a fretboard gate for windowed-rows surfaces to ensure scroll-driven view-cache reuse cannot freeze the visible window.
+- Diagnostics: add a dedicated UI Gallery repro script for code editor scroll stability (`ui-gallery-code-editor-torture-scroll-stability.json`).
 
 Recent changes (2026-02-02):
 
@@ -34,8 +38,8 @@ Recent changes (2026-02-03):
 
 Next up (priority order):
 
-1. Re-validate the “no stale lines” torture harness:
-   - confirm the line-prefix invariant visually and keep the view-cache + scroll invalidation tests green.
+1. Keep the “no stale lines” torture harness gateable:
+   - run the dedicated diag script with view-cache enabled and keep the windowed-rows scroll gate green.
 2. Editor surface MVP correctness (native first):
    - ensure typing, selection, undo/redo, and caret navigation remain correct under scroll + soft-wrap.
 3. Fonts on web:

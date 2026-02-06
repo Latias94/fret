@@ -95,6 +95,10 @@ Workflow tip:
 
    - `FRET_DIAG=1`
 
+   Note:
+   - When using `fretboard diag run --launch`, `--env KEY=VALUE` cannot override reserved variables
+     like `FRET_DIAG`. Set reserved vars in the parent shell environment instead.
+
 2. (Recommended while authoring scripts) disable redaction so you can see semantics labels in bundles:
 
    - `FRET_DIAG_REDACT_TEXT=0`
@@ -365,7 +369,11 @@ Supported selectors (v1 MVP):
 - `move_pointer`
 - `drag_pointer` (optional `button`, `steps`)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
-- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`, `a-z`, `0-9`;
+- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`,
+  `f1-f12`, `alt`/`alt_left`/`alt_right`, `a-z`, `0-9`,
+  `comma`/`,`, `period`/`dot`/`.`, `slash`/`/`, `semicolon`/`;`, `quote`/`apostrophe`/`'`,
+  `minus`/`dash`/`-`, `equal`/`=`, `bracket_left`/`left_bracket`/`[`, `bracket_right`/`right_bracket`/`]`,
+  `backslash`/`\\`, `backquote`/`grave`/`` ` ``;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
@@ -374,6 +382,15 @@ Supported selectors (v1 MVP):
 - `assert`
 - `capture_bundle`
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
+
+Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
+When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
+`ecosystem/fret-bootstrap/src/ui_diagnostics.rs` for the authoritative list.
+
+Recent additions:
+
+- `role_is` (assert semantics role equality for a target)
+- `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 
 Notes:
 
@@ -395,6 +412,7 @@ Supported intent steps (v2):
 - `scroll_into_view` (wheel a container until a target becomes visible)
 - `type_text_into` (wait + click + type)
 - `menu_select` (wait + open menu + click item)
+- `menu_select_path` (wait + open nested menus + click final item)
 - `drag_to` (drag between two semantics targets)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
 

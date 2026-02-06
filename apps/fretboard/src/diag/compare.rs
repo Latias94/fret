@@ -537,6 +537,14 @@ pub(super) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
 }
 
 pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
+    fn parse_leading_ts(name: &str) -> Option<u64> {
+        let digits: String = name.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if digits.is_empty() {
+            return None;
+        }
+        digits.parse::<u64>().ok()
+    }
+
     let mut best: Option<(u64, PathBuf)> = None;
     let entries = std::fs::read_dir(out_dir).ok()?;
     for entry in entries.flatten() {
@@ -545,7 +553,7 @@ pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
             continue;
         }
         let name = entry.file_name().to_string_lossy().to_string();
-        let Ok(ts) = name.parse::<u64>() else {
+        let Some(ts) = parse_leading_ts(&name) else {
             continue;
         };
         match &best {

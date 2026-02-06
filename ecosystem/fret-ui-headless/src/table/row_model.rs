@@ -723,7 +723,18 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn row_key_for_id(&self, row_id: &str, search_all: bool) -> Option<RowKey> {
-        self.row_by_id(row_id, search_all).map(|r| r.key)
+        if let Some(row) = self.row_by_id(row_id, search_all) {
+            return Some(row.key);
+        }
+
+        if !self.state.grouping.is_empty() {
+            let grouped = self.grouped_row_model();
+            if let Some(i) = grouped.row_by_id(row_id) {
+                return grouped.row(i).map(|r| r.key);
+            }
+        }
+
+        None
     }
 
     pub fn state(&self) -> &super::TableState {

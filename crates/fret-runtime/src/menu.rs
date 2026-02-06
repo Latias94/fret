@@ -21,6 +21,22 @@ pub enum SystemMenuType {
     Services,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MenuItemToggleKind {
+    Checkbox,
+    Radio,
+}
+
+/// Optional checked/radio semantics for command-backed menu items.
+///
+/// This is intentionally data-only so OS menubars and in-window surfaces can share one
+/// source-of-truth for toggle state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MenuItemToggle {
+    pub kind: MenuItemToggleKind,
+    pub checked: bool,
+}
+
 /// A minimal, data-only menu model intended to power:
 /// - future menubar rendering,
 /// - context menus,
@@ -37,6 +53,11 @@ pub struct MenuBar {
 pub struct Menu {
     pub title: Arc<str>,
     pub role: Option<MenuRole>,
+    /// Optional mnemonic/access key for Alt+Key activation on platforms that support it.
+    ///
+    /// This is intentionally separate from `title` so titles can remain localization-friendly
+    /// and so OS vs in-window surfaces can share one source of truth.
+    pub mnemonic: Option<char>,
     pub items: Vec<MenuItem>,
 }
 
@@ -45,6 +66,14 @@ pub enum MenuItem {
     Command {
         command: CommandId,
         when: Option<WhenExpr>,
+        toggle: Option<MenuItemToggle>,
+    },
+    /// A non-interactive, disabled menu entry with a custom label.
+    ///
+    /// This is intended for placeholder and dynamic menu content where a `CommandId` is not
+    /// available (yet). Menu surfaces should render this as disabled text.
+    Label {
+        title: Arc<str>,
     },
     Separator,
     Submenu {
@@ -106,6 +135,10 @@ pub enum ItemSelectorTyped {
     ///
     /// Note: if multiple submenus share the same title, prefer using an index anchor instead.
     Submenu { title: String },
+    /// Select the first label item with the given title.
+    ///
+    /// Note: if multiple labels share the same title, prefer using an index anchor instead.
+    Label { title: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -113,17 +146,20 @@ pub enum MenuBarPatchOp {
     AppendMenu {
         title: String,
         role: Option<MenuRole>,
+        mnemonic: Option<char>,
         items: Vec<MenuItem>,
     },
     InsertMenuBefore {
         title: String,
         role: Option<MenuRole>,
+        mnemonic: Option<char>,
         before: String,
         items: Vec<MenuItem>,
     },
     InsertMenuAfter {
         title: String,
         role: Option<MenuRole>,
+        mnemonic: Option<char>,
         after: String,
         items: Vec<MenuItem>,
     },
@@ -197,6 +233,32 @@ impl MenuBar {
         Self { menus: Vec::new() }
     }
 
+    /// Normalize the menu structure for display across menu surfaces.
+    ///
+    /// This is a best-effort "shape cleanup" pass intended to prevent drift between:
+    /// - OS menubars (runner mappings),
+    /// - in-window menubars (overlay renderers),
+    /// - other menu-like surfaces that derive from `MenuBar`.
+    ///
+    /// Current normalization rules:
+    /// - remove leading separators,
+    /// - collapse duplicate separators,
+    /// - remove trailing separators,
+    /// - recursively drop empty submenus (after normalizing their children).
+    ///
+    /// Note: this does **not** apply enable/disable gating; that is handled by
+    /// `WindowCommandGatingSnapshot` and surface-specific policies.
+    pub fn normalize(&mut self) {
+        for menu in &mut self.menus {
+            normalize_menu_items(&mut menu.items);
+        }
+    }
+
+    pub fn normalized(mut self) -> Self {
+        self.normalize();
+        self
+    }
+
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, MenuBarError> {
         let version: MenuBarVersionOnly =
             serde_json::from_slice(bytes).map_err(|source| MenuBarError::ParseFailed { source })?;
@@ -232,6 +294,7 @@ impl MenuBar {
             menus.push(Menu {
                 title: Arc::from(menu.title),
                 role: None,
+                mnemonic: None,
                 items,
             });
         }
@@ -256,12 +319,52 @@ impl MenuBar {
             menus.push(Menu {
                 title: Arc::from(menu.title),
                 role: menu.role,
+                mnemonic: menu.mnemonic,
                 items,
             });
         }
 
         Ok(MenuBar { menus })
     }
+}
+
+fn normalize_menu_items(items: &mut Vec<MenuItem>) {
+    let mut out: Vec<MenuItem> = Vec::with_capacity(items.len());
+    let mut last_was_separator = false;
+
+    for item in std::mem::take(items) {
+        match item {
+            MenuItem::Separator => {
+                if out.is_empty() || last_was_separator {
+                    continue;
+                }
+                out.push(MenuItem::Separator);
+                last_was_separator = true;
+            }
+            MenuItem::Submenu {
+                title,
+                when,
+                mut items,
+            } => {
+                normalize_menu_items(&mut items);
+                if items.is_empty() {
+                    continue;
+                }
+                out.push(MenuItem::Submenu { title, when, items });
+                last_was_separator = false;
+            }
+            other => {
+                out.push(other);
+                last_was_separator = false;
+            }
+        }
+    }
+
+    while matches!(out.last(), Some(MenuItem::Separator)) {
+        out.pop();
+    }
+
+    *items = out;
 }
 
 impl MenuBarConfig {
@@ -349,6 +452,7 @@ impl MenuItemFileV1 {
                 Ok(MenuItem::Command {
                     command: CommandId::new(command),
                     when,
+                    toggle: None,
                 })
             }
             Self::Submenu { title, when, items } => {
@@ -383,6 +487,8 @@ pub struct MenuFileV2 {
     pub title: String,
     #[serde(default)]
     pub role: Option<MenuRole>,
+    #[serde(default)]
+    pub mnemonic: Option<char>,
     pub items: Vec<MenuItemFileV2>,
 }
 
@@ -393,6 +499,9 @@ pub enum MenuItemFileV2 {
         command: String,
         #[serde(default)]
         when: Option<String>,
+    },
+    Label {
+        title: String,
     },
     Separator,
     Submenu {
@@ -420,8 +529,12 @@ impl MenuItemFileV2 {
                 Ok(MenuItem::Command {
                     command: CommandId::new(command),
                     when,
+                    toggle: None,
                 })
             }
+            Self::Label { title } => Ok(MenuItem::Label {
+                title: Arc::from(title),
+            }),
             Self::Submenu { title, when, items } => {
                 let when = when
                     .as_deref()
@@ -543,6 +656,7 @@ impl MenuBarPatchOpFileV1 {
                 Ok(MenuBarPatchOp::AppendMenu {
                     title,
                     role: None,
+                    mnemonic: None,
                     items: out_items,
                 })
             }
@@ -558,6 +672,7 @@ impl MenuBarPatchOpFileV1 {
                 Ok(MenuBarPatchOp::InsertMenuBefore {
                     title,
                     role: None,
+                    mnemonic: None,
                     before,
                     items: out_items,
                 })
@@ -574,6 +689,7 @@ impl MenuBarPatchOpFileV1 {
                 Ok(MenuBarPatchOp::InsertMenuAfter {
                     title,
                     role: None,
+                    mnemonic: None,
                     after,
                     items: out_items,
                 })
@@ -642,12 +758,16 @@ enum MenuBarPatchOpFileV2 {
         #[serde(default)]
         role: Option<MenuRole>,
         #[serde(default)]
+        mnemonic: Option<char>,
+        #[serde(default)]
         items: Vec<MenuItemFileV2>,
     },
     InsertMenuBefore {
         title: String,
         #[serde(default)]
         role: Option<MenuRole>,
+        #[serde(default)]
+        mnemonic: Option<char>,
         before: String,
         #[serde(default)]
         items: Vec<MenuItemFileV2>,
@@ -656,6 +776,8 @@ enum MenuBarPatchOpFileV2 {
         title: String,
         #[serde(default)]
         role: Option<MenuRole>,
+        #[serde(default)]
+        mnemonic: Option<char>,
         after: String,
         #[serde(default)]
         items: Vec<MenuItemFileV2>,
@@ -728,7 +850,12 @@ enum MenuBarPatchOpFileV2 {
 impl MenuBarPatchOpFileV2 {
     fn into_op(self, index: usize) -> Result<MenuBarPatchOp, MenuBarError> {
         match self {
-            Self::AppendMenu { title, role, items } => {
+            Self::AppendMenu {
+                title,
+                role,
+                mnemonic,
+                items,
+            } => {
                 let mut out_items = Vec::with_capacity(items.len());
                 for (idx, item) in items.into_iter().enumerate() {
                     out_items.push(item.into_menu_item(&format!("ops[{index}].items[{idx}]"))?);
@@ -736,12 +863,14 @@ impl MenuBarPatchOpFileV2 {
                 Ok(MenuBarPatchOp::AppendMenu {
                     title,
                     role,
+                    mnemonic,
                     items: out_items,
                 })
             }
             Self::InsertMenuBefore {
                 title,
                 role,
+                mnemonic,
                 before,
                 items,
             } => {
@@ -752,6 +881,7 @@ impl MenuBarPatchOpFileV2 {
                 Ok(MenuBarPatchOp::InsertMenuBefore {
                     title,
                     role,
+                    mnemonic,
                     before,
                     items: out_items,
                 })
@@ -759,6 +889,7 @@ impl MenuBarPatchOpFileV2 {
             Self::InsertMenuAfter {
                 title,
                 role,
+                mnemonic,
                 after,
                 items,
             } => {
@@ -769,6 +900,7 @@ impl MenuBarPatchOpFileV2 {
                 Ok(MenuBarPatchOp::InsertMenuAfter {
                     title,
                     role,
+                    mnemonic,
                     after,
                     items: out_items,
                 })
@@ -890,13 +1022,21 @@ fn apply_patch_op(
             ItemSelector::Typed(ItemSelectorTyped::Submenu { title }) => items.iter().position(
                 |item| matches!(item, MenuItem::Submenu { title: t, .. } if t.as_ref() == title),
             ),
+            ItemSelector::Typed(ItemSelectorTyped::Label { title }) => items.iter().position(
+                |item| matches!(item, MenuItem::Label { title: t } if t.as_ref() == title),
+            ),
         }
     }
 
     let fail = |error: String| Err(MenuBarError::PatchFailed { index, error });
 
     match op {
-        MenuBarPatchOp::AppendMenu { title, role, items } => {
+        MenuBarPatchOp::AppendMenu {
+            title,
+            role,
+            mnemonic,
+            items,
+        } => {
             if menu_index(menu_bar, &title).is_some() {
                 return fail(format!("menu already exists: {title}"));
             }
@@ -904,6 +1044,7 @@ fn apply_patch_op(
             menu_bar.menus.push(Menu {
                 title: Arc::from(title),
                 role,
+                mnemonic,
                 items,
             });
             Ok(())
@@ -911,6 +1052,7 @@ fn apply_patch_op(
         MenuBarPatchOp::InsertMenuBefore {
             title,
             role,
+            mnemonic,
             before,
             items,
         } => {
@@ -926,6 +1068,7 @@ fn apply_patch_op(
                 Menu {
                     title: Arc::from(title),
                     role,
+                    mnemonic,
                     items,
                 },
             );
@@ -934,6 +1077,7 @@ fn apply_patch_op(
         MenuBarPatchOp::InsertMenuAfter {
             title,
             role,
+            mnemonic,
             after,
             items,
         } => {
@@ -950,6 +1094,7 @@ fn apply_patch_op(
                 Menu {
                     title: Arc::from(title),
                     role,
+                    mnemonic,
                     items,
                 },
             );
@@ -1234,10 +1379,12 @@ mod tests {
             menus: vec![Menu {
                 title: Arc::from("File"),
                 role: None,
+                mnemonic: None,
                 items: vec![
                     MenuItem::Command {
                         command: CommandId::new("app.open"),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Submenu {
                         title: Arc::from("Recent"),
@@ -1250,6 +1397,92 @@ mod tests {
     }
 
     #[test]
+    fn normalize_removes_leading_trailing_and_duplicate_separators() {
+        let mut bar = MenuBar {
+            menus: vec![Menu {
+                title: Arc::from("File"),
+                role: None,
+                mnemonic: None,
+                items: vec![
+                    MenuItem::Separator,
+                    MenuItem::Separator,
+                    MenuItem::Command {
+                        command: CommandId::new("app.open"),
+                        when: None,
+                        toggle: None,
+                    },
+                    MenuItem::Separator,
+                    MenuItem::Separator,
+                    MenuItem::SystemMenu {
+                        title: Arc::from("Services"),
+                        menu_type: SystemMenuType::Services,
+                    },
+                    MenuItem::Separator,
+                ],
+            }],
+        };
+
+        bar.normalize();
+
+        assert_eq!(bar.menus.len(), 1);
+        assert!(matches!(
+            bar.menus[0].items.as_slice(),
+            [
+                MenuItem::Command { .. },
+                MenuItem::Separator,
+                MenuItem::SystemMenu { .. }
+            ]
+        ));
+    }
+
+    #[test]
+    fn normalize_drops_empty_submenus_recursively() {
+        let mut bar = MenuBar {
+            menus: vec![Menu {
+                title: Arc::from("File"),
+                role: None,
+                mnemonic: None,
+                items: vec![
+                    MenuItem::Submenu {
+                        title: Arc::from("Empty"),
+                        when: None,
+                        items: vec![MenuItem::Separator, MenuItem::Separator],
+                    },
+                    MenuItem::Submenu {
+                        title: Arc::from("NonEmpty"),
+                        when: None,
+                        items: vec![
+                            MenuItem::Submenu {
+                                title: Arc::from("NestedEmpty"),
+                                when: None,
+                                items: vec![MenuItem::Separator],
+                            },
+                            MenuItem::Command {
+                                command: CommandId::new("app.open"),
+                                when: None,
+                                toggle: None,
+                            },
+                        ],
+                    },
+                ],
+            }],
+        };
+
+        bar.normalize();
+
+        let items = &bar.menus[0].items;
+        assert_eq!(items.len(), 1);
+        let MenuItem::Submenu { title, items, .. } = &items[0] else {
+            panic!("expected submenu");
+        };
+        assert_eq!(title.as_ref(), "NonEmpty");
+        assert!(items.iter().all(|i| !matches!(
+            i,
+            MenuItem::Submenu { title, .. } if title.as_ref() == "NestedEmpty"
+        )));
+    }
+
+    #[test]
     fn patch_can_target_submenu_by_path() {
         let mut base = base_menu_bar();
         let patch = MenuBarPatch {
@@ -1258,6 +1491,7 @@ mod tests {
                 item: MenuItem::Command {
                     command: CommandId::new("app.open_recent"),
                     when: None,
+                    toggle: None,
                 },
             }],
         };
@@ -1285,6 +1519,7 @@ mod tests {
                 item: MenuItem::Command {
                     command: CommandId::new("app.new"),
                     when: None,
+                    toggle: None,
                 },
             }],
         };
@@ -1330,6 +1565,36 @@ mod tests {
         assert!(!base.menus[0].items.iter().any(|item| matches!(
             item,
             MenuItem::Submenu { title, .. } if title.as_ref() == "Recent"
+        )));
+    }
+
+    #[test]
+    fn remove_at_can_remove_label_by_title() {
+        let mut base = base_menu_bar();
+        if let MenuItem::Submenu { items, .. } = &mut base.menus[0].items[1] {
+            items.push(MenuItem::Label {
+                title: Arc::from("No recent items"),
+            });
+        }
+
+        let patch = MenuBarPatch {
+            ops: vec![MenuBarPatchOp::RemoveAt {
+                menu: MenuTarget::Path(vec!["File".into(), "Recent".into()]),
+                at: ItemSelector::Typed(ItemSelectorTyped::Label {
+                    title: "No recent items".into(),
+                }),
+            }],
+        };
+
+        patch.apply_to(&mut base).unwrap();
+
+        let recent_items = match &base.menus[0].items[1] {
+            MenuItem::Submenu { items, .. } => items,
+            other => panic!("expected submenu, got {other:?}"),
+        };
+        assert!(!recent_items.iter().any(|item| matches!(
+            item,
+            MenuItem::Label { title } if title.as_ref() == "No recent items"
         )));
     }
 
@@ -1389,5 +1654,28 @@ mod tests {
             )),
             other => panic!("expected patch, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn v2_replace_parses_label_items() {
+        let json = serde_json::json!({
+            "menu_bar_version": 2,
+            "menus": [
+                {
+                    "title": "File",
+                    "items": [
+                        { "type": "label", "title": "No recent items" }
+                    ]
+                }
+            ]
+        });
+
+        let bytes = serde_json::to_vec(&json).unwrap();
+        let bar = MenuBar::from_bytes(&bytes).unwrap();
+        assert_eq!(bar.menus.len(), 1);
+        assert!(matches!(
+            &bar.menus[0].items[0],
+            MenuItem::Label { title } if title.as_ref() == "No recent items"
+        ));
     }
 }

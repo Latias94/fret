@@ -113,6 +113,7 @@ fn push_command(items: &mut Vec<MenuItem>, command: Option<CommandId>) {
         items.push(MenuItem::Command {
             command,
             when: None,
+            toggle: None,
         });
     }
 }
@@ -197,6 +198,7 @@ fn build_app_menu(cmds: &WorkspaceMenuCommands) -> Option<Menu> {
     Some(Menu {
         title,
         role: Some(MenuRole::App),
+        mnemonic: None,
         items,
     })
 }
@@ -250,6 +252,16 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     push_command(&mut file_items, open);
     push_command(&mut file_items, save);
     push_command(&mut file_items, save_as);
+    if !file_items.is_empty() {
+        push_separator(&mut file_items);
+        file_items.push(MenuItem::Submenu {
+            title: Arc::from("Recent"),
+            when: None,
+            items: vec![MenuItem::Label {
+                title: Arc::from("No recent items"),
+            }],
+        });
+    }
     if quit.is_some() && !file_items.is_empty() {
         file_items.push(MenuItem::Separator);
     }
@@ -274,6 +286,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         view_items.push(MenuItem::Command {
             command: cp,
             when: None,
+            toggle: None,
         });
     }
 
@@ -285,6 +298,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         menus.push(Menu {
             title: Arc::from("File"),
             role: Some(MenuRole::File),
+            mnemonic: Some('f'),
             items: file_items,
         });
     }
@@ -292,6 +306,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         menus.push(Menu {
             title: Arc::from("Edit"),
             role: Some(MenuRole::Edit),
+            mnemonic: Some('e'),
             items: edit_items,
         });
     }
@@ -299,6 +314,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         menus.push(Menu {
             title: Arc::from("View"),
             role: Some(MenuRole::View),
+            mnemonic: Some('v'),
             items: view_items,
         });
     }
@@ -306,49 +322,60 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     menus.push(Menu {
         title: Arc::from("Window"),
         role: Some(MenuRole::Window),
+        mnemonic: Some('w'),
         items: vec![
             MenuItem::Command {
                 command: next_tab,
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: prev_tab,
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_LEFT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_MOVE_RIGHT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Command {
                 command: close_tab,
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_OTHERS),
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_LEFT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: CommandId::new(crate::commands::CMD_WORKSPACE_TAB_CLOSE_RIGHT),
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Command {
                 command: next_pane,
                 when: None,
+                toggle: None,
             },
             MenuItem::Command {
                 command: prev_pane,
                 when: None,
+                toggle: None,
             },
             MenuItem::Separator,
             MenuItem::Submenu {
@@ -358,18 +385,22 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: split_right,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: split_left,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: split_up,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: split_down,
                         when: None,
+                        toggle: None,
                     },
                 ],
             },
@@ -380,10 +411,12 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: move_active_tab_next_pane,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: move_active_tab_prev_pane,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Separator,
                     MenuItem::Command {
@@ -391,24 +424,28 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT,
                         ),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT,
                         ),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP,
                         ),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(
                             crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN,
                         ),
                         when: None,
+                        toggle: None,
                     },
                 ],
             },
@@ -419,18 +456,22 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: CommandId::new(crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN),
                         when: None,
+                        toggle: None,
                     },
                 ],
             },
@@ -441,20 +482,32 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                     MenuItem::Command {
                         command: resize_pane_right,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: resize_pane_left,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: resize_pane_up,
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Command {
                         command: resize_pane_down,
                         when: None,
+                        toggle: None,
                     },
                 ],
+            },
+            MenuItem::Separator,
+            MenuItem::Submenu {
+                title: Arc::from("Windows"),
+                when: None,
+                items: vec![MenuItem::Label {
+                    title: Arc::from("Window list not implemented"),
+                }],
             },
         ],
     });

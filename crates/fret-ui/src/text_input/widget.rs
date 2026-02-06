@@ -681,29 +681,35 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !self.is_ime_composing() {
                     match key {
                         fret_core::KeyCode::Backspace => {
+                            let command = if modifiers.ctrl || modifiers.alt {
+                                "text.delete_word_backward"
+                            } else {
+                                "text.delete_backward"
+                            };
                             let outcome = crate::text_edit::commands::apply_basic(
                                 &mut self.edit_state(),
-                                "text.delete_backward",
+                                command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
                             );
-                            let delta = crate::text_edit::commands::singleline_ui_delta(
-                                "text.delete_backward",
-                                outcome,
-                            );
+                            let delta =
+                                crate::text_edit::commands::singleline_ui_delta(command, outcome);
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::Delete => {
+                            let command = if modifiers.ctrl || modifiers.alt {
+                                "text.delete_word_forward"
+                            } else {
+                                "text.delete_forward"
+                            };
                             let outcome = crate::text_edit::commands::apply_basic(
                                 &mut self.edit_state(),
-                                "text.delete_forward",
+                                command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
                             );
-                            let delta = crate::text_edit::commands::singleline_ui_delta(
-                                "text.delete_forward",
-                                outcome,
-                            );
+                            let delta =
+                                crate::text_edit::commands::singleline_ui_delta(command, outcome);
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::ArrowLeft => {

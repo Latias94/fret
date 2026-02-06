@@ -109,6 +109,11 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
       - Remaining (gate): add a fixture-backed gate that asserts `rowsById` semantics beyond smoke coverage.
     - [ ] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
+      - Done (partial): grouped rows now carry TanStack-style ids (`col:value` with `>` parent chain),
+        and id → rowKey lookup can resolve grouped ids.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/grouping.rs` (`GroupedRow.id`, `GroupedRowModel::row_by_id`)
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_key_for_id` grouped fallback)
+        - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs` (`*_grouped_row_ids_exist_*`)
     - [~] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
       - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
         - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)

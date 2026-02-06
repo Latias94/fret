@@ -79,7 +79,8 @@ pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, P
 pub use menu::{
     ItemAnchor, ItemSelector, ItemSelectorTyped, Menu, MenuBar, MenuBarConfig, MenuBarError,
     MenuBarFileV1, MenuBarFileV2, MenuBarPatch, MenuBarPatchOp, MenuFileV1, MenuFileV2, MenuItem,
-    MenuItemFileV1, MenuItemFileV2, MenuRole, MenuTarget, SystemMenuType,
+    MenuItemFileV1, MenuItemFileV2, MenuItemToggle, MenuItemToggleKind, MenuRole, MenuTarget,
+    SystemMenuType,
 };
 pub use model::{
     Model, ModelChangedDebugInfo, ModelCreatedDebugInfo, ModelCx, ModelHost, ModelId, ModelStore,

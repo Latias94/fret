@@ -2,6 +2,7 @@ use fret_ui_headless::table::{
     ColumnDef, ColumnPinPosition, ColumnSizingRegion, ExpandingState, RowId, RowKey,
     RowPinPosition, Table, TableState, TanStackTableState,
 };
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 struct DemoRow {
@@ -149,4 +150,50 @@ fn tanstack_v8_capability_smoke_tanstack_state_can_resolve_string_row_ids() {
         .expect("row exists");
     let next = updater.apply(&TableState::default().row_pinning);
     assert_eq!(next.top, vec![RowKey(1)]);
+}
+
+#[test]
+fn tanstack_v8_capability_smoke_grouped_row_ids_exist_and_resolve_to_row_keys() {
+    #[derive(Debug, Clone)]
+    struct GroupRow {
+        id: u64,
+        role: u64,
+    }
+
+    let data = vec![
+        GroupRow { id: 1, role: 1 },
+        GroupRow { id: 2, role: 2 },
+        GroupRow { id: 3, role: 1 },
+    ];
+
+    let columns = vec![
+        ColumnDef::<GroupRow>::new("role").facet_key_by(|r| r.role),
+        ColumnDef::<GroupRow>::new("id").value_u64_by(|r| r.id),
+    ];
+
+    let mut state = TableState::default();
+    state.grouping = vec![Arc::<str>::from("role")];
+
+    let table = Table::builder(&data)
+        .columns(columns)
+        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+        .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
+        .state(state)
+        .build();
+
+    let grouped = table.grouped_row_model();
+    let root = grouped.root_rows().first().copied().expect("group root");
+    let root_row = grouped.row(root).expect("group root row");
+    assert_eq!(root_row.id.as_str(), "role:1");
+
+    let resolved = table
+        .row_key_for_id("role:1", true)
+        .expect("group id resolves");
+    assert_eq!(resolved, root_row.key);
+
+    let updater = table
+        .row_pinning_updater_by_id("role:1", true, Some(RowPinPosition::Top), false, false)
+        .expect("group row pin updater");
+    let next = updater.apply(&TableState::default().row_pinning);
+    assert_eq!(next.top, vec![root_row.key]);
 }

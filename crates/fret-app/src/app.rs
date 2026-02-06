@@ -442,16 +442,17 @@ mod menu_bar_effect_tests {
         settings.menu_bar.os = crate::MenuBarIntegrationModeV1::Off;
         app.set_global(settings);
 
-        app.push_effect(Effect::SetMenuBar {
-            window: None,
-            menu_bar: MenuBar {
-                menus: vec![Menu {
-                    title: "File".into(),
-                    role: None,
-                    items: vec![MenuItem::Separator],
-                }],
-            },
-        });
+         app.push_effect(Effect::SetMenuBar {
+             window: None,
+             menu_bar: MenuBar {
+                 menus: vec![Menu {
+                     title: "File".into(),
+                     role: None,
+                     mnemonic: None,
+                     items: vec![MenuItem::Separator],
+                 }],
+             },
+         });
 
         app.push_effect(Effect::SetMenuBar {
             window: None,
