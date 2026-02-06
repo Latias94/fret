@@ -4980,3 +4980,71 @@ Evidence files:
 Interpretation:
 - The run-max counters are now first-class perf-gate signals (baseline + CLI + failure scan).
 - This removes the remaining manual `bundle.json` max extraction step for gate-path regressions.
+
+## 2026-02-06 20:12:00 (commit `f4a6f422b`)
+
+Change:
+- Refresh `ui-gallery-steady` baseline to include the latest perf-threshold schema with run-max gate fields:
+  - baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`
+  - includes threshold keys:
+    - `min_run_paint_cache_hit_test_only_replay_allowed_max`
+    - `max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`
+
+Baseline command (final v14):
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v14h20c \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v14-validate2 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `check.perf_thresholds.json` failures: `0` (validation passes).
+- Baseline v14 worst overall (generation run):
+  - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=22645`
+  - bundle: `target/fret-diag-codex-perf-v14h20c/1770379813412-ui-gallery-window-resize-stress-steady/bundle.json`
+- Validation worst overall:
+  - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=15856`
+  - bundle: `target/fret-diag-codex-perf-v14-validate2/1770379937450-ui-gallery-window-resize-stress-steady/bundle.json`
+- Drift vs v13 baseline (`docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v13.json`):
+  - `window-resize-stress-steady` measured max `top_total_time_us`: `15532 -> 22645`.
+
+Run-max gate fields in v14 baseline:
+- Present in `thresholds` and `measured_max` for every row.
+- Current `ui-gallery-steady` run keeps both values at `0` (expected because this suite does not enable
+  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` nor target the dedicated probe page).
+
+Evidence files:
+- Baseline generation JSON: `target/fret-diag-codex-summaries/ui-gallery-steady.macos-m4.v14.h20c.gen.perf.clean.json`
+- Baseline validation JSON: `target/fret-diag-codex-summaries/ui-gallery-steady.macos-m4.v14.validate2.perf.clean.json`
+- Threshold report: `target/fret-diag-codex-perf-v14-validate2/check.perf_thresholds.json`
+
+Interpretation:
+- Baseline schema migration is complete and validated (new run-max gate fields are now part of the canonical baseline).
+- The resize script remains the dominant noise source; one high outlier in the baseline generation run significantly
+  raised `max_top_total_us` for that script. Follow-up should consider robust baseline generation
+  (e.g., percentile-capped thresholding for known noisy scripts) to avoid over-loose gates.
