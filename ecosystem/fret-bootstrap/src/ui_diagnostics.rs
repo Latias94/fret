@@ -1669,7 +1669,7 @@ impl UiDiagnosticsService {
                             step_index,
                             remaining_frames: timeout_frames,
                             phase: 0,
-                            last_drag_x: None,
+                            last_drag_axis: None,
                         },
                     };
 
@@ -1685,23 +1685,178 @@ impl UiDiagnosticsService {
                             output.request_redraw = true;
                         } else {
                             let bounds = node.bounds;
-                            let left = bounds.origin.x.0;
-                            let width = bounds.size.width.0.max(0.0);
-                            let right = left + width;
+                            let center = center_of_rect(bounds);
+                            let axis = if bounds.size.width.0 >= bounds.size.height.0 {
+                                fret_core::Axis::Horizontal
+                            } else {
+                                fret_core::Axis::Vertical
+                            };
+                            let (axis_origin, axis_len, cross_center) = match axis {
+                                fret_core::Axis::Horizontal => {
+                                    (bounds.origin.x.0, bounds.size.width.0.max(0.0), center.y.0)
+                                }
+                                fret_core::Axis::Vertical => {
+                                    (bounds.origin.y.0, bounds.size.height.0.max(0.0), center.x.0)
+                                }
+                            };
                             let span = (max - min).abs().max(0.0001);
 
-                            let clamp_x = |x: f32| {
-                                let pad = 2.0_f32;
-                                x.clamp(left + pad, right - pad)
+                            #[derive(Debug, Clone, Copy)]
+                            struct ThumbGeom {
+                                thumb_r: f32,
+                                center_axis: f32,
+                                center_cross: f32,
+                                min_at_axis_start: bool,
+                            }
+
+                            let thumb_geom = || -> Option<ThumbGeom> {
+                                let mut by_id: HashMap<u64, &fret_core::SemanticsNode> =
+                                    HashMap::new();
+                                let mut children: HashMap<u64, Vec<u64>> = HashMap::new();
+                                for n in &snapshot.nodes {
+                                    let id = n.id.data().as_ffi();
+                                    by_id.insert(id, n);
+                                    if let Some(parent) = n.parent {
+                                        children
+                                            .entry(parent.data().as_ffi())
+                                            .or_default()
+                                            .push(id);
+                                    }
+                                }
+
+                                let mut subtree: HashSet<u64> = HashSet::new();
+                                collect_subtree_ids(
+                                    node.id.data().as_ffi(),
+                                    &children,
+                                    &mut subtree,
+                                );
+
+                                let mut best: Option<(ThumbGeom, f32)> = None;
+                                for id in subtree.iter().copied() {
+                                    let Some(candidate) = by_id.get(&id).copied() else {
+                                        continue;
+                                    };
+                                    if candidate.role != fret_core::SemanticsRole::Slider {
+                                        continue;
+                                    }
+                                    let Some(candidate_value) = candidate
+                                        .value
+                                        .as_deref()
+                                        .and_then(parse_semantics_numeric_value)
+                                    else {
+                                        continue;
+                                    };
+
+                                    let candidate_bounds = candidate.bounds;
+                                    let (thumb_size, center_axis, center_cross) = match axis {
+                                        fret_core::Axis::Horizontal => (
+                                            candidate_bounds.size.width.0.max(0.0),
+                                            candidate_bounds.origin.x.0
+                                                + candidate_bounds.size.width.0.max(0.0) * 0.5,
+                                            candidate_bounds.origin.y.0
+                                                + candidate_bounds.size.height.0.max(0.0) * 0.5,
+                                        ),
+                                        fret_core::Axis::Vertical => (
+                                            candidate_bounds.size.height.0.max(0.0),
+                                            candidate_bounds.origin.y.0
+                                                + candidate_bounds.size.height.0.max(0.0) * 0.5,
+                                            candidate_bounds.origin.x.0
+                                                + candidate_bounds.size.width.0.max(0.0) * 0.5,
+                                        ),
+                                    };
+                                    let thumb_r = (thumb_size * 0.5).max(0.0);
+
+                                    // Infer direction by comparing the thumb's normalized position
+                                    // to the observed value. This lets the diagnostics script set
+                                    // values for RTL / inverted / vertical sliders without hard
+                                    // coding a direction rule.
+                                    let usable_len = (axis_len - 2.0 * thumb_r).max(0.0);
+                                    let observed_t =
+                                        ((candidate_value - min) / span).clamp(0.0, 1.0);
+                                    let pointer_t = if usable_len > 0.0 {
+                                        ((center_axis - axis_origin - thumb_r) / usable_len)
+                                            .clamp(0.0, 1.0)
+                                    } else {
+                                        0.0
+                                    };
+                                    let min_at_axis_start = (pointer_t - observed_t).abs()
+                                        <= (pointer_t - (1.0 - observed_t)).abs();
+
+                                    let geom = ThumbGeom {
+                                        thumb_r,
+                                        center_axis,
+                                        center_cross,
+                                        min_at_axis_start,
+                                    };
+                                    let score = (candidate_value - value).abs();
+                                    match best {
+                                        None => best = Some((geom, score)),
+                                        Some((_, best_score)) if score < best_score => {
+                                            best = Some((geom, score))
+                                        }
+                                        _ => {}
+                                    }
+                                }
+
+                                best.map(|(geom, _)| geom)
                             };
-                            let target_t = ((value - min) / span).clamp(0.0, 1.0);
+
+                            let mut thumb_r = 0.0_f32;
+                            let mut usable_len = axis_len;
+                            let mut min_at_axis_start = true;
+                            let mut start_axis_default = match axis {
+                                fret_core::Axis::Horizontal => center.x.0,
+                                fret_core::Axis::Vertical => center.y.0,
+                            };
+                            let mut cross = cross_center;
+
+                            if let Some(thumb) = thumb_geom() {
+                                thumb_r = thumb.thumb_r;
+                                usable_len = (axis_len - 2.0 * thumb_r).max(0.0);
+                                min_at_axis_start = thumb.min_at_axis_start;
+                                start_axis_default = thumb.center_axis;
+                                cross = thumb.center_cross;
+                            }
+
+                            let clamp_axis = |pos: f32| {
+                                let pad = 2.0_f32;
+                                let min_pos = axis_origin + thumb_r + pad;
+                                let max_pos = axis_origin + axis_len - thumb_r - pad;
+                                if max_pos >= min_pos {
+                                    pos.clamp(min_pos, max_pos)
+                                } else {
+                                    pos
+                                }
+                            };
+
+                            let axis_point = |axis_pos: f32| match axis {
+                                fret_core::Axis::Horizontal => {
+                                    Point::new(fret_core::Px(axis_pos), fret_core::Px(cross))
+                                }
+                                fret_core::Axis::Vertical => {
+                                    Point::new(fret_core::Px(cross), fret_core::Px(axis_pos))
+                                }
+                            };
+
+                            let axis_pos_for_value = |desired: f32| {
+                                let value_t = ((desired - min) / span).clamp(0.0, 1.0);
+                                let pointer_t = if min_at_axis_start {
+                                    value_t
+                                } else {
+                                    1.0 - value_t
+                                };
+                                if usable_len > 0.0 {
+                                    axis_origin + thumb_r + usable_len * pointer_t
+                                } else {
+                                    axis_origin + axis_len * pointer_t
+                                }
+                            };
 
                             if state.phase == 0 {
-                                let x = clamp_x(left + width * target_t);
-                                let start = center_of_rect(bounds);
-                                let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                let start = Point::new(fret_core::Px(start_x), start.y);
-                                let end = Point::new(fret_core::Px(x), start.y);
+                                let axis_pos = clamp_axis(axis_pos_for_value(value));
+                                let start_axis = state.last_drag_axis.unwrap_or(start_axis_default);
+                                let start = axis_point(start_axis);
+                                let end = axis_point(axis_pos);
                                 output.events.extend(drag_events(
                                     start,
                                     end,
@@ -1709,7 +1864,7 @@ impl UiDiagnosticsService {
                                     drag_steps.max(1),
                                 ));
                                 state.phase = 1;
-                                state.last_drag_x = Some(x);
+                                state.last_drag_axis = Some(axis_pos);
                                 active.v2_step_state = Some(V2StepState::SetSliderValue(state));
                                 output.request_redraw = true;
                             } else {
@@ -1738,19 +1893,20 @@ impl UiDiagnosticsService {
                                         output.request_redraw = true;
                                     } else {
                                         let error = value - observed;
-                                        let dx = (error / span) * width;
-                                        let start = center_of_rect(bounds);
-                                        let start_x = state.last_drag_x.unwrap_or(start.x.0);
-                                        let end_x = clamp_x(start_x + dx);
-                                        let start = Point::new(fret_core::Px(start_x), start.y);
-                                        let end = Point::new(fret_core::Px(end_x), start.y);
+                                        let direction = if min_at_axis_start { 1.0 } else { -1.0 };
+                                        let dx = (error / span) * usable_len * direction;
+                                        let start_axis =
+                                            state.last_drag_axis.unwrap_or(start_axis_default);
+                                        let end_axis = clamp_axis(start_axis + dx);
+                                        let start = axis_point(start_axis);
+                                        let end = axis_point(end_axis);
                                         output.events.extend(drag_events(
                                             start,
                                             end,
                                             UiMouseButtonV1::Left,
                                             drag_steps.max(1),
                                         ));
-                                        state.last_drag_x = Some(end_x);
+                                        state.last_drag_axis = Some(end_axis);
                                         state.remaining_frames =
                                             state.remaining_frames.saturating_sub(1);
                                         active.v2_step_state =
@@ -3794,7 +3950,7 @@ struct V2SetSliderValueState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
-    last_drag_x: Option<f32>,
+    last_drag_axis: Option<f32>,
 }
 
 #[derive(Debug, Clone)]
