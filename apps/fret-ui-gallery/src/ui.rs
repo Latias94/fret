@@ -5492,22 +5492,273 @@ fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    vec![
+    let theme = Theme::global(&*cx.app).clone();
+
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
+
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
+        cx.container(
+            decl_style::container_props(
+                &theme,
+                ChromeRefinement::default()
+                    .border_1()
+                    .rounded(Radius::Md)
+                    .p(Space::N4),
+                layout,
+            ),
+            move |_cx| [body],
+        )
+    };
+
+    let demo = {
+        let top = stack::vstack(
+            cx,
+            stack::VStackProps::default().gap(Space::N1).items_start(),
+            |cx| {
                 vec![
-                    cx.text("Left"),
+                    shadcn::typography::small(cx, "Radix Primitives"),
+                    shadcn::typography::muted(cx, "An open-source UI component library."),
+                ]
+            },
+        );
+
+        let links = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N4)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().h_px(Px(20.0))),
+            |cx| {
+                vec![
+                    cx.text("Blog"),
                     shadcn::Separator::new()
                         .orientation(shadcn::SeparatorOrientation::Vertical)
                         .flex_stretch_cross_axis(true)
                         .into_element(cx),
-                    cx.text("Right"),
+                    cx.text("Docs"),
+                    shadcn::Separator::new()
+                        .orientation(shadcn::SeparatorOrientation::Vertical)
+                        .flex_stretch_cross_axis(true)
+                        .into_element(cx),
+                    cx.text("Source"),
                 ]
             },
-        ),
-        shadcn::Separator::new().into_element(cx),
+        );
+
+        let content = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full().max_w(Px(384.0))),
+            |cx| {
+                vec![
+                    top,
+                    shadcn::Separator::new()
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                    links,
+                ]
+            },
+        )
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-separator-demo"),
+        );
+
+        let card = shell(cx, LayoutRefinement::default(), content);
+        let body = centered(cx, card);
+        section(cx, "Demo", body)
+    };
+
+    let vertical = {
+        let content = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N4)
+                .items_center()
+                .layout(LayoutRefinement::default().h_px(Px(20.0))),
+            |cx| {
+                vec![
+                    cx.text("Blog"),
+                    shadcn::Separator::new()
+                        .orientation(shadcn::SeparatorOrientation::Vertical)
+                        .flex_stretch_cross_axis(true)
+                        .into_element(cx),
+                    cx.text("Docs"),
+                    shadcn::Separator::new()
+                        .orientation(shadcn::SeparatorOrientation::Vertical)
+                        .flex_stretch_cross_axis(true)
+                        .into_element(cx),
+                    cx.text("Source"),
+                ]
+            },
+        )
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-separator-vertical"),
+        );
+
+        let card = shell(cx, LayoutRefinement::default(), content);
+        let body = centered(cx, card);
+        section(cx, "Vertical", body)
+    };
+
+    let menu = {
+        let menu_item =
+            |cx: &mut ElementContext<'_, App>, title: &'static str, desc: &'static str| {
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default().gap(Space::N1).items_start(),
+                    move |cx| {
+                        vec![
+                            shadcn::typography::small(cx, title),
+                            shadcn::typography::muted(cx, desc),
+                        ]
+                    },
+                )
+            };
+
+        let content = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N3)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().max_w(Px(560.0))),
+            |cx| {
+                vec![
+                    menu_item(cx, "Settings", "Manage preferences"),
+                    shadcn::Separator::new()
+                        .orientation(shadcn::SeparatorOrientation::Vertical)
+                        .flex_stretch_cross_axis(true)
+                        .into_element(cx),
+                    menu_item(cx, "Account", "Profile & security"),
+                    shadcn::Separator::new()
+                        .orientation(shadcn::SeparatorOrientation::Vertical)
+                        .flex_stretch_cross_axis(true)
+                        .into_element(cx),
+                    menu_item(cx, "Help", "Support & docs"),
+                ]
+            },
+        )
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-separator-menu"),
+        );
+
+        let card = shell(cx, LayoutRefinement::default(), content);
+        let body = centered(cx, card);
+        section(cx, "Menu", body)
+    };
+
+    let list = {
+        let row = |cx: &mut ElementContext<'_, App>, key: &'static str, value: &'static str| {
+            stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .justify_between()
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full()),
+                move |cx| vec![cx.text(key), shadcn::typography::muted(cx, value)],
+            )
+        };
+
+        let content = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full().max_w(Px(384.0))),
+            |cx| {
+                vec![
+                    row(cx, "Item 1", "Value 1"),
+                    shadcn::Separator::new().into_element(cx),
+                    row(cx, "Item 2", "Value 2"),
+                    shadcn::Separator::new().into_element(cx),
+                    row(cx, "Item 3", "Value 3"),
+                ]
+            },
+        )
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-separator-list"),
+        );
+
+        let card = shell(cx, LayoutRefinement::default(), content);
+        let body = centered(cx, card);
+        section(cx, "List", body)
+    };
+
+    let rtl = {
+        let content = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N4)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().max_w(Px(384.0))),
+                    |cx| {
+                        vec![
+                            stack::vstack(
+                                cx,
+                                stack::VStackProps::default().gap(Space::N1).items_start(),
+                                |cx| {
+                                    vec![
+                                        shadcn::typography::small(cx, "shadcn/ui"),
+                                        shadcn::typography::muted(cx, "أساس نظام التصميم الخاص بك"),
+                                    ]
+                                },
+                            ),
+                            shadcn::Separator::new().into_element(cx),
+                            shadcn::typography::muted(
+                                cx,
+                                "مجموعة مكونات مصممة بشكل جميل يمكنك تخصيصها وتوسيعها.",
+                            ),
+                        ]
+                    },
+                )
+            },
+        )
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-separator-rtl"),
+        );
+
+        let card = shell(cx, LayoutRefinement::default(), content);
+        let body = centered(cx, card);
+        section(cx, "RTL", body)
+    };
+
+    vec![
+        cx.text("Visually or semantically separates content."),
+        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
+            vec![demo, vertical, menu, list, rtl]
+        }),
     ]
 }
 
@@ -13750,34 +14001,183 @@ fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let items = (1..=64)
-        .map(|i| cx.text(format!("Item {i:02}")))
-        .collect::<Vec<_>>();
+    let theme = Theme::global(&*cx.app).clone();
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |_cx| items,
-    );
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
 
-    let scroll = shadcn::ScrollArea::new([body])
-        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
-        .into_element(cx);
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
+        cx.container(
+            decl_style::container_props(
+                &theme,
+                ChromeRefinement::default().border_1().rounded(Radius::Md),
+                layout,
+            ),
+            move |_cx| [body],
+        )
+    };
+
+    let demo = {
+        let versions: Vec<Arc<str>> = (1..=50)
+            .map(|idx| Arc::<str>::from(format!("v1.2.0-beta.{:02}", 51 - idx)))
+            .collect();
+
+        let content = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full()),
+            |cx| {
+                let mut rows: Vec<AnyElement> = Vec::with_capacity(versions.len() * 2 + 1);
+                rows.push(shadcn::typography::small(cx, "Tags"));
+                for tag in versions {
+                    rows.push(cx.text(tag));
+                    rows.push(
+                        shadcn::Separator::new()
+                            .refine_layout(LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                    );
+                }
+                rows
+            },
+        );
+
+        let scroll = shadcn::ScrollArea::new([content])
+            .axis(fret_ui::element::ScrollAxis::Y)
+            .refine_layout(LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)))
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-scroll-area-demo"),
+            );
+
+        let card = shell(cx, LayoutRefinement::default(), scroll);
+        let body = centered(cx, card);
+        section(cx, "Demo", body)
+    };
+
+    let horizontal = {
+        let rail = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_px(Px(760.0))),
+            |cx| {
+                let artists = [
+                    "Ornella Binni",
+                    "Tom Byrom",
+                    "Vladimir Malyavko",
+                    "Silvia Serra",
+                ];
+                artists
+                    .iter()
+                    .map(|artist| {
+                        shadcn::Card::new(vec![
+                            shadcn::CardContent::new(vec![
+                                cx.container(
+                                    decl_style::container_props(
+                                        &theme,
+                                        ChromeRefinement::default()
+                                            .rounded(Radius::Md)
+                                            .border_1()
+                                            .bg(ColorRef::Color(theme.color_required("muted"))),
+                                        LayoutRefinement::default().w_px(Px(140.0)).h_px(Px(180.0)),
+                                    ),
+                                    |_cx| Vec::new(),
+                                ),
+                                shadcn::typography::muted(cx, format!("Photo by {artist}")),
+                            ])
+                            .into_element(cx),
+                        ])
+                        .refine_layout(LayoutRefinement::default().w_px(Px(160.0)))
+                        .into_element(cx)
+                    })
+                    .collect::<Vec<_>>()
+            },
+        );
+
+        let scroll = shadcn::ScrollArea::new([rail])
+            .axis(fret_ui::element::ScrollAxis::X)
+            .refine_layout(LayoutRefinement::default().w_px(Px(384.0)).h_px(Px(280.0)))
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-scroll-area-horizontal"),
+            );
+
+        let card = shell(cx, LayoutRefinement::default(), scroll);
+        let body = centered(cx, card);
+        section(cx, "Horizontal", body)
+    };
+
+    let rtl = {
+        let rtl_scroll = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                let content = stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N2)
+                        .layout(LayoutRefinement::default().w_full()),
+                    |cx| {
+                        let mut rows: Vec<AnyElement> =
+                            vec![shadcn::typography::small(cx, "العلامات")];
+                        for idx in 1..=40 {
+                            rows.push(cx.text(format!("v1.2.0-beta.{:02}", 41 - idx)));
+                            rows.push(
+                                shadcn::Separator::new()
+                                    .refine_layout(LayoutRefinement::default().w_full())
+                                    .into_element(cx),
+                            );
+                        }
+                        rows
+                    },
+                );
+
+                shadcn::ScrollArea::new([content])
+                    .axis(fret_ui::element::ScrollAxis::Y)
+                    .refine_layout(LayoutRefinement::default().w_px(Px(192.0)).h_px(Px(288.0)))
+                    .into_element(cx)
+            },
+        )
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-scroll-area-rtl"),
+        );
+
+        let card = shell(cx, LayoutRefinement::default(), rtl_scroll);
+        let body = centered(cx, card);
+        section(cx, "RTL", body)
+    };
 
     vec![
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("Scroll Area").into_element(cx),
-                shadcn::CardDescription::new("Fixed-height viewport with scrollbars.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![scroll]).into_element(cx),
-        ])
-        .refine_layout(LayoutRefinement::default().w_full())
-        .into_element(cx),
+        cx.text("Scrollable region with custom scrollbars and nested content."),
+        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
+            vec![demo, horizontal, rtl]
+        }),
     ]
 }
 
