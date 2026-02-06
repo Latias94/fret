@@ -18,11 +18,13 @@ Status legend:
   - Evidence: `docs/workstreams/localization-i18n-v1.md`
 - `[x]` Add this milestone tracker document.
   - Evidence: `docs/workstreams/localization-i18n-v1-todo.md`
-- `[ ]` Inventory user-visible strings in high-impact surfaces:
+- `[~]` Inventory user-visible strings in high-impact surfaces:
   - command metadata,
   - workspace/default menu labels,
   - `fret-ui-shadcn` component copy (calendar/date/time/form helpers).
-- `[ ]` Produce baseline implementation map (`surface` -> `message key namespace`) with owners.
+- `[~]` Produce baseline implementation map (`surface` -> `message key namespace`) with owners.
+  - Progress: command + workspace menu baseline key map is documented in
+    `docs/workstreams/localization-i18n-v1.md`.
 
 ## Phase 1 - i18n core contract crate (`ecosystem/fret-i18n`)
 
@@ -55,13 +57,14 @@ Exit criteria:
 Goal: provide a production default backend using `fluent-rs` while keeping backend replaceable.
 
 - `[x]` Scaffold `ecosystem/fret-i18n-fluent` crate.
-- `[~]` Implement contract adapters on top of:
+- `[x]` Implement contract adapters on top of:
   - `fluent-bundle`,
   - `fluent-fallback`.
 - `[x]` Implement `.ftl` resource loading for embedded and memory-backed sources.
 - `[x]` Implement deterministic fallback chain behavior and tests.
 - `[~]` Add pseudo-localization mode for UI QA and snapshot tests.
-- `[ ]` Add docs/examples for key naming and resource layout conventions.
+- `[x]` Add docs/examples for key naming and resource layout conventions.
+  - Evidence: `docs/workstreams/localization-i18n-v1.md`
 
 Exit criteria:
 
@@ -78,7 +81,7 @@ Goal: app-owned locale state and runtime switching through existing config layer
   - fallback locales,
   - optional pseudo-locale mode.
 - `[x]` Update layered config load/merge behavior accordingly.
-- `[~]` Add runtime locale switch command flow and effect wiring.
+- `[x]` Add runtime locale switch command flow and effect wiring.
 - `[ ]` Add integration tests for:
   - settings load with defaults,
   - runtime switch updates visible text,
@@ -99,9 +102,9 @@ Exit criteria:
 
 Goal: implement high-value surfaces directly on the new i18n contracts with minimal boilerplate.
 
-- `[ ]` Command metadata localization implementation:
+- `[x]` Command metadata localization implementation:
   - `title`, `description`, `category` use message keys or localized wrappers.
-- `[ ]` Workspace/default menu label localization implementation.
+- `[x]` Workspace/default menu label localization implementation.
 - `[ ]` `fret-ui-shadcn` calendar locale model implementation using i18n provider.
 - `[~]` Add helper APIs for UI authors:
   - simple `t(key)` lookup,
@@ -116,9 +119,12 @@ Progress notes (2026-02-06):
 - Added first localized high-visibility surface:
   - core app command titles/categories now resolve via i18n catalog keys
   - localization is reapplied when locale changes
+- Added workspace top-level menu localization (`File`/`Edit`/`View`/`Window`) and
+  locale-switch command entry wiring.
 - Added tests for:
   - locale switch command rotation,
   - localized command metadata projection.
+- Added v1 message key naming conventions and baseline key registry documentation.
 - `[ ]` Update at least one template/demo to showcase best-practice i18n usage.
 
 Exit criteria:
@@ -130,7 +136,18 @@ Exit criteria:
 
 - `[x]` Confirm this workstream is greenfield (no previous localization subsystem to migrate).
 - `[~]` Keep all phases aligned to one delivery train (contract + backend + app integration + primary surfaces).
+  - Progress: contract/backend/settings/command+menu primary surfaces are in place; shadcn surfaces, wasm hardening,
+    and mobile-readiness gates remain.
 - `[x]` Avoid introducing temporary compatibility layers unless explicitly required by later product constraints.
+
+## Cross-phase guardrails (avoid future large rewrites)
+
+- `[x]` Document no-regret contract constraints for v1 (key stability, deterministic fallback,
+  backend-neutral APIs, portable source abstractions, app-owned locale state).
+  - Evidence: `docs/workstreams/localization-i18n-v1.md`
+- `[~]` Keep new user-visible localization keys inside documented namespaces and lifecycle rules.
+- `[ ]` Add CI-level checks/scripts that prevent accidental key repurposing or missing required locale entries.
+- `[ ]` Add ADR that freezes the i18n contract boundaries before broader ecosystem rollout.
 
 ## Phase 5 - wasm support hardening
 
@@ -199,4 +216,7 @@ Exit criteria:
 - `crates/fret-app/src/config_files.rs`
 - `crates/fret-app/src/config_watcher.rs`
 - `ecosystem/fret-bootstrap/src/lib.rs`
+- `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+- `crates/fret-app/src/core_commands.rs`
+- `ecosystem/fret-workspace/src/menu.rs`
 - `apps/fret-ui-gallery/src/driver.rs`

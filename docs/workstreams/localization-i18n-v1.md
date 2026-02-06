@@ -78,6 +78,38 @@ Out of scope (v1):
    - Message lookup should be one-liner in component code.
    - Runtime errors for missing keys should be diagnosable and testable.
 
+## No-regret contract constraints (prevent large rewrites)
+
+The following constraints are intentionally treated as hard gates for v1 because changing them later would force broad API churn:
+
+1. **Stable semantic keys**
+   - Message identity is the key, never the source text.
+   - A key must not be reused for a different semantic meaning.
+
+2. **Deterministic locale chain semantics**
+   - Locale resolution order must remain deterministic: `primary -> ordered fallbacks -> default safety locale`.
+   - The same input chain must always resolve to the same output text across platforms.
+
+3. **Backend-neutral app/runtime contracts**
+   - Public app/runtime APIs must not expose `fluent-rs` concrete types.
+   - `ecosystem/fret-i18n` remains the only required contract dependency for callers.
+
+4. **Portable resource source model**
+   - Catalog acquisition abstractions must support embedded, async, and reloadable sources.
+   - No contract surface should require desktop-only path semantics or `std::fs`.
+
+5. **App-owned locale state with global projection**
+   - Locale preference is owned by typed settings and projected to globals.
+   - Components consume localized text through service lookup, not ad-hoc locale threading.
+
+6. **First-class wasm baseline and mobile-ready shape**
+   - Embedded catalogs are the required baseline for wasm startup determinism.
+   - API shapes must remain compatible with future mobile asset and locale-preference providers.
+
+7. **Diagnostics and QA gates as contract guardrails**
+   - Missing key/locale and fallback events must stay observable.
+   - Pseudo-locale validation must remain available for overflow/truncation regressions.
+
 ## Proposed layering (modular and extensible)
 
 ### Layer A: Backend-agnostic i18n contracts (`ecosystem/fret-i18n`)
@@ -143,6 +175,53 @@ Ergonomics constraints:
 - no repeated manual locale plumbing in every component constructor,
 - no stringly fallback logic scattered in UI code,
 - clear missing-key behavior (debug warning + deterministic fallback text).
+
+## Message key naming conventions (v1)
+
+Naming rules:
+
+- use lower `kebab-case` keys,
+- use domain-prefixed namespaces,
+- keep keys semantic and stable (do not encode locale or presentation-only variants in key names),
+- keep punctuation/formatting in values, not in key naming.
+
+Current namespace patterns:
+
+- `core-command-title-<domain>-<command>`
+- `core-command-category-<domain>`
+- `workspace-menu-<slot>`
+- `component-<surface>-<semantic-name>` (reserved for broader component rollout)
+
+Key lifecycle rules:
+
+1. Add key following namespace rules.
+2. Add at least `en-US` and `zh-CN` entries in the same delivery.
+3. Wire usage and add/adjust tests for fallback and runtime switch behavior.
+4. Never silently repurpose an existing key; add a new key when meaning changes.
+
+## Implemented key registry (baseline: 2026-02-06)
+
+Current baseline keys shipped in core command localization (`crates/fret-app/src/core_commands.rs`):
+
+- `core-command-category-app`
+- `workspace-menu-file`
+- `workspace-menu-edit`
+- `workspace-menu-view`
+- `workspace-menu-window`
+- `core-command-title-app-command-palette`
+- `core-command-title-app-about`
+- `core-command-title-app-preferences`
+- `core-command-title-app-locale-switch-next`
+- `core-command-title-app-hide`
+- `core-command-title-app-hide-others`
+- `core-command-title-app-show-all`
+- `core-command-title-app-quit`
+
+Registry usage anchors:
+
+- key declarations and locale resources: `crates/fret-app/src/core_commands.rs`
+- workspace menu title projection: `ecosystem/fret-workspace/src/menu.rs`
+- gallery-level menu command wiring and dynamic title update: `apps/fret-ui-gallery/src/driver.rs`
 
 ## One-shot delivery strategy
 
@@ -227,9 +306,15 @@ Notes:
   - config hot reload (`crates/fret-app/src/config_watcher.rs`),
   - bootstrap (`ecosystem/fret-bootstrap/src/lib.rs`),
   - ui gallery setup/runtime settings write-back (`apps/fret-ui-gallery/src/driver.rs`).
+- Added runtime locale-switch command flow (`app.locale.switch_next`) and integrated handling in
+  bootstrap/gallery drivers.
+- Localized core command metadata (`title`/`category`) and re-localization on locale change.
+- Localized workspace top-level menu titles (`File`, `Edit`, `View`, `Window`) through i18n keys.
+- Added and documented v1 key naming conventions and baseline key registry.
 
-Remaining for Phase 3+:
+Next priorities (Phase 4+):
 
-- runtime locale switch command flow,
-- first localized user-visible surfaces (command/menu/shadcn copy),
-- wasm/mobile-specific validation lanes.
+- expand beyond current command/menu baseline to `fret-ui-shadcn` component copy,
+- add wasm-specific smoke/perf gates for localization assets and lookup paths,
+- formalize mobile asset/locale provider abstraction contracts,
+- add diagnostics + pseudo-locale QA lanes as CI-quality regression gates.
