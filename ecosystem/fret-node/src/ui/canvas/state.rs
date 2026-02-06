@@ -566,6 +566,12 @@ pub(crate) struct InternalsCacheKey {
     pub(crate) view: InternalsViewKey,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DerivedBuildCounters {
+    pub(crate) geom_rebuilds: u64,
+    pub(crate) index_rebuilds: u64,
+}
+
 #[derive(Debug, Clone, Default)]
 pub(crate) struct GeometryCache {
     pub(crate) geom_key: Option<GeometryCacheKey>,
@@ -573,6 +579,7 @@ pub(crate) struct GeometryCache {
     pub(crate) geom: Arc<super::geometry::CanvasGeometry>,
     pub(crate) index: Arc<super::spatial::CanvasSpatialIndex>,
     pub(crate) drag_preview: Option<DragPreviewCache>,
+    pub(crate) counters: DerivedBuildCounters,
 }
 
 impl GeometryCache {
@@ -590,6 +597,7 @@ impl GeometryCache {
         self.geom_key = Some(geom_key);
         self.index_key = None;
         self.clear_drag_preview();
+        self.counters.geom_rebuilds = self.counters.geom_rebuilds.saturating_add(1);
         true
     }
 
@@ -602,6 +610,7 @@ impl GeometryCache {
         }
         self.index_key = Some(index_key);
         self.clear_drag_preview();
+        self.counters.index_rebuilds = self.counters.index_rebuilds.saturating_add(1);
         true
     }
 

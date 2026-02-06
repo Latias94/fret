@@ -360,6 +360,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     #[cfg(test)]
+    fn debug_derived_build_counters(&self) -> super::state::DerivedBuildCounters {
+        self.geometry.counters
+    }
+
+    #[cfg(test)]
     fn debug_render_metrics_for_bounds<H: UiHost>(
         &mut self,
         host: &mut H,

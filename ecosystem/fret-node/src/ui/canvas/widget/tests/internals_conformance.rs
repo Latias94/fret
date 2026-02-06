@@ -104,6 +104,7 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    let counters1 = canvas.debug_derived_build_counters();
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     let rev1 = internals.revision();
@@ -122,9 +123,18 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
     });
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+    let counters2 = canvas.debug_derived_build_counters();
 
     assert!(Arc::ptr_eq(&geom1, &geom2));
     assert!(Arc::ptr_eq(&index1, &index2));
+    assert_eq!(
+        counters2.geom_rebuilds, counters1.geom_rebuilds,
+        "pan-only must not rebuild geometry cache"
+    );
+    assert_eq!(
+        counters2.index_rebuilds, counters1.index_rebuilds,
+        "pan-only must not rebuild spatial index cache"
+    );
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     assert!(internals.revision() > rev1);
@@ -252,6 +262,7 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    let counters1 = canvas.debug_derived_build_counters();
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     let rev1 = internals.revision();
@@ -273,9 +284,18 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+    let counters2 = canvas.debug_derived_build_counters();
 
     assert!(!Arc::ptr_eq(&geom1, &geom2));
     assert!(!Arc::ptr_eq(&index1, &index2));
+    assert!(
+        counters2.geom_rebuilds > counters1.geom_rebuilds,
+        "graph edit should rebuild geometry cache"
+    );
+    assert!(
+        counters2.index_rebuilds > counters1.index_rebuilds,
+        "graph edit should rebuild spatial index cache"
+    );
 
     paint_once(&mut canvas, &mut host, &mut services, bounds);
     assert!(internals.revision() > rev1);
@@ -303,13 +323,23 @@ fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
 
     let snapshot1 = canvas.sync_view_state(&mut host);
     let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    let counters1 = canvas.debug_derived_build_counters();
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+    let counters2 = canvas.debug_derived_build_counters();
 
     assert!(Arc::ptr_eq(&geom1, &geom2));
     assert!(!Arc::ptr_eq(&index1, &index2));
+    assert_eq!(
+        counters2.geom_rebuilds, counters1.geom_rebuilds,
+        "spatial index tuning should not rebuild geometry cache"
+    );
+    assert!(
+        counters2.index_rebuilds > counters1.index_rebuilds,
+        "spatial index tuning should rebuild index cache"
+    );
 }

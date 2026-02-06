@@ -48,6 +48,7 @@ For the detailed internals contract checklist, see `docs/workstreams/fret-node-i
 - **Pan-only must not rebuild geometry** (derived geometry caches are reused; internals update only).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs` (`DerivedBuildCounters`) + `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - **Semantic zoom discipline** (node sizes stay constant in window space; geometry rebuild is scoped and deterministic).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - **Hit-testing determinism** (same inputs → same hit results; Strict vs Loose modes are stable).
@@ -388,6 +389,8 @@ canonical data flow and invalidation boundaries:
     - graph revision + zoom + node-origin + draw order hash + presenter revision + edgeTypes revision.
     - **Pan-only must not invalidate** this cache (it is applied via render transforms).
     - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+    - Rebuild counters (`DerivedBuildCounters`) increment only on cache-key changes and are asserted by conformance tests.
+    - Evidence: `ecosystem/fret-node/src/ui/canvas/state.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
 - **Spatial index (canvas space, UI-only)**
   - `CanvasSpatialIndex` is an acceleration structure built from `Graph + CanvasGeometry` and
     spatial tuning, used by hit-testing and previews.
