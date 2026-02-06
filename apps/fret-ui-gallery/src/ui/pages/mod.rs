@@ -16,6 +16,7 @@ mod date_picker;
 mod dialog;
 mod field;
 mod form;
+mod hover_card;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -122,6 +123,10 @@ pub(super) fn preview_forms(
     switch: Model<bool>,
 ) -> Vec<AnyElement> {
     form::preview_forms(cx, text_input, text_area, checkbox, switch)
+}
+
+pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    hover_card::preview_hover_card(cx)
 }
 
 pub(super) fn preview_drawer(

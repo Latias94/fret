@@ -7626,22 +7626,7 @@ fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let trigger = shadcn::Button::new("Hover me")
-        .variant(shadcn::ButtonVariant::Outline)
-        .into_element(cx);
-    let content = shadcn::Card::new(vec![
-        shadcn::CardHeader::new(vec![shadcn::CardTitle::new("HoverCard").into_element(cx)])
-            .into_element(cx),
-        shadcn::CardContent::new(vec![
-            cx.text("HoverCard content lives in a hover overlay."),
-            cx.text("Useful for previews, profile cards, etc."),
-        ])
-        .into_element(cx),
-    ])
-    .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
-    .into_element(cx);
-
-    vec![shadcn::HoverCard::new_controllable(cx, None, false, trigger, content).into_element(cx)]
+    pages::preview_hover_card(cx)
 }
 
 fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
