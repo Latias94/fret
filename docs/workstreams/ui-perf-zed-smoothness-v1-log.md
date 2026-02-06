@@ -5220,3 +5220,35 @@ Result highlights:
 Interpretation:
 - Baseline seed tuning is now script-group aware, so tightening policy can happen by suite-level commands without
   introducing one-off code branches.
+
+## 2026-02-06 22:50:00 (working tree)
+
+Change:
+- Added JSON preset support for perf baseline seed policy in `diag perf`:
+  - new CLI flag: `--perf-baseline-seed-preset <path>` (repeatable)
+  - preset schema validation: `schema_version=1`, `kind=perf_baseline_seed_policy`
+  - supported fields: optional `default_seed`, required `rules[]` (`scope`, `metric`, `seed`)
+- Policy merge precedence is now explicit:
+  - built-in defaults -> preset rules (CLI order) -> explicit `--perf-baseline-seed` rules
+- Added versioned preset artifact:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`
+- Updated docs/help surfaces:
+  - `apps/fretboard/src/cli.rs` usage + example
+  - `docs/workstreams/perf-baselines/seed-policy-template.md`
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite baseline_threshold_seed_policy_supports_preset_file baseline_threshold_seed_policy_rejects_bad_preset_schema baseline_threshold_seed_policy_cli_overrides_preset_rule baseline_threshold_seed_policy_preset_can_override_default_seed perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Result highlights:
+- Nextest summary: `14 passed, 0 failed` for the targeted policy/perf-threshold test set.
+- New tests cover:
+  - preset parse success
+  - preset schema validation failure
+  - CLI rule overriding preset rule
+  - preset `default_seed` override while preserving built-in resize `p95` default rule
+
+Interpretation:
+- Seed policy is now file-versionable and replayable without code edits.
+- Teams can keep policy profiles in-repo, then layer temporary CLI overrides for experiments while preserving reproducibility.

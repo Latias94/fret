@@ -134,6 +134,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_baseline_out: Option<PathBuf> = None;
     let mut perf_baseline_headroom_pct: u32 = 20;
     let mut perf_baseline_seed_rule_specs: Vec<String> = Vec::new();
+    let mut perf_baseline_seed_preset_paths: Vec<PathBuf> = Vec::new();
     let mut check_idle_no_paint_min: Option<u64> = None;
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
@@ -570,6 +571,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --perf-baseline-seed".to_string());
                 };
                 perf_baseline_seed_rule_specs.push(v);
+                i += 1;
+            }
+            "--perf-baseline-seed-preset" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --perf-baseline-seed-preset".to_string());
+                };
+                perf_baseline_seed_preset_paths.push(PathBuf::from(v));
                 i += 1;
             }
             "--check-idle-no-paint-min" => {
@@ -3502,6 +3511,7 @@ See: `docs/tracy.md`.\n";
             let baseline_seed_policy = build_perf_baseline_seed_policy(
                 &workspace_root,
                 &perf_suite_labels,
+                &perf_baseline_seed_preset_paths,
                 &perf_baseline_seed_rule_specs,
             )?;
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
@@ -8029,6 +8039,12 @@ struct BaselineSeedPolicy {
     rules: Vec<BaselineSeedRule>,
 }
 
+#[derive(Debug, Clone)]
+struct BaselineSeedPreset {
+    default_seed: Option<BaselineSeedKind>,
+    rules: Vec<BaselineSeedRule>,
+}
+
 impl BaselineSeedPolicy {
     fn to_json(&self) -> serde_json::Value {
         serde_json::json!({
@@ -8083,12 +8099,159 @@ fn default_perf_baseline_seed_rules(workspace_root: &Path) -> Vec<BaselineSeedRu
     .collect::<Vec<_>>()
 }
 
+fn load_perf_baseline_seed_preset(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    preset_path: &Path,
+) -> Result<BaselineSeedPreset, String> {
+    let resolved_path = resolve_path(workspace_root, preset_path.to_path_buf());
+    let value = read_json_value(&resolved_path).ok_or_else(|| {
+        format!(
+            "failed to read --perf-baseline-seed-preset `{}`",
+            resolved_path.display()
+        )
+    })?;
+    parse_perf_baseline_seed_preset_json(workspace_root, active_suites, &resolved_path, &value)
+}
+
+fn parse_perf_baseline_seed_preset_json(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    path: &Path,
+    value: &serde_json::Value,
+) -> Result<BaselineSeedPreset, String> {
+    let schema_version = value
+        .get("schema_version")
+        .and_then(|v| v.as_u64())
+        .ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: missing `schema_version`",
+                path.display()
+            )
+        })?;
+    if schema_version != 1 {
+        return Err(format!(
+            "invalid --perf-baseline-seed-preset `{}`: unsupported `schema_version` `{schema_version}` (expected 1)",
+            path.display()
+        ));
+    }
+
+    let kind = value.get("kind").and_then(|v| v.as_str()).ok_or_else(|| {
+        format!(
+            "invalid --perf-baseline-seed-preset `{}`: missing `kind`",
+            path.display()
+        )
+    })?;
+    if kind != "perf_baseline_seed_policy" {
+        return Err(format!(
+            "invalid --perf-baseline-seed-preset `{}`: unsupported `kind` `{kind}` (expected `perf_baseline_seed_policy`)",
+            path.display()
+        ));
+    }
+
+    let default_seed = if let Some(default_seed_value) = value.get("default_seed") {
+        let default_seed_raw = default_seed_value.as_str().ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: `default_seed` must be a string",
+                path.display()
+            )
+        })?;
+        Some(BaselineSeedKind::parse(default_seed_raw).ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: `default_seed` must be one of max|p90|p95",
+                path.display()
+            )
+        })?)
+    } else {
+        None
+    };
+
+    let rules = value
+        .get("rules")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| {
+            format!(
+                "invalid --perf-baseline-seed-preset `{}`: missing `rules` array",
+                path.display()
+            )
+        })?;
+
+    let mut parsed_rules: Vec<BaselineSeedRule> = Vec::new();
+    for (index, rule_value) in rules.iter().enumerate() {
+        let scope = rule_value
+            .get("scope")
+            .or_else(|| rule_value.get("script"))
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: missing `scope` string",
+                    path.display(),
+                    index + 1
+                )
+            })?;
+        let metric = rule_value
+            .get("metric")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: missing `metric` string",
+                    path.display(),
+                    index + 1
+                )
+            })?;
+        let seed = rule_value
+            .get("seed")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: missing `seed` string",
+                    path.display(),
+                    index + 1
+                )
+            })?;
+
+        let spec = format!("{}@{}={}", scope.trim(), metric.trim(), seed.trim());
+        parsed_rules.extend(
+            parse_perf_baseline_seed_rule_spec_with_source(
+                workspace_root,
+                active_suites,
+                spec.as_str(),
+                "preset",
+                "preset-suite",
+            )
+            .map_err(|err| {
+                format!(
+                    "invalid --perf-baseline-seed-preset `{}` rule #{}: {err}",
+                    path.display(),
+                    index + 1
+                )
+            })?,
+        );
+    }
+
+    Ok(BaselineSeedPreset {
+        default_seed,
+        rules: parsed_rules,
+    })
+}
+
 fn build_perf_baseline_seed_policy(
     workspace_root: &Path,
     active_suites: &[&'static str],
+    preset_paths: &[PathBuf],
     specs: &[String],
 ) -> Result<BaselineSeedPolicy, String> {
+    let mut default_seed = BaselineSeedKind::Max;
     let mut rules = default_perf_baseline_seed_rules(workspace_root);
+
+    for preset_path in preset_paths {
+        let preset = load_perf_baseline_seed_preset(workspace_root, active_suites, preset_path)?;
+        if let Some(seed) = preset.default_seed {
+            default_seed = seed;
+        }
+        rules.extend(preset.rules);
+    }
+
     for spec in specs {
         rules.extend(parse_perf_baseline_seed_rule_spec(
             workspace_root,
@@ -8096,8 +8259,9 @@ fn build_perf_baseline_seed_policy(
             spec,
         )?);
     }
+
     Ok(BaselineSeedPolicy {
-        default_seed: BaselineSeedKind::Max,
+        default_seed,
         rules,
     })
 }
@@ -8106,6 +8270,22 @@ fn parse_perf_baseline_seed_rule_spec(
     workspace_root: &Path,
     active_suites: &[&'static str],
     spec: &str,
+) -> Result<Vec<BaselineSeedRule>, String> {
+    parse_perf_baseline_seed_rule_spec_with_source(
+        workspace_root,
+        active_suites,
+        spec,
+        "cli",
+        "cli-suite",
+    )
+}
+
+fn parse_perf_baseline_seed_rule_spec_with_source(
+    workspace_root: &Path,
+    active_suites: &[&'static str],
+    spec: &str,
+    source: &'static str,
+    suite_source: &'static str,
 ) -> Result<Vec<BaselineSeedRule>, String> {
     let (lhs, seed_raw) = spec.split_once('=').ok_or_else(|| {
         format!(
@@ -8141,7 +8321,7 @@ fn parse_perf_baseline_seed_rule_spec(
 
     let mut targets: Vec<(String, &'static str)> = Vec::new();
     if scope == "*" {
-        targets.push(("*".to_string(), "cli"));
+        targets.push(("*".to_string(), source));
     } else if scope == "this-suite" {
         if active_suites.is_empty() {
             return Err(
@@ -8153,7 +8333,7 @@ fn parse_perf_baseline_seed_rule_spec(
                 for script in scripts {
                     targets.push((
                         normalize_script_match_key(workspace_root, script),
-                        "cli-suite",
+                        suite_source,
                     ));
                 }
             }
@@ -8168,18 +8348,18 @@ fn parse_perf_baseline_seed_rule_spec(
         for script in scripts {
             targets.push((
                 normalize_script_match_key(workspace_root, script),
-                "cli-suite",
+                suite_source,
             ));
         }
     } else if let Some(scripts) = perf_suite_scripts_by_name(scope) {
         for script in scripts {
             targets.push((
                 normalize_script_match_key(workspace_root, script),
-                "cli-suite",
+                suite_source,
             ));
         }
     } else {
-        targets.push((normalize_script_match_key(workspace_root, scope), "cli"));
+        targets.push((normalize_script_match_key(workspace_root, scope), source));
     }
 
     let mut rules: Vec<BaselineSeedRule> = Vec::new();
@@ -8580,7 +8760,7 @@ mod tests {
 
     #[test]
     fn baseline_threshold_seed_policy_for_resize_script() {
-        let policy = build_perf_baseline_seed_policy(Path::new("."), &[], &[]).unwrap();
+        let policy = build_perf_baseline_seed_policy(Path::new("."), &[], &[], &[]).unwrap();
         assert_eq!(
             baseline_threshold_seed_for_metric(
                 &policy,
@@ -8621,6 +8801,7 @@ mod tests {
         let policy = build_perf_baseline_seed_policy(
             Path::new("."),
             &[],
+            &[],
             &[
                 "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90"
                     .to_string(),
@@ -8645,6 +8826,7 @@ mod tests {
         let err = build_perf_baseline_seed_policy(
             Path::new("."),
             &[],
+            &[],
             &[
                 "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p80"
                     .to_string(),
@@ -8659,6 +8841,7 @@ mod tests {
         let policy = build_perf_baseline_seed_policy(
             Path::new("."),
             &["ui-gallery-steady"],
+            &[],
             &["ui-gallery-steady@top_total_time_us=p90".to_string()],
         )
         .unwrap();
@@ -8691,6 +8874,7 @@ mod tests {
         let policy = build_perf_baseline_seed_policy(
             Path::new("."),
             &["ui-gallery-steady"],
+            &[],
             &["this-suite@top_total_time_us=p90".to_string()],
         )
         .unwrap();
@@ -8712,12 +8896,173 @@ mod tests {
         let err = build_perf_baseline_seed_policy(
             Path::new("."),
             &[],
+            &[],
             &["this-suite@top_total_time_us=p90".to_string()],
         )
         .unwrap_err();
         assert!(err.contains("requires a named perf suite"));
     }
 
+    #[test]
+    fn baseline_threshold_seed_policy_supports_preset_file() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_ok");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 1,
+            "kind": "perf_baseline_seed_policy",
+            "default_seed": "max",
+            "rules": [
+                {
+                    "scope": "ui-gallery-steady",
+                    "metric": "top_total_time_us",
+                    "seed": "p90"
+                },
+                {
+                    "scope": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                    "metric": "top_layout_time_us",
+                    "seed": "p95"
+                }
+            ]
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[preset_path],
+            &[],
+        )
+        .unwrap();
+
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_layout_time_us",
+                5400,
+                5100,
+                5200,
+            ),
+            (5200, "p95".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_rejects_bad_preset_schema() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_bad_schema");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 2,
+            "kind": "perf_baseline_seed_policy",
+            "rules": []
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let err = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[preset_path],
+            &[],
+        )
+        .unwrap_err();
+        assert!(err.contains("unsupported `schema_version`"));
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_cli_overrides_preset_rule() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_cli_override");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 1,
+            "kind": "perf_baseline_seed_policy",
+            "rules": [
+                {
+                    "scope": "ui-gallery-steady",
+                    "metric": "top_total_time_us",
+                    "seed": "p95"
+                }
+            ]
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &[preset_path],
+            &["this-suite@top_total_time_us=p90".to_string()],
+        )
+        .unwrap();
+
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_preset_can_override_default_seed() {
+        let out_dir = tmp_out_dir("baseline_seed_preset_default_seed");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let preset_path = out_dir.join("seed-policy.json");
+        let preset = json!({
+            "schema_version": 1,
+            "kind": "perf_baseline_seed_policy",
+            "default_seed": "p90",
+            "rules": []
+        });
+        std::fs::write(&preset_path, serde_json::to_vec_pretty(&preset).unwrap())
+            .expect("seed preset write should succeed");
+
+        let policy =
+            build_perf_baseline_seed_policy(Path::new("."), &[], &[preset_path], &[]).unwrap();
+
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "pointer_move_max_dispatch_time_us",
+                3673,
+                3400,
+                3200,
+            ),
+            (3400, "p90".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "top_total_time_us",
+                15763,
+                15683,
+                15723,
+            ),
+            (15723, "p95".to_string())
+        );
+    }
     #[test]
     fn bundle_stats_tracks_hover_declarative_layout_invalidations() {
         let bundle = json!({

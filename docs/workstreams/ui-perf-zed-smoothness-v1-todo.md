@@ -523,6 +523,11 @@ Perf acceptance:
   - Example: `--perf-baseline-seed ui-gallery-steady@top_total_time_us=p90`.
   - Template doc: `docs/workstreams/perf-baselines/seed-policy-template.md`.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 21:35.
+- [x] Add versioned JSON presets for baseline seed policies.
+  - New flag: `--perf-baseline-seed-preset <path>` (repeatable; merge order follows CLI argument order).
+  - Merge precedence: built-in defaults -> preset rules -> explicit `--perf-baseline-seed` overrides.
+  - Added preset example: `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 22:50.
 - [x] Coalesce window resizes to once per frame in the desktop runner.
   - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).
   - Commit: `beb2fa315`
