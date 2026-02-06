@@ -12,6 +12,7 @@ mod combobox;
 mod command;
 mod context_menu;
 mod data_table;
+mod date_picker;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -86,6 +87,14 @@ pub(super) fn preview_data_table(
     state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
     data_table::preview_data_table(cx, state)
+}
+pub(super) fn preview_date_picker(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<Date>>,
+) -> Vec<AnyElement> {
+    date_picker::preview_date_picker(cx, open, month, selected)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

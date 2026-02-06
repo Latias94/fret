@@ -16213,19 +16213,7 @@ fn preview_date_picker(
     month: Model<fret_ui_headless::calendar::CalendarMonth>,
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
-    let picker = shadcn::DatePicker::new(open, month, selected.clone())
-        .placeholder("Pick a date")
-        .into_element(cx);
-
-    let selected_text: Arc<str> = cx
-        .app
-        .models()
-        .read(&selected, |v| v.map(|d| Arc::<str>::from(d.to_string())))
-        .ok()
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    vec![picker, cx.text(format!("Selected: {selected_text}"))]
+    pages::preview_date_picker(cx, open, month, selected)
 }
 
 fn preview_resizable(
