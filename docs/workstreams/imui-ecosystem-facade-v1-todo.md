@@ -114,8 +114,9 @@ Exit criteria:
 
 - Common controls are authorable in a single immediate-mode style, backed by canonical components.
 
-- [~] IMUIECO-controls-020 Button/checkbox/toggle wrappers that return `Response` without duplicating policy.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{button,checkbox_model}`)
+- [x] IMUIECO-controls-020 Button/checkbox/toggle wrappers that return `Response` without duplicating policy.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ToggleOptions`, `UiWriterImUiFacadeExt::{button,checkbox_model,toggle_model}`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`checkbox_changed_is_delivered_once_and_updates_model`, `toggle_model_reports_changed_once_after_click`).
 - [x] IMUIECO-controls-021 Input/textarea wrappers (coordinate with the code editor ecosystem; don't duplicate).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`InputTextOptions`, `TextAreaOptions`, `UiWriterImUiFacadeExt::{input_text_model,textarea_model}`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`input_text_model_reports_changed_once_after_text_input`, `textarea_model_reports_changed_once_after_text_input`).

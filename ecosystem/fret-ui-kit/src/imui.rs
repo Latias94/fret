@@ -476,6 +476,8 @@ impl Default for SwitchOptions {
     }
 }
 
+pub type ToggleOptions = SwitchOptions;
+
 #[derive(Debug, Clone)]
 pub struct SliderOptions {
     pub enabled: bool,
@@ -1252,6 +1254,26 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     ) -> ResponseExt {
         let focusable = options.enabled && options.focusable;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::textarea_model_ex(self, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn toggle_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.toggle_model_ex(label, model, ToggleOptions::default())
+    }
+
+    pub fn toggle_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: ToggleOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::toggle_model_ex(self, label, model, options);
         self.record_focusable(resp.id, focusable);
         resp
     }
@@ -2912,6 +2934,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         response
     }
 
+    fn toggle_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.toggle_model_ex(label, model, ToggleOptions::default())
+    }
+
+    fn toggle_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: ToggleOptions,
+    ) -> ResponseExt {
+        self.switch_model_ex(label, model, options)
+    }
+
     fn switch_model(
         &mut self,
         label: impl Into<Arc<str>>,
@@ -2938,11 +2977,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let mut props = PressableProps::default();
             props.enabled = options.enabled;
             props.focusable = options.focusable;
-            props.a11y.test_id = options.test_id.clone();
             props.a11y = crate::primitives::switch::switch_a11y(
                 options.a11y_label.clone().or_else(|| Some(label.clone())),
                 value,
             );
+            props.a11y.test_id = options.test_id.clone();
 
             cx.pressable_with_id(props, |cx, state, id| {
                 cx.pressable_clear_on_pointer_down();
@@ -3004,13 +3043,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let mut props = PressableProps::default();
             props.enabled = options.enabled;
             props.focusable = options.focusable;
-            props.a11y.test_id = options.test_id.clone();
             props.layout.size.width = Length::Fill;
             props.layout.size.height = Length::Px(Px(24.0));
 
             props.a11y = PressableA11y {
                 role: Some(SemanticsRole::Slider),
                 label: options.a11y_label.clone().or_else(|| Some(label.clone())),
+                test_id: options.test_id.clone(),
                 ..Default::default()
             };
 

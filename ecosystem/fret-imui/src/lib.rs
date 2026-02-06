@@ -186,7 +186,7 @@ mod tests {
     use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
     use fret_ui_kit::imui::{
         GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions, PopupMenuOptions,
-        ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, VerticalOptions,
+        ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, ToggleOptions, VerticalOptions,
     };
 
     #[derive(Default)]
@@ -3906,6 +3906,137 @@ mod tests {
         );
         assert_eq!(changed.borrow().get(&1).copied().unwrap_or(false), false);
         assert_eq!(changed.borrow().get(&2).copied().unwrap_or(false), false);
+    }
+
+    #[test]
+    fn toggle_model_reports_changed_once_after_click() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(false);
+
+        let changed = Rc::new(Cell::new(false));
+        let value = Rc::new(Cell::new(false));
+
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-toggle",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.toggle_model_ex(
+                            "Flag",
+                            &model,
+                            ToggleOptions {
+                                test_id: Some(Arc::from("imui-toggle")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(!value.get());
+
+        let at = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-toggle");
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-toggle",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.toggle_model_ex(
+                            "Flag",
+                            &model,
+                            ToggleOptions {
+                                test_id: Some(Arc::from("imui-toggle")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert!(value.get());
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-toggle",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.toggle_model_ex(
+                            "Flag",
+                            &model,
+                            ToggleOptions {
+                                test_id: Some(Arc::from("imui-toggle")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(value.get());
     }
 
     #[test]
