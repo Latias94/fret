@@ -408,6 +408,54 @@ impl Default for MenuItemOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct InputTextOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub a11y_role: Option<SemanticsRole>,
+    pub placeholder: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub submit_command: Option<fret_runtime::CommandId>,
+    pub cancel_command: Option<fret_runtime::CommandId>,
+}
+
+impl Default for InputTextOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            a11y_role: Some(SemanticsRole::TextField),
+            placeholder: None,
+            test_id: None,
+            submit_command: None,
+            cancel_command: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TextAreaOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub min_height: Px,
+}
+
+impl Default for TextAreaOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            min_height: Px(80.0),
+        }
+    }
+}
+
 #[derive(Clone)]
 struct PopupStoreState {
     open: fret_runtime::Model<bool>,
@@ -475,6 +523,46 @@ fn point_sub(a: Point, b: Point) -> Point {
 
 fn point_add(a: Point, b: Point) -> Point {
     Point::new(Px(a.x.0 + b.x.0), Px(a.y.0 + b.y.0))
+}
+
+fn text_model_changed_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    current: &str,
+) -> bool {
+    cx.with_state_for(
+        id,
+        || current.to_string(),
+        |previous| {
+            let changed = previous != current;
+            if changed {
+                previous.clear();
+                previous.push_str(current);
+            }
+            changed
+        },
+    )
+}
+
+fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAreaStyle {
+    let input_style = crate::recipes::input::default_text_input_style(theme);
+    let mut preedit_bg_color = input_style.selection_color;
+    preedit_bg_color.a = (preedit_bg_color.a * 0.35).clamp(0.0, 1.0);
+
+    fret_ui::TextAreaStyle {
+        padding_x: input_style.padding.left,
+        padding_y: input_style.padding.top,
+        background: input_style.background,
+        border: input_style.border,
+        border_color: input_style.border_color,
+        focus_ring: input_style.focus_ring,
+        corner_radii: input_style.corner_radii,
+        text_color: input_style.text_color,
+        selection_color: input_style.selection_color,
+        caret_color: input_style.caret_color,
+        preedit_bg_color,
+        preedit_underline_color: input_style.preedit_color,
+    }
 }
 
 fn arm_long_press_timer_for(
@@ -726,6 +814,36 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     ) -> ResponseExt {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_close_popup(self, popup_id, label);
         self.record_focusable(resp.id, true);
+        resp
+    }
+
+    pub fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.input_text_model_ex(model, InputTextOptions::default())
+    }
+
+    pub fn input_text_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: InputTextOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::input_text_model_ex(self, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn textarea_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.textarea_model_ex(model, TextAreaOptions::default())
+    }
+
+    pub fn textarea_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: TextAreaOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::textarea_model_ex(self, model, options);
+        self.record_focusable(resp.id, focusable);
         resp
     }
 }
@@ -2262,6 +2380,95 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     Arc::from("[ ] ")
                 };
                 vec![cx.text(Arc::from(format!("{prefix}{label}")))]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn input_text_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.input_text_model_ex(model, InputTextOptions::default())
+    }
+
+    fn input_text_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: InputTextOptions,
+    ) -> ResponseExt {
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let element = self.with_cx_mut(|cx| {
+            cx.scope(|cx| {
+                let id = cx.root_id();
+                let current = cx
+                    .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                    .unwrap_or_default();
+
+                response.id = Some(id);
+                response.core.focused = cx.is_focused_element(id);
+                response.core.changed = text_model_changed_for(cx, id, &current);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                let theme = fret_ui::Theme::global(&*cx.app).clone();
+                let mut props = fret_ui::element::TextInputProps::new(model.clone());
+                props.enabled = options.enabled;
+                props.focusable = options.focusable;
+                props.a11y_label = options.a11y_label.clone();
+                props.a11y_role = options.a11y_role;
+                props.test_id = options.test_id.clone();
+                props.placeholder = options.placeholder.clone();
+                props.submit_command = options.submit_command.clone();
+                props.cancel_command = options.cancel_command.clone();
+                props.chrome = crate::recipes::input::default_text_input_style(&theme);
+
+                let mut element = cx.text_input(props);
+                element.id = id;
+                element
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn textarea_model(&mut self, model: &fret_runtime::Model<String>) -> ResponseExt {
+        self.textarea_model_ex(model, TextAreaOptions::default())
+    }
+
+    fn textarea_model_ex(
+        &mut self,
+        model: &fret_runtime::Model<String>,
+        options: TextAreaOptions,
+    ) -> ResponseExt {
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let element = self.with_cx_mut(|cx| {
+            cx.scope(|cx| {
+                let id = cx.root_id();
+                let current = cx
+                    .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                    .unwrap_or_default();
+
+                response.id = Some(id);
+                response.core.focused = cx.is_focused_element(id);
+                response.core.changed = text_model_changed_for(cx, id, &current);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                let theme = fret_ui::Theme::global(&*cx.app).clone();
+                let mut props = fret_ui::element::TextAreaProps::new(model.clone());
+                props.enabled = options.enabled;
+                props.focusable = options.focusable;
+                props.a11y_label = options.a11y_label.clone();
+                props.test_id = options.test_id.clone();
+                props.min_height = options.min_height;
+                props.chrome = default_text_area_style_from_theme(&theme);
+
+                let mut element = cx.text_area(props);
+                element.id = id;
+                element
             })
         });
 

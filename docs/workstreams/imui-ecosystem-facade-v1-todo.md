@@ -116,7 +116,9 @@ Exit criteria:
 
 - [~] IMUIECO-controls-020 Button/checkbox/toggle wrappers that return `Response` without duplicating policy.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{button,checkbox_model}`)
-- [ ] IMUIECO-controls-021 Input/textarea wrappers (coordinate with the code editor ecosystem; don't duplicate).
+- [x] IMUIECO-controls-021 Input/textarea wrappers (coordinate with the code editor ecosystem; don't duplicate).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`InputTextOptions`, `TextAreaOptions`, `UiWriterImUiFacadeExt::{input_text_model,textarea_model}`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`input_text_model_reports_changed_once_after_text_input`, `textarea_model_reports_changed_once_after_text_input`).
 - [ ] IMUIECO-controls-022 Slider/select/switch wrappers (shadcn-aligned when enabled).
 - [ ] IMUIECO-api-023 Container helpers (`horizontal`, `vertical`, `grid`, `scroll`) that prefer `UiBuilder` patch vocabulary.
 - [ ] IMUIECO-api-024 `push_id` / scoped identity helpers mirroring egui/imgui patterns.
