@@ -179,14 +179,13 @@ pub(crate) fn insert_graph_view(
     graph_value: Graph,
 ) -> (Model<Graph>, Model<NodeGraphViewState>) {
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(host);
     (graph, view)
 }
 pub(crate) fn make_host_graph_view(
     graph_value: Graph,
 ) -> (TestUiHostImpl, Model<Graph>, Model<NodeGraphViewState>) {
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
     (host, graph, view)
 }

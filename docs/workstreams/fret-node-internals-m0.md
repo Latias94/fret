@@ -284,6 +284,9 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/color_mode_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/selection_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/group_preview_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs` (`insert_graph_view` / `make_host_graph_view` route through `insert_view`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/threshold_zoom_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
@@ -370,5 +373,4 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_resize_preview_conformance.rs`
-
 
