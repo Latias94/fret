@@ -56,7 +56,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] accordion — examples mirrored; parity still under audit (`apps/fret-ui-gallery/src/ui.rs::preview_accordion`)
 - [ ] alert
 - [~] alert-dialog - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs`)
-- [ ] aspect-ratio
+- [~] aspect-ratio - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs`)
 - [~] avatar — base demo present; still missing upstream examples (badge/group/sizes/dropdown/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_avatar`, `ecosystem/fret-ui-shadcn/src/avatar.rs`)
 - [~] badge — examples mirrored; missing upstream variants (`apps/fret-ui-gallery/src/ui.rs::preview_badge`)
 - [ ] breadcrumb

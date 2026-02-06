@@ -2,6 +2,7 @@ use super::*;
 
 mod alert;
 mod alert_dialog;
+mod aspect_ratio;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -16,6 +17,10 @@ pub(super) fn preview_alert_dialog(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     alert_dialog::preview_alert_dialog(cx, open)
+}
+
+pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    aspect_ratio::preview_aspect_ratio(cx)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

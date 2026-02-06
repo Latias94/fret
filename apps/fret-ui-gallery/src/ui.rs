@@ -6591,21 +6591,7 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-    let muted = theme.color_required("muted");
-    let child = cx.container(
-        fret_ui::element::ContainerProps {
-            background: Some(muted),
-            ..Default::default()
-        },
-        |cx| vec![cx.text("16:9")],
-    );
-
-    vec![
-        shadcn::AspectRatio::new(16.0 / 9.0, child)
-            .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
-            .into_element(cx),
-    ]
+    pages::preview_aspect_ratio(cx)
 }
 
 fn preview_breadcrumb(
