@@ -3770,21 +3770,26 @@ impl<H: UiHost> UiTree<H> {
     fn mark_view_cache_layout_dirty_subtree(&mut self, root: NodeId) {
         let mut stack: Vec<NodeId> = vec![root];
         while let Some(id) = stack.pop() {
-            let Some(n) = self.nodes.get_mut(id) else {
-                continue;
+            let (prev, next, layout_before, layout_after) = {
+                let Some(n) = self.nodes.get_mut(id) else {
+                    continue;
+                };
+                let prev = n.invalidation;
+                let layout_before = n.invalidation.layout;
+                n.invalidation.mark(Invalidation::Layout);
+                let next = n.invalidation;
+                let layout_after = n.invalidation.layout;
+                for &child in &n.children {
+                    stack.push(child);
+                }
+                (prev, next, layout_before, layout_after)
             };
-            let prev = n.invalidation;
-            let layout_before = n.invalidation.layout;
-            n.invalidation.mark(Invalidation::Layout);
             record_layout_invalidation_transition(
                 &mut self.layout_invalidations_count,
                 layout_before,
-                n.invalidation.layout,
+                layout_after,
             );
-            for &child in &n.children {
-                stack.push(child);
-            }
-            self.update_invalidation_counters(prev, n.invalidation);
+            self.update_invalidation_counters(prev, next);
         }
     }
 

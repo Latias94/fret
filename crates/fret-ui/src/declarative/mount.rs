@@ -568,7 +568,7 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
                 let root_reachable_from_layer_roots =
                     reachable_from_layers_computed && reachable_from_layers.contains(&node);
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
@@ -1044,7 +1044,7 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
                 let root_reachable_from_layer_roots =
                     reachable_from_layers_computed && reachable_from_layers.contains(&node);
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
@@ -1618,7 +1618,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                 let node = window_frame
                     .instances
                     .iter()
-                    .find_map(|(&node, record)| (record.element == element).then_some(node))?;
+                    .find_map(|(node, record)| (record.element == element).then_some(node))?;
                 window_state.set_node_entry(
                     element,
                     NodeEntry {

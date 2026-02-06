@@ -2802,7 +2802,7 @@ impl<H: UiHost> UiTree<H> {
             self.mark_invalidation_dedup_with_source(
                 prev_node,
                 Invalidation::Paint,
-                &mut invalidation_visited,
+                invalidation_visited,
                 UiDebugInvalidationSource::Other,
             );
         }

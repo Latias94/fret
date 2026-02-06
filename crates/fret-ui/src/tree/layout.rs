@@ -2442,7 +2442,6 @@ impl<H: UiHost> UiTree<H> {
                     self.layout_invalidations_count =
                         self.layout_invalidations_count.saturating_sub(1);
                 }
-                let prev = n.invalidation;
                 n.invalidation.layout = false;
                 (prev, n.invalidation)
             }) {

@@ -182,7 +182,7 @@ pub(crate) fn with_element_record_for_node<H: UiHost, R>(
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&node))
+            .and_then(|w| w.instances.get(node))
             .map(f)
     })
 }
