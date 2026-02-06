@@ -4459,3 +4459,42 @@ target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scro
 Result:
 - PASS
 - Evidence bundle: `target/fret-diag-codex-scroll-offset-stable-v1b/1770359181990-ui-gallery-window-resize-scroll-offset-stable/bundle.json`
+
+## 2026-02-06 15:01:00 (correctness gate; commits `8375df091`, `e20637f92`)
+
+Change:
+- Export per-frame scrollbar telemetry in UI diagnostics bundles (`debug.scrollbars[]`):
+  - `node`, `element`, `axis`, `scroll_target`, `offset_{x,y}`, `viewport_{w,h}`, `content_{w,h}`,
+    `track`, `thumb`, `hovered`, `dragging`.
+- Add a post-run diagnostics gate to ensure scrollbar thumb geometry remains valid:
+  - `fretboard diag run ... --check-scrollbar-thumb-valid all`
+- Add a dedicated correctness repro script covering the resize stress sequence:
+  - `tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json`
+
+Why:
+- The “deferred unbounded scroll probe” resize optimization is intentionally allowed to lag
+  content extents while the viewport is changing.
+- We need a scripted gate that catches catastrophic scrollbar thumb glitches (negative sizes,
+  thumb escaping the track) while we iterate on resize policy.
+
+Probe (single script; gate pass):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json`
+- Gate: `--check-scrollbar-thumb-valid all`
+
+Command:
+```bash
+target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scrollbar-thumb-valid.json \
+  --dir target/fret-diag-codex-scrollbar-thumb-valid-v1b \
+  --timeout-ms 300000 --poll-ms 50 \
+  --check-scrollbar-thumb-valid all \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Result:
+- PASS
+- Evidence bundle: `target/fret-diag-codex-scrollbar-thumb-valid-v1b/1770361216367-ui-gallery-window-resize-scrollbar-thumb-valid/bundle.json`

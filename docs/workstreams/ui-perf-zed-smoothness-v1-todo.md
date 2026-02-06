@@ -73,6 +73,9 @@ Conventions:
   - Implemented by `perf(fret-ui): defer unbounded scroll probe on resize` (commit `05d2d56c`).
   - Env: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
   - Debounce: `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES` (default: 2)
+- [x] Add correctness gates for the resize + scroll probe policy:
+  - Scroll offset stability gate: `--check-scroll-offset-stable <test_id>` (commit `6c248d9e1`).
+  - Scrollbar thumb geometry validity gate: `--check-scrollbar-thumb-valid all` (commit `e20637f92`).
 - [ ] Decide whether scroll unbounded-probe deferral should become the default (remove env gating) and
   update the canonical perf suite env set accordingly.
 - [x] Export view-cache reuse “miss reasons” as perf-visible counters (so regressions are explainable).
