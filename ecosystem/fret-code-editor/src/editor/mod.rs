@@ -368,6 +368,17 @@ impl CodeEditorHandle {
         });
     }
 
+    pub fn set_preedit_debug(&self, text: impl Into<String>, cursor: Option<(usize, usize)>) {
+        let text = text.into();
+        let mut st = self.state.borrow_mut();
+        if text.is_empty() {
+            st.preedit = None;
+        } else {
+            st.preedit = Some(PreeditState { text, cursor });
+        }
+        st.caret_preferred_x = None;
+    }
+
     pub fn text_boundary_mode(&self) -> TextBoundaryMode {
         self.state.borrow().active_text_boundary_mode
     }
