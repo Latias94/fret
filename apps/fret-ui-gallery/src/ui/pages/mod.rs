@@ -18,6 +18,7 @@ mod field;
 mod form;
 mod hover_card;
 mod input;
+mod input_group;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -135,6 +136,10 @@ pub(super) fn preview_input(
     value: Model<String>,
 ) -> Vec<AnyElement> {
     input::preview_input(cx, value)
+}
+
+pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    input_group::preview_input_group(cx)
 }
 
 pub(super) fn preview_drawer(

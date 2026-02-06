@@ -7617,32 +7617,7 @@ fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct InputGroupModels {
-        value: Option<Model<String>>,
-    }
-
-    let value = cx.with_state(InputGroupModels::default, |st| st.value.clone());
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(InputGroupModels::default, |st| {
-                st.value = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let group = shadcn::InputGroup::new(value)
-        .a11y_label("Search")
-        .leading([shadcn::InputGroupText::new("Search").into_element(cx)])
-        .trailing([shadcn::InputGroupButton::new("Go")
-            .on_click(CMD_APP_OPEN)
-            .into_element(cx)])
-        .into_element(cx);
-
-    vec![group]
+    pages::preview_input_group(cx)
 }
 
 fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
