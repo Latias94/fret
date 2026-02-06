@@ -32,6 +32,7 @@ Status snapshot (2026-02-05):
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- State integration note: `docs/workstreams/imui-state-integration-v1.md`
 - imui authoring facade v2 (implemented): `docs/workstreams/imui-authoring-facade-v2.md`
 - Unified authoring builder surface (ADR): `docs/adr/0175-unified-authoring-builder-surface-v1.md`
 - Docking + multi-window parity (ImGui-aligned): `docs/workstreams/docking-multiwindow-imgui-parity.md`

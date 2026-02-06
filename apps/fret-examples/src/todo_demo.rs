@@ -6,6 +6,7 @@ use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_shadcn::state::{query_error_alert, query_status_badge};
 
 const TEST_ID_INPUT: &str = "todo-input";
 const TEST_ID_ADD: &str = "todo-add";
@@ -254,6 +255,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .cloned()
         .unwrap_or_else(QueryState::<TipData>::default);
 
+    let tip_status = query_status_badge(cx, &tip_state);
     let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
         QueryStatus::Idle | QueryStatus::Loading => {
             (Arc::from("Tip: loading..."), "muted-foreground")
@@ -276,9 +278,29 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         }
     };
 
-    let tip_line = ui::text(cx, tip_text)
-        .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
-        .into_element(cx);
+    let tip_line = ui::h_flex(cx, |_cx| {
+        [
+            tip_status,
+            ui::text(_cx, tip_text)
+                .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
+                .into_element(_cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .w_full()
+    .into_element(cx);
+
+    let tip_error = query_error_alert(cx, &tip_state);
+    let tip_block = ui::v_flex_build(cx, |_cx, out| {
+        out.push(tip_line);
+        if let Some(alert) = tip_error {
+            out.push(alert);
+        }
+    })
+    .gap(Space::N2)
+    .w_full()
+    .into_element(cx);
 
     let add_enabled = !draft_value.trim().is_empty();
     let add_cmd = st.router.cmd(Msg::Add);
@@ -388,7 +410,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let summary = ui::text(
         cx,
         format!(
-            "{} total 璺?{} active 璺?{} completed",
+            "{} total | {} active | {} completed",
             derived.total, derived.active, derived.completed
         ),
     )
@@ -406,7 +428,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
                 .gap(Space::N2)
                 .into_element(cx),
             summary,
-            tip_line,
+            tip_block,
         ])
         .into_element(cx),
         shadcn::CardContent::new([ui::v_flex(cx, |_cx| [input_row, filter_row, rows])

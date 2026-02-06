@@ -108,6 +108,24 @@ struct TodoWindowState {
 }
 ```
 
+
+## Three-layer state split (recommended)
+
+The official baseline (including `apps/fret-examples/src/todo_demo.rs`) uses an explicit 3-layer model:
+
+1. Local mutable state (`Model<T>`):
+   - canonical source for user edits and UI interaction state (`draft`, `todos`, `filter`).
+2. Derived state (`fret-selector`):
+   - memoized projections/counters/filtered views derived from models.
+3. Async resource state (`fret-query`):
+   - loading/error/success/cache lifecycle for remote or background resources.
+
+Boundary rule:
+
+- keep domain mutations in typed command handlers,
+- keep selector/query as read-side helpers,
+- pass plain values/snapshots into components whenever practical.
+
 ## Commands (UI -> app logic)
 
 Use typed messages as the default boundary between UI intents and app mutations:

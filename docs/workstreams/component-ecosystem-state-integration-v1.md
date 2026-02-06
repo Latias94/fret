@@ -10,6 +10,7 @@ Related:
 - `docs/adr/0066-fret-ui-runtime-contract-surface.md`
 - `docs/adr/0051-model-observation-and-invalidation-contract.md`
 - `docs/workstreams/imui-ecosystem-facade-v1.md`
+- `docs/workstreams/imui-state-integration-v1.md`
 
 This document answers a practical question for ecosystem authors:
 
@@ -314,3 +315,16 @@ Recipe-layer adapter sample (optional, feature-gated):
 
 This keeps primitive contracts state-stack agnostic while giving official recipes a low-friction,
 opt-in state integration path.
+
+## 14) imui compatibility landing (service-first)
+
+The immediate-mode compatibility guidance is now captured in:
+
+- `docs/workstreams/imui-state-integration-v1.md`
+
+Scope of that landing note:
+
+- keep `imui` core APIs state-stack agnostic,
+- orchestrate selector/query on the host side,
+- pass plain snapshots into immediate draws,
+- include practical integration scenarios (`reqwest`, `sqlx`, stream pipelines).

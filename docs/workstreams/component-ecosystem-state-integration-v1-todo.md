@@ -91,8 +91,10 @@ Exit criteria:
 - immediate-mode wrappers can consume query/selector outputs via service-first integration,
 - no hook-only requirement leaks into `imui` core abstractions.
 
-- [ ] CSTATE-imui-030 Add a short compatibility note to the `imui` ecosystem workstream.
-- [ ] CSTATE-imui-031 Add one sample showing host-side query/selector orchestration feeding immediate draws.
+- [x] CSTATE-imui-030 Add a short compatibility note to the `imui` ecosystem workstream.
+  - Evidence: `docs/workstreams/imui-state-integration-v1.md`
+- [x] CSTATE-imui-031 Add one sample showing host-side query/selector orchestration feeding immediate draws.
+  - Evidence: `docs/workstreams/imui-state-integration-v1.md` ("Host-side orchestration pattern")
 - [ ] CSTATE-imui-032 Verify typed command routing guidance is mirrored in immediate-mode examples.
 
 ---
@@ -103,7 +105,9 @@ Exit criteria:
 
 - at least one official demo and one scaffold template reflect the final guidance.
 
-- [ ] CSTATE-demo-040 Update `todo_demo` narrative/docs to explicitly call out the three-layer state split.
+- [x] CSTATE-demo-040 Update `todo_demo` narrative/docs to explicitly call out the three-layer state split.
+  - Evidence: `docs/examples/todo-app-golden-path.md` ("Three-layer state split")
+  - Evidence: `apps/fret-examples/src/todo_demo.rs`
 - [ ] CSTATE-demo-041 Add/refresh one recipe-heavy example that uses optional selector/query adapters.
 - [ ] CSTATE-demo-042 Ensure scaffold docs point to state integration guidance and adapter policy.
 
