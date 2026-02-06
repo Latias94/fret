@@ -1293,6 +1293,8 @@ pub(super) struct PerfThresholds {
     pub(super) max_pointer_move_dispatch_us: Option<u64>,
     pub(super) max_pointer_move_hit_test_us: Option<u64>,
     pub(super) max_pointer_move_global_changes: Option<u64>,
+    pub(super) min_run_paint_cache_hit_test_only_replay_allowed_max: Option<u64>,
+    pub(super) max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: Option<u64>,
 }
 
 impl PerfThresholds {
@@ -1303,6 +1305,12 @@ impl PerfThresholds {
             || self.max_pointer_move_dispatch_us.is_some()
             || self.max_pointer_move_hit_test_us.is_some()
             || self.max_pointer_move_global_changes.is_some()
+            || self
+                .min_run_paint_cache_hit_test_only_replay_allowed_max
+                .is_some()
+            || self
+                .max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
+                .is_some()
     }
 }
 
@@ -1400,6 +1408,14 @@ pub(super) fn read_perf_baseline_file(
             max_pointer_move_global_changes: t
                 .and_then(|m| m.get("max_pointer_move_global_changes"))
                 .and_then(|v| v.as_u64()),
+            min_run_paint_cache_hit_test_only_replay_allowed_max: t
+                .and_then(|m| m.get("min_run_paint_cache_hit_test_only_replay_allowed_max"))
+                .and_then(|v| v.as_u64()),
+            max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max: t
+                .and_then(|m| {
+                    m.get("max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max")
+                })
+                .and_then(|v| v.as_u64()),
         };
 
         thresholds_by_script.insert(script.to_string(), thresholds);
@@ -1414,6 +1430,15 @@ pub(super) fn read_perf_baseline_file(
 pub(super) fn apply_perf_baseline_headroom(value_us: u64, headroom_pct: u32) -> u64 {
     let pct = (headroom_pct as u64).min(10_000);
     value_us.saturating_mul(100 + pct).saturating_add(99) / 100
+}
+
+pub(super) fn apply_perf_baseline_floor(value: u64, headroom_pct: u32) -> u64 {
+    if value == 0 {
+        return 0;
+    }
+    let pct = (headroom_pct as u64).min(95);
+    let floored = value.saturating_mul(100 - pct) / 100;
+    floored.max(1)
 }
 
 pub(super) fn apply_perf_baseline_headroom_with_slack_and_quantum(
@@ -1449,7 +1474,7 @@ pub(super) fn resolve_threshold(
 
 #[cfg(test)]
 mod tests {
-    use super::apply_perf_baseline_headroom_with_slack_and_quantum;
+    use super::{apply_perf_baseline_floor, apply_perf_baseline_headroom_with_slack_and_quantum};
 
     #[test]
     fn perf_baseline_headroom_with_slack_and_quantum_is_stable_for_small_values() {
@@ -1472,6 +1497,13 @@ mod tests {
             0
         );
     }
+
+    #[test]
+    fn perf_baseline_floor_preserves_non_zero_signal() {
+        assert_eq!(apply_perf_baseline_floor(17, 20), 13);
+        assert_eq!(apply_perf_baseline_floor(1, 20), 1);
+        assert_eq!(apply_perf_baseline_floor(0, 20), 0);
+    }
 }
 
 pub(super) fn scan_perf_threshold_failures(
@@ -1485,6 +1517,8 @@ pub(super) fn scan_perf_threshold_failures(
     max_pointer_move_dispatch_time_us: u64,
     max_pointer_move_hit_test_time_us: u64,
     max_pointer_move_global_changes: u64,
+    max_run_paint_cache_hit_test_only_replay_allowed: u64,
+    max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch: u64,
 ) -> Vec<serde_json::Value> {
     let mut out: Vec<serde_json::Value> = Vec::new();
     let (threshold_total, source_total) =
@@ -1506,6 +1540,20 @@ pub(super) fn scan_perf_threshold_failures(
             cli.max_pointer_move_global_changes,
             baseline.max_pointer_move_global_changes,
         );
+    let (
+        threshold_min_run_paint_cache_hit_test_only_replay_allowed,
+        source_min_run_paint_cache_hit_test_only_replay_allowed,
+    ) = resolve_threshold(
+        cli.min_run_paint_cache_hit_test_only_replay_allowed_max,
+        baseline.min_run_paint_cache_hit_test_only_replay_allowed_max,
+    );
+    let (
+        threshold_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+        source_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+    ) = resolve_threshold(
+        cli.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+        baseline.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+    );
 
     if let Some(threshold_us) = threshold_total
         && max_total_time_us > threshold_us
@@ -1575,6 +1623,31 @@ pub(super) fn scan_perf_threshold_failures(
             "threshold": threshold,
             "threshold_source": source_pointer_move_global_changes,
             "actual": max_pointer_move_global_changes,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    if let Some(threshold) = threshold_min_run_paint_cache_hit_test_only_replay_allowed
+        && max_run_paint_cache_hit_test_only_replay_allowed < threshold
+    {
+        out.push(serde_json::json!({
+            "metric": "run_paint_cache_hit_test_only_replay_allowed_max",
+            "threshold_min": threshold,
+            "threshold_source": source_min_run_paint_cache_hit_test_only_replay_allowed,
+            "actual": max_run_paint_cache_hit_test_only_replay_allowed,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    if let Some(threshold) =
+        threshold_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch
+        && max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch > threshold
+    {
+        out.push(serde_json::json!({
+            "metric": "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max",
+            "threshold": threshold,
+            "threshold_source": source_max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+            "actual": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
             "script": script,
             "sort": sort.as_str(),
         }));
