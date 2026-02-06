@@ -2,7 +2,7 @@ use fret_core::{Point, Px};
 use uuid::Uuid;
 
 use crate::core::{Edge, EdgeId, EdgeKind, Graph, PortId};
-use crate::io::NodeGraphViewState;
+
 use crate::ui::canvas::geometry::CanvasGeometry;
 
 use super::super::{
@@ -10,7 +10,7 @@ use super::super::{
     wire_distance2_path,
 };
 use super::prelude::*;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn hit_port_slow(geom: &CanvasGeometry, pos: Point) -> Option<PortId> {
     let mut best: Option<(PortId, u32)> = None;
@@ -191,7 +191,7 @@ fn spatial_index_hit_port_matches_slow_scan() {
     let (graph_value, _a, _a_in, _a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot = canvas.sync_view_state(&mut host);
@@ -240,7 +240,7 @@ fn spatial_index_hit_edge_matches_slow_scan() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edge_interaction_width = 24.0;
         s.interaction.edges_reconnectable = true;
@@ -308,7 +308,7 @@ fn spatial_index_edge_focus_anchor_hit_testing_matches_slow_scan() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.edges_reconnectable = true;
     });
