@@ -3,6 +3,7 @@ use super::*;
 mod toggle;
 mod toggle_group;
 mod tooltip;
+mod typography;
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     toggle::preview_toggle(cx)
@@ -14,6 +15,10 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
 
 pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     tooltip::preview_tooltip(cx)
+}
+
+pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    typography::preview_typography(cx)
 }
 
 pub(super) fn render_component_page_tabs(

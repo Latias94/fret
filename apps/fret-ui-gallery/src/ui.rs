@@ -9820,25 +9820,7 @@ fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3).items_start(),
-        move |cx| {
-            vec![
-                shadcn::typography::h1(cx, "The Joke Tax Chronicles"),
-                shadcn::typography::lead(cx, "Once upon a time, in a far-off land..."),
-                shadcn::typography::p(
-                    cx,
-                    "The king, seeing how much happier his subjects were, realized the error of his ways and repealed the joke tax.",
-                ),
-                shadcn::typography::blockquote(
-                    cx,
-                    "After all, everyone enjoys a good joke, so it's only fair that they should pay for the privilege.",
-                ),
-                shadcn::typography::inline_code(cx, "cargo run -p fret-ui-gallery"),
-            ]
-        },
-    )]
+    pages::preview_typography(cx)
 }
 
 fn preview_alert_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {

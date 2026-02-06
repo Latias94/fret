@@ -112,7 +112,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] toggle - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle.rs`)
 - [~] toggle-group - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`)
 - [~] tooltip - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/tooltip.rs`)
-- [ ] typography
+- [~] typography - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/typography.rs`)
 
 ---
 
