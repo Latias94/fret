@@ -229,6 +229,9 @@ Exit criteria:
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`ui_gallery.debug.window.open`, `window_create_spec`, dynamic `Window` submenu radio mapping)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`window.activate.*` uses `FRET_DIAG` fast-path focused-window sync to avoid OS-focus flakiness in automation)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER` keeps frame progression stable right after auxiliary window creation)
+- [x] MENU-MVP4-test-058 Add a cross-platform shortcut gate that opens command palette via the primary shortcut (`Ctrl/Cmd+P`).
+  - Evidence: `tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json`
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`UiActionStepV2::PressShortcut`, `parse_shortcut`)
 
 ---
 

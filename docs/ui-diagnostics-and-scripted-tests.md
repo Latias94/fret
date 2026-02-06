@@ -375,6 +375,8 @@ Supported selectors (v1 MVP):
   `minus`/`dash`/`-`, `equal`/`=`, `bracket_left`/`left_bracket`/`[`, `bracket_right`/`right_bracket`/`]`,
   `backslash`/`\\`, `backquote`/`grave`/`` ` ``;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
+- `press_shortcut` (schema v2 only; shortcut strings like `primary+p`, `primary+shift+p`, `alt+f`; supports
+  modifier aliases `primary`/`cmd_or_ctrl`/`command_or_control` and `meta`/`cmd`/`command`)
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames`

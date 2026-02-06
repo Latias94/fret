@@ -955,6 +955,29 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
+            UiActionStepV2::PressShortcut { shortcut, repeat } => match parse_shortcut(&shortcut) {
+                Ok((key, modifiers)) => {
+                    output
+                        .events
+                        .extend(press_key_events(key, modifiers, repeat));
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-press_shortcut"));
+                    }
+                }
+                Err(reason) => {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-press_shortcut-invalid"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some(reason);
+                    output.request_redraw = true;
+                }
+            },
             UiActionStepV2::TypeText { text } => {
                 output.events.push(Event::TextInput(text));
                 active.wait_until = None;
@@ -3025,10 +3048,12 @@ fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
+        | UiActionStepV2::MenuSelectPath { .. }
         | UiActionStepV2::DragTo { .. }
         | UiActionStepV2::SetSliderValue { .. } => true,
         UiActionStepV2::ResetDiagnostics
         | UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::PressShortcut { .. }
         | UiActionStepV2::TypeText { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::CaptureBundle { .. }
@@ -3672,6 +3697,11 @@ pub enum UiActionStepV2 {
         key: String,
         #[serde(default)]
         modifiers: UiKeyModifiersV1,
+        #[serde(default)]
+        repeat: bool,
+    },
+    PressShortcut {
+        shortcut: String,
         #[serde(default)]
         repeat: bool,
     },
@@ -9465,6 +9495,41 @@ fn press_key_events(key: KeyCode, modifiers: UiKeyModifiersV1, repeat: bool) -> 
     [down, up]
 }
 
+fn parse_shortcut(shortcut: &str) -> Result<(KeyCode, UiKeyModifiersV1), String> {
+    let mut modifiers = UiKeyModifiersV1::default();
+    let mut key_token: Option<&str> = None;
+
+    for token in shortcut.split('+').map(str::trim).filter(|v| !v.is_empty()) {
+        match token.to_ascii_lowercase().as_str() {
+            "shift" => modifiers.shift = true,
+            "ctrl" | "control" => modifiers.ctrl = true,
+            "alt" | "option" => modifiers.alt = true,
+            "meta" | "cmd" | "command" => modifiers.meta = true,
+            "primary" | "cmd_or_ctrl" | "command_or_control" => {
+                if cfg!(target_os = "macos") {
+                    modifiers.meta = true;
+                } else {
+                    modifiers.ctrl = true;
+                }
+            }
+            _ => {
+                if key_token.is_some() {
+                    return Err(format!("multiple_key_tokens: {shortcut}"));
+                }
+                key_token = Some(token);
+            }
+        }
+    }
+
+    let Some(key_token) = key_token else {
+        return Err(format!("missing_key_token: {shortcut}"));
+    };
+    let Some(key) = parse_key_code(key_token) else {
+        return Err(format!("unknown_key: {key_token}"));
+    };
+    Ok((key, modifiers))
+}
+
 fn parse_key_code(key: &str) -> Option<KeyCode> {
     let key = key.trim().to_ascii_lowercase();
     match key.as_str() {
@@ -9709,6 +9774,42 @@ mod tests {
         assert_eq!(parse_key_code("alt_right"), Some(KeyCode::AltRight));
     }
 
+    #[test]
+    fn parse_shortcut_maps_primary_modifier() {
+        let (key, modifiers) = parse_shortcut("primary+p").expect("parse shortcut");
+        assert_eq!(key, KeyCode::KeyP);
+        if cfg!(target_os = "macos") {
+            assert!(modifiers.meta);
+            assert!(!modifiers.ctrl);
+        } else {
+            assert!(modifiers.ctrl);
+            assert!(!modifiers.meta);
+        }
+    }
+
+    #[test]
+    fn parse_shortcut_supports_cmd_or_ctrl_aliases() {
+        let (key, modifiers) =
+            parse_shortcut("cmd_or_ctrl+shift+k").expect("parse cmd_or_ctrl shortcut");
+        assert_eq!(key, KeyCode::KeyK);
+        assert!(modifiers.shift);
+        if cfg!(target_os = "macos") {
+            assert!(modifiers.meta);
+            assert!(!modifiers.ctrl);
+        } else {
+            assert!(modifiers.ctrl);
+            assert!(!modifiers.meta);
+        }
+    }
+
+    #[test]
+    fn parse_shortcut_requires_single_key_token() {
+        let missing = parse_shortcut("ctrl+shift").expect_err("missing key token should fail");
+        assert!(missing.contains("missing_key_token"));
+        let multiple = parse_shortcut("ctrl+x+y").expect_err("multiple key tokens should fail");
+        assert!(multiple.contains("multiple_key_tokens"));
+    }
+
     fn node_id(id: u64) -> NodeId {
         NodeId::from(KeyData::from_ffi(id))
     }
@@ -9826,6 +9927,22 @@ mod tests {
                 [UiActionStepV2::MovePointerSweep { .. }]
             ),
             "expected move_pointer_sweep step"
+        );
+    }
+
+    #[test]
+    fn scripts_support_press_shortcut_step() {
+        let parsed: UiActionScriptV2 = serde_json::from_str(
+            r#"{"schema_version":2,"steps":[{"type":"press_shortcut","shortcut":"primary+shift+p"}]}"#,
+        )
+        .expect("parse press_shortcut step");
+        assert_eq!(parsed.schema_version, 2);
+        assert!(
+            matches!(
+                parsed.steps.as_slice(),
+                [UiActionStepV2::PressShortcut { .. }]
+            ),
+            "expected press_shortcut step"
         );
     }
 
