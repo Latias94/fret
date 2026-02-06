@@ -58,6 +58,41 @@ Non-goals:
 
 ---
 
+## Capability Inventory (selected; expand over time)
+
+This is the “not weaker than TanStack” checklist. Each item should map to a concrete Rust surface
+and be covered by parity fixtures when behavior overlap exists.
+
+### Row identity (`RowId`) and lookup
+
+Upstream:
+
+- `table.getRow(rowId, searchAll?)` (pre-pagination vs current model lookup)
+- `table.getCoreRowModel().rowsById` (stable lookup)
+- Grouped row ids (string ids like `role:1`) are first-class rows
+
+Fret status:
+
+- Leaf identity is `RowKey(u64)` (fast), but grouped row ids are not yet first-class in the main
+  `RowModel` pipeline.
+- Planned: promote TanStack-style `RowId` and maintain `rows_by_id` alongside `rows_by_key`.
+  - Tracked in TODO: `HTP-id-010` / `HTP-cap-010`.
+
+### Row pinning over grouped rows
+
+Upstream:
+
+- `row.pin(position, includeLeafRows?, includeParentRows?)` works for any `Row`
+- `getTopRows/getCenterRows/getBottomRows` operate on `table.getRowModel().rows`
+
+Fret status:
+
+- Leaf row pinning is parity-gated; grouped interactions are partially gated.
+- Capability gap to close: pin/group rows as first-class and align `getCenterRows` semantics under
+  grouping.
+
+---
+
 ## Upstream Feature Map (TanStack → Fret)
 
 The upstream `table-core` feature files live under:
