@@ -98,7 +98,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] scroll-area — examples mirrored (Demo/Horizontal/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_scroll_area`)
 - [~] select (group semantics + default alignment audited; needs full docs example order)
 - [x] separator ? examples mirrored (Demo/Vertical/Menu/List/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_separator`)
-- [ ] sheet
+- [x] sheet ? examples mirrored (Demo/Side/No Close Button/RTL; `showCloseButton` behavior approximated by omitting explicit close actions) (`apps/fret-ui-gallery/src/ui.rs::preview_sheet`)
 - [ ] sidebar
 - [ ] skeleton
 - [x] slider — examples mirrored (Demo/Range/Multiple Thumbs/Vertical/Controlled/Disabled/RTL; extras: inverted) (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
