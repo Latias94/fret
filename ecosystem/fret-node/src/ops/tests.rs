@@ -1230,7 +1230,7 @@ fn graph_diff_roundtrips_when_a_port_changes_structurally() {
 #[test]
 fn graph_diff_roundtrips_when_deleting_a_group_with_child_nodes() {
     let mut from = Graph::default();
-    let group_id = GroupId(Uuid::from_u128(10));
+    let group_id = GroupId::from_u128(10);
     from.groups.insert(
         group_id,
         Group {
@@ -1246,8 +1246,8 @@ fn graph_diff_roundtrips_when_deleting_a_group_with_child_nodes() {
         },
     );
 
-    let child_a = NodeId(Uuid::from_u128(200));
-    let child_b = NodeId(Uuid::from_u128(100));
+    let child_a = NodeId::from_u128(200);
+    let child_b = NodeId::from_u128(100);
     let mut node_a = make_node("core.a");
     node_a.parent = Some(group_id);
     from.nodes.insert(child_a, node_a);
@@ -1256,7 +1256,7 @@ fn graph_diff_roundtrips_when_deleting_a_group_with_child_nodes() {
     from.nodes.insert(child_b, node_b);
 
     from.nodes
-        .insert(NodeId(Uuid::from_u128(300)), make_node("core.c"));
+        .insert(NodeId::from_u128(300), make_node("core.c"));
 
     let mut to = from.clone();
     to.groups.remove(&group_id);

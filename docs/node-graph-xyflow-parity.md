@@ -344,9 +344,10 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 1.3 View constraints and persistence
 
-- [~] **Translate extent (world bounds) constraint**
+- [x] **Translate extent (world bounds) constraint**
   - XyFlow: `translateExtent` in `XYPanZoom` constrain pipeline
   - fret-node: `NodeGraphInteractionState.translate_extent` clamped in `NodeGraphCanvas::update_view_state(...)`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
 
 - [x] **Fit view / frame all / frame selection**
   - XyFlow: `fitViewport(...)` from `@xyflow/system`, surfaced via `useReactFlow().fitView()` and `<Controls />`
