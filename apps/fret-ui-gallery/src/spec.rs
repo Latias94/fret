@@ -57,37 +57,20 @@ fn ui_gallery_start_page_from_id(id: &str) -> Option<Arc<str>> {
 
 #[cfg(target_arch = "wasm32")]
 fn ui_gallery_start_page_from_url() -> Option<Arc<str>> {
-    fn find_key_value(raw: &str, key: &str) -> Option<String> {
-        let raw = raw.trim();
-        if raw.is_empty() {
-            return None;
-        }
+    let location = fret_router::web::current_location()?;
 
-        for part in raw.split('&') {
-            let (k, v) = part.split_once('=').unwrap_or((part, ""));
-            if k.trim() == key {
-                let v = v.trim();
-                if v.is_empty() {
-                    return None;
-                }
-                return Some(v.to_string());
-            }
-        }
-        None
-    }
-
-    let window = web_sys::window()?;
-    let location = window.location();
-    let search = location.search().ok().unwrap_or_default();
-    let hash = location.hash().ok().unwrap_or_default();
-
-    let search = search.strip_prefix('?').unwrap_or(search.as_str());
-    let hash = hash.strip_prefix('#').unwrap_or(hash.as_str());
-
-    let id = find_key_value(search, "page")
-        .or_else(|| find_key_value(hash, "page"))
-        .or_else(|| find_key_value(search, "start_page"))
-        .or_else(|| find_key_value(hash, "start_page"))?;
+    let id = fret_router::first_query_value_from_search_or_hash(
+        &location.search,
+        &location.hash,
+        "page",
+    )
+    .or_else(|| {
+        fret_router::first_query_value_from_search_or_hash(
+            &location.search,
+            &location.hash,
+            "start_page",
+        )
+    })?;
 
     ui_gallery_start_page_from_id(&id)
 }

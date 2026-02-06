@@ -49,6 +49,7 @@ wgpu.workspace = true
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 fret-markdown = { path = "../../ecosystem/fret-markdown" }
 fret-code-editor = { path = "../../ecosystem/fret-code-editor" }
+fret-router = { path = "../../ecosystem/fret-router", features = ["web-history", "hash-routing"] }
 web-sys = { version = "0.3", features = ["Window", "Location"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
