@@ -4875,3 +4875,33 @@ Interpretation:
   is correctness/path-validation evidence, not a speedup claim.
 - Follow-up: improve `diag perf --json` to expose per-run counter maxima directly (not only the selected `top_*` row)
   to avoid false negatives when validating gate-path counters.
+
+## 2026-02-06 19:28:00 (commit `4c88f6696`)
+
+Change:
+- Extend `diag perf --json` to export per-run maxima for hit-test-only replay gate counters:
+  - `run_paint_cache_hit_test_only_replay_allowed_max`
+  - `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`
+- Keep existing `top_*` fields unchanged for compatibility with existing triage tooling.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json --dir target/fret-diag-codex-hit-test-only-probe-json-surface-v6c-r2-debug --repeat 2 --warmup-frames 1 --sort time --json --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe --env FRET_UI_GALLERY_VIEW_CACHE=0 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 --launch -- target/release/fret-ui-gallery`
+
+Results:
+- Run-level evidence (`rows[0].runs`):
+  - run 0: `top_paint_cache_hit_test_only_replay_allowed=0`, `run_paint_cache_hit_test_only_replay_allowed_max=17`, `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max=0`
+  - run 1: `top_paint_cache_hit_test_only_replay_allowed=0`, `run_paint_cache_hit_test_only_replay_allowed_max=17`, `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max=0`
+- Summary evidence (`rows[0].stats`):
+  - `run_paint_cache_hit_test_only_replay_allowed_max`: `min/p50/p95/max = 17/17/17/17`
+  - `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`: `0/0/0/0`
+  - `top_paint_cache_hit_test_only_replay_allowed`: `0/0/0/0`
+
+Evidence files:
+- Perf run bundles: `target/fret-diag-codex-hit-test-only-probe-json-surface-v6c-r2-debug/*/bundle.json`
+- Captured perf output (clean JSON): `target/fret-diag-codex-summaries/hit-test-only-probe-v6c-r2-debug-perf.clean.json`
+
+Interpretation:
+- `top_*` remains tied to the selected top snapshot (time-sorted), so it can legitimately stay `0`.
+- New `run_*_max` fields provide the missing counter surface and prevent false negatives in gate-path validation.
