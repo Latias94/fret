@@ -159,8 +159,9 @@ Exit criteria:
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`floating_window_impl_on_area` using `floating_area_ex`).
   - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (`render_floating_window_in_area`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (floating window tests still pass under nextest).
-- [~] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
+- [x] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingAreaResponse`, `FloatingWindowResponse`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{area,window,window_open,window_resizable}`).
 - [ ] IMUIECO-float-034 Decide OS-window promotion scope:
   - docking-only for v1 (recommended), or
   - generalized capability-gated promotion later.

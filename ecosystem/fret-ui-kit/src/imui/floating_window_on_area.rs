@@ -20,10 +20,11 @@ pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
     initial_size: Option<Size>,
     resize: Option<super::FloatingWindowResizeOptions>,
     build: Build,
-) where
+) -> super::FloatingWindowChromeResponse
+where
     Build: for<'cx2, 'a2> FnOnce(&mut super::ImUiFacade<'cx2, 'a2, H>),
 {
-    let window = ui.with_cx_mut(|cx| {
+    let (window, chrome) = ui.with_cx_mut(|cx| {
         let window_id = area.id;
         let resizable = initial_size.is_some();
 
@@ -54,6 +55,9 @@ pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
         } else {
             None
         };
+        let resizing = resize_snapshot
+            .map(|(_, dragging, _, _)| dragging)
+            .unwrap_or(false);
 
         let (
             position_after_resize,
@@ -204,6 +208,11 @@ pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
                 },
             );
         }
+
+        let chrome = super::FloatingWindowChromeResponse {
+            size: resizable.then_some(size),
+            resizing,
+        };
 
         let (popover, border, muted) = {
             let theme = fret_ui::Theme::global(&*cx.app);
@@ -598,8 +607,9 @@ pub(super) fn render_floating_window_in_area<H: UiHost, Build>(
                 ]
             })]
         });
-        window
+        (window, chrome)
     });
 
     ui.add(window);
+    chrome
 }
