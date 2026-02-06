@@ -224,8 +224,9 @@ Evidence anchors:
   - editor-local cache hits/misses (row text + syntax).
 - [x] Ensure windowed surface window telemetry is exported in diagnostics snapshots (align with ADR 0190).
 - [x] Export editor/IME harness state into diagnostics snapshots (ui-gallery app snapshot + web IME bridge snapshot; enables “single artifact” repros).
-- [ ] Add renderer-level churn counters (next):
-  - text blob churn and glyph atlas pressure (likely from renderer/canvas caches).
+- [x] Add renderer-level churn counters:
+  - Text blob churn + glyph atlas pressure are captured by the runner as a per-frame app global (`fret_core::RendererTextPerfSnapshot`) and exported into UI diagnostics bundles.
+  - Evidence: `crates/fret-core/src/render_text.rs`, `crates/fret-render/src/text.rs`, `crates/fret-launch/src/runner/desktop/app_handler.rs`, `crates/fret-launch/src/runner/web.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`.
 
 ---
 
