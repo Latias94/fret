@@ -1,9 +1,14 @@
 use super::*;
 
+mod alert;
 mod toggle;
 mod toggle_group;
 mod tooltip;
 mod typography;
+
+pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    alert::preview_alert(cx)
+}
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     toggle::preview_toggle(cx)

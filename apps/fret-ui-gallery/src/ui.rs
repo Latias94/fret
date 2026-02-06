@@ -5379,19 +5379,7 @@ fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    vec![
-        shadcn::Alert::new([
-            shadcn::AlertTitle::new("Heads up!").into_element(cx),
-            shadcn::AlertDescription::new("You can add components to your app.").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::Alert::new([
-            shadcn::AlertTitle::new("Error").into_element(cx),
-            shadcn::AlertDescription::new("Something went wrong.").into_element(cx),
-        ])
-        .variant(shadcn::AlertVariant::Destructive)
-        .into_element(cx),
-    ]
+    pages::preview_alert(cx)
 }
 
 fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
@@ -5790,43 +5778,48 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
     }
 
     let state = cx.with_state(TextareaModels::default, |st| st.clone());
-    let (field_value, disabled_value, invalid_value, button_value, rtl_value) =
-        match (state.field, state.disabled, state.invalid, state.button, state.rtl) {
+    let (field_value, disabled_value, invalid_value, button_value, rtl_value) = match (
+        state.field,
+        state.disabled,
+        state.invalid,
+        state.button,
+        state.rtl,
+    ) {
+        (
+            Some(field_value),
+            Some(disabled_value),
+            Some(invalid_value),
+            Some(button_value),
+            Some(rtl_value),
+        ) => (
+            field_value,
+            disabled_value,
+            invalid_value,
+            button_value,
+            rtl_value,
+        ),
+        _ => {
+            let field_value = cx.app.models_mut().insert(String::new());
+            let disabled_value = cx.app.models_mut().insert(String::new());
+            let invalid_value = cx.app.models_mut().insert(String::new());
+            let button_value = cx.app.models_mut().insert(String::new());
+            let rtl_value = cx.app.models_mut().insert(String::new());
+            cx.with_state(TextareaModels::default, |st| {
+                st.field = Some(field_value.clone());
+                st.disabled = Some(disabled_value.clone());
+                st.invalid = Some(invalid_value.clone());
+                st.button = Some(button_value.clone());
+                st.rtl = Some(rtl_value.clone());
+            });
             (
-                Some(field_value),
-                Some(disabled_value),
-                Some(invalid_value),
-                Some(button_value),
-                Some(rtl_value),
-            ) => (
                 field_value,
                 disabled_value,
                 invalid_value,
                 button_value,
                 rtl_value,
-            ),
-            _ => {
-                let field_value = cx.app.models_mut().insert(String::new());
-                let disabled_value = cx.app.models_mut().insert(String::new());
-                let invalid_value = cx.app.models_mut().insert(String::new());
-                let button_value = cx.app.models_mut().insert(String::new());
-                let rtl_value = cx.app.models_mut().insert(String::new());
-                cx.with_state(TextareaModels::default, |st| {
-                    st.field = Some(field_value.clone());
-                    st.disabled = Some(disabled_value.clone());
-                    st.invalid = Some(invalid_value.clone());
-                    st.button = Some(button_value.clone());
-                    st.rtl = Some(rtl_value.clone());
-                });
-                (
-                    field_value,
-                    disabled_value,
-                    invalid_value,
-                    button_value,
-                    rtl_value,
-                )
-            }
-        };
+            )
+        }
+    };
 
     let theme = Theme::global(&*cx.app).clone();
     let destructive = theme.color_required("destructive");
@@ -5927,8 +5920,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
                 .min_height(Px(96.0))
                 .refine_layout(area_layout.clone())
                 .into_element(cx),
-            shadcn::FieldDescription::new("Please enter a valid message.")
-                .into_element(cx),
+            shadcn::FieldDescription::new("Please enter a valid message.").into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
         .into_element(cx)
@@ -6468,19 +6460,15 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         .into_element(cx),
                     shadcn::Badge::new("Updating")
                         .variant(shadcn::BadgeVariant::Secondary)
-                        .children([
-                            shadcn::Spinner::new()
-                                .color(secondary_fg.clone())
-                                .into_element(cx),
-                        ])
+                        .children([shadcn::Spinner::new()
+                            .color(secondary_fg.clone())
+                            .into_element(cx)])
                         .into_element(cx),
                     shadcn::Badge::new("Processing")
                         .variant(shadcn::BadgeVariant::Outline)
-                        .children([
-                            shadcn::Spinner::new()
-                                .color(outline_fg.clone())
-                                .into_element(cx),
-                        ])
+                        .children([shadcn::Spinner::new()
+                            .color(outline_fg.clone())
+                            .into_element(cx)])
                         .into_element(cx),
                 ]
             },
@@ -6531,10 +6519,12 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             |_cx| vec![input, textarea],
         );
 
-        let card = shell(cx, LayoutRefinement::default().w_full().max_w(Px(480.0)), group)
-            .attach_semantics(
-                SemanticsDecoration::default().test_id("ui-gallery-spinner-input-group"),
-            );
+        let card = shell(
+            cx,
+            LayoutRefinement::default().w_full().max_w(Px(480.0)),
+            group,
+        )
+        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-spinner-input-group"));
 
         let body = centered(cx, card);
         section(cx, "Input Group", body)
@@ -6553,12 +6543,10 @@ fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                 .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::empty::EmptyContent::new([
-                shadcn::Button::new("Cancel")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .into_element(cx),
-            ])
+            shadcn::empty::EmptyContent::new([shadcn::Button::new("Cancel")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .into_element(cx)])
             .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(560.0)))
@@ -18208,9 +18196,9 @@ fn preview_tabs(
 ) -> Vec<AnyElement> {
     let theme = Theme::global(&*cx.app).clone();
     let line_style = shadcn::tabs::TabsStyle::default()
-        .trigger_background(fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Color(
-            CoreColor::TRANSPARENT,
-        ))))
+        .trigger_background(fret_ui_kit::WidgetStateProperty::new(Some(
+            ColorRef::Color(CoreColor::TRANSPARENT),
+        )))
         .trigger_border_color(
             fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Color(CoreColor::TRANSPARENT)))
                 .when(
@@ -18410,7 +18398,12 @@ fn preview_tabs(
                 shadcn::TabsItem::new(
                     "settings",
                     "Disabled",
-                    [card_panel(cx, "Disabled", "This panel should not become active.", "")],
+                    [card_panel(
+                        cx,
+                        "Disabled",
+                        "This panel should not become active.",
+                        "",
+                    )],
                 )
                 .disabled(true),
             ])
@@ -18858,21 +18851,24 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     }
 
     let state = cx.with_state(TableModels::default, |st| st.clone());
-    let (actions_open_1, actions_open_2, actions_open_3) =
-        match (state.actions_open_1, state.actions_open_2, state.actions_open_3) {
-            (Some(open_1), Some(open_2), Some(open_3)) => (open_1, open_2, open_3),
-            _ => {
-                let open_1 = cx.app.models_mut().insert(false);
-                let open_2 = cx.app.models_mut().insert(false);
-                let open_3 = cx.app.models_mut().insert(false);
-                cx.with_state(TableModels::default, |st| {
-                    st.actions_open_1 = Some(open_1.clone());
-                    st.actions_open_2 = Some(open_2.clone());
-                    st.actions_open_3 = Some(open_3.clone());
-                });
-                (open_1, open_2, open_3)
-            }
-        };
+    let (actions_open_1, actions_open_2, actions_open_3) = match (
+        state.actions_open_1,
+        state.actions_open_2,
+        state.actions_open_3,
+    ) {
+        (Some(open_1), Some(open_2), Some(open_3)) => (open_1, open_2, open_3),
+        _ => {
+            let open_1 = cx.app.models_mut().insert(false);
+            let open_2 = cx.app.models_mut().insert(false);
+            let open_3 = cx.app.models_mut().insert(false);
+            cx.with_state(TableModels::default, |st| {
+                st.actions_open_1 = Some(open_1.clone());
+                st.actions_open_2 = Some(open_2.clone());
+                st.actions_open_3 = Some(open_3.clone());
+            });
+            (open_1, open_2, open_3)
+        }
+    };
 
     let theme = Theme::global(&*cx.app).clone();
     let invoice_w = fret_core::Px(128.0);
@@ -18935,99 +18931,101 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         )
     };
 
-    let make_invoice_table = |cx: &mut ElementContext<'_, App>,
-                              rows: &[(&'static str, &'static str, &'static str, &'static str)],
-                              include_footer: bool,
-                              test_id: &'static str| {
-        let header = shadcn::TableHeader::new(vec![
-            shadcn::TableRow::new(
-                4,
-                vec![
-                    shadcn::TableHead::new("Invoice")
-                        .refine_layout(LayoutRefinement::default().w_px(invoice_w))
-                        .into_element(cx),
-                    shadcn::TableHead::new("Status")
-                        .refine_layout(LayoutRefinement::default().w_px(status_w))
-                        .into_element(cx),
-                    shadcn::TableHead::new("Method")
-                        .refine_layout(LayoutRefinement::default().w_px(method_w))
-                        .into_element(cx),
-                    shadcn::TableHead::new("Amount")
-                        .refine_layout(LayoutRefinement::default().w_px(amount_w))
-                        .into_element(cx),
-                ],
-            )
-            .border_bottom(true)
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
-        let body_rows = rows
-            .iter()
-            .copied()
-            .map(|(invoice, status, amount, method)| {
+    let make_invoice_table =
+        |cx: &mut ElementContext<'_, App>,
+         rows: &[(&'static str, &'static str, &'static str, &'static str)],
+         include_footer: bool,
+         test_id: &'static str| {
+            let header = shadcn::TableHeader::new(vec![
                 shadcn::TableRow::new(
                     4,
                     vec![
-                        shadcn::TableCell::new(cx.text(invoice))
+                        shadcn::TableHead::new("Invoice")
                             .refine_layout(LayoutRefinement::default().w_px(invoice_w))
                             .into_element(cx),
-                        shadcn::TableCell::new(cx.text(status))
+                        shadcn::TableHead::new("Status")
                             .refine_layout(LayoutRefinement::default().w_px(status_w))
                             .into_element(cx),
-                        shadcn::TableCell::new(cx.text(method))
+                        shadcn::TableHead::new("Method")
                             .refine_layout(LayoutRefinement::default().w_px(method_w))
                             .into_element(cx),
-                        {
-                            let amount_text = cx.text(amount);
-                            shadcn::TableCell::new(align_end(cx, amount_text))
-                                .refine_layout(LayoutRefinement::default().w_px(amount_w))
-                                .into_element(cx)
-                        },
-                    ],
-                )
-                .into_element(cx)
-            })
-            .collect::<Vec<_>>();
-
-        let body = shadcn::TableBody::new(body_rows).into_element(cx);
-
-        let mut children = vec![header, body];
-        if include_footer {
-            let footer = shadcn::TableFooter::new(vec![
-                shadcn::TableRow::new(
-                    4,
-                    vec![
-                        shadcn::TableCell::new(cx.text("Total"))
-                            .col_span(3)
-                            .refine_layout(
-                                LayoutRefinement::default().w_px(
-                                    invoice_w + status_w + method_w,
-                                ),
-                            )
+                        shadcn::TableHead::new("Amount")
+                            .refine_layout(LayoutRefinement::default().w_px(amount_w))
                             .into_element(cx),
-                        {
-                            let total_amount = cx.text("$2,500.00");
-                            shadcn::TableCell::new(align_end(cx, total_amount))
-                                .refine_layout(LayoutRefinement::default().w_px(amount_w))
-                                .into_element(cx)
-                        },
                     ],
                 )
-                .border_bottom(false)
+                .border_bottom(true)
                 .into_element(cx),
             ])
             .into_element(cx);
-            children.push(footer);
-        }
 
-        children.push(shadcn::TableCaption::new("A list of your recent invoices.").into_element(cx));
+            let body_rows = rows
+                .iter()
+                .copied()
+                .map(|(invoice, status, amount, method)| {
+                    shadcn::TableRow::new(
+                        4,
+                        vec![
+                            shadcn::TableCell::new(cx.text(invoice))
+                                .refine_layout(LayoutRefinement::default().w_px(invoice_w))
+                                .into_element(cx),
+                            shadcn::TableCell::new(cx.text(status))
+                                .refine_layout(LayoutRefinement::default().w_px(status_w))
+                                .into_element(cx),
+                            shadcn::TableCell::new(cx.text(method))
+                                .refine_layout(LayoutRefinement::default().w_px(method_w))
+                                .into_element(cx),
+                            {
+                                let amount_text = cx.text(amount);
+                                shadcn::TableCell::new(align_end(cx, amount_text))
+                                    .refine_layout(LayoutRefinement::default().w_px(amount_w))
+                                    .into_element(cx)
+                            },
+                        ],
+                    )
+                    .into_element(cx)
+                })
+                .collect::<Vec<_>>();
 
-        shadcn::Table::new(children)
-            .refine_layout(LayoutRefinement::default().w_full())
-            .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id))
-    };
+            let body = shadcn::TableBody::new(body_rows).into_element(cx);
+
+            let mut children = vec![header, body];
+            if include_footer {
+                let footer = shadcn::TableFooter::new(vec![
+                    shadcn::TableRow::new(
+                        4,
+                        vec![
+                            shadcn::TableCell::new(cx.text("Total"))
+                                .col_span(3)
+                                .refine_layout(
+                                    LayoutRefinement::default()
+                                        .w_px(invoice_w + status_w + method_w),
+                                )
+                                .into_element(cx),
+                            {
+                                let total_amount = cx.text("$2,500.00");
+                                shadcn::TableCell::new(align_end(cx, total_amount))
+                                    .refine_layout(LayoutRefinement::default().w_px(amount_w))
+                                    .into_element(cx)
+                            },
+                        ],
+                    )
+                    .border_bottom(false)
+                    .into_element(cx),
+                ])
+                .into_element(cx);
+                children.push(footer);
+            }
+
+            children.push(
+                shadcn::TableCaption::new("A list of your recent invoices.").into_element(cx),
+            );
+
+            shadcn::Table::new(children)
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .attach_semantics(SemanticsDecoration::default().test_id(test_id))
+        };
 
     let demo = {
         let table = make_invoice_table(cx, &invoices, true, "ui-gallery-table-demo");
@@ -19057,7 +19055,7 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         .variant(shadcn::ButtonVariant::Ghost)
                         .size(shadcn::ButtonSize::Icon)
                         .toggle_model(open_model.clone())
-                                                .test_id(trigger_id.clone())
+                        .test_id(trigger_id.clone())
                         .into_element(cx)
                 },
                 |_cx| {
@@ -19066,8 +19064,9 @@ fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                         shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Duplicate")),
                         shadcn::DropdownMenuEntry::Separator,
                         shadcn::DropdownMenuEntry::Item(
-                            shadcn::DropdownMenuItem::new("Delete")
-                                .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive),
+                            shadcn::DropdownMenuItem::new("Delete").variant(
+                                shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                            ),
                         ),
                     ]
                 },
@@ -19607,90 +19606,110 @@ fn preview_sonner(
         let default_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                sonner.toast_message(
-                    host,
-                    action_cx.window,
-                    "Event has been created",
-                    shadcn::ToastMessageOptions::new(),
-                );
-                let _ = host.models_mut().update(&last_action_model, |v| {
-                    *v = Arc::<str>::from("sonner.types.default");
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_message(
+                        host,
+                        action_cx.window,
+                        "Event has been created",
+                        shadcn::ToastMessageOptions::new(),
+                    );
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.default");
+                    });
+                    host.request_redraw(action_cx.window);
                 });
-                host.request_redraw(action_cx.window);
-            });
-            button(cx, "Default", "ui-gallery-sonner-types-default", on_activate)
+            button(
+                cx,
+                "Default",
+                "ui-gallery-sonner-types-default",
+                on_activate,
+            )
         };
 
         let success_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                sonner.toast_success_message(
-                    host,
-                    action_cx.window,
-                    "Event has been created",
-                    shadcn::ToastMessageOptions::new(),
-                );
-                let _ = host.models_mut().update(&last_action_model, |v| {
-                    *v = Arc::<str>::from("sonner.types.success");
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_success_message(
+                        host,
+                        action_cx.window,
+                        "Event has been created",
+                        shadcn::ToastMessageOptions::new(),
+                    );
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.success");
+                    });
+                    host.request_redraw(action_cx.window);
                 });
-                host.request_redraw(action_cx.window);
-            });
-            button(cx, "Success", "ui-gallery-sonner-types-success", on_activate)
+            button(
+                cx,
+                "Success",
+                "ui-gallery-sonner-types-success",
+                on_activate,
+            )
         };
 
         let info_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                sonner.toast_info_message(
-                    host,
-                    action_cx.window,
-                    "Be at the area 10 minutes before the event time",
-                    shadcn::ToastMessageOptions::new(),
-                );
-                let _ = host.models_mut().update(&last_action_model, |v| {
-                    *v = Arc::<str>::from("sonner.types.info");
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_info_message(
+                        host,
+                        action_cx.window,
+                        "Be at the area 10 minutes before the event time",
+                        shadcn::ToastMessageOptions::new(),
+                    );
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.info");
+                    });
+                    host.request_redraw(action_cx.window);
                 });
-                host.request_redraw(action_cx.window);
-            });
             button(cx, "Info", "ui-gallery-sonner-types-info", on_activate)
         };
 
         let warning_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                sonner.toast_warning_message(
-                    host,
-                    action_cx.window,
-                    "Event start time cannot be earlier than 8am",
-                    shadcn::ToastMessageOptions::new(),
-                );
-                let _ = host.models_mut().update(&last_action_model, |v| {
-                    *v = Arc::<str>::from("sonner.types.warning");
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_warning_message(
+                        host,
+                        action_cx.window,
+                        "Event start time cannot be earlier than 8am",
+                        shadcn::ToastMessageOptions::new(),
+                    );
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.warning");
+                    });
+                    host.request_redraw(action_cx.window);
                 });
-                host.request_redraw(action_cx.window);
-            });
-            button(cx, "Warning", "ui-gallery-sonner-types-warning", on_activate)
+            button(
+                cx,
+                "Warning",
+                "ui-gallery-sonner-types-warning",
+                on_activate,
+            )
         };
 
         let error_button = {
             let sonner = sonner.clone();
             let last_action_model = last_action.clone();
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                sonner.toast_error_message(
-                    host,
-                    action_cx.window,
-                    "Event has not been created",
-                    shadcn::ToastMessageOptions::new(),
-                );
-                let _ = host.models_mut().update(&last_action_model, |v| {
-                    *v = Arc::<str>::from("sonner.types.error");
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    sonner.toast_error_message(
+                        host,
+                        action_cx.window,
+                        "Event has not been created",
+                        shadcn::ToastMessageOptions::new(),
+                    );
+                    let _ = host.models_mut().update(&last_action_model, |v| {
+                        *v = Arc::<str>::from("sonner.types.error");
+                    });
+                    host.request_redraw(action_cx.window);
                 });
-                host.request_redraw(action_cx.window);
-            });
             button(cx, "Error", "ui-gallery-sonner-types-error", on_activate)
         };
 
@@ -19698,26 +19717,39 @@ fn preview_sonner(
             let sonner = sonner.clone();
             let pending_model = pending_promise.clone();
             let last_action_model = last_action.clone();
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                let pending = host.models_mut().get_copied(&pending_model).flatten();
-                if let Some(id) = pending {
-                    sonner.toast_success_update(host, action_cx.window, id, "Event has been created");
-                    let _ = host.models_mut().update(&pending_model, |slot| *slot = None);
-                    let _ = host.models_mut().update(&last_action_model, |v| {
-                        *v = Arc::<str>::from("sonner.types.promise.resolve");
-                    });
-                } else {
-                    let promise = sonner.toast_promise(host, action_cx.window, "Loading...");
-                    let _ = host
-                        .models_mut()
-                        .update(&pending_model, |slot| *slot = Some(promise.id()));
-                    let _ = host.models_mut().update(&last_action_model, |v| {
-                        *v = Arc::<str>::from("sonner.types.promise.start");
-                    });
-                }
-                host.request_redraw(action_cx.window);
-            });
-            button(cx, "Promise", "ui-gallery-sonner-types-promise", on_activate)
+            let on_activate: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let pending = host.models_mut().get_copied(&pending_model).flatten();
+                    if let Some(id) = pending {
+                        sonner.toast_success_update(
+                            host,
+                            action_cx.window,
+                            id,
+                            "Event has been created",
+                        );
+                        let _ = host
+                            .models_mut()
+                            .update(&pending_model, |slot| *slot = None);
+                        let _ = host.models_mut().update(&last_action_model, |v| {
+                            *v = Arc::<str>::from("sonner.types.promise.resolve");
+                        });
+                    } else {
+                        let promise = sonner.toast_promise(host, action_cx.window, "Loading...");
+                        let _ = host
+                            .models_mut()
+                            .update(&pending_model, |slot| *slot = Some(promise.id()));
+                        let _ = host.models_mut().update(&last_action_model, |v| {
+                            *v = Arc::<str>::from("sonner.types.promise.start");
+                        });
+                    }
+                    host.request_redraw(action_cx.window);
+                });
+            button(
+                cx,
+                "Promise",
+                "ui-gallery-sonner-types-promise",
+                on_activate,
+            )
         };
 
         let buttons_row = row(
@@ -19801,31 +19833,34 @@ fn preview_sonner(
             .get_model_copied(&sonner_position, Invalidation::Layout)
             .unwrap_or(shadcn::ToastPosition::TopCenter);
 
-        let make_position_button = |cx: &mut ElementContext<'_, App>,
-                                    label: &'static str,
-                                    test_id: &'static str,
-                                    target: shadcn::ToastPosition| {
-            let sonner = sonner.clone();
-            let position_model = sonner_position.clone();
-            let last_action_model = last_action.clone();
-            let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-                let _ = host.models_mut().update(&position_model, |v| *v = target);
-                sonner.toast_message(
-                    host,
-                    action_cx.window,
-                    "Event has been created",
-                    shadcn::ToastMessageOptions::new().description(format!(
-                        "position: {}",
-                        sonner_position_key(target)
-                    )),
-                );
-                let _ = host.models_mut().update(&last_action_model, |v| {
-                    *v = Arc::<str>::from(format!("sonner.position.{}", sonner_position_key(target)));
-                });
-                host.request_redraw(action_cx.window);
-            });
-            button(cx, label, test_id, on_activate)
-        };
+        let make_position_button =
+            |cx: &mut ElementContext<'_, App>,
+             label: &'static str,
+             test_id: &'static str,
+             target: shadcn::ToastPosition| {
+                let sonner = sonner.clone();
+                let position_model = sonner_position.clone();
+                let last_action_model = last_action.clone();
+                let on_activate: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host.models_mut().update(&position_model, |v| *v = target);
+                        sonner.toast_message(
+                            host,
+                            action_cx.window,
+                            "Event has been created",
+                            shadcn::ToastMessageOptions::new()
+                                .description(format!("position: {}", sonner_position_key(target))),
+                        );
+                        let _ = host.models_mut().update(&last_action_model, |v| {
+                            *v = Arc::<str>::from(format!(
+                                "sonner.position.{}",
+                                sonner_position_key(target)
+                            ));
+                        });
+                        host.request_redraw(action_cx.window);
+                    });
+                button(cx, label, test_id, on_activate)
+            };
 
         let make_position_button = make_position_button;
         let top_left = make_position_button(
@@ -19885,10 +19920,7 @@ fn preview_sonner(
                     centered(cx, rows),
                     shadcn::typography::muted(
                         cx,
-                        format!(
-                            "Current toaster position: {}",
-                            sonner_position_key(current)
-                        ),
+                        format!("Current toaster position: {}", sonner_position_key(current)),
                     ),
                 ]
             },
@@ -19940,12 +19972,10 @@ fn preview_toast(
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![
-            shadcn::typography::muted(
-                cx,
-                "This page intentionally keeps only the deprecation guidance to match upstream docs.",
-            ),
-        ])
+        shadcn::CardContent::new(vec![shadcn::typography::muted(
+            cx,
+            "This page intentionally keeps only the deprecation guidance to match upstream docs.",
+        )])
         .into_element(cx),
         shadcn::CardFooter::new(vec![
             shadcn::Button::new("Open Sonner page")
