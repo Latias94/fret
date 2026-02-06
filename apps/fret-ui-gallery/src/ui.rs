@@ -19277,26 +19277,7 @@ fn preview_command_palette(
     query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let last = cx
-        .app
-        .models()
-        .get_cloned(&last_action)
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    let cmdk = shadcn::CommandDialog::new_with_host_commands(cx, open.clone(), query)
-        .a11y_label("Command palette")
-        .into_element(cx, |cx| {
-            shadcn::Button::new("Open Command Palette")
-                .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open)
-                .into_element(cx)
-        });
-
-    vec![
-        cx.text("Tip: Ctrl/Cmd+P triggers the command palette command."),
-        cx.text(format!("last action: {last}")),
-        cmdk,
-    ]
+    pages::preview_command_palette(cx, open, query, last_action)
 }
 
 fn sonner_position_key(position: shadcn::ToastPosition) -> &'static str {

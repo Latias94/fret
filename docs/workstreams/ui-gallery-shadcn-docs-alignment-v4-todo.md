@@ -69,7 +69,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] checkbox - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/checkbox.rs`)
 - [~] collapsible - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/collapsible.rs`)
 - [~] combobox - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/combobox.rs`)
-- [ ] command
+- [~] command - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/command.rs`)
 - [ ] context-menu
 - [ ] data-table
 - [ ] date-picker
