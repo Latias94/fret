@@ -52,9 +52,9 @@ impl ToolStatus {
         match self {
             Self::Pending => IconId::new_static("lucide.circle"),
             Self::Running => IconId::new_static("lucide.clock"),
-            Self::Succeeded => IconId::new_static("lucide.check-circle"),
-            Self::Failed => IconId::new_static("lucide.x-circle"),
-            Self::Cancelled => IconId::new_static("lucide.x-circle"),
+            Self::Succeeded => IconId::new_static("lucide.circle-check"),
+            Self::Failed => IconId::new_static("lucide.circle-x"),
+            Self::Cancelled => IconId::new_static("lucide.circle-x"),
         }
     }
 

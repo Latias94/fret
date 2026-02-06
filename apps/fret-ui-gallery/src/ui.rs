@@ -9195,7 +9195,7 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     &selected_value,
                     "sales-marketing",
                     "Sales & Marketing",
-                    "lucide.pie-chart",
+                    "lucide.chart-pie",
                     is_collapsed,
                     Arc::from("ui-gallery-sidebar-demo-item-sales-marketing"),
                 ))
@@ -9322,7 +9322,7 @@ fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
                     &selected_value,
                     "sales-marketing",
                     "Sales & Marketing",
-                    "lucide.pie-chart",
+                    "lucide.chart-pie",
                     is_collapsed,
                     Arc::from("ui-gallery-sidebar-controlled-item-sales-marketing"),
                 ))

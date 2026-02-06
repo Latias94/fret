@@ -1,10 +1,10 @@
-This crate provides a small curated set of Lucide SVG icons embedded via `rust-embed`.
+This crate provides a Lucide SVG icon pack embedded via `rust-embed`.
 
 ## Attribution
 
 The SVG assets in `assets/icons/*.svg` are derived from the upstream Lucide icon set:
 
-- Source: `repo-ref/lucide/icons/*`
+- Source: `third_party/lucide/icons/*` (git submodule)
 - Upstream: `https://github.com/lucide-icons/lucide` @ `d391bda369305b98a43a812ae2ff8955455dcd5d`
 - License: see `LICENSE.lucide`
 
@@ -26,9 +26,17 @@ The SVG assets in `assets/icons/*.svg` are derived from the upstream Lucide icon
 This crate registers `lucide.<icon-name>` for every SVG listed in `icon-list.txt` (where `<icon-name>` matches the
 upstream SVG filename stem).
 
+Generated vendor constants are exposed under `generated_ids::lucide::*`.
+
 ## Maintenance
 
-- Update the curated list in `icon-list.txt`.
-- Sync SVGs from upstream Lucide into `assets/icons`:
+- Generate full Lucide list and Rust constants:
+  - Windows/macOS/Linux: `python3 tools/gen_lucide.py`
+- Sync SVGs from upstream sources into `assets/icons`:
   - Windows: `pwsh tools/sync_icons.ps1 -Pack lucide -Clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`
+- Verify referenced vendor IDs resolve to vendored assets:
+  - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
+- Release-time one-shot checks:
+  - Icons only: `pwsh tools/pre_release_icons.ps1`
+  - Aggregate entrypoint: `pwsh tools/pre_release.ps1`
