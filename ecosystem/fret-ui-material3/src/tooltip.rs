@@ -335,8 +335,9 @@ impl PlainTooltip {
         let container_bg = surface.background;
         let shadow = surface.shadow;
 
-        let body_small = theme
-            .text_style_by_key("md.sys.typescale.body-small")
+        let supporting_text_style = theme
+            .text_style_by_key("md.comp.plain-tooltip.supporting-text")
+            .or_else(|| theme.text_style_by_key("md.sys.typescale.body-small"))
             .unwrap_or_default();
         let content_max_width = tooltip_tokens::max_width(&theme);
         let container_padding = tooltip_tokens::plain_container_padding(&theme);
@@ -346,7 +347,7 @@ impl PlainTooltip {
                 PlainTooltipContent::Text(text) => cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
                     text,
-                    style: Some(body_small),
+                    style: Some(supporting_text_style),
                     color: Some(text_fg),
                     wrap: TextWrap::Word,
                     overflow: TextOverflow::Clip,
