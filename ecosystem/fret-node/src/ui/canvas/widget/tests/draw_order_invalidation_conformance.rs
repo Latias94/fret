@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[test]

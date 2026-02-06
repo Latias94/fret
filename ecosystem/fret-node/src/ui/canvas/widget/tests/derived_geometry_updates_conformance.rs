@@ -13,7 +13,7 @@ use crate::ui::canvas::spatial::CanvasSpatialIndex;
 use crate::ui::presenter::NodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 
 #[derive(Default)]
 struct StubPresenter;

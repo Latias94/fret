@@ -3,7 +3,7 @@ use fret_runtime::Effect;
 
 use crate::core::CanvasPoint;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{NullServices, event_cx, make_host_graph_view, make_test_graph_two_nodes};
 
 #[test]

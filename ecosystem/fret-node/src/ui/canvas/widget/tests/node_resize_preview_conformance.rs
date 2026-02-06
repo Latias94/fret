@@ -4,7 +4,7 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn assert_near(a: f32, b: f32) {

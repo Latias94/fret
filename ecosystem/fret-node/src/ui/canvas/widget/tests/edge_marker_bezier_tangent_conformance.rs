@@ -10,6 +10,7 @@ use crate::ui::edge_types::NodeGraphEdgeTypes;
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 use crate::ui::{NodeGraphCanvas, NodeGraphStyle};
 
+use super::prelude::{cubic_bezier_derivative, wire_ctrl_points};
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[derive(Default)]
@@ -201,9 +202,9 @@ fn bezier_markers_align_with_bezier_start_end_tangents() {
     let from = geom.port_center(a_out).expect("from port center");
     let to = geom.port_center(b_in).expect("to port center");
 
-    let (c1, c2) = super::super::wire_ctrl_points(from, to, snapshot.zoom);
-    let start_tangent = super::super::cubic_bezier_derivative(from, c1, c2, to, 0.0);
-    let end_tangent = super::super::cubic_bezier_derivative(from, c1, c2, to, 1.0);
+    let (c1, c2) = wire_ctrl_points(from, to, snapshot.zoom);
+    let start_tangent = cubic_bezier_derivative(from, c1, c2, to, 0.0);
+    let end_tangent = cubic_bezier_derivative(from, c1, c2, to, 1.0);
 
     let mut tree = UiTree::<TestUiHostImpl>::default();
     let mut services = CaptureServices::default();

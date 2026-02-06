@@ -10,7 +10,7 @@ use fret_ui::retained_bridge::Widget as _;
 use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::{MEASURED_GEOMETRY_EPSILON_PX, MeasuredGeometryStore};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn paint_once(

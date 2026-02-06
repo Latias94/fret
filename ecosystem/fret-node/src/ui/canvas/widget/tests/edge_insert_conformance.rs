@@ -12,7 +12,7 @@ use crate::core::{
 use crate::ui::canvas::state::{ContextMenuTarget, EdgeInsertDrag, PendingEdgeInsertDrag};
 use crate::ui::presenter::{EdgeRenderHint, EdgeRouteKind, NodeGraphPresenter};
 
-use super::super::{NodeGraphCanvas, edge_insert_drag};
+use super::prelude::{NodeGraphCanvas, edge_insert_drag};
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,

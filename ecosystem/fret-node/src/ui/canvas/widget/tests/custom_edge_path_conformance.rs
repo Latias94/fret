@@ -1,4 +1,4 @@
-use super::super::path_midpoint_and_normal;
+use super::prelude::path_midpoint_and_normal;
 use super::*;
 
 #[test]

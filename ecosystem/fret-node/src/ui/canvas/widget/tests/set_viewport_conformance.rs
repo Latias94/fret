@@ -3,7 +3,7 @@ use fret_core::{Point, Px, Rect, Size};
 use crate::core::CanvasPoint;
 use crate::ui::{NodeGraphSetViewportOptions, NodeGraphViewQueue};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 #[test]

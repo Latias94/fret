@@ -7,7 +7,7 @@ use crate::core::CanvasPoint;
 
 use crate::ui::commands::CMD_NODE_GRAPH_FOCUS_NEXT;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, command_cx, insert_view, make_test_graph_two_nodes};
 
 #[test]

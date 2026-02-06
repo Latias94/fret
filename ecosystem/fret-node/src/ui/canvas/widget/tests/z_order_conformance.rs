@@ -3,7 +3,7 @@ use crate::core::{
     PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_view};
 
 #[test]

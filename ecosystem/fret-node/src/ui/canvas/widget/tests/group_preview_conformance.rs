@@ -7,7 +7,7 @@ use crate::core::{
 };
 use crate::ui::canvas::state::{GroupDrag, GroupResize};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,

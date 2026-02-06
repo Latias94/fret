@@ -7,7 +7,7 @@ use crate::core::{
 
 use crate::rules::EdgeEndpoint;
 
-use super::super::{NodeGraphCanvas, edge_drag};
+use super::prelude::{NodeGraphCanvas, edge_drag};
 use super::{NullServices, TestUiHostImpl, event_cx, insert_view};
 use crate::ui::canvas::state::{EdgeDrag, WireDragKind};
 

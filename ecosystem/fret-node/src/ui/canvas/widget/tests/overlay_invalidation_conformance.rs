@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::core::CanvasPoint;
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_graph_view, make_test_graph_two_nodes_with_ports_spaced_x};
 use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 

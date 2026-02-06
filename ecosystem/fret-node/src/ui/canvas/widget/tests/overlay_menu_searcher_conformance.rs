@@ -8,8 +8,8 @@ use crate::ui::presenter::{
 };
 use crate::ui::style::NodeGraphStyle;
 
-use super::super::NodeGraphCanvas;
-use super::super::overlay_hit;
+use super::prelude::NodeGraphCanvas;
+use super::prelude::overlay_hit;
 use super::{TestUiHostImpl, insert_graph_view};
 use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};

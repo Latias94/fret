@@ -17,7 +17,7 @@ use crate::core::{
 };
 use crate::ui::presenter::{EdgeMarker, EdgeRenderHint, NodeGraphPresenter};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_graph_view};
 
 #[derive(Default)]

@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[test]

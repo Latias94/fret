@@ -5,7 +5,7 @@ use crate::core::{Edge, EdgeId, EdgeKind};
 
 use crate::ui::NodeGraphCanvas;
 
-use super::super::{cubic_bezier, wire_ctrl_points};
+use super::prelude::{cubic_bezier, wire_ctrl_points};
 use super::{
     NullServices, TestUiHostImpl, event_cx, insert_view,
     make_test_graph_two_nodes_with_ports_spaced_x,

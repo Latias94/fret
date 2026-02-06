@@ -8,6 +8,7 @@ use crate::ui::NodeGraphCanvas;
 use crate::ui::edge_types::{EdgeCustomPath, EdgePathInput, NodeGraphEdgeTypes};
 use crate::ui::presenter::EdgeMarker;
 
+use super::prelude::path_start_end_tangents;
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[derive(Default)]
@@ -173,7 +174,7 @@ fn custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents() 
         .flatten()
         .expect("custom path must exist");
     assert!(
-        super::super::path_start_end_tangents(&custom.commands).is_none(),
+        path_start_end_tangents(&custom.commands).is_none(),
         "commands must not provide tangents (this test expects fallback tangents)"
     );
 

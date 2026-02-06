@@ -11,7 +11,7 @@ use crate::ui::{
     NodeGraphCanvasMiddlewareCx,
 };
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{
     NullServices, TestUiHostImpl, command_cx, insert_graph_view, make_test_graph_two_nodes,
     read_node_pos,

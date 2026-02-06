@@ -4,7 +4,7 @@ use fret_core::{Point, Px, Rect, Size};
 use crate::core::{CanvasPoint, CanvasRect, CanvasSize};
 use crate::ui::{NodeGraphSetViewportOptions, NodeGraphViewQueue};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 fn rect_contains(outer: Rect, inner: Rect, eps: f32) -> bool {

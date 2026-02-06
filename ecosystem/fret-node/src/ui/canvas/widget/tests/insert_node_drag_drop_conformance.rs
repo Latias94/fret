@@ -12,7 +12,7 @@ use crate::rules::{InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphPresenter};
 use crate::{core::Graph, ops::GraphOp};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 
 #[derive(Default)]

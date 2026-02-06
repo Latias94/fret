@@ -11,7 +11,7 @@ use crate::core::CanvasPoint;
 use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::MeasuredGeometryStore;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{
     NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes_with_ports,
 };

@@ -11,7 +11,7 @@ use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::{MeasuredGeometryApplyOptions, MeasuredGeometryExclusiveBatch};
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn paint_once(

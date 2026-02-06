@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect, Size};
 
-use super::super::NodeGraphCanvas;
+use super::prelude::{DragPreviewKind, NodeGraphCanvas};
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 use crate::core::{CanvasPoint, Edge, EdgeId, EdgeKind};
 
@@ -30,7 +30,7 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
         .drag_preview_derived(
             &host,
             &snapshot0,
-            super::super::DragPreviewKind::NodeDrag,
+            DragPreviewKind::NodeDrag,
             1,
             &[(a, pos0)],
         )
@@ -45,7 +45,7 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
         .drag_preview_derived(
             &host,
             &snapshot0,
-            super::super::DragPreviewKind::NodeDrag,
+            DragPreviewKind::NodeDrag,
             2,
             &[(a, pos0)],
         )
@@ -68,7 +68,7 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
         .drag_preview_derived(
             &host,
             &snapshot0,
-            super::super::DragPreviewKind::NodeDrag,
+            DragPreviewKind::NodeDrag,
             3,
             &[(a, pos1)],
         )
@@ -101,7 +101,7 @@ fn drag_preview_cache_reuses_geometry_across_preview_rev_updates() {
         .drag_preview_derived(
             &host,
             &snapshot1,
-            super::super::DragPreviewKind::NodeDrag,
+            DragPreviewKind::NodeDrag,
             4,
             &[(a, pos1)],
         )
@@ -154,7 +154,7 @@ fn drag_preview_updates_node_rect_port_centers_and_edge_index() {
         .drag_preview_derived(
             &host,
             &snapshot,
-            super::super::DragPreviewKind::NodeDrag,
+            DragPreviewKind::NodeDrag,
             1,
             &[(a, next_pos)],
         )

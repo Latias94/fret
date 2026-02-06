@@ -17,7 +17,7 @@ use crate::ui::portal::NodeGraphPortalHost;
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::NodeGraphCanvas;
 use super::{NullServices, TestUiHostImpl, insert_view};
 
 fn bounds() -> Rect {
