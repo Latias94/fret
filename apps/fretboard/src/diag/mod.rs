@@ -5329,7 +5329,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 21] {
+fn ui_gallery_suite_scripts() -> [&'static str; 22] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -5344,6 +5344,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 21] {
         "tools/diag-scripts/ui-gallery-menubar-pointer-submenu-grace-intent.json",
         "tools/diag-scripts/ui-gallery-menubar-alt-mnemonic.json",
         "tools/diag-scripts/ui-gallery-menubar-active-mnemonic.json",
+        "tools/diag-scripts/ui-gallery-menubar-escape-exits-active.json",
         "tools/diag-scripts/ui-gallery-context-menu-shift-f10.json",
         "tools/diag-scripts/ui-gallery-slider-set-value.json",
         "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
