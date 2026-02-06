@@ -1,6 +1,6 @@
 # ADR 1162: Authoring Paradigm (App-Owned Models) and State Helpers (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -119,8 +119,8 @@ authoring story.
 
 - **More concepts than “signals-only” frameworks:** the golden path must be documented and taught.
 - **Selector misuse risk:** hook-like sugar must provide guard rails (keys, deps helpers, diagnostics).
-- **Async ecosystem friction:** a sync closure fetch is portable but not ideal for wasm/network APIs;
-  we likely need an async adapter story (see Open Questions).
+- **Async ecosystem friction:** async fetch works via optional spawners (tokio/wasm), but requires
+  installing `FutureSpawnerHandle` and preserving driver-boundary apply semantics.
 
 ## Alternatives Considered
 
@@ -151,12 +151,21 @@ Tracking and adoption work is captured in:
 
 - **Key conventions:** namespace + structured key patterns (what is stable, what is hashed, and how
   collisions are handled/debugged).
+  - Status: Implemented + documented.
+  - Evidence: `docs/query-key-conventions.md`
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
 - **Default policy:** `stale_time`/`cache_time` defaults, dedupe and cancel semantics, and which
   operations are “forced refetch” vs “mark stale”.
 - **Error model:** use a typed `QueryError` (kind + message) so retry/UX can be consistent without
   leaking backend error types into UI.
+  - Status: Implemented (`QueryError` + `QueryRetryPolicy`).
+  - Evidence: `ecosystem/fret-query/src/lib.rs`
 - **Async adapter story:** should `fret-query` add an optional `Future` fetch mode via ecosystem
   adapters (tokio + wasm), while preserving the driver-boundary apply contract?
+  - Status: Implemented (async query variants + `FutureSpawnerHandle`).
+  - Evidence: `ecosystem/fret-executor/src/lib.rs`
+  - Evidence: `docs/integrating-tokio-and-reqwest.md`
+  - Evidence: `docs/integrating-sqlite-and-sqlx.md`
 - **Instrumentation:** a minimal tracing vocabulary for query lifecycle (start/finish/cancel, cache
   hits, stale decisions) and a path to “devtools-like” introspection in `fretboard diag`.
 
@@ -164,6 +173,8 @@ Tracking and adoption work is captured in:
 
 - **Ergonomics + safety rails:** `DepsBuilder`, keyed variants, and helper fns for common deps
   (model revision tokens, global change tokens) to reduce “forgot to observe” footguns.
+  - Status: Implemented.
+  - Evidence: `ecosystem/fret-selector/src/ui.rs`
 - **Shared derived state:** should we provide an opt-in “computed model” helper (`Model<U>` updated
   from `Model<T>` changes) in addition to local memo selectors?
 - **Debuggability:** tracing hooks for selector recompute + a way to surface unexpected recompute

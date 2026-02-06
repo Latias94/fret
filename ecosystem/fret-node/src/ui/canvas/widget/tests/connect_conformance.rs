@@ -12,11 +12,11 @@ use crate::io::NodeGraphViewState;
 use crate::rules::{ConnectPlan, EdgeEndpoint, InsertNodeTemplate, PortTemplate};
 use crate::ui::presenter::NodeGraphPresenter;
 
-use super::super::super::state::{ContextMenuTarget, WireDrag, WireDragKind};
 use super::super::NodeGraphCanvas;
 use super::{
     NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
 };
+use crate::ui::canvas::state::{ContextMenuTarget, WireDrag, WireDragKind};
 
 #[derive(Clone)]
 struct RejectingConversionPresenter {

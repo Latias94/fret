@@ -69,6 +69,8 @@ pub enum PopoverSide {
     #[default]
     Bottom,
     Left,
+    InlineStart,
+    InlineEnd,
 }
 
 /// shadcn/ui `Popover` (v4).
@@ -425,6 +427,20 @@ impl Popover {
                         PopoverSide::Right => Side::Right,
                         PopoverSide::Bottom => Side::Bottom,
                         PopoverSide::Left => Side::Left,
+                        PopoverSide::InlineStart => {
+                            if direction == direction_prim::LayoutDirection::Rtl {
+                                Side::Right
+                            } else {
+                                Side::Left
+                            }
+                        }
+                        PopoverSide::InlineEnd => {
+                            if direction == direction_prim::LayoutDirection::Rtl {
+                                Side::Left
+                            } else {
+                                Side::Right
+                            }
+                        }
                     };
 
                     let (arrow_options, arrow_protrusion) =

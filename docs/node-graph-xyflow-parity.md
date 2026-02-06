@@ -12,6 +12,7 @@ If you are looking for overall sequencing and milestones, see `docs/node-graph-r
 If you are looking for an execution plan (milestones + deliverables), see
 `docs/workstreams/fret-node-xyflow-parity.md`.
 If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed-connections.md`.
+If you are looking for an API-level guide, see `docs/node-graph-how-to-build-like-xyflow.md`.
 
 ## How to use this doc
 
@@ -23,7 +24,7 @@ If you are looking for contracts, see `docs/adr/0135-node-graph-editor-and-typed
 
 ## Focus window (current refactor target)
 
-Last audited: 2026-02-01
+Last audited: 2026-02-05
 
 This document is intentionally exhaustive. During large refactors, keep a small “focus window” so
 work remains coherent and measurable. For the execution plan + gates, see:
@@ -36,6 +37,31 @@ Current top gaps (aligned to workstream M0/M5):
 - **Coordinate-space correctness under `render_transform`** (screen px vs canvas units): keep thresholds and hit slop zoom-safe.
 - **Cache correctness + perf guardrails** (scene op caches, geometry caches): avoid perf cliffs during pan/zoom.
 - **Stable overlay anchoring** (minimap/controls/toolbars): overlays must not “steal” input or drift.
+
+## Refactor guide (fearless refactors)
+
+This repository prefers “docs + conformance tests” as the refactor safety net. When you touch
+internals/geometry/caches, treat the following behaviors as locked outcomes:
+
+For the detailed internals contract checklist, see `docs/workstreams/fret-node-internals-m0.md`.
+
+- **Pan-only must not rebuild geometry** (derived geometry caches are reused; internals update only).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
+- **Semantic zoom discipline** (node sizes stay constant in window space; geometry rebuild is scoped and deterministic).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+- **Hit-testing determinism** (same inputs → same hit results; Strict vs Loose modes are stable).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_conformance.rs`
+- **Invalidation ordering discipline** (measured geometry updates are observed without requiring a layout pass).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+- **Cache guardrails** (paint reuses cached paths/text between frames; warming behavior stays stable).
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`
+
+Suggested local gates while refactoring:
+
+- `cargo nextest run -p fret-node internals invalidation hit_testing perf_cache spatial_index_equivalence threshold_zoom_conformance`
 
 Legend:
 
@@ -93,8 +119,8 @@ High-level layering (ADR 0135):
 - **Runtime change model (headless-safe)**: `ecosystem/fret-node/src/runtime/*`
 - **UI substrate (optional, default)**: `ecosystem/fret-node/src/ui/*`
   - canvas widget: `ecosystem/fret-node/src/ui/canvas/*` and `ecosystem/fret-node/src/ui/canvas/widget.rs`
-  - derived internals: `ecosystem/fret-node/src/ui/internals.rs`, `MeasuredGeometryStore`
-  - overlays (rename, controls, minimap): `ecosystem/fret-node/src/ui/overlays.rs`
+  - derived internals (entry + impl): `ecosystem/fret-node/src/ui/internals.rs` and `ecosystem/fret-node/src/ui/internals/*` (`MeasuredGeometryStore` in `ecosystem/fret-node/src/ui/measured.rs`)
+  - overlays (rename, controls, minimap): `ecosystem/fret-node/src/ui/overlays/mod.rs`
   - portal escape hatch: `ecosystem/fret-node/src/ui/portal.rs`
   - commands: `ecosystem/fret-node/src/ui/commands.rs`
 - **Demos**: `apps/fret-examples/src/node_graph_demo.rs`, `apps/fret-examples/src/node_graph_domain_demo.rs`
@@ -220,32 +246,39 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 0.4 Batteries-included add-ons (Controls / MiniMap / Background / Panels)
 
-- [~] **MiniMap**
+- [x] **MiniMap**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/MiniMap/MiniMap.tsx`
-  - fret-node: overlay exists; needs polish and API stabilization for B-layer consumption
+  - fret-node: `NodeGraphMiniMapOverlay` (derived-internals driven) + B-layer navigation wiring via `NodeGraphViewQueue`
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
-- [~] **Controls**
+- [x] **Controls**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Controls/Controls.tsx`
-  - fret-node: overlay exists; needs a B-layer integration story (store/actions + theming + composition)
+  - fret-node: `NodeGraphControlsOverlay` + command binding injection (`NodeGraphControlsBindings`)
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
-- [~] **Background**
+- [x] **Background**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/Background/Background.tsx`
-  - fret-node: grid patterns exist (lines/dots/cross); theming + configuration parity still TBD
+  - fret-node: grid patterns (`Lines` / `Dots` / `Cross`) + explicit theme/token plumbing contract
+  - Contract: `docs/node-graph-addons-theming.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
 
 - [x] **NodeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/NodeToolbar/NodeToolbar.tsx`
-  - fret-node: `NodeGraphNodeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+  - fret-node: `NodeGraphNodeToolbar` (`ecosystem/fret-node/src/ui/overlays/toolbars.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
 
 - [x] **EdgeToolbar**
   - XyFlow: `repo-ref/xyflow/packages/react/src/additional-components/EdgeToolbar/EdgeToolbar.tsx`
-  - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
+  - fret-node: `NodeGraphEdgeToolbar` (`ecosystem/fret-node/src/ui/overlays/toolbars.rs`) + `NodeGraphInternalsSnapshot.edge_centers_window` (`ecosystem/fret-node/src/ui/internals/snapshot.rs`) + re-export from `ecosystem/fret-node/src/ui/mod.rs`
 
-- [~] **Panels / toolbars / overlays composition API**
+- [x] **Panels / toolbars / overlays composition API**
   - XyFlow: `<Panel />` composition patterns
   - fret-node:
     - `NodeGraphPanel` provides window-space anchored overlay composition: `ecosystem/fret-node/src/ui/panel.rs`
     - `NodeGraphControlsOverlay::in_panel_bounds` + `NodeGraphMiniMapOverlay::in_panel_bounds` support panel-based placement
     - demo usage: `apps/fret-examples/src/node_graph_demo.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`
 
 ---
 
@@ -333,6 +366,47 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 ---
 
 # 2) Node Rendering, Internals, and Measurement
+
+## 2.0 Derived geometry pipeline (single source of truth)
+
+This is the high-risk refactor surface in node editors. To avoid drift, treat the following as the
+canonical data flow and invalidation boundaries:
+
+- **Inputs (authoritative)**
+  - Graph semantics: `Graph` (`Node.pos`, ports, edges, selection flags, etc.).
+  - View semantics: `NodeGraphViewState` (`pan`, `zoom`, draw order).
+  - Interaction tuning: `NodeGraphInteractionState` (hit slop, spatial index tuning, etc.).
+  - Presentation: `NodeGraphPresenter` + `NodeGraphStyle` + optional `NodeGraphEdgeTypes` overrides.
+- **Derived geometry (canvas space)**
+  - `CanvasGeometry` (nodes, ports, edge routing hints) is the single source of truth for:
+    - painting coordinates,
+    - port hit-testing / connection candidate selection,
+    - conservative AABBs used for spatial indexing and culling.
+  - Built and cached by: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/mod.rs`, `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/{base_cache,cache_keys,updates,spatial_index}.rs`
+  - Invalidation key (must remain stable and auditable):
+    - graph revision + zoom + node-origin + draw order hash + presenter revision + edgeTypes revision.
+    - **Pan-only must not invalidate** this cache (it is applied via render transforms).
+    - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
+- **Spatial index (canvas space, UI-only)**
+  - `CanvasSpatialIndex` is an acceleration structure built from `Graph + CanvasGeometry` and
+    spatial tuning, used by hit-testing and previews.
+  - Built by: `ecosystem/fret-node/src/ui/canvas/spatial.rs`
+  - Edge AABB padding is treated as a correctness guardrail: it must cover at least the effective
+    edge hit slop (`edge_interaction_width`) and the visible wire stroke width (`NodeGraphStyle.wire_width`),
+    even if the tuning knobs are reduced.
+  - Custom edges (`edgeTypes` Stage 2) may patch conservative edge bounds in the index when a
+    custom path is present (to keep hit-testing and culling consistent).
+  - Implementation: `ecosystem/fret-node/src/ui/canvas/widget/derived_geometry/spatial_index.rs`
+- **Internals snapshot (window space, UI-only)**
+  - `NodeGraphInternalsSnapshot` is derived output for overlays/inspectors/a11y:
+    window-space node rects, port bounds/centers, edge centers, and the current canvas transform.
+  - Written by: `ecosystem/fret-node/src/ui/canvas/widget/stores.rs` and `ecosystem/fret-node/src/ui/canvas/widget/stores/internals.rs`
+  - Invalidation key includes pan + bounds origin/size, so panning updates internals without forcing
+    a geometry rebuild.
+- **Hit-testing (consumer)**
+  - All pointer hit-testing and connection candidate selection must use `CanvasGeometry` +
+    `CanvasSpatialIndex` (never ad-hoc “layout guesses”).
+- Implemented in: `ecosystem/fret-node/src/ui/canvas/widget/hit_test/mod.rs` and `ecosystem/fret-node/src/ui/canvas/widget/hit_test/*`
 
 ## 2.1 User node vs internal node separation
 
@@ -633,14 +707,17 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [~] **Edge types (bezier/step/smooth) and markers**
   - XyFlow: edge types in React package; system provides geometry helpers
   - fret-node: presenter hint supports `EdgeRouteKind::{bezier, straight, step}` and end markers (`EdgeMarkerKind::Arrow`); other marker styles remain TODO
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_size_zoom_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_step_tangent_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_bezier_tangent_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_tangent_fallback_conformance.rs`
 
 - [~] **Interaction width**
   - XyFlow: `interactionWidth` on edges (`components/EdgeWrapper/index.tsx`)
   - fret-node: `edge_interaction_width` in `NodeGraphStyle`
 
-- [~] **Edge labels**
+- [x] **Edge labels**
   - XyFlow: `EdgeLabelRenderer` component
-  - fret-node: presenter can provide `EdgeRenderHint.label`; labels render on the canvas near the edge midpoint (not interactive yet)
+  - fret-node: presenter can provide `EdgeRenderHint.label`; labels render on the canvas near the edge midpoint (non-interactive)
+    - per-edge label border override: `EdgeRenderHint.color`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_route_anchor_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_style_override_conformance.rs`
 
 ## 6.2 Edge selection and context menus
 
@@ -669,7 +746,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - TODO: parity knobs:
     - cancel behavior:
       - [x] Escape / focus loss cancels active reconnect/connect drags: `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`, `ecosystem/fret-node/src/ui/canvas/widget.rs`
-      - [~] outside press / pointer-capture loss:
+      - [x] outside press / pointer-capture loss:
         - inferred from `PointerEvent::Move.buttons` when an expected "up" is missed: `ecosystem/fret-node/src/ui/canvas/widget.rs`
         - right click cancels active gestures before opening the context menu: `ecosystem/fret-node/src/ui/canvas/widget.rs`
         - [x] platform pointer-left maps to `Event::PointerCancel` and clears capture:
@@ -697,6 +774,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - alt+drag wire opens the insert-node picker on release (optional): `NodeGraphInteractionState.edge_insert_on_alt_drag`
       - start gesture: `ecosystem/fret-node/src/ui/canvas/widget/left_click.rs`
       - threshold + pointer-up completion: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag.rs`
+    - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_gestures_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
 
 ---
 
@@ -748,23 +826,23 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 
 ## 8.1 Controls panel
 
-- [~] **Controls (zoom/fit/lock)**
+- [x] **Controls (zoom/fit/lock)**
   - XyFlow: `additional-components/Controls/Controls.tsx`
   - fret-node: `NodeGraphControlsOverlay` (zoom/fit/reset + Strict/Loose toggle)
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
 ## 8.2 Minimap
 
-- [~] **Minimap navigation and styling**
+- [x] **Minimap navigation and styling**
   - XyFlow: `MiniMap.tsx` + `@xyflow/system` `XYMinimap` (`packages/system/src/xyminimap/index.ts`)
   - fret-node: `NodeGraphMiniMapOverlay` consumes `NodeGraphInternalsStore` and view state
-  - TODO:
-    - keyboard focus/a11y baseline
-    - click-to-pan vs drag-to-pan parity
-    - inverse pan option
+  - Contract: `docs/node-graph-addons-minimap-controls.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
 
 ## 8.3 Background patterns
 
-- [~] **Grid background patterns (lines/dots/cross)**
+- [x] **Grid background patterns (lines/dots/cross)**
   - XyFlow: `additional-components/Background/Background.tsx` (dots/lines/cross patterns)
   - fret-node:
     - renderer: `ecosystem/fret-node/src/ui/canvas/widget/paint_grid.rs`
@@ -774,8 +852,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - `NodeGraphStyle.grid_dot_size`
       - `NodeGraphStyle.grid_cross_size`
       - see: `ecosystem/fret-node/src/ui/style.rs`
-  - TODO:
-    - per-editor styling via theme tokens (plumb theme metrics/colors into the new fields)
+  - Contract: `docs/node-graph-addons-theming.md`
+  - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
 
 ## 8.4 Viewport portals and window-space overlays
 
@@ -810,13 +888,18 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - `selectionKeyCode`: `NodeGraphInteractionState.selection_key` (default: Shift)
       - `multiSelectionKeyCode`: `NodeGraphInteractionState.multi_selection_key` (default: Ctrl/Cmd)
       - `disableKeyboardA11y`: `NodeGraphInteractionState.disable_keyboard_a11y` (disables keyboard focus traversal / a11y paths, not delete/copy/paste)
-    - TODO: configurable nudge step (screen px vs grid step) and keyboard focus semantics
+    - [x] configurable nudge step (screen px vs grid step):
+      - config: `NodeGraphInteractionState.{nudge_step_mode,nudge_step_px,nudge_fast_step_px}` in `ecosystem/fret-node/src/io/mod.rs`
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
+    - TODO: keyboard focus semantics
 
 - [~] **Roving focus / a11y semantics**
   - XyFlow: has ARIA descriptions and keyboard a11y paths in `NodeWrapper`
   - fret-node:
     - `Tab` / `Shift+Tab` focus-cycle nodes (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - `Ctrl/Cmd+Tab` focus-cycle edges (updates selection): `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - [x] `active_descendant` semantics are stable when `NodeGraphA11yFocused{Port,Edge,Node}` children are mounted:
+      - conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
     - TODO: semantic focus nodes (ARIA-like), ports focus path, and minimap/controls focus
 
 ---
@@ -848,14 +931,14 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - [x] cached edge path tessellation (wires + markers; preview uses the same cache): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [x] cached text shaping/metrics (covers `TextService::{prepare,measure}`): `ecosystem/fret-node/src/ui/canvas/paint.rs` (`CanvasPaintCache`)
     - [~] incremental scene op updates (true retained scene graph diffing)
-      - node/group/edge chrome static layer replay cache (viewport-tile keyed): `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs` (`groups_scene_cache` / `nodes_scene_cache` / `edges_scene_cache` / `edge_labels_scene_cache`)
+      - node/group/edge chrome static layer replay cache (viewport-tile keyed): `ecosystem/fret-node/src/ui/canvas/widget/paint_root/` (`cached_groups.rs` / `cached_nodes.rs` / `cached.rs`; `groups_scene_cache` / `nodes_scene_cache` / `edges_scene_cache` / `edge_labels_scene_cache`)
       - perf conformance: cached edge scene does not revisit presenter on small pans: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
-      - edge + edge label cache warmup is budgeted per frame: `ecosystem/fret-node/src/ui/canvas/widget/paint_root.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+      - edge + edge label cache warmup is budgeted per frame: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
 
 - [~] **Derived geometry invalidation discipline**
   - XyFlow: `updateNodeInternals` is explicit and batched
   - fret-node:
-    - [~] measured geometry epsilon + batch semantics conformance tests: `ecosystem/fret-node/src/ui/measured.rs`
+    - [x] measured geometry epsilon + batch semantics conformance tests: `ecosystem/fret-node/src/ui/measured.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
     - [x] invalidation ordering conformance harness: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
 
 ---

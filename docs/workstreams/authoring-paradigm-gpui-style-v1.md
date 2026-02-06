@@ -79,6 +79,10 @@ direct dependency.
   - apply results via inbox draining and model updates.
 - For `fret-query` async fetch, install a `FutureSpawnerHandle` global; see
   `docs/integrating-tokio-and-reqwest.md`.
+- For persistence patterns (sqlite/sqlx) that preserve driver-boundary apply, see
+  `docs/integrating-sqlite-and-sqlx.md`.
+- For the recommended service injection + subtree override patterns used by ecosystem crates, see
+  `docs/service-injection-and-overrides.md`.
 
 ## Key decision gates
 

@@ -4,10 +4,10 @@ use crate::core::{CanvasPoint, Port, PortCapacity, PortDirection, PortId, PortKe
 use crate::io::NodeGraphViewState;
 use crate::ui::NodeGraphCanvas;
 
-use super::super::super::state::{WireDrag, WireDragKind};
 use super::{
     NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
 };
+use crate::ui::canvas::state::{WireDrag, WireDragKind};
 
 #[test]
 fn wire_drag_hover_tracks_invalid_port_in_strict_mode() {

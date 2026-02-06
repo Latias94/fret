@@ -7133,6 +7133,194 @@ fn material3_headless_divider_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_list_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::{List, ListItem};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            for (case_name, hover_id, focus_id) in [
+                ("idle", None, None),
+                ("hover_selected", Some("list-beta"), None),
+                ("focus_visible_selected", None, Some("list-beta")),
+            ] {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(520.0), Px(420.0)),
+                );
+
+                let selected = app.models_mut().insert(Arc::<str>::from("beta"));
+
+                let render = |ui: &mut UiTree<TestHost>,
+                              app: &mut TestHost,
+                              services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut props = FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = Px(12.0);
+
+                            let list = List::new(selected.clone())
+                                .test_id("list")
+                                .items(vec![
+                                    ListItem::new("alpha", "Alpha")
+                                        .leading_icon(fret_icons::ids::ui::SEARCH)
+                                        .test_id("list-alpha"),
+                                    ListItem::new("beta", "Beta (selected)")
+                                        .leading_icon(fret_icons::ids::ui::SETTINGS)
+                                        .trailing_icon(fret_icons::ids::ui::CHEVRON_RIGHT)
+                                        .test_id("list-beta"),
+                                    ListItem::new("charlie", "Charlie (disabled)")
+                                        .leading_icon(fret_icons::ids::ui::SLASH)
+                                        .disabled(true)
+                                        .test_id("list-charlie"),
+                                ])
+                                .into_element(cx);
+
+                            let content = cx.flex(props, |_cx| vec![list]);
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let root = render(&mut ui, &mut app, &mut services);
+                ui.set_root(root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                if case_name == "idle" {
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), Point::new(Px(1.0), Px(1.0))),
+                    );
+                }
+
+                if let Some(test_id) = hover_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
+                            )
+                        });
+                    let node_bounds = ui.debug_node_visual_bounds(node_id).unwrap_or_else(|| {
+                        panic!("expected {test_id} bounds ({label}, {scale}, {case_name})")
+                    });
+                    let hover_at = Point::new(
+                        Px(node_bounds.origin.x.0 + node_bounds.size.width.0 * 0.5),
+                        Px(node_bounds.origin.y.0 + node_bounds.size.height.0 * 0.5),
+                    );
+                    ui.dispatch_event(
+                        &mut app,
+                        &mut services,
+                        &pointer_move(PointerId(1), hover_at),
+                    );
+                }
+
+                if let Some(test_id) = focus_id {
+                    let node_id: NodeId = ui
+                        .semantics_snapshot()
+                        .and_then(|snapshot| {
+                            snapshot.nodes.iter().find_map(|node| {
+                                (node.test_id.as_deref() == Some(test_id)).then_some(node.id)
+                            })
+                        })
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "expected {test_id} in semantics snapshot ({label}, {scale}, {case_name})"
+                            )
+                        });
+                    ui.set_focus(Some(node_id));
+                    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowRight));
+                    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowRight));
+                }
+
+                let mut settled: Option<Material3HeadlessGoldenV1> = None;
+                for frame in 0..64 {
+                    app.advance_frame();
+                    let root = render(&mut ui, &mut app, &mut services);
+                    ui.set_root(root);
+                    ui.layout_all(&mut app, &mut services, bounds, scale_factor);
+
+                    let mut scene = Scene::default();
+                    ui.paint_all(&mut app, &mut services, bounds, &mut scene, scale_factor);
+
+                    if frame < 28 {
+                        continue;
+                    }
+
+                    let snapshot = material3_scene_snapshot_v1(&scene);
+                    if let Some(prev) = settled.as_ref() {
+                        assert_eq!(
+                            snapshot, *prev,
+                            "expected list scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                        );
+                    } else {
+                        settled = Some(snapshot);
+                    }
+                }
+
+                let Some(snapshot) = settled else {
+                    panic!("expected a settled list snapshot ({label}, {scale}, {case_name})");
+                };
+                cases.insert(case_name.to_string(), snapshot);
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(&format!("material3-list.{scale}.{label}"), &suite);
+        }
+    }
+}
+
+#[test]
 fn material3_headless_progress_indicator_suite_goldens_v1() {
     use fret_ui::element::FlexProps;
     use fret_ui_material3::{CircularProgressIndicator, LinearProgressIndicator};
@@ -8337,6 +8525,1025 @@ fn material3_headless_overlays_suite_goldens_v1() {
 
             write_or_assert_material3_suite_v1(
                 &format!("material3-overlays.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
+fn material3_autocomplete_semantics_v1() {
+    use fret_core::SemanticsRole;
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Autocomplete, AutocompleteItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let model = app.models_mut().insert(String::new());
+    let selected_value = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let ac = Autocomplete::new(model.clone())
+                    .selected_value(selected_value.clone())
+                    .items(items.clone())
+                    .a11y_label("autocomplete")
+                    .test_id("material3-autocomplete")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), ac)]
+            })
+        };
+
+    // Frame 1: build stable input id + bounds.
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let input_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-autocomplete")).then_some(node.id)
+            })
+        })
+        .expect("expected material3-autocomplete input node in semantics snapshot");
+
+    ui.set_focus(Some(input_node));
+
+    // Frame 2: focus visible to the widget.
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    // Open via keyboard.
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+    // Frame 3/4: overlay created, then relationships stabilize (controls/active-descendant).
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected autocomplete popover overlay to be open after ArrowDown"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete"))
+        .expect("combobox input node");
+    assert_eq!(input.role, SemanticsRole::ComboBox);
+    assert!(
+        input.flags.expanded,
+        "combobox input should report expanded=true while open"
+    );
+
+    let list = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-listbox"))
+        .expect("listbox node");
+    assert!(
+        input.controls.iter().any(|id| *id == list.id),
+        "combobox input should control the listbox"
+    );
+    assert!(
+        list.labelled_by.iter().any(|id| *id == input.id),
+        "listbox should be labelled by the combobox input"
+    );
+
+    let active = input
+        .active_descendant
+        .expect("active_descendant should be set");
+    let active_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.id == active)
+        .expect("active_descendant should reference a node in the snapshot");
+    assert_eq!(active_node.role, SemanticsRole::ListBoxOption);
+
+    let beta = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-option-beta"))
+        .expect("expected beta option node");
+    assert!(beta.flags.selected, "expected beta to be marked selected");
+
+    // Typing still works while the overlay is open.
+    ui.set_focus(Some(input.id));
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::TextInput("a".to_string()),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete"))
+        .expect("combobox input node after typing");
+    assert_eq!(input.value.as_deref(), Some("a"));
+}
+
+#[test]
+fn material3_autocomplete_filters_items_by_query_v1() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Autocomplete, AutocompleteItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let model = app.models_mut().insert(String::new());
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let ac = Autocomplete::new(model.clone())
+                    .items(items.clone())
+                    .a11y_label("autocomplete")
+                    .test_id("material3-autocomplete")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), ac)]
+            })
+        };
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let input_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-autocomplete")).then_some(node.id)
+            })
+        })
+        .expect("expected material3-autocomplete input node in semantics snapshot");
+    ui.set_focus(Some(input_node));
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::TextInput("ga".to_string()),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected autocomplete popover overlay to be open after typing"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert!(
+        snap.nodes
+            .iter()
+            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete-option-gamma") }),
+        "expected gamma option after typing 'ga'"
+    );
+    assert!(
+        !snap
+            .nodes
+            .iter()
+            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete-option-alpha") }),
+        "expected alpha option to be filtered out after typing 'ga'"
+    );
+}
+
+#[test]
+fn material3_autocomplete_enter_commits_and_does_not_reopen_v1() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Autocomplete, AutocompleteItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let model = app.models_mut().insert(String::new());
+    let selected_value = app.models_mut().insert(None::<Arc<str>>);
+    let selected_value_for_render = selected_value.clone();
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let ac = Autocomplete::new(model.clone())
+                    .selected_value(selected_value_for_render.clone())
+                    .items(items.clone())
+                    .a11y_label("autocomplete")
+                    .test_id("material3-autocomplete")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), ac)]
+            })
+        };
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let input_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-autocomplete")).then_some(node.id)
+            })
+        })
+        .expect("expected material3-autocomplete input node in semantics snapshot");
+    ui.set_focus(Some(input_node));
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        false,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected autocomplete popover overlay to be open after ArrowDown"
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Enter));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Enter));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        !stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected autocomplete popover overlay to remain closed after Enter commit"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete"))
+        .expect("combobox input node after Enter");
+    assert_eq!(input.value.as_deref(), Some("Alpha"));
+
+    let selected = app.models_mut().get_cloned(&selected_value).unwrap_or(None);
+    assert_eq!(
+        selected.as_deref(),
+        Some("alpha"),
+        "expected selected_value model to be committed on Enter"
+    );
+}
+
+#[test]
+fn material3_exposed_dropdown_reverts_query_to_committed_selection_on_blur_v1() {
+    use fret_ui::element::{FlexProps, Length};
+    use fret_ui_material3::{AutocompleteItem, ExposedDropdown, TextField, TextFieldVariant};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let selected_value = app
+        .models_mut()
+        .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+    let query = app.models_mut().insert(String::new());
+    let query_for_render = query.clone();
+    let other = app.models_mut().insert(String::new());
+
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let exposed = ExposedDropdown::new(selected_value.clone())
+                    .query(query_for_render.clone())
+                    .items(items.clone())
+                    .a11y_label("exposed dropdown")
+                    .test_id("material3-exposed-dropdown")
+                    .into_element(cx);
+
+                let other = TextField::new(other.clone())
+                    .variant(TextFieldVariant::Outlined)
+                    .label("Other")
+                    .test_id("other-field")
+                    .into_element(cx);
+
+                let mut column = FlexProps::default();
+                column.direction = fret_core::Axis::Vertical;
+                column.gap = Px(24.0);
+                column.layout.size.width = Length::Fill;
+
+                let content = cx.flex(column, |_cx| vec![exposed, other]);
+                vec![with_padding(cx, Px(24.0), content)]
+            })
+        };
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models_mut().get_cloned(&query).unwrap_or_default(),
+        "Beta",
+        "expected query to synchronize from the committed selection while blurred"
+    );
+
+    let (input_node, other_node): (NodeId, NodeId) = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            let input = snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-exposed-dropdown")).then_some(node.id)
+            })?;
+            let other = snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("other-field")).then_some(node.id)
+            })?;
+            Some((input, other))
+        })
+        .expect("expected input and other nodes in semantics snapshot");
+
+    ui.set_focus(Some(input_node));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let _ = app.models_mut().update(&query, |v| *v = "ga".to_string());
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    assert_eq!(
+        app.models_mut().get_cloned(&query).unwrap_or_default(),
+        "ga",
+        "expected query to remain editable while focused"
+    );
+
+    ui.set_focus(Some(other_node));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    assert_eq!(
+        app.models_mut().get_cloned(&query).unwrap_or_default(),
+        "Beta",
+        "expected query to revert to the committed selection label on blur"
+    );
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let input = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("material3-exposed-dropdown"))
+        .expect("combobox input node after blur");
+    assert_eq!(input.value.as_deref(), Some("Beta"));
+}
+
+#[test]
+fn material3_exposed_dropdown_trailing_icon_toggles_overlay_v1() {
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{AutocompleteItem, ExposedDropdown};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices::default();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(860.0), Px(520.0)),
+    );
+
+    let selected_value = app.models_mut().insert(None::<Arc<str>>);
+    let query = app.models_mut().insert(String::new());
+    let query_for_render = query.clone();
+
+    let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+        AutocompleteItem::new("alpha", "Alpha"),
+        AutocompleteItem::new("beta", "Beta"),
+        AutocompleteItem::new("gamma", "Gamma"),
+    ]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let exposed = ExposedDropdown::new(selected_value.clone())
+                    .query(query_for_render.clone())
+                    .items(items.clone())
+                    .a11y_label("exposed dropdown")
+                    .test_id("material3-exposed-dropdown")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), exposed)]
+            })
+        };
+
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let icon_node: NodeId = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot.nodes.iter().find_map(|node| {
+                (node.test_id.as_deref() == Some("material3-exposed-dropdown-trailing-icon"))
+                    .then_some(node.id)
+            })
+        })
+        .expect("expected trailing icon node in semantics snapshot");
+
+    let icon_bounds = ui
+        .debug_node_visual_bounds(icon_node)
+        .expect("expected trailing icon bounds");
+    let click_at = Point::new(
+        Px(icon_bounds.origin.x.0 + icon_bounds.size.width.0 * 0.5),
+        Px(icon_bounds.origin.y.0 + icon_bounds.size.height.0 * 0.5),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected popover overlay to be open after clicking the trailing icon"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &pointer_down(PointerId(1), click_at),
+    );
+    ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+    run_overlay_frame_scaled(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        1.0,
+        true,
+        |ui, app, services| render(ui, app, services),
+    );
+
+    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+    assert!(
+        !stack.stack.iter().any(|entry| {
+            entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+        }),
+        "expected popover overlay to be closed after clicking the trailing icon again"
+    );
+}
+
+#[test]
+fn material3_headless_autocomplete_suite_goldens_v1() {
+    use fret_ui::element::{FlexProps, Length};
+    use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
+    use fret_ui_material3::{Autocomplete, AutocompleteItem, AutocompleteVariant};
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(860.0), Px(520.0)),
+            );
+
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            // Closed scene: show both variants so token drift is visible.
+            {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let outlined_model = app.models_mut().insert(String::new());
+                let filled_model = app.models_mut().insert(String::new());
+                let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+                    AutocompleteItem::new("alpha", "Alpha"),
+                    AutocompleteItem::new("beta", "Beta"),
+                    AutocompleteItem::new("gamma", "Gamma"),
+                    AutocompleteItem::new("delta", "Delta"),
+                    AutocompleteItem::new("epsilon", "Epsilon"),
+                ]);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut column = FlexProps::default();
+                            column.direction = fret_core::Axis::Vertical;
+                            column.gap = Px(16.0);
+
+                            let outlined = Autocomplete::new(outlined_model.clone())
+                                .variant(AutocompleteVariant::Outlined)
+                                .label("Outlined")
+                                .placeholder("Type to search")
+                                .items(items.clone())
+                                .a11y_label("outlined autocomplete")
+                                .test_id("material3-ac-outlined")
+                                .into_element(cx);
+                            let outlined = cx.container(
+                                {
+                                    let mut props = ContainerProps::default();
+                                    props.layout.size.width = Length::Px(Px(360.0));
+                                    props
+                                },
+                                move |_cx| vec![outlined],
+                            );
+
+                            let filled = Autocomplete::new(filled_model.clone())
+                                .variant(AutocompleteVariant::Filled)
+                                .label("Filled")
+                                .placeholder("Type to search")
+                                .items(items.clone())
+                                .a11y_label("filled autocomplete")
+                                .test_id("material3-ac-filled")
+                                .into_element(cx);
+                            let filled = cx.container(
+                                {
+                                    let mut props = ContainerProps::default();
+                                    props.layout.size.width = Length::Px(Px(360.0));
+                                    props
+                                },
+                                move |_cx| vec![filled],
+                            );
+
+                            let content = cx.flex(column, |_cx| vec![outlined, filled]);
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 autocomplete closed scene to be stable after animations settle ({label}, {scale})"
+                );
+                cases.insert(
+                    "both_closed".to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        16,
+                        32,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            for (case_name, focus_test_id) in [
+                ("outlined_open", "material3-ac-outlined"),
+                ("filled_open", "material3-ac-filled"),
+            ] {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let outlined_model = app.models_mut().insert(String::new());
+                let filled_model = app.models_mut().insert(String::new());
+                let items: Arc<[AutocompleteItem]> = Arc::from(vec![
+                    AutocompleteItem::new("alpha", "Alpha"),
+                    AutocompleteItem::new("beta", "Beta"),
+                    AutocompleteItem::new("gamma", "Gamma"),
+                    AutocompleteItem::new("delta", "Delta"),
+                    AutocompleteItem::new("epsilon", "Epsilon"),
+                ]);
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let mut column = FlexProps::default();
+                            column.direction = fret_core::Axis::Vertical;
+                            column.gap = Px(16.0);
+
+                            let outlined = Autocomplete::new(outlined_model.clone())
+                                .variant(AutocompleteVariant::Outlined)
+                                .label("Outlined")
+                                .placeholder("Type to search")
+                                .items(items.clone())
+                                .a11y_label("outlined autocomplete")
+                                .test_id("material3-ac-outlined")
+                                .into_element(cx);
+                            let outlined = cx.container(
+                                {
+                                    let mut props = ContainerProps::default();
+                                    props.layout.size.width = Length::Px(Px(360.0));
+                                    props
+                                },
+                                move |_cx| vec![outlined],
+                            );
+
+                            let filled = Autocomplete::new(filled_model.clone())
+                                .variant(AutocompleteVariant::Filled)
+                                .label("Filled")
+                                .placeholder("Type to search")
+                                .items(items.clone())
+                                .a11y_label("filled autocomplete")
+                                .test_id("material3-ac-filled")
+                                .into_element(cx);
+                            let filled = cx.container(
+                                {
+                                    let mut props = ContainerProps::default();
+                                    props.layout.size.width = Length::Px(Px(360.0));
+                                    props
+                                },
+                                move |_cx| vec![filled],
+                            );
+
+                            let content = cx.flex(column, |_cx| vec![outlined, filled]);
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                run_overlay_frame_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let input_node: NodeId = ui
+                    .semantics_snapshot()
+                    .and_then(|snapshot| {
+                        snapshot.nodes.iter().find_map(|node| {
+                            (node.test_id.as_deref() == Some(focus_test_id)).then_some(node.id)
+                        })
+                    })
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "expected {focus_test_id} input node in semantics snapshot ({label}, {scale}, {case_name})"
+                        )
+                    });
+
+                ui.set_focus(Some(input_node));
+                run_overlay_frame_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    false,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::ArrowDown));
+                ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::ArrowDown));
+
+                run_overlay_frame_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                assert!(
+                    stack.stack.iter().any(|entry| {
+                        entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+                    }),
+                    "expected autocomplete popover overlay to be open after ArrowDown ({label}, {scale}, {case_name})"
+                );
+
+                let message = format!(
+                    "expected the Material3 autocomplete overlay scene to be stable after animations settle ({label}, {scale}, {case_name})"
+                );
+                cases.insert(
+                    case_name.to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        44,
+                        80,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-autocomplete.{scale}.{label}"),
                 &suite,
             );
         }
