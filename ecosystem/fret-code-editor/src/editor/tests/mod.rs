@@ -1,5 +1,6 @@
 use super::*;
 use super::{input, paint};
+use std::sync::Arc;
 
 #[derive(Default)]
 struct TestHost {
@@ -44,13 +45,23 @@ fn replace_buffer_resets_state() {
         };
         st.dragging = true;
         st.drag_pointer = Some(fret_core::PointerId(1));
-        st.row_text_cache.insert(0, ("hello".into(), 1));
+        st.row_text_cache.insert(
+            0,
+            (
+                RowTextCacheEntry {
+                    text: Arc::from("hello"),
+                    range: 0..5,
+                },
+                1,
+            ),
+        );
         st.row_text_cache_queue.push_back((0, 1));
         st.row_geom_cache.insert(
             0,
             (
                 RowGeom {
                     row_range: 0..5,
+                    blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![(0, Px(0.0))],
                     caret_rect_top: None,
                     caret_rect_height: None,
@@ -132,6 +143,7 @@ fn map_row_local_to_buffer_byte_snaps_inside_preedit() {
     let buffer = TextBuffer::new(doc, "hello".to_string()).unwrap();
     let geom = RowGeom {
         row_range: 0..buffer.len_bytes(),
+        blob: fret_core::TextBlobId::default(),
         caret_stops: Vec::new(),
         caret_rect_top: None,
         caret_rect_height: None,
@@ -169,6 +181,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 0..4,
+                    blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -188,6 +201,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 5..9,
+                    blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
@@ -207,6 +221,7 @@ fn caret_preferred_x_is_preserved_across_vertical_moves() {
             (
                 RowGeom {
                     row_range: 10..14,
+                    blob: fret_core::TextBlobId::default(),
                     caret_stops: vec![
                         (0, Px(0.0)),
                         (1, Px(10.0)),
