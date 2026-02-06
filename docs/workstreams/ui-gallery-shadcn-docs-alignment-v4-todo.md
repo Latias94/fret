@@ -106,7 +106,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] spinner — examples mirrored (Demo/Customization/Size/Button/Badge/Input Group/Empty/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_spinner`)
 - [x] switch ? examples mirrored (Demo/Description/Choice Card/Disabled/Invalid/Size/RTL; size + invalid are style approximations in current API) (`apps/fret-ui-gallery/src/ui.rs::preview_switch`, `ecosystem/fret-ui-shadcn/src/switch.rs`)
 - [x] table ? examples mirrored (Demo/Footer/Actions/RTL; action trigger uses text icon approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_table`, `ecosystem/fret-ui-shadcn/src/table.rs`)
-- [ ] tabs
+- [x] tabs ? examples mirrored (Demo/Line/Vertical/Disabled/Icons/RTL; line variant uses style approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_tabs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`)
 - [ ] textarea
 - [ ] toast
 - [ ] toggle
