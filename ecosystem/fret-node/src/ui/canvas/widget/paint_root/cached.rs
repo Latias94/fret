@@ -1,4 +1,4 @@
-use super::super::*;
+use crate::ui::canvas::widget::*;
 
 #[path = "cached_edges/mod.rs"]
 mod cached_edges;

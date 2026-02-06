@@ -1,5 +1,5 @@
-use super::super::*;
 use crate::ui::canvas::geometry::node_rect_origin_from_anchor;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn node_resize_preview_derived<H: UiHost>(

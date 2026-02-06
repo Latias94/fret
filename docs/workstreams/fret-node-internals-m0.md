@@ -268,6 +268,13 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/searcher_logic.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit/mod.rs`
+- [x] Normalize remaining widget submodule wildcard imports (`use super::super::*;`) to absolute module paths.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/commit/apply.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/view_state/frame.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_math/path.rs`
 - [x] Split measured-geometry module into small modules to reduce drift (store vs presenter wrappers).
   - Evidence: `ecosystem/fret-node/src/ui/measured/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/measured/store.rs`

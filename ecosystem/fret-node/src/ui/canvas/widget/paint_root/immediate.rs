@@ -1,5 +1,5 @@
-use super::super::*;
 use crate::ui::canvas::widget::paint_render_data::RenderData;
+use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     #[allow(clippy::too_many_arguments)]
