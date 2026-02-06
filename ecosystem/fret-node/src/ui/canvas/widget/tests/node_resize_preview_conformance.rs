@@ -3,10 +3,9 @@ use std::sync::Arc;
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind};
-use crate::io::NodeGraphViewState;
 
 use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 
 fn assert_near(a: f32, b: f32) {
     assert!((a - b).abs() <= 1.0e-5, "{a} != {b}");
@@ -18,7 +17,7 @@ fn node_resize_preview_cache_reuses_geometry_across_preview_rev_updates() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
 
     // Ensure base geometry + spatial index caches exist (resize previews are keyed off base_index_key).
@@ -119,7 +118,7 @@ fn node_resize_preview_updates_node_rect_ports_and_edge_index() {
     );
 
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let snapshot = canvas.sync_view_state(&mut host);
@@ -192,7 +191,7 @@ fn node_resize_preview_rev_updates_do_not_drift() {
     let (graph_value, a, _a_in, a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(500.0);
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
     let mut canvas = NodeGraphCanvas::new(graph, view);
 
     let snapshot = canvas.sync_view_state(&mut host);
