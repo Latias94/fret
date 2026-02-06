@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use fret_core::{Color, Px};
 use fret_core::{SvgId, UiServices};
-use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned, MISSING_ICON_SVG};
-use fret_ui::element::SvgIconProps;
+use fret_icons::{FrozenIconRegistry, IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
 use fret_ui::SvgSource;
+use fret_ui::element::SvgIconProps;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::style;
@@ -14,6 +14,13 @@ use crate::{ColorRef, LayoutRefinement};
 pub struct IconSvgRegistry {
     icons: HashMap<IconId, SvgId>,
     missing: Option<SvgId>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct IconSvgPreloadDiagnostics {
+    pub entries: usize,
+    pub bytes_ready: u64,
+    pub register_calls: u64,
 }
 
 impl IconSvgRegistry {
@@ -41,11 +48,16 @@ impl IconSvgRegistry {
 /// This is an optional optimization that allows `icon(...)` to return `SvgSource::Id` without
 /// per-frame SVG registration.
 pub fn preload_icon_svgs<H: UiHost>(app: &mut H, services: &mut dyn UiServices) {
-    let resolved: Vec<(IconId, ResolvedSvgOwned)> = app
-        .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons.collect_resolved_owned()
+    let resolved: Vec<(IconId, ResolvedSvgOwned)> =
+        app.with_global_mut(IconRegistry::default, |icons, app| {
+            let frozen = icons.freeze().unwrap_or_default();
+            app.set_global(frozen.clone());
+            frozen.collect_owned()
         });
 
+    let total_icons = resolved.len();
+    let mut bytes_ready = MISSING_ICON_SVG.len() as u64;
+    let mut register_calls = 1_u64;
     let missing = services.svg().register_svg(MISSING_ICON_SVG);
 
     app.with_global_mut(IconSvgRegistry::default, |registry, _app| {
@@ -53,12 +65,26 @@ pub fn preload_icon_svgs<H: UiHost>(app: &mut H, services: &mut dyn UiServices) 
         registry.missing = Some(missing);
 
         for (icon, svg) in resolved {
-            let id = match svg {
-                ResolvedSvgOwned::Static(bytes) => services.svg().register_svg(bytes),
-                ResolvedSvgOwned::Bytes(bytes) => services.svg().register_svg(bytes.as_ref()),
+            let (id, byte_len) = match svg {
+                ResolvedSvgOwned::Static(bytes) => {
+                    (services.svg().register_svg(bytes), bytes.len())
+                }
+                ResolvedSvgOwned::Bytes(bytes) => {
+                    let byte_len = bytes.len();
+                    (services.svg().register_svg(bytes.as_ref()), byte_len)
+                }
             };
+
+            bytes_ready += byte_len as u64;
+            register_calls += 1;
             registry.icons.insert(icon, id);
         }
+    });
+
+    app.set_global(IconSvgPreloadDiagnostics {
+        entries: total_icons + 1,
+        bytes_ready,
+        register_calls,
     });
 }
 
@@ -87,8 +113,15 @@ pub fn icon_with<H: UiHost>(
         } else {
             let resolved = cx
                 .app
-                .with_global_mut(IconRegistry::default, |icons, _app| {
-                    icons.resolve_or_missing_owned(&icon)
+                .global::<FrozenIconRegistry>()
+                .map(|frozen| frozen.resolve_or_missing_owned(&icon))
+                .unwrap_or_else(|| {
+                    cx.app.with_global_mut(IconRegistry::default, |icons, app| {
+                        let frozen = icons.freeze().unwrap_or_default();
+                        let resolved = frozen.resolve_or_missing_owned(&icon);
+                        app.set_global(frozen);
+                        resolved
+                    })
                 });
 
             match resolved {

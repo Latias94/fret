@@ -11,7 +11,7 @@ use std::sync::Arc;
 use fret_core::{
     Axis, Color, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
-use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned};
+use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -20,16 +20,17 @@ use fret_ui::element::{
     SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
-use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
+use fret_ui::{Invalidation, Theme, UiHost};
 
+use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
-    material_ink_layer_for_pressable_with_ripple_bounds, material_pressable_indication_config,
-    RippleClip,
+    RippleClip, material_ink_layer_for_pressable_with_ripple_bounds,
+    material_pressable_indication_config,
 };
-use crate::foundation::interaction::{pressable_interaction, PressableInteraction};
+use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
-use crate::foundation::motion_scheme::{sys_spring_in_scope, MotionSchemeKey};
+use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::navigation_rail as rail_tokens;
 use crate::{Badge, BadgePlacement, BadgeValue};
@@ -732,17 +733,4 @@ fn rail_icon<H: UiHost>(
     props.layout.size.height = Length::Px(size);
     props.color = color;
     cx.svg_icon_props(props)
-}
-
-fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId) -> SvgSource {
-    let resolved = cx
-        .app
-        .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons.resolve_or_missing_owned(icon)
-        });
-
-    match resolved {
-        ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
-        ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
-    }
 }

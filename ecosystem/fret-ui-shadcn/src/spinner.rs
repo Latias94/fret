@@ -1,5 +1,5 @@
 use fret_core::{Point, Px, Transform2D};
-use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned};
+use fret_icons::{FrozenIconRegistry, IconId, IconRegistry, ResolvedSvgOwned};
 use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
 use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::scheduling;
@@ -74,8 +74,15 @@ impl Spinner {
 
         let resolved = cx
             .app
-            .with_global_mut(IconRegistry::default, |icons, _app| {
-                icons.resolve_or_missing_owned(&self.icon)
+            .global::<FrozenIconRegistry>()
+            .map(|frozen| frozen.resolve_or_missing_owned(&self.icon))
+            .unwrap_or_else(|| {
+                cx.app.with_global_mut(IconRegistry::default, |icons, app| {
+                    let frozen = icons.freeze().unwrap_or_default();
+                    let resolved = frozen.resolve_or_missing_owned(&self.icon);
+                    app.set_global(frozen);
+                    resolved
+                })
             });
 
         let svg: SvgSource = match resolved {

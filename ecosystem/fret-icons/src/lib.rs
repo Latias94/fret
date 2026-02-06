@@ -180,6 +180,10 @@ impl IconRegistry {
             .filter_map(|id| self.resolve_owned(&id).ok().map(|resolved| (id, resolved)))
             .collect()
     }
+
+    pub fn freeze(&self) -> Result<FrozenIconRegistry, Vec<ResolveError>> {
+        FrozenIconRegistry::from_registry_ref(self)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -232,6 +236,10 @@ pub struct FrozenIconRegistry {
 
 impl FrozenIconRegistry {
     pub fn from_registry(registry: IconRegistry) -> Result<Self, Vec<ResolveError>> {
+        Self::from_registry_ref(&registry)
+    }
+
+    pub fn from_registry_ref(registry: &IconRegistry) -> Result<Self, Vec<ResolveError>> {
         let mut ids: Vec<IconId> = registry.icon_ids().cloned().collect();
         ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
 
@@ -252,6 +260,22 @@ impl FrozenIconRegistry {
         } else {
             Err(errors)
         }
+    }
+
+    pub fn icon_ids(&self) -> impl Iterator<Item = &IconId> {
+        self.icons.keys()
+    }
+
+    pub fn entries(&self) -> impl Iterator<Item = (&IconId, &ResolvedSvgOwned)> {
+        self.icons.iter()
+    }
+
+    pub fn collect_owned(&self) -> Vec<(IconId, ResolvedSvgOwned)> {
+        let mut ids: Vec<IconId> = self.icon_ids().cloned().collect();
+        ids.sort_by(|left, right| left.as_str().cmp(right.as_str()));
+        ids.into_iter()
+            .filter_map(|id| self.resolve(&id).cloned().map(|resolved| (id, resolved)))
+            .collect()
     }
 
     pub fn len(&self) -> usize {

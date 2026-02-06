@@ -3240,26 +3240,14 @@ pub struct UiCacheKindSnapshotV1 {
 
 #[cfg(feature = "preload-icon-svgs")]
 fn icon_svg_cache_stats(app: &App) -> Option<UiRetainedSvgCacheStatsV1> {
-    let cache = app.global::<crate::icon_preload::PreloadedIconSvgCache>()?;
-    let (entries, bytes_ready, stats) = cache.diagnostics_snapshot();
+    let diagnostics = app.global::<fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics>()?;
     Some(UiRetainedSvgCacheStatsV1 {
-        entries,
-        bytes_ready,
+        entries: diagnostics.entries,
+        bytes_ready: diagnostics.bytes_ready,
         stats: UiCacheStatsV1 {
-            get_calls: stats.get_calls,
-            get_hits: stats.get_hits,
-            get_misses: stats.get_misses,
-            prepare_calls: stats.prepare_calls,
-            prepare_hits: stats.prepare_hits,
-            prepare_misses: stats.prepare_misses,
-            prune_calls: stats.prune_calls,
-            clear_calls: stats.clear_calls,
-            evict_calls: stats.evict_calls,
-            release_replaced: stats.release_replaced,
-            release_prune_age: stats.release_prune_age,
-            release_prune_budget: stats.release_prune_budget,
-            release_clear: stats.release_clear,
-            release_evict: stats.release_evict,
+            prepare_calls: diagnostics.register_calls,
+            prepare_misses: diagnostics.register_calls,
+            ..UiCacheStatsV1::default()
         },
     })
 }
@@ -9684,6 +9672,23 @@ mod tests {
                 .iter()
                 .any(|r| { r.kind == "focus_barrier_root" && r.root == key_to_u64(node_id(11)) })
         );
+    }
+
+    #[cfg(feature = "preload-icon-svgs")]
+    #[test]
+    fn icon_svg_cache_stats_reads_preload_diagnostics() {
+        let mut app = App::new();
+        app.set_global(fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics {
+            entries: 12,
+            bytes_ready: 3456,
+            register_calls: 12,
+        });
+
+        let stats = icon_svg_cache_stats(&app).expect("expected preload diagnostics");
+        assert_eq!(stats.entries, 12);
+        assert_eq!(stats.bytes_ready, 3456);
+        assert_eq!(stats.stats.prepare_calls, 12);
+        assert_eq!(stats.stats.prepare_misses, 12);
     }
 }
 
