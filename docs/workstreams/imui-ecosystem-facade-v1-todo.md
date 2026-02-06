@@ -176,7 +176,9 @@ Exit criteria:
 - Basic tests exist to prevent regressions in signals and floating behavior.
 - Perf guidance is written down (allocation patterns, caching boundaries, virtualization).
 
-- [ ] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
+- [x] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
+  - Evidence: `apps/fret-demo/src/bin/imui_response_signals_demo.rs`
+  - Evidence: `apps/fret-examples/src/imui_response_signals_demo.rs`
 - [x] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
   - Evidence: `apps/fret-demo/src/bin/imui_floating_windows_demo.rs`
   - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`

@@ -37,6 +37,8 @@ Status snapshot (2026-02-06):
 - A minimal diagnostics demo + scripted repro exists for floating window drag/resize + context-menu overlay coexistence.
   - Demo: `cargo run -p fret-demo --bin imui_floating_windows_demo`
   - Script: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
+- A minimal response-signals demo exists for click variants + drag lifecycle + context-menu requests.
+  - Demo: `cargo run -p fret-demo --bin imui_response_signals_demo`
 
 Tracking:
 
