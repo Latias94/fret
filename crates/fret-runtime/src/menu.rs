@@ -135,6 +135,10 @@ pub enum ItemSelectorTyped {
     ///
     /// Note: if multiple submenus share the same title, prefer using an index anchor instead.
     Submenu { title: String },
+    /// Select the first label item with the given title.
+    ///
+    /// Note: if multiple labels share the same title, prefer using an index anchor instead.
+    Label { title: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -496,6 +500,9 @@ pub enum MenuItemFileV2 {
         #[serde(default)]
         when: Option<String>,
     },
+    Label {
+        title: String,
+    },
     Separator,
     Submenu {
         title: String,
@@ -525,6 +532,9 @@ impl MenuItemFileV2 {
                     toggle: None,
                 })
             }
+            Self::Label { title } => Ok(MenuItem::Label {
+                title: Arc::from(title),
+            }),
             Self::Submenu { title, when, items } => {
                 let when = when
                     .as_deref()
@@ -1011,6 +1021,9 @@ fn apply_patch_op(
             ItemSelector::Anchor(anchor) => resolve_anchor_index(items, anchor),
             ItemSelector::Typed(ItemSelectorTyped::Submenu { title }) => items.iter().position(
                 |item| matches!(item, MenuItem::Submenu { title: t, .. } if t.as_ref() == title),
+            ),
+            ItemSelector::Typed(ItemSelectorTyped::Label { title }) => items.iter().position(
+                |item| matches!(item, MenuItem::Label { title: t } if t.as_ref() == title),
             ),
         }
     }
@@ -1556,6 +1569,36 @@ mod tests {
     }
 
     #[test]
+    fn remove_at_can_remove_label_by_title() {
+        let mut base = base_menu_bar();
+        if let MenuItem::Submenu { items, .. } = &mut base.menus[0].items[1] {
+            items.push(MenuItem::Label {
+                title: Arc::from("No recent items"),
+            });
+        }
+
+        let patch = MenuBarPatch {
+            ops: vec![MenuBarPatchOp::RemoveAt {
+                menu: MenuTarget::Path(vec!["File".into(), "Recent".into()]),
+                at: ItemSelector::Typed(ItemSelectorTyped::Label {
+                    title: "No recent items".into(),
+                }),
+            }],
+        };
+
+        patch.apply_to(&mut base).unwrap();
+
+        let recent_items = match &base.menus[0].items[1] {
+            MenuItem::Submenu { items, .. } => items,
+            other => panic!("expected submenu, got {other:?}"),
+        };
+        assert!(!recent_items.iter().any(|item| matches!(
+            item,
+            MenuItem::Label { title } if title.as_ref() == "No recent items"
+        )));
+    }
+
+    #[test]
     fn v2_replace_parses_roles_and_system_menus() {
         let json = serde_json::json!({
             "menu_bar_version": 2,
@@ -1611,5 +1654,28 @@ mod tests {
             )),
             other => panic!("expected patch, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn v2_replace_parses_label_items() {
+        let json = serde_json::json!({
+            "menu_bar_version": 2,
+            "menus": [
+                {
+                    "title": "File",
+                    "items": [
+                        { "type": "label", "title": "No recent items" }
+                    ]
+                }
+            ]
+        });
+
+        let bytes = serde_json::to_vec(&json).unwrap();
+        let bar = MenuBar::from_bytes(&bytes).unwrap();
+        assert_eq!(bar.menus.len(), 1);
+        assert!(matches!(
+            &bar.menus[0].items[0],
+            MenuItem::Label { title } if title.as_ref() == "No recent items"
+        ));
     }
 }

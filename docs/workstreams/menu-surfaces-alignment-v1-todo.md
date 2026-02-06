@@ -161,7 +161,18 @@ Exit criteria:
     `UiGalleryHarnessDiagnosticsStore` (non-wasm).
   - Evidence: `ecosystem/fret-workspace/src/menu.rs` (default `Windows` submenu anchor)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (dynamic window list rebuild)
-- [ ] MENU-MVP3-conf-043 Decide how dynamic items interact with layered `menubar.json` patch ops (what is addressable?).
+- [x] MENU-MVP3-conf-043 Decide how dynamic items interact with layered `menubar.json` patch ops (what is addressable?).
+  - Decision (MVP): dynamic submenu customization is path+selector addressable, with stability guidance:
+    - Submenu path: `menu: ["File", "Recent"]`
+    - Dynamic placeholder rows use `type: "label"` in `menubar.json` v2
+    - Non-command item targeting uses `remove_at` / `move_at_*` with typed selectors
+      (`{"type":"submenu","title":"Recent"}`, `{"type":"label","title":"No recent items"}`),
+      and falls back to index anchors when titles are not unique.
+  - Recommendation:
+    - Prefer stable submenu anchors for long-lived customization points (`Recent`, `Windows`).
+    - Prefer index anchors for localized/duplicated labels; title selectors are convenience-only.
+  - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuTarget::Path`, `ItemSelectorTyped::{Submenu,Label}`, `MenuItemFileV2::Label`)
+  - Evidence: `crates/fret-runtime/src/menu.rs` tests (`remove_at_can_remove_label_by_title`, `v2_replace_parses_label_items`)
 
 ---
 
