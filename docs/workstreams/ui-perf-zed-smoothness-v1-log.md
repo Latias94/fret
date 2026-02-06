@@ -4271,10 +4271,10 @@ Drift vs v10:
 - Worst overall script remains `ui-gallery-window-resize-stress-steady` with `top_total_time_us=16136`
   (bundle: `target/fret-diag-codex-perf-v11/1770350673752-ui-gallery-window-resize-stress-steady/bundle.json`).
 
-## 2026-02-06 12:36:00 (commit TBD)
+## 2026-02-06 12:36:00 (commit `65f8af318`)
 
 Change:
-- Make perf-baseline pointer-move thresholds less flaky by adding slack + quantum rounding.
+- Make perf-baseline pointer-move thresholds less flaky by adding slack + quantum rounding (commit `43a9eb124`).
 - Refresh `ui-gallery-steady` perf baseline (v12).
 
 Context:
