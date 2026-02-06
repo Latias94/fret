@@ -5961,16 +5961,7 @@ fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> V
 }
 
 fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2).items_start(),
-        move |cx| {
-            vec![
-                shadcn::Label::new("Label").into_element(cx),
-                shadcn::Label::new("Required label").into_element(cx),
-            ]
-        },
-    )]
+    pages::preview_label(cx)
 }
 
 fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
