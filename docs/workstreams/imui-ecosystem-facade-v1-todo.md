@@ -1,7 +1,7 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1 - TODO Tracker
 
 Status: Draft
-Last updated: 2026-02-05
+Last updated: 2026-02-06
 
 This tracker covers the work described in:
 
@@ -124,6 +124,13 @@ Exit criteria:
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigger_focus`).
 - [x] IMUIECO-overlays-032 Add a minimal `BeginPopupModal`-style primitive (ImGui-aligned).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`open_popup`, `begin_popup_modal(_ex)`, `PopupModalOptions`).
+- [x] IMUIECO-overlays-033 Add minimal menu keyboard navigation (roving focus) for imui popups.
+  - Target: ArrowUp/ArrowDown + Home/End to move focus between menu items.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`menu_item_impl`: key handlers + `ImUiMenuNavState`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`context_menu_popup_arrow_keys_move_focus_between_items`).
+- [x] IMUIECO-overlays-034 Add checkbox/radio menu items (ImGui-style) with semantics.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`menu_item_checkbox_ex`, `menu_item_radio_ex`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`menu_item_checkbox_stamps_semantics_checked_state`).
 - [ ] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
   - move (drag) + z-order + focus activation,
   - predictable hit-testing with overlays,
