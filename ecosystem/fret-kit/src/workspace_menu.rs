@@ -366,6 +366,19 @@ fn submenu_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMen
     }
 }
 
+fn label_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMenuItem {
+    InWindowMenuItem {
+        label: title,
+        value,
+        disabled,
+        command: None,
+        toggle: None,
+        shortcut: None,
+        has_submenu: false,
+        keep_if_empty_submenu: false,
+    }
+}
+
 fn system_menu_placeholder_item(
     title: Arc<str>,
     value: Arc<str>,
@@ -449,6 +462,15 @@ fn build_entries<H: UiHost>(
                     value,
                     Vec::new(),
                 ));
+            }
+            MenuItem::Label { title } => {
+                let child_key = stable_menu_key(title.as_ref());
+                let value: Arc<str> = Arc::from(format!("{prefix}.label.{child_key}"));
+                out.push(InWindowMenuEntry::Item(label_item(
+                    title.clone(),
+                    value,
+                    true,
+                )));
             }
             MenuItem::Command {
                 command,

@@ -68,6 +68,13 @@ pub enum MenuItem {
         when: Option<WhenExpr>,
         toggle: Option<MenuItemToggle>,
     },
+    /// A non-interactive, disabled menu entry with a custom label.
+    ///
+    /// This is intended for placeholder and dynamic menu content where a `CommandId` is not
+    /// available (yet). Menu surfaces should render this as disabled text.
+    Label {
+        title: Arc<str>,
+    },
     Separator,
     Submenu {
         title: Arc<str>,

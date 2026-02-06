@@ -340,6 +340,12 @@ unsafe fn append_menu_item(
 
             menu.addItem_(system_item);
         }
+        MenuItem::Label { title } => {
+            let item = NSMenuItem::new(nil).autorelease();
+            let _: () = msg_send![item, setTitle: ns_string(title)];
+            item.setEnabled_(false);
+            menu.addItem_(item);
+        }
         MenuItem::Submenu { title, items, .. } => {
             let submenu_item = NSMenuItem::new(nil).autorelease();
             let _: () = msg_send![submenu_item, setTitle: ns_string(title)];

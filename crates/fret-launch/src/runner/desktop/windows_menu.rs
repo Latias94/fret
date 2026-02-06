@@ -523,6 +523,12 @@ fn append_menu_item(
             // Windows HMENU does not have a direct equivalent for macOS system-managed menus.
             // Keep the runtime model portable by treating these as no-ops in the Win32 mapping.
         }
+        MenuItem::Label { title } => {
+            let title = to_wide(title);
+            unsafe {
+                let _ = AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, title.as_ptr());
+            }
+        }
         MenuItem::Submenu { title, items, .. } => {
             let popup = unsafe { CreatePopupMenu() };
             if popup.is_null() {

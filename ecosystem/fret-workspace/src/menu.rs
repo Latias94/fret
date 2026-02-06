@@ -252,6 +252,16 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     push_command(&mut file_items, open);
     push_command(&mut file_items, save);
     push_command(&mut file_items, save_as);
+    if !file_items.is_empty() {
+        push_separator(&mut file_items);
+        file_items.push(MenuItem::Submenu {
+            title: Arc::from("Recent"),
+            when: None,
+            items: vec![MenuItem::Label {
+                title: Arc::from("No recent items"),
+            }],
+        });
+    }
     if quit.is_some() && !file_items.is_empty() {
         file_items.push(MenuItem::Separator);
     }
@@ -490,6 +500,14 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
                         toggle: None,
                     },
                 ],
+            },
+            MenuItem::Separator,
+            MenuItem::Submenu {
+                title: Arc::from("Windows"),
+                when: None,
+                items: vec![MenuItem::Label {
+                    title: Arc::from("Window list not implemented"),
+                }],
             },
         ],
     });
