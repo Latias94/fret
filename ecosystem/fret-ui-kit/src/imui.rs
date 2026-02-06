@@ -194,6 +194,7 @@ pub struct FloatingWindowResponse {
     pub area: FloatingAreaResponse,
     pub size: Option<Size>,
     pub resizing: bool,
+    pub collapsed: bool,
 }
 
 impl FloatingWindowResponse {
@@ -216,12 +217,17 @@ impl FloatingWindowResponse {
     pub fn resizing(self) -> bool {
         self.resizing
     }
+
+    pub fn collapsed(self) -> bool {
+        self.collapsed
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 struct FloatingWindowChromeResponse {
     size: Option<Size>,
     resizing: bool,
+    collapsed: bool,
 }
 
 impl ResponseExt {
@@ -299,6 +305,11 @@ struct ImUiLongPressStore {
     by_element: HashMap<GlobalElementId, fret_runtime::Model<LongPressSignalState>>,
 }
 
+#[derive(Default)]
+struct ImUiFloatWindowCollapsedStore {
+    by_element: HashMap<GlobalElementId, fret_runtime::Model<bool>>,
+}
+
 fn context_menu_anchor_model_for<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     id: GlobalElementId,
@@ -321,6 +332,19 @@ fn long_press_signal_model_for<H: UiHost>(
             st.by_element
                 .entry(id)
                 .or_insert_with(|| app.models_mut().insert(LongPressSignalState::default()))
+                .clone()
+        })
+}
+
+fn float_window_collapsed_model_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+) -> fret_runtime::Model<bool> {
+    cx.app
+        .with_global_mut_untracked(ImUiFloatWindowCollapsedStore::default, |st, app| {
+            st.by_element
+                .entry(id)
+                .or_insert_with(|| app.models_mut().insert(false))
                 .clone()
         })
 }
@@ -598,6 +622,11 @@ pub struct FloatingAreaContext {
 }
 
 const KEY_FLOAT_WINDOW_ACTIVATE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.activate.v1");
+const KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED: u64 =
+    fnv1a64(b"fret-ui-kit.imui.float_window.toggle_collapsed.v1");
+
+type OnFloatingAreaLeftDoubleClick =
+    Arc<dyn Fn(&mut dyn fret_ui::action::UiPointerActionHost, fret_ui::action::ActionCx) + 'static>;
 
 /// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
 ///
@@ -785,6 +814,7 @@ fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
     cx: &mut ElementContext<'_, H>,
     area: FloatingAreaContext,
     props: PointerRegionProps,
+    on_left_double_click: Option<OnFloatingAreaLeftDoubleClick>,
     setup: Setup,
     build: Build,
 ) -> AnyElement
@@ -794,6 +824,7 @@ where
 {
     let mut build = Some(build);
     let mut setup = Some(setup);
+    let on_left_double_click_for_down = on_left_double_click.clone();
     cx.pointer_region(props, move |cx| {
         let region_id = cx.root_id();
         float_layer_bring_to_front_if_activated(cx, region_id, area.id);
@@ -812,6 +843,17 @@ where
             host.capture_pointer();
             if host.drag(down.pointer_id).is_none() {
                 host.begin_drag_with_kind(down.pointer_id, drag_kind, acx.window, down.position);
+            }
+            if down.click_count == 2
+                && let Some(on_left_double_click) = on_left_double_click_for_down.as_ref()
+            {
+                on_left_double_click(
+                    host,
+                    fret_ui::action::ActionCx {
+                        window: acx.window,
+                        target: area.id,
+                    },
+                );
             }
             host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
             host.notify(acx);
@@ -1152,7 +1194,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         setup: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> AnyElement {
-        self.with_cx_mut(|cx| floating_area_drag_surface_element(cx, area, props, setup, f))
+        self.with_cx_mut(|cx| floating_area_drag_surface_element(cx, area, props, None, setup, f))
     }
 
     /// Returns the internal open model for a named popup scope.
@@ -1607,9 +1649,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     row.gap = Px(8.0);
 
                     let indicator = match (role, checked) {
-                        (SemanticsRole::MenuItemCheckbox, Some(true)) => Some(Arc::from("✓")),
+                        (SemanticsRole::MenuItemCheckbox, Some(true)) => {
+                            Some(Arc::from("\u{2713}"))
+                        }
                         (SemanticsRole::MenuItemCheckbox, Some(false)) => Some(Arc::from(" ")),
-                        (SemanticsRole::MenuItemRadio, Some(true)) => Some(Arc::from("●")),
+                        (SemanticsRole::MenuItemRadio, Some(true)) => Some(Arc::from("\u{25CF}")),
                         (SemanticsRole::MenuItemRadio, Some(false)) => Some(Arc::from(" ")),
                         _ => None,
                     };
@@ -2573,6 +2617,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     },
                     size: initial_size,
                     resizing: false,
+                    collapsed: false,
                 };
             }
         }
@@ -2610,6 +2655,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             area,
             size: chrome.size,
             resizing: chrome.resizing,
+            collapsed: chrome.collapsed,
         }
     }
 

@@ -33,7 +33,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
 
         let hint = fret_ui_kit::ui::text(
             ui.cx_mut(),
-            "Drag the window title bar onto the drop zone, resize from the corner, and open the context menu.",
+            "Drag the title bar onto the drop zone, double-click title to collapse/expand, resize from the corner, and open the context menu.",
         )
         .text_xs();
         ui.add_ui(hint);
@@ -104,6 +104,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
                 resp.area.rect,
                 resp.size,
                 resp.resizing,
+                resp.collapsed,
             );
         });
 

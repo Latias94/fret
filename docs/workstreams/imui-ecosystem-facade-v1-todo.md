@@ -69,7 +69,7 @@ Exit criteria:
 - [x] IMUIECO-scope-011 Choose a canonical delegation seam for returning `Response` from canonical components.
   - Decision: element-id based delegation + reporter hook; canonical components own state machines, facade only maps signals to `ResponseExt`.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.2).
-- [x] IMUIECO-scope-012 Decide whether “tear-off to OS window” is docking-only for v1 (recommended) or generalized.
+- [x] IMUIECO-scope-012 Decide whether "tear-off to OS window" is docking-only for v1 (recommended) or generalized.
   - Decision: docking-only for v1; non-docking `ui.window(...)` / `ui.area(...)` stay in-window.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.3).
 - [x] IMUIECO-scope-013 Define the `ResponseExt` signal storage model (transient vs element-local state) and document it.
@@ -103,7 +103,7 @@ Exit criteria:
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`right_click_sets_context_menu_requested_true_once`, `shift_f10_sets_context_menu_requested_true_once`).
 - [x] IMUIECO-resp-012b Add context-menu anchor + trigger identity for popup alignment.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::{id,context_menu_anchor}`).
-- [x] IMUIECO-resp-013 Document “two-frame stabilization” where geometry is sourced from last-frame bounds.
+- [x] IMUIECO-resp-013 Document "two-frame stabilization" where geometry is sourced from last-frame bounds.
   - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.3).
 
 ---
@@ -116,7 +116,7 @@ Exit criteria:
 
 - [~] IMUIECO-controls-020 Button/checkbox/toggle wrappers that return `Response` without duplicating policy.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{button,checkbox_model}`)
-- [ ] IMUIECO-controls-021 Input/textarea wrappers (coordinate with the code editor ecosystem; don’t duplicate).
+- [ ] IMUIECO-controls-021 Input/textarea wrappers (coordinate with the code editor ecosystem; don't duplicate).
 - [ ] IMUIECO-controls-022 Slider/select/switch wrappers (shadcn-aligned when enabled).
 - [ ] IMUIECO-api-023 Container helpers (`horizontal`, `vertical`, `grid`, `scroll`) that prefer `UiBuilder` patch vocabulary.
 - [ ] IMUIECO-api-024 `push_id` / scoped identity helpers mirroring egui/imgui patterns.
@@ -166,6 +166,11 @@ Exit criteria:
 - [x] IMUIECO-float-032e Add minimal resize handles for floating windows (v1: edges + corners; diagonal cursor supported; min/max configurable).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window_resizable`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_resizes_when_dragging_corner_handle`).
+- [x] IMUIECO-float-032f Add ImGui-style title-bar double-click collapse/expand for floating windows.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED`, `FloatingWindowResponse::collapsed`, double-click hook in `floating_area_drag_surface_element`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (collapse toggle + collapsed layout branch + resize handles hidden while collapsed).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_title_bar_double_click_toggles_collapsed`).
+  - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs` (demo hint includes double-click collapse/expand behavior).
 - [x] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
   - title bar (drag surface), close button, Esc-to-close,
   - resize handles + resize session state,
