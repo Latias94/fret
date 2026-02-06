@@ -5591,3 +5591,49 @@ tools/perf/diag_vlist_boundary_gate.sh \
 Interpretation:
 - M4.3 first optimization slice lands: non-retained fallback no longer pays avoidable prefetch-triggered rerender churn on this steady crossing probe.
 - Next M4.3 slice should audit cache-key instability and add a bounded non-retained escape gate so regressions are caught early.
+
+
+## 2026-02-07 01:16:00 (working tree)
+
+Change:
+- Extended `tools/perf/diag_vlist_boundary_gate.sh` to cover both retained and non-retained profiles.
+- Added new gate options:
+  - `--retained <0|1>`
+  - `--max-cache-key-mismatch <n>`
+  - `--max-needs-rerender <n>`
+- Gate now records per-run maxima from `bundle.json` snapshots:
+  - `view_cache_roots_cache_key_mismatch`
+  - `view_cache_roots_needs_rerender`
+
+Retained profile validation:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --out-dir target/fret-diag-codex-vlist-boundary-gate-r3 \
+  --launch-bin target/release/fret-ui-gallery
+```
+- Summary: `target/fret-diag-codex-vlist-boundary-gate-r3/summary.json`
+- Result: `pass=true` (3/3), sample remains `prefetch=1`, `escape=0`, `non_retained=0`,
+  `cache_key_mismatch_max=0`, `needs_rerender_max=0`.
+
+Non-retained strict gate validation:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --retained 0 \
+  --prefetch-max 0 \
+  --escape-max 0 \
+  --non-retained-max 0 \
+  --max-cache-key-mismatch 0 \
+  --max-needs-rerender 0 \
+  --out-dir target/fret-diag-codex-vlist-boundary-nonretained-gate-r1 \
+  --launch-bin target/release/fret-ui-gallery
+```
+- Summary: `target/fret-diag-codex-vlist-boundary-nonretained-gate-r1/summary.json`
+- Result: `pass=true` (3/3)
+- Per-run sample: `prefetch=0`, `escape=0`, `non_retained=0`,
+  `cache_key_mismatch_max=0`, `needs_rerender_max=0`.
+
+Interpretation:
+- We now have a bounded non-retained fallback gate that tracks both shift behavior and cache-key/rerender hygiene.
+- This closes the earlier “non-retained escape budget gate” TODO at tooling level and makes M4.3 regressions easier to catch.

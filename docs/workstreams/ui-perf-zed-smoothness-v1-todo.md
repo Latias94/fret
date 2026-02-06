@@ -475,6 +475,12 @@ Perf acceptance:
 - [x] `ui-gallery-virtual-list-window-boundary-crossing-steady.json` (non-retained fallback profile):
   - Run profile: add `FRET_UI_GALLERY_VLIST_RETAINED=0`
   - Current sampled expectation (3 runs): `prefetch=0`, `escape=0`, `non_retained=0`
+- [x] Add strict non-retained fallback gate and cache-key budgets.
+  - Gate runner: `tools/perf/diag_vlist_boundary_gate.sh` now supports
+    `--retained`, `--max-cache-key-mismatch`, `--max-needs-rerender`.
+  - Validation summary: `target/fret-diag-codex-vlist-boundary-nonretained-gate-r1/summary.json`
+    (`runs=3`, `pass=true`, `prefetch=0`, `escape=0`, `non_retained=0`,
+    `cache_key_mismatch_max=0`, `needs_rerender_max=0`).
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
 - [x] `ui-gallery-code-editor-torture-autoscroll-steady.json`: eliminate the post-merge Canvas paint hotspot.
   - Root cause: accidental per-row `Theme` clone in syntax paint (allocator churn).
