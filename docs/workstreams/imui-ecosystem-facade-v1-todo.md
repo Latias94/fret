@@ -185,7 +185,9 @@ Exit criteria:
   - drag lifecycle is consistent across frames,
   - context-menu request is stable (mouse + keyboard if supported).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (tests: `click_sets_clicked_true_once`, `double_click_sets_double_clicked_true_once`, `right_click_sets_context_menu_requested_true_once`, `shift_f10_sets_context_menu_requested_true_once`, `drag_started_stopped_and_delta_are_consistent`)
-- [ ] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
+- [x] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
+  - Evidence: `.github/workflows/ci.yml` (`Wasm Compile Smoke (imui facade)`)
+  - Evidence (local): `cargo check -p fret-authoring -p fret-imui -p fret-ui-kit --features imui --target wasm32-unknown-unknown`
 - [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
 - [ ] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
 - [x] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
