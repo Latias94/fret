@@ -8,9 +8,9 @@ fn prepaint_interaction_cache_replays_for_clean_view_cache_root() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let cache_root = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);
@@ -27,6 +27,11 @@ fn prepaint_interaction_cache_replays_for_clean_view_cache_root() {
     assert_eq!(ui.debug_stats().interaction_cache_hits, 0);
 
     app.advance_frame();
+    // Force a non-stable layout pass so the test exercises interaction-cache replay.
+    //
+    // The layout engine can legitimately skip work on a completely stable frame, which would
+    // bypass prepaint recording/replay and make `interaction_cache_hits` remain 0.
+    ui.invalidate(root, Invalidation::Layout);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     let stats = ui.debug_stats();
     assert!(stats.interaction_cache_hits >= 1);
@@ -63,11 +68,11 @@ fn prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache() 
 
     let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     let cache_root = ui.create_node(PrepaintCountStack {
         calls: calls.clone(),
     });
-    let leaf = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);
@@ -85,6 +90,9 @@ fn prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache() 
     assert_eq!(ui.debug_stats().interaction_cache_hits, 0);
 
     app.advance_frame();
+    // Force a non-stable layout pass so the test exercises interaction-cache replay (and ensures
+    // the view-cache root's prepaint hook still runs under reuse).
+    ui.invalidate(root, Invalidation::Layout);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     assert!(ui.debug_stats().interaction_cache_hits >= 1);
     assert_eq!(calls.load(Ordering::SeqCst), 2);
@@ -116,9 +124,9 @@ fn prepaint_actions_are_exported_to_debug_snapshot() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     let cache_root = ui.create_node(PrepaintActionStack);
-    let leaf = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);
@@ -187,11 +195,11 @@ fn prepaint_output_store_is_keyed_by_cache_root_prepaint_key() {
 
     let seen_prev = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     let cache_root = ui.create_node(PrepaintOutputCounter {
         seen_prev: seen_prev.clone(),
     });
-    let leaf = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);

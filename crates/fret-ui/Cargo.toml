@@ -21,6 +21,7 @@ diagnostics = []
 fret-core = { path = "../fret-core" }
 fret-runtime = { path = "../fret-runtime" }
 slotmap.workspace = true
+smallvec.workspace = true
 stacksafe.workspace = true
 tracing.workspace = true
 serde.workspace = true

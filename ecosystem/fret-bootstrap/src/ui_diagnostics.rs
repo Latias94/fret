@@ -238,6 +238,47 @@ impl UiDiagnosticsService {
         self.app_snapshot_provider = provider;
     }
 
+    /// Returns `true` if the current diagnostics state would benefit from (or requires) a fresh
+    /// semantics snapshot for `window` on this frame.
+    ///
+    /// This is a performance knob: semantics snapshots are expensive, and many scripted steps only
+    /// need semantics for *initial target resolution*. Once a step has cached its target geometry
+    /// (via `v2_step_state`), we can often skip requesting semantics until a selector-based step is
+    /// about to run again.
+    pub fn wants_semantics_snapshot(&mut self, window: AppWindowId) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+        self.poll_script_trigger();
+
+        if self.cfg.capture_semantics {
+            return true;
+        }
+
+        if self.pick_armed_run_id.is_some()
+            || self
+                .pending_pick
+                .as_ref()
+                .is_some_and(|p| p.window == window)
+            || self.inspect_enabled
+            || self.inspect_locked_windows.contains(&window)
+            || self.inspect_toast.contains_key(&window)
+        {
+            return true;
+        }
+
+        if self.pending_script.is_some() {
+            return true;
+        }
+
+        self.active_scripts
+            .get(&window)
+            .is_some_and(active_script_needs_semantics_snapshot)
+    }
+
     pub fn poll_exit_trigger(&mut self) -> bool {
         if !self.is_enabled() {
             return false;
@@ -690,6 +731,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
+                | UiActionStepV2::MovePointerSweep { .. }
         );
         if !is_v2_intent_step {
             active.v2_step_state = None;
@@ -1170,6 +1212,114 @@ impl UiDiagnosticsService {
                 output.request_redraw = true;
                 if self.cfg.script_auto_dump {
                     force_dump_label = Some(format!("script-step-{step_index:04}-drag_pointer"));
+                }
+            }
+            UiActionStepV2::MovePointerSweep {
+                target,
+                delta_x,
+                delta_y,
+                steps,
+                frames_per_step,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                let Some(snapshot) = semantics_snapshot else {
+                    output.request_redraw = true;
+                    let label =
+                        format!("script-step-{step_index:04}-move_pointer_sweep-no-semantics");
+                    if self.cfg.script_auto_dump {
+                        self.dump_bundle(Some(&label));
+                    }
+                    self.write_script_result(UiScriptResultV1 {
+                        schema_version: 1,
+                        run_id: active.run_id,
+                        updated_unix_ms: unix_ms_now(),
+                        window: Some(window.data().as_ffi()),
+                        stage: UiScriptStageV1::Failed,
+                        step_index: Some(step_index as u32),
+                        reason: Some("no_semantics_snapshot".to_string()),
+                        last_bundle_dir: self
+                            .last_dump_dir
+                            .as_ref()
+                            .map(|p| display_path(&self.cfg.out_dir, p)),
+                    });
+                    return output;
+                };
+
+                let mut state = match active.v2_step_state.take() {
+                    Some(V2StepState::MovePointerSweep(state))
+                        if state.step_index == step_index =>
+                    {
+                        state
+                    }
+                    _ => {
+                        let Some(node) =
+                            select_semantics_node(snapshot, window, element_runtime, &target)
+                        else {
+                            output.request_redraw = true;
+                            let label = format!(
+                                "script-step-{step_index:04}-move_pointer_sweep-no-semantics-match"
+                            );
+                            if self.cfg.script_auto_dump {
+                                self.dump_bundle(Some(&label));
+                            }
+                            self.write_script_result(UiScriptResultV1 {
+                                schema_version: 1,
+                                run_id: active.run_id,
+                                updated_unix_ms: unix_ms_now(),
+                                window: Some(window.data().as_ffi()),
+                                stage: UiScriptStageV1::Failed,
+                                step_index: Some(step_index as u32),
+                                reason: Some("move_pointer_sweep_no_semantics_match".to_string()),
+                                last_bundle_dir: self
+                                    .last_dump_dir
+                                    .as_ref()
+                                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                            });
+                            return output;
+                        };
+
+                        let start = center_of_rect(node.bounds);
+                        let end = Point::new(
+                            fret_core::Px(start.x.0 + delta_x),
+                            fret_core::Px(start.y.0 + delta_y),
+                        );
+                        V2MovePointerSweepState {
+                            step_index,
+                            start,
+                            end,
+                            steps: steps.max(1),
+                            next_step: 0,
+                            frames_per_step: frames_per_step.max(1),
+                            wait_frames_remaining: 0,
+                        }
+                    }
+                };
+
+                if state.wait_frames_remaining > 0 {
+                    state.wait_frames_remaining = state.wait_frames_remaining.saturating_sub(1);
+                    active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
+                    output.request_redraw = true;
+                } else if state.next_step > state.steps {
+                    active.v2_step_state = None;
+                    active.next_step = active.next_step.saturating_add(1);
+                    output.request_redraw = true;
+                    if self.cfg.script_auto_dump {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-move_pointer_sweep"));
+                    }
+                } else {
+                    let t = state.next_step as f32 / state.steps as f32;
+                    let x = state.start.x.0 + (state.end.x.0 - state.start.x.0) * t;
+                    let y = state.start.y.0 + (state.end.y.0 - state.start.y.0) * t;
+                    let position = Point::new(fret_core::Px(x), fret_core::Px(y));
+                    output.events.push(move_pointer_event(position));
+
+                    state.next_step = state.next_step.saturating_add(1);
+                    state.wait_frames_remaining = state.frames_per_step.saturating_sub(1);
+                    active.v2_step_state = Some(V2StepState::MovePointerSweep(state));
+                    output.request_redraw = true;
                 }
             }
             UiActionStepV2::Wheel {
@@ -2337,10 +2487,15 @@ impl UiDiagnosticsService {
             })
         };
 
+        let renderer_perf = app
+            .global::<fret_render::RendererPerfFrameStore>()
+            .and_then(|store| store.latest_for_window(window));
+
         let mut debug = UiTreeDebugSnapshotV1::from_tree(
             app,
             window,
             ui,
+            renderer_perf,
             element_runtime,
             hit_test,
             element_diag,
@@ -2718,6 +2873,43 @@ impl UiDiagnosticsService {
 
         self.write_pick_result(result);
         self.pending_pick = None;
+    }
+}
+
+fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
+    if active.wait_until.is_some() {
+        return true;
+    }
+
+    if active.v2_step_state.is_some() {
+        return false;
+    }
+
+    let Some(step) = active.steps.get(active.next_step) else {
+        return false;
+    };
+
+    match step {
+        UiActionStepV2::Click { .. }
+        | UiActionStepV2::MovePointer { .. }
+        | UiActionStepV2::DragPointer { .. }
+        | UiActionStepV2::MovePointerSweep { .. }
+        | UiActionStepV2::Wheel { .. }
+        | UiActionStepV2::WaitUntil { .. }
+        | UiActionStepV2::Assert { .. }
+        | UiActionStepV2::EnsureVisible { .. }
+        | UiActionStepV2::ScrollIntoView { .. }
+        | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::MenuSelect { .. }
+        | UiActionStepV2::DragTo { .. }
+        | UiActionStepV2::SetSliderValue { .. } => true,
+        UiActionStepV2::ResetDiagnostics
+        | UiActionStepV2::PressKey { .. }
+        | UiActionStepV2::TypeText { .. }
+        | UiActionStepV2::WaitFrames { .. }
+        | UiActionStepV2::CaptureBundle { .. }
+        | UiActionStepV2::CaptureScreenshot { .. }
+        | UiActionStepV2::SetWindowInnerSize { .. } => false,
     }
 }
 
@@ -3235,6 +3427,19 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_drag_steps")]
         steps: u32,
     },
+    /// Move the pointer along a straight line over multiple frames (one move event per frame).
+    ///
+    /// Prefer this over `drag_pointer` when measuring hit-test/dispatch time, because
+    /// `drag_pointer` emits multiple pointer move events in a single frame.
+    MovePointerSweep {
+        target: UiSelectorV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(default = "default_drag_steps")]
+        steps: u32,
+        #[serde(default = "default_move_frames_per_step")]
+        frames_per_step: u32,
+    },
     Wheel {
         target: UiSelectorV1,
         #[serde(default)]
@@ -3402,6 +3607,10 @@ impl From<UiActionStepV1> for UiActionStepV2 {
 
 fn default_drag_steps() -> u32 {
     8
+}
+
+fn default_move_frames_per_step() -> u32 {
+    1
 }
 
 fn default_capture_screenshot_timeout_frames() -> u32 {
@@ -3755,6 +3964,7 @@ enum V2StepState {
     MenuSelect(V2MenuSelectState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
+    MovePointerSweep(V2MovePointerSweepState),
 }
 
 #[derive(Debug, Clone)]
@@ -3795,6 +4005,17 @@ struct V2SetSliderValueState {
     remaining_frames: u32,
     phase: u32,
     last_drag_x: Option<f32>,
+}
+
+#[derive(Debug, Clone)]
+struct V2MovePointerSweepState {
+    step_index: usize,
+    start: Point,
+    end: Point,
+    steps: u32,
+    next_step: u32,
+    frames_per_step: u32,
+    wait_frames_remaining: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -3917,6 +4138,10 @@ pub struct UiTreeDebugSnapshotV1 {
     pub layout_hotspots: Vec<UiLayoutHotspotV1>,
     #[serde(default)]
     pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
+    #[serde(default)]
+    pub paint_widget_hotspots: Vec<UiPaintWidgetHotspotV1>,
+    #[serde(default)]
+    pub paint_text_prepare_hotspots: Vec<UiPaintTextPrepareHotspotV1>,
     #[serde(default)]
     pub input_arbitration: UiInputArbitrationSnapshotV1,
     /// Best-effort command gating decisions for a small set of "interesting" commands.
@@ -4045,6 +4270,7 @@ impl UiTreeDebugSnapshotV1 {
         app: &App,
         window: AppWindowId,
         ui: &UiTree<App>,
+        renderer_perf: Option<fret_render::RendererPerfFrameSample>,
         element_runtime_state: Option<&ElementRuntime>,
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
@@ -4057,7 +4283,7 @@ impl UiTreeDebugSnapshotV1 {
             .copied()
             .collect();
         Self {
-            stats: UiFrameStatsV1::from_stats(ui.debug_stats()),
+            stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
             invalidation_walks: ui
                 .debug_invalidation_walks()
                 .iter()
@@ -4187,6 +4413,16 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_widget_measure_hotspots()
                 .iter()
                 .map(UiWidgetMeasureHotspotV1::from_hotspot)
+                .collect(),
+            paint_widget_hotspots: ui
+                .debug_paint_widget_hotspots()
+                .iter()
+                .map(UiPaintWidgetHotspotV1::from_hotspot)
+                .collect(),
+            paint_text_prepare_hotspots: ui
+                .debug_paint_text_prepare_hotspots()
+                .iter()
+                .map(UiPaintTextPrepareHotspotV1::from_hotspot)
                 .collect(),
             input_arbitration: UiInputArbitrationSnapshotV1::from_snapshot(
                 ui.input_arbitration_snapshot(),
@@ -4873,6 +5109,8 @@ pub enum UiPrepaintActionKindV1 {
     RequestRedraw,
     RequestAnimationFrame,
     VirtualListWindowShift,
+    ChartSamplingWindowShift,
+    NodeGraphCullWindowShift,
 }
 
 impl UiPrepaintActionKindV1 {
@@ -4885,6 +5123,12 @@ impl UiPrepaintActionKindV1 {
             }
             fret_ui::tree::UiDebugPrepaintActionKind::VirtualListWindowShift => {
                 Self::VirtualListWindowShift
+            }
+            fret_ui::tree::UiDebugPrepaintActionKind::ChartSamplingWindowShift => {
+                Self::ChartSamplingWindowShift
+            }
+            fret_ui::tree::UiDebugPrepaintActionKind::NodeGraphCullWindowShift => {
+                Self::NodeGraphCullWindowShift
             }
         }
     }
@@ -4904,6 +5148,10 @@ pub struct UiPrepaintActionV1 {
     pub virtual_list_window_shift_kind: Option<UiVirtualListWindowShiftKindV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub virtual_list_window_shift_reason: Option<UiVirtualListWindowShiftReasonV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub chart_sampling_window_key: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_graph_cull_window_key: Option<u64>,
     #[serde(default)]
     pub frame_id: u64,
 }
@@ -4929,6 +5177,8 @@ impl UiPrepaintActionV1 {
             virtual_list_window_shift_reason: action
                 .virtual_list_window_shift_reason
                 .map(UiVirtualListWindowShiftReasonV1::from_reason),
+            chart_sampling_window_key: action.chart_sampling_window_key,
+            node_graph_cull_window_key: action.node_graph_cull_window_key,
             frame_id: action.frame_id.0,
         }
     }
@@ -5907,6 +6157,91 @@ impl UiWidgetMeasureHotspotV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPaintWidgetHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    pub widget_type: String,
+    pub paint_time_us: u64,
+    #[serde(default)]
+    pub inclusive_time_us: u64,
+    #[serde(default)]
+    pub inclusive_scene_ops_delta: u32,
+    #[serde(default)]
+    pub exclusive_scene_ops_delta: u32,
+}
+
+impl UiPaintWidgetHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugPaintWidgetHotspot) -> Self {
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            element_kind: h.element_kind.map(|s| s.to_string()),
+            widget_type: h.widget_type.to_string(),
+            paint_time_us: h.exclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_time_us: h.inclusive_time.as_micros().min(u64::MAX as u128) as u64,
+            inclusive_scene_ops_delta: h.inclusive_scene_ops_delta,
+            exclusive_scene_ops_delta: h.exclusive_scene_ops_delta,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiPaintTextPrepareHotspotV1 {
+    pub node: u64,
+    #[serde(default)]
+    pub element: Option<u64>,
+    #[serde(default)]
+    pub element_kind: Option<String>,
+    pub prepare_time_us: u64,
+    pub text_len: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_width: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wrap: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub overflow: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scale_factor: Option<f32>,
+    #[serde(default)]
+    pub reasons_mask: u16,
+}
+
+impl UiPaintTextPrepareHotspotV1 {
+    fn from_hotspot(h: &fret_ui::tree::UiDebugPaintTextPrepareHotspot) -> Self {
+        fn wrap_as_str(wrap: fret_core::TextWrap) -> &'static str {
+            match wrap {
+                fret_core::TextWrap::None => "none",
+                fret_core::TextWrap::Word => "word",
+                fret_core::TextWrap::Grapheme => "grapheme",
+            }
+        }
+
+        fn overflow_as_str(overflow: fret_core::TextOverflow) -> &'static str {
+            match overflow {
+                fret_core::TextOverflow::Clip => "clip",
+                fret_core::TextOverflow::Ellipsis => "ellipsis",
+            }
+        }
+
+        Self {
+            node: h.node.data().as_ffi(),
+            element: h.element.map(|id| id.0),
+            element_kind: Some(h.element_kind.to_string()),
+            prepare_time_us: h.prepare_time.as_micros().min(u64::MAX as u128) as u64,
+            text_len: h.text_len,
+            max_width: h.constraints.max_width.map(|v| v.0),
+            wrap: Some(wrap_as_str(h.constraints.wrap).to_string()),
+            overflow: Some(overflow_as_str(h.constraints.overflow).to_string()),
+            scale_factor: Some(h.constraints.scale_factor),
+            reasons_mask: h.reasons_mask,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiLayoutEngineMeasureHotspotV1 {
     pub node: u64,
     pub measure_time_us: u64,
@@ -6279,7 +6614,35 @@ impl UiSemanticsNodeV1 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiFrameStatsV1 {
+    #[serde(default)]
+    pub frame_arena_capacity_estimate_bytes: u64,
+    #[serde(default)]
+    pub frame_arena_grow_events: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_reuses: u32,
+    #[serde(default)]
+    pub element_children_vec_pool_misses: u32,
     pub layout_time_us: u64,
+    #[serde(default)]
+    pub layout_collect_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_invalidate_scroll_handle_bindings_time_us: u64,
+    #[serde(default)]
+    pub layout_expand_view_cache_invalidations_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_pending_barrier_relayouts_time_us: u64,
+    #[serde(default)]
+    pub layout_repair_view_cache_bounds_time_us: u64,
+    #[serde(default)]
+    pub layout_contained_view_cache_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_collapse_layout_observations_time_us: u64,
+    #[serde(default)]
+    pub layout_prepaint_after_layout_time_us: u64,
+    #[serde(default)]
+    pub layout_skipped_engine_frame: bool,
     #[serde(default)]
     pub layout_roots_time_us: u64,
     #[serde(default)]
@@ -6295,6 +6658,152 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub prepaint_time_us: u64,
     pub paint_time_us: u64,
+    #[serde(default)]
+    pub paint_record_visual_bounds_time_us: u64,
+    #[serde(default)]
+    pub paint_record_visual_bounds_calls: u32,
+    #[serde(default)]
+    pub paint_cache_key_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_hit_check_time_us: u64,
+    #[serde(default)]
+    pub paint_widget_time_us: u64,
+    #[serde(default)]
+    pub paint_observation_record_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_models_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_models_items: u32,
+    #[serde(default)]
+    pub paint_host_widget_observed_globals_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_observed_globals_items: u32,
+    #[serde(default)]
+    pub paint_host_widget_instance_lookup_time_us: u64,
+    #[serde(default)]
+    pub paint_host_widget_instance_lookup_calls: u32,
+    #[serde(default)]
+    pub paint_text_prepare_time_us: u64,
+    #[serde(default)]
+    pub paint_text_prepare_calls: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_blob_missing: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_scale_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_text_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_rich_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_style_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_wrap_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_overflow_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_width_changed: u32,
+    #[serde(default)]
+    pub paint_text_prepare_reason_font_stack_changed: u32,
+    #[serde(default)]
+    pub paint_input_context_time_us: u64,
+    #[serde(default)]
+    pub paint_scroll_handle_invalidation_time_us: u64,
+    #[serde(default)]
+    pub paint_collect_roots_time_us: u64,
+    #[serde(default)]
+    pub paint_publish_text_input_snapshot_time_us: u64,
+    #[serde(default)]
+    pub paint_collapse_observations_time_us: u64,
+    #[serde(default)]
+    pub dispatch_time_us: u64,
+    #[serde(default)]
+    pub dispatch_pointer_events: u32,
+    #[serde(default)]
+    pub dispatch_pointer_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_targeted_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_targeted_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_events: u32,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_layers_visited: u32,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_rebuild_visible_layers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_broadcast_loop_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_slowest_event_time_us: u64,
+    #[serde(default)]
+    pub dispatch_timer_slowest_token: Option<u64>,
+    #[serde(default)]
+    pub dispatch_timer_slowest_was_broadcast: bool,
+    #[serde(default)]
+    pub dispatch_other_events: u32,
+    #[serde(default)]
+    pub dispatch_other_event_time_us: u64,
+    #[serde(default)]
+    pub hit_test_time_us: u64,
+    #[serde(default)]
+    pub dispatch_events: u32,
+    #[serde(default)]
+    pub hit_test_queries: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_queries: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_disabled: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_misses: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_hits: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_candidate_rejected: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_nodes_visited: u32,
+    #[serde(default)]
+    pub hit_test_bounds_tree_nodes_pushed: u32,
+    #[serde(default)]
+    pub hit_test_path_cache_hits: u32,
+    #[serde(default)]
+    pub hit_test_path_cache_misses: u32,
+    #[serde(default)]
+    pub hit_test_cached_path_time_us: u64,
+    #[serde(default)]
+    pub hit_test_bounds_tree_query_time_us: u64,
+    #[serde(default)]
+    pub hit_test_candidate_self_only_time_us: u64,
+    #[serde(default)]
+    pub hit_test_fallback_traversal_time_us: u64,
+    #[serde(default)]
+    pub dispatch_hover_update_time_us: u64,
+    #[serde(default)]
+    pub dispatch_scroll_handle_invalidation_time_us: u64,
+    #[serde(default)]
+    pub dispatch_active_layers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_input_context_time_us: u64,
+    #[serde(default)]
+    pub dispatch_event_chain_build_time_us: u64,
+    #[serde(default)]
+    pub dispatch_widget_capture_time_us: u64,
+    #[serde(default)]
+    pub dispatch_widget_bubble_time_us: u64,
+    #[serde(default)]
+    pub dispatch_cursor_query_time_us: u64,
+    #[serde(default)]
+    pub dispatch_pointer_move_layer_observers_time_us: u64,
+    #[serde(default)]
+    pub dispatch_synth_hover_observer_time_us: u64,
+    #[serde(default)]
+    pub dispatch_cursor_effect_time_us: u64,
+    #[serde(default)]
+    pub dispatch_post_dispatch_snapshot_time_us: u64,
     pub layout_nodes_visited: u32,
     pub layout_nodes_performed: u32,
     #[serde(default)]
@@ -6304,6 +6813,12 @@ pub struct UiFrameStatsV1 {
     pub paint_cache_hits: u32,
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
+    #[serde(default)]
+    pub paint_cache_replay_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_bounds_translate_time_us: u64,
+    #[serde(default)]
+    pub paint_cache_bounds_translated_nodes: u32,
     #[serde(default)]
     pub interaction_cache_hits: u32,
     #[serde(default)]
@@ -6378,6 +6893,24 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub view_cache_contained_relayouts: u32,
     #[serde(default)]
+    pub view_cache_roots_total: u32,
+    #[serde(default)]
+    pub view_cache_roots_reused: u32,
+    #[serde(default)]
+    pub view_cache_roots_first_mount: u32,
+    #[serde(default)]
+    pub view_cache_roots_node_recreated: u32,
+    #[serde(default)]
+    pub view_cache_roots_cache_key_mismatch: u32,
+    #[serde(default)]
+    pub view_cache_roots_not_marked_reuse_root: u32,
+    #[serde(default)]
+    pub view_cache_roots_needs_rerender: u32,
+    #[serde(default)]
+    pub view_cache_roots_layout_invalidated: u32,
+    #[serde(default)]
+    pub view_cache_roots_manual: u32,
+    #[serde(default)]
     pub set_children_barrier_writes: u32,
     #[serde(default)]
     pub barrier_relayouts_scheduled: u32,
@@ -6399,12 +6932,148 @@ pub struct UiFrameStatsV1 {
     pub retained_virtual_list_detached_items: u32,
     pub focused_node: Option<u64>,
     pub captured_node: Option<u64>,
+
+    // Renderer (wgpu) perf sample (best-effort; may be absent or lag a frame).
+    #[serde(default)]
+    pub renderer_tick_id: u64,
+    #[serde(default)]
+    pub renderer_frame_id: u64,
+    #[serde(default)]
+    pub renderer_frames: u64,
+    #[serde(default)]
+    pub renderer_encode_scene_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_svg_us: u64,
+    #[serde(default)]
+    pub renderer_prepare_text_us: u64,
+    #[serde(default)]
+    pub renderer_svg_uploads: u64,
+    #[serde(default)]
+    pub renderer_svg_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_image_uploads: u64,
+    #[serde(default)]
+    pub renderer_image_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_budget_bytes: u64,
+    #[serde(default)]
+    pub renderer_svg_rasters_live: u64,
+    #[serde(default)]
+    pub renderer_svg_standalone_bytes_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_pages_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_bytes_live: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_used_px: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_capacity_px: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_svg_raster_budget_evictions: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_page_evictions: u64,
+    #[serde(default)]
+    pub renderer_svg_mask_atlas_entries_evicted: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_revision: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_uploads: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_upload_bytes: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_glyphs: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_pages: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_evicted_page_glyphs: u64,
+    #[serde(default)]
+    pub renderer_text_atlas_resets: u64,
+    #[serde(default)]
+    pub renderer_intermediate_budget_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_in_use_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_peak_in_use_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_release_targets: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_allocations: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_reuses: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_releases: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_evictions: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_free_bytes: u64,
+    #[serde(default)]
+    pub renderer_intermediate_pool_free_textures: u64,
+    #[serde(default)]
+    pub renderer_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_text_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_quad_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_mask_draw_calls: u64,
+    #[serde(default)]
+    pub renderer_pipeline_switches: u64,
+    #[serde(default)]
+    pub renderer_bind_group_switches: u64,
+    #[serde(default)]
+    pub renderer_scissor_sets: u64,
+    #[serde(default)]
+    pub renderer_uniform_bytes: u64,
+    #[serde(default)]
+    pub renderer_instance_bytes: u64,
+    #[serde(default)]
+    pub renderer_vertex_bytes: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_scene_encoding_cache_misses: u64,
 }
 
 impl UiFrameStatsV1 {
-    fn from_stats(stats: UiDebugFrameStats) -> Self {
-        Self {
+    fn from_stats(
+        stats: UiDebugFrameStats,
+        renderer_perf: Option<fret_render::RendererPerfFrameSample>,
+    ) -> Self {
+        let mut out = Self {
+            frame_arena_capacity_estimate_bytes: stats.frame_arena_capacity_estimate_bytes,
+            frame_arena_grow_events: stats.frame_arena_grow_events,
+            element_children_vec_pool_reuses: stats.element_children_vec_pool_reuses,
+            element_children_vec_pool_misses: stats.element_children_vec_pool_misses,
             layout_time_us: stats.layout_time.as_micros() as u64,
+            layout_collect_roots_time_us: stats.layout_collect_roots_time.as_micros() as u64,
+            layout_invalidate_scroll_handle_bindings_time_us: stats
+                .layout_invalidate_scroll_handle_bindings_time
+                .as_micros() as u64,
+            layout_expand_view_cache_invalidations_time_us: stats
+                .layout_expand_view_cache_invalidations_time
+                .as_micros() as u64,
+            layout_request_build_roots_time_us: stats.layout_request_build_roots_time.as_micros()
+                as u64,
+            layout_pending_barrier_relayouts_time_us: stats
+                .layout_pending_barrier_relayouts_time
+                .as_micros() as u64,
+            layout_repair_view_cache_bounds_time_us: stats
+                .layout_repair_view_cache_bounds_time
+                .as_micros() as u64,
+            layout_contained_view_cache_roots_time_us: stats
+                .layout_contained_view_cache_roots_time
+                .as_micros() as u64,
+            layout_collapse_layout_observations_time_us: stats
+                .layout_collapse_layout_observations_time
+                .as_micros() as u64,
+            layout_prepaint_after_layout_time_us: stats
+                .layout_prepaint_after_layout_time
+                .as_micros() as u64,
+            layout_skipped_engine_frame: stats.layout_skipped_engine_frame,
             layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
             layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()
                 as u64,
@@ -6415,6 +7084,116 @@ impl UiFrameStatsV1 {
             layout_deferred_cleanup_time_us: stats.layout_deferred_cleanup_time.as_micros() as u64,
             prepaint_time_us: stats.prepaint_time.as_micros() as u64,
             paint_time_us: stats.paint_time.as_micros() as u64,
+            paint_record_visual_bounds_time_us: stats.paint_record_visual_bounds_time.as_micros()
+                as u64,
+            paint_record_visual_bounds_calls: stats.paint_record_visual_bounds_calls,
+            paint_cache_key_time_us: stats.paint_cache_key_time.as_micros() as u64,
+            paint_cache_hit_check_time_us: stats.paint_cache_hit_check_time.as_micros() as u64,
+            paint_widget_time_us: stats.paint_widget_time.as_micros() as u64,
+            paint_observation_record_time_us: stats.paint_observation_record_time.as_micros()
+                as u64,
+            paint_host_widget_observed_models_time_us: stats
+                .paint_host_widget_observed_models_time
+                .as_micros() as u64,
+            paint_host_widget_observed_models_items: stats.paint_host_widget_observed_models_items,
+            paint_host_widget_observed_globals_time_us: stats
+                .paint_host_widget_observed_globals_time
+                .as_micros() as u64,
+            paint_host_widget_observed_globals_items: stats
+                .paint_host_widget_observed_globals_items,
+            paint_host_widget_instance_lookup_time_us: stats
+                .paint_host_widget_instance_lookup_time
+                .as_micros() as u64,
+            paint_host_widget_instance_lookup_calls: stats.paint_host_widget_instance_lookup_calls,
+            paint_text_prepare_time_us: stats.paint_text_prepare_time.as_micros() as u64,
+            paint_text_prepare_calls: stats.paint_text_prepare_calls,
+            paint_text_prepare_reason_blob_missing: stats.paint_text_prepare_reason_blob_missing,
+            paint_text_prepare_reason_scale_changed: stats.paint_text_prepare_reason_scale_changed,
+            paint_text_prepare_reason_text_changed: stats.paint_text_prepare_reason_text_changed,
+            paint_text_prepare_reason_rich_changed: stats.paint_text_prepare_reason_rich_changed,
+            paint_text_prepare_reason_style_changed: stats.paint_text_prepare_reason_style_changed,
+            paint_text_prepare_reason_wrap_changed: stats.paint_text_prepare_reason_wrap_changed,
+            paint_text_prepare_reason_overflow_changed: stats
+                .paint_text_prepare_reason_overflow_changed,
+            paint_text_prepare_reason_width_changed: stats.paint_text_prepare_reason_width_changed,
+            paint_text_prepare_reason_font_stack_changed: stats
+                .paint_text_prepare_reason_font_stack_changed,
+            paint_input_context_time_us: stats.paint_input_context_time.as_micros() as u64,
+            paint_scroll_handle_invalidation_time_us: stats
+                .paint_scroll_handle_invalidation_time
+                .as_micros() as u64,
+            paint_collect_roots_time_us: stats.paint_collect_roots_time.as_micros() as u64,
+            paint_publish_text_input_snapshot_time_us: stats
+                .paint_publish_text_input_snapshot_time
+                .as_micros() as u64,
+            paint_collapse_observations_time_us: stats.paint_collapse_observations_time.as_micros()
+                as u64,
+            dispatch_time_us: stats.dispatch_time.as_micros() as u64,
+            dispatch_pointer_events: stats.dispatch_pointer_events,
+            dispatch_pointer_event_time_us: stats.dispatch_pointer_event_time.as_micros() as u64,
+            dispatch_timer_events: stats.dispatch_timer_events,
+            dispatch_timer_event_time_us: stats.dispatch_timer_event_time.as_micros() as u64,
+            dispatch_timer_targeted_events: stats.dispatch_timer_targeted_events,
+            dispatch_timer_targeted_time_us: stats.dispatch_timer_targeted_time.as_micros() as u64,
+            dispatch_timer_broadcast_events: stats.dispatch_timer_broadcast_events,
+            dispatch_timer_broadcast_time_us: stats.dispatch_timer_broadcast_time.as_micros()
+                as u64,
+            dispatch_timer_broadcast_layers_visited: stats.dispatch_timer_broadcast_layers_visited,
+            dispatch_timer_broadcast_rebuild_visible_layers_time_us: stats
+                .dispatch_timer_broadcast_rebuild_visible_layers_time
+                .as_micros()
+                as u64,
+            dispatch_timer_broadcast_loop_time_us: stats
+                .dispatch_timer_broadcast_loop_time
+                .as_micros() as u64,
+            dispatch_timer_slowest_event_time_us: stats
+                .dispatch_timer_slowest_event_time
+                .as_micros() as u64,
+            dispatch_timer_slowest_token: stats.dispatch_timer_slowest_token.map(|t| t.0),
+            dispatch_timer_slowest_was_broadcast: stats.dispatch_timer_slowest_was_broadcast,
+            dispatch_other_events: stats.dispatch_other_events,
+            dispatch_other_event_time_us: stats.dispatch_other_event_time.as_micros() as u64,
+            hit_test_time_us: stats.hit_test_time.as_micros() as u64,
+            dispatch_events: stats.dispatch_events,
+            hit_test_queries: stats.hit_test_queries,
+            hit_test_bounds_tree_queries: stats.hit_test_bounds_tree_queries,
+            hit_test_bounds_tree_disabled: stats.hit_test_bounds_tree_disabled,
+            hit_test_bounds_tree_misses: stats.hit_test_bounds_tree_misses,
+            hit_test_bounds_tree_hits: stats.hit_test_bounds_tree_hits,
+            hit_test_bounds_tree_candidate_rejected: stats.hit_test_bounds_tree_candidate_rejected,
+            hit_test_bounds_tree_nodes_visited: stats.hit_test_bounds_tree_nodes_visited,
+            hit_test_bounds_tree_nodes_pushed: stats.hit_test_bounds_tree_nodes_pushed,
+            hit_test_path_cache_hits: stats.hit_test_path_cache_hits,
+            hit_test_path_cache_misses: stats.hit_test_path_cache_misses,
+            hit_test_cached_path_time_us: stats.hit_test_cached_path_time.as_micros() as u64,
+            hit_test_bounds_tree_query_time_us: stats.hit_test_bounds_tree_query_time.as_micros()
+                as u64,
+            hit_test_candidate_self_only_time_us: stats
+                .hit_test_candidate_self_only_time
+                .as_micros() as u64,
+            hit_test_fallback_traversal_time_us: stats.hit_test_fallback_traversal_time.as_micros()
+                as u64,
+            dispatch_hover_update_time_us: stats.dispatch_hover_update_time.as_micros() as u64,
+            dispatch_scroll_handle_invalidation_time_us: stats
+                .dispatch_scroll_handle_invalidation_time
+                .as_micros() as u64,
+            dispatch_active_layers_time_us: stats.dispatch_active_layers_time.as_micros() as u64,
+            dispatch_input_context_time_us: stats.dispatch_input_context_time.as_micros() as u64,
+            dispatch_event_chain_build_time_us: stats.dispatch_event_chain_build_time.as_micros()
+                as u64,
+            dispatch_widget_capture_time_us: stats.dispatch_widget_capture_time.as_micros() as u64,
+            dispatch_widget_bubble_time_us: stats.dispatch_widget_bubble_time.as_micros() as u64,
+            dispatch_cursor_query_time_us: stats.dispatch_cursor_query_time.as_micros() as u64,
+            dispatch_pointer_move_layer_observers_time_us: stats
+                .dispatch_pointer_move_layer_observers_time
+                .as_micros() as u64,
+            dispatch_synth_hover_observer_time_us: stats
+                .dispatch_synth_hover_observer_time
+                .as_micros() as u64,
+            dispatch_cursor_effect_time_us: stats.dispatch_cursor_effect_time.as_micros() as u64,
+            dispatch_post_dispatch_snapshot_time_us: stats
+                .dispatch_post_dispatch_snapshot_time
+                .as_micros() as u64,
             layout_nodes_visited: stats.layout_nodes_visited,
             layout_nodes_performed: stats.layout_nodes_performed,
             prepaint_nodes_visited: stats.prepaint_nodes_visited,
@@ -6423,6 +7202,11 @@ impl UiFrameStatsV1 {
             paint_cache_hits: stats.paint_cache_hits,
             paint_cache_misses: stats.paint_cache_misses,
             paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            paint_cache_replay_time_us: stats.paint_cache_replay_time.as_micros() as u64,
+            paint_cache_bounds_translate_time_us: stats
+                .paint_cache_bounds_translate_time
+                .as_micros() as u64,
+            paint_cache_bounds_translated_nodes: stats.paint_cache_bounds_translated_nodes,
             interaction_cache_hits: stats.interaction_cache_hits,
             interaction_cache_misses: stats.interaction_cache_misses,
             interaction_cache_replayed_records: stats.interaction_cache_replayed_records,
@@ -6462,6 +7246,15 @@ impl UiFrameStatsV1 {
             view_cache_active: stats.view_cache_active,
             view_cache_invalidation_truncations: stats.view_cache_invalidation_truncations,
             view_cache_contained_relayouts: stats.view_cache_contained_relayouts,
+            view_cache_roots_total: stats.view_cache_roots_total,
+            view_cache_roots_reused: stats.view_cache_roots_reused,
+            view_cache_roots_first_mount: stats.view_cache_roots_first_mount,
+            view_cache_roots_node_recreated: stats.view_cache_roots_node_recreated,
+            view_cache_roots_cache_key_mismatch: stats.view_cache_roots_cache_key_mismatch,
+            view_cache_roots_not_marked_reuse_root: stats.view_cache_roots_not_marked_reuse_root,
+            view_cache_roots_needs_rerender: stats.view_cache_roots_needs_rerender,
+            view_cache_roots_layout_invalidated: stats.view_cache_roots_layout_invalidated,
+            view_cache_roots_manual: stats.view_cache_roots_manual,
             set_children_barrier_writes: stats.set_children_barrier_writes,
             barrier_relayouts_scheduled: stats.barrier_relayouts_scheduled,
             barrier_relayouts_performed: stats.barrier_relayouts_performed,
@@ -6474,7 +7267,118 @@ impl UiFrameStatsV1 {
             retained_virtual_list_detached_items: stats.retained_virtual_list_detached_items,
             focused_node: stats.focus.map(key_to_u64),
             captured_node: stats.captured.map(key_to_u64),
+            renderer_tick_id: 0,
+            renderer_frame_id: 0,
+            renderer_frames: 0,
+            renderer_encode_scene_us: 0,
+            renderer_prepare_svg_us: 0,
+            renderer_prepare_text_us: 0,
+            renderer_svg_uploads: 0,
+            renderer_svg_upload_bytes: 0,
+            renderer_image_uploads: 0,
+            renderer_image_upload_bytes: 0,
+            renderer_svg_raster_budget_bytes: 0,
+            renderer_svg_rasters_live: 0,
+            renderer_svg_standalone_bytes_live: 0,
+            renderer_svg_mask_atlas_pages_live: 0,
+            renderer_svg_mask_atlas_bytes_live: 0,
+            renderer_svg_mask_atlas_used_px: 0,
+            renderer_svg_mask_atlas_capacity_px: 0,
+            renderer_svg_raster_cache_hits: 0,
+            renderer_svg_raster_cache_misses: 0,
+            renderer_svg_raster_budget_evictions: 0,
+            renderer_svg_mask_atlas_page_evictions: 0,
+            renderer_svg_mask_atlas_entries_evicted: 0,
+            renderer_text_atlas_revision: 0,
+            renderer_text_atlas_uploads: 0,
+            renderer_text_atlas_upload_bytes: 0,
+            renderer_text_atlas_evicted_glyphs: 0,
+            renderer_text_atlas_evicted_pages: 0,
+            renderer_text_atlas_evicted_page_glyphs: 0,
+            renderer_text_atlas_resets: 0,
+            renderer_intermediate_budget_bytes: 0,
+            renderer_intermediate_in_use_bytes: 0,
+            renderer_intermediate_peak_in_use_bytes: 0,
+            renderer_intermediate_release_targets: 0,
+            renderer_intermediate_pool_allocations: 0,
+            renderer_intermediate_pool_reuses: 0,
+            renderer_intermediate_pool_releases: 0,
+            renderer_intermediate_pool_evictions: 0,
+            renderer_intermediate_pool_free_bytes: 0,
+            renderer_intermediate_pool_free_textures: 0,
+            renderer_draw_calls: 0,
+            renderer_text_draw_calls: 0,
+            renderer_quad_draw_calls: 0,
+            renderer_mask_draw_calls: 0,
+            renderer_pipeline_switches: 0,
+            renderer_bind_group_switches: 0,
+            renderer_scissor_sets: 0,
+            renderer_uniform_bytes: 0,
+            renderer_instance_bytes: 0,
+            renderer_vertex_bytes: 0,
+            renderer_scene_encoding_cache_hits: 0,
+            renderer_scene_encoding_cache_misses: 0,
+        };
+
+        if let Some(sample) = renderer_perf {
+            out.renderer_tick_id = sample.tick_id;
+            out.renderer_frame_id = sample.frame_id;
+            out.renderer_frames = sample.perf.frames;
+            out.renderer_encode_scene_us = sample.perf.encode_scene_us;
+            out.renderer_prepare_svg_us = sample.perf.prepare_svg_us;
+            out.renderer_prepare_text_us = sample.perf.prepare_text_us;
+            out.renderer_svg_uploads = sample.perf.svg_uploads;
+            out.renderer_svg_upload_bytes = sample.perf.svg_upload_bytes;
+            out.renderer_image_uploads = sample.perf.image_uploads;
+            out.renderer_image_upload_bytes = sample.perf.image_upload_bytes;
+            out.renderer_svg_raster_budget_bytes = sample.perf.svg_raster_budget_bytes;
+            out.renderer_svg_rasters_live = sample.perf.svg_rasters_live;
+            out.renderer_svg_standalone_bytes_live = sample.perf.svg_standalone_bytes_live;
+            out.renderer_svg_mask_atlas_pages_live = sample.perf.svg_mask_atlas_pages_live;
+            out.renderer_svg_mask_atlas_bytes_live = sample.perf.svg_mask_atlas_bytes_live;
+            out.renderer_svg_mask_atlas_used_px = sample.perf.svg_mask_atlas_used_px;
+            out.renderer_svg_mask_atlas_capacity_px = sample.perf.svg_mask_atlas_capacity_px;
+            out.renderer_svg_raster_cache_hits = sample.perf.svg_raster_cache_hits;
+            out.renderer_svg_raster_cache_misses = sample.perf.svg_raster_cache_misses;
+            out.renderer_svg_raster_budget_evictions = sample.perf.svg_raster_budget_evictions;
+            out.renderer_svg_mask_atlas_page_evictions = sample.perf.svg_mask_atlas_page_evictions;
+            out.renderer_svg_mask_atlas_entries_evicted =
+                sample.perf.svg_mask_atlas_entries_evicted;
+            out.renderer_text_atlas_revision = sample.perf.text_atlas_revision;
+            out.renderer_text_atlas_uploads = sample.perf.text_atlas_uploads;
+            out.renderer_text_atlas_upload_bytes = sample.perf.text_atlas_upload_bytes;
+            out.renderer_text_atlas_evicted_glyphs = sample.perf.text_atlas_evicted_glyphs;
+            out.renderer_text_atlas_evicted_pages = sample.perf.text_atlas_evicted_pages;
+            out.renderer_text_atlas_evicted_page_glyphs =
+                sample.perf.text_atlas_evicted_page_glyphs;
+            out.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
+            out.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
+            out.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
+            out.renderer_intermediate_peak_in_use_bytes =
+                sample.perf.intermediate_peak_in_use_bytes;
+            out.renderer_intermediate_release_targets = sample.perf.intermediate_release_targets;
+            out.renderer_intermediate_pool_allocations = sample.perf.intermediate_pool_allocations;
+            out.renderer_intermediate_pool_reuses = sample.perf.intermediate_pool_reuses;
+            out.renderer_intermediate_pool_releases = sample.perf.intermediate_pool_releases;
+            out.renderer_intermediate_pool_evictions = sample.perf.intermediate_pool_evictions;
+            out.renderer_intermediate_pool_free_bytes = sample.perf.intermediate_pool_free_bytes;
+            out.renderer_intermediate_pool_free_textures =
+                sample.perf.intermediate_pool_free_textures;
+            out.renderer_draw_calls = sample.perf.draw_calls;
+            out.renderer_text_draw_calls = sample.perf.text_draw_calls;
+            out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
+            out.renderer_mask_draw_calls = sample.perf.mask_draw_calls;
+            out.renderer_pipeline_switches = sample.perf.pipeline_switches;
+            out.renderer_bind_group_switches = sample.perf.bind_group_switches;
+            out.renderer_scissor_sets = sample.perf.scissor_sets;
+            out.renderer_uniform_bytes = sample.perf.uniform_bytes;
+            out.renderer_instance_bytes = sample.perf.instance_bytes;
+            out.renderer_vertex_bytes = sample.perf.vertex_bytes;
+            out.renderer_scene_encoding_cache_hits = sample.perf.scene_encoding_cache_hits;
+            out.renderer_scene_encoding_cache_misses = sample.perf.scene_encoding_cache_misses;
         }
+
+        out
     }
 }
 
@@ -8456,6 +9360,22 @@ mod tests {
     }
 
     #[test]
+    fn scripts_support_move_pointer_sweep_step() {
+        let parsed: UiActionScriptV2 = serde_json::from_str(
+            r#"{"schema_version":2,"steps":[{"type":"move_pointer_sweep","target":{"kind":"test_id","id":"x"},"delta_x":10.0,"delta_y":-5.0,"steps":3,"frames_per_step":2}]}"#,
+        )
+        .expect("parse move_pointer_sweep step");
+        assert_eq!(parsed.schema_version, 2);
+        assert!(
+            matches!(
+                parsed.steps.as_slice(),
+                [UiActionStepV2::MovePointerSweep { .. }]
+            ),
+            "expected move_pointer_sweep step"
+        );
+    }
+
+    #[test]
     fn pick_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
@@ -9333,6 +10253,10 @@ mod tests {
         )
         .expect("parse barrier_roots predicate");
         svc.pending_script = PendingScript::from_v1(script);
+        assert!(
+            svc.pending_script.is_some(),
+            "script schema_version should be valid"
+        );
         svc.pending_script_run_id = Some(1);
 
         let app = App::new();

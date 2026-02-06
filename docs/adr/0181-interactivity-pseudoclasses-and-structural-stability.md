@@ -130,6 +130,7 @@ This ADR instead defines a runtime contract + tooling enforcement, while leaving
   - `repo-ref/zed/crates/gpui/src/elements/div.rs` (hover style refinement and `cx.notify(current_view)` on hover edge)
 - Fret cache root semantics:
   - ADR 1152: `docs/adr/1152-cache-roots-and-cached-subtree-semantics-v1.md`
-  - ADR 1152: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`
+  - ADR 1152: `docs/adr/1163-view-cache-subtree-reuse-and-state-retention.md`
 - Fret runtime contract surface and layering:
   - ADR 0066: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+

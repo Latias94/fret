@@ -76,6 +76,32 @@ let subtree = cx.view_cache(ViewCacheProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_HIT_TEST_TORTURE: &str = r#"
+## Hit Test (torture harness)
+
+This page exists to stress the runtime's pointer hit-testing path under editor-grade UI workloads:
+
+- many hit-testable regions (pointer listeners),
+- stable layout (no relayout on pointer move),
+- pointer moves that change the hovered target every frame (to defeat path caching),
+- ability to A/B test spatial indices (e.g. bounds tree) against the fallback traversal.
+
+The goal is to make `top_hit_test_time_us` large enough to be a meaningful slice of the frame budget so
+we can validate improvements and gate regressions.
+"#;
+
+pub(crate) const USAGE_HIT_TEST_TORTURE: &str = r#"
+```rust
+// Customize the stress level.
+// Defaults are chosen to create a large number of PointerRegion interaction records.
+//
+// - stripes: hit target changes frequently (defeats hit-test path cache).
+// - noise: many tiny pointer regions that should never be hit, but are expensive for fallback scans.
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES", "256");
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE", "50000");
+```
+"#;
+
 pub(crate) const DOC_VIRTUAL_LIST_TORTURE: &str = r#"
 ## Virtual List (torture harness)
 
@@ -320,6 +346,38 @@ use fret_canvas::ui::{PanZoomCanvasSurfacePanelProps, pan_zoom_canvas_surface_pa
 
 let props = PanZoomCanvasSurfacePanelProps::default();
 let el = pan_zoom_canvas_surface_panel(cx, props, |_painter, _cx| {});
+```
+"#;
+
+pub(crate) const DOC_NODE_GRAPH_CULL_TORTURE: &str = r#"
+## Node Graph Cull (torture harness)
+
+This page hosts a large `fret-node` canvas surface (nodes + edges) intended to stress:
+
+- viewport-driven culling,
+- pan/zoom interaction routing,
+- paint-cache reuse under view-cache + shell.
+
+It exists to support the GPUI parity workstream:
+
+- promote a real ecosystem surface into the prepaint-windowed migration pipeline (ADR 0190),
+- validate “paint-only” interaction updates for small deltas,
+- provide deterministic script targets for perf investigations.
+"#;
+
+pub(crate) const USAGE_NODE_GRAPH_CULL_TORTURE: &str = r#"
+```rust
+use fret_node::{Graph, GraphId};
+use fret_node::io::NodeGraphViewState;
+use fret_node::ui::NodeGraphCanvas;
+use fret_ui::retained_bridge::{RetainedSubtreeProps, UiTreeRetainedExt};
+
+let graph = models.insert(Graph::new(GraphId::from_u128(1)));
+let view = models.insert(NodeGraphViewState::default());
+
+let el = cx.retained_subtree(RetainedSubtreeProps::new(move |ui| {
+    ui.create_node_retained(NodeGraphCanvas::new(graph.clone(), view.clone()))
+}));
 ```
 "#;
 

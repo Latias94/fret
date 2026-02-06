@@ -91,7 +91,7 @@ Recent changes (2026-02-01):
 This document is an implementation-focused tracker for building an editor-grade **code editor ecosystem** for Fret.
 It is intentionally non-authoritative; the normative contracts are:
 
-- `docs/adr/0193-code-editor-ecosystem-v1.md`
+- `docs/adr/0200-code-editor-ecosystem-v1.md`
 - `docs/adr/0194-text-navigation-and-word-boundaries-v1.md`
 - `docs/adr/0195-web-ime-and-text-input-bridge-v1.md`
 
@@ -573,3 +573,4 @@ Evidence anchors:
 - Targeted tests (examples):
   - `cargo nextest run -p fret-ui` (focus/scroll/semantics regressions)
   - `cargo nextest run -p fret-render` (text cache/atlas conformance)
+

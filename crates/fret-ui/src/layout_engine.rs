@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use fret_core::{FrameId, NodeId, Point, Px, Rect, Size};
 use serde_json::json;
+use slotmap::SecondaryMap;
 use taffy::{TaffyTree, prelude::NodeId as TaffyNodeId};
 
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
@@ -38,8 +39,9 @@ pub struct TaffyLayoutEngine {
     parent: HashMap<NodeId, NodeId>,
     seen: HashSet<NodeId>,
     solve_generation: u64,
-    node_solved_generation: HashMap<NodeId, u64>,
-    root_solve_keys: HashMap<NodeId, RootSolveKey>,
+    node_solved_stamp: SecondaryMap<NodeId, SolvedStamp>,
+    root_solve_stamp: SecondaryMap<NodeId, RootSolveStamp>,
+    measure_cache_scratch: HashMap<LayoutMeasureKey, taffy::geometry::Size<f32>>,
     solve_scale_factor: f32,
     frame_id: Option<FrameId>,
     last_solve_time: Duration,
@@ -59,6 +61,27 @@ struct RootSolveKey {
     scale_bits: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct LayoutMeasureKey {
+    node: NodeId,
+    known_w: Option<u32>,
+    known_h: Option<u32>,
+    avail_w: (u8, u32),
+    avail_h: (u8, u32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SolvedStamp {
+    frame_id: FrameId,
+    solve_generation: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RootSolveStamp {
+    frame_id: FrameId,
+    key: RootSolveKey,
+}
+
 impl Default for TaffyLayoutEngine {
     fn default() -> Self {
         let mut tree = TaffyTree::new();
@@ -72,8 +95,9 @@ impl Default for TaffyLayoutEngine {
             parent: HashMap::new(),
             seen: HashSet::new(),
             solve_generation: 0,
-            node_solved_generation: HashMap::new(),
-            root_solve_keys: HashMap::new(),
+            node_solved_stamp: SecondaryMap::new(),
+            root_solve_stamp: SecondaryMap::new(),
+            measure_cache_scratch: HashMap::new(),
             solve_scale_factor: 1.0,
             frame_id: None,
             last_solve_time: Duration::default(),
@@ -91,8 +115,8 @@ impl Default for TaffyLayoutEngine {
 impl TaffyLayoutEngine {
     fn invalidate_solved_ancestors(&mut self, mut node: NodeId) {
         while let Some(parent) = self.parent.get(&node).copied() {
-            self.node_solved_generation.remove(&parent);
-            self.root_solve_keys.remove(&parent);
+            self.node_solved_stamp.remove(parent);
+            self.root_solve_stamp.remove(parent);
             node = parent;
         }
     }
@@ -102,8 +126,6 @@ impl TaffyLayoutEngine {
             self.frame_id = Some(frame_id);
             self.seen.clear();
             self.solve_generation = 0;
-            self.node_solved_generation.clear();
-            self.root_solve_keys.clear();
             self.solve_scale_factor = 1.0;
             self.last_solve_time = Duration::default();
             self.last_solve_root = None;
@@ -137,8 +159,8 @@ impl TaffyLayoutEngine {
                 }
             }
             self.parent.remove(&node);
-            self.node_solved_generation.remove(&node);
-            self.root_solve_keys.remove(&node);
+            self.node_solved_stamp.remove(node);
+            self.root_solve_stamp.remove(node);
             let _ = self.tree.remove(layout_id.0);
         }
         self.seen.clear();
@@ -198,9 +220,16 @@ impl TaffyLayoutEngine {
         if self.solve_generation == 0 {
             return None;
         }
-        let parent_gen = self.node_solved_generation.get(&parent).copied()?;
-        let child_gen = self.node_solved_generation.get(&child).copied()?;
-        if parent_gen == 0 || child_gen == 0 || parent_gen != child_gen {
+        let frame_id = self.frame_id?;
+        let parent_stamp = self.node_solved_stamp.get(parent).copied()?;
+        let child_stamp = self.node_solved_stamp.get(child).copied()?;
+        if parent_stamp.frame_id != frame_id || child_stamp.frame_id != frame_id {
+            return None;
+        }
+        if parent_stamp.solve_generation == 0
+            || child_stamp.solve_generation == 0
+            || parent_stamp.solve_generation != child_stamp.solve_generation
+        {
             return None;
         }
         if !self.seen.contains(&parent) || !self.seen.contains(&child) {
@@ -226,13 +255,21 @@ impl TaffyLayoutEngine {
         if !self.seen.contains(&root) {
             return false;
         }
-        if self.node_solved_generation.get(&root).copied().unwrap_or(0) == 0 {
+        let Some(frame_id) = self.frame_id else {
+            return false;
+        };
+        let solved = self
+            .node_solved_stamp
+            .get(root)
+            .copied()
+            .is_some_and(|s| s.frame_id == frame_id && s.solve_generation != 0);
+        if !solved {
             return false;
         }
 
         fn key_bits(axis: AvailableSpace) -> u64 {
             match axis {
-                AvailableSpace::Definite(px) => (0u64 << 32) | px.0.to_bits() as u64,
+                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
                 AvailableSpace::MinContent => 1u64 << 32,
                 AvailableSpace::MaxContent => 2u64 << 32,
             }
@@ -248,7 +285,10 @@ impl TaffyLayoutEngine {
             height_bits: key_bits(available.height),
             scale_bits: sf.to_bits(),
         };
-        self.root_solve_keys.get(&root).copied() == Some(key)
+        self.root_solve_stamp
+            .get(root)
+            .copied()
+            .is_some_and(|s| s.frame_id == frame_id && s.key == key)
     }
 
     pub fn compute_root_for_node_with_measure_if_needed(
@@ -297,8 +337,8 @@ impl TaffyLayoutEngine {
         if ctx.node == node && ctx.measured == measured {
             return;
         }
-        self.node_solved_generation.remove(&node);
-        self.root_solve_keys.remove(&node);
+        self.node_solved_stamp.remove(node);
+        self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
         let _ = self
             .tree
@@ -311,8 +351,8 @@ impl TaffyLayoutEngine {
         if self.styles.get(&node) == Some(&style) {
             return;
         }
-        self.node_solved_generation.remove(&node);
-        self.root_solve_keys.remove(&node);
+        self.node_solved_stamp.remove(node);
+        self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
         if self.tree.set_style(id, style.clone()).is_ok() {
             self.styles.insert(node, style);
@@ -327,8 +367,8 @@ impl TaffyLayoutEngine {
         if prev_children.as_slice() == children {
             return;
         }
-        self.node_solved_generation.remove(&node);
-        self.root_solve_keys.remove(&node);
+        self.node_solved_stamp.remove(node);
+        self.root_solve_stamp.remove(node);
         self.invalidate_solved_ancestors(node);
 
         for child in prev_children {
@@ -358,15 +398,6 @@ impl TaffyLayoutEngine {
         scale_factor: f32,
         mut measure: impl FnMut(NodeId, LayoutConstraints) -> Size,
     ) {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-        struct MeasureKey {
-            node: NodeId,
-            known_w: Option<u32>,
-            known_h: Option<u32>,
-            avail_w: (u8, u32),
-            avail_h: (u8, u32),
-        }
-
         fn avail_key(avail: taffy::style::AvailableSpace) -> (u8, u32) {
             match avail {
                 taffy::style::AvailableSpace::Definite(v) => (0, v.to_bits()),
@@ -414,7 +445,8 @@ impl TaffyLayoutEngine {
 
         let mut measure_calls: u64 = 0;
         let mut measure_cache_hits: u64 = 0;
-        let mut measure_cache: HashMap<MeasureKey, taffy::geometry::Size<f32>> = HashMap::new();
+        self.measure_cache_scratch.clear();
+        let measure_cache = &mut self.measure_cache_scratch;
         let enable_profile = self.measure_profiling_enabled;
         let mut measure_time = Duration::default();
 
@@ -439,7 +471,7 @@ impl TaffyLayoutEngine {
                     }
 
                     measure_calls = measure_calls.saturating_add(1);
-                    let key = MeasureKey {
+                    let key = LayoutMeasureKey {
                         node: ctx.node,
                         known_w: known.width.map(|v| v.to_bits()),
                         known_h: known.height.map(|v| v.to_bits()),
@@ -537,19 +569,24 @@ impl TaffyLayoutEngine {
             self.mark_solved_subtree(root_node);
             fn key_bits(axis: AvailableSpace) -> u64 {
                 match axis {
-                    AvailableSpace::Definite(px) => (0u64 << 32) | px.0.to_bits() as u64,
+                    AvailableSpace::Definite(px) => px.0.to_bits() as u64,
                     AvailableSpace::MinContent => 1u64 << 32,
                     AvailableSpace::MaxContent => 2u64 << 32,
                 }
             }
-            self.root_solve_keys.insert(
-                root_node,
-                RootSolveKey {
-                    width_bits: key_bits(available.width),
-                    height_bits: key_bits(available.height),
-                    scale_bits: self.solve_scale_factor.to_bits(),
-                },
-            );
+            if let Some(frame_id) = self.frame_id {
+                self.root_solve_stamp.insert(
+                    root_node,
+                    RootSolveStamp {
+                        frame_id,
+                        key: RootSolveKey {
+                            width_bits: key_bits(available.width),
+                            height_bits: key_bits(available.height),
+                            scale_bits: self.solve_scale_factor.to_bits(),
+                        },
+                    },
+                );
+            }
         } else {
             self.last_solve_root = None;
         }
@@ -735,10 +772,18 @@ impl TaffyLayoutEngine {
     }
 
     fn mark_solved_subtree(&mut self, root: NodeId) {
+        let Some(frame_id) = self.frame_id else {
+            return;
+        };
         let mut stack: Vec<NodeId> = vec![root];
         while let Some(node) = stack.pop() {
-            self.node_solved_generation
-                .insert(node, self.solve_generation);
+            self.node_solved_stamp.insert(
+                node,
+                SolvedStamp {
+                    frame_id,
+                    solve_generation: self.solve_generation,
+                },
+            );
             if let Some(children) = self.children.get(&node) {
                 stack.extend(children.iter().copied());
             }

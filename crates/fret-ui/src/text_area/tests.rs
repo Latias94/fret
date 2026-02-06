@@ -233,10 +233,12 @@ fn text_area_copy_clamps_out_of_range_selection_indices() {
     app.set_global(PlatformCapabilities::default());
     let mut services = FakeTextService::default();
 
-    let mut area = TextArea::default();
-    area.text = "hello\nworld".to_string();
-    area.selection_anchor = 0;
-    area.caret = 999;
+    let mut area = TextArea {
+        text: "hello\nworld".to_string(),
+        selection_anchor: 0,
+        caret: 999,
+        ..Default::default()
+    };
 
     let mut cx = command_cx(&mut app, &mut services, &mut ui, node, window);
     assert!(

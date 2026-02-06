@@ -40,6 +40,10 @@ impl Renderer {
             };
 
             if let Some(entry) = self.svg_rasters.remove(&victim_key) {
+                if self.perf_enabled {
+                    self.perf_svg_raster_budget_evictions =
+                        self.perf_svg_raster_budget_evictions.saturating_add(1);
+                }
                 self.drop_svg_raster_entry(entry);
             } else {
                 break;

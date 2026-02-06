@@ -109,24 +109,16 @@ impl ElementHostWidget {
                 text::handle_resizable_panel_group(self, cx, props, event);
             }
             ElementInstance::VirtualList(props) => {
-                if scroll::handle_virtual_list(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = scroll::handle_virtual_list(self, cx, window, props, event);
             }
             ElementInstance::Scroll(props) => {
-                if scroll::handle_scroll(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = scroll::handle_scroll(self, cx, window, props, event);
             }
             ElementInstance::Scrollbar(props) => {
-                if scrollbar::handle_scrollbar(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = scrollbar::handle_scrollbar(self, cx, window, props, event);
             }
             ElementInstance::WheelRegion(props) => {
-                if wheel_region::handle_wheel_region(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = wheel_region::handle_wheel_region(self, cx, window, props, event);
             }
             ElementInstance::DismissibleLayer(props) => {
                 dismissible::handle_dismissible_layer(self, cx, window, props, event);
@@ -159,11 +151,8 @@ impl ElementHostWidget {
             return;
         };
 
-        match instance {
-            ElementInstance::DismissibleLayer(props) => {
-                dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
-            }
-            _ => {}
+        if let ElementInstance::DismissibleLayer(props) = instance {
+            dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
         }
     }
 }

@@ -1,4 +1,4 @@
-# ADR 1163: Semantics Decorations (v2) — states and relations
+# ADR 1166: Semantics Decorations (v2) — states and relations
 
 Status: Proposed
 
