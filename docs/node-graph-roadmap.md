@@ -185,6 +185,7 @@ Legend:
     - Structural validation: `ecosystem/fret-node/src/core/validate.rs`
     - Tests: `ecosystem/fret-node/src/core/tests.rs`
     - Copy/paste includes referenced symbols: `ecosystem/fret-node/src/ops/fragment.rs` + `ecosystem/fret-node/src/ops/tests.rs`
+  - Profile concretization (Dataflow demo): `ecosystem/fret-node/src/kit/profiles/dataflow.rs` (ensures symbol-ref nodes have a typed `out` port)
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
