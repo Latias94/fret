@@ -51,9 +51,9 @@ use stats::{
     check_bundle_for_vlist_window_shifts_kind_max,
     check_bundle_for_vlist_window_shifts_non_retained_max, check_bundle_for_wheel_scroll,
     check_bundle_for_wheel_scroll_hit_changes, check_bundle_for_windowed_rows_offset_changes_min,
-    check_report_for_hover_layout_invalidations,
-    clear_script_result_files, report_pick_result_and_exit, report_result_and_exit,
-    run_pick_and_wait, run_script_and_wait, wait_for_failure_dump_bundle, write_pick_script,
+    check_report_for_hover_layout_invalidations, clear_script_result_files,
+    report_pick_result_and_exit, report_result_and_exit, run_pick_and_wait, run_script_and_wait,
+    wait_for_failure_dump_bundle, write_pick_script,
 };
 use util::{now_unix_ms, read_json_value, touch, write_json_value, write_script};
 
