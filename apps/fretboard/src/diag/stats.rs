@@ -3738,6 +3738,155 @@ pub(super) fn check_bundle_for_scroll_offset_stable_json(
     Err(msg)
 }
 
+pub(super) fn check_bundle_for_scrollbar_thumb_valid(
+    bundle_path: &Path,
+    selector: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_scrollbar_thumb_valid_json(&bundle, bundle_path, selector, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_scrollbar_thumb_valid_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    selector: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const EPS: f32 = 0.5;
+
+    if selector != "all" {
+        return Err(format!(
+            "scrollbar thumb validity check only supports selector=all for now (got {selector})"
+        ));
+    }
+
+    fn rect_f32(v: &serde_json::Value) -> Option<(f32, f32, f32, f32)> {
+        let x = v.get("x")?.as_f64()? as f32;
+        let y = v.get("y")?.as_f64()? as f32;
+        let w = v.get("w")?.as_f64()? as f32;
+        let h = v.get("h")?.as_f64()? as f32;
+        if !(x.is_finite() && y.is_finite() && w.is_finite() && h.is_finite()) {
+            return None;
+        }
+        Some((x, y, w, h))
+    }
+
+    fn rect_contains(outer: (f32, f32, f32, f32), inner: (f32, f32, f32, f32), eps: f32) -> bool {
+        let (ox, oy, ow, oh) = outer;
+        let (ix, iy, iw, ih) = inner;
+        (ix + eps) >= ox
+            && (iy + eps) >= oy
+            && (ix + iw) <= (ox + ow + eps)
+            && (iy + ih) <= (oy + oh + eps)
+    }
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_scrollbar_samples = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        if snaps.is_empty() {
+            continue;
+        }
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            let scrollbars = s
+                .get("debug")
+                .and_then(|v| v.get("scrollbars"))
+                .and_then(|v| v.as_array())
+                .map_or(&[][..], |v| v);
+            if scrollbars.is_empty() {
+                continue;
+            }
+            any_scrollbar_samples = true;
+
+            for sb in scrollbars {
+                let node = sb.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
+                let axis = sb.get("axis").and_then(|v| v.as_str()).unwrap_or("?");
+                let Some(track) = sb.get("track").and_then(rect_f32) else {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=invalid_track_rect"
+                    ));
+                    continue;
+                };
+                let (_tx, _ty, tw, th) = track;
+                if tw < -EPS || th < -EPS {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=negative_track_size track=({tw:.2},{th:.2}) eps={EPS:.2}"
+                    ));
+                }
+
+                let Some(thumb_v) = sb.get("thumb") else {
+                    continue;
+                };
+                if thumb_v.is_null() {
+                    continue;
+                }
+
+                let Some(thumb) = rect_f32(thumb_v) else {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=invalid_thumb_rect"
+                    ));
+                    continue;
+                };
+                let (_x, _y, w, h) = thumb;
+                if w < -EPS || h < -EPS {
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=negative_thumb_size thumb=({w:.2},{h:.2}) eps={EPS:.2}"
+                    ));
+                    continue;
+                }
+                if !rect_contains(track, thumb, EPS) {
+                    let (tx, ty, tw, th) = track;
+                    let (x, y, w, h) = thumb;
+                    failures.push(format!(
+                        "window={window_id} frame_id={frame_id} node={node} axis={axis} error=thumb_out_of_track track=({tx:.2},{ty:.2},{tw:.2},{th:.2}) thumb=({x:.2},{y:.2},{w:.2},{h:.2}) eps={EPS:.2}"
+                    ));
+                }
+            }
+        }
+    }
+
+    if !any_scrollbar_samples {
+        return Err(format!(
+            "scrollbar thumb validity check failed (no samples). bundle: {}",
+            bundle_path.display()
+        ));
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("scrollbar thumb validity check failed\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
     bundle_path: &Path,
     out_dir: &Path,
