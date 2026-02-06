@@ -5,10 +5,6 @@ use crate::core::{Edge, EdgeId, EdgeKind, Graph, PortId};
 
 use crate::ui::canvas::geometry::CanvasGeometry;
 
-use super::super::{
-    dist2_point_to_segment, path_start_end_tangents, step_wire_distance2, wire_distance2,
-    wire_distance2_path,
-};
 use super::prelude::*;
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports_spaced_x};
 

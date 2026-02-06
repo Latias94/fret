@@ -276,6 +276,8 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/group_preview_conformance.rs` (routes group-resize internals via `prelude`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/custom_edge_path_conformance.rs` (routes hit-test context via `prelude`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_hit_width_conformance.rs` (routes hit-test context via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/insert_node_drag_conformance.rs` (routes insert-drag internals via `prelude`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/spatial_index_equivalence_conformance.rs` (routes geometry helpers via `prelude`)
 - [x] Add harness graph/view setup helper API and adopt it in high-churn conformance suites.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs` (`insert_view`, `insert_graph_view`, `make_host_graph_view`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/callbacks_conformance.rs`
