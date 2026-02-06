@@ -23,10 +23,10 @@ use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
     FilteringFnSpec, FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind,
-    PaginationBounds, PaginationState, Row, RowKey, SortSpec, Table, TableOptions, TableState,
-    begin_column_resize, column_size, compute_grouped_u64_aggregations, drag_column_resize,
-    end_column_resize, is_column_visible, is_row_expanded, is_row_selected, is_some_rows_pinned,
-    order_column_refs_for_grouping, order_columns, pagination_bounds,
+    PaginationBounds, PaginationState, Row, RowId, RowKey, SortSpec, Table, TableOptions,
+    TableState, begin_column_resize, column_size, compute_grouped_u64_aggregations,
+    drag_column_resize, end_column_resize, is_column_visible, is_row_expanded, is_row_selected,
+    is_some_rows_pinned, order_column_refs_for_grouping, order_columns, pagination_bounds,
     sort_grouped_row_indices_in_place, split_pinned_columns,
 };
 use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
@@ -3871,7 +3871,7 @@ where
                                                 };
 
                                             let data_row = Row {
-                                                id: row_key.0.to_string().into(),
+                                                id: RowId::new(row_key.0.to_string()),
                                                 key: row_key,
                                                 original: &data[data_index],
                                                 index: data_index,
