@@ -28,6 +28,7 @@ mod row_pinning;
 mod row_selection;
 mod sorting;
 mod state;
+mod tanstack_memo;
 mod tanstack_options;
 mod tanstack_state;
 mod updater;
@@ -107,6 +108,9 @@ pub use sorting::{
     toggle_sorting_handler_tanstack, toggle_sorting_tanstack,
 };
 pub use state::TableState;
+pub use tanstack_memo::{
+    FlatRowOrderEntry, TanStackSortedFlatRowOrderCache, TanStackSortedFlatRowOrderDeps,
+};
 pub use tanstack_options::TanStackTableOptions;
 pub use tanstack_state::{
     TanStackColumnFilter, TanStackPaginationState, TanStackSortingSpec, TanStackStateError,

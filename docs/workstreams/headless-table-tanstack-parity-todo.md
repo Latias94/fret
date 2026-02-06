@@ -438,7 +438,13 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## M7 — Engine memoization parity + perf gates
 
-- [ ] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
+- [~] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
+  - Done (first building block, unit-gated): a TanStack-aligned dependency snapshot + memo cache for
+    “filtered + sorted root row order”:
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`
+    - Tests: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs` (`sorted_flat_row_order_cache_*`)
+  - Remaining: lift this pattern across the full derived row model pipeline (core/filtered/sorted/expanded/paginated),
+    plus a stable external cache surface for rebuild-each-frame callers.
 - [ ] HTP-memo-020 Provide an integration pattern for “rebuild each frame” while retaining memo cache.
   - Candidate designs:
     - external cache passed into a pure “compute” API, or

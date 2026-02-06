@@ -32,7 +32,7 @@ pub enum TanStackValue {
     DateTime(f64),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltInSortingFn {
     Alphanumeric,
     AlphanumericCaseSensitive,
@@ -42,7 +42,7 @@ pub enum BuiltInSortingFn {
     Basic,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SortingFnSpec {
     /// TanStack `sortingFn: 'auto'`.
     Auto,
@@ -52,7 +52,7 @@ pub enum SortingFnSpec {
     Named(Arc<str>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltInFilterFn {
     IncludesString,
     IncludesStringSensitive,
@@ -65,7 +65,7 @@ pub enum BuiltInFilterFn {
     InNumberRange,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FilteringFnSpec {
     /// TanStack `filterFn: 'auto'`.
     Auto,
@@ -75,7 +75,7 @@ pub enum FilteringFnSpec {
     Named(Arc<str>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SortUndefined {
     /// TanStack `sortUndefined: false` (disable the pre-pass undefined ordering).
     Disabled,
