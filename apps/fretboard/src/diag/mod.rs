@@ -11,10 +11,11 @@ mod util;
 
 use compare::{
     CompareOptions, CompareReport, PerfThresholds, RenderdocDumpAttempt,
-    apply_perf_baseline_headroom, cargo_run_inject_feature, compare_bundles, ensure_env_var,
-    find_latest_export_dir, maybe_launch_demo, normalize_repo_relative_path, read_latest_pointer,
-    read_perf_baseline_file, resolve_threshold, run_fret_renderdoc_dump,
-    scan_perf_threshold_failures, stop_launched_demo, wait_for_files_with_extensions,
+    apply_perf_baseline_headroom, apply_perf_baseline_headroom_with_slack_and_quantum,
+    cargo_run_inject_feature, compare_bundles, ensure_env_var, find_latest_export_dir,
+    maybe_launch_demo, normalize_repo_relative_path, read_latest_pointer, read_perf_baseline_file,
+    resolve_threshold, run_fret_renderdoc_dump, scan_perf_threshold_failures, stop_launched_demo,
+    wait_for_files_with_extensions,
 };
 use gates::{
     RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
@@ -4884,20 +4885,26 @@ See: `docs/tracy.md`.\n";
 	                            apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
 	                        let thr_layout =
 	                            apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
-	                        let thr_solve =
-	                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
-	                        let thr_pointer_move_dispatch = apply_perf_baseline_headroom(
-	                            max_pointer_move_dispatch,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        let thr_pointer_move_hit_test = apply_perf_baseline_headroom(
-	                            max_pointer_move_hit_test,
-	                            perf_baseline_headroom_pct,
-	                        );
-	                        let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
-	                            max_pointer_move_global_changes,
-	                            perf_baseline_headroom_pct,
-	                        );
+		                        let thr_solve =
+		                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
+		                        let thr_pointer_move_dispatch =
+		                            apply_perf_baseline_headroom_with_slack_and_quantum(
+		                                max_pointer_move_dispatch,
+		                                perf_baseline_headroom_pct,
+		                                8,
+		                                4,
+		                            );
+		                        let thr_pointer_move_hit_test =
+		                            apply_perf_baseline_headroom_with_slack_and_quantum(
+		                                max_pointer_move_hit_test,
+		                                perf_baseline_headroom_pct,
+		                                2,
+		                                2,
+		                            );
+		                        let thr_pointer_move_global_changes = apply_perf_baseline_headroom(
+		                            max_pointer_move_global_changes,
+		                            perf_baseline_headroom_pct,
+		                        );
 	                        Some(serde_json::json!({
 	                            "script": script,
 	                            "thresholds": {

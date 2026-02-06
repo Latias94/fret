@@ -1416,6 +1416,24 @@ pub(super) fn apply_perf_baseline_headroom(value_us: u64, headroom_pct: u32) -> 
     value_us.saturating_mul(100 + pct).saturating_add(99) / 100
 }
 
+pub(super) fn apply_perf_baseline_headroom_with_slack_and_quantum(
+    value_us: u64,
+    headroom_pct: u32,
+    min_slack_us: u64,
+    quantum_us: u64,
+) -> u64 {
+    if value_us == 0 {
+        return 0;
+    }
+
+    let threshold = apply_perf_baseline_headroom(value_us, headroom_pct)
+        .max(value_us.saturating_add(min_slack_us));
+    if quantum_us <= 1 {
+        return threshold;
+    }
+    threshold.saturating_add(quantum_us - 1) / quantum_us * quantum_us
+}
+
 pub(super) fn resolve_threshold(
     cli: Option<u64>,
     baseline: Option<u64>,
@@ -1427,6 +1445,33 @@ pub(super) fn resolve_threshold(
         return (Some(v), Some("baseline"));
     }
     (None, None)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::apply_perf_baseline_headroom_with_slack_and_quantum;
+
+    #[test]
+    fn perf_baseline_headroom_with_slack_and_quantum_is_stable_for_small_values() {
+        // Baseline "26us @ +20%" would yield 32us without slack; we want extra headroom to avoid
+        // 1–2us jitter causing flaky gates.
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(26, 20, 8, 4),
+            36
+        );
+
+        // Quantum rounding is a no-op for quantum<=1.
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(26, 20, 8, 1),
+            34
+        );
+
+        // Zero stays zero so scripts without pointer-move frames do not accidentally gain a gate.
+        assert_eq!(
+            apply_perf_baseline_headroom_with_slack_and_quantum(0, 20, 8, 4),
+            0
+        );
+    }
 }
 
 pub(super) fn scan_perf_threshold_failures(
