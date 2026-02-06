@@ -183,7 +183,7 @@ Legend:
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
-- [~] Deterministic graph diff/patch set for collaboration.
+- [x] Deterministic graph diff/patch set for collaboration (MVP).
   - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
   - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
   - Patch units:
@@ -191,3 +191,5 @@ Legend:
     - Groups: setters for common edits (`title`, `rect`, `color`) to preserve identity.
     - Sticky notes: setters for common edits (`text`, `rect`, `color`) to preserve identity.
   - Tests: `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`, `graph_diff_roundtrips_when_a_port_changes_structurally`, `graph_diff_roundtrips_when_deleting_a_port_with_incident_edges`)
+- [~] Patch unit minimality follow-ups (optional).
+  - Consider port structural setter ops (key/dir/kind/capacity) if we need more minimal collaboration diffs.

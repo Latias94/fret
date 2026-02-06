@@ -24,7 +24,7 @@ If you are looking for an API-level guide, see `docs/node-graph-how-to-build-lik
 
 ## Focus window (current refactor target)
 
-Last audited: 2026-02-05
+Last audited: 2026-02-06
 
 This document is intentionally exhaustive. During large refactors, keep a small “focus window” so
 work remains coherent and measurable. For the execution plan + gates, see:
