@@ -98,6 +98,7 @@ pub(crate) const PAGE_INTRO: &str = "intro";
 pub(crate) const PAGE_LAYOUT: &str = "layout";
 pub(crate) const PAGE_VIEW_CACHE: &str = "view_cache";
 pub(crate) const PAGE_HIT_TEST_TORTURE: &str = "hit_test_torture";
+pub(crate) const PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = "hit_test_only_paint_cache_probe";
 pub(crate) const PAGE_EFFECTS_BLUR_TORTURE: &str = "effects_blur_torture";
 pub(crate) const PAGE_SVG_UPLOAD_TORTURE: &str = "svg_upload_torture";
 pub(crate) const PAGE_SVG_SCROLL_TORTURE: &str = "svg_scroll_torture";
@@ -220,6 +221,8 @@ pub(crate) const CMD_NAV_INTRO: &str = "ui_gallery.nav.select.intro";
 pub(crate) const CMD_NAV_LAYOUT: &str = "ui_gallery.nav.select.layout";
 pub(crate) const CMD_NAV_VIEW_CACHE: &str = "ui_gallery.nav.select.view_cache";
 pub(crate) const CMD_NAV_HIT_TEST_TORTURE: &str = "ui_gallery.nav.select.hit_test_torture";
+pub(crate) const CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str =
+    "ui_gallery.nav.select.hit_test_only_paint_cache_probe";
 pub(crate) const CMD_NAV_VIRTUAL_LIST_TORTURE: &str = "ui_gallery.nav.select.virtual_list_torture";
 pub(crate) const CMD_NAV_UI_KIT_LIST_TORTURE: &str = "ui_gallery.nav.select.ui_kit_list_torture";
 pub(crate) const CMD_NAV_CODE_VIEW_TORTURE: &str = "ui_gallery.nav.select.code_view_torture";
@@ -477,6 +480,22 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["hit_test", "pointer", "dispatch", "performance", "harness"],
                 docs::DOC_HIT_TEST_TORTURE,
                 docs::USAGE_HIT_TEST_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                "HitTestOnly Paint-Cache Probe",
+                "Hit Test / Paint Cache Gate Probe",
+                "fret-ui (paint-cache diagnostics)",
+                CMD_NAV_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                &[
+                    "hit_test",
+                    "paint_cache",
+                    "diagnostics",
+                    "performance",
+                    "harness",
+                ],
+                docs::DOC_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
+                docs::USAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE,
             ),
             PageSpec::new(
                 PAGE_VIRTUAL_LIST_TORTURE,

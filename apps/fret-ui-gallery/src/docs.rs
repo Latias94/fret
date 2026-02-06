@@ -102,6 +102,30 @@ std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE", "50000");
 ```
 "#;
 
+pub(crate) const DOC_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = r#"
+## Hit-test-only paint-cache probe
+
+This page is a focused probe for the `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` experiment:
+
+- pointer moves intentionally trigger `Invalidation::HitTestOnly` on a cache-eligible subtree,
+- layout stays stable,
+- paint output stays stable.
+
+Goal: make the new diagnostics counters non-zero in a deterministic script so A/B results are
+causally attributable to the gate path.
+"#;
+
+pub(crate) const USAGE_HIT_TEST_ONLY_PAINT_CACHE_PROBE: &str = r#"
+```rust
+// Recommended run flags for this probe:
+// - start directly on the probe page
+// - disable gallery view-cache wrappers to keep paint-cache gating simple
+std::env::set_var("FRET_UI_GALLERY_START_PAGE", "hit_test_only_paint_cache_probe");
+std::env::set_var("FRET_UI_GALLERY_VIEW_CACHE", "0");
+std::env::set_var("FRET_UI_GALLERY_VIEW_CACHE_SHELL", "0");
+```
+"#;
+
 pub(crate) const DOC_VIRTUAL_LIST_TORTURE: &str = r#"
 ## Virtual List (torture harness)
 
