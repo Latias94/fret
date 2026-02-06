@@ -275,8 +275,10 @@ fn diff_ports(
                 && port_from.capacity == port_to.capacity;
 
             if !structural_equal {
+                let mut removed_edge_ids: Vec<EdgeId> = Vec::new();
                 if let Some(op) = crate::ops::GraphOpBuilderExt::build_remove_port_op(from, *id) {
                     if let GraphOp::RemovePort { edges, .. } = &op {
+                        removed_edge_ids = edges.iter().map(|(id, _)| *id).collect();
                         removed_edges_by_cascade.extend(edges.iter().map(|(id, _)| *id));
                     }
                     tx.ops.push(op);
@@ -285,6 +287,32 @@ fn diff_ports(
                     id: *id,
                     port: port_to.clone(),
                 });
+
+                // Restore the port ordering for the owning node. `RemovePort` detaches the port id
+                // from `node.ports`, but `AddPort` does not implicitly re-attach it.
+                if let Some(node_to) = to.nodes.get(&port_to.node) {
+                    let mut from_ports = node_to.ports.clone();
+                    from_ports.retain(|p| p != id);
+                    if from_ports != node_to.ports {
+                        tx.ops.push(GraphOp::SetNodePorts {
+                            id: port_to.node,
+                            from: from_ports,
+                            to: node_to.ports.clone(),
+                        });
+                    }
+                }
+
+                // `RemovePort` cascades to incident edges. If those edges still exist in `to`,
+                // re-add them to keep the patch apply-safe (edge diffing compares `from` vs `to`,
+                // not the intermediate state created by the removal).
+                for edge_id in removed_edge_ids {
+                    if let Some(edge_to) = to.edges.get(&edge_id) {
+                        tx.ops.push(GraphOp::AddEdge {
+                            id: edge_id,
+                            edge: edge_to.clone(),
+                        });
+                    }
+                }
                 continue;
             }
 

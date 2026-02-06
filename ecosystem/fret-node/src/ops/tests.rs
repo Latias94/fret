@@ -1094,3 +1094,135 @@ fn graph_diff_roundtrips_when_deleting_a_node_with_ports_and_edges() {
         "diff must roundtrip"
     );
 }
+
+#[test]
+fn graph_diff_roundtrips_when_deleting_a_port_with_incident_edges() {
+    let mut from = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    from.nodes.insert(a, make_node("core.a"));
+    from.nodes.insert(b, make_node("core.b"));
+
+    let out = PortId::from_u128(30);
+    let inn = PortId::from_u128(31);
+    from.ports
+        .insert(out, make_port(a, "out", PortDirection::Out));
+    from.ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    from.nodes.get_mut(&a).unwrap().ports.push(out);
+    from.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::from_u128(789);
+    from.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out,
+            to: inn,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let mut to = from.clone();
+    to.nodes.get_mut(&a).unwrap().ports.retain(|p| *p != out);
+    to.ports.remove(&out);
+    to.edges.remove(&edge_id);
+
+    let tx = graph_diff(&from, &to);
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemovePort { id, .. } if *id == out)),
+        "diff must use reversible RemovePort for port deletion"
+    );
+    assert!(
+        !tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveEdge { id, .. } if *id == edge_id)),
+        "diff must not double-remove edges that are already removed by RemovePort"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
+}
+
+#[test]
+fn graph_diff_roundtrips_when_a_port_changes_structurally() {
+    let mut from = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    from.nodes.insert(a, make_node("core.a"));
+    from.nodes.insert(b, make_node("core.b"));
+
+    let out = PortId::from_u128(40);
+    let inn = PortId::from_u128(41);
+    from.ports
+        .insert(out, make_port(a, "out", PortDirection::Out));
+    from.ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    from.nodes.get_mut(&a).unwrap().ports.push(out);
+    from.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::from_u128(1010);
+    from.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out,
+            to: inn,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let mut to = from.clone();
+    to.ports.get_mut(&out).unwrap().key = PortKey::new("out2");
+
+    let tx = graph_diff(&from, &to);
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemovePort { id, .. } if *id == out)),
+        "diff must represent structural port changes as remove+add"
+    );
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::AddPort { id, .. } if *id == out)),
+        "diff must represent structural port changes as remove+add"
+    );
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetNodePorts { id, .. } if *id == a)),
+        "diff must restore node port ordering after remove+add"
+    );
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::AddEdge { id, .. } if *id == edge_id)),
+        "diff must re-add incident edges removed by RemovePort when they still exist in 'to'"
+    );
+    assert!(
+        !tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveEdge { id, .. } if *id == edge_id)),
+        "diff must not double-remove edges that are removed by RemovePort"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
+}

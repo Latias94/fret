@@ -59,8 +59,8 @@ The diff emits ops in the following high-level order:
 3) Nodes (add/remove + setters)
 4) Ports (add/remove + setters)
 5) Edges (add/remove + setters)
-6) Groups (add/remove + setters; color changes via remove+add)
-7) Sticky notes (add/remove; changes via remove+add)
+6) Groups (add/remove + setters, including color)
+7) Sticky notes (add/remove + setters)
 
 Rationale:
 
@@ -69,10 +69,10 @@ Rationale:
 
 ### 4) Setter strategy
 
-For MVP, setters are emitted when a field differs:
+For MVP, setters are emitted when a field differs (when a setter op exists and keeps identity):
 
 - node: kind, kind_version, pos, parent, size, collapsed, hidden, ports ordering, data
-- port: all fields including `ty` and `data`
+- port: soft fields (`connectable*`, `ty`, `data`)
 - edge: kind, endpoints, selectable/deletable/reconnectable
 - import: alias
 - symbol: name, ty, default_value, meta
@@ -100,5 +100,8 @@ Note (MVP compromise):
   - `connectable`, `connectable_start`, `connectable_end`, `ty`, and `data`.
 - Sticky-note setters exist for common edit fields:
   - `text`, `rect`, and `color`.
+- Group setters include common edit fields:
+  - `title`, `rect`, and `color`.
 - Structural port changes (owner node, key, dir, kind, capacity) are represented as remove+add
-  (and edges are re-added afterwards). This preserves correctness and determinism but is not minimal.
+  (the owning node `ports` ordering is restored and incident edges are re-added afterwards).
+  This preserves correctness and determinism but is not minimal.
