@@ -1,6 +1,7 @@
 use super::*;
 
 mod alert;
+mod alert_dialog;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -8,6 +9,13 @@ mod typography;
 
 pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     alert::preview_alert(cx)
+}
+
+pub(super) fn preview_alert_dialog(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+) -> Vec<AnyElement> {
+    alert_dialog::preview_alert_dialog(cx, open)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

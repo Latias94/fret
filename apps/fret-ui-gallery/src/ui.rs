@@ -9812,33 +9812,7 @@ fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_alert_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
-    let open_for_children = open.clone();
-    let dialog = shadcn::AlertDialog::new(open).into_element(
-        cx,
-        |cx| shadcn::Button::new("Open alert dialog").into_element(cx),
-        |cx| {
-            shadcn::AlertDialogContent::new(vec![
-                shadcn::AlertDialogHeader::new(vec![
-                    shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
-                    shadcn::AlertDialogDescription::new(
-                        "This action cannot be undone. This will permanently delete your data.",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::AlertDialogFooter::new(vec![
-                    shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
-                        .into_element(cx),
-                    shadcn::AlertDialogAction::new("Continue", open_for_children.clone())
-                        .into_element(cx),
-                ])
-                .into_element(cx),
-            ])
-            .into_element(cx)
-        },
-    );
-
-    vec![dialog]
+    pages::preview_alert_dialog(cx, open)
 }
 
 fn preview_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
