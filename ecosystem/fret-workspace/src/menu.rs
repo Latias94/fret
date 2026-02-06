@@ -21,6 +21,7 @@ pub struct WorkspaceMenuCommands {
     pub quit_app: Option<CommandId>,
 
     pub command_palette: Option<CommandId>,
+    pub switch_locale: Option<CommandId>,
 
     pub open: Option<CommandId>,
     pub save: Option<CommandId>,
@@ -68,6 +69,7 @@ impl Default for WorkspaceMenuCommands {
             quit_app: None,
 
             command_palette: None,
+            switch_locale: None,
 
             open: None,
             save: None,
@@ -219,6 +221,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         show_all: _,
         quit_app: _,
         command_palette,
+        switch_locale,
         open,
         save,
         save_as,
@@ -270,12 +273,8 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     push_command(&mut edit_items, select_all);
 
     let mut view_items = Vec::new();
-    if let Some(cp) = command_palette {
-        view_items.push(MenuItem::Command {
-            command: cp,
-            when: None,
-        });
-    }
+    push_command(&mut view_items, command_palette);
+    push_command(&mut view_items, switch_locale);
 
     let mut menus = Vec::new();
     if let Some(app_menu) = app_menu {
@@ -460,4 +459,34 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     });
 
     MenuBar { menus }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn workspace_default_menu_includes_locale_switch_command_in_view_menu() {
+        let mut cmds = WorkspaceMenuCommands::default();
+        cmds.command_palette = Some(CommandId::new("app.command_palette"));
+        cmds.switch_locale = Some(CommandId::new("app.locale.switch_next"));
+
+        let menu_bar = workspace_default_menu_bar(cmds);
+        let view_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::View))
+            .expect("view menu should be present");
+
+        assert!(
+            view_menu.items.iter().any(|item| {
+                matches!(
+                    item,
+                    MenuItem::Command { command, .. }
+                        if command == &CommandId::new("app.locale.switch_next")
+                )
+            }),
+            "view menu should contain locale switch command"
+        );
+    }
 }

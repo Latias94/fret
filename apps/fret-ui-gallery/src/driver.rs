@@ -2260,6 +2260,9 @@ pub fn build_app() -> App {
     cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
     cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
     cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
+    cmds.switch_locale = Some(CommandId::new(
+        fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
+    ));
 
     if Platform::current() == Platform::Macos {
         cmds.app_menu_title = Some(Arc::from("Fret"));
