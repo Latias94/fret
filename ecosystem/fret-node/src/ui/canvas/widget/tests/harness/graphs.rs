@@ -170,6 +170,10 @@ pub(crate) fn read_node_pos(
         .unwrap_or_default()
 }
 
+pub(crate) fn insert_view(host: &mut TestUiHostImpl) -> Model<NodeGraphViewState> {
+    host.models.insert(NodeGraphViewState::default())
+}
+
 pub(crate) fn insert_graph_view(
     host: &mut TestUiHostImpl,
     graph_value: Graph,
