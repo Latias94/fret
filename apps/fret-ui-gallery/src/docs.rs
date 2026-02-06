@@ -1323,11 +1323,16 @@ let _id = controller.show(host, acx.window, m3::Snackbar::new("Saved").action("U
 pub(crate) const DOC_MATERIAL3_TOOLTIP: &str = r#"
 ## Material 3 Tooltip (MVP)
 
-This page validates a Material 3 plain tooltip surface:
+This page validates Material 3 tooltip surfaces (plain + rich):
 
 - Radix-aligned delay group + hover intent + safe-hover corridor (via `fret-ui-kit`)
-- deterministic open/close motion driven by `md.sys.motion.*` (duration + cubic-bezier)
-- token-driven container/text styling via `md.comp.plain-tooltip.*`
+- deterministic open/close motion driven by `md.sys.motion.spring.*` (fast spatial/effects springs)
+- token-driven container/text styling via `md.comp.{plain,rich}-tooltip.*`
+
+Notes:
+
+- In Fret, `OverlayKind::Tooltip` is click-through, so rich tooltip actions are currently out of
+  scope.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
@@ -1336,7 +1341,16 @@ use fret_ui_material3 as m3;
 
 m3::TooltipProvider::new().with_elements(cx, |cx| {
     let trigger = m3::Button::new("Hover me").into_element(cx);
-    [m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+
+    let plain = m3::PlainTooltip::new(trigger, "Plain tooltip text").into_element(cx);
+    let rich = m3::RichTooltip::new(
+        m3::Button::new("Hover me (rich)").into_element(cx),
+        "Supporting text",
+    )
+    .title("Title")
+    .into_element(cx);
+
+    [plain, rich]
 })
 ```
 "#;

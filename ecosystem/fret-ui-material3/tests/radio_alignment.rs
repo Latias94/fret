@@ -8197,7 +8197,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::menu::{MenuEntry, MenuItem};
     use fret_ui_material3::{
-        Button, DropdownMenu, PlainTooltip, Select, SelectItem, TooltipProvider,
+        Button, DropdownMenu, PlainTooltip, RichTooltip, Select, SelectItem, TooltipProvider,
     };
 
     let schemes = [
@@ -8393,6 +8393,191 @@ fn material3_headless_overlays_suite_goldens_v1() {
 
             let Some(both_open_snapshot) = settled else {
                 panic!("expected a settled overlays snapshot ({label}, {scale})");
+            };
+
+            let rich_both_open_snapshot = {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(860.0), Px(520.0)),
+                );
+
+                let open = app.models_mut().insert(true);
+                let open_model = open.clone();
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            TooltipProvider::new()
+                                .delay_duration_frames(0)
+                                .skip_delay_duration_frames(0)
+                                .with_elements(cx, |cx| {
+                                    let tooltip_trigger = Button::new("Rich tooltip")
+                                        .test_id("tooltip-trigger")
+                                        .into_element(cx);
+                                    let tooltip =
+                                        RichTooltip::new(tooltip_trigger, "Supporting text")
+                                            .title("Title")
+                                            .open_delay_frames(Some(0))
+                                            .close_delay_frames(Some(0))
+                                            .into_element(cx);
+
+                                    let menu = DropdownMenu::new(open_model.clone())
+                                        .a11y_label("menu")
+                                        .test_id("dropdown")
+                                        .into_element(
+                                            cx,
+                                            |cx| {
+                                                Button::new("Menu")
+                                                    .test_id("dropdown-trigger")
+                                                    .into_element(cx)
+                                            },
+                                            |_cx| {
+                                                vec![
+                                                    MenuEntry::Item(
+                                                        MenuItem::new("A")
+                                                            .test_id("dropdown-item-a"),
+                                                    ),
+                                                    MenuEntry::Item(
+                                                        MenuItem::new("B")
+                                                            .test_id("dropdown-item-b"),
+                                                    ),
+                                                    MenuEntry::Item(
+                                                        MenuItem::new("C")
+                                                            .test_id("dropdown-item-c"),
+                                                    ),
+                                                ]
+                                            },
+                                        );
+
+                                    let mut props = FlexProps::default();
+                                    props.layout.size.width = Length::Fill;
+                                    props.direction = fret_core::Axis::Horizontal;
+                                    props.gap = Px(48.0);
+                                    props.justify = MainAlign::SpaceBetween;
+                                    props.align = CrossAlign::Center;
+
+                                    let content = cx.flex(props, move |_cx| vec![tooltip, menu]);
+                                    vec![with_padding(cx, Px(24.0), content)]
+                                })
+                        },
+                    )
+                };
+
+                run_overlay_frame_scaled(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    scale_factor,
+                    true,
+                    |ui, app, services| render(ui, app, services),
+                );
+
+                let tooltip_trigger_node: NodeId = ui
+                    .semantics_snapshot()
+                    .and_then(|snapshot| {
+                        snapshot.nodes.iter().find_map(|node| {
+                            (node.test_id.as_deref() == Some("tooltip-trigger")).then_some(node.id)
+                        })
+                    })
+                    .unwrap_or_else(|| {
+                        panic!("expected tooltip-trigger in semantics snapshot ({label}, {scale})")
+                    });
+                let tooltip_trigger_bounds = ui
+                    .debug_node_visual_bounds(tooltip_trigger_node)
+                    .expect("expected tooltip-trigger bounds");
+                let hover_at = Point::new(
+                    Px(tooltip_trigger_bounds.origin.x.0
+                        + tooltip_trigger_bounds.size.width.0 * 0.5),
+                    Px(tooltip_trigger_bounds.origin.y.0
+                        + tooltip_trigger_bounds.size.height.0 * 0.5),
+                );
+
+                ui.dispatch_event(
+                    &mut app,
+                    &mut services,
+                    &pointer_move(PointerId(1), hover_at),
+                );
+
+                let mut opened = false;
+                for _ in 0..12 {
+                    run_overlay_frame_scaled(
+                        &mut ui,
+                        &mut app,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        false,
+                        |ui, app, services| render(ui, app, services),
+                    );
+
+                    let stack = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+                    let tooltip_open = stack.stack.iter().any(|entry| {
+                        entry.kind == OverlayStackEntryKind::Tooltip && entry.open && entry.visible
+                    });
+                    let menu_open = stack.stack.iter().any(|entry| {
+                        entry.kind == OverlayStackEntryKind::Popover && entry.open && entry.visible
+                    });
+                    if tooltip_open && menu_open {
+                        opened = true;
+                        break;
+                    }
+                }
+                assert!(
+                    opened,
+                    "expected both rich tooltip and menu overlays to be open ({label}, {scale})"
+                );
+
+                let mut settled: Option<Material3HeadlessGoldenV1> = None;
+                for frame in 0..80 {
+                    let scene = run_overlay_frame_with_scene_scaled(
+                        &mut ui,
+                        &mut app,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        false,
+                        |ui, app, services| render(ui, app, services),
+                    );
+
+                    if frame < 44 {
+                        continue;
+                    }
+
+                    let snapshot = material3_scene_snapshot_v1(&scene);
+                    if let Some(prev) = settled.as_ref() {
+                        assert_eq!(
+                            snapshot, *prev,
+                            "expected the Material3 rich tooltip overlays scene to be stable after animations settle ({label}, {scale})"
+                        );
+                    } else {
+                        settled = Some(snapshot);
+                    }
+                }
+
+                settled.unwrap_or_else(|| {
+                    panic!("expected a settled rich tooltip overlays snapshot ({label}, {scale})")
+                })
             };
 
             let (
@@ -8641,6 +8826,7 @@ fn material3_headless_overlays_suite_goldens_v1() {
 
             let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
             cases.insert("both_open".to_string(), both_open_snapshot);
+            cases.insert("rich_both_open".to_string(), rich_both_open_snapshot);
             cases.insert("select_open".to_string(), select_open_snapshot);
             cases.insert(
                 "select_open_trigger".to_string(),
