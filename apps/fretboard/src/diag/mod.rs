@@ -1591,6 +1591,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             .collect(),
                         Some("ui-gallery".to_string()),
                     )
+                } else if rest.len() == 1 && rest[0] == "ui-gallery-code-editor" {
+                    (
+                        ui_gallery_code_editor_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some("ui-gallery-code-editor".to_string()),
+                    )
                 } else if rest.len() == 1 && rest[0] == "docking-arbitration" {
                     (
                         docking_arbitration_suite_scripts()
@@ -2294,11 +2302,14 @@ See: `docs/tracy.md`.\n";
             #[derive(Debug, Clone, Copy, PartialEq, Eq)]
             enum BuiltinSuite {
                 UiGallery,
+                UiGalleryCodeEditor,
                 UiGalleryLayout,
                 DockingArbitration,
             }
 
             let is_ui_gallery_suite = rest.len() == 1 && rest[0] == "ui-gallery";
+            let is_ui_gallery_code_editor_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-code-editor";
             let is_ui_gallery_layout_suite = rest.len() == 1 && rest[0] == "ui-gallery-layout";
             let is_ui_gallery_virt_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-virt-retained";
@@ -2357,6 +2368,14 @@ See: `docs/tracy.md`.\n";
                             .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
                             .collect(),
                         Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_code_editor_suite {
+                    (
+                        ui_gallery_code_editor_suite_scripts()
+                            .into_iter()
+                            .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                            .collect(),
+                        Some(BuiltinSuite::UiGalleryCodeEditor),
                     )
                 } else if is_ui_gallery_layout_suite {
                     (
@@ -2952,6 +2971,7 @@ See: `docs/tracy.md`.\n";
 
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration)
+                    || builtin_suite == Some(BuiltinSuite::UiGalleryCodeEditor)
                     || is_ui_gallery_vlist_window_boundary_suite
                     || is_ui_gallery_vlist_window_boundary_retained_suite
                     || is_components_gallery_file_tree_suite
@@ -3080,6 +3100,18 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_word_boundary =
                         ui_gallery_script_requires_code_editor_word_boundary_gate(&src)
                             && !check_ui_gallery_code_editor_word_boundary;
+                    let suite_ui_gallery_code_editor_a11y_selection =
+                        ui_gallery_script_requires_code_editor_a11y_selection_gate(&src)
+                            && !check_ui_gallery_code_editor_a11y_selection;
+                    let suite_ui_gallery_code_editor_a11y_composition =
+                        ui_gallery_script_requires_code_editor_a11y_composition_gate(&src)
+                            && !check_ui_gallery_code_editor_a11y_composition;
+                    let suite_ui_gallery_code_editor_a11y_selection_wrap =
+                        ui_gallery_script_requires_code_editor_a11y_selection_wrap_gate(&src)
+                            && !check_ui_gallery_code_editor_a11y_selection_wrap;
+                    let suite_ui_gallery_code_editor_a11y_composition_wrap =
+                        ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(&src)
+                            && !check_ui_gallery_code_editor_a11y_composition_wrap;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
                     let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
@@ -3148,10 +3180,14 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_undo_redo,
                         check_ui_gallery_code_editor_word_boundary
                             || suite_ui_gallery_code_editor_word_boundary,
-                        check_ui_gallery_code_editor_a11y_selection,
-                        check_ui_gallery_code_editor_a11y_composition,
-                        check_ui_gallery_code_editor_a11y_selection_wrap,
-                        check_ui_gallery_code_editor_a11y_composition_wrap,
+                        check_ui_gallery_code_editor_a11y_selection
+                            || suite_ui_gallery_code_editor_a11y_selection,
+                        check_ui_gallery_code_editor_a11y_composition
+                            || suite_ui_gallery_code_editor_a11y_composition,
+                        check_ui_gallery_code_editor_a11y_selection_wrap
+                            || suite_ui_gallery_code_editor_a11y_selection_wrap,
+                        check_ui_gallery_code_editor_a11y_composition_wrap
+                            || suite_ui_gallery_code_editor_a11y_composition_wrap,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -5509,6 +5545,20 @@ fn ui_gallery_suite_scripts() -> [&'static str; 19] {
     ]
 }
 
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 9] {
+    [
+        "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
+        "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-a11y-selection-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-a11y-selection-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-a11y-selection-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-wrap-baseline.json",
+    ]
+}
+
 fn ui_gallery_layout_suite_scripts() -> [&'static str; 6] {
     [
         "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
@@ -5658,6 +5708,52 @@ fn ui_gallery_script_requires_code_editor_word_boundary_gate(script: &Path) -> b
     };
 
     matches!(name, "ui-gallery-code-editor-word-boundary-baseline.json")
+}
+
+fn ui_gallery_script_requires_code_editor_a11y_selection_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-a11y-selection-baseline.json"
+            | "ui-gallery-code-editor-a11y-selection-soft-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_a11y_composition_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-a11y-composition-baseline.json"
+            | "ui-gallery-code-editor-a11y-composition-soft-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_a11y_selection_wrap_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-a11y-selection-wrap-baseline.json"
+    )
+}
+
+fn ui_gallery_script_requires_code_editor_a11y_composition_wrap_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        name,
+        "ui-gallery-code-editor-a11y-composition-wrap-baseline.json"
+    )
 }
 
 fn script_requests_screenshots(script: &Path) -> bool {
