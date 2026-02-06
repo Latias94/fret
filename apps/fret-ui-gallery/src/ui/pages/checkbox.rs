@@ -297,12 +297,8 @@ pub(super) fn preview_checkbox(
 
     let invalid_content = shadcn::Field::new([
         shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("Accept terms")
-                .text_color(ColorRef::Color(destructive))
-                .into_element(cx),
-            shadcn::FieldDescription::new("You must accept before continuing.")
-                .text_color(ColorRef::Color(destructive))
-                .into_element(cx),
+            shadcn::FieldLabel::new("Accept terms").into_element(cx),
+            shadcn::FieldDescription::new("You must accept before continuing.").into_element(cx),
             shadcn::FieldError::new("Please accept the terms to proceed.").into_element(cx),
         ])
         .into_element(cx),
@@ -461,14 +457,13 @@ pub(super) fn preview_checkbox(
             shadcn::TableRow::new(
                 3,
                 vec![
-                    shadcn::TableHead::new("")
-                        .child(
-                            shadcn::Checkbox::new(table_all.clone())
-                                .a11y_label("Select all rows")
-                                .test_id("ui-gallery-checkbox-table-all")
-                                .into_element(cx),
-                        )
-                        .into_element(cx),
+                    shadcn::TableCell::new(
+                        shadcn::Checkbox::new(table_all.clone())
+                            .a11y_label("Select all rows")
+                            .test_id("ui-gallery-checkbox-table-all")
+                            .into_element(cx),
+                    )
+                    .into_element(cx),
                     shadcn::TableHead::new("Member").into_element(cx),
                     shadcn::TableHead::new("Role").into_element(cx),
                 ],

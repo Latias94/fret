@@ -183,7 +183,7 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             .gap(Space::N6)
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
-        |_cx| {
+        |cx| {
             vec![
                 shadcn::typography::muted(
                     cx,

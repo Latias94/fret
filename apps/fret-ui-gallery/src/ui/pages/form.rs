@@ -193,7 +193,6 @@ pub(super) fn preview_forms(
                 shadcn::Field::new([
                     shadcn::FieldLabel::new("Bio").into_element(cx),
                     shadcn::Textarea::new(text_area.clone())
-                        .placeholder("Tell us about yourself")
                         .a11y_label("Bio")
                         .refine_layout(LayoutRefinement::default().h_px(Px(88.0)))
                         .into_element(cx),

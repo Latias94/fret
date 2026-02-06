@@ -470,23 +470,20 @@ pub(super) fn preview_context_menu(
             "state: status_bar={status}, activity_bar={activity}, line_numbers={line_numbers}"
         ));
 
-        section_card(
+        let checkboxes_content = stack::vstack(
             cx,
-            "Checkboxes",
-            stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N2).items_start(),
-                |_cx| {
-                    vec![
-                        menu.attach_semantics(
-                            SemanticsDecoration::default()
-                                .test_id("ui-gallery-context-menu-checkboxes"),
-                        ),
-                        state,
-                    ]
-                },
-            ),
-        )
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            |_cx| {
+                vec![
+                    menu.attach_semantics(
+                        SemanticsDecoration::default()
+                            .test_id("ui-gallery-context-menu-checkboxes"),
+                    ),
+                    state,
+                ]
+            },
+        );
+        section_card(cx, "Checkboxes", checkboxes_content)
     };
 
     let radio = {
@@ -518,22 +515,20 @@ pub(super) fn preview_context_menu(
             .unwrap_or_else(|| Some(Arc::<str>::from("system")))
             .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-        section_card(
+        let selected_text = cx.text(format!("selected theme: {selected}"));
+        let radio_content = stack::vstack(
             cx,
-            "Radio",
-            stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N2).items_start(),
-                |_cx| {
-                    vec![
-                        menu.attach_semantics(
-                            SemanticsDecoration::default().test_id("ui-gallery-context-menu-radio"),
-                        ),
-                        cx.text(format!("selected theme: {selected}")),
-                    ]
-                },
-            ),
-        )
+            stack::VStackProps::default().gap(Space::N2).items_start(),
+            |_cx| {
+                vec![
+                    menu.attach_semantics(
+                        SemanticsDecoration::default().test_id("ui-gallery-context-menu-radio"),
+                    ),
+                    selected_text,
+                ]
+            },
+        );
+        section_card(cx, "Radio", radio_content)
     };
 
     let destructive = {
@@ -554,7 +549,7 @@ pub(super) fn preview_context_menu(
                     shadcn::ContextMenuEntry::Separator,
                     shadcn::ContextMenuEntry::Item(
                         shadcn::ContextMenuItem::new("Delete project")
-                            .variant(shadcn::ContextMenuItemVariant::Destructive)
+                            .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive)
                             .on_select(CMD_MENU_CONTEXT_ACTION)
                             .test_id("ui-gallery-context-menu-destructive-delete"),
                     ),
@@ -597,7 +592,9 @@ pub(super) fn preview_context_menu(
                             shadcn::ContextMenuEntry::Separator,
                             shadcn::ContextMenuEntry::Item(
                                 shadcn::ContextMenuItem::new("Delete")
-                                    .variant(shadcn::ContextMenuItemVariant::Destructive)
+                                    .variant(
+                                        shadcn::context_menu::ContextMenuItemVariant::Destructive,
+                                    )
                                     .on_select(CMD_MENU_CONTEXT_ACTION),
                             ),
                         ]

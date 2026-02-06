@@ -221,7 +221,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                         .group_size(Some(3))
                         .refine_style(
                             ChromeRefinement::default()
-                                .background(ColorRef::Color(theme.color_required("muted")))
+                                .bg(ColorRef::Color(theme.color_required("muted")))
                                 .text_color(ColorRef::Color(
                                     theme.color_required("muted-foreground"),
                                 )),
@@ -241,7 +241,11 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     };
 
     let controlled = {
-        let value_text = controlled_value.read(cx.app).to_string();
+        let value_text = cx
+            .app
+            .models()
+            .get_cloned(&controlled_value)
+            .unwrap_or_default();
         let content = stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -335,33 +339,29 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
                     .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new(vec![
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N3)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
-                    |cx| {
-                        vec![
-                            shadcn::InputOtp::new(form_value)
-                                .length(6)
-                                .group_size(Some(3))
-                                .slot_size_px(Px(44.0), Px(48.0))
-                                .slot_text_px(Px(18.0))
-                                .slot_corner_mode(shadcn::InputOtpSlotCornerMode::All)
-                                .refine_layout(LayoutRefinement::default().w_full())
-                                .into_element(cx)
-                                .attach_semantics(
-                                    SemanticsDecoration::default()
-                                        .test_id("ui-gallery-input-otp-form"),
-                                ),
-                            shadcn::Button::new("Verify").into_element(cx),
-                        ]
-                    },
-                )
-                .into_element(cx),
-            ])
+            shadcn::CardContent::new(vec![stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full()),
+                |cx| {
+                    vec![
+                        shadcn::InputOtp::new(form_value)
+                            .length(6)
+                            .group_size(Some(3))
+                            .slot_size_px(Px(44.0), Px(48.0))
+                            .slot_text_px(Px(18.0))
+                            .slot_corner_mode(shadcn::input_otp::InputOtpSlotCornerMode::All)
+                            .refine_layout(LayoutRefinement::default().w_full())
+                            .into_element(cx)
+                            .attach_semantics(
+                                SemanticsDecoration::default().test_id("ui-gallery-input-otp-form"),
+                            ),
+                        shadcn::Button::new("Verify").into_element(cx),
+                    ]
+                },
+            )])
             .into_element(cx),
         ])
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))

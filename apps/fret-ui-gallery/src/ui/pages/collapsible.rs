@@ -289,7 +289,6 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 ]
             },
         )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
         .attach_semantics(SemanticsDecoration::default().test_id(test_id_prefix))
     };
 
@@ -376,7 +375,6 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .into_element(cx)
             },
         )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
         .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-collapsible-basic"));
     let basic = section_card(cx, "Basic", basic_content);
 
@@ -388,8 +386,8 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             shadcn::FieldLabel::new(label).into_element(cx),
             shadcn::Input::new(value)
                 .a11y_label(label)
-                .test_id(test_id)
-                .into_element(cx),
+                .into_element(cx)
+                .attach_semantics(SemanticsDecoration::default().test_id(test_id)),
         ])
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
@@ -430,11 +428,9 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                         ]
                     },
                 )])
-                .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))
                 .into_element(cx)
             },
         )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(420.0)))
         .attach_semantics(
             SemanticsDecoration::default().test_id("ui-gallery-collapsible-settings"),
         );
@@ -480,7 +476,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Ghost)
             .size(shadcn::ButtonSize::Sm)
-            .refine_layout(LayoutRefinement::default().w_full().justify_start())
+            .refine_layout(LayoutRefinement::default().w_full())
             .into_element(cx)
     };
 
@@ -495,7 +491,7 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 shadcn::Button::new(format!("{} {}", if is_open { "?" } else { "?" }, label))
                     .variant(shadcn::ButtonVariant::Ghost)
                     .size(shadcn::ButtonSize::Sm)
-                    .refine_layout(LayoutRefinement::default().w_full().justify_start())
+                    .refine_layout(LayoutRefinement::default().w_full())
                     .toggle_model(open)
                     .test_id(format!("ui-gallery-collapsible-tree-trigger-{key}"))
                     .into_element(cx)
@@ -516,37 +512,43 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     };
 
     let file_tree_content = {
+        let ui_button = file_leaf(cx, "button.rs");
+        let ui_dialog = file_leaf(cx, "dialog.rs");
         let ui_folder = folder(
             cx,
             "src-ui",
             "ui",
             tree_src_ui_open.clone(),
-            vec![file_leaf(cx, "button.rs"), file_leaf(cx, "dialog.rs")],
+            vec![ui_button, ui_dialog],
         );
 
+        let src_main = file_leaf(cx, "main.rs");
         let src_folder = folder(
             cx,
             "src",
             "src",
             tree_src_open.clone(),
-            vec![ui_folder, file_leaf(cx, "main.rs")],
+            vec![ui_folder, src_main],
         );
 
+        let comp_card = file_leaf(cx, "card.rs");
+        let comp_table = file_leaf(cx, "table.rs");
         let components_folder = folder(
             cx,
             "components",
             "components",
             tree_components_open.clone(),
-            vec![file_leaf(cx, "card.rs"), file_leaf(cx, "table.rs")],
+            vec![comp_card, comp_table],
         );
 
+        let cargo_toml = file_leaf(cx, "Cargo.toml");
         stack::vstack(
             cx,
             stack::VStackProps::default()
                 .gap(Space::N1)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
-            |_cx| vec![components_folder, src_folder, file_leaf(cx, "Cargo.toml")],
+            |_cx| vec![components_folder, src_folder, cargo_toml],
         )
         .attach_semantics(
             SemanticsDecoration::default().test_id("ui-gallery-collapsible-file-tree"),

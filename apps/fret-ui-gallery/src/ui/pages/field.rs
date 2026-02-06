@@ -215,7 +215,9 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     };
     let section_card =
         |cx: &mut ElementContext<'_, App>, title: &'static str, content: AnyElement| {
-            section(cx, title, centered(cx, shell(cx, content)))
+            let card = shell(cx, content);
+            let centered_card = centered(cx, card);
+            section(cx, title, centered_card)
         };
 
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
@@ -253,7 +255,6 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         let content = shadcn::FieldSet::new([shadcn::FieldGroup::new([shadcn::Field::new([
             shadcn::FieldLabel::new("Feedback").into_element(cx),
             shadcn::Textarea::new(feedback)
-                .placeholder("Your feedback helps us improve...")
                 .a11y_label("Feedback")
                 .refine_layout(LayoutRefinement::default().h_px(Px(96.0)))
                 .into_element(cx),
@@ -589,7 +590,6 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     ])
                     .into_element(cx),
                     shadcn::Textarea::new(responsive_message)
-                        .placeholder("Hello, world!")
                         .a11y_label("Message")
                         .refine_layout(LayoutRefinement::default().h_px(Px(96.0)).min_w(Px(280.0)))
                         .into_element(cx),
@@ -614,122 +614,116 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         section_card(cx, "Responsive Layout", content)
     };
 
-    let component_panel = shell(
+    let component_stack = stack::vstack(
         cx,
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::typography::muted(
-                        cx,
-                        "Preview follows shadcn Field docs order: Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Field Group, RTL, Responsive Layout.",
-                    ),
-                    input,
-                    textarea,
-                    select,
-                    slider,
-                    fieldset,
-                    checkbox,
-                    radio,
-                    switch,
-                    choice_card,
-                    field_group,
-                    rtl,
-                    responsive,
-                ]
-            },
-        ),
-    )
-    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-component"));
-
-    let code_panel = shell(
-        cx,
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::Card::new(vec![
-                        shadcn::CardHeader::new(vec![
-                            shadcn::CardTitle::new("Input + Description").into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::CardContent::new(vec![
-                            ui::text_block(cx, "Field::new([FieldLabel, Input, FieldDescription]).into_element(cx);")
-                                .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::Card::new(vec![
-                        shadcn::CardHeader::new(vec![
-                            shadcn::CardTitle::new("Choice Card").into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::CardContent::new(vec![
-                            ui::text_block(
-                                cx,
-                                "RadioGroupItem::new(...).variant(RadioGroupItemVariant::ChoiceCard).child(FieldContent::new([...]).into_element(cx));",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::Card::new(vec![
-                        shadcn::CardHeader::new(vec![
-                            shadcn::CardTitle::new("Responsive Orientation").into_element(cx),
-                        ])
-                        .into_element(cx),
-                        shadcn::CardContent::new(vec![
-                            ui::text_block(
-                                cx,
-                                "Field::new([...]).orientation(FieldOrientation::Responsive);",
-                            )
-                            .into_element(cx),
-                        ])
-                        .into_element(cx),
-                    ])
-                    .into_element(cx),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                shadcn::typography::muted(
+                    cx,
+                    "Preview follows shadcn Field docs order: Input, Textarea, Select, Slider, Fieldset, Checkbox, Radio, Switch, Choice Card, Field Group, RTL, Responsive Layout.",
+                ),
+                input,
+                textarea,
+                select,
+                slider,
+                fieldset,
+                checkbox,
+                radio,
+                switch,
+                choice_card,
+                field_group,
+                rtl,
+                responsive,
+            ]
+        },
     );
+    let component_panel = shell(cx, component_stack)
+        .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-field-component"));
 
-    let notes_panel = shell(
+    let code_stack = stack::vstack(
         cx,
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    shadcn::typography::h4(cx, "Notes"),
-                    shadcn::typography::muted(
-                        cx,
-                        "Field page now follows upstream docs section order for deterministic parity checks.",
-                    ),
-                    shadcn::typography::muted(
-                        cx,
-                        "Each section keeps a stable test_id so diag scripts can target specific examples.",
-                    ),
-                    shadcn::typography::muted(
-                        cx,
-                        "RTL and Responsive samples are included to exercise orientation and direction contracts.",
-                    ),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("Input + Description").into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text_block(cx, "Field::new([FieldLabel, Input, FieldDescription]).into_element(cx);")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("Choice Card").into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text_block(
+                            cx,
+                            "RadioGroupItem::new(...).variant(RadioGroupItemVariant::ChoiceCard).child(FieldContent::new([...]).into_element(cx));",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("Responsive Orientation").into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text_block(
+                            cx,
+                            "Field::new([...]).orientation(FieldOrientation::Responsive);",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ]
+        },
     );
+    let code_panel = shell(cx, code_stack);
+
+    let notes_stack = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()),
+        |cx| {
+            vec![
+                shadcn::typography::h4(cx, "Notes"),
+                shadcn::typography::muted(
+                    cx,
+                    "Field page now follows upstream docs section order for deterministic parity checks.",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "Each section keeps a stable test_id so diag scripts can target specific examples.",
+                ),
+                shadcn::typography::muted(
+                    cx,
+                    "RTL and Responsive samples are included to exercise orientation and direction contracts.",
+                ),
+            ]
+        },
+    );
+    let notes_panel = shell(cx, notes_stack);
 
     super::render_component_page_tabs(
         cx,

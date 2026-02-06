@@ -48,13 +48,19 @@ pub(super) fn preview_command_palette(
 
     let on_select = |tag: Arc<str>| {
         let last_action = last_action.clone();
-        Arc::new(move |host, action_cx, _reason| {
-            let value = tag.clone();
-            let _ = host.models_mut().update(&last_action, |cur| {
-                *cur = value;
-            });
-            host.request_redraw(action_cx.window);
-        }) as fret_ui::action::OnActivate
+        Arc::new(
+            move |host: &mut dyn fret_ui::action::UiActionHost,
+                  action_cx: fret_ui::action::ActionCx,
+                  _reason: fret_ui::action::ActivateReason| {
+                let value = tag.clone();
+                let _ = host
+                    .models_mut()
+                    .update(&last_action, |cur: &mut Arc<str>| {
+                        *cur = value.clone();
+                    });
+                host.request_redraw(action_cx.window);
+            },
+        ) as fret_ui::action::OnActivate
     };
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {

@@ -408,14 +408,11 @@ pub(super) fn preview_combobox(
     );
     let custom_items_top = section_card(cx, "Custom Items", custom_items_top_content);
 
-    let multiple_selection = section_card(
+    let multiple_selection_content = shadcn::typography::muted(
         cx,
-        "Multiple Selection",
-        shadcn::typography::muted(
-            cx,
-            "Upstream supports chips + multiple values. Current Fret `Combobox` API is single-select; keep this as an explicit parity gap marker.",
-        ),
+        "Upstream supports chips + multiple values. Current Fret `Combobox` API is single-select; keep this as an explicit parity gap marker.",
     );
+    let multiple_selection = section_card(cx, "Multiple Selection", multiple_selection_content);
 
     let basic_combo = shadcn::Combobox::new(basic_value.clone(), basic_open.clone())
         .a11y_label("Combobox basic")
@@ -433,41 +430,32 @@ pub(super) fn preview_combobox(
         .attach_semantics(
             SemanticsDecoration::default().test_id("ui-gallery-combobox-basic-trigger"),
         );
-    let basic = section_card(
+    let basic_content = stack::vstack(
         cx,
-        "Basic",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-            |cx| {
-                vec![
-                    basic_combo,
-                    state_rows(cx, &basic_value, &basic_query, "ui-gallery-combobox-basic"),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+        |cx| {
+            vec![
+                basic_combo,
+                state_rows(cx, &basic_value, &basic_query, "ui-gallery-combobox-basic"),
+            ]
+        },
     );
+    let basic = section_card(cx, "Basic", basic_content);
 
-    let multiple = section_card(
+    let multiple_content = shadcn::typography::muted(
         cx,
-        "Multiple",
-        shadcn::typography::muted(
-            cx,
-            "`multiple` + chips behavior is not exposed in current Fret `Combobox`; tracked as a follow-up API expansion.",
-        ),
+        "`multiple` + chips behavior is not exposed in current Fret `Combobox`; tracked as a follow-up API expansion.",
     );
+    let multiple = section_card(cx, "Multiple", multiple_content);
 
-    let clear_button = section_card(
+    let clear_button_content = shadcn::typography::muted(
         cx,
-        "Clear Button",
-        shadcn::typography::muted(
-            cx,
-            "Upstream has `showClear`. Current Fret API can be cleared by external state reset, but does not provide built-in clear trigger yet.",
-        ),
+        "Upstream has `showClear`. Current Fret API can be cleared by external state reset, but does not provide built-in clear trigger yet.",
     );
+    let clear_button = section_card(cx, "Clear Button", clear_button_content);
 
     let groups_combo = shadcn::Combobox::new(groups_value.clone(), groups_open.clone())
         .a11y_label("Combobox groups")
@@ -485,41 +473,35 @@ pub(super) fn preview_combobox(
         .attach_semantics(
             SemanticsDecoration::default().test_id("ui-gallery-combobox-groups-trigger"),
         );
-    let groups = section_card(
+    let groups_content = stack::vstack(
         cx,
-        "Groups",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
-            |cx| {
-                vec![
-                    groups_combo,
-                    shadcn::typography::muted(
-                        cx,
-                        "Grouped rows are approximated with prefix labels until dedicated group/separator APIs are introduced.",
-                    ),
-                    state_rows(
-                        cx,
-                        &groups_value,
-                        &groups_query,
-                        "ui-gallery-combobox-groups",
-                    ),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
+        |cx| {
+            vec![
+                groups_combo,
+                shadcn::typography::muted(
+                    cx,
+                    "Grouped rows are approximated with prefix labels until dedicated group/separator APIs are introduced.",
+                ),
+                state_rows(
+                    cx,
+                    &groups_value,
+                    &groups_query,
+                    "ui-gallery-combobox-groups",
+                ),
+            ]
+        },
     );
+    let groups = section_card(cx, "Groups", groups_content);
 
-    let custom_items_example = section_card(
+    let custom_items_example_content = shadcn::typography::muted(
         cx,
-        "Custom Items",
-        shadcn::typography::muted(
-            cx,
-            "Render-rich custom item surfaces are currently approximated at label level in this gallery.",
-        ),
+        "Render-rich custom item surfaces are currently approximated at label level in this gallery.",
     );
+    let custom_items_example = section_card(cx, "Custom Items", custom_items_example_content);
 
     let invalid_combo = shadcn::Combobox::new(invalid_value.clone(), invalid_open.clone())
         .a11y_label("Combobox invalid")
@@ -536,32 +518,29 @@ pub(super) fn preview_combobox(
         .attach_semantics(
             SemanticsDecoration::default().test_id("ui-gallery-combobox-invalid-trigger"),
         );
-    let invalid = section_card(
+    let invalid_content = stack::vstack(
         cx,
-        "Invalid",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-            |cx| {
-                vec![
-                    invalid_combo,
-                    shadcn::typography::muted(
-                        cx,
-                        "Invalid visual is currently approximated via destructive border style on trigger.",
-                    ),
-                    state_rows(
-                        cx,
-                        &invalid_value,
-                        &invalid_query,
-                        "ui-gallery-combobox-invalid",
-                    ),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+        |cx| {
+            vec![
+                invalid_combo,
+                shadcn::typography::muted(
+                    cx,
+                    "Invalid visual is currently approximated via destructive border style on trigger.",
+                ),
+                state_rows(
+                    cx,
+                    &invalid_value,
+                    &invalid_query,
+                    "ui-gallery-combobox-invalid",
+                ),
+            ]
+        },
     );
+    let invalid = section_card(cx, "Invalid", invalid_content);
 
     let disabled_combo = shadcn::Combobox::new(disabled_value.clone(), disabled_open.clone())
         .a11y_label("Combobox disabled")
@@ -574,28 +553,25 @@ pub(super) fn preview_combobox(
         .attach_semantics(
             SemanticsDecoration::default().test_id("ui-gallery-combobox-disabled-trigger"),
         );
-    let disabled = section_card(
+    let disabled_content = stack::vstack(
         cx,
-        "Disabled",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-            |cx| {
-                vec![
-                    disabled_combo,
-                    state_rows(
-                        cx,
-                        &disabled_value,
-                        &disabled_query,
-                        "ui-gallery-combobox-disabled",
-                    ),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+        |cx| {
+            vec![
+                disabled_combo,
+                state_rows(
+                    cx,
+                    &disabled_value,
+                    &disabled_query,
+                    "ui-gallery-combobox-disabled",
+                ),
+            ]
+        },
     );
+    let disabled = section_card(cx, "Disabled", disabled_content);
 
     let auto_highlight_combo =
         shadcn::Combobox::new(input_group_value.clone(), input_group_open.clone())
@@ -609,35 +585,29 @@ pub(super) fn preview_combobox(
                 SemanticsDecoration::default()
                     .test_id("ui-gallery-combobox-auto-highlight-trigger"),
             );
-    let auto_highlight = section_card(
+    let auto_highlight_content = stack::vstack(
         cx,
-        "Auto Highlight",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-            |cx| {
-                vec![
-                    auto_highlight_combo,
-                    shadcn::typography::muted(
-                        cx,
-                        "Current behavior follows command palette defaults; explicit `autoHighlight` knob is not yet surfaced.",
-                    ),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+        |cx| {
+            vec![
+                auto_highlight_combo,
+                shadcn::typography::muted(
+                    cx,
+                    "Current behavior follows command palette defaults; explicit `autoHighlight` knob is not yet surfaced.",
+                ),
+            ]
+        },
     );
+    let auto_highlight = section_card(cx, "Auto Highlight", auto_highlight_content);
 
-    let popup = section_card(
+    let popup_content = shadcn::typography::muted(
         cx,
-        "Popup",
-        shadcn::typography::muted(
-            cx,
-            "Trigger-as-button popup recipe is not yet exposed as a dedicated API in Fret Combobox.",
-        ),
+        "Trigger-as-button popup recipe is not yet exposed as a dedicated API in Fret Combobox.",
     );
+    let popup = section_card(cx, "Popup", popup_content);
 
     let input_group_combo =
         shadcn::Combobox::new(input_group_value.clone(), input_group_open.clone())
@@ -654,48 +624,45 @@ pub(super) fn preview_combobox(
             .attach_semantics(
                 SemanticsDecoration::default().test_id("ui-gallery-combobox-input-group-trigger"),
             );
-    let input_group = section_card(
+    let input_group_content = stack::vstack(
         cx,
-        "Input Group",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
-            |cx| {
-                vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                cx.container(
-                                    decl_style::container_props(
-                                        &theme,
-                                        ChromeRefinement::default()
-                                            .border_1()
-                                            .rounded(Radius::Sm)
-                                            .px(Space::N2)
-                                            .py(Space::N1),
-                                        LayoutRefinement::default(),
-                                    ),
-                                    |cx| vec![shadcn::typography::muted(cx, "Cmd")],
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
+        |cx| {
+            vec![
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |cx| {
+                        vec![
+                            cx.container(
+                                decl_style::container_props(
+                                    &theme,
+                                    ChromeRefinement::default()
+                                        .border_1()
+                                        .rounded(Radius::Sm)
+                                        .px(Space::N2)
+                                        .py(Space::N1),
+                                    LayoutRefinement::default(),
                                 ),
-                                input_group_combo,
-                            ]
-                        },
-                    ),
-                    state_rows(
-                        cx,
-                        &input_group_value,
-                        &input_group_query,
-                        "ui-gallery-combobox-input-group",
-                    ),
-                ]
-            },
-        ),
+                                |cx| vec![shadcn::typography::muted(cx, "Cmd")],
+                            ),
+                            input_group_combo,
+                        ]
+                    },
+                ),
+                state_rows(
+                    cx,
+                    &input_group_value,
+                    &input_group_query,
+                    "ui-gallery-combobox-input-group",
+                ),
+            ]
+        },
     );
+    let input_group = section_card(cx, "Input Group", input_group_content);
 
     let rtl_combo = fret_ui_kit::primitives::direction::with_direction_provider(
         cx,
@@ -717,23 +684,20 @@ pub(super) fn preview_combobox(
                 )
         },
     );
-    let rtl = section_card(
+    let rtl_content = stack::vstack(
         cx,
-        "RTL",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-            |cx| {
-                vec![
-                    rtl_combo,
-                    state_rows(cx, &rtl_value, &rtl_query, "ui-gallery-combobox-rtl"),
-                ]
-            },
-        ),
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+        |cx| {
+            vec![
+                rtl_combo,
+                state_rows(cx, &rtl_value, &rtl_query, "ui-gallery-combobox-rtl"),
+            ]
+        },
     );
+    let rtl = section_card(cx, "RTL", rtl_content);
 
     let preview_hint = shadcn::typography::muted(
         cx,

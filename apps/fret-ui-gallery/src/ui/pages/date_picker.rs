@@ -174,19 +174,16 @@ pub(super) fn preview_date_picker(
                     title: &'static str,
                     details: &'static str,
                     test_id: &'static str| {
-        section_card(
-            cx,
-            title,
-            shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
-                shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
-                shadcn::AlertDescription::new(details).into_element(cx),
-            ])
-            .variant(shadcn::AlertVariant::Default)
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(700.0)))
-            .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id)),
-        )
+        let alert_content = shadcn::Alert::new([
+            shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+            shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
+            shadcn::AlertDescription::new(details).into_element(cx),
+        ])
+        .variant(shadcn::AlertVariant::Default)
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(700.0)))
+        .into_element(cx)
+        .attach_semantics(SemanticsDecoration::default().test_id(test_id));
+        section_card(cx, title, alert_content)
     };
 
     let basic_selected = cx
@@ -202,15 +199,12 @@ pub(super) fn preview_date_picker(
         .into_element(cx)
         .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-date-picker-basic"));
 
-    let basic = section_card(
+    let basic_content = stack::vstack(
         cx,
-        "Basic",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default().gap(Space::N2).items_start(),
-            |cx| vec![basic_picker, cx.text(format!("selected: {basic_selected}"))],
-        ),
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        |cx| vec![basic_picker, cx.text(format!("selected: {basic_selected}"))],
     );
+    let basic = section_card(cx, "Basic", basic_content);
 
     let range_value = cx
         .app
@@ -235,21 +229,18 @@ pub(super) fn preview_date_picker(
     .into_element(cx)
     .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-date-picker-range"));
 
-    let range = section_card(
+    let range_content = stack::vstack(
         cx,
-        "Range Picker",
-        stack::vstack(
-            cx,
-            stack::VStackProps::default().gap(Space::N2).items_start(),
-            |cx| {
-                vec![
-                    range_picker,
-                    cx.text(format!("from: {range_from}")),
-                    cx.text(format!("to: {range_to}")),
-                ]
-            },
-        ),
+        stack::VStackProps::default().gap(Space::N2).items_start(),
+        |cx| {
+            vec![
+                range_picker,
+                cx.text(format!("from: {range_from}")),
+                cx.text(format!("to: {range_to}")),
+            ]
+        },
     );
+    let range = section_card(cx, "Range Picker", range_content);
 
     let dob_text = cx
         .app

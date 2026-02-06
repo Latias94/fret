@@ -55,7 +55,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         shadcn::ItemMedia::new([shadcn::Avatar::new([
             shadcn::AvatarFallback::new(initials).into_element(cx)
         ])
-        .size(Px(28.0))
+        .refine_layout(LayoutRefinement::default().w_px(Px(28.0)).h_px(Px(28.0)))
         .into_element(cx)])
         .into_element(cx)
     };
@@ -67,10 +67,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 ChromeRefinement::default()
                     .bg(ColorRef::Color(theme.color_required("muted")))
                     .rounded(Radius::Sm),
-                LayoutRefinement::default()
-                    .size_full()
-                    .items_center()
-                    .justify_center(),
+                LayoutRefinement::default().size_full(),
             ),
             move |cx| vec![shadcn::typography::muted(cx, label)],
         )])
@@ -115,12 +112,75 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
             .attach_semantics(SemanticsDecoration::default().test_id(test_id))
     };
 
+    let item_row_icon = |cx: &mut ElementContext<'_, App>,
+                         title: &'static str,
+                         description: &'static str,
+                         icon: &'static str,
+                         variant: shadcn::ItemVariant,
+                         size: shadcn::ItemSize,
+                         with_action: bool,
+                         test_id: &'static str| {
+        let media = icon_media(cx, icon);
+        item_row(
+            cx,
+            title,
+            description,
+            media,
+            variant,
+            size,
+            with_action,
+            test_id,
+        )
+    };
+
+    let item_row_avatar = |cx: &mut ElementContext<'_, App>,
+                           title: &'static str,
+                           description: &'static str,
+                           initials: &'static str,
+                           variant: shadcn::ItemVariant,
+                           size: shadcn::ItemSize,
+                           with_action: bool,
+                           test_id: &'static str| {
+        let media = avatar_media(cx, initials);
+        item_row(
+            cx,
+            title,
+            description,
+            media,
+            variant,
+            size,
+            with_action,
+            test_id,
+        )
+    };
+
+    let item_row_image = |cx: &mut ElementContext<'_, App>,
+                          title: &'static str,
+                          description: &'static str,
+                          label: &'static str,
+                          variant: shadcn::ItemVariant,
+                          size: shadcn::ItemSize,
+                          with_action: bool,
+                          test_id: &'static str| {
+        let media = image_media(cx, label);
+        item_row(
+            cx,
+            title,
+            description,
+            media,
+            variant,
+            size,
+            with_action,
+            test_id,
+        )
+    };
+
     let demo = {
-        let content = item_row(
+        let content = item_row_icon(
             cx,
             "Invoice.pdf",
             "Updated 2 days ago",
-            icon_media(cx, "lucide.file-text"),
+            "lucide.file-text",
             shadcn::ItemVariant::Default,
             shadcn::ItemSize::Default,
             true,
@@ -131,31 +191,31 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
 
     let variant = {
         let content = shadcn::ItemGroup::new([
-            item_row(
+            item_row_icon(
                 cx,
                 "Default",
                 "Neutral style with hover/press states.",
-                icon_media(cx, "lucide.layout-dashboard"),
+                "lucide.layout-dashboard",
                 shadcn::ItemVariant::Default,
                 shadcn::ItemSize::Default,
                 false,
                 "ui-gallery-item-variant-default",
             ),
-            item_row(
+            item_row_icon(
                 cx,
                 "Outline",
                 "Visible border emphasis for dense lists.",
-                icon_media(cx, "lucide.panel-top"),
+                "lucide.panel-top",
                 shadcn::ItemVariant::Outline,
                 shadcn::ItemSize::Default,
                 false,
                 "ui-gallery-item-variant-outline",
             ),
-            item_row(
+            item_row_icon(
                 cx,
                 "Muted",
                 "Low-contrast background for secondary groups.",
-                icon_media(cx, "lucide.inbox"),
+                "lucide.inbox",
                 shadcn::ItemVariant::Muted,
                 shadcn::ItemSize::Default,
                 false,
@@ -177,21 +237,21 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .layout(LayoutRefinement::default().w_full().max_w(Px(720.0))),
             |cx| {
                 vec![
-                    item_row(
+                    item_row_icon(
                         cx,
                         "Default Size",
                         "Use for regular settings and list rows.",
-                        icon_media(cx, "lucide.settings"),
+                        "lucide.settings",
                         shadcn::ItemVariant::Default,
                         shadcn::ItemSize::Default,
                         false,
                         "ui-gallery-item-size-default",
                     ),
-                    item_row(
+                    item_row_icon(
                         cx,
                         "Small Size",
                         "Compact row density.",
-                        icon_media(cx, "lucide.layers"),
+                        "lucide.layers",
                         shadcn::ItemVariant::Default,
                         shadcn::ItemSize::Sm,
                         false,
@@ -208,11 +268,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let icon = {
-        let content = item_row(
+        let content = item_row_icon(
             cx,
             "Analytics",
             "Open dashboard metrics and trends.",
-            icon_media(cx, "lucide.chart-column-big"),
+            "lucide.chart-column-big",
             shadcn::ItemVariant::Default,
             shadcn::ItemSize::Default,
             true,
@@ -222,11 +282,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let avatar = {
-        let content = item_row(
+        let content = item_row_avatar(
             cx,
             "Dana Chen",
             "Design review owner",
-            avatar_media(cx, "DC"),
+            "DC",
             shadcn::ItemVariant::Default,
             shadcn::ItemSize::Default,
             true,
@@ -236,11 +296,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let image = {
-        let content = item_row(
+        let content = item_row_image(
             cx,
             "Cover Image",
             "Media-style item with image slot",
-            image_media(cx, "IMG"),
+            "IMG",
             shadcn::ItemVariant::Default,
             shadcn::ItemSize::Default,
             true,
@@ -251,33 +311,33 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
 
     let group = {
         let content = shadcn::ItemGroup::new([
-            item_row(
+            item_row_icon(
                 cx,
                 "README.md",
                 "Updated now",
-                icon_media(cx, "lucide.file-text"),
+                "lucide.file-text",
                 shadcn::ItemVariant::Default,
                 shadcn::ItemSize::Default,
                 false,
                 "ui-gallery-item-group-readme",
             ),
             shadcn::ItemSeparator::new().into_element(cx),
-            item_row(
+            item_row_icon(
                 cx,
                 "Roadmap.md",
                 "Updated yesterday",
-                icon_media(cx, "lucide.map"),
+                "lucide.map",
                 shadcn::ItemVariant::Default,
                 shadcn::ItemSize::Default,
                 false,
                 "ui-gallery-item-group-roadmap",
             ),
             shadcn::ItemSeparator::new().into_element(cx),
-            item_row(
+            item_row_icon(
                 cx,
                 "Changelog.md",
                 "Updated 3 days ago",
-                icon_media(cx, "lucide.history"),
+                "lucide.history",
                 shadcn::ItemVariant::Default,
                 shadcn::ItemSize::Default,
                 false,
@@ -308,11 +368,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                             .into_element(cx),
                     ])
                     .into_element(cx),
-                    item_row(
+                    item_row_icon(
                         cx,
                         "Draft proposal",
                         "Edited by Alex",
-                        icon_media(cx, "lucide.file-pen-line"),
+                        "lucide.file-pen-line",
                         shadcn::ItemVariant::Outline,
                         shadcn::ItemSize::Default,
                         false,
@@ -326,11 +386,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let link = {
-        let content = item_row(
+        let content = item_row_icon(
             cx,
             "Dashboard",
             "Overview of your account and activity.",
-            icon_media(cx, "lucide.house"),
+            "lucide.house",
             shadcn::ItemVariant::Outline,
             shadcn::ItemSize::Default,
             false,
@@ -340,8 +400,9 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
     };
 
     let dropdown = {
+        let dropdown_media = icon_media(cx, "lucide.folder");
         let content = shadcn::Item::new([
-            icon_media(cx, "lucide.folder"),
+            dropdown_media,
             shadcn::ItemContent::new([
                 shadcn::ItemTitle::new("Team Drive").into_element(cx),
                 shadcn::ItemDescription::new("Shared files and permissions").into_element(cx),
@@ -374,11 +435,11 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                         LayoutRefinement::default().w_full().max_w(Px(720.0)),
                     ),
                     |cx| {
-                        vec![item_row(
+                        vec![item_row_icon(
                             cx,
                             "???? ??????",
                             "???? ???? ??? ?????",
-                            icon_media(cx, "lucide.layout-dashboard"),
+                            "lucide.layout-dashboard",
                             shadcn::ItemVariant::Default,
                             shadcn::ItemSize::Default,
                             true,

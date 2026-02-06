@@ -52,19 +52,16 @@ pub(super) fn preview_data_table(
                     title: &'static str,
                     details: &'static str,
                     test_id: &'static str| {
-        section_card(
-            cx,
-            title,
-            shadcn::Alert::new([
-                shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
-                shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
-                shadcn::AlertDescription::new(details).into_element(cx),
-            ])
-            .variant(shadcn::AlertVariant::Default)
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)))
-            .into_element(cx)
-            .attach_semantics(SemanticsDecoration::default().test_id(test_id)),
-        )
+        let alert_content = shadcn::Alert::new([
+            shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.info")),
+            shadcn::AlertTitle::new("Guide-aligned placeholder").into_element(cx),
+            shadcn::AlertDescription::new(details).into_element(cx),
+        ])
+        .variant(shadcn::AlertVariant::Default)
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)))
+        .into_element(cx)
+        .attach_semantics(SemanticsDecoration::default().test_id(test_id));
+        section_card(cx, title, alert_content)
     };
 
     let live_table = {

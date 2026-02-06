@@ -231,10 +231,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
 
         let content = stack::hstack(
             cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .wrap(fret_core::Wrap::Wrap),
+            stack::HStackProps::default().gap(Space::N2).items_center(),
             |_cx| vec![left, top, bottom, right],
         );
 
