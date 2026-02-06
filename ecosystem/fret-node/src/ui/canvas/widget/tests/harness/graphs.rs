@@ -2,6 +2,7 @@ use crate::core::{
     CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity,
     PortDirection, PortId, PortKey, PortKind,
 };
+use crate::io::NodeGraphViewState;
 use fret_runtime::Model;
 use serde_json::Value;
 
@@ -167,4 +168,13 @@ pub(crate) fn read_node_pos(
         .ok()
         .flatten()
         .unwrap_or_default()
+}
+
+pub(crate) fn make_host_graph_view(
+    graph_value: Graph,
+) -> (TestUiHostImpl, Model<Graph>, Model<NodeGraphViewState>) {
+    let mut host = TestUiHostImpl::default();
+    let graph = host.models.insert(graph_value);
+    let view = host.models.insert(NodeGraphViewState::default());
+    (host, graph, view)
 }

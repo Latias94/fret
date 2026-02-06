@@ -8,12 +8,13 @@ use fret_ui::UiTree;
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::MeasuredGeometryStore;
 
 use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{
+    NullServices, TestUiHostImpl, make_host_graph_view, make_test_graph_two_nodes_with_ports,
+};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -55,10 +56,8 @@ fn bounds_at(x: f32, y: f32) -> Rect {
 
 #[test]
 fn internals_store_is_stable_across_identical_paint() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -87,10 +86,8 @@ fn internals_store_is_stable_across_identical_paint() {
 
 #[test]
 fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -154,10 +151,8 @@ fn pan_updates_internals_without_rebuilding_geometry_or_measured_output() {
 
 #[test]
 fn semantic_zoom_keeps_node_sizes_constant_in_window_space() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -203,10 +198,8 @@ fn semantic_zoom_keeps_node_sizes_constant_in_window_space() {
 
 #[test]
 fn bounds_origin_updates_internals_transform() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut canvas = NodeGraphCanvas::new(graph, view).with_internals_store(internals.clone());
@@ -245,10 +238,8 @@ fn bounds_origin_updates_internals_transform() {
 
 #[test]
 fn graph_edit_rebuilds_geometry_and_updates_internals() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());
@@ -314,10 +305,8 @@ fn graph_edit_rebuilds_geometry_and_updates_internals() {
 
 #[test]
 fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
 

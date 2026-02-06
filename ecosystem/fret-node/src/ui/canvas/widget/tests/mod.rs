@@ -97,9 +97,10 @@ mod xyflow_style_conformance;
 mod z_order_conformance;
 
 use harness::{
-    NullServices, TestUiHostImpl, command_cx, event_cx, make_test_graph_two_nodes,
-    make_test_graph_two_nodes_with_ports, make_test_graph_two_nodes_with_ports_spaced_x,
-    make_test_graph_two_nodes_with_size, read_node_pos,
+    NullServices, TestUiHostImpl, command_cx, event_cx, make_host_graph_view,
+    make_test_graph_two_nodes, make_test_graph_two_nodes_with_ports,
+    make_test_graph_two_nodes_with_ports_spaced_x, make_test_graph_two_nodes_with_size,
+    read_node_pos,
 };
 
 use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};

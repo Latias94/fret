@@ -1,8 +1,6 @@
 use fret_core::{Point, Px, Rect, Size};
 
-use crate::io::NodeGraphViewState;
-
-use super::{NodeGraphCanvas, TestUiHostImpl, make_test_graph_two_nodes_with_size};
+use super::{NodeGraphCanvas, make_host_graph_view, make_test_graph_two_nodes_with_size};
 
 #[test]
 fn render_metrics_report_culling_reduction_when_enabled() {
@@ -16,9 +14,7 @@ fn render_metrics_report_culling_reduction_when_enabled() {
     graph_value.nodes.get_mut(&b).expect("node b exists").pos.y = 0.0;
 
     let metrics_culled = {
-        let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value.clone());
-        let view = host.models.insert(NodeGraphViewState::default());
+        let (mut host, graph, view) = make_host_graph_view(graph_value.clone());
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;
@@ -31,9 +27,7 @@ fn render_metrics_report_culling_reduction_when_enabled() {
     };
 
     let metrics_full = {
-        let mut host = TestUiHostImpl::default();
-        let graph = host.models.insert(graph_value);
-        let view = host.models.insert(NodeGraphViewState::default());
+        let (mut host, graph, view) = make_host_graph_view(graph_value);
         let _ = view.update(&mut host, |s, _cx| {
             s.pan = crate::core::CanvasPoint::default();
             s.zoom = 1.0;

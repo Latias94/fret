@@ -1,21 +1,18 @@
 use std::sync::Arc;
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 use crate::ui::measured::{
     MEASURED_GEOMETRY_EPSILON_PX, MeasuredGeometryApplyOptions, MeasuredGeometryExclusiveBatch,
 };
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 
 use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{make_host_graph_view, make_test_graph_two_nodes_with_ports};
 
 #[test]
 fn measured_geometry_revision_rebuilds_canvas_derived_geometry() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let presenter =
@@ -53,10 +50,8 @@ fn measured_geometry_revision_rebuilds_canvas_derived_geometry() {
 
 #[test]
 fn measured_geometry_updates_within_epsilon_do_not_rebuild_canvas_derived_geometry() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let measured = Arc::new(MeasuredGeometryStore::new());
     let presenter =
@@ -103,10 +98,8 @@ fn measured_geometry_updates_within_epsilon_do_not_rebuild_canvas_derived_geomet
 
 #[test]
 fn pan_updates_do_not_rebuild_canvas_derived_geometry() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
 
