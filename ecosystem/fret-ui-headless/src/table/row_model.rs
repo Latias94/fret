@@ -2309,6 +2309,22 @@ impl<'a, TData> Table<'a, TData> {
         let row = self.row(row_key, true)?;
         let row_id = row.id.as_str();
 
+        let grouped_column_ids = self.state.grouping.as_slice();
+        let mut row_grouping_column_id: Option<&str> = None;
+        if !grouped_column_ids.is_empty() {
+            let grouped = self.grouped_row_model();
+            if let Some(grouped_row_index) = grouped.row_by_key(row.key)
+                && let Some(grouped_row) = grouped.row(grouped_row_index)
+                && let super::GroupedRowKind::Group {
+                    grouping_column, ..
+                } = &grouped_row.kind
+            {
+                row_grouping_column_id = Some(grouping_column.as_ref());
+            }
+        }
+
+        let row_has_sub_rows = !row.sub_rows.is_empty();
+
         let all_leaf_columns = self.ordered_columns();
         let (left, center, right) = self.pinned_visible_columns();
 
@@ -2318,6 +2334,9 @@ impl<'a, TData> Table<'a, TData> {
             left.as_slice(),
             center.as_slice(),
             right.as_slice(),
+            grouped_column_ids,
+            row_grouping_column_id,
+            row_has_sub_rows,
         ))
     }
 

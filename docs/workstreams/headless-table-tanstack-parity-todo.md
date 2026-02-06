@@ -71,17 +71,16 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## Next execution plan (functional parity first)
 
-- Step 1: Close grouped placeholder/aggregated cell inventory parity (`HTP-grp-010`).
-- Step 2: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
-- Step 3: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
-- Step 4: Expand filtering `getCanFilter`/controlled hooks parity surface.
-- Step 5: Extend API inventory coverage (`HTP-base-004` + `HTP-cap-010`) for non-option surfaces.
+- Step 1: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
+- Step 2: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
+- Step 3: Expand filtering `getCanFilter`/controlled hooks parity surface.
+- Step 4: Extend API inventory coverage (`HTP-base-004` + `HTP-cap-010`) for non-option surfaces.
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
 P0 (core behavior parity, highest user-visible risk):
 
-- HTP-grp-010: complete grouped placeholder/aggregated cell inventories for deep nesting cases.
+- Cleared for current grouping scope: `HTP-grp-010` + `HTP-grp-030` are fixture-gated.
 
 P1 (capability breadth parity):
 
@@ -364,9 +363,12 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 
 ## M5 鈥?Grouping + aggregation parity
 
-- [~] HTP-grp-010 Implement grouped row model parity (including placeholder/aggregated cell flags).
-  - Parity-gated (grouped row model structure + flat rows ordering): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+- [x] HTP-grp-010 Implement grouped row model parity (including placeholder/aggregated cell flags).
+  - Done (parity-gated, grouped row model structure + flat rows ordering): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Done (parity-gated, grouped/placeholder/aggregated cell inventories in two-level grouping):
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_cells.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_cells_parity.rs`
 - [x] HTP-grp-020 Implement grouped aggregation parity (built-in and custom aggregation fns).
   - Done (parity-gated, u64 built-ins + TanStack `auto` -> `sum`): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
     `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
@@ -667,6 +669,7 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` | `grouping` | `ColumnGrouping` (grouped model + flat row ordering) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_sorting_precedence.json` | `grouping_sorting_precedence` | `ColumnGrouping` + `RowSorting` (grouped multi-sort precedence + aggregation-any sort keys) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_sorting_precedence_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_row_model_pipeline.json` | `grouping_row_model_pipeline` | `ColumnGrouping` + `RowSorting` + `RowExpanding` (grouped row-model pipeline composition in `Table::row_model()`) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_row_model_pipeline_parity.rs` | Partial |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping_cells.json` | `grouping_cells` | `ColumnGrouping` (grouped/placeholder/aggregated cell inventory flags across nested grouped rows) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_cells_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` | `visibility_ordering` | `ColumnVisibility` + `ColumnOrdering` (state transitions + derived leaf column order) | `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json` | `faceting` | `ColumnFaceting` / `GlobalFaceting` | `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |
