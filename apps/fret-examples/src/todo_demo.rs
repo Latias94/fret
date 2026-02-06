@@ -7,13 +7,6 @@ use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_clie
 use fret_selector::ui::SelectorElementContextExt as _;
 use fret_ui::element::SemanticsDecoration;
 
-const CMD_ADD: &str = "todo.add";
-const CMD_CLEAR_DONE: &str = "todo.clear_done";
-const CMD_REFRESH_TIP: &str = "todo.refresh_tip";
-const CMD_FILTER_ALL: &str = "todo.filter.all";
-const CMD_FILTER_ACTIVE: &str = "todo.filter.active";
-const CMD_FILTER_COMPLETED: &str = "todo.filter.completed";
-
 const TEST_ID_INPUT: &str = "todo-input";
 const TEST_ID_ADD: &str = "todo-add";
 const TEST_ID_CLEAR_DONE: &str = "todo-clear-done";
@@ -47,9 +40,12 @@ struct TodoState {
 
 #[derive(Debug, Clone)]
 enum Msg {
+    Add,
+    ClearDone,
+    RefreshTip,
+    SetFilter(TodoFilter),
     Remove(u64),
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum TodoFilter {
     All,
@@ -285,10 +281,16 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .into_element(cx);
 
     let add_enabled = !draft_value.trim().is_empty();
+    let add_cmd = st.router.cmd(Msg::Add);
+    let clear_done_cmd = st.router.cmd(Msg::ClearDone);
+    let refresh_tip_cmd = st.router.cmd(Msg::RefreshTip);
+    let filter_all_cmd = st.router.cmd(Msg::SetFilter(TodoFilter::All));
+    let filter_active_cmd = st.router.cmd(Msg::SetFilter(TodoFilter::Active));
+    let filter_completed_cmd = st.router.cmd(Msg::SetFilter(TodoFilter::Completed));
     let add_button = shadcn::Button::new("")
         .size(shadcn::ButtonSize::Icon)
         .disabled(!add_enabled)
-        .on_click(CMD_ADD)
+        .on_click(add_cmd.clone())
         .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx)
         .attach_semantics(
@@ -299,7 +301,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
 
     let input = shadcn::Input::new(st.draft.clone())
         .placeholder("Add a task")
-        .submit_command(CommandId::new(CMD_ADD))
+        .submit_command(add_cmd.clone())
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()
@@ -316,21 +318,21 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let filter_all = filter_chip(
         cx,
         "All",
-        CMD_FILTER_ALL,
+        filter_all_cmd,
         filter_value == TodoFilter::All,
         TEST_ID_FILTER_ALL,
     );
     let filter_active = filter_chip(
         cx,
         "Active",
-        CMD_FILTER_ACTIVE,
+        filter_active_cmd,
         filter_value == TodoFilter::Active,
         TEST_ID_FILTER_ACTIVE,
     );
     let filter_completed = filter_chip(
         cx,
         "Completed",
-        CMD_FILTER_COMPLETED,
+        filter_completed_cmd,
         filter_value == TodoFilter::Completed,
         TEST_ID_FILTER_COMPLETED,
     );
@@ -365,7 +367,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let clear_done = shadcn::Button::new("Clear completed")
         .variant(shadcn::ButtonVariant::Secondary)
         .disabled(derived.completed == 0)
-        .on_click(CMD_CLEAR_DONE)
+        .on_click(clear_done_cmd)
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()
@@ -375,7 +377,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
 
     let refresh_tip = shadcn::Button::new("Refresh tip")
         .variant(shadcn::ButtonVariant::Ghost)
-        .on_click(CMD_REFRESH_TIP)
+        .on_click(refresh_tip_cmd)
         .into_element(cx)
         .attach_semantics(
             SemanticsDecoration::default()
@@ -442,7 +444,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
 fn filter_chip(
     cx: &mut ElementContext<'_, App>,
     label: &'static str,
-    cmd: &'static str,
+    cmd: CommandId,
     selected: bool,
     test_id: &'static str,
 ) -> AnyElement {
@@ -529,8 +531,12 @@ fn on_command(
     state: &mut TodoState,
     cmd: &CommandId,
 ) {
-    match cmd.as_str() {
-        CMD_ADD => {
+    let Some(msg) = state.router.try_take(cmd) else {
+        return;
+    };
+
+    match msg {
+        Msg::Add => {
             let draft = app
                 .models()
                 .read(&state.draft, Clone::clone)
@@ -554,7 +560,7 @@ fn on_command(
             let _ = app.models_mut().update(&state.draft, String::clear);
             app.request_redraw(window);
         }
-        CMD_CLEAR_DONE => {
+        Msg::ClearDone => {
             let snapshot = app
                 .models()
                 .read(&state.todos, Clone::clone)
@@ -567,42 +573,23 @@ fn on_command(
             let _ = app.models_mut().update(&state.todos, |todos| *todos = keep);
             app.request_redraw(window);
         }
-        CMD_REFRESH_TIP => {
+        Msg::RefreshTip => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, tip_key());
             });
             app.request_redraw(window);
         }
-        CMD_FILTER_ALL => {
+        Msg::SetFilter(filter) => {
             let _ = app
                 .models_mut()
-                .update(&state.filter, |filter| *filter = TodoFilter::All);
+                .update(&state.filter, |current| *current = filter);
             app.request_redraw(window);
         }
-        CMD_FILTER_ACTIVE => {
-            let _ = app
-                .models_mut()
-                .update(&state.filter, |filter| *filter = TodoFilter::Active);
+        Msg::Remove(id) => {
+            let _ = app.models_mut().update(&state.todos, |todos| {
+                todos.retain(|todo| todo.id != id);
+            });
             app.request_redraw(window);
-        }
-        CMD_FILTER_COMPLETED => {
-            let _ = app
-                .models_mut()
-                .update(&state.filter, |filter| *filter = TodoFilter::Completed);
-            app.request_redraw(window);
-        }
-        _ => {
-            let Some(msg) = state.router.try_take(cmd) else {
-                return;
-            };
-            match msg {
-                Msg::Remove(id) => {
-                    let _ = app.models_mut().update(&state.todos, |todos| {
-                        todos.retain(|todo| todo.id != id);
-                    });
-                    app.request_redraw(window);
-                }
-            }
         }
     }
 }

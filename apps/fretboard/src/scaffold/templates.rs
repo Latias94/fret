@@ -135,14 +135,14 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
         r#"    let add_btn = shadcn::Button::new("")
         .size(shadcn::ButtonSize::Icon)
         .disabled(!add_enabled)
-        .on_click(CMD_ADD)
+        .on_click(add_cmd.clone())
         .children([icon::icon(cx, IconId::new("lucide.plus"))])
         .into_element(cx);
 "#
     } else {
         r#"    let add_btn = shadcn::Button::new("Add")
         .disabled(!add_enabled)
-        .on_click(CMD_ADD)
+        .on_click(add_cmd.clone())
         .into_element(cx);
 "#
     };
@@ -171,10 +171,6 @@ use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
 use fret_selector::ui::SelectorElementContextExt as _;
 
-const CMD_ADD: &str = "todo.add";
-const CMD_CLEAR_DONE: &str = "todo.clear_done";
-const CMD_REFRESH_TIP: &str = "todo.refresh_tip";
-
 #[derive(Clone)]
 struct TodoItem {
     id: u64,
@@ -191,6 +187,9 @@ struct TodoState {
 
 #[derive(Debug, Clone)]
 enum Msg {
+    Add,
+    ClearDone,
+    RefreshTip,
     Remove(u64),
 }
 
@@ -350,12 +349,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
     let clear_done_btn = shadcn::Button::new("Clear done")
         .variant(shadcn::ButtonVariant::Secondary)
         .disabled(done_count == 0)
-        .on_click(CMD_CLEAR_DONE)
+        .on_click(clear_done_cmd)
         .into_element(cx);
 
     let refresh_tip_btn = shadcn::Button::new("Refresh tip")
         .variant(shadcn::ButtonVariant::Ghost)
-        .on_click(CMD_REFRESH_TIP)
+        .on_click(refresh_tip_cmd)
         .into_element(cx);
 
     let header_actions = ui::h_flex(cx, |_cx| [progress, clear_done_btn, refresh_tip_btn])
@@ -368,11 +367,14 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .into_element(cx);
 
     let add_enabled = !draft_value.trim().is_empty();
+    let add_cmd = st.router.cmd(Msg::Add);
+    let clear_done_cmd = st.router.cmd(Msg::ClearDone);
+    let refresh_tip_cmd = st.router.cmd(Msg::RefreshTip);
 __ADD_BTN_DEF__
 
     let input = shadcn::Input::new(st.draft.clone())
         .placeholder("Add a task…")
-        .submit_command(CommandId::new(CMD_ADD))
+        .submit_command(add_cmd.clone())
         .into_element(cx);
 
     let input_row = ui::h_flex(cx, |_cx| [input, add_btn])
@@ -491,8 +493,12 @@ fn on_command(
     state: &mut TodoState,
     cmd: &CommandId,
 ) {
-    match cmd.as_str() {
-        CMD_ADD => {
+    let Some(msg) = state.router.try_take(cmd) else {
+        return;
+    };
+
+    match msg {
+        Msg::Add => {
             let draft = app
                 .models()
                 .read(&state.draft, |s| s.clone())
@@ -520,7 +526,7 @@ fn on_command(
             });
             app.request_redraw(window);
         }
-        CMD_CLEAR_DONE => {
+        Msg::ClearDone => {
             let snapshot = app
                 .models()
                 .read(&state.todos, |v| v.clone())
@@ -540,25 +546,17 @@ fn on_command(
             });
             app.request_redraw(window);
         }
-        CMD_REFRESH_TIP => {
+        Msg::RefreshTip => {
             let _ = with_query_client(app, |client, app| {
                 client.invalidate(app, tip_key());
             });
             app.request_redraw(window);
         }
-        _ => {
-            let Some(msg) = state.router.try_take(cmd) else {
-                return;
-            };
-
-            match msg {
-                Msg::Remove(id) => {
-                    let _ = app.models_mut().update(&state.todos, |todos| {
-                        todos.retain(|t| t.id != id);
-                    });
-                    app.request_redraw(window);
-                }
-            }
+        Msg::Remove(id) => {
+            let _ = app.models_mut().update(&state.todos, |todos| {
+                todos.retain(|t| t.id != id);
+            });
+            app.request_redraw(window);
         }
     }
 }
