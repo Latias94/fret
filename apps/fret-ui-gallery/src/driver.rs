@@ -1,7 +1,7 @@
 use fret_app::{
-    App, CommandId, CommandMeta, Effect, LayeredConfigPaths, Menu, MenuBar,
-    MenuBarIntegrationModeV1, MenuItem, MenuRole, Model, Platform, SettingsFileV1, WindowRequest,
-    load_layered_settings,
+    ActivationPolicy, App, CommandId, CommandMeta, CreateWindowKind, CreateWindowRequest, Effect,
+    LayeredConfigPaths, Menu, MenuBar, MenuBarIntegrationModeV1, MenuItem, MenuRole, Model,
+    Platform, SettingsFileV1, WindowRequest, WindowRole, WindowStyleRequest, load_layered_settings,
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
@@ -68,6 +68,11 @@ struct UiGalleryHarnessDiagnosticsStore {
 struct UiGalleryRecentItemsService {
     next_id: u64,
     items: Vec<Arc<str>>,
+}
+
+#[derive(Default)]
+struct UiGalleryDebugWindowService {
+    next_logical_window_id: u64,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -449,6 +454,11 @@ impl UiGalleryDriver {
                         },
                         MenuItem::Command {
                             command: CommandId::new(CMD_GALLERY_DEBUG_RECENT_CLEAR),
+                            when: None,
+                            toggle: None,
+                        },
+                        MenuItem::Command {
+                            command: CommandId::new(CMD_GALLERY_DEBUG_WINDOW_OPEN),
                             when: None,
                             toggle: None,
                         },
@@ -1117,6 +1127,40 @@ impl UiGalleryDriver {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("debug.recent.clear");
                 });
+            }
+            CMD_GALLERY_DEBUG_WINDOW_OPEN => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let logical_window_id =
+                        app.with_global_mut(UiGalleryDebugWindowService::default, |svc, _app| {
+                            svc.next_logical_window_id =
+                                svc.next_logical_window_id.saturating_add(1);
+                            format!("ui-gallery-debug-window-{}", svc.next_logical_window_id)
+                        });
+
+                    app.push_effect(Effect::Window(WindowRequest::Create(CreateWindowRequest {
+                        kind: CreateWindowKind::DockRestore {
+                            logical_window_id: logical_window_id.clone(),
+                        },
+                        anchor: None,
+                        role: WindowRole::Auxiliary,
+                        style: WindowStyleRequest {
+                            activation: Some(ActivationPolicy::NonActivating),
+                            ..Default::default()
+                        },
+                    })));
+
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from(format!("debug.window.open({logical_window_id})"));
+                    });
+                }
+
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("debug.window.open.unsupported");
+                    });
+                }
             }
             CMD_CODE_EDITOR_LOAD_FONTS => {
                 app.push_effect(Effect::FileDialogOpen {
@@ -2699,6 +2743,12 @@ pub fn build_app() -> App {
             .with_category("Debug")
             .with_keywords(["debug", "menu", "menubar", "recent", "clear"]),
     );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_DEBUG_WINDOW_OPEN),
+        CommandMeta::new("Debug: Window (open)")
+            .with_category("Debug")
+            .with_keywords(["debug", "menu", "menubar", "window", "open"]),
+    );
 
     for group in PAGE_GROUPS {
         for page in group.items {
@@ -3785,9 +3835,15 @@ impl WinitAppDriver for UiGalleryDriver {
     fn window_create_spec(
         &mut self,
         _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
+        request: &CreateWindowRequest,
     ) -> Option<WindowCreateSpec> {
-        None
+        match &request.kind {
+            CreateWindowKind::DockRestore { logical_window_id } => Some(WindowCreateSpec::new(
+                format!("fret-ui-gallery - {logical_window_id}"),
+                winit::dpi::LogicalSize::new(980.0, 720.0),
+            )),
+            CreateWindowKind::DockFloating { .. } => None,
+        }
     }
 
     fn window_created(

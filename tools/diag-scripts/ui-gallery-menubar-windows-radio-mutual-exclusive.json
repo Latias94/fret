@@ -1,0 +1,111 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-gallery" },
+        { "kind": "test_id", "id": "menubar-item-menu-gallery-submenu-debug" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-debug-window-open" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "menu_select",
+      "menu": { "kind": "test_id", "id": "menubar-trigger-window" },
+      "item": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-2" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-window" },
+        { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-1" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "menu_select",
+      "menu": { "kind": "test_id", "id": "menubar-trigger-window" },
+      "item": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-1" },
+        "checked": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-2" },
+        "checked": false
+      }
+    },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-window" },
+        { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-2" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "menu_select",
+      "menu": { "kind": "test_id", "id": "menubar-trigger-window" },
+      "item": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-1" },
+        "checked": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-2" },
+        "checked": true
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-windows-radio-mutual-exclusive" }
+  ]
+}
