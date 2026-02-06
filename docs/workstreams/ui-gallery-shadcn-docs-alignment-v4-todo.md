@@ -65,7 +65,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] calendar — examples mirrored (Basic/Range/Month+Year selector/Presets/Date+Time/Booked/Custom Cell Size/Week Numbers/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_calendar`, `ecosystem/fret-ui-shadcn/src/calendar.rs`)
 - [x] card — examples mirrored + size/action slots (`apps/fret-ui-gallery/src/ui.rs::preview_card`, `ecosystem/fret-ui-shadcn/src/card.rs`)
 - [~] carousel - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/carousel.rs`)
-- [ ] chart
+- [~] chart - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/chart.rs`)
 - [ ] checkbox
 - [ ] collapsible
 - [ ] combobox

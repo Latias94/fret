@@ -8787,36 +8787,7 @@ fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-    let chart_1 = theme.color_required("chart-1");
-    let chart_2 = theme.color_required("chart-2");
-
-    let tooltip = shadcn::ChartTooltipContent::new()
-        .label("January")
-        .items([
-            shadcn::ChartTooltipItem::new("Desktop", "186").color(ColorRef::Color(chart_1)),
-            shadcn::ChartTooltipItem::new("Mobile", "80").color(ColorRef::Color(chart_2)),
-        ])
-        .into_element(cx);
-
-    let legend = shadcn::ChartLegendContent::new()
-        .items([
-            shadcn::ChartLegendItem::new("Desktop").color(ColorRef::Color(chart_1)),
-            shadcn::ChartLegendItem::new("Mobile").color(ColorRef::Color(chart_2)),
-        ])
-        .wrap(true)
-        .into_element(cx);
-
-    vec![
-        cx.text("Chart in shadcn/ui is Recharts composition; here we demo tooltip/legend skins."),
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_px(Px(360.0)))
-                .gap(Space::N3),
-            |_cx| vec![tooltip, legend],
-        ),
-    ]
+    pages::preview_chart(cx)
 }
 
 fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
