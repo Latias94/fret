@@ -173,11 +173,57 @@ struct InWindowMenu {
 pub struct InWindowMenubarFocusHandle {
     pub group_active: fret_runtime::Model<Option<menubar_trigger_row::MenubarActiveTrigger>>,
     pub trigger_registry: fret_runtime::Model<Vec<menubar_trigger_row::MenubarTriggerRowEntry>>,
+    pub last_focus_before_menubar: fret_runtime::Model<Option<GlobalElementId>>,
+    pub focus_is_trigger: fret_runtime::Model<bool>,
 }
 
 #[derive(Default)]
 struct InWindowMenubarMenuState {
     open: Option<fret_runtime::Model<bool>>,
+}
+
+#[derive(Default)]
+struct InWindowMenubarBridgeState {
+    last_focus_before_menubar: Option<fret_runtime::Model<Option<GlobalElementId>>>,
+    focus_is_trigger: Option<fret_runtime::Model<bool>>,
+}
+
+#[track_caller]
+fn ensure_last_focus_before_menubar_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    group: GlobalElementId,
+) -> fret_runtime::Model<Option<GlobalElementId>> {
+    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.last_focus_before_menubar.clone()
+    });
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx.app.models_mut().insert(None);
+    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.last_focus_before_menubar = Some(model.clone());
+    });
+    model
+}
+
+#[track_caller]
+fn ensure_menubar_focus_is_trigger_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    group: GlobalElementId,
+) -> fret_runtime::Model<bool> {
+    let existing = cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.focus_is_trigger.clone()
+    });
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx.app.models_mut().insert(false);
+    cx.with_state_for(group, InWindowMenubarBridgeState::default, |st| {
+        st.focus_is_trigger = Some(model.clone());
+    });
+    model
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -454,6 +500,8 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
 
     let group_active = menubar_trigger_row::ensure_group_active_model(cx, group);
     let trigger_registry = menubar_trigger_row::ensure_group_registry_model(cx, group);
+    let last_focus_before_menubar = ensure_last_focus_before_menubar_model(cx, group);
+    let focus_is_trigger = ensure_menubar_focus_is_trigger_model(cx, group);
 
     let fallback_ctx = menu_fallback_input_context(cx, opts.platform);
     let gating =
@@ -501,6 +549,8 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
 
     let group_active_for_render = group_active.clone();
     let trigger_registry_for_render = trigger_registry.clone();
+    let last_focus_for_render = last_focus_before_menubar.clone();
+    let focus_is_trigger_for_render = focus_is_trigger.clone();
 
     let element = cx.semantics(
         SemanticsProps {
@@ -512,6 +562,61 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
         move |cx| {
             let group_active = group_active_for_render.clone();
             let trigger_registry = trigger_registry_for_render.clone();
+            let last_focus_before_menubar = last_focus_for_render.clone();
+            let focus_is_trigger = focus_is_trigger_for_render.clone();
+
+            let focused = cx.focused_element();
+            let focused_is_trigger = focused.is_some_and(|id| {
+                cx.app
+                    .models()
+                    .read(&trigger_registry, |v| v.iter().any(|e| e.trigger == id))
+                    .ok()
+                    .unwrap_or(false)
+            });
+            let cur_focused_is_trigger = cx
+                .app
+                .models()
+                .read(&focus_is_trigger, |v| *v)
+                .ok()
+                .unwrap_or(false);
+            if cur_focused_is_trigger != focused_is_trigger {
+                let _ = cx.app.models_mut().update(&focus_is_trigger, |v| {
+                    *v = focused_is_trigger;
+                });
+            }
+
+            let active = cx
+                .app
+                .models()
+                .read(&group_active, |v| v.clone())
+                .ok()
+                .flatten();
+            if let Some(active) = active.as_ref() {
+                let is_open = cx
+                    .app
+                    .models()
+                    .read(&active.open, |v| *v)
+                    .ok()
+                    .unwrap_or(false);
+                if !is_open && !focused_is_trigger {
+                    let _ = cx.app.models_mut().update(&group_active, |v| *v = None);
+                }
+            } else if let Some(focused) = focused {
+                if !focused_is_trigger {
+                    let current = cx
+                        .app
+                        .models()
+                        .read(&last_focus_before_menubar, |v| *v)
+                        .ok()
+                        .flatten();
+                    if current != Some(focused) {
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&last_focus_before_menubar, |v| *v = Some(focused));
+                    }
+                }
+            }
 
             vec![cx.container(
                 ContainerProps {
@@ -574,6 +679,8 @@ pub fn menubar_from_runtime_with_focus_handle<H: UiHost>(
         InWindowMenubarFocusHandle {
             group_active,
             trigger_registry,
+            last_focus_before_menubar,
+            focus_is_trigger,
         },
     )
 }
@@ -629,8 +736,8 @@ fn render_menu_from_runtime<H: UiHost>(
         cx.pressable_with_id_props(|cx, st, trigger_id| {
             let is_open = cx.watch_model(&open).copied().unwrap_or(false);
             let group_has_active = cx.watch_model(&group_active).cloned().is_some();
-            let show_mnemonics = matches!(opts.platform, Platform::Windows | Platform::Linux)
-                && (group_has_active || st.focused);
+            let show_mnemonics =
+                matches!(opts.platform, Platform::Windows | Platform::Linux) && group_has_active;
 
             menubar_trigger_row::register_trigger_in_registry(
                 cx,

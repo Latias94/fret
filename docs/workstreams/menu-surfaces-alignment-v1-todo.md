@@ -92,6 +92,7 @@ Exit criteria:
     - Alt+Key routing for in-window menubars (policy)
   - Evidence: `crates/fret-runtime/src/menu.rs` (`Menu.mnemonic`, `MenuFileV2.mnemonic`, patch ops v2)
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`open_on_alt_mnemonic`)
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`open_on_mnemonic_when_active`)
   - Evidence: `ecosystem/fret-kit/src/workspace_shell.rs` (installs Alt+mnemonic key handler)
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (installs Alt+mnemonic key handler; adds Gallery mnemonic)
   - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` (maps mnemonics to Win32 `&` labels for OS menubar)

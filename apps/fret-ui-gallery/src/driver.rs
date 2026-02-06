@@ -1792,8 +1792,11 @@ impl UiGalleryDriver {
                     if let Some(handle) = menubar_handle.borrow().clone() {
                         let group_active = handle.group_active.clone();
                         let trigger_registry = handle.trigger_registry.clone();
+                        let last_focus_before_menubar = handle.last_focus_before_menubar.clone();
+                        let focus_is_trigger = handle.focus_is_trigger.clone();
                         let group_active_for_command = group_active.clone();
                         let trigger_registry_for_command = trigger_registry.clone();
+                        let last_focus_for_command = last_focus_before_menubar.clone();
                         cx.command_add_on_command_for(
                             panel.id,
                             Arc::new(move |host, acx, command| {
@@ -1810,7 +1813,9 @@ impl UiGalleryDriver {
                                     let _ = host
                                         .models_mut()
                                         .update(&group_active_for_command, |v| *v = None);
-                                    host.request_focus(active.trigger);
+                                    let restore =
+                                        host.models_mut().get_cloned(&last_focus_for_command).flatten();
+                                    host.request_focus(restore.unwrap_or(active.trigger));
                                     host.request_redraw(acx.window);
                                     return true;
                                 }
@@ -1847,6 +1852,14 @@ impl UiGalleryDriver {
                             fret_ui_kit::primitives::menubar::trigger_row::open_on_alt_mnemonic(
                                 group_active.clone(),
                                 trigger_registry.clone(),
+                            ),
+                        );
+                        cx.key_add_on_key_down_for(
+                            panel.id,
+                            fret_ui_kit::primitives::menubar::trigger_row::open_on_mnemonic_when_active(
+                                group_active.clone(),
+                                trigger_registry.clone(),
+                                focus_is_trigger.clone(),
                             ),
                         );
                     }

@@ -133,6 +133,95 @@ pub fn open_on_alt_mnemonic(
     })
 }
 
+/// Build a KeyDown handler that opens a top-level menu when the menubar is already active.
+///
+/// This matches common Windows/Linux outcomes where:
+/// - Alt-up (or F10) activates the menubar and shows mnemonics.
+/// - Pressing the mnemonic letter without Alt opens the corresponding top-level menu.
+///
+/// Policy:
+/// - Only handles plain `<letter>` (no modifiers).
+/// - Only when the menubar is active and no top-level menu is currently open.
+/// - Requires the current focus to be on the trigger row (to avoid stealing typing from editors).
+pub fn open_on_mnemonic_when_active(
+    group_active: Model<Option<MenubarActiveTrigger>>,
+    registry: Model<Vec<MenubarTriggerRowEntry>>,
+    focus_is_trigger: Model<bool>,
+) -> OnKeyDown {
+    Arc::new(move |host, acx, down| {
+        if down.repeat {
+            return false;
+        }
+
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return false;
+        }
+
+        if down.modifiers.alt
+            || down.modifiers.ctrl
+            || down.modifiers.meta
+            || down.modifiers.shift
+            || down.modifiers.alt_gr
+        {
+            return false;
+        }
+
+        let is_trigger_focused = host
+            .models_mut()
+            .read(&focus_is_trigger, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        if !is_trigger_focused {
+            return false;
+        }
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        let Some(active) = active else {
+            return false;
+        };
+
+        let is_open = host
+            .models_mut()
+            .read(&active.open, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        if is_open {
+            return false;
+        }
+
+        let Some(letter) = keycode_to_ascii_lowercase(down.key) else {
+            return false;
+        };
+
+        let entries = host.models_mut().get_cloned(&registry).unwrap_or_default();
+        let Some(target) = entries
+            .iter()
+            .find(|e| e.enabled && e.mnemonic.is_some_and(|m| m.to_ascii_lowercase() == letter))
+            .cloned()
+        else {
+            return false;
+        };
+
+        if target.trigger == active.trigger {
+            let _ = host.models_mut().update(&target.open, |v| *v = true);
+            host.request_redraw(acx.window);
+            return true;
+        }
+
+        let _ = host.models_mut().update(&target.open, |v| *v = true);
+        let open_for_state = target.open.clone();
+        let _ = host.models_mut().update(&group_active, |v| {
+            *v = Some(MenubarActiveTrigger {
+                trigger: target.trigger,
+                open: open_for_state,
+            });
+        });
+        host.request_focus(target.trigger);
+        host.request_redraw(acx.window);
+        true
+    })
+}
+
 fn cancel_hover_switch_timer(host: &mut dyn UiActionHost, timer: &Model<Option<TimerToken>>) {
     let pending = host.models_mut().read(timer, |v| *v).ok().flatten();
     let Some(token) = pending else {
@@ -880,6 +969,106 @@ mod tests {
 
         let active = host.models_mut().get_cloned(&group_active).flatten();
         assert!(active.is_some_and(|a| a.trigger == trigger_file));
+    }
+
+    #[test]
+    fn mnemonic_without_alt_opens_menu_when_menubar_active_and_closed() {
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return;
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host { app: &mut app };
+
+        let trigger_file = GlobalElementId(1);
+        let open_file = host.models_mut().insert(false);
+
+        let focus_is_trigger = host.models_mut().insert(true);
+        let group_active: Model<Option<MenubarActiveTrigger>> =
+            host.models_mut().insert(Some(MenubarActiveTrigger {
+                trigger: trigger_file,
+                open: open_file.clone(),
+            }));
+        let registry: Model<Vec<MenubarTriggerRowEntry>> =
+            host.models_mut().insert(vec![MenubarTriggerRowEntry {
+                trigger: trigger_file,
+                open: open_file.clone(),
+                enabled: true,
+                mnemonic: Some('f'),
+            }]);
+
+        let on_key = open_on_mnemonic_when_active(group_active.clone(), registry, focus_is_trigger);
+        let handled = on_key(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger_file,
+            },
+            KeyDownCx {
+                key: KeyCode::KeyF,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(handled);
+
+        let is_open = host
+            .models_mut()
+            .read(&open_file, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        assert!(is_open);
+    }
+
+    #[test]
+    fn mnemonic_without_alt_does_not_steal_typing_when_trigger_row_not_focused() {
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return;
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host { app: &mut app };
+
+        let trigger_file = GlobalElementId(1);
+        let open_file = host.models_mut().insert(false);
+
+        let focus_is_trigger = host.models_mut().insert(false);
+        let group_active: Model<Option<MenubarActiveTrigger>> =
+            host.models_mut().insert(Some(MenubarActiveTrigger {
+                trigger: trigger_file,
+                open: open_file.clone(),
+            }));
+        let registry: Model<Vec<MenubarTriggerRowEntry>> =
+            host.models_mut().insert(vec![MenubarTriggerRowEntry {
+                trigger: trigger_file,
+                open: open_file.clone(),
+                enabled: true,
+                mnemonic: Some('f'),
+            }]);
+
+        let on_key = open_on_mnemonic_when_active(group_active.clone(), registry, focus_is_trigger);
+        let handled = on_key(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger_file,
+            },
+            KeyDownCx {
+                key: KeyCode::KeyF,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(!handled);
+
+        let is_open = host
+            .models_mut()
+            .read(&open_file, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        assert!(!is_open);
     }
 
     #[test]

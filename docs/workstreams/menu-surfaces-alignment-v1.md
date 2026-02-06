@@ -211,9 +211,12 @@ incremental tweaks.
 - **Mnemonics**
   - Implemented an explicit mnemonic strategy for top-level in-window menubars (Windows/Linux):
     - Data model: `Menu.mnemonic: Option<char>` (and `menubar.json` v2 support)
-    - Keyboard: `Alt+Key` opens/switches the corresponding top-level menu
+    - Keyboard:
+      - `Alt+Key` opens/switches the corresponding top-level menu
+      - when the menubar is active (Alt-up / F10), pressing the mnemonic letter **without Alt**
+        opens the corresponding top-level menu (Windows-style outcome)
     - Presentation: underline the mnemonic character for menubar triggers while the menubar is
-      active/focused (ecosystem-owned rendering)
+      active (ecosystem-owned rendering)
   - Important constraint: no “first letter” heuristics — mnemonics must come from a
     source-of-truth to avoid localization/collision regressions.
 
