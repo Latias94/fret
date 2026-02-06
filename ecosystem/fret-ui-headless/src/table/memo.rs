@@ -1,7 +1,15 @@
-#[derive(Default)]
 pub struct Memo<TDeps, TValue> {
     deps: Option<TDeps>,
     value: Option<TValue>,
+}
+
+impl<TDeps, TValue> Default for Memo<TDeps, TValue> {
+    fn default() -> Self {
+        Self {
+            deps: None,
+            value: None,
+        }
+    }
 }
 
 impl<TDeps: PartialEq, TValue> Memo<TDeps, TValue> {

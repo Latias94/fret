@@ -1,7 +1,7 @@
 # imui Ecosystem Facade (egui/imgui-like ergonomics) v1
 
 Status: Draft (workstream note; not an ADR)
-Last updated: 2026-02-05
+Last updated: 2026-02-06
 
 This document proposes an ecosystem-level “batteries included” facade built on top of Fret’s
 immediate-mode authoring surface (`imui`) that targets **egui/Dear ImGui-style ergonomics**
@@ -11,7 +11,7 @@ The central decision: keep `ecosystem/fret-imui` **policy-light and minimal**, a
 egui/imgui” convenience (richer `Response` signals, floating windows/areas, menus, adapters for
 common controls) into **ecosystem facade crates**.
 
-Status snapshot (2026-02-05):
+Status snapshot (2026-02-06):
 
 - The minimal shared `Response` contract lives in `ecosystem/fret-authoring`.
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
@@ -20,10 +20,15 @@ Status snapshot (2026-02-05):
 - A minimal menu-like popup primitive exists (`open_popup_at` + `begin_popup_menu` / `begin_popup_context_menu` + `menu_item`), built on `OverlayController`.
   - Menu popups now use Radix-aligned initial focus policy (pointer-open focuses the menu container; keyboard-open focuses the first focusable item when available).
   - `Escape` closes menu popups via `DismissableLayer`, and focus restore routes back to the trigger when appropriate.
+  - Menu popups now support minimal roving keyboard navigation (ArrowUp/ArrowDown + Home/End).
+  - Menu items support checkbox/radio semantics (`menu_item_checkbox_ex`, `menu_item_radio_ex`).
 - A minimal modal popup primitive exists (`open_popup` + `begin_popup_modal`), built on `OverlayRequest::modal`.
   - Default policy: `Escape` closes; outside presses are ignored (unless explicitly enabled via options).
+- A minimal in-window floating area primitive exists (`floating_area` + `floating_area_drag_surface_ex`):
+  - drag move + element-local position state,
+  - opt-in `floating_layer(...)` for bring-to-front z-order management.
 - A minimal in-window floating window primitive exists (`floating_window` / `floating_window_open`):
-  - draggable title bar + element-local position state,
+  - draggable title bar + element-local position state (built on the same area state),
   - optional ImGui-style `open` model + close button,
   - `Esc`-to-close when the title bar is focused,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.

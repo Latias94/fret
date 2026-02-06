@@ -88,12 +88,21 @@ fn radio_indicator(theme: &Theme) -> Color {
 
 pub use fret_ui_kit::primitives::radio_group::RadioGroupOrientation;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RadioGroupItemVariant {
+    #[default]
+    Default,
+    ChoiceCard,
+}
+
 #[derive(Debug, Clone)]
 pub struct RadioGroupItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
     pub children: Option<Vec<AnyElement>>,
     pub disabled: bool,
+    pub aria_invalid: bool,
+    pub variant: RadioGroupItemVariant,
 }
 
 impl RadioGroupItem {
@@ -103,6 +112,8 @@ impl RadioGroupItem {
             label: label.into(),
             children: None,
             disabled: false,
+            aria_invalid: false,
+            variant: RadioGroupItemVariant::default(),
         }
     }
 
@@ -119,6 +130,17 @@ impl RadioGroupItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
+    pub fn variant(mut self, variant: RadioGroupItemVariant) -> Self {
+        self.variant = variant;
         self
     }
 }
@@ -292,13 +314,15 @@ impl RadioGroup {
                 .when(WidgetStates::HOVERED, ColorRef::Color(alpha_mul(ring, 0.8)))
                 .when(WidgetStates::ACTIVE, ColorRef::Color(alpha_mul(ring, 0.8)))
                 .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring))
-                .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(border, 0.5)));
-
-            let default_label_color =
-                WidgetStateProperty::new(ColorRef::Color(fg)).when(
+                .when(
                     WidgetStates::DISABLED,
-                    ColorRef::Color(alpha_mul(alpha_mul(fg, 0.5), 0.8)),
+                    ColorRef::Color(alpha_mul(border, 0.5)),
                 );
+
+            let default_label_color = WidgetStateProperty::new(ColorRef::Color(fg)).when(
+                WidgetStates::DISABLED,
+                ColorRef::Color(alpha_mul(alpha_mul(fg, 0.5), 0.8)),
+            );
 
             let default_indicator_color = WidgetStateProperty::new(ColorRef::Color(dot))
                 .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(dot, 0.8)));
@@ -307,11 +331,9 @@ impl RadioGroup {
             let group_label = a11y_label.clone();
             let items = items.clone();
             let style_override = style.clone();
-            let model = radio_group_prim::radio_group_use_model(
-                cx,
-                model.clone(),
-                || default_value.clone(),
-            )
+            let model = radio_group_prim::radio_group_use_model(cx, model.clone(), || {
+                default_value.clone()
+            })
             .model();
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
@@ -325,7 +347,9 @@ impl RadioGroup {
 
             let values_arc: Arc<[Arc<str>]> = Arc::from(values.into_boxed_slice());
             let disabled_arc: Arc<[bool]> = Arc::from(disabled.clone().into_boxed_slice());
-            let set_size = u32::try_from(items.len()).ok().and_then(|n| (n > 0).then_some(n));
+            let set_size = u32::try_from(items.len())
+                .ok()
+                .and_then(|n| (n > 0).then_some(n));
 
             let mut radix_root = radio_group_prim::RadioGroupRoot::new(model.clone())
                 .disabled(group_disabled)
@@ -365,9 +389,22 @@ impl RadioGroup {
                         let item_disabled = disabled.get(idx).copied().unwrap_or(true);
                         let item_enabled = !item_disabled;
                         let tab_stop = active.is_some_and(|a| a == idx);
+                        let aria_invalid = item.aria_invalid;
+                        let item_variant = item.variant;
 
                         let radius = Px((icon.0 * 0.5).max(0.0));
-                        let ring_style = decl_style::focus_ring(&theme, radius);
+                        let mut ring_style = decl_style::focus_ring(&theme, radius);
+                        if aria_invalid {
+                            let ring_key = if theme.name.contains("/dark") {
+                                "destructive/40"
+                            } else {
+                                "destructive/20"
+                            };
+                            ring_style.color = theme
+                                .color_by_key(ring_key)
+                                .or_else(|| theme.color_by_key("destructive/20"))
+                                .unwrap_or_else(|| theme.color_required("destructive"));
+                        }
                         let pressable_layout = decl_style::layout_style(
                             &theme,
                             fret_ui_kit::LayoutRefinement::default().w_full(),
@@ -397,14 +434,18 @@ impl RadioGroup {
                                         enabled: item_enabled,
                                         focusable: tab_stop,
                                         focus_ring: Some(ring_style),
-                                        focus_ring_bounds: Some(Rect::new(
-                                            Point::new(Px(0.0), Px(0.0)),
-                                            Size::new(icon, icon),
-                                        )),
+                                        focus_ring_bounds: match item_variant {
+                                            RadioGroupItemVariant::Default => Some(Rect::new(
+                                                Point::new(Px(0.0), Px(0.0)),
+                                                Size::new(icon, icon),
+                                            )),
+                                            RadioGroupItemVariant::ChoiceCard => None,
+                                        },
                                         ..Default::default()
                                     },
                                     move |cx, st, checked| {
                                         let theme = Theme::global(&*cx.app).clone();
+                                        let theme_for_icon = theme.clone();
 
                                         let mut states =
                                             WidgetStates::from_pressable(cx, st, item_enabled);
@@ -416,6 +457,16 @@ impl RadioGroup {
                                             states,
                                         )
                                         .resolve(&theme);
+                                        let border_color = if aria_invalid {
+                                            let destructive = theme.color_required("destructive");
+                                            if item_enabled {
+                                                destructive
+                                            } else {
+                                                alpha_mul(destructive, 0.5)
+                                            }
+                                        } else {
+                                            border_color
+                                        };
                                         let fg = resolve_override_slot(
                                             style_override.label_color.as_ref(),
                                             &default_label_color,
@@ -469,7 +520,7 @@ impl RadioGroup {
                                             border: Edges::all(Px(0.0)),
                                             border_color: None,
                                             corner_radii: Corners::all(Px(
-                                                (indicator.0 * 0.5).max(0.0),
+                                                (indicator.0 * 0.5).max(0.0)
                                             )),
                                             ..Default::default()
                                         };
@@ -484,7 +535,36 @@ impl RadioGroup {
                                             overflow: TextOverflow::Clip,
                                         };
 
-                                        vec![cx.flex(
+                                        let icon_element =
+                                            cx.container(icon_props, move |cx| {
+                                                if !checked {
+                                                    return Vec::new();
+                                                }
+
+                                                vec![cx.flex(
+                                                FlexProps {
+                                                    layout: decl_style::layout_style(
+                                                        &theme_for_icon,
+                                                        fret_ui_kit::LayoutRefinement::default()
+                                                            .size_full(),
+                                                    ),
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(0.0),
+                                                    padding: Edges::all(Px(0.0)),
+                                                    justify: MainAlign::Center,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                },
+                                                move |cx| {
+                                                    vec![cx.container(
+                                                        indicator_props,
+                                                        |_cx| Vec::new(),
+                                                    )]
+                                                },
+                                            )]
+                                            });
+
+                                        let item_content = cx.flex(
                                             FlexProps {
                                                 layout: row_layout,
                                                 direction: fret_core::Axis::Horizontal,
@@ -496,43 +576,69 @@ impl RadioGroup {
                                             },
                                             move |cx| {
                                                 let mut out = Vec::new();
-                                                out.push(cx.container(icon_props, move |cx| {
-                                                    if !checked {
-                                                        return Vec::new();
+
+                                                match item_variant {
+                                                    RadioGroupItemVariant::Default => {
+                                                        out.push(icon_element.clone());
+                                                        if let Some(children) =
+                                                            item_children.clone()
+                                                        {
+                                                            out.extend(children);
+                                                        } else {
+                                                            out.push(cx.text_props(label_props));
+                                                        }
                                                     }
-
-                                                    vec![cx.flex(
-                                                        FlexProps {
-                                                            layout: decl_style::layout_style(
-                                                                &theme,
-                                                                fret_ui_kit::LayoutRefinement::default()
-                                                                    .size_full(),
-                                                            ),
-                                                            direction: fret_core::Axis::Horizontal,
-                                                            gap: Px(0.0),
-                                                            padding: Edges::all(Px(0.0)),
-                                                            justify: MainAlign::Center,
-                                                            align: CrossAlign::Center,
-                                                            wrap: false,
-                                                        },
-                                                        move |cx| {
-                                                            vec![cx.container(
-                                                                indicator_props,
-                                                                |_cx| Vec::new(),
-                                                            )]
-                                                        },
-                                                    )]
-                                                }));
-
-                                                if let Some(children) = item_children.clone() {
-                                                    out.extend(children);
-                                                } else {
-                                                    out.push(cx.text_props(label_props));
+                                                    RadioGroupItemVariant::ChoiceCard => {
+                                                        if let Some(children) =
+                                                            item_children.clone()
+                                                        {
+                                                            out.extend(children);
+                                                        } else {
+                                                            out.push(cx.text_props(label_props));
+                                                        }
+                                                        out.push(icon_element.clone());
+                                                    }
                                                 }
 
                                                 out
                                             },
-                                        )]
+                                        );
+
+                                        match item_variant {
+                                            RadioGroupItemVariant::Default => vec![item_content],
+                                            RadioGroupItemVariant::ChoiceCard => {
+                                                let bg_alpha = if theme.name.contains("/dark") {
+                                                    0.10
+                                                } else {
+                                                    0.05
+                                                };
+                                                let primary = radio_indicator(&theme);
+                                                let border = radio_border(&theme);
+
+                                                let mut chrome = ChromeRefinement::default()
+                                                    .p_4()
+                                                    .rounded_md()
+                                                    .border_1()
+                                                    .border_color(ColorRef::Color(border));
+                                                if checked {
+                                                    chrome = chrome
+                                                        .bg(ColorRef::Color(alpha_mul(
+                                                            primary, bg_alpha,
+                                                        )))
+                                                        .border_color(ColorRef::Color(primary));
+                                                }
+
+                                                let container = decl_style::container_props(
+                                                    &theme,
+                                                    chrome,
+                                                    fret_ui_kit::LayoutRefinement::default()
+                                                        .w_full(),
+                                                );
+                                                vec![cx.container(container, move |_cx| {
+                                                    vec![item_content]
+                                                })]
+                                            }
+                                        }
                                     },
                                 )
                         }));
@@ -740,6 +846,177 @@ mod tests {
             (dot_cy - icon_cy).abs() <= 0.2,
             "expected dot center_y {dot_cy} close to icon center_y {icon_cy}"
         );
+    }
+
+    #[test]
+    fn radio_group_item_aria_invalid_uses_destructive_border_color() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("invalid")));
+        let items = vec![
+            RadioGroupItem::new("valid", "Valid"),
+            RadioGroupItem::new("invalid", "Invalid").aria_invalid(true),
+        ];
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-invalid-border",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .a11y_label("Options")
+                        .item(items[0].clone())
+                        .item(items[1].clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let theme = Theme::global(&app).clone();
+        let icon = icon_size(&theme);
+        let destructive = theme.color_required("destructive");
+
+        let mut icon_border_colors: Vec<Color> = Vec::new();
+        for op in scene.ops() {
+            let fret_core::SceneOp::Quad {
+                rect,
+                background,
+                border,
+                border_color,
+                ..
+            } = op
+            else {
+                continue;
+            };
+
+            let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
+                && (rect.size.height.0 - icon.0).abs() <= 0.1
+                && *background == Color::TRANSPARENT
+                && border.left.0 > 0.0
+                && border.top.0 > 0.0
+                && border.right.0 > 0.0
+                && border.bottom.0 > 0.0
+                && border_color.a > 0.0;
+            if is_icon {
+                icon_border_colors.push(*border_color);
+            }
+        }
+
+        assert!(
+            icon_border_colors.len() >= 2,
+            "expected at least 2 radio icon quads (got {})",
+            icon_border_colors.len()
+        );
+        assert!(
+            icon_border_colors.iter().any(|c| *c == destructive),
+            "expected an aria-invalid icon border quad with destructive color"
+        );
+        assert!(
+            icon_border_colors.iter().any(|c| *c != destructive),
+            "expected a non-invalid icon border quad that is not destructive"
+        );
+    }
+
+    #[test]
+    fn radio_group_choice_card_applies_checked_background_and_border() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let model = app.models_mut().insert(Some(Arc::from("beta")));
+        let items =
+            vec![RadioGroupItem::new("beta", "Beta").variant(RadioGroupItemVariant::ChoiceCard)];
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "radio-group-choice-card-checked",
+            |cx| {
+                vec![
+                    RadioGroup::new(model.clone())
+                        .a11y_label("Options")
+                        .item(items[0].clone())
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let theme = Theme::global(&app).clone();
+        let primary = radio_indicator(&theme);
+        let expected_bg = alpha_mul(primary, 0.05);
+
+        let mut found = false;
+        for op in scene.ops() {
+            let fret_core::SceneOp::Quad {
+                background,
+                border,
+                border_color,
+                ..
+            } = op
+            else {
+                continue;
+            };
+
+            if *background == expected_bg
+                && *border_color == primary
+                && border.left.0 > 0.0
+                && border.top.0 > 0.0
+                && border.right.0 > 0.0
+                && border.bottom.0 > 0.0
+            {
+                found = true;
+                break;
+            }
+        }
+
+        assert!(found, "missing checked choice-card background/border quad");
     }
 
     #[test]

@@ -438,7 +438,13 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## M7 — Engine memoization parity + perf gates
 
-- [ ] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
+- [~] HTP-memo-010 Introduce dependency-driven memoization for derived models (TanStack-style).
+  - Done (first building block, unit-gated): a TanStack-aligned dependency snapshot + memo cache for
+    “filtered + sorted root row order”:
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs`
+    - Tests: `ecosystem/fret-ui-headless/src/table/tanstack_memo.rs` (`sorted_flat_row_order_cache_*`)
+  - Remaining: lift this pattern across the full derived row model pipeline (core/filtered/sorted/expanded/paginated),
+    plus a stable external cache surface for rebuild-each-frame callers.
 - [ ] HTP-memo-020 Provide an integration pattern for “rebuild each frame” while retaining memo cache.
   - Candidate designs:
     - external cache passed into a pure “compute” API, or
@@ -481,4 +487,4 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` | `grouping` | `ColumnGrouping` (grouped model + flat row ordering) | `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/visibility_ordering.json` | `visibility_ordering` | `ColumnVisibility` + `ColumnOrdering` (state transitions + derived leaf column order) | `ecosystem/fret-ui-headless/tests/tanstack_v8_visibility_ordering_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json` | `faceting` | `ColumnFaceting` / `GlobalFaceting` | `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` | Partial |
-| (todo) `.../auto_reset.json` | `auto_reset` | auto-reset semantics across features (`autoResetAll`, `autoResetPageIndex`, etc.) | (todo) `.../tanstack_v8_auto_reset_parity.rs` | Open |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/auto_reset.json` | `auto_reset` | auto-reset semantics (`autoResetAll`, `autoResetPageIndex`) under sorting/globalFilter changes | `ecosystem/fret-ui-headless/tests/tanstack_v8_auto_reset_parity.rs` | Partial |

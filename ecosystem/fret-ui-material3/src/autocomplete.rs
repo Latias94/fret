@@ -728,7 +728,7 @@ fn autocomplete_into_element<H: UiHost>(
             request.close_on_window_focus_lost = true;
             request.close_on_window_resize = true;
             if let Some(field_id) = runtime.field_element_id.get() {
-                request.dismissable_branches.push(field_id);
+                request = request.add_dismissable_branch(field_id);
             }
 
             OverlayController::request(cx, request);

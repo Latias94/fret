@@ -54,6 +54,10 @@ so the default authoring story lives in ecosystem crates.
   - Typed UI → app routing (dynamic per-item actions): `fret-kit::mvu::MessageRouter<M>`
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
+- Integration guidance:
+  - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`
+  - Persistence (sqlite/sqlx): `docs/integrating-sqlite-and-sqlx.md`
+  - Service injection + subtree overrides: `docs/service-injection-and-overrides.md`
 
 ## Recommended reading order (for a new contributor or AI agent)
 
