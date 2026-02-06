@@ -18,6 +18,26 @@ Non-goals:
   outcomes.
 - Favor suite-style headless goldens + small scripted interaction tests over pixel snapshots.
 
+### Infrastructure notes (2026-02-06)
+
+Recent Material3 and shadcn alignment work uncovered a few mechanism gaps that were worth fixing
+before continuing component surface work:
+
+- Timer dispatch: targeted `Event::Timer { token }` dispatch must still bubble so overlay-root timer
+  hooks can observe descendant timers (e.g. snackbar auto-dismiss). Evidence:
+  `crates/fret-ui/src/tree/dispatch.rs`, tests in
+  `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+  (`snackbar_action_emits_command_and_dismisses`,
+  `snackbar_dismiss_button_dismisses_without_emitting_command`).
+- Popover placement: unconstrained-height popovers should allow main-axis overflow on tiny viewports
+  (Radix/Floating UI style), while constrained/scrollable popovers should clamp to available space.
+  Evidence: `ecosystem/fret-ui-shadcn/src/popover.rs`,
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_{chrome,placement}.rs` (calendar + combobox).
+- Layout max-size: treat `max_width`/`max_height` as border-box constraints for shadcn-style
+  `w-full max-w-*` overlays so centered dialogs match web geometry. Evidence:
+  `crates/fret-ui/src/layout_engine/flow.rs`, overlay placement tests in
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (Dialog / AlertDialog).
+
 ## P0 (recommended)
 
 - [x] FAB (Floating Action Button) MVP surface in `ecosystem/fret-ui-material3`.
