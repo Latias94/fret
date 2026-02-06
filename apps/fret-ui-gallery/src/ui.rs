@@ -7622,30 +7622,7 @@ fn preview_calendar(
 }
 
 fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let collapsible = shadcn::Collapsible::uncontrolled(false).into_element_with_open_model(
-        cx,
-        |cx, open, is_open| {
-            let label = if is_open {
-                "Hide details"
-            } else {
-                "Show details"
-            };
-            shadcn::Button::new(label)
-                .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open)
-                .into_element(cx)
-        },
-        |cx| {
-            shadcn::CollapsibleContent::new(vec![
-                cx.text("This content is toggled by a Collapsible."),
-                cx.text("Use it for disclosure panels, advanced options, etc."),
-            ])
-            .refine_layout(LayoutRefinement::default().w_full())
-            .into_element(cx)
-        },
-    );
-
-    vec![collapsible]
+    pages::preview_collapsible(cx)
 }
 
 fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

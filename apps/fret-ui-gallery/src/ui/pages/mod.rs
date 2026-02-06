@@ -7,6 +7,7 @@ mod breadcrumb;
 mod checkbox;
 mod carousel;
 mod chart;
+mod collapsible;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -44,6 +45,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
 pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     chart::preview_chart(cx)
+}
+
+pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    collapsible::preview_collapsible(cx)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
