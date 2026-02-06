@@ -1,4 +1,4 @@
-use super::prelude::path_midpoint_and_normal;
+use super::prelude::{HitTestCtx, HitTestScratch, path_midpoint_and_normal};
 use super::*;
 
 #[test]
@@ -97,8 +97,8 @@ fn hit_testing_uses_custom_edge_path() {
         .graph
         .read_ref(cx.app, |g| g.clone())
         .unwrap_or_default();
-    let mut scratch = super::super::HitTestScratch::default();
-    let mut ctx = super::super::HitTestCtx::new(&geom, &index, zoom, &mut scratch);
+    let mut scratch = HitTestScratch::default();
+    let mut ctx = HitTestCtx::new(&geom, &index, zoom, &mut scratch);
     let hit = canvas.hit_edge(&graph, &snapshot, &mut ctx, mid);
     assert_eq!(hit, Some(edge_id));
 }
