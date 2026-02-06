@@ -9677,31 +9677,7 @@ fn preview_alert_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> 
 }
 
 fn preview_dialog(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
-    let open_for_close = open.clone();
-    let dialog = shadcn::Dialog::new(open).into_element(
-        cx,
-        |cx| shadcn::Button::new("Open dialog").into_element(cx),
-        |cx| {
-            shadcn::DialogContent::new(vec![
-                shadcn::DialogHeader::new(vec![
-                    shadcn::DialogTitle::new("Edit profile").into_element(cx),
-                    shadcn::DialogDescription::new(
-                        "Make changes to your profile here. Click save when you're done.",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::DialogFooter::new(vec![
-                    shadcn::Button::new("Save changes").into_element(cx),
-                    shadcn::DialogClose::new(open_for_close.clone()).into_element(cx),
-                ])
-                .into_element(cx),
-            ])
-            .into_element(cx)
-        },
-    );
-
-    vec![dialog]
+    pages::preview_dialog(cx, open)
 }
 
 fn preview_popover(cx: &mut ElementContext<'_, App>, _open: Model<bool>) -> Vec<AnyElement> {

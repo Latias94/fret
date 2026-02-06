@@ -13,6 +13,7 @@ mod command;
 mod context_menu;
 mod data_table;
 mod date_picker;
+mod dialog;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -95,6 +96,13 @@ pub(super) fn preview_date_picker(
     selected: Model<Option<Date>>,
 ) -> Vec<AnyElement> {
     date_picker::preview_date_picker(cx, open, month, selected)
+}
+
+pub(super) fn preview_dialog(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+) -> Vec<AnyElement> {
+    dialog::preview_dialog(cx, open)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
