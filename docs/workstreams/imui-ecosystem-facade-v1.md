@@ -47,6 +47,8 @@ Status snapshot (2026-02-06):
 Tracking:
 
 - TODO tracker: `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- v2 follow-up: `docs/workstreams/imui-ecosystem-facade-v2.md`
+- v2 tracker: `docs/workstreams/imui-ecosystem-facade-v2-todo.md`
 - Perf guide: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - imui authoring facade v2 (implemented): `docs/workstreams/imui-authoring-facade-v2.md`
 - Unified authoring builder surface (ADR): `docs/adr/0175-unified-authoring-builder-surface-v1.md`
