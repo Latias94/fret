@@ -237,6 +237,17 @@ Next action:
 
 - record the decision in this workstream and treat it as part of the performance contract (M0).
 
+Update (2026-02-06):
+
+- A large post-merge `code-editor autoscroll` regression (`paint_time_us` p95 ~30ms) was caused by **allocator churn**
+  in the editor paint path (accidental per-row `Theme` clone during syntax span construction), not by renderer encode
+  or text prepare.
+- The fix (`perf(code-editor): avoid per-row Theme clone in syntax paint`, commit `0d8ad27ac`) collapses
+  `paint_time_us` p95 to sub-millisecond (~0.7ms) in the probe; evidence and bundle paths are recorded in
+  `docs/workstreams/ui-perf-zed-smoothness-v1-log.md`.
+- This is a concrete example of a GPUI transfer lesson: “Zed feel” is often dominated by allocation discipline
+  (avoid per-frame/per-row heap churn) as much as by caching algorithms.
+
 ### 1.4 Dispatch / hit-test visibility (known gap)
 
 The current `fretboard diag perf` suite focuses on **frame pipeline** costs (layout / prepaint / paint). This is

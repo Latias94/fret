@@ -41,6 +41,11 @@ Conventions:
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v6.json` (see perf log entry).
     - Includes pointer-move maxima in the baseline rows (newer perf protocol) and reflects the current steady-state
       costs of the menubar script after recent diagnostics/runtime changes.
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v7.json` (see perf log entry).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v8.json` (post-merge snapshot;
+    evidence + drift notes in the perf log entry for commit `72e6c32df`).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json` (planned: refresh after the
+    post-merge editor regression fix; commit `0d8ad27ac`).
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
 - [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
@@ -435,7 +440,11 @@ Perf acceptance:
 
 - [ ] `ui-gallery-virtual-list-torture.json`: steady scroll should avoid cache-root rerender in most frames.
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
-- [ ] `ui-gallery-code-editor-torture-autoscroll-steady.json`: reduce Canvas paint hotspot and keep Tier B progress tracked.
+- [x] `ui-gallery-code-editor-torture-autoscroll-steady.json`: eliminate the post-merge Canvas paint hotspot.
+  - Root cause: accidental per-row `Theme` clone in syntax paint (allocator churn).
+  - Fix: `perf(code-editor): avoid per-row Theme clone in syntax paint` (commit `0d8ad27ac`).
+  - Evidence + numbers: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for 2026-02-06 (commit `0d8ad27ac`).
+  - Follow-up: still track tail outliers (max spikes) and ensure the probe stays within Tier B on high-end HW.
 
 ### M5: Text pipeline stabilization (editor-ready)
 
@@ -448,6 +457,9 @@ Perf acceptance:
 - [x] Cut code editor syntax paint cost in the “autoscroll torture” probe (p95 paint drops from ~23ms → ~5ms).
   - Implemented by `perf(fret-code-editor): cache syntax rich rows` (commit `81159325`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries for commit `bd709f88` (baseline) and `81159325`.
+- [x] Eliminate allocation churn in editor syntax paint by avoiding per-row `Theme` clones.
+  - Implemented by `perf(code-editor): avoid per-row Theme clone in syntax paint` (commit `0d8ad27ac`).
+  - Evidence + numbers: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry for 2026-02-06 (commit `0d8ad27ac`).
 - [x] Add diagnostics hooks to identify text cache misses that correlate with perf hitches.
   - `paint_widget_hotspots` now include `ElementInstance` kind attribution (commit `c80525b9`).
   - Paint-phase text prepare counters + reason counts:

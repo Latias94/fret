@@ -4045,3 +4045,92 @@ Perf baseline snapshot:
 - Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v7.json`
 - Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
   - Evidence bundle: `target/fret-diag/1770313439094-ui-gallery-window-resize-stress-steady/bundle.json`
+
+## 2026-02-06 01:50:00 (commit `72e6c32df`)
+
+Change:
+- Merge the latest `origin/main` into the local perf work branch (large upstream delta).
+- Fix post-merge compilation issues caused by `slotmap` API expectations (`SecondaryMap::get` takes keys by value).
+- Update the view-cache toggle perf scripts to avoid waiting for a now-missing popover close `test_id`
+  (`ui-gallery-view-cache-popover-close`) and close via `Escape` instead.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-open-hover-sweep-steady.json`
+- Bundle:
+  - `target/fret-diag-codex-postmerge-menubar-sweep/1770341327163-script-step-0016-press_key/bundle.json`
+
+Results:
+- `paint_text_prepare_calls==0` across the measured sweep frames (no prepare hotspots recorded).
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-menubar-reopen-after-close.json`
+- Bundle:
+  - `target/fret-diag-codex-postmerge-menubar-reopen/1770341382081-script-step-0016-press_key/bundle.json`
+
+Results:
+- Observed `paint_text_prepare_calls=sum=1 (max=1)`, `paint_text_prepare_time_us=306`.
+  - Single hotspot: `kind=Text`, `text_len=164`, `prepare_time_us=306`, `reasons_mask=blob_missing|scale_changed|width_changed`.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+- Bundle:
+  - `target/fret-diag-codex-postmerge-codeeditor-autoscroll/1770341454895-script-step-0011-press_key/bundle.json`
+
+Results:
+- This workload regressed dramatically vs the earlier baseline: `paint_time_us` p50/p95/max = `27085/30223/33968`.
+- `paint_widget_hotspots` remains dominated by `kind=Canvas`:
+  - worst `Canvas us=33907 ops=581/581`, `scene_ops=1104`
+  - same-frame renderer: `encode_scene_us=655`, `prepare_text_us=552`
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v8.json`
+- Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - Evidence bundle: `target/fret-diag-codex-postmerge-perf/1770342116675-ui-gallery-window-resize-stress-steady/bundle.json`
+- Notable drift vs v7 (max `top_total_time_us`):
+  - `ui-gallery-view-cache-toggle-perf-steady`: `4757 → 13046` (script updated to close popover via `Escape`)
+  - `ui-gallery-window-resize-stress-steady`: `22721 → 25156`
+
+## 2026-02-06 10:05:00 (commit `b9ba410f6`)
+
+Change:
+- `CanvasPainter::{text,text_with_blob}` no longer bypass stable keys by using the “shared text cache” implicitly.
+  - Shared text caching is now **explicit** (`CanvasPainter::shared_text*`), so high-entropy call sites can’t
+    accidentally pollute a global/shared cache map.
+
+Rationale:
+- The post-merge `code-editor autoscroll` regression still showed `paint_widget_hotspots kind=Canvas`, and renderer
+  self-time was not the dominant slice (`encode_scene_us` / `prepare_text_us` both sub-millisecond).
+- Before this change, `text_with_blob(..)` could still land in the shared cache due to internal plumbing. That made it
+  too easy for a tight loop (e.g. per-row paint) to do high-entropy “cache by content” and effectively turn the cache
+  into a hashmap-backed allocation sink.
+- This commit makes the intended contract match the workstream goal: caching is deterministic + keyed unless the
+  call site explicitly opts into shared caching.
+
+Evidence:
+- See the post-merge regression bundle (commit `72e6c32df`) for the “Canvas dominates paint” symptom:
+  - `target/fret-diag-codex-postmerge-codeeditor-autoscroll/1770341454895-script-step-0011-press_key/bundle.json`
+
+## 2026-02-06 10:45:00 (commit `0d8ad27ac`)
+
+Change:
+- Fix code-editor syntax paint hot path: avoid cloning the full `Theme` per painted row.
+
+Root cause (post-merge regression):
+- The `code-editor autoscroll` probe became “allocation dominated” due to an accidental per-row `Theme` clone during
+  syntax span → rich text construction. This caused extreme allocator churn (malloc/free + `drop_in_place<Theme>`)
+  and made `Canvas` paint time explode to ~30ms per frame.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+- Worst frame bundle (pre-fix, from commit `72e6c32df`):
+  - `target/fret-diag-codex-postmerge-codeeditor-autoscroll/1770341454895-script-step-0011-press_key/bundle.json`
+- Worst frame bundle (after fix, commit `0d8ad27ac`):
+  - `target/fret-diag-codex-codeeditor-autoscroll-after-0d8ad27ac/1770345867196-script-step-0011-press_key/bundle.json`
+
+Results (from the 247 snapshots captured in the `script-step-0011-press_key` bundle; `paint_time_us` p50/p95/max):
+- Pre-fix (`72e6c32df`): `27085 / 30215 / 33968`
+- After fix (`0d8ad27ac`): `594 / 690 / 5699`
+
+Interpretation:
+- This was not a renderer encode or text-prepare bottleneck; it was CPU-side allocation churn in the editor paint path.
+- The “Zed feel” gap is often dominated by allocation discipline, not just caching algorithms.

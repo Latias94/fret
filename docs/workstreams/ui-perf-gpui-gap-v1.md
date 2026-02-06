@@ -20,10 +20,12 @@ Related:
 
 ## 0) Current state (Fret)
 
-Recent editor-class win (evidence lives in the perf log):
+Recent editor-class wins (evidence lives in the perf log):
 
 - Code editor autoscroll torture: `p95 paint ~23ms → ~5ms` via `perf(fret-code-editor): cache syntax rich rows`
   (commit `81159325`).
+- Post-merge editor regression fix: `paint_time_us p95 ~30ms → ~0.7ms` by eliminating allocator churn
+  (per-row `Theme` clone) in syntax paint (commit `0d8ad27ac`).
 
 This removes an obvious “can’t ever feel like Zed” bottleneck, but it does **not** yet guarantee Tier B (120Hz)
 budgets across editor-class pages. The remaining work is mainly about *systemic* caching + allocation strategy.
@@ -300,17 +302,20 @@ GPUI’s “Zed feel” comes from a combination of:
 Fret has paint-cache replay mechanisms at the `UiTree` level, but editor-class pages can still spend multiple
 milliseconds per frame in **CPU-side scene construction** inside `Canvas` paint closures.
 
-Evidence (current baseline; see perf log entry 2026-02-05 15:43:55, commit `5eaf5884`):
+Evidence (post-merge regression + fix; see perf log entry 2026-02-06, commits `72e6c32df` and `0d8ad27ac`):
 
 - Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
-- Worst frame: `paint_time_us ~5.4ms`, dominated by a single `ElementInstance::Canvas` host widget
-  (`paint_widget_hotspots kind=Canvas us~5.1ms`, `scene ops delta ~581`).
-- Renderer costs are non-trivial but secondary on the same frame (`encode_scene_us~0.6ms`, `prepare_text_us~0.5ms`).
+- Regression symptom: `paint_time_us` p95 ~30ms, dominated by a single `ElementInstance::Canvas` host widget.
+  - Renderer self-time was not the dominant slice in the worst bundle (`encode_scene_us~0.7ms`, `prepare_text_us~0.6ms`),
+    which points away from “GPU encode is the bottleneck” and toward CPU-side work.
+- Root cause: allocation churn (accidental per-row `Theme` clone during syntax span → rich text construction).
+- Fix (commit `0d8ad27ac`): `paint_time_us` p95 collapses to sub-millisecond (~0.7ms) in the same probe.
 
 Why this matters:
 
-- Without a retained/replay-friendly model for editor-class surfaces, we pay the full “build scene ops” cost every frame,
-  which makes Tier B (120Hz) budgets hard even when layout is cheap.
+- It’s easy to misattribute “Canvas paint is slow” to renderer work or missing replay primitives. In practice, the most
+  immediate “Zed feel” killers are often accidental allocations in tight loops (per-row/per-glyph/per-span).
+- GPUI is a useful reference here not just for caching primitives, but for its strict draw-scope allocation discipline.
 
 What to do about it (transferable lessons from GPUI, not literal copying):
 
