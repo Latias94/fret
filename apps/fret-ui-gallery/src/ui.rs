@@ -15983,62 +15983,7 @@ fn preview_forms(
     checkbox: Model<bool>,
     switch: Model<bool>,
 ) -> Vec<AnyElement> {
-    let input = shadcn::Input::new(text_input)
-        .a11y_label("Email")
-        .placeholder("name@example.com")
-        .into_element(cx);
-
-    let textarea = shadcn::Textarea::new(text_area)
-        .a11y_label("Message")
-        .into_element(cx);
-
-    let toggles = stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2).items_start(),
-        |cx| {
-            vec![
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Checkbox::new(checkbox)
-                                .a11y_label("Accept terms")
-                                .into_element(cx),
-                            ui::label(cx, "Accept terms").into_element(cx),
-                        ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Switch::new(switch)
-                                .a11y_label("Enable feature")
-                                .into_element(cx),
-                            ui::label(cx, "Enable feature").into_element(cx),
-                        ]
-                    },
-                ),
-            ]
-        },
-    );
-
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3),
-        |cx| {
-            let tip = ui::text_block(
-                cx,
-                "Tip: these are model-bound controls; values persist while you stay in the window.",
-            )
-            .into_element(cx);
-            [input, textarea, toggles, tip]
-        },
-    )]
+    pages::preview_forms(cx, text_input, text_area, checkbox, switch)
 }
 
 fn preview_select(

@@ -79,7 +79,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] dropdown-menu - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs`)
 - [~] empty - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/empty.rs`)
 - [~] field - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/field.rs`)
-- [ ] form
+- [~] form - gallery-hub examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/form.rs`)
 - [ ] hover-card
 - [ ] input
 - [ ] input-group

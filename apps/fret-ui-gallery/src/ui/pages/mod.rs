@@ -15,6 +15,7 @@ mod data_table;
 mod date_picker;
 mod dialog;
 mod field;
+mod form;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -111,6 +112,16 @@ pub(super) fn preview_dialog(
 
 pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     field::preview_field(cx)
+}
+
+pub(super) fn preview_forms(
+    cx: &mut ElementContext<'_, App>,
+    text_input: Model<String>,
+    text_area: Model<String>,
+    checkbox: Model<bool>,
+    switch: Model<bool>,
+) -> Vec<AnyElement> {
+    form::preview_forms(cx, text_input, text_area, checkbox, switch)
 }
 
 pub(super) fn preview_drawer(
