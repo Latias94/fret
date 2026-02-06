@@ -355,7 +355,10 @@ Notes:
 
 Tool calls should have an explicit lifecycle state so the UI can show running/progress/error:
 
-- `Pending` → `Running` → `Succeeded | Failed | Cancelled`
+- AI Elements-aligned states:
+  - `ApprovalRequested` / `ApprovalResponded`
+  - `InputStreaming` / `InputAvailable`
+  - `OutputAvailable` / `OutputDenied` / `OutputError`
 
 Represent `input`/`output` as structured values (e.g. JSON string or `serde_json::Value`) so apps
 can choose how to present them.
@@ -468,6 +471,35 @@ minimum v1 gate set:
 
 Concrete script names and gating checklists live in the TODO tracker:
 `docs/workstreams/ai-elements-port-todo.md`.
+
+## Known blockers (v1)
+
+### Diag automation: click targeting inside scroll + sticky chrome
+
+Some `ai_chat_demo` interactions are difficult to gate with pure “semantics bounds → pointer click”
+automation when the transcript scroll surface shares space with sticky bottom chrome (the prompt
+panel) and when scroll transforms can move targets near the bottom edge of the viewport.
+
+Symptoms:
+
+- `scroll_into_view` succeeds (target is within the **window** bounds) but the target is still
+  occluded by sticky chrome.
+- A subsequent `click(test_id=...)` can hit a non-pressable container at the same location, so the
+  intended pressable does not activate and follow-up `wait_until` steps time out.
+
+Short-term mitigations:
+
+- Prefer seeded fixtures that expose targets without depending on prompt typing.
+- Use a conservative `padding_px` in `scroll_into_view` to keep targets away from the bottom chrome.
+- Gate the _rendered_ outcome (content exists / semantics stable) even if the exact click path is
+  not yet fully stable.
+
+Long-term fixes (preferred):
+
+- Extend diag scripting to support container-relative “fully visible” constraints and safe insets
+  (exclude known occluding chrome regions).
+- Extend `click` to validate the resulting hit-test path and retry with alternative points when
+  occluded.
 
 ## Component inventory (upstream → Fret mapping)
 

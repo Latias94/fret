@@ -121,6 +121,8 @@ Existing gates (UI Gallery `ai_chat_demo`):
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-codeblock-expand.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-streaming-finalize.json`
 - `tools/diag-scripts/ui-gallery-ai-chat-demo-citation-highlight.json`
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-sources-collapsible.json` (`[!]` if click targeting is occluded by prompt chrome)
+- `tools/diag-scripts/ui-gallery-ai-chat-demo-inline-citation-hovercard.json` (`[!]` if hover/click targeting is occluded by prompt chrome)
 
 Planned next gate:
 
@@ -271,8 +273,10 @@ Keep this list in sync with the pinned upstream commit recorded in
 
 - [ ] AIEL-MVP2-tooling-010 Align `Sources` to upstream Collapsible behavior (`Used N sources` trigger, hidden-by-default content).
 - [ ] AIEL-MVP2-tooling-011 Align `InlineCitation` to upstream HoverCard behavior (delay 0, pager with prev/next + `current/count`).
-- [ ] AIEL-MVP2-tooling-012 Gate hover + pager with `fretboard diag` (open hover card, next/prev).
-- [ ] AIEL-MVP2-tooling-013 Gate sources Collapsible with `fretboard diag` (open, verify rows).
+- [!] AIEL-MVP2-tooling-012 Gate hover + pager with `fretboard diag` (open hover card, next/prev).
+  - Blocker: pointer targeting can be occluded by sticky prompt chrome when the target lands near the bottom edge.
+- [!] AIEL-MVP2-tooling-013 Gate sources Collapsible with `fretboard diag` (open, verify rows).
+  - Blocker: `click(test_id=...sources-*-trigger)` can hit a non-pressable container at the same location; see workstream “Known blockers”.
 
 ### Tool calls / Sources / Citations
 
