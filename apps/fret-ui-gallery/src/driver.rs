@@ -443,8 +443,8 @@ impl UiGalleryDriver {
             .models_mut()
             .insert(time::Time::from_hms(9, 41, 0).expect("valid time"));
 
-        let resizable_h_fractions = app.models_mut().insert(vec![0.3, 0.7]);
-        let resizable_v_fractions = app.models_mut().insert(vec![0.5, 0.5]);
+        let resizable_h_fractions = app.models_mut().insert(vec![0.5, 0.5]);
+        let resizable_v_fractions = app.models_mut().insert(vec![0.25, 0.75]);
 
         let data_table_state = app
             .models_mut()

@@ -94,14 +94,14 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] popover — examples mirrored (Demo/Basic/Align/With Form/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_popover`, `ecosystem/fret-ui-shadcn/src/popover.rs`)
 - [x] progress — examples mirrored (Demo/Label/Controlled/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_progress`, `ecosystem/fret-ui-shadcn/src/progress.rs`)
 - [x] radio-group — examples mirrored (Demo/Description/Choice Card/Fieldset/Disabled/Invalid/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_radio_group`, `ecosystem/fret-ui-shadcn/src/radio_group.rs`, `ecosystem/fret-ui-shadcn/src/radio_group.rs::tests::*radio_group_*`)
-- [ ] resizable
+- [x] resizable — examples mirrored (Demo/Vertical/Handle/RTL; `with_handle` approximates grip) (`apps/fret-ui-gallery/src/ui.rs::preview_resizable`, `ecosystem/fret-ui-shadcn/src/resizable.rs`)
 - [ ] scroll-area
 - [~] select (group semantics + default alignment audited; needs full docs example order)
 - [ ] separator
 - [ ] sheet
 - [ ] sidebar
 - [ ] skeleton
-- [~] slider — demo/range/disabled/RTL/vertical wired; still needs upstream example ordering + multiple thumbs + controlled example (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
+- [x] slider — examples mirrored (Demo/Range/Multiple Thumbs/Vertical/Controlled/Disabled/RTL; extras: inverted) (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
 - [ ] sonner
 - [ ] spinner
 - [ ] switch

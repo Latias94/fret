@@ -13828,7 +13828,31 @@ fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         #[derive(Default)]
         struct SliderPageState {
             last_commit: Option<Model<Vec<f32>>>,
+            controlled_values: Option<Model<Vec<f32>>>,
         }
+
+        let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+            stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_center(),
+                move |_cx| [body],
+            )
+        };
+
+        let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full()),
+                move |cx| vec![shadcn::typography::h4(cx, title), body],
+            )
+        };
+
+        let max_width_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
         let last_commit = cx.with_state(SliderPageState::default, |st| st.last_commit.clone());
         let last_commit = match last_commit {
@@ -13842,101 +13866,217 @@ fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
             }
         };
 
-        let single = cx.keyed("ui_gallery.slider.single", |cx| {
+        let controlled_values =
+            cx.with_state(SliderPageState::default, |st| st.controlled_values.clone());
+        let controlled_values = match controlled_values {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(vec![0.3, 0.7]);
+                cx.with_state(SliderPageState::default, |st| {
+                    st.controlled_values = Some(model.clone());
+                });
+                model
+            }
+        };
+
+        let demo = cx.keyed("ui_gallery.slider.demo", |cx| {
             let last_commit_for_cb = last_commit.clone();
-            shadcn::Slider::new_controllable(cx, None, || vec![35.0])
+            let slider = shadcn::Slider::new_controllable(cx, None, || vec![75.0])
                 .range(0.0, 100.0)
                 .test_id("ui-gallery-slider-single")
-                .a11y_label("Single value slider")
+                .a11y_label("Slider")
+                .refine_layout(max_width_xs.clone())
                 .on_value_commit(move |host, _cx, values| {
                     let _ = host.models_mut().update(&last_commit_for_cb, |v| {
                         *v = values;
                     });
                 })
-                .into_element(cx)
-        });
+                .into_element(cx);
 
-        let last_commit_values = cx
-            .watch_model(&last_commit)
-            .layout()
-            .cloned()
-            .unwrap_or_default();
-        let last_commit_text = if last_commit_values.is_empty() {
-            "<none>".to_string()
-        } else {
-            format!("{last_commit_values:?}")
-        };
+            let last_commit_values = cx
+                .watch_model(&last_commit)
+                .layout()
+                .cloned()
+                .unwrap_or_default();
+            let last_commit_text = if last_commit_values.is_empty() {
+                "<none>".to_string()
+            } else {
+                format!("{last_commit_values:?}")
+            };
+            let meta = shadcn::typography::muted(cx, format!("onValueCommit: {last_commit_text}"));
+
+            let body = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+                |_cx| vec![slider, meta],
+            );
+            let body = centered(cx, body);
+            section(cx, "Demo", body)
+        });
 
         let range = cx.keyed("ui_gallery.slider.range", |cx| {
-            shadcn::Slider::new_controllable(cx, None, || vec![20.0, 80.0])
+            let slider = shadcn::Slider::new_controllable(cx, None, || vec![25.0, 50.0])
                 .range(0.0, 100.0)
-                .min_steps_between_thumbs(5)
+                .step(5.0)
                 .test_id("ui-gallery-slider-range")
                 .a11y_label("Range slider")
-                .into_element(cx)
+                .refine_layout(max_width_xs.clone())
+                .into_element(cx);
+            let body = centered(cx, slider);
+            section(cx, "Range", body)
         });
 
-        let disabled = cx.keyed("ui_gallery.slider.disabled", |cx| {
-            shadcn::Slider::new_controllable(cx, None, || vec![60.0])
-                .disabled(true)
-                .test_id("ui-gallery-slider-disabled")
-                .a11y_label("Disabled slider")
-                .into_element(cx)
-        });
-
-        let inverted = cx.keyed("ui_gallery.slider.inverted", |cx| {
-            shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+        let multiple = cx.keyed("ui_gallery.slider.multiple", |cx| {
+            let slider = shadcn::Slider::new_controllable(cx, None, || vec![10.0, 20.0, 70.0])
                 .range(0.0, 100.0)
-                .inverted(true)
-                .test_id("ui-gallery-slider-inverted")
-                .a11y_label("Inverted slider")
-                .into_element(cx)
-        });
-
-        let rtl = cx.keyed("ui_gallery.slider.rtl", |cx| {
-            shadcn::Slider::new_controllable(cx, None, || vec![25.0])
-                .range(0.0, 100.0)
-                .dir(fret_ui_kit::primitives::direction::LayoutDirection::Rtl)
-                .test_id("ui-gallery-slider-rtl")
-                .a11y_label("RTL slider")
-                .into_element(cx)
+                .step(10.0)
+                .test_id("ui-gallery-slider-multiple")
+                .a11y_label("Multiple thumbs slider")
+                .refine_layout(max_width_xs.clone())
+                .into_element(cx);
+            let body = centered(cx, slider);
+            section(cx, "Multiple Thumbs", body)
         });
 
         let vertical = cx.keyed("ui_gallery.slider.vertical", |cx| {
-            shadcn::Slider::new_controllable(cx, None, || vec![60.0])
+            let a = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
                 .range(0.0, 100.0)
+                .step(1.0)
                 .orientation(fret_ui_kit::primitives::slider::SliderOrientation::Vertical)
-                .refine_layout(LayoutRefinement::default().h_px(Px(176.0)))
+                .refine_layout(LayoutRefinement::default().h_px(Px(160.0)))
                 .test_id("ui-gallery-slider-vertical")
                 .a11y_label("Vertical slider")
-                .into_element(cx)
+                .into_element(cx);
+
+            let b = shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+                .range(0.0, 100.0)
+                .step(1.0)
+                .orientation(fret_ui_kit::primitives::slider::SliderOrientation::Vertical)
+                .refine_layout(LayoutRefinement::default().h_px(Px(160.0)))
+                .a11y_label("Vertical slider")
+                .into_element(cx);
+
+            let body = stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N6)
+                    .items_center()
+                    .justify_center()
+                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+                |_cx| vec![a, b],
+            );
+
+            section(cx, "Vertical", body)
         });
 
-        let items: Vec<AnyElement> = vec![
-            cx.text("Single value"),
-            single,
-            cx.text(format!("Last commit: {last_commit_text}")),
-            cx.text("Range (two thumbs)"),
-            range,
-            cx.text("Disabled"),
-            disabled,
-            cx.text("Inverted"),
-            inverted,
-            cx.text("RTL"),
-            rtl,
-            cx.text("Vertical"),
-            vertical,
-        ];
+        let controlled = cx.keyed("ui_gallery.slider.controlled", |cx| {
+            let values_snapshot = cx
+                .watch_model(&controlled_values)
+                .layout()
+                .cloned()
+                .unwrap_or_default();
+            let values_text = values_snapshot
+                .iter()
+                .map(|v| format!("{v:.1}"))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            let header = stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_center()
+                    .justify_between(),
+                |cx| {
+                    vec![
+                        shadcn::Label::new("Temperature").into_element(cx),
+                        shadcn::typography::muted(cx, values_text),
+                    ]
+                },
+            );
+            let slider = shadcn::Slider::new(controlled_values.clone())
+                .range(0.0, 1.0)
+                .step(0.1)
+                .test_id("ui-gallery-slider-controlled")
+                .a11y_label("Temperature")
+                .into_element(cx);
+
+            let body = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+                |_cx| vec![header, slider],
+            );
+
+            let body = centered(cx, body);
+            section(cx, "Controlled", body)
+        });
+
+        let disabled = cx.keyed("ui_gallery.slider.disabled", |cx| {
+            let slider = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
+                .range(0.0, 100.0)
+                .step(1.0)
+                .disabled(true)
+                .test_id("ui-gallery-slider-disabled")
+                .a11y_label("Disabled slider")
+                .refine_layout(max_width_xs.clone())
+                .into_element(cx);
+            let body = centered(cx, slider);
+            section(cx, "Disabled", body)
+        });
+
+        let rtl = cx.keyed("ui_gallery.slider.rtl", |cx| {
+            let slider = shadcn::Slider::new_controllable(cx, None, || vec![75.0])
+                .range(0.0, 100.0)
+                .step(1.0)
+                .dir(fret_ui_kit::primitives::direction::LayoutDirection::Rtl)
+                .test_id("ui-gallery-slider-rtl")
+                .a11y_label("RTL slider")
+                .refine_layout(max_width_xs.clone())
+                .into_element(cx);
+            let body = centered(cx, slider);
+            section(cx, "RTL", body)
+        });
+
+        let inverted = cx.keyed("ui_gallery.slider.inverted", |cx| {
+            let slider = shadcn::Slider::new_controllable(cx, None, || vec![25.0])
+                .range(0.0, 100.0)
+                .step(1.0)
+                .inverted(true)
+                .test_id("ui-gallery-slider-inverted")
+                .a11y_label("Inverted slider")
+                .refine_layout(max_width_xs.clone())
+                .into_element(cx);
+            let body = centered(cx, slider);
+            section(cx, "Extras: Inverted", body)
+        });
 
         vec![
             stack::vstack(
                 cx,
                 stack::VStackProps::default()
                     .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N4),
-                move |_cx| items,
+                    .gap(Space::N6)
+                    .items_start(),
+                |_cx| vec![
+                    demo,
+                    range,
+                    multiple,
+                    vertical,
+                    controlled,
+                    disabled,
+                    rtl,
+                    inverted,
+                ],
             ),
-            cx.text("Note: this page uses uncontrolled sliders; state is stored in element state under a stable key."),
+            shadcn::typography::muted(
+                cx,
+                "Note: demo/range/multiple/vertical/disabled/RTL are uncontrolled (element state). Controlled uses a shared model."
+                    .to_string(),
+            ),
         ]
     })
 }
@@ -14239,54 +14379,236 @@ fn preview_resizable(
     h_fractions: Model<Vec<f32>>,
     v_fractions: Model<Vec<f32>>,
 ) -> Vec<AnyElement> {
-    let boxy = |cx: &mut ElementContext<'_, App>, title: &str, color_key: &str| -> AnyElement {
-        let props = decl_style::container_props(
-            theme,
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(theme.color_required(color_key)))
-                .rounded(Radius::Md)
-                .p(Space::N3),
-            LayoutRefinement::default().w_full().h_full(),
-        );
-        cx.container(props, move |cx| [cx.text(title)])
-    };
+    #[derive(Default, Clone)]
+    struct ResizableModels {
+        vertical_fractions: Option<Model<Vec<f32>>>,
+        handle_fractions: Option<Model<Vec<f32>>>,
+        rtl_h_fractions: Option<Model<Vec<f32>>>,
+        rtl_v_fractions: Option<Model<Vec<f32>>>,
+    }
 
-    let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
-        .axis(fret_core::Axis::Vertical)
-        .entries([
-            shadcn::ResizablePanel::new([boxy(cx, "Viewport", "muted")])
-                .min_px(Px(120.0))
-                .into(),
-            shadcn::ResizableHandle::new().into(),
-            shadcn::ResizablePanel::new([boxy(cx, "Console", "card")])
-                .min_px(Px(80.0))
-                .into(),
-        ])
-        .into_element(cx);
-
-    let root = {
-        let root = shadcn::ResizablePanelGroup::new(h_fractions)
-            .axis(fret_core::Axis::Horizontal)
-            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
-            .entries(vec![
-                shadcn::ResizablePanel::new(vec![boxy(cx, "Explorer", "accent")])
-                    .min_px(Px(140.0))
-                    .into(),
-                shadcn::ResizableHandle::new().into(),
-                shadcn::ResizablePanel::new(vec![nested_vertical])
-                    .min_px(Px(240.0))
-                    .into(),
-            ])
-            .into_element(cx);
-
-        root.attach_semantics(
-            SemanticsDecoration::default()
-                .label("Debug:ui-gallery:resizable-panels")
-                .test_id("ui-gallery-resizable-panels"),
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
         )
     };
 
-    vec![cx.text("Drag the handles to resize panels."), root]
+    let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()),
+            move |cx| vec![shadcn::typography::h4(cx, title), body],
+        )
+    };
+
+    let box_group =
+        |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
+            cx.container(
+                decl_style::container_props(
+                    theme,
+                    ChromeRefinement::default().border_1().rounded(Radius::Lg),
+                    layout,
+                ),
+                move |_cx| [body],
+            )
+        };
+
+    let panel = |cx: &mut ElementContext<'_, App>, label: &'static str, height: Option<Px>| {
+        let layout = match height {
+            Some(h) => LayoutRefinement::default().w_full().h_px(h),
+            None => LayoutRefinement::default().w_full().h_full(),
+        };
+
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full().h_full())
+                .items_center()
+                .justify_center(),
+            move |cx| vec![cx.text(label)],
+        );
+
+        cx.container(
+            decl_style::container_props(theme, ChromeRefinement::default().p(Space::N6), layout),
+            move |_cx| [body],
+        )
+    };
+
+    let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
+    let max_w_md = LayoutRefinement::default().w_full().max_w(Px(448.0));
+
+    let state = cx.with_state(ResizableModels::default, |st| st.clone());
+    let vertical_fractions = match state.vertical_fractions {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(vec![0.25, 0.75]);
+            cx.with_state(ResizableModels::default, |st| {
+                st.vertical_fractions = Some(model.clone())
+            });
+            model
+        }
+    };
+    let handle_fractions = match state.handle_fractions {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(vec![0.25, 0.75]);
+            cx.with_state(ResizableModels::default, |st| {
+                st.handle_fractions = Some(model.clone())
+            });
+            model
+        }
+    };
+    let rtl_h_fractions = match state.rtl_h_fractions {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(vec![0.5, 0.5]);
+            cx.with_state(ResizableModels::default, |st| {
+                st.rtl_h_fractions = Some(model.clone())
+            });
+            model
+        }
+    };
+    let rtl_v_fractions = match state.rtl_v_fractions {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(vec![0.25, 0.75]);
+            cx.with_state(ResizableModels::default, |st| {
+                st.rtl_v_fractions = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let demo = {
+        let nested_vertical = shadcn::ResizablePanelGroup::new(v_fractions)
+            .axis(fret_core::Axis::Vertical)
+            .entries([
+                shadcn::ResizablePanel::new([panel(cx, "Two", None)]).into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new([panel(cx, "Three", None)]).into(),
+            ])
+            .into_element(cx);
+
+        let group = shadcn::ResizablePanelGroup::new(h_fractions)
+            .axis(fret_core::Axis::Horizontal)
+            .entries([
+                shadcn::ResizablePanel::new([panel(cx, "One", Some(Px(200.0)))]).into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new([nested_vertical]).into(),
+            ])
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .label("Debug:ui-gallery:resizable-panels")
+                    .test_id("ui-gallery-resizable-panels"),
+            );
+
+        let group = box_group(
+            cx,
+            max_w_sm
+                .clone()
+                .merge(LayoutRefinement::default().h_px(Px(320.0))),
+            group,
+        );
+
+        let body = centered(cx, group);
+        section(cx, "Demo", body)
+    };
+
+    let vertical = {
+        let group = shadcn::ResizablePanelGroup::new(vertical_fractions)
+            .axis(fret_core::Axis::Vertical)
+            .entries([
+                shadcn::ResizablePanel::new([panel(cx, "Header", None)]).into(),
+                shadcn::ResizableHandle::new().into(),
+                shadcn::ResizablePanel::new([panel(cx, "Content", None)]).into(),
+            ])
+            .into_element(cx);
+
+        let group = box_group(
+            cx,
+            max_w_sm
+                .clone()
+                .merge(LayoutRefinement::default().h_px(Px(200.0))),
+            group,
+        );
+
+        let body = centered(cx, group);
+        section(cx, "Vertical", body)
+    };
+
+    let handle = {
+        let group = shadcn::ResizablePanelGroup::new(handle_fractions)
+            .axis(fret_core::Axis::Horizontal)
+            .entries([
+                shadcn::ResizablePanel::new([panel(cx, "Sidebar", None)]).into(),
+                shadcn::ResizableHandle::new().with_handle(true).into(),
+                shadcn::ResizablePanel::new([panel(cx, "Content", None)]).into(),
+            ])
+            .into_element(cx);
+
+        let group = box_group(
+            cx,
+            max_w_md
+                .clone()
+                .merge(LayoutRefinement::default().h_px(Px(200.0))),
+            group,
+        );
+
+        let body = centered(cx, group);
+        section(cx, "Handle", body)
+    };
+
+    let rtl = {
+        let group = fret_ui_kit::primitives::direction::with_direction_provider(
+            cx,
+            fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+            |cx| {
+                let nested_vertical = shadcn::ResizablePanelGroup::new(rtl_v_fractions.clone())
+                    .axis(fret_core::Axis::Vertical)
+                    .entries([
+                        shadcn::ResizablePanel::new([panel(cx, "اثنان", None)]).into(),
+                        shadcn::ResizableHandle::new().with_handle(true).into(),
+                        shadcn::ResizablePanel::new([panel(cx, "ثلاثة", None)]).into(),
+                    ])
+                    .into_element(cx);
+
+                shadcn::ResizablePanelGroup::new(rtl_h_fractions.clone())
+                    .axis(fret_core::Axis::Horizontal)
+                    .entries([
+                        shadcn::ResizablePanel::new([panel(cx, "واحد", Some(Px(200.0)))]).into(),
+                        shadcn::ResizableHandle::new().with_handle(true).into(),
+                        shadcn::ResizablePanel::new([nested_vertical]).into(),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        let group = box_group(
+            cx,
+            max_w_sm
+                .clone()
+                .merge(LayoutRefinement::default().h_px(Px(320.0))),
+            group,
+        );
+
+        let body = centered(cx, group);
+        section(cx, "RTL", body)
+    };
+
+    vec![
+        cx.text("Drag the handles to resize panels."),
+        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
+            vec![demo, vertical, handle, rtl]
+        }),
+    ]
 }
 
 #[derive(Debug, Clone)]
