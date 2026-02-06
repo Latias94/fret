@@ -3490,6 +3490,17 @@ pub enum UiPredicateV1 {
     FocusIs {
         target: UiSelectorV1,
     },
+    RoleIs {
+        target: UiSelectorV1,
+        role: String,
+    },
+    CheckedIs {
+        target: UiSelectorV1,
+        checked: bool,
+    },
+    CheckedIsNone {
+        target: UiSelectorV1,
+    },
     /// Matches the current modal/pointer barrier root and focus barrier root (if any).
     ///
     /// This is intentionally coarse-grained: scripts should be able to assert that close
@@ -5239,7 +5250,7 @@ fn collect_menu_items(
 ) {
     for item in items {
         match item {
-            fret_runtime::MenuItem::Command { command, when } => {
+            fret_runtime::MenuItem::Command { command, when, .. } => {
                 out.push(UiCommandGatingTraceCandidate {
                     command: command.clone(),
                     source: "menu_bar",
@@ -7573,6 +7584,30 @@ fn eval_predicate(
             };
             node.id == focus
         }
+        UiPredicateV1::RoleIs { target, role } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            let Some(expected) = parse_semantics_role(role) else {
+                return false;
+            };
+            node.role == expected
+        }
+        UiPredicateV1::CheckedIs { target, checked } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.flags.checked == Some(*checked)
+        }
+        UiPredicateV1::CheckedIsNone { target } => {
+            let Some(node) = select_semantics_node(snapshot, window, element_runtime, target)
+            else {
+                return false;
+            };
+            node.flags.checked.is_none()
+        }
         UiPredicateV1::BarrierRoots {
             barrier_root,
             focus_barrier_root,
@@ -8159,6 +8194,17 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
         "space" => Some(KeyCode::Space),
         "backspace" => Some(KeyCode::Backspace),
         "delete" | "del" => Some(KeyCode::Delete),
+        "comma" => Some(KeyCode::Comma),
+        "period" | "dot" => Some(KeyCode::Period),
+        "slash" => Some(KeyCode::Slash),
+        "semicolon" => Some(KeyCode::Semicolon),
+        "quote" | "apostrophe" => Some(KeyCode::Quote),
+        "minus" | "dash" => Some(KeyCode::Minus),
+        "equal" => Some(KeyCode::Equal),
+        "bracket_left" | "left_bracket" => Some(KeyCode::BracketLeft),
+        "bracket_right" | "right_bracket" => Some(KeyCode::BracketRight),
+        "backslash" => Some(KeyCode::Backslash),
+        "backquote" | "grave" => Some(KeyCode::Backquote),
         "f1" => Some(KeyCode::F1),
         "f2" => Some(KeyCode::F2),
         "f3" => Some(KeyCode::F3),
@@ -8218,6 +8264,17 @@ fn parse_key_code(key: &str) -> Option<KeyCode> {
                     b'7' => KeyCode::Digit7,
                     b'8' => KeyCode::Digit8,
                     b'9' => KeyCode::Digit9,
+                    b',' => KeyCode::Comma,
+                    b'.' => KeyCode::Period,
+                    b'/' => KeyCode::Slash,
+                    b';' => KeyCode::Semicolon,
+                    b'\'' => KeyCode::Quote,
+                    b'-' => KeyCode::Minus,
+                    b'=' => KeyCode::Equal,
+                    b'[' => KeyCode::BracketLeft,
+                    b']' => KeyCode::BracketRight,
+                    b'\\' => KeyCode::Backslash,
+                    b'`' => KeyCode::Backquote,
                     _ => return None,
                 });
             }
@@ -8351,6 +8408,16 @@ mod tests {
         assert_eq!(parse_key_code("f1"), Some(KeyCode::F1));
         assert_eq!(parse_key_code("f10"), Some(KeyCode::F10));
         assert_eq!(parse_key_code("F12"), Some(KeyCode::F12));
+    }
+
+    #[test]
+    fn parse_key_code_supports_punctuation_keys() {
+        assert_eq!(parse_key_code("comma"), Some(KeyCode::Comma));
+        assert_eq!(parse_key_code(","), Some(KeyCode::Comma));
+        assert_eq!(parse_key_code("period"), Some(KeyCode::Period));
+        assert_eq!(parse_key_code("."), Some(KeyCode::Period));
+        assert_eq!(parse_key_code("slash"), Some(KeyCode::Slash));
+        assert_eq!(parse_key_code("/"), Some(KeyCode::Slash));
     }
 
     #[test]
@@ -8900,6 +8967,77 @@ mod tests {
         assert!(
             eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
             "expected missing test id to satisfy NotExists"
+        );
+    }
+
+    #[test]
+    fn role_and_checked_predicates_match_semantics_flags() {
+        let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
+        let mut item = semantics_node_with_test_id(
+            2,
+            Some(1),
+            SemanticsRole::MenuItemCheckbox,
+            rect(10.0, 10.0, 20.0, 20.0),
+            "Item",
+            "item",
+        );
+        item.flags.checked = Some(true);
+
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root",
+                ),
+                item,
+            ],
+        };
+
+        let pred = UiPredicateV1::RoleIs {
+            target: UiSelectorV1::TestId {
+                id: "item".to_string(),
+            },
+            role: "menu_item_checkbox".to_string(),
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected RoleIs(menu_item_checkbox) to match"
+        );
+
+        let pred = UiPredicateV1::CheckedIs {
+            target: UiSelectorV1::TestId {
+                id: "item".to_string(),
+            },
+            checked: true,
+        };
+        assert!(
+            eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected CheckedIs(true) to match"
+        );
+
+        let pred = UiPredicateV1::CheckedIsNone {
+            target: UiSelectorV1::TestId {
+                id: "item".to_string(),
+            },
+        };
+        assert!(
+            !eval_predicate(&snapshot, window_bounds, window_id(1), None, &pred),
+            "expected CheckedIsNone to fail when checked is Some(true)"
         );
     }
 

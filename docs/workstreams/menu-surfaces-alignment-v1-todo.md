@@ -125,12 +125,15 @@ Exit criteria:
 - Checked/radio semantics have a source-of-truth and can be rendered consistently.
 - A11y roles/labels are stable across OS and in-window, where possible.
 
-- [ ] MENU-MVP2-sem-030 Decide where checked/radio state lives:
-  - command meta (preferred for stable IDs), vs
-  - menu item state (dynamic), vs
-  - app-provided query hook (runner/UI reads from a service).
-- [ ] MENU-MVP2-sem-031 Extend `MenuItem` model (or add a parallel “presentation” layer) for checked/radio/accelerator hints.
-- [ ] MENU-MVP2-sem-032 Add a minimal in-window rendering for checked/radio indicators (no OS mapping required at first).
+- [x] MENU-MVP2-sem-030 Decide where checked/radio state lives.
+  - Decision: state lives on the menu item model (`MenuItem::Command.toggle`), so OS and in-window
+    surfaces share one source of truth.
+  - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuItemToggle`, `MenuItem::Command.toggle`)
+- [x] MENU-MVP2-sem-031 Extend `MenuItem` model (or add a parallel “presentation” layer) for checked/radio/accelerator hints.
+  - Implemented: `MenuItemToggleKind` + `MenuItemToggle` + `MenuItem::Command.toggle`
+  - Evidence: `crates/fret-runtime/src/menu.rs`
+- [x] MENU-MVP2-sem-032 Add a minimal in-window rendering for checked/radio indicators (no OS mapping required at first).
+  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (checkbox/radio semantics roles + checkmark indicator)
 
 ---
 
@@ -154,7 +157,8 @@ Exit criteria:
 
 - Core invariants are covered by unit tests and at least one `fretboard diag` script.
 
-- [ ] MENU-MVP4-test-050 Add nextest coverage for menu normalization (shared helper, if implemented).
+- [x] MENU-MVP4-test-050 Add nextest coverage for menu normalization (shared helper, if implemented).
+  - Evidence: `crates/fret-runtime/src/menu.rs` (tests `normalize_*`)
 - [x] MENU-MVP4-test-051 Add a `fretboard diag` script for keyboard-only menubar navigation:
   - Focus menubar (F10)
   - Open menu (Enter/ArrowDown)
@@ -164,11 +168,18 @@ Exit criteria:
   - Extra: `tools/diag-scripts/ui-gallery-menubar-alt-activation.json` (toggles in-window menubar on, then validates Alt activation focuses `menubar-trigger-file`)
 - [x] MENU-MVP4-test-052 Add a diag script for pointer “submenu grace intent” (prevent accidental close when moving toward submenu).
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-pointer-submenu-grace-intent.json`
+- [x] MENU-MVP4-test-053 Add a diag script for checked/radio semantics (role + checked flags) on in-window menubar items.
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-os-radio-checked.json`
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (updates menubar baseline when settings change)
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`role_is`, `checked_is` predicates)
 
 ---
 
 ## Notes / decisions log (keep short)
 
-- [ ] MENU-MVP0-docs-900 Pick the canonical layer for menu normalization (see `MENU-MVP0-sanitize-010`).
+- [x] MENU-MVP0-docs-900 Pick the canonical layer for menu normalization (see `MENU-MVP0-sanitize-010`).
+  - Decision: `crates/fret-runtime::menu` is the canonical normalization layer (`MenuBar::normalize`),
+    and all surfaces must consume normalized menus before mapping/rendering.
+  - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuBar::normalize`, `MenuBar::normalized`)
 - [x] MENU-MVP1-docs-901 Decide Alt activation behavior and document trade-offs.
   - Decision: Alt-up focuses menubar triggers via `focus.menu_bar` on Windows/Linux; see `MENU-MVP1-kbd-020`.

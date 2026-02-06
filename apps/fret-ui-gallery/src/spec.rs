@@ -372,6 +372,14 @@ pub(crate) const CMD_APP_SETTINGS_WRITE_PROJECT: &str = "ui_gallery.app.settings
 pub(crate) const CMD_APP_TOGGLE_PREFERENCES_ENABLED: &str =
     "ui_gallery.app.preferences.toggle_enabled";
 
+pub(crate) const CMD_MENU_BAR_OS_AUTO: &str = "ui_gallery.menu_bar.os.auto";
+pub(crate) const CMD_MENU_BAR_OS_ON: &str = "ui_gallery.menu_bar.os.on";
+pub(crate) const CMD_MENU_BAR_OS_OFF: &str = "ui_gallery.menu_bar.os.off";
+
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_AUTO: &str = "ui_gallery.menu_bar.in_window.auto";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_ON: &str = "ui_gallery.menu_bar.in_window.on";
+pub(crate) const CMD_MENU_BAR_IN_WINDOW_OFF: &str = "ui_gallery.menu_bar.in_window.off";
+
 pub(crate) const CMD_CLIPBOARD_COPY_LINK: &str = "ui_gallery.clipboard.copy_link";
 pub(crate) const CMD_CLIPBOARD_COPY_USAGE: &str = "ui_gallery.clipboard.copy_usage";
 pub(crate) const CMD_CLIPBOARD_COPY_NOTES: &str = "ui_gallery.clipboard.copy_notes";

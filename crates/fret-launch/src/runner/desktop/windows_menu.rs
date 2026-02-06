@@ -538,7 +538,7 @@ fn append_menu_item(
                 let _ = AppendMenuW(menu, MF_POPUP, popup as usize, title.as_ptr());
             }
         }
-        MenuItem::Command { command, when } => {
+        MenuItem::Command { command, when, .. } => {
             let id = *next_id;
             *next_id = next_id.saturating_add(1);
 

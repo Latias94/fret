@@ -6,8 +6,9 @@ use fret_core::{
 };
 use fret_runtime::{
     CommandId, CommandScope, InputContext, InputDispatchPhase, KeymapService, MenuBar, MenuItem,
-    Platform, PlatformCapabilities, WhenExpr, WindowCommandGatingSnapshot,
-    best_effort_snapshot_for_window_with_input_ctx_fallback, format_sequence,
+    MenuItemToggle, MenuItemToggleKind, Platform, PlatformCapabilities, WhenExpr,
+    WindowCommandGatingSnapshot, best_effort_snapshot_for_window_with_input_ctx_fallback,
+    format_sequence,
 };
 use fret_ui::action::{ActionCx, OnDismissRequest, UiActionHost};
 use fret_ui::element::{
@@ -143,6 +144,7 @@ struct InWindowMenuItem {
     value: Arc<str>,
     disabled: bool,
     command: Option<CommandId>,
+    toggle: Option<MenuItemToggle>,
     shortcut: Option<Arc<str>>,
     has_submenu: bool,
     keep_if_empty_submenu: bool,
@@ -300,6 +302,7 @@ fn command_item<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     command: &CommandId,
     item_when: Option<&WhenExpr>,
+    toggle: Option<MenuItemToggle>,
     gating: &WindowCommandGatingSnapshot,
     shortcut_base_ctx: &InputContext,
     opts: &MenubarFromRuntimeOptions,
@@ -343,6 +346,7 @@ fn command_item<H: UiHost>(
         value: Arc::<str>::from(command.as_str()),
         disabled,
         command: Some(command.clone()),
+        toggle,
         shortcut,
         has_submenu: false,
         keep_if_empty_submenu: false,
@@ -355,6 +359,7 @@ fn submenu_item(title: Arc<str>, value: Arc<str>, disabled: bool) -> InWindowMen
         value,
         disabled,
         command: None,
+        toggle: None,
         shortcut: None,
         has_submenu: true,
         keep_if_empty_submenu: false,
@@ -372,6 +377,7 @@ fn system_menu_placeholder_item(
             value,
             disabled: true,
             command: None,
+            toggle: None,
             shortcut: None,
             has_submenu: true,
             keep_if_empty_submenu: true,
@@ -444,10 +450,15 @@ fn build_entries<H: UiHost>(
                     Vec::new(),
                 ));
             }
-            MenuItem::Command { command, when } => out.push(InWindowMenuEntry::Item(command_item(
+            MenuItem::Command {
+                command,
+                when,
+                toggle,
+            } => out.push(InWindowMenuEntry::Item(command_item(
                 cx,
                 command,
                 when.as_ref(),
+                *toggle,
                 gating,
                 shortcut_base_ctx,
                 opts,
@@ -1314,6 +1325,16 @@ fn render_menu_item<H: UiHost>(
         layout.size.width = Length::Fill;
         layout.size.min_height = Some(Px(28.0));
 
+        let (role, checked) = match item.toggle {
+            Some(toggle) => match toggle.kind {
+                MenuItemToggleKind::Checkbox => {
+                    (SemanticsRole::MenuItemCheckbox, Some(toggle.checked))
+                }
+                MenuItemToggleKind::Radio => (SemanticsRole::MenuItemRadio, Some(toggle.checked)),
+            },
+            None => (SemanticsRole::MenuItem, None),
+        };
+
         let props = PressableProps {
             layout,
             enabled: !disabled,
@@ -1321,10 +1342,11 @@ fn render_menu_item<H: UiHost>(
             focus_ring: None,
             focus_ring_bounds: None,
             a11y: PressableA11y {
-                role: Some(SemanticsRole::MenuItem),
+                role: Some(role),
                 label: Some(item.label.clone()),
                 test_id: Some(diag_test_id("menubar-item", item.value.as_ref())),
                 expanded,
+                checked,
                 controls_element,
                 ..Default::default()
             },
@@ -1368,6 +1390,53 @@ fn render_menu_item<H: UiHost>(
             color: Some(text_color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
+        });
+
+        let item_text_for_leading = item_text.clone();
+        let leading = item.toggle.map(|toggle| {
+            let item_text_for_leading = item_text_for_leading.clone();
+            let symbol: Arc<str> = match toggle.kind {
+                MenuItemToggleKind::Checkbox => {
+                    if toggle.checked {
+                        Arc::from("✓")
+                    } else {
+                        Arc::from("")
+                    }
+                }
+                MenuItemToggleKind::Radio => {
+                    if toggle.checked {
+                        Arc::from("●")
+                    } else {
+                        Arc::from("")
+                    }
+                }
+            };
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Px(Px(16.0));
+            layout.size.height = Length::Fill;
+
+            cx.flex(
+                FlexProps {
+                    layout,
+                    direction: fret_core::Axis::Horizontal,
+                    gap: Px(0.0),
+                    padding: Edges::all(Px(0.0)),
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    vec![cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: symbol.clone(),
+                        style: Some(item_text_for_leading.clone()),
+                        color: Some(text_color),
+                        wrap: TextWrap::None,
+                        overflow: TextOverflow::Clip,
+                    })]
+                },
+            )
         });
 
         let trailing = if let Some(shortcut) = item.shortcut.clone() {
@@ -1421,8 +1490,26 @@ fn render_menu_item<H: UiHost>(
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    move |_cx| {
-                        let mut out = vec![label];
+                    move |cx| {
+                        let mut left_children: Vec<AnyElement> = Vec::new();
+                        if let Some(leading) = leading {
+                            left_children.push(leading);
+                        }
+                        left_children.push(label);
+                        let left = cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle::default(),
+                                direction: fret_core::Axis::Horizontal,
+                                gap: Px(8.0),
+                                padding: Edges::all(Px(0.0)),
+                                justify: MainAlign::Start,
+                                align: CrossAlign::Center,
+                                wrap: false,
+                            },
+                            move |_cx| left_children,
+                        );
+
+                        let mut out = vec![left];
                         if let Some(trailing) = trailing {
                             out.push(trailing);
                         }
@@ -1498,6 +1585,7 @@ mod tests {
             value: Arc::from(label),
             disabled: false,
             command: None,
+            toggle: None,
             shortcut: None,
             has_submenu: false,
             keep_if_empty_submenu: false,
@@ -1665,11 +1753,13 @@ mod tests {
                             items: vec![MenuItem::Command {
                                 command: CommandId::from("workspace.pane.split.right"),
                                 when: None,
+                                toggle: None,
                             }],
                         },
                         MenuItem::Command {
                             command: CommandId::from("test.noop"),
                             when: None,
+                            toggle: None,
                         },
                     ],
                 }],

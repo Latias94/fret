@@ -1,6 +1,7 @@
 use fret_app::{
-    App, CommandId, CommandMeta, Effect, LayeredConfigPaths, Menu, MenuBarIntegrationModeV1,
-    MenuItem, Model, Platform, SettingsFileV1, WindowRequest, load_layered_settings,
+    App, CommandId, CommandMeta, Effect, LayeredConfigPaths, Menu, MenuBar,
+    MenuBarIntegrationModeV1, MenuItem, Model, Platform, SettingsFileV1, WindowRequest,
+    load_layered_settings,
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
@@ -14,8 +15,8 @@ use fret_launch::{
     WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
-    PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
-    WindowCommandEnabledService,
+    MenuItemToggle, MenuItemToggleKind, PlatformCapabilities, WindowCommandAvailability,
+    WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
@@ -193,6 +194,133 @@ struct UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
+    fn build_workspace_menu_commands() -> fret_workspace::menu::WorkspaceMenuCommands {
+        let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
+        cmds.open = Some(CommandId::new(CMD_APP_OPEN));
+        cmds.save = Some(CommandId::new(CMD_APP_SAVE));
+        cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
+        cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
+        cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
+        cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
+        cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
+        cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
+        cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
+
+        if Platform::current() == Platform::Macos {
+            cmds.app_menu_title = Some(Arc::from("Fret"));
+            cmds.include_services_menu = true;
+            cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
+            cmds.preferences = Some(CommandId::new(fret_app::core_commands::APP_PREFERENCES));
+            cmds.hide = Some(CommandId::new(fret_app::core_commands::APP_HIDE));
+            cmds.hide_others = Some(CommandId::new(fret_app::core_commands::APP_HIDE_OTHERS));
+            cmds.show_all = Some(CommandId::new(fret_app::core_commands::APP_SHOW_ALL));
+            cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
+        }
+
+        cmds
+    }
+
+    fn build_menu_bar(app: &App) -> MenuBar {
+        let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let os = settings.menu_bar.os;
+        let in_window = settings.menu_bar.in_window;
+
+        let mut menu_bar =
+            fret_workspace::menu::workspace_default_menu_bar(Self::build_workspace_menu_commands());
+
+        let radio = |checked: bool| {
+            Some(MenuItemToggle {
+                kind: MenuItemToggleKind::Radio,
+                checked,
+            })
+        };
+
+        menu_bar.menus.push(Menu {
+            title: Arc::from("Gallery"),
+            role: None,
+            mnemonic: Some('g'),
+            items: vec![
+                MenuItem::Command {
+                    command: CommandId::new(CMD_APP_SETTINGS),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_APP_TOGGLE_PREFERENCES_ENABLED),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Separator,
+                MenuItem::Submenu {
+                    title: Arc::from("Menu Bar"),
+                    when: None,
+                    items: vec![
+                        MenuItem::Submenu {
+                            title: Arc::from("OS"),
+                            when: None,
+                            items: vec![
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_OS_AUTO),
+                                    when: None,
+                                    toggle: radio(os == MenuBarIntegrationModeV1::Auto),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_OS_ON),
+                                    when: None,
+                                    toggle: radio(os == MenuBarIntegrationModeV1::On),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_OS_OFF),
+                                    when: None,
+                                    toggle: radio(os == MenuBarIntegrationModeV1::Off),
+                                },
+                            ],
+                        },
+                        MenuItem::Submenu {
+                            title: Arc::from("In-window"),
+                            when: None,
+                            items: vec![
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_IN_WINDOW_AUTO),
+                                    when: None,
+                                    toggle: radio(in_window == MenuBarIntegrationModeV1::Auto),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_IN_WINDOW_ON),
+                                    when: None,
+                                    toggle: radio(in_window == MenuBarIntegrationModeV1::On),
+                                },
+                                MenuItem::Command {
+                                    command: CommandId::new(CMD_MENU_BAR_IN_WINDOW_OFF),
+                                    when: None,
+                                    toggle: radio(in_window == MenuBarIntegrationModeV1::Off),
+                                },
+                            ],
+                        },
+                    ],
+                },
+                MenuItem::Separator,
+                MenuItem::Command {
+                    command: CommandId::new(CMD_CLIPBOARD_COPY_LINK),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
+                    when: None,
+                    toggle: None,
+                },
+                MenuItem::Command {
+                    command: CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
+                    when: None,
+                    toggle: None,
+                },
+            ],
+        });
+
+        menu_bar
+    }
+
     fn sync_undo_availability(app: &mut App, window: AppWindowId, doc: &DocumentId) {
         let mut edit_can_undo = false;
         let mut edit_can_redo = false;
@@ -393,10 +521,10 @@ impl UiGalleryDriver {
             settings.menu_bar.in_window = MenuBarIntegrationModeV1::On;
             Self::apply_menu_bar_settings(
                 app,
-                window,
                 settings.menu_bar.os,
                 settings.menu_bar.in_window,
             );
+            Self::sync_menu_bar_after_settings_change(app, window);
         }
         let settings_open = app.models_mut().insert(false);
         let settings_menu_bar_os = app
@@ -947,7 +1075,6 @@ impl UiGalleryDriver {
 
     fn apply_menu_bar_settings(
         app: &mut App,
-        window: AppWindowId,
         os: MenuBarIntegrationModeV1,
         in_window: MenuBarIntegrationModeV1,
     ) {
@@ -955,8 +1082,70 @@ impl UiGalleryDriver {
             settings.menu_bar.os = os;
             settings.menu_bar.in_window = in_window;
         });
+    }
+
+    fn sync_menu_bar_after_settings_change(app: &mut App, window: AppWindowId) {
+        let menu_bar = Self::build_menu_bar(app);
+        fret_app::set_menu_bar_baseline(app, menu_bar);
         fret_app::sync_os_menu_bar(app);
         app.request_redraw(window);
+    }
+
+    fn handle_menu_bar_mode_command(
+        app: &mut App,
+        window: AppWindowId,
+        state: &mut UiGalleryWindowState,
+        command: &str,
+    ) -> bool {
+        let settings = app.global::<SettingsFileV1>().cloned().unwrap_or_default();
+        let mut os = settings.menu_bar.os;
+        let mut in_window = settings.menu_bar.in_window;
+
+        let last_action: &'static str = match command {
+            CMD_MENU_BAR_OS_AUTO => {
+                os = MenuBarIntegrationModeV1::Auto;
+                "settings.menu_bar.os.auto"
+            }
+            CMD_MENU_BAR_OS_ON => {
+                os = MenuBarIntegrationModeV1::On;
+                "settings.menu_bar.os.on"
+            }
+            CMD_MENU_BAR_OS_OFF => {
+                os = MenuBarIntegrationModeV1::Off;
+                "settings.menu_bar.os.off"
+            }
+            CMD_MENU_BAR_IN_WINDOW_AUTO => {
+                in_window = MenuBarIntegrationModeV1::Auto;
+                "settings.menu_bar.in_window.auto"
+            }
+            CMD_MENU_BAR_IN_WINDOW_ON => {
+                in_window = MenuBarIntegrationModeV1::On;
+                "settings.menu_bar.in_window.on"
+            }
+            CMD_MENU_BAR_IN_WINDOW_OFF => {
+                in_window = MenuBarIntegrationModeV1::Off;
+                "settings.menu_bar.in_window.off"
+            }
+            _ => return false,
+        };
+
+        Self::apply_menu_bar_settings(app, os, in_window);
+        Self::sync_menu_bar_after_settings_change(app, window);
+
+        let _ = app.models_mut().update(&state.settings_menu_bar_os, |v| {
+            *v = Some(Self::menu_bar_mode_key(os));
+        });
+        let _ = app
+            .models_mut()
+            .update(&state.settings_menu_bar_in_window, |v| {
+                *v = Some(Self::menu_bar_mode_key(in_window));
+            });
+
+        let _ = app.models_mut().update(&state.last_action, |v| {
+            *v = Arc::<str>::from(last_action);
+        });
+
+        true
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -2208,6 +2397,42 @@ pub fn build_app() -> App {
             .with_category("Settings")
             .with_keywords(["preferences", "menubar", "enabled", "disable", "debug"]),
     );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_OS_AUTO),
+        CommandMeta::new("Menu Bar (OS): Auto")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "os", "auto"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_OS_ON),
+        CommandMeta::new("Menu Bar (OS): On")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "os", "on"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_OS_OFF),
+        CommandMeta::new("Menu Bar (OS): Off")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "os", "off"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_IN_WINDOW_AUTO),
+        CommandMeta::new("Menu Bar (In-window): Auto")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "in-window", "auto"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_IN_WINDOW_ON),
+        CommandMeta::new("Menu Bar (In-window): On")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "in-window", "on"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_MENU_BAR_IN_WINDOW_OFF),
+        CommandMeta::new("Menu Bar (In-window): Off")
+            .with_category("Settings")
+            .with_keywords(["menu", "menubar", "in-window", "off"]),
+    );
 
     for group in PAGE_GROUPS {
         for page in group.items {
@@ -2246,62 +2471,9 @@ pub fn build_app() -> App {
 
     fret_workspace::commands::register_workspace_commands(app.commands_mut());
     fret_app::install_command_default_keybindings_into_keymap(&mut app);
-
-    let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
-    cmds.open = Some(CommandId::new(CMD_APP_OPEN));
-    cmds.save = Some(CommandId::new(CMD_APP_SAVE));
-    cmds.undo = Some(CommandId::new(fret_app::core_commands::EDIT_UNDO));
-    cmds.redo = Some(CommandId::new(fret_app::core_commands::EDIT_REDO));
-    cmds.cut = Some(CommandId::new(fret_app::core_commands::EDIT_CUT));
-    cmds.copy = Some(CommandId::new(fret_app::core_commands::EDIT_COPY));
-    cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
-    cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
-    cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
-
-    if Platform::current() == Platform::Macos {
-        cmds.app_menu_title = Some(Arc::from("Fret"));
-        cmds.include_services_menu = true;
-        cmds.about = Some(CommandId::new(fret_app::core_commands::APP_ABOUT));
-        cmds.preferences = Some(CommandId::new(fret_app::core_commands::APP_PREFERENCES));
-        cmds.hide = Some(CommandId::new(fret_app::core_commands::APP_HIDE));
-        cmds.hide_others = Some(CommandId::new(fret_app::core_commands::APP_HIDE_OTHERS));
-        cmds.show_all = Some(CommandId::new(fret_app::core_commands::APP_SHOW_ALL));
-        cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
-    }
-
-    let mut menu_bar = fret_workspace::menu::workspace_default_menu_bar(cmds);
-
-    menu_bar.menus.push(Menu {
-        title: Arc::from("Gallery"),
-        role: None,
-        mnemonic: Some('g'),
-        items: vec![
-            MenuItem::Command {
-                command: CommandId::new(CMD_APP_SETTINGS),
-                when: None,
-            },
-            MenuItem::Command {
-                command: CommandId::new(CMD_APP_TOGGLE_PREFERENCES_ENABLED),
-                when: None,
-            },
-            MenuItem::Separator,
-            MenuItem::Command {
-                command: CommandId::new(CMD_CLIPBOARD_COPY_LINK),
-                when: None,
-            },
-            MenuItem::Command {
-                command: CommandId::new(CMD_CLIPBOARD_COPY_USAGE),
-                when: None,
-            },
-            MenuItem::Command {
-                command: CommandId::new(CMD_CLIPBOARD_COPY_NOTES),
-                when: None,
-            },
-        ],
-    });
     app.push_effect(Effect::SetMenuBar {
         window: None,
-        menu_bar,
+        menu_bar: UiGalleryDriver::build_menu_bar(&app),
     });
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -2554,6 +2726,11 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
+        if Self::handle_menu_bar_mode_command(app, window, state, command.as_str()) {
+            app.request_redraw(window);
+            return;
+        }
+
         if state.ui.dispatch_command(app, services, &command) {
             app.request_redraw(window);
             return;
@@ -2780,7 +2957,8 @@ impl WinitAppDriver for UiGalleryDriver {
 
                 let os = Self::menu_bar_mode_from_key(os.as_deref());
                 let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
-                Self::apply_menu_bar_settings(app, window, os, in_window);
+                Self::apply_menu_bar_settings(app, os, in_window);
+                Self::sync_menu_bar_after_settings_change(app, window);
 
                 let _ = app
                     .models_mut()

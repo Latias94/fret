@@ -21,6 +21,22 @@ pub enum SystemMenuType {
     Services,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum MenuItemToggleKind {
+    Checkbox,
+    Radio,
+}
+
+/// Optional checked/radio semantics for command-backed menu items.
+///
+/// This is intentionally data-only so OS menubars and in-window surfaces can share one
+/// source-of-truth for toggle state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct MenuItemToggle {
+    pub kind: MenuItemToggleKind,
+    pub checked: bool,
+}
+
 /// A minimal, data-only menu model intended to power:
 /// - future menubar rendering,
 /// - context menus,
@@ -50,6 +66,7 @@ pub enum MenuItem {
     Command {
         command: CommandId,
         when: Option<WhenExpr>,
+        toggle: Option<MenuItemToggle>,
     },
     Separator,
     Submenu {
@@ -424,6 +441,7 @@ impl MenuItemFileV1 {
                 Ok(MenuItem::Command {
                     command: CommandId::new(command),
                     when,
+                    toggle: None,
                 })
             }
             Self::Submenu { title, when, items } => {
@@ -497,6 +515,7 @@ impl MenuItemFileV2 {
                 Ok(MenuItem::Command {
                     command: CommandId::new(command),
                     when,
+                    toggle: None,
                 })
             }
             Self::Submenu { title, when, items } => {
@@ -1345,6 +1364,7 @@ mod tests {
                     MenuItem::Command {
                         command: CommandId::new("app.open"),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Submenu {
                         title: Arc::from("Recent"),
@@ -1369,6 +1389,7 @@ mod tests {
                     MenuItem::Command {
                         command: CommandId::new("app.open"),
                         when: None,
+                        toggle: None,
                     },
                     MenuItem::Separator,
                     MenuItem::Separator,
@@ -1419,6 +1440,7 @@ mod tests {
                             MenuItem::Command {
                                 command: CommandId::new("app.open"),
                                 when: None,
+                                toggle: None,
                             },
                         ],
                     },
@@ -1449,6 +1471,7 @@ mod tests {
                 item: MenuItem::Command {
                     command: CommandId::new("app.open_recent"),
                     when: None,
+                    toggle: None,
                 },
             }],
         };
@@ -1476,6 +1499,7 @@ mod tests {
                 item: MenuItem::Command {
                     command: CommandId::new("app.new"),
                     when: None,
+                    toggle: None,
                 },
             }],
         };

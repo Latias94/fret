@@ -353,7 +353,7 @@ unsafe fn append_menu_item(
             submenu_item.setSubmenu_(submenu);
             menu.addItem_(submenu_item);
         }
-        MenuItem::Command { command, when } => {
+        MenuItem::Command { command, when, .. } => {
             let (label, command_when, os_action, command_scope) =
                 match commands.get(command.clone()) {
                     Some(meta) => (

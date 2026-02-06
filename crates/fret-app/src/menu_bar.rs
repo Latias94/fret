@@ -26,6 +26,14 @@ impl MenuBarBaselineService {
         self.baseline.as_ref()
     }
 
+    pub(crate) fn set_baseline(&mut self, menu_bar: MenuBar) -> bool {
+        if self.baseline.as_ref() == Some(&menu_bar) {
+            return false;
+        }
+        self.baseline = Some(menu_bar);
+        true
+    }
+
     pub(crate) fn note_default_menu_bar(&mut self, menu_bar: &MenuBar) {
         let should_overwrite_empty_baseline = self
             .baseline
@@ -40,6 +48,7 @@ impl MenuBarBaselineService {
 
 #[derive(Debug, Default)]
 pub struct MenuBarOverlayState {
+    layered: Option<LayeredMenuBarConfig>,
     effective: Option<MenuBar>,
 }
 
@@ -53,6 +62,26 @@ pub fn effective_menu_bar(app: &App) -> Option<MenuBar> {
         .and_then(|s| s.effective.clone());
 
     overlaid.or(baseline)
+}
+
+pub fn set_menu_bar_baseline(app: &mut App, menu_bar: MenuBar) {
+    let changed = app.with_global_mut_untracked(MenuBarBaselineService::default, |svc, _app| {
+        svc.set_baseline(menu_bar)
+    });
+
+    if !changed {
+        return;
+    }
+
+    let layered = app
+        .global::<MenuBarOverlayState>()
+        .and_then(|state| state.layered.clone());
+
+    let Some(layered) = layered else {
+        return;
+    };
+
+    let _ = apply_layered_menu_bar(app, None, layered);
 }
 
 pub fn should_publish_os_menu_bar(app: &App, platform: Platform) -> bool {
@@ -84,7 +113,7 @@ pub fn sync_os_menu_bar(app: &mut App) {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct LayeredMenuBarConfig {
     pub user: Option<(PathBuf, MenuBarConfig)>,
     pub project: Option<(PathBuf, MenuBarConfig)>,
@@ -116,39 +145,51 @@ pub fn apply_layered_menu_bar(
     window: Option<AppWindowId>,
     layered: LayeredMenuBarConfig,
 ) -> Result<(), MenuBarFileError> {
-    let base = app
-        .global::<MenuBarBaselineService>()
-        .and_then(|svc| svc.baseline().cloned())
-        .unwrap_or_else(MenuBar::empty);
+    let (has_baseline, base) = match app.global::<MenuBarBaselineService>() {
+        Some(svc) => match svc.baseline().cloned() {
+            Some(baseline) => (true, baseline),
+            None => (false, MenuBar::empty()),
+        },
+        None => (false, MenuBar::empty()),
+    };
 
     let mut effective = base.clone();
     let mut has_layers = false;
 
-    if let Some((path, cfg)) = layered.user {
+    if let Some((path, cfg)) = layered.user.as_ref() {
         has_layers = true;
-        effective = apply_config(effective, cfg).map_err(|source| MenuBarFileError::Parse {
+        effective =
+            apply_config(effective, cfg.clone()).map_err(|source| MenuBarFileError::Parse {
             path: path.display().to_string(),
             source,
         })?;
     }
 
-    if let Some((path, cfg)) = layered.project {
+    if let Some((path, cfg)) = layered.project.as_ref() {
         has_layers = true;
-        effective = apply_config(effective, cfg).map_err(|source| MenuBarFileError::Parse {
+        effective =
+            apply_config(effective, cfg.clone()).map_err(|source| MenuBarFileError::Parse {
             path: path.display().to_string(),
             source,
         })?;
     }
 
-    let next_effective = if has_layers { effective } else { base };
+    let layered_for_state = has_layers.then(|| layered.clone());
+    let next_effective = if has_layers {
+        Some(effective)
+    } else if has_baseline {
+        None
+    } else {
+        Some(base.clone())
+    };
 
     let mut should_push = false;
     app.with_global_mut_untracked(MenuBarOverlayState::default, |state, _app| {
-        if !has_layers && state.effective.is_none() {
-            return;
-        }
-        if state.effective.as_ref() != Some(&next_effective) {
-            state.effective = Some(next_effective.clone());
+        if state.layered.as_ref() != layered_for_state.as_ref()
+            || state.effective.as_ref() != next_effective.as_ref()
+        {
+            state.layered = layered_for_state.clone();
+            state.effective = next_effective.clone();
             should_push = true;
         }
     });
