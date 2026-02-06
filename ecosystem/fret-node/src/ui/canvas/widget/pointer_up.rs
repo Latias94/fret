@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 use fret_canvas::scale::canvas_units_from_screen_px;
 use fret_core::{Modifiers, MouseButton, Point, Rect};
@@ -203,11 +203,11 @@ pub(super) fn handle_pointer_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .iter()
             .copied()
             .collect::<HashMap<_, _>>();
-        let group_overrides: HashMap<GroupId, crate::core::CanvasRect> = drag
+        let group_overrides: BTreeMap<GroupId, crate::core::CanvasRect> = drag
             .current_groups
             .iter()
             .copied()
-            .collect::<HashMap<_, _>>();
+            .collect::<BTreeMap<_, _>>();
 
         let parent_changes: Vec<(crate::core::NodeId, Option<GroupId>, Option<GroupId>)> = canvas
             .graph

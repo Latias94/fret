@@ -11,6 +11,19 @@ use std::hash::Hash;
 
 use fret_core::{Point, Rect};
 
+/// Runs a spatial query into `scratch`, then sorts and deduplicates the results in-place.
+///
+/// Many coarse spatial indices intentionally allow duplicates and preserve insertion order inside
+/// buckets. This helper provides a deterministic "candidate set" suitable for hit-testing and
+/// other workflows that require stable ordering.
+pub fn query_sorted_dedup<T: Ord>(scratch: &mut Vec<T>, query: impl FnOnce(&mut Vec<T>)) -> &[T] {
+    scratch.clear();
+    query(scratch);
+    scratch.sort_unstable();
+    scratch.dedup();
+    scratch.as_slice()
+}
+
 #[cfg(feature = "rstar")]
 use crate::spatial_rstar::RStarIndexWithBackrefs;
 
@@ -374,6 +387,21 @@ impl<T: Copy + Eq + Hash> DefaultIndexWithBackrefs<T> {
     }
 }
 
+impl<T: Copy + Eq + Hash + Ord> DefaultIndexWithBackrefs<T> {
+    pub fn query_radius_sorted_dedup<'a>(
+        &self,
+        pos: Point,
+        radius: f32,
+        out: &'a mut Vec<T>,
+    ) -> &'a [T] {
+        query_sorted_dedup(out, |scratch| self.query_radius(pos, radius, scratch))
+    }
+
+    pub fn query_rect_sorted_dedup<'a>(&self, rect: Rect, out: &'a mut Vec<T>) -> &'a [T] {
+        query_sorted_dedup(out, |scratch| self.query_rect(rect, scratch))
+    }
+}
+
 impl<T: Copy + Eq + Hash> Default for DefaultIndexWithBackrefs<T> {
     fn default() -> Self {
         Self::new(1.0)
@@ -391,6 +419,86 @@ mod tests {
     use fret_core::{Px, Rect, Size};
 
     use super::*;
+
+    #[test]
+    fn query_sorted_dedup_sorts_and_dedups_in_place() {
+        let mut scratch = vec![999u32];
+        let out = query_sorted_dedup(&mut scratch, |v| v.extend([3, 1, 2, 2, 1]));
+        assert_eq!(out, [1, 2, 3]);
+        assert_eq!(scratch, [1, 2, 3]);
+
+        let out = query_sorted_dedup(&mut scratch, |v| v.extend([5, 4, 4]));
+        assert_eq!(out, [4, 5]);
+        assert_eq!(scratch, [4, 5]);
+    }
+
+    #[test]
+    fn default_index_with_backrefs_sorted_dedup_is_deterministic() {
+        let mut idx = DefaultIndexWithBackrefs::new(10.0);
+        idx.insert_rect(
+            2u32,
+            Rect::new(Point::new(Px(1.0), Px(1.0)), Size::new(Px(5.0), Px(5.0))),
+        );
+        idx.insert_rect(
+            1u32,
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(5.0), Px(5.0))),
+        );
+        idx.insert_rect(
+            3u32,
+            Rect::new(
+                Point::new(Px(100.0), Px(100.0)),
+                Size::new(Px(5.0), Px(5.0)),
+            ),
+        );
+
+        let mut out = Vec::new();
+        let got = idx.query_radius_sorted_dedup(Point::new(Px(2.0), Px(2.0)), 0.25, &mut out);
+        assert_eq!(got, [1, 2]);
+
+        let got = idx.query_rect_sorted_dedup(
+            Rect::new(
+                Point::new(Px(-1.0), Px(-1.0)),
+                Size::new(Px(20.0), Px(20.0)),
+            ),
+            &mut out,
+        );
+        assert_eq!(got, [1, 2]);
+    }
+
+    #[cfg(not(feature = "rstar"))]
+    #[test]
+    fn default_index_with_backrefs_sorted_dedup_removes_duplicates_from_grid_backend() {
+        let mut idx = DefaultIndexWithBackrefs::new(10.0);
+        // This item spans multiple cells; a multi-cell query returns duplicates in the grid backend.
+        idx.insert_rect(
+            7u32,
+            Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(25.0), Px(25.0))),
+        );
+
+        let mut raw = Vec::new();
+        idx.query_rect(
+            Rect::new(
+                Point::new(Px(-10.0), Px(-10.0)),
+                Size::new(Px(60.0), Px(60.0)),
+            ),
+            &mut raw,
+        );
+        assert!(
+            raw.len() > 1,
+            "expected duplicates from multi-cell grid query"
+        );
+        assert!(raw.iter().all(|v| *v == 7));
+
+        let mut out = Vec::new();
+        let got = idx.query_rect_sorted_dedup(
+            Rect::new(
+                Point::new(Px(-10.0), Px(-10.0)),
+                Size::new(Px(60.0), Px(60.0)),
+            ),
+            &mut out,
+        );
+        assert_eq!(got, [7]);
+    }
 
     #[test]
     fn grid_index_query_radius_returns_inserted_items() {

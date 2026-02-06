@@ -1,6 +1,27 @@
 use fret_core::{Color, Px, TextStyle};
 use fret_ui::{Theme, ThemeSnapshot};
 
+/// Background/theming configuration for the node graph canvas.
+///
+/// This is intentionally policy-light: it is a pure token/config bundle that can be
+/// stored in a B-layer store and applied without touching interaction logic.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NodeGraphBackgroundStyle {
+    pub background: Color,
+
+    pub grid_pattern: NodeGraphBackgroundPattern,
+    pub grid_spacing: f32,
+    pub grid_minor_color: Color,
+    pub grid_major_every: u32,
+    pub grid_major_color: Color,
+    /// Grid stroke thickness in screen pixels (XyFlow `BackgroundProps.lineWidth`).
+    pub grid_line_width: f32,
+    /// Dot diameter in canvas units at zoom=1 (XyFlow `BackgroundProps.size` for dots).
+    pub grid_dot_size: f32,
+    /// Cross size in canvas units at zoom=1 (XyFlow `BackgroundProps.size` for cross).
+    pub grid_cross_size: f32,
+}
+
 /// Background grid pattern variant (XyFlow `BackgroundVariant`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeGraphBackgroundPattern {
@@ -78,6 +99,25 @@ pub struct NodeGraphStyle {
 
     pub wire_width_selected_mul: f32,
     pub wire_width_hover_mul: f32,
+
+    /// Edge label padding in screen-space pixels (logical px).
+    pub edge_label_padding: f32,
+    /// Edge label corner radius in screen-space pixels (logical px).
+    pub edge_label_corner_radius: f32,
+    /// Edge label offset distance from the edge in screen-space pixels (logical px).
+    pub edge_label_offset: f32,
+    /// Edge label max width in screen-space pixels (logical px).
+    pub edge_label_max_width: f32,
+    /// Edge label background color.
+    pub edge_label_background: Color,
+    /// Edge label border color (used when `EdgeRenderHint.color` is not set).
+    pub edge_label_border: Color,
+    /// Edge label border width in screen-space pixels (logical px).
+    pub edge_label_border_width: f32,
+    /// Edge label text color.
+    pub edge_label_text: Color,
+    /// Edge label text style.
+    pub edge_label_text_style: TextStyle,
 
     pub marquee_fill: Color,
     pub marquee_border: Color,
@@ -251,6 +291,34 @@ impl Default for NodeGraphStyle {
 
             wire_width_selected_mul: 1.6,
             wire_width_hover_mul: 1.25,
+
+            edge_label_padding: 6.0,
+            edge_label_corner_radius: 8.0,
+            edge_label_offset: 10.0,
+            edge_label_max_width: 220.0,
+            edge_label_background: Color {
+                r: 0.14,
+                g: 0.15,
+                b: 0.16,
+                a: 0.98,
+            },
+            edge_label_border: Color {
+                r: 0.60,
+                g: 0.62,
+                b: 0.64,
+                a: 0.90,
+            },
+            edge_label_border_width: 1.0,
+            edge_label_text: Color {
+                r: 0.92,
+                g: 0.93,
+                b: 0.94,
+                a: 1.0,
+            },
+            edge_label_text_style: TextStyle {
+                size: Px(12.0),
+                ..TextStyle::default()
+            },
 
             marquee_fill: Color {
                 r: 0.20,
@@ -466,6 +534,11 @@ impl NodeGraphStyle {
             a: 1.0,
         };
 
+        s.edge_label_background = s.context_menu_background;
+        s.edge_label_border = s.context_menu_border;
+        s.edge_label_text = s.context_menu_text;
+        s.edge_label_text_style = s.context_menu_text_style.clone();
+
         s.controls_text = s.context_menu_text;
         s.controls_hover_background = s.context_menu_hover_background;
         s.controls_active_background = Color {
@@ -491,6 +564,7 @@ impl NodeGraphStyle {
         self.node_corner_radius = 3.0;
         self.pin_radius = 3.0;
         self.context_menu_text_style.size = Px(12.0);
+        self.edge_label_text_style.size = Px(12.0);
     }
 
     pub fn with_xyflow_default_node_style(mut self) -> Self {
@@ -568,6 +642,19 @@ impl NodeGraphStyle {
             wire_width_selected_mul: 1.6,
             wire_width_hover_mul: 1.25,
 
+            edge_label_padding: padding_sm.max(6.0),
+            edge_label_corner_radius: radius_sm,
+            edge_label_offset: 10.0,
+            edge_label_max_width: 220.0,
+            edge_label_background: alpha(popover, 0.98),
+            edge_label_border: alpha(popover_border, 1.0),
+            edge_label_border_width: 1.0,
+            edge_label_text: popover_foreground,
+            edge_label_text_style: TextStyle {
+                size: Px(font_size),
+                ..TextStyle::default()
+            },
+
             marquee_fill: theme.colors.viewport_selection_fill,
             marquee_border: theme.colors.viewport_selection_stroke,
             marquee_border_width: 1.0,
@@ -611,5 +698,32 @@ impl NodeGraphStyle {
             min_zoom: 0.15,
             max_zoom: 4.0,
         }
+    }
+
+    pub fn background_style(&self) -> NodeGraphBackgroundStyle {
+        NodeGraphBackgroundStyle {
+            background: self.background,
+            grid_pattern: self.grid_pattern,
+            grid_spacing: self.grid_spacing,
+            grid_minor_color: self.grid_minor_color,
+            grid_major_every: self.grid_major_every,
+            grid_major_color: self.grid_major_color,
+            grid_line_width: self.grid_line_width,
+            grid_dot_size: self.grid_dot_size,
+            grid_cross_size: self.grid_cross_size,
+        }
+    }
+
+    pub fn with_background_style(mut self, background: NodeGraphBackgroundStyle) -> Self {
+        self.background = background.background;
+        self.grid_pattern = background.grid_pattern;
+        self.grid_spacing = background.grid_spacing;
+        self.grid_minor_color = background.grid_minor_color;
+        self.grid_major_every = background.grid_major_every;
+        self.grid_major_color = background.grid_major_color;
+        self.grid_line_width = background.grid_line_width;
+        self.grid_dot_size = background.grid_dot_size;
+        self.grid_cross_size = background.grid_cross_size;
+        self
     }
 }

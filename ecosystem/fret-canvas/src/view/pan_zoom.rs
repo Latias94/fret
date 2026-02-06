@@ -127,6 +127,28 @@ impl PanZoom2D {
         self.pan = Point::new(Px(new_pan_x), Px(new_pan_y));
         self.zoom = new_zoom;
     }
+
+    /// Adjusts `pan` so that zooming keeps the given canvas-space point stable in screen space.
+    ///
+    /// This is equivalent to "zoom about cursor" in widgets that report pointer positions in
+    /// canvas space (e.g. when the widget uses a pan/zoom `render_transform`).
+    ///
+    /// The stability guarantee is relative to the widget's origin; callers can add any `bounds`
+    /// origin externally if they need absolute window-space coordinates.
+    pub fn zoom_about_canvas_point(&mut self, center_canvas: Point, new_zoom: f32) {
+        let zoom = Self::sanitize_zoom(self.zoom, 1.0);
+        let new_zoom = Self::sanitize_zoom(new_zoom, zoom);
+        if (new_zoom - zoom).abs() <= 1.0e-9 {
+            return;
+        }
+
+        let scale = zoom / new_zoom;
+        let new_pan_x = (center_canvas.x.0 + self.pan.x.0) * scale - center_canvas.x.0;
+        let new_pan_y = (center_canvas.y.0 + self.pan.y.0) * scale - center_canvas.y.0;
+
+        self.pan = Point::new(Px(new_pan_x), Px(new_pan_y));
+        self.zoom = new_zoom;
+    }
 }
 
 #[cfg(test)]
@@ -167,6 +189,26 @@ mod tests {
 
         assert!((before.x.0 - after.x.0).abs() <= 1.0e-6);
         assert!((before.y.0 - after.y.0).abs() <= 1.0e-6);
+    }
+
+    #[test]
+    fn zoom_about_canvas_point_keeps_screen_relative_position_stable() {
+        let mut view = PanZoom2D {
+            pan: Point::new(Px(-3.0), Px(5.0)),
+            zoom: 2.0,
+        };
+
+        let center_canvas = Point::new(Px(42.0), Px(-17.0));
+        let before_x = (center_canvas.x.0 + view.pan.x.0) * view.zoom;
+        let before_y = (center_canvas.y.0 + view.pan.y.0) * view.zoom;
+
+        view.zoom_about_canvas_point(center_canvas, 3.0);
+
+        let after_x = (center_canvas.x.0 + view.pan.x.0) * view.zoom;
+        let after_y = (center_canvas.y.0 + view.pan.y.0) * view.zoom;
+
+        assert!((before_x - after_x).abs() <= 1.0e-6);
+        assert!((before_y - after_y).abs() <= 1.0e-6);
     }
 
     #[test]

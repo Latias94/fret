@@ -1972,6 +1972,72 @@ fn text_input_paste_requests_clipboard_text_when_editable() {
 }
 
 #[test]
+fn text_input_key_hooks_can_intercept_navigation_keys() {
+    use fret_core::{Event, KeyCode, Modifiers};
+
+    let mut app = TestHost::new();
+    app.set_global(fret_runtime::PlatformCapabilities::default());
+
+    let model = app.models_mut().insert("hello".to_string());
+    let opened = app.models_mut().insert(false);
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let opened_for_hook = opened.clone();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "text-input-key-hooks-intercept",
+        move |cx| {
+            vec![cx.text_input_with_id_props(|cx, id| {
+                let opened = opened_for_hook.clone();
+                cx.key_add_on_key_down_for(
+                    id,
+                    Arc::new(move |host, action_cx, down| {
+                        if down.key != KeyCode::ArrowDown {
+                            return false;
+                        }
+                        let _ = host.models_mut().update(&opened, |v| *v = true);
+                        host.request_redraw(action_cx.window);
+                        true
+                    }),
+                );
+                crate::element::TextInputProps::new(model.clone())
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let input_node = ui.children(root)[0];
+    ui.set_focus(Some(input_node));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::ArrowDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert!(
+        app.models().get_copied(&opened).unwrap_or(false),
+        "expected key hook to run for focused text input"
+    );
+}
+
+#[test]
 fn text_input_middle_click_pastes_primary_selection_when_enabled() {
     let mut app = TestHost::new();
     app.set_global(fret_runtime::TextInteractionSettings {
@@ -4724,6 +4790,99 @@ fn pressable_clears_pressed_and_releases_capture_on_move_without_buttons() {
 }
 
 #[test]
+fn pressable_clears_pressed_state_on_pointer_cancel() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(40.0)));
+    let mut services = FakeTextService::default();
+
+    let pressable_element_id_cell: Rc<Cell<Option<crate::elements::GlobalElementId>>> =
+        Rc::new(Cell::new(None));
+    let pressable_element_id_cell_for_render = pressable_element_id_cell.clone();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "pressable-clear-pressed-on-pointer-cancel",
+        move |cx| {
+            let pressable_element_id_cell = pressable_element_id_cell_for_render.clone();
+            vec![cx.pressable_with_id(
+                crate::element::PressableProps::default(),
+                move |cx, _state, id| {
+                    pressable_element_id_cell.set(Some(id));
+                    vec![cx.text("pressable")]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let pressable_node = ui.children(root)[0];
+    let pressable_element_id = pressable_element_id_cell
+        .get()
+        .expect("missing pressable element id");
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+    let inside = Point::new(
+        Px(pressable_bounds.origin.x.0 + 1.0),
+        Px(pressable_bounds.origin.y.0 + 1.0),
+    );
+
+    let pointer_id = fret_core::PointerId(0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: inside,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id,
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(pointer_id), Some(pressable_node));
+    assert!(crate::elements::is_pressed_pressable(
+        &mut app,
+        window,
+        pressable_element_id
+    ));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::PointerCancel(fret_core::PointerCancelEvent {
+            pointer_id,
+            position: Some(inside),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+            reason: fret_core::PointerCancelReason::LeftWindow,
+        }),
+    );
+
+    assert_eq!(ui.captured_for(pointer_id), None);
+    assert!(!crate::elements::is_pressed_pressable(
+        &mut app,
+        window,
+        pressable_element_id
+    ));
+}
+
+#[test]
 fn pressable_clears_pressed_state_when_element_is_removed() {
     use std::cell::Cell;
     use std::rc::Rc;
@@ -5625,4 +5784,72 @@ fn pressable_semantics_checked_is_exposed() {
 
     assert_eq!(node.flags.checked, Some(true));
     assert!(node.actions.invoke, "expected checkbox to be invokable");
+}
+
+#[test]
+fn text_input_semantics_controls_element_is_exposed() {
+    use std::cell::Cell;
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(60.0)));
+    let mut services = FakeTextService::default();
+
+    let model = app.models_mut().insert("hello".to_string());
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-input-controls",
+        |cx| {
+            let listbox_id_out: Cell<Option<crate::elements::GlobalElementId>> = Cell::new(None);
+            let listbox = cx.semantics_with_id(
+                crate::element::SemanticsProps {
+                    role: fret_core::SemanticsRole::ListBox,
+                    test_id: Some(Arc::from("listbox")),
+                    ..Default::default()
+                },
+                |_cx, id| {
+                    listbox_id_out.set(Some(id));
+                    Vec::new()
+                },
+            );
+
+            let mut props = crate::element::TextInputProps::new(model.clone());
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Fill;
+            props.test_id = Some(Arc::from("combo"));
+            props.a11y_role = Some(fret_core::SemanticsRole::ComboBox);
+            props.controls_element = listbox_id_out.get().map(|id| id.0);
+
+            vec![cx.text_input(props), listbox]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let combo = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("combo"))
+        .expect("expected combobox semantics node");
+    let listbox = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("listbox"))
+        .expect("expected listbox semantics node");
+
+    assert!(
+        combo.controls.contains(&listbox.id),
+        "expected combobox to control the listbox"
+    );
 }

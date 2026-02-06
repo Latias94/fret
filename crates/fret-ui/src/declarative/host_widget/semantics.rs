@@ -116,6 +116,11 @@ impl ElementHostWidget {
                     cx.set_expanded(expanded);
                 }
                 cx.set_active_descendant(props.active_descendant);
+                if let Some(element) = props.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
+                }
                 input.semantics(cx);
             }
             ElementInstance::TextArea(props) => {
@@ -290,6 +295,38 @@ impl ElementHostWidget {
             }
             if let Some(value) = decoration.value.as_ref() {
                 cx.set_value(value.as_ref().to_string());
+            }
+            if let Some(disabled) = decoration.disabled {
+                cx.set_disabled(disabled);
+            }
+            if let Some(selected) = decoration.selected {
+                cx.set_selected(selected);
+            }
+            if let Some(expanded) = decoration.expanded {
+                cx.set_expanded(expanded);
+            }
+            if let Some(checked) = decoration.checked {
+                cx.set_checked(checked);
+            }
+            if let Some(element) = decoration.active_descendant_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.set_active_descendant(Some(node));
+            }
+            if let Some(element) = decoration.labelled_by_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.push_labelled_by(node);
+            }
+            if let Some(element) = decoration.described_by_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.push_described_by(node);
+            }
+            if let Some(element) = decoration.controls_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.push_controlled(node);
             }
         }
     }

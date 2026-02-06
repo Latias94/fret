@@ -720,6 +720,12 @@ impl<H: UiHost> UiTree<H> {
 
         if pass_kind == LayoutPassKind::Final {
             self.layout_engine.end_frame();
+            if let Some(window) = self.window {
+                let frame_id = app.frame_id();
+                crate::elements::with_window_state(app, window, |st| {
+                    st.clear_stale_interaction_targets_for_frame(frame_id);
+                });
+            }
         }
 
         if pass_kind == LayoutPassKind::Final {
@@ -1139,6 +1145,12 @@ impl<H: UiHost> UiTree<H> {
         );
 
         self.layout_engine.end_frame();
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            crate::elements::with_window_state(app, window, |st| {
+                st.clear_stale_interaction_targets_for_frame(frame_id);
+            });
+        }
         self.sync_element_bounds_cache_after_layout(app);
         size
     }
@@ -1177,6 +1189,12 @@ impl<H: UiHost> UiTree<H> {
             &mut viewport_cursor,
         );
         self.layout_engine.end_frame();
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            crate::elements::with_window_state(app, window, |st| {
+                st.clear_stale_interaction_targets_for_frame(frame_id);
+            });
+        }
         self.sync_element_bounds_cache_after_layout(app);
         size
     }

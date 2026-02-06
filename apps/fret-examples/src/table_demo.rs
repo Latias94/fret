@@ -25,6 +25,15 @@ use fret_ui_shadcn::dropdown_menu::{
 use std::sync::Arc;
 use std::time::Instant;
 
+const CMD_CLOSE: &str = "table_demo.close";
+const CMD_GROUP_CLEAR: &str = "table_demo.group.clear";
+const CMD_GROUP_SET_ROLE: &str = "table_demo.group.set.role";
+const CMD_GROUP_SET_NAME: &str = "table_demo.group.set.name";
+const CMD_GROUP_TOGGLE_ID: &str = "table_demo.group.toggle.id";
+const CMD_GROUP_TOGGLE_NAME: &str = "table_demo.group.toggle.name";
+const CMD_GROUP_TOGGLE_ROLE: &str = "table_demo.group.toggle.role";
+const CMD_GROUP_TOGGLE_SCORE: &str = "table_demo.group.toggle.score";
+
 #[derive(Debug, Clone)]
 struct DemoRow {
     id: u32,
@@ -173,46 +182,59 @@ impl WinitAppDriver for TableDemoDriver {
             return;
         }
 
-        if command.as_str() == "table_demo.close" {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if command.as_str() == "table_demo.group.clear" {
-            let _ = app.models_mut().update(&state.table_state, |st| {
-                st.grouping.clear();
-                st.expanding = Default::default();
-                st.pagination.page_index = 0;
-            });
-            app.request_redraw(window);
-            return;
-        }
-
-        if let Some(id) = command.as_str().strip_prefix("table_demo.group.set.") {
-            let id: Arc<str> = Arc::from(id);
-            let _ = app.models_mut().update(&state.table_state, |st| {
-                st.grouping.clear();
-                st.grouping.push(id);
-                st.expanding = Default::default();
-                st.pagination.page_index = 0;
-            });
-            app.request_redraw(window);
-            return;
-        }
-
-        if let Some(id) = command.as_str().strip_prefix("table_demo.group.toggle.") {
-            let id: Arc<str> = Arc::from(id);
-            let _ = app.models_mut().update(&state.table_state, |st| {
-                if let Some(i) = st.grouping.iter().position(|c| c.as_ref() == id.as_ref()) {
-                    st.grouping.remove(i);
-                } else {
-                    st.grouping.push(id);
-                }
-                st.expanding = Default::default();
-                st.pagination.page_index = 0;
-            });
-            app.request_redraw(window);
-            return;
+        match command.as_str() {
+            CMD_CLOSE => {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
+            }
+            CMD_GROUP_CLEAR => {
+                let _ = app.models_mut().update(&state.table_state, clear_grouping);
+                app.request_redraw(window);
+                return;
+            }
+            CMD_GROUP_SET_ROLE => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.table_state, |st| set_grouping(st, "role"));
+                app.request_redraw(window);
+                return;
+            }
+            CMD_GROUP_SET_NAME => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.table_state, |st| set_grouping(st, "name"));
+                app.request_redraw(window);
+                return;
+            }
+            CMD_GROUP_TOGGLE_ID => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.table_state, |st| toggle_grouping(st, "id"));
+                app.request_redraw(window);
+                return;
+            }
+            CMD_GROUP_TOGGLE_NAME => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.table_state, |st| toggle_grouping(st, "name"));
+                app.request_redraw(window);
+                return;
+            }
+            CMD_GROUP_TOGGLE_ROLE => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.table_state, |st| toggle_grouping(st, "role"));
+                app.request_redraw(window);
+                return;
+            }
+            CMD_GROUP_TOGGLE_SCORE => {
+                let _ = app
+                    .models_mut()
+                    .update(&state.table_state, |st| toggle_grouping(st, "score"));
+                app.request_redraw(window);
+                return;
+            }
+            _ => {}
         }
     }
 
@@ -444,26 +466,20 @@ impl WinitAppDriver for TableDemoDriver {
                                                                 DropdownMenuItem::new(
                                                                     "Clear grouping",
                                                                 )
-                                                                .on_select(CommandId::from(
-                                                                    "table_demo.group.clear",
-                                                                )),
+                                                                .on_select(CommandId::from(CMD_GROUP_CLEAR)),
                                                             ),
                                                             DropdownMenuEntry::Separator,
                                                             DropdownMenuEntry::Item(
                                                                 DropdownMenuItem::new(
                                                                     "Group by Role",
                                                                 )
-                                                                .on_select(CommandId::from(
-                                                                    "table_demo.group.set.role",
-                                                                )),
+                                                                .on_select(CommandId::from(CMD_GROUP_SET_ROLE)),
                                                             ),
                                                             DropdownMenuEntry::Item(
                                                                 DropdownMenuItem::new(
                                                                     "Group by Name",
                                                                 )
-                                                                .on_select(CommandId::from(
-                                                                    "table_demo.group.set.name",
-                                                                )),
+                                                                .on_select(CommandId::from(CMD_GROUP_SET_NAME)),
                                                             ),
                                                             DropdownMenuEntry::Separator,
                                                             DropdownMenuEntry::Label(
@@ -583,22 +599,27 @@ impl WinitAppDriver for TableDemoDriver {
                                                                     } else {
                                                                         "Group by this column"
                                                                     };
-                                                                    entries.push(
-                                                                        ContextMenuEntry::Item(
-                                                                            ContextMenuItem::new(
-                                                                                action,
-                                                                            )
-                                                                            .on_select(
-                                                                                CommandId::new(
-                                                                                    Arc::<str>::from(
-                                                                                        format!(
-                                                                                            "table_demo.group.toggle.{id}"
-                                                                                        ),
-                                                                                    ),
-                                                                                ),
+                                                                    if let Some(cmd) =
+                                                                        group_toggle_command_for_column(id.as_ref())
+                                                                    {
+                                                                        entries.push(
+                                                                            ContextMenuEntry::Item(
+                                                                                ContextMenuItem::new(
+                                                                                    action,
+                                                                                )
+                                                                                .on_select(cmd),
                                                                             ),
-                                                                        ),
-                                                                    );
+                                                                        );
+                                                                    } else {
+                                                                        entries.push(
+                                                                            ContextMenuEntry::Item(
+                                                                                ContextMenuItem::new(
+                                                                                    "Grouping not available",
+                                                                                )
+                                                                                .disabled(true),
+                                                                            ),
+                                                                        );
+                                                                    }
                                                                 } else {
                                                                     entries.push(
                                                                         ContextMenuEntry::Item(
@@ -620,7 +641,7 @@ impl WinitAppDriver for TableDemoDriver {
                                                                             )
                                                                             .on_select(
                                                                                 CommandId::from(
-                                                                                    "table_demo.group.clear",
+                                                                                    CMD_GROUP_CLEAR,
                                                                                 ),
                                                                             ),
                                                                         ),
@@ -732,4 +753,37 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     crate::run_native_demo(config, app, TableDemoDriver::default()).context("run table_demo app")
+}
+
+fn clear_grouping(st: &mut TableState) {
+    st.grouping.clear();
+    st.expanding = Default::default();
+    st.pagination.page_index = 0;
+}
+
+fn set_grouping(st: &mut TableState, id: &'static str) {
+    clear_grouping(st);
+    st.grouping.push(Arc::<str>::from(id));
+}
+
+fn toggle_grouping(st: &mut TableState, id: &'static str) {
+    let id = Arc::<str>::from(id);
+    if let Some(i) = st.grouping.iter().position(|c| c.as_ref() == id.as_ref()) {
+        st.grouping.remove(i);
+    } else {
+        st.grouping.push(id);
+    }
+    st.expanding = Default::default();
+    st.pagination.page_index = 0;
+}
+
+fn group_toggle_command_for_column(id: &str) -> Option<CommandId> {
+    let cmd = match id {
+        "id" => CMD_GROUP_TOGGLE_ID,
+        "name" => CMD_GROUP_TOGGLE_NAME,
+        "role" => CMD_GROUP_TOGGLE_ROLE,
+        "score" => CMD_GROUP_TOGGLE_SCORE,
+        _ => return None,
+    };
+    Some(CommandId::from(cmd))
 }

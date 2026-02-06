@@ -3,6 +3,7 @@
 //! This module is always available (no long-lived feature gate).
 
 mod aggregation;
+mod aggregation_fns;
 mod cells;
 mod column;
 mod column_ordering;
@@ -29,8 +30,13 @@ mod sorting;
 mod state;
 mod tanstack_options;
 mod tanstack_state;
+mod updater;
 
 pub use aggregation::{Aggregation, aggregate_u64};
+pub use aggregation_fns::{
+    AggregationFn, AggregationFnSpec, BuiltInAggregationFn, apply_builtin_aggregation,
+    resolve_auto_aggregation,
+};
 pub use cells::{CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
 pub use column::{
     BuiltInFilterFn, BuiltInSortingFn, ColumnDef, ColumnHelper, ColumnId, FilterFn,
@@ -40,8 +46,8 @@ pub use column::{
 pub use column_ordering::{ColumnOrderState, order_columns};
 pub use column_ordering::{move_column, moved_column, set_column_order, set_column_order_for};
 pub use column_pinning::{
-    ColumnPinPosition, ColumnPinningState, is_column_pinned, pin_column, pinned_column,
-    split_pinned_columns,
+    ColumnPinPosition, ColumnPinningState, is_column_pinned, is_some_columns_pinned, pin_column,
+    pin_columns, pinned_column, pinned_columns, split_pinned_columns,
 };
 pub use column_sizing::{
     ColumnResizeDirection, ColumnResizeMode, begin_column_resize, column_can_resize,
@@ -64,7 +70,9 @@ pub use filtering::{
     contains_ascii_case_insensitive, filter_row_model, set_column_filter_value_tanstack,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
-pub use grouped_aggregation::compute_grouped_u64_aggregations;
+pub use grouped_aggregation::{
+    compute_grouped_u64_aggregations, compute_grouped_u64_aggregations_from_core,
+};
 pub use grouped_sorting::sort_grouped_row_indices_in_place;
 pub use grouping::{
     GroupedColumnMode, GroupedRow, GroupedRowIndex, GroupedRowKind, GroupedRowModel, GroupingState,
@@ -85,7 +93,7 @@ pub use row_expanding::{
 pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
 pub use row_pinning::{
     RowPinPosition, RowPinningState, center_row_keys, is_row_pinned, is_some_rows_pinned, pin_row,
-    pin_rows,
+    pin_row_keys, pin_rows,
 };
 pub use row_selection::{
     RowSelectionState, SubRowSelection, is_all_page_rows_selected, is_all_rows_selected,
@@ -104,3 +112,4 @@ pub use tanstack_state::{
     TanStackColumnFilter, TanStackPaginationState, TanStackSortingSpec, TanStackStateError,
     TanStackTableState,
 };
+pub use updater::{Updater, functional_update};

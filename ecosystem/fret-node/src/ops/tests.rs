@@ -1,11 +1,13 @@
 use crate::core::{
-    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, Group, GroupId, Node,
-    NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, GraphImport,
+    Group, GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
+    PortKind, Symbol, SymbolId,
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
-    IdRemapSeed, IdRemapper, PasteTuning, apply_transaction, invert_transaction,
+    IdRemapSeed, IdRemapper, PasteTuning, apply_transaction, graph_diff, invert_transaction,
 };
+use crate::types::TypeDesc;
 use uuid::Uuid;
 
 fn make_node(kind: &str) -> Node {
@@ -693,4 +695,355 @@ fn history_undo_redo_roundtrip() {
         })
         .unwrap();
     assert_eq!(serde_json::to_value(&graph).unwrap(), forward_state);
+}
+
+#[test]
+fn symbol_setters_roundtrip_through_normalize_and_invert() {
+    let mut graph = Graph::default();
+    let symbol_id = SymbolId::new();
+    graph.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "A".to_string(),
+            ty: None,
+            default_value: None,
+            meta: serde_json::Value::Null,
+        },
+    );
+
+    let baseline = serde_json::to_value(&graph).unwrap();
+
+    let mut tx = GraphTransaction::new();
+    tx.ops.push(GraphOp::SetSymbolName {
+        id: symbol_id,
+        from: "A".to_string(),
+        to: "B".to_string(),
+    });
+    tx.ops.push(GraphOp::SetSymbolName {
+        id: symbol_id,
+        from: "B".to_string(),
+        to: "C".to_string(),
+    });
+    tx.ops.push(GraphOp::SetSymbolType {
+        id: symbol_id,
+        from: None,
+        to: Some(TypeDesc::Int),
+    });
+    tx.ops.push(GraphOp::SetSymbolDefaultValue {
+        id: symbol_id,
+        from: None,
+        to: Some(serde_json::json!(123)),
+    });
+
+    let tx = crate::ops::normalize_transaction(tx);
+    assert!(
+        tx.ops.len() < 4,
+        "expected normalize to coalesce setter chain"
+    );
+
+    apply_transaction(&mut graph, &tx).expect("apply forward");
+    assert_eq!(graph.symbols.get(&symbol_id).unwrap().name, "C");
+    assert_eq!(
+        graph.symbols.get(&symbol_id).unwrap().ty,
+        Some(TypeDesc::Int)
+    );
+    assert_eq!(
+        graph.symbols.get(&symbol_id).unwrap().default_value,
+        Some(serde_json::json!(123))
+    );
+
+    let inverse = invert_transaction(&tx);
+    apply_transaction(&mut graph, &inverse).expect("apply inverse");
+    assert_eq!(serde_json::to_value(&graph).unwrap(), baseline);
+}
+
+#[test]
+fn graph_import_ops_roundtrip_through_normalize_and_invert() {
+    let mut graph = Graph::default();
+    let baseline = serde_json::to_value(&graph).unwrap();
+
+    let imported = GraphId::from_u128(2);
+    let import = GraphImport {
+        alias: Some("math".to_string()),
+    };
+
+    let mut tx = GraphTransaction::new();
+    tx.ops.push(GraphOp::AddImport {
+        id: imported,
+        import: import.clone(),
+    });
+    tx.ops.push(GraphOp::SetImportAlias {
+        id: imported,
+        from: Some("math".to_string()),
+        to: Some("stdlib".to_string()),
+    });
+    tx.ops.push(GraphOp::SetImportAlias {
+        id: imported,
+        from: Some("stdlib".to_string()),
+        to: None,
+    });
+
+    let tx = crate::ops::normalize_transaction(tx);
+    apply_transaction(&mut graph, &tx).expect("apply");
+    assert!(graph.imports.contains_key(&imported));
+    assert_eq!(graph.imports.get(&imported).unwrap().alias, None);
+
+    let inverse = invert_transaction(&tx);
+    apply_transaction(&mut graph, &inverse).expect("apply inverse");
+    assert_eq!(serde_json::to_value(&graph).unwrap(), baseline);
+}
+
+#[test]
+fn graph_diff_is_deterministic_and_roundtrips() {
+    let mut from = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    from.nodes.insert(a, make_node("core.a"));
+    from.nodes.insert(b, make_node("core.b"));
+
+    let group_id = GroupId::new();
+    from.groups.insert(
+        group_id,
+        Group {
+            title: "G".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 100.0,
+                },
+            },
+            color: None,
+        },
+    );
+    from.nodes.get_mut(&a).unwrap().parent = Some(group_id);
+
+    let out = PortId::from_u128(10);
+    let inn = PortId::from_u128(11);
+    from.ports
+        .insert(out, make_port(a, "out", PortDirection::Out));
+    from.ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    from.nodes.get_mut(&a).unwrap().ports.push(out);
+    from.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::from_u128(123);
+    from.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out,
+            to: inn,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let imported = GraphId::from_u128(10);
+    from.imports.insert(imported, GraphImport::default());
+
+    let symbol_id = SymbolId::from_u128(1);
+    from.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "S".to_string(),
+            ty: None,
+            default_value: None,
+            meta: serde_json::Value::Null,
+        },
+    );
+
+    let mut to = from.clone();
+    to.imports.insert(
+        imported,
+        GraphImport {
+            alias: Some("stdlib".to_string()),
+        },
+    );
+    to.symbols.insert(
+        symbol_id,
+        Symbol {
+            name: "T".to_string(),
+            ty: Some(TypeDesc::Int),
+            default_value: Some(serde_json::json!(123)),
+            meta: serde_json::json!({ "k": 1 }),
+        },
+    );
+    if let Some(group) = to.groups.get_mut(&group_id) {
+        group.color = Some("red".to_string());
+    }
+    if let Some(edge) = to.edges.get_mut(&edge_id) {
+        edge.deletable = Some(true);
+        edge.reconnectable = Some(crate::core::EdgeReconnectable::Endpoint(
+            crate::core::EdgeReconnectableEndpoint::Target,
+        ));
+    }
+    if let Some(port) = to.ports.get_mut(&out) {
+        port.connectable = Some(false);
+        port.ty = Some(TypeDesc::String);
+        port.data = serde_json::json!({ "p": 1 });
+    }
+    if let Some(node) = to.nodes.get_mut(&a) {
+        node.pos.x = 42.0;
+        node.selectable = Some(false);
+        node.draggable = Some(false);
+        node.connectable = Some(false);
+        node.deletable = Some(false);
+        node.extent = Some(crate::core::NodeExtent::Rect {
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 1.0, y: 2.0 },
+                size: CanvasSize {
+                    width: 3.0,
+                    height: 4.0,
+                },
+            },
+        });
+        node.expand_parent = Some(true);
+        node.hidden = true;
+    }
+
+    let tx1 = graph_diff(&from, &to);
+    let tx2 = graph_diff(&from, &to);
+    assert_eq!(
+        serde_json::to_string(&tx1.ops).unwrap(),
+        serde_json::to_string(&tx2.ops).unwrap(),
+        "diff must be deterministic"
+    );
+
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetNodeSelectable { id, .. } if *id == a)),
+        "diff must include node setter ops for changed fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetNodeExtent { id, .. } if *id == a)),
+        "diff must include node setter ops for changed fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetNodeHidden { id, .. } if *id == a)),
+        "diff must include node setter ops for changed fields"
+    );
+    assert!(
+        !tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveNode { id, .. } if *id == a)),
+        "diff must not use destructive node removal for soft field changes"
+    );
+
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetGroupColor { id, .. } if *id == group_id)),
+        "diff must prefer group setter ops over remove+add to preserve parent bindings"
+    );
+    assert!(
+        !tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveGroup { id, .. } if *id == group_id)),
+        "diff must not remove groups for color-only changes"
+    );
+
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetPortConnectable { id, .. } if *id == out)),
+        "diff must use port setter ops for soft fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetPortType { id, .. } if *id == out)),
+        "diff must use port setter ops for soft fields"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetPortData { id, .. } if *id == out)),
+        "diff must use port setter ops for soft fields"
+    );
+    assert!(
+        !tx1.ops.iter().any(|op| {
+            matches!(op, GraphOp::RemovePort { id, .. } if *id == out)
+                || matches!(op, GraphOp::AddPort { id, .. } if *id == out)
+        }),
+        "diff must not fall back to remove+add for soft port changes"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx1).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
+}
+
+#[test]
+fn graph_diff_roundtrips_when_deleting_a_node_with_ports_and_edges() {
+    let mut from = Graph::default();
+    let a = NodeId::new();
+    let b = NodeId::new();
+    from.nodes.insert(a, make_node("core.a"));
+    from.nodes.insert(b, make_node("core.b"));
+
+    let out = PortId::from_u128(20);
+    let inn = PortId::from_u128(21);
+    from.ports
+        .insert(out, make_port(a, "out", PortDirection::Out));
+    from.ports
+        .insert(inn, make_port(b, "in", PortDirection::In));
+    from.nodes.get_mut(&a).unwrap().ports.push(out);
+    from.nodes.get_mut(&b).unwrap().ports.push(inn);
+
+    let edge_id = EdgeId::from_u128(456);
+    from.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: out,
+            to: inn,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let mut to = from.clone();
+    to.nodes.remove(&b);
+    to.ports.remove(&inn);
+    to.edges.remove(&edge_id);
+
+    let tx = graph_diff(&from, &to);
+    assert!(
+        tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveNode { id, .. } if *id == b)),
+        "diff must use reversible RemoveNode for node deletion"
+    );
+    assert!(
+        !tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemovePort { id, .. } if *id == inn)),
+        "diff must not double-remove ports that are already removed by RemoveNode"
+    );
+    assert!(
+        !tx.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::RemoveEdge { id, .. } if *id == edge_id)),
+        "diff must not double-remove edges that are already removed by RemoveNode"
+    );
+
+    let mut patched = from.clone();
+    apply_transaction(&mut patched, &tx).expect("apply diff");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap(),
+        "diff must roundtrip"
+    );
 }

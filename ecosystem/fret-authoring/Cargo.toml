@@ -11,8 +11,11 @@ documentation.workspace = true
 
 [features]
 default = []
+query = ["dep:fret-query"]
+selector = ["dep:fret-selector"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-ui = { path = "../../crates/fret-ui" }
-
+fret-query = { path = "../fret-query", optional = true }
+fret-selector = { path = "../fret-selector", optional = true }

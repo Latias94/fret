@@ -5,6 +5,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod autocomplete;
 pub mod badge;
 pub mod bottom_sheet;
 pub mod button;
@@ -16,6 +17,7 @@ pub mod date_picker;
 pub mod dialog;
 pub mod divider;
 pub mod dropdown_menu;
+pub mod exposed_dropdown;
 pub mod fab;
 pub mod filter_chip;
 mod foundation;
@@ -45,6 +47,10 @@ pub mod tokens;
 pub mod tooltip;
 pub mod top_app_bar;
 
+pub use autocomplete::{
+    Autocomplete, AutocompleteItem, AutocompleteSelectCx, AutocompleteSelectMethod,
+    AutocompleteVariant, OnAutocompleteSelect,
+};
 pub use badge::{Badge, BadgePlacement, BadgeValue};
 pub use bottom_sheet::{DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet};
 pub use button::{Button, ButtonStyle, ButtonVariant};
@@ -57,6 +63,7 @@ pub use date_picker::{DatePickerDialog, DatePickerVariant, DockedDatePicker};
 pub use dialog::{Dialog, DialogAction, DialogStyle};
 pub use divider::Divider;
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
+pub use exposed_dropdown::ExposedDropdown;
 pub use fab::{Fab, FabSize, FabStyle, FabVariant};
 pub use filter_chip::{FilterChip, FilterChipStyle, FilterChipVariant};
 pub use icon_button::{IconButton, IconButtonSize, IconButtonStyle, IconButtonVariant};

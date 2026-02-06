@@ -33,7 +33,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiHelloState) -> fret_kit::
         .unwrap_or_default();
 
     fret_imui::imui_vstack(cx, |ui| {
-        use fret_imui::UiWriterImUiExt as _;
+        use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
         let count_line = fret_ui_kit::ui::text(ui.cx_mut(), format!("Count: {count}"))
