@@ -45,7 +45,7 @@ Now / Next / Later (high level):
   - Detailed contract checklist: `docs/workstreams/fret-node-internals-m0.md`
 - **Next**: stabilize built-in add-ons API (minimap/controls/background theming) without policy bleed (workstream M2).
   - Workstream: `docs/workstreams/fret-node-addons-api-m2.md`
-- **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M5 + future milestones).
+- **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M6 + future milestones).
 
 ### Headless substrate (present)
 
@@ -108,7 +108,7 @@ Suggested mapping (high level):
 - NG0 (Contracts + Harness) ↔ workstream M0/M1
 - NG1 (Editor Usability) ↔ workstream M2 (add-ons stabilization) + selected A-layer fixes
 - NG2 (Domain Readiness) ↔ typed connections + profile pipeline hardening (domain demos)
-- NG3 (Scale + Collaboration) ↔ derived geometry invalidation + culling + deterministic patch units
+- NG3 (Scale + Collaboration) ↔ derived geometry invalidation + culling + deterministic patch units (workstream M6)
 
 ## Milestones and Exit Criteria
 

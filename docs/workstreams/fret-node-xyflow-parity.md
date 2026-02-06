@@ -353,6 +353,23 @@ Perf/scale targets (placeholders; make these measurable as we add instrumentatio
 - Derived geometry rebuild budget: “no per-frame rebuild while panning” (expressed as counters once available).
 - Spatial index rebuild budget: “no rebuild on pan; rebuild on graph edits only” (unless explicitly forced).
 
+### M6 — Deterministic patch units (collaboration readiness) (P3)
+
+Goal: lock a deterministic, reversible patch unit for future collaboration and refactor safety.
+
+Exit criteria:
+
+- A stable patch unit contract is documented (ADR).
+- `graph_diff(from, to)` is deterministic and apply-safe.
+- Conformance tests lock determinism + roundtrip + cascade semantics.
+
+Evidence anchors:
+
+- Workstream checklist: `docs/workstreams/fret-node-deterministic-patch-units-m6.md`
+- ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+- Diff implementation: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
+- Tests: `ecosystem/fret-node/src/ops/tests.rs`
+
 ## Tracking policy
 
 - Use `docs/node-graph-xyflow-parity.md` as the authoritative “what exists vs what’s missing” map.

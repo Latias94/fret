@@ -30,7 +30,7 @@ This document is intentionally exhaustive. During large refactors, keep a small 
 work remains coherent and measurable. For the execution plan + gates, see:
 `docs/workstreams/fret-node-xyflow-parity.md`.
 
-Current top gaps (aligned to workstream M0/M5):
+Current top gaps (aligned to workstream M0/M6):
 
 - **Derived internals invalidation discipline** (`updateNodeInternals`-style semantics): avoid over/under invalidation.
 - **Internals update pipeline determinism** (batching + stable ordering): ensure repeatable results.
