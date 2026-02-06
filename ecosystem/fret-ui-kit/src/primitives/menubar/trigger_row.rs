@@ -35,6 +35,29 @@ pub struct MenubarTriggerRowEntry {
     pub mnemonic: Option<char>,
 }
 
+fn resolve_mnemonic_target(
+    entries: &[MenubarTriggerRowEntry],
+    letter: char,
+    active_trigger: Option<GlobalElementId>,
+) -> Option<MenubarTriggerRowEntry> {
+    let matching: Vec<MenubarTriggerRowEntry> = entries
+        .iter()
+        .filter(|e| e.enabled && e.mnemonic.is_some_and(|m| m.to_ascii_lowercase() == letter))
+        .cloned()
+        .collect();
+    if matching.is_empty() {
+        return None;
+    }
+
+    if let Some(active) = active_trigger {
+        if let Some(active_match) = matching.iter().find(|e| e.trigger == active).cloned() {
+            return Some(active_match);
+        }
+    }
+
+    matching.into_iter().next()
+}
+
 #[derive(Default)]
 struct MenubarTriggerRowGroupState {
     active: Option<Model<Option<MenubarActiveTrigger>>>,
@@ -82,16 +105,12 @@ pub fn open_on_alt_mnemonic(
             return false;
         };
 
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        let active_trigger = active.as_ref().map(|a| a.trigger);
         let entries = host.models_mut().get_cloned(&registry).unwrap_or_default();
-        let Some(target) = entries
-            .iter()
-            .find(|e| e.enabled && e.mnemonic.is_some_and(|m| m.to_ascii_lowercase() == letter))
-            .cloned()
-        else {
+        let Some(target) = resolve_mnemonic_target(&entries, letter, active_trigger) else {
             return false;
         };
-
-        let active = host.models_mut().get_cloned(&group_active).flatten();
         if let Some(active) = active.as_ref() {
             if active.trigger == target.trigger {
                 let is_open = host
@@ -194,11 +213,7 @@ pub fn open_on_mnemonic_when_active(
         };
 
         let entries = host.models_mut().get_cloned(&registry).unwrap_or_default();
-        let Some(target) = entries
-            .iter()
-            .find(|e| e.enabled && e.mnemonic.is_some_and(|m| m.to_ascii_lowercase() == letter))
-            .cloned()
-        else {
+        let Some(target) = resolve_mnemonic_target(&entries, letter, Some(active.trigger)) else {
             return false;
         };
 
@@ -1063,6 +1078,73 @@ mod tests {
     }
 
     #[test]
+    fn alt_mnemonic_prefers_active_trigger_on_collision() {
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return;
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let trigger_a = GlobalElementId(1);
+        let trigger_b = GlobalElementId(2);
+
+        let open_a = host.models_mut().insert(false);
+        let open_b = host.models_mut().insert(false);
+
+        let group_active: Model<Option<MenubarActiveTrigger>> =
+            host.models_mut().insert(Some(MenubarActiveTrigger {
+                trigger: trigger_b,
+                open: open_b.clone(),
+            }));
+        let registry: Model<Vec<MenubarTriggerRowEntry>> = host.models_mut().insert(vec![
+            MenubarTriggerRowEntry {
+                trigger: trigger_a,
+                open: open_a,
+                enabled: true,
+                mnemonic: Some('f'),
+            },
+            MenubarTriggerRowEntry {
+                trigger: trigger_b,
+                open: open_b.clone(),
+                enabled: true,
+                mnemonic: Some('f'),
+            },
+        ]);
+
+        let on_key = open_on_alt_mnemonic(group_active.clone(), registry);
+        let mut mods = Modifiers::default();
+        mods.alt = true;
+        let handled = on_key(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger_b,
+            },
+            KeyDownCx {
+                key: KeyCode::KeyF,
+                modifiers: mods,
+                repeat: false,
+            },
+        );
+        assert!(handled);
+
+        let is_open = host
+            .models_mut()
+            .read(&open_b, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        assert!(is_open);
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        assert!(active.is_some_and(|a| a.trigger == trigger_b));
+    }
+
+    #[test]
     fn mnemonic_without_alt_opens_menu_when_menubar_active_and_closed() {
         if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
             return;
@@ -1113,6 +1195,72 @@ mod tests {
             .ok()
             .unwrap_or(false);
         assert!(is_open);
+    }
+
+    #[test]
+    fn mnemonic_without_alt_prefers_active_trigger_on_collision() {
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return;
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let trigger_a = GlobalElementId(1);
+        let trigger_b = GlobalElementId(2);
+
+        let open_a = host.models_mut().insert(false);
+        let open_b = host.models_mut().insert(false);
+
+        let focus_is_trigger = host.models_mut().insert(true);
+        let group_active: Model<Option<MenubarActiveTrigger>> =
+            host.models_mut().insert(Some(MenubarActiveTrigger {
+                trigger: trigger_b,
+                open: open_b.clone(),
+            }));
+        let registry: Model<Vec<MenubarTriggerRowEntry>> = host.models_mut().insert(vec![
+            MenubarTriggerRowEntry {
+                trigger: trigger_a,
+                open: open_a,
+                enabled: true,
+                mnemonic: Some('f'),
+            },
+            MenubarTriggerRowEntry {
+                trigger: trigger_b,
+                open: open_b.clone(),
+                enabled: true,
+                mnemonic: Some('f'),
+            },
+        ]);
+
+        let on_key = open_on_mnemonic_when_active(group_active.clone(), registry, focus_is_trigger);
+        let handled = on_key(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger_b,
+            },
+            KeyDownCx {
+                key: KeyCode::KeyF,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(handled);
+
+        let is_open = host
+            .models_mut()
+            .read(&open_b, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        assert!(is_open);
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        assert!(active.is_some_and(|a| a.trigger == trigger_b));
     }
 
     #[test]

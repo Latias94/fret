@@ -221,6 +221,8 @@ incremental tweaks.
     source-of-truth to avoid localization/collision regressions.
   - Escape outcome: when the menubar is active but no menu is open, Escape cancels activation and
     restores focus to the previously focused element.
+  - Collision outcome: if multiple top-level menus share the same mnemonic, the active trigger is
+    preferred when it matches; otherwise the first enabled match in trigger-row order is used.
 
 - **Menu key / Shift+F10**
   - Align “open context menu” behavior with in-window menus so keyboard users have a predictable
