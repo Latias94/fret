@@ -214,6 +214,11 @@ Evidence anchors:
 - [~] Define semantics role for the editor surface (current baseline: `TextInputRegion` emits `SemanticsRole::TextField`).
 - [~] Ensure selection and composition ranges follow ADR 0071 rules (baseline: app-provided UTF-8 ranges within an app-provided value; code editor handles `SetTextSelection` best-effort within its windowed value).
 - [x] Decide whether to expose visible-row-only semantics or a stub/viewport role for v1 (documented in workstream; v1 chooses stub/viewport semantics).
+  - [x] Add regression gates for selection/composition invariants (including wrap and drag-selection cases):
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-selection-baseline.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json`
+    - `tools/diag-scripts/ui-gallery-code-editor-a11y-composition-drag-baseline.json`
+    - `apps/fretboard/src/diag/stats.rs` (a11y selection/composition checkers + evidence JSON)
 
 ---
 
