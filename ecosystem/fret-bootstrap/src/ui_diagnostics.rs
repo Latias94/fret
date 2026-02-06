@@ -2337,10 +2337,17 @@ impl UiDiagnosticsService {
         let resource_caches = {
             let icon_svg_cache = icon_svg_cache_stats(app);
             let canvas = canvas_cache_stats_for_window(app, window.data().as_ffi());
-            (icon_svg_cache.is_some() || !canvas.is_empty()).then_some(UiResourceCachesV1 {
-                icon_svg_cache,
-                canvas,
-            })
+            let render_text = app
+                .global::<fret_core::RendererTextPerfSnapshot>()
+                .copied()
+                .map(UiRendererTextPerfSnapshotV1::from_core);
+            (icon_svg_cache.is_some() || !canvas.is_empty() || render_text.is_some()).then_some(
+                UiResourceCachesV1 {
+                    icon_svg_cache,
+                    canvas,
+                    render_text,
+                },
+            )
         };
 
         let mut debug = UiTreeDebugSnapshotV1::from_tree(
@@ -2928,6 +2935,8 @@ pub struct UiResourceCachesV1 {
     pub icon_svg_cache: Option<UiRetainedSvgCacheStatsV1>,
     #[serde(default)]
     pub canvas: Vec<UiCanvasCacheEntryV1>,
+    #[serde(default)]
+    pub render_text: Option<UiRendererTextPerfSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -2953,6 +2962,101 @@ pub struct UiCacheStatsV1 {
     pub release_prune_budget: u64,
     pub release_clear: u64,
     pub release_evict: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiRendererTextPerfSnapshotV1 {
+    pub frame_id: u64,
+
+    pub font_stack_key: u64,
+    pub font_db_revision: u64,
+
+    pub blobs_live: u64,
+    pub blob_cache_entries: u64,
+    pub shape_cache_entries: u64,
+    pub measure_cache_buckets: u64,
+
+    pub frame_cache_resets: u64,
+    pub frame_blob_cache_hits: u64,
+    pub frame_blob_cache_misses: u64,
+    pub frame_blobs_created: u64,
+    pub frame_shape_cache_hits: u64,
+    pub frame_shape_cache_misses: u64,
+    pub frame_shapes_created: u64,
+
+    pub mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+    pub color_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+    pub subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+}
+
+impl UiRendererTextPerfSnapshotV1 {
+    fn from_core(snapshot: fret_core::RendererTextPerfSnapshot) -> Self {
+        Self {
+            frame_id: snapshot.frame_id.0,
+            font_stack_key: snapshot.font_stack_key,
+            font_db_revision: snapshot.font_db_revision,
+            blobs_live: snapshot.blobs_live,
+            blob_cache_entries: snapshot.blob_cache_entries,
+            shape_cache_entries: snapshot.shape_cache_entries,
+            measure_cache_buckets: snapshot.measure_cache_buckets,
+            frame_cache_resets: snapshot.frame_cache_resets,
+            frame_blob_cache_hits: snapshot.frame_blob_cache_hits,
+            frame_blob_cache_misses: snapshot.frame_blob_cache_misses,
+            frame_blobs_created: snapshot.frame_blobs_created,
+            frame_shape_cache_hits: snapshot.frame_shape_cache_hits,
+            frame_shape_cache_misses: snapshot.frame_shape_cache_misses,
+            frame_shapes_created: snapshot.frame_shapes_created,
+            mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
+            color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
+            subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiRendererGlyphAtlasPerfSnapshotV1 {
+    pub width: u32,
+    pub height: u32,
+    pub pages: u32,
+    pub entries: u64,
+
+    pub used_px: u64,
+    pub capacity_px: u64,
+
+    pub frame_hits: u64,
+    pub frame_misses: u64,
+    pub frame_inserts: u64,
+    pub frame_evict_glyphs: u64,
+    pub frame_evict_pages: u64,
+    pub frame_out_of_space: u64,
+    pub frame_too_large: u64,
+
+    pub frame_pending_uploads: u64,
+    pub frame_pending_upload_bytes: u64,
+    pub frame_upload_bytes: u64,
+}
+
+impl UiRendererGlyphAtlasPerfSnapshotV1 {
+    fn from_core(snapshot: fret_core::RendererGlyphAtlasPerfSnapshot) -> Self {
+        Self {
+            width: snapshot.width,
+            height: snapshot.height,
+            pages: snapshot.pages,
+            entries: snapshot.entries,
+            used_px: snapshot.used_px,
+            capacity_px: snapshot.capacity_px,
+            frame_hits: snapshot.frame_hits,
+            frame_misses: snapshot.frame_misses,
+            frame_inserts: snapshot.frame_inserts,
+            frame_evict_glyphs: snapshot.frame_evict_glyphs,
+            frame_evict_pages: snapshot.frame_evict_pages,
+            frame_out_of_space: snapshot.frame_out_of_space,
+            frame_too_large: snapshot.frame_too_large,
+            frame_pending_uploads: snapshot.frame_pending_uploads,
+            frame_pending_upload_bytes: snapshot.frame_pending_upload_bytes,
+            frame_upload_bytes: snapshot.frame_upload_bytes,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
