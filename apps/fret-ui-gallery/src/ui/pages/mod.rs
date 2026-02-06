@@ -3,6 +3,7 @@ use super::*;
 mod alert;
 mod alert_dialog;
 mod aspect_ratio;
+mod breadcrumb;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -21,6 +22,13 @@ pub(super) fn preview_alert_dialog(
 
 pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     aspect_ratio::preview_aspect_ratio(cx)
+}
+
+pub(super) fn preview_breadcrumb(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    breadcrumb::preview_breadcrumb(cx, last_action)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

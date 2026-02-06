@@ -6596,32 +6596,9 @@ fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
 fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
-    _last_action: Model<Arc<str>>,
+    last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let trunc_layout = LayoutRefinement::default().max_w(Px(80.0));
-
-    vec![
-        shadcn::Breadcrumb::new()
-            .items([
-                shadcn::BreadcrumbItem::new("Home"),
-                shadcn::BreadcrumbItem::new("Components"),
-                shadcn::BreadcrumbItem::new("Breadcrumb"),
-            ])
-            .into_element(cx),
-        shadcn::Breadcrumb::new()
-            .items([
-                shadcn::BreadcrumbItem::new("Home"),
-                shadcn::BreadcrumbItem::ellipsis(),
-                shadcn::BreadcrumbItem::new("Examples"),
-                shadcn::BreadcrumbItem::new("Data Fetching")
-                    .truncate(true)
-                    .refine_layout(trunc_layout.clone()),
-                shadcn::BreadcrumbItem::new("Caching and Revalidating")
-                    .truncate(true)
-                    .refine_layout(trunc_layout),
-            ])
-            .into_element(cx),
-    ]
+    pages::preview_breadcrumb(cx, last_action)
 }
 
 fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

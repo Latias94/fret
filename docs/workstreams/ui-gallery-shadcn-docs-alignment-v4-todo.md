@@ -59,7 +59,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] aspect-ratio - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs`)
 - [~] avatar — base demo present; still missing upstream examples (badge/group/sizes/dropdown/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_avatar`, `ecosystem/fret-ui-shadcn/src/avatar.rs`)
 - [~] badge — examples mirrored; missing upstream variants (`apps/fret-ui-gallery/src/ui.rs::preview_badge`)
-- [ ] breadcrumb
+- [~] breadcrumb - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs`)
 - [~] button (page examples re-ordered + expanded; still validating interactions)
 - [x] button-group — examples mirrored (`apps/fret-ui-gallery/src/ui.rs::preview_button_group`)
 - [x] calendar — examples mirrored (Basic/Range/Month+Year selector/Presets/Date+Time/Booked/Custom Cell Size/Week Numbers/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_calendar`, `ecosystem/fret-ui-shadcn/src/calendar.rs`)
