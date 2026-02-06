@@ -8662,42 +8662,8 @@ fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let icon = |name: &'static str| fret_icons::IconId::new_static(name);
-
-    let row = |cx: &mut ElementContext<'_, App>, title: &'static str, desc: &'static str| {
-        shadcn::Item::new([
-            shadcn::ItemMedia::new([shadcn::icon::icon(cx, icon("lucide.file-text"))])
-                .variant(shadcn::ItemMediaVariant::Icon)
-                .into_element(cx),
-            shadcn::ItemContent::new([
-                shadcn::ItemTitle::new(title).into_element(cx),
-                shadcn::ItemDescription::new(desc).into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::ItemActions::new([shadcn::Button::new("Open")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .on_click(CMD_APP_OPEN)
-                .into_element(cx)])
-            .into_element(cx),
-        ])
-        .on_click(CMD_APP_OPEN)
-        .into_element(cx)
-    };
-
-    let group = shadcn::ItemGroup::new([
-        row(cx, "Invoice.pdf", "Updated 2 days ago"),
-        shadcn::ItemSeparator::new().into_element(cx),
-        row(cx, "Report.md", "Draft"),
-        shadcn::ItemSeparator::new().into_element(cx),
-        row(cx, "Notes.txt", "Personal"),
-    ])
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
-    .into_element(cx);
-
-    vec![group]
+    pages::preview_item(cx)
 }
-
 fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let row = stack::vstack(
         cx,

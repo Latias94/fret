@@ -84,7 +84,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] input - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input.rs`)
 - [~] input-group - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input_group.rs`)
 - [~] input-otp - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/input_otp.rs`)
-- [ ] item
+- [~] item - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/item.rs`)
 - [ ] kbd
 - [ ] label
 - [ ] menubar
