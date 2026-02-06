@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 (Stabilization + Authoring Alignment)
 
-Status: In progress (M0-M3 locked; M4+ pending; planning note, not an ADR)
+Status: Complete (M0-M5 locked; planning note, not an ADR)
 Last updated: 2026-02-06
 
 This workstream starts after `imui` ecosystem facade v1 is functionally complete.
@@ -21,6 +21,8 @@ Related:
 - `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-m2-adapter-seam.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-m3-popup-floating-polish.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m4-perf-gates.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m5-readiness-review.md`
 - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity.md`
@@ -89,6 +91,8 @@ Main goals:
 
 ### M4 - Perf hardening from guidance to gates
 
+- M4 perf checklist and gate details are normative in
+  `docs/workstreams/imui-ecosystem-facade-v2-m4-perf-gates.md`.
 - Turn perf guide rules into review checklist items.
 - Add at least one micro/behavior gate that catches allocation-heavy regressions in hot wrappers.
 - Ensure large-list wrapper examples use keyed identity and virtualization by default.

@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 - TODO Tracker
 
-Status: In progress (M0-M3 complete; M4+ pending)
+Status: Complete (M0-M5 complete)
 Last updated: 2026-02-06
 
 This tracker covers:
@@ -110,9 +110,14 @@ Exit criteria:
 
 - Perf guide is reflected in enforceable review/test gates.
 
-- [ ] IMUIECO2-perf-040 Convert perf guide into review checklist items.
-- [ ] IMUIECO2-perf-041 Add targeted gate for hot wrapper allocation regression.
-- [ ] IMUIECO2-perf-042 Ensure large-list examples default to keyed identity + virtualization.
+- [x] IMUIECO2-perf-040 Convert perf guide into review checklist items.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m4-perf-gates.md` (section 1).
+- [x] IMUIECO2-perf-041 Add targeted gate for hot wrapper allocation regression.
+  - Evidence: `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` (`select_wrapper_does_not_materialize_items_vec_each_frame`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`select_model_ex`, no `items.to_vec()` materialization).
+- [x] IMUIECO2-perf-042 Ensure large-list examples default to keyed identity + virtualization.
+  - Evidence: `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` (`virtual_list_stress_demo_keeps_keyed_virtualization_path`).
+  - Evidence: `apps/fret-examples/src/virtual_list_stress_demo.rs` (`VirtualListOptions::new`, `virtual_list_keyed_with_layout`).
 
 ---
 
@@ -122,5 +127,8 @@ Exit criteria:
 
 - v2 stable subset is published with explicit deferrals.
 
-- [ ] IMUIECO2-scope-050 Re-audit layering boundaries and dependency ownership.
-- [ ] IMUIECO2-docs-051 Publish v2 stable subset + deferred backlog.
+- [x] IMUIECO2-scope-050 Re-audit layering boundaries and dependency ownership.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m5-readiness-review.md` (section 1).
+  - Evidence: `ecosystem/fret-authoring/src/lib.rs`, `ecosystem/fret-imui/src/lib.rs`, `ecosystem/fret-ui-kit/src/imui.rs`.
+- [x] IMUIECO2-docs-051 Publish v2 stable subset + deferred backlog.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m5-readiness-review.md` (sections 2 and 3).

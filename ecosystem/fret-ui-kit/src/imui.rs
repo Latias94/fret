@@ -3221,7 +3221,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     ) -> ResponseExt {
         let label = label.into();
         let model = model.clone();
-        let items: Vec<Arc<str>> = items.to_vec();
 
         let selected = self.with_cx_mut(|cx| {
             cx.read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
