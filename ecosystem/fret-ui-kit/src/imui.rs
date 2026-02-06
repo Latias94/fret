@@ -10,6 +10,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_authoring::Response;
 use fret_authoring::UiWriter;
@@ -158,6 +159,8 @@ pub struct ResponseExt {
     pub id: Option<GlobalElementId>,
     pub secondary_clicked: bool,
     pub double_clicked: bool,
+    pub long_pressed: bool,
+    pub press_holding: bool,
     pub context_menu_requested: bool,
     pub context_menu_anchor: Option<Point>,
     pub drag: DragResponse,
@@ -238,6 +241,14 @@ impl ResponseExt {
         self.double_clicked
     }
 
+    pub fn long_pressed(self) -> bool {
+        self.long_pressed
+    }
+
+    pub fn press_holding(self) -> bool {
+        self.press_holding
+    }
+
     pub fn context_menu_requested(self) -> bool {
         self.context_menu_requested
     }
@@ -272,9 +283,20 @@ struct DragReportState {
     last_position: Option<Point>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+struct LongPressSignalState {
+    timer: Option<fret_runtime::TimerToken>,
+    holding: bool,
+}
+
 #[derive(Default)]
 struct ImUiContextMenuAnchorStore {
     by_element: HashMap<GlobalElementId, fret_runtime::Model<Option<Point>>>,
+}
+
+#[derive(Default)]
+struct ImUiLongPressStore {
+    by_element: HashMap<GlobalElementId, fret_runtime::Model<LongPressSignalState>>,
 }
 
 fn context_menu_anchor_model_for<H: UiHost>(
@@ -286,6 +308,19 @@ fn context_menu_anchor_model_for<H: UiHost>(
             st.by_element
                 .entry(id)
                 .or_insert_with(|| app.models_mut().insert(None::<Point>))
+                .clone()
+        })
+}
+
+fn long_press_signal_model_for<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+) -> fret_runtime::Model<LongPressSignalState> {
+    cx.app
+        .with_global_mut_untracked(ImUiLongPressStore::default, |st, app| {
+            st.by_element
+                .entry(id)
+                .or_insert_with(|| app.models_mut().insert(LongPressSignalState::default()))
                 .clone()
         })
 }
@@ -397,11 +432,13 @@ const KEY_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.clicked.v1");
 const KEY_CHANGED: u64 = fnv1a64(b"fret-ui-kit.imui.changed.v1");
 const KEY_SECONDARY_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.secondary_clicked.v1");
 const KEY_DOUBLE_CLICKED: u64 = fnv1a64(b"fret-ui-kit.imui.double_clicked.v1");
+const KEY_LONG_PRESSED: u64 = fnv1a64(b"fret-ui-kit.imui.long_pressed.v1");
 const KEY_CONTEXT_MENU_REQUESTED: u64 = fnv1a64(b"fret-ui-kit.imui.context_menu_requested.v1");
 const KEY_DRAG_STARTED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_started.v1");
 const KEY_DRAG_STOPPED: u64 = fnv1a64(b"fret-ui-kit.imui.drag_stopped.v1");
 
 const DRAG_THRESHOLD_PX: f32 = 4.0;
+const LONG_PRESS_DELAY: Duration = Duration::from_millis(450);
 const DRAG_KIND_MASK: u64 = 0x8000_0000_0000_0000;
 
 fn drag_kind_for_element(element: GlobalElementId) -> fret_runtime::DragKindId {
@@ -414,6 +451,70 @@ fn point_sub(a: Point, b: Point) -> Point {
 
 fn point_add(a: Point, b: Point) -> Point {
     Point::new(Px(a.x.0 + b.x.0), Px(a.y.0 + b.y.0))
+}
+
+fn arm_long_press_timer_for(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    model: &fret_runtime::Model<LongPressSignalState>,
+) {
+    let token = host.next_timer_token();
+    let previous = host
+        .update_model(model, |state| {
+            let previous = state.timer.take();
+            state.timer = Some(token);
+            state.holding = false;
+            previous
+        })
+        .flatten();
+    if let Some(previous) = previous {
+        host.push_effect(fret_runtime::Effect::CancelTimer { token: previous });
+    }
+    host.push_effect(fret_runtime::Effect::SetTimer {
+        window: Some(action_cx.window),
+        token,
+        after: LONG_PRESS_DELAY,
+        repeat: None,
+    });
+}
+
+fn cancel_long_press_timer_for(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    model: &fret_runtime::Model<LongPressSignalState>,
+) {
+    let previous = host
+        .update_model(model, |state| {
+            let previous = state.timer.take();
+            state.holding = false;
+            previous
+        })
+        .flatten();
+    if let Some(previous) = previous {
+        host.push_effect(fret_runtime::Effect::CancelTimer { token: previous });
+    }
+}
+
+fn emit_long_press_if_matching(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    action_cx: fret_ui::action::ActionCx,
+    model: &fret_runtime::Model<LongPressSignalState>,
+    token: fret_runtime::TimerToken,
+) -> bool {
+    let fired = host
+        .update_model(model, |state| {
+            if state.timer != Some(token) {
+                return false;
+            }
+            state.timer = None;
+            state.holding = true;
+            true
+        })
+        .unwrap_or(false);
+    if fired {
+        host.record_transient_event(action_cx, KEY_LONG_PRESSED);
+        host.notify(action_cx);
+    }
+    fired
 }
 
 const FLOAT_WINDOW_DRAG_KIND_MASK: u64 = 0x4000_0000_0000_0000;
@@ -1684,6 +1785,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
+                let long_press_signal_model = long_press_signal_model_for(cx, id);
+                let long_press_signal_model_for_timer = long_press_signal_model.clone();
+                let long_press_signal_model_for_down = long_press_signal_model.clone();
+                let long_press_signal_model_for_move = long_press_signal_model.clone();
+                let long_press_signal_model_for_up = long_press_signal_model.clone();
+
+                cx.timer_on_timer_for(
+                    id,
+                    Arc::new(move |host, action_cx, token| {
+                        emit_long_press_if_matching(
+                            host,
+                            action_cx,
+                            &long_press_signal_model_for_timer,
+                            token,
+                        )
+                    }),
+                );
 
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
@@ -1710,6 +1828,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return PressablePointerDownResult::Continue;
                     }
 
+                    arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
+
                     if host.drag(down.pointer_id).is_none() {
                         host.begin_drag_with_kind(
                             down.pointer_id,
@@ -1723,6 +1843,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    let mut cancel_long_press = false;
+
                     let Some(drag) = host.drag_mut(mv.pointer_id) else {
                         return false;
                     };
@@ -1736,11 +1858,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     drag.position = mv.position;
 
                     if !mv.buttons.left {
+                        cancel_long_press = true;
                         if drag.dragging {
                             drag.phase = DragPhase::Canceled;
                             host.record_transient_event(acx, KEY_DRAG_STOPPED);
                         }
                         host.cancel_drag(mv.pointer_id);
+                        if cancel_long_press {
+                            cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                        }
                         host.notify(acx);
                         return false;
                     }
@@ -1748,16 +1874,24 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let d = point_sub(drag.position, drag.start_position);
                     let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
                     if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                        cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
                         host.record_transient_event(acx, KEY_DRAG_STARTED);
                     }
 
+                    if cancel_long_press {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                    }
                     host.notify(acx);
                     false
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                    if up.button == MouseButton::Left {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
+                    }
+
                     if let Some(drag) = host.drag(up.pointer_id)
                         && drag.kind == drag_kind_for_element(acx.target)
                         && drag.source_window == acx.window
@@ -1796,6 +1930,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
                 response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
+                response.long_pressed = cx.take_transient_for(id, KEY_LONG_PRESSED);
+                response.press_holding = cx
+                    .read_model(
+                        &long_press_signal_model,
+                        fret_ui::Invalidation::Paint,
+                        |_app, value| value.holding,
+                    )
+                    .unwrap_or(false);
                 response.context_menu_requested =
                     cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
                 response.context_menu_anchor = cx
@@ -1876,6 +2018,23 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                 let context_anchor_model = context_menu_anchor_model_for(cx, id);
                 let context_anchor_model_for_report = context_anchor_model.clone();
+                let long_press_signal_model = long_press_signal_model_for(cx, id);
+                let long_press_signal_model_for_timer = long_press_signal_model.clone();
+                let long_press_signal_model_for_down = long_press_signal_model.clone();
+                let long_press_signal_model_for_move = long_press_signal_model.clone();
+                let long_press_signal_model_for_up = long_press_signal_model.clone();
+
+                cx.timer_on_timer_for(
+                    id,
+                    Arc::new(move |host, action_cx, token| {
+                        emit_long_press_if_matching(
+                            host,
+                            action_cx,
+                            &long_press_signal_model_for_timer,
+                            token,
+                        )
+                    }),
+                );
 
                 let model = model.clone();
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
@@ -1904,6 +2063,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         return PressablePointerDownResult::Continue;
                     }
 
+                    arm_long_press_timer_for(host, acx, &long_press_signal_model_for_down);
+
                     if host.drag(down.pointer_id).is_none() {
                         host.begin_drag_with_kind(
                             down.pointer_id,
@@ -1917,6 +2078,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    let mut cancel_long_press = false;
+
                     let Some(drag) = host.drag_mut(mv.pointer_id) else {
                         return false;
                     };
@@ -1930,11 +2093,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     drag.position = mv.position;
 
                     if !mv.buttons.left {
+                        cancel_long_press = true;
                         if drag.dragging {
                             drag.phase = DragPhase::Canceled;
                             host.record_transient_event(acx, KEY_DRAG_STOPPED);
                         }
                         host.cancel_drag(mv.pointer_id);
+                        if cancel_long_press {
+                            cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                        }
                         host.notify(acx);
                         return false;
                     }
@@ -1942,16 +2109,24 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     let d = point_sub(drag.position, drag.start_position);
                     let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
                     if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                        cancel_long_press = true;
                         drag.dragging = true;
                         drag.phase = DragPhase::Dragging;
                         host.record_transient_event(acx, KEY_DRAG_STARTED);
                     }
 
+                    if cancel_long_press {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_move);
+                    }
                     host.notify(acx);
                     false
                 }));
 
                 cx.pressable_on_pointer_up(Arc::new(move |host, acx, up| {
+                    if up.button == MouseButton::Left {
+                        cancel_long_press_timer_for(host, &long_press_signal_model_for_up);
+                    }
+
                     if let Some(drag) = host.drag(up.pointer_id)
                         && drag.kind == drag_kind_for_element(acx.target)
                         && drag.source_window == acx.window
@@ -1987,6 +2162,14 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
                 response.secondary_clicked = cx.take_transient_for(id, KEY_SECONDARY_CLICKED);
                 response.double_clicked = cx.take_transient_for(id, KEY_DOUBLE_CLICKED);
+                response.long_pressed = cx.take_transient_for(id, KEY_LONG_PRESSED);
+                response.press_holding = cx
+                    .read_model(
+                        &long_press_signal_model,
+                        fret_ui::Invalidation::Paint,
+                        |_app, value| value.holding,
+                    )
+                    .unwrap_or(false);
                 response.context_menu_requested =
                     cx.take_transient_for(id, KEY_CONTEXT_MENU_REQUESTED);
                 response.context_menu_anchor = cx

@@ -681,6 +681,30 @@ mod tests {
         );
     }
 
+    fn dispatch_all_timers(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+    ) -> usize {
+        let mut pending: Vec<TimerToken> = Vec::new();
+        for effect in &app.effects {
+            if let Effect::SetTimer { token, repeat, .. } = effect
+                && repeat.is_none()
+            {
+                pending.push(*token);
+            }
+        }
+        app.effects.retain(
+            |effect| !matches!(effect, Effect::SetTimer { repeat, .. } if repeat.is_none()),
+        );
+
+        let dispatched = pending.len();
+        for token in pending {
+            ui.dispatch_event(app, services, &Event::Timer { token });
+        }
+        dispatched
+    }
+
     fn first_child_point(ui: &UiTree<TestHost>, root: fret_core::NodeId) -> Point {
         let child = ui.children(root)[0];
         let bounds = ui.debug_node_bounds(child).expect("child bounds");
@@ -2045,6 +2069,116 @@ mod tests {
         assert!(!started.get());
         assert!(!dragging.get());
         assert!(stopped.get());
+    }
+
+    #[test]
+    fn long_press_sets_long_pressed_true_once_and_reports_holding() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let long_pressed = Rc::new(Cell::new(false));
+        let holding = Rc::new(Cell::new(false));
+
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+        assert!(!long_pressed.get());
+        assert!(!holding.get());
+
+        let at = first_child_point(&ui, root);
+        pointer_down_at(&mut ui, &mut app, &mut services, at);
+        let dispatched = dispatch_all_timers(&mut ui, &mut app, &mut services);
+        assert!(dispatched > 0);
+
+        app.advance_frame();
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+
+        assert!(long_pressed.get());
+        assert!(holding.get());
+
+        app.advance_frame();
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+        assert!(!long_pressed.get());
+        assert!(holding.get());
+
+        pointer_up_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let long_pressed_out = long_pressed.clone();
+        let holding_out = holding.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-long-press-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    long_pressed_out.set(resp.long_pressed());
+                    holding_out.set(resp.press_holding());
+                })
+            },
+        );
+        assert!(!long_pressed.get());
+        assert!(!holding.get());
     }
 
     fn floating_window_nodes(

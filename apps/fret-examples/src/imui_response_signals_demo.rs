@@ -7,6 +7,8 @@ struct ImUiResponseSignalsState {
     left_clicks: Model<u32>,
     secondary_clicks: Model<u32>,
     double_clicks: Model<u32>,
+    long_presses: Model<u32>,
+    press_holding: Model<bool>,
 
     drag_offset: Model<Point>,
     drag_starts: Model<u32>,
@@ -28,6 +30,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> ImUiResponseSignalsState 
         left_clicks: app.models_mut().insert(0),
         secondary_clicks: app.models_mut().insert(0),
         double_clicks: app.models_mut().insert(0),
+        long_presses: app.models_mut().insert(0),
+        press_holding: app.models_mut().insert(false),
 
         drag_offset: app.models_mut().insert(Point::default()),
         drag_starts: app.models_mut().insert(0),
@@ -51,6 +55,16 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiResponseSignalsState) -> 
         .unwrap_or_default();
     let double_clicks = cx
         .watch_model(&st.double_clicks)
+        .layout()
+        .copied()
+        .unwrap_or_default();
+    let long_presses = cx
+        .watch_model(&st.long_presses)
+        .layout()
+        .copied()
+        .unwrap_or_default();
+    let press_holding = cx
+        .watch_model(&st.press_holding)
         .layout()
         .copied()
         .unwrap_or_default();
@@ -104,13 +118,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiResponseSignalsState) -> 
         let click_report = fret_ui_kit::ui::text(
             ui.cx_mut(),
             format!(
-                "clicks: left={left_clicks} secondary={secondary_clicks} double={double_clicks}"
+                "clicks: left={left_clicks} secondary={secondary_clicks} double={double_clicks} long={long_presses} holding={press_holding}"
             ),
         )
         .text_sm()
         .font_medium();
         ui.add_ui(click_report);
-        let click = ui.button("Click variants (left/right/double)");
+        let click = ui.button("Click variants (left/right/double/long-press)");
         if click.clicked() {
             let _ = ui
                 .cx_mut()
@@ -132,6 +146,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiResponseSignalsState) -> 
                 .models_mut()
                 .update(&st.double_clicks, |v| *v += 1);
         }
+        if click.long_pressed() {
+            let _ = ui
+                .cx_mut()
+                .app
+                .models_mut()
+                .update(&st.long_presses, |v| *v += 1);
+        }
+        let _ = ui
+            .cx_mut()
+            .app
+            .models_mut()
+            .update(&st.press_holding, |v| *v = click.press_holding());
 
         ui.separator();
 

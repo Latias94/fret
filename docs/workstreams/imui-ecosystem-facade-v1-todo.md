@@ -90,7 +90,11 @@ Exit criteria:
 - [x] IMUIECO-resp-010 Add click variants (secondary + double click).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::{secondary_clicked,double_clicked}`, `UiWriterImUiFacadeExt::button`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`right_click_sets_context_menu_requested_true_once`, `double_click_sets_double_clicked_true_once`).
-- [ ] IMUIECO-resp-010b Add long-press / press-and-hold signal (touch-first; schedule-aware).
+- [x] IMUIECO-resp-010b Add long-press / press-and-hold signal (touch-first; schedule-aware).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::{long_pressed,press_holding}`, timer-backed scheduling).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`long_press_sets_long_pressed_true_once_and_reports_holding`).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/event/hooks.rs` (`TimerHookHost::record_transient_event` keeps timer hooks parity with pointer/key hooks).
+  - Evidence: `apps/fret-examples/src/imui_response_signals_demo.rs` (demo report includes `long` + `holding`).
 - [x] IMUIECO-resp-011 Add drag lifecycle signals (started/dragging/stopped) and useful geometry/delta fields.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ResponseExt::drag`, `UiWriterImUiFacadeExt::button`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`drag_started_stopped_and_delta_are_consistent`).
