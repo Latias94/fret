@@ -4420,3 +4420,42 @@ Notes:
   wrap-aware extents. Before making this default, we should add a correctness probe:
   - assert scroll offset remains stable across a resize stress sequence, and
   - validate scrollbar thumb sizing does not glitch (or at least stays within an acceptable tolerance).
+
+## 2026-02-06 14:26:00 (correctness gate; commit pending)
+
+Change:
+- Add per-frame scroll telemetry in UI diagnostics bundles (`debug.scroll_nodes[]`):
+  - `node`, `element`, `axis`, `offset_{x,y}`, `viewport_{w,h}`, `content_{w,h}`.
+- Add a post-run diagnostics gate to ensure scroll offsets remain stable across a script run:
+  - `fretboard diag run ... --check-scroll-offset-stable <test_id>`
+- Add a dedicated correctness repro script that scrolls the view-cache page, then performs the
+  resize stress sequence:
+  - `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+
+Why:
+- The “deferred unbounded scroll probe” resize optimization is intentionally allowed to lag
+  content extents while the viewport is changing.
+- We need a scripted gate that catches catastrophic offset clamping/jumps while we iterate on the
+  policy (and before considering a default-on switch).
+
+Probe (single script; gate pass):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+- Gate: `--check-scroll-offset-stable ui-gallery-content-viewport`
+
+Command:
+```bash
+target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json \
+  --dir target/fret-diag-codex-scroll-offset-stable-v1b \
+  --timeout-ms 300000 --poll-ms 50 \
+  --check-scroll-offset-stable ui-gallery-content-viewport \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Result:
+- PASS
+- Evidence bundle: `target/fret-diag-codex-scroll-offset-stable-v1b/1770359181990-ui-gallery-window-resize-scroll-offset-stable/bundle.json`

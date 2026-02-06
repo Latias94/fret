@@ -3591,6 +3591,153 @@ pub(super) fn check_bundle_for_wheel_scroll_hit_changes_json(
     Err(msg)
 }
 
+pub(super) fn check_bundle_for_scroll_offset_stable(
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_scroll_offset_stable_json(&bundle, bundle_path, test_id, warmup_frames)
+}
+
+pub(super) fn check_bundle_for_scroll_offset_stable_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const EPS: f32 = 0.5;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle.json: missing windows".to_string())?;
+    if windows.is_empty() {
+        return Ok(());
+    }
+
+    let mut any_target = false;
+    let mut failures: Vec<String> = Vec::new();
+
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        if snaps.is_empty() {
+            continue;
+        }
+
+        let mut target_node_id: Option<u64> = None;
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            if let Some(node_id) = semantics_node_id_for_test_id(s, test_id) {
+                target_node_id = Some(node_id);
+                break;
+            }
+        }
+        let Some(target_node_id) = target_node_id else {
+            failures.push(format!(
+                "window={window_id} test_id={test_id} error=missing_semantics_or_test_id (ensure FRET_DIAG_SEMANTICS=1)"
+            ));
+            continue;
+        };
+
+        let mut baseline: Option<(f32, f32)> = None;
+        let mut baseline_frame: u64 = 0;
+        let mut samples = 0u64;
+
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+
+            let entry = s
+                .get("debug")
+                .and_then(|v| v.get("scroll_nodes"))
+                .and_then(|v| v.as_array())
+                .and_then(|nodes| {
+                    nodes.iter().find(|n| {
+                        n.get("node")
+                            .and_then(|v| v.as_u64())
+                            .is_some_and(|id| id == target_node_id)
+                    })
+                });
+            let Some(entry) = entry else {
+                continue;
+            };
+
+            let Some(x) = entry
+                .get("offset_x")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+            else {
+                continue;
+            };
+            let Some(y) = entry
+                .get("offset_y")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32)
+            else {
+                continue;
+            };
+
+            samples += 1;
+            if baseline.is_none() {
+                baseline = Some((x, y));
+                baseline_frame = frame_id;
+                continue;
+            }
+            let (bx, by) = baseline.unwrap();
+            if (x - bx).abs() > EPS || (y - by).abs() > EPS {
+                failures.push(format!(
+                    "window={window_id} test_id={test_id} target_node={target_node_id} error=offset_changed frame_id={frame_id} baseline_frame={baseline_frame} baseline=({bx:.2},{by:.2}) cur=({x:.2},{y:.2}) eps={EPS:.2}"
+                ));
+            }
+        }
+
+        if samples > 0 {
+            any_target = true;
+        } else {
+            failures.push(format!(
+                "window={window_id} test_id={test_id} target_node={target_node_id} error=no_scroll_nodes_samples (ensure scroll telemetry is enabled in the bundle)"
+            ));
+        }
+    }
+
+    if !any_target {
+        let mut msg = String::new();
+        msg.push_str("scroll offset stable check failed (no samples)\n");
+        msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+        for line in failures {
+            msg.push_str("  ");
+            msg.push_str(&line);
+            msg.push('\n');
+        }
+        return Err(msg);
+    }
+
+    if failures.is_empty() {
+        return Ok(());
+    }
+
+    let mut msg = String::new();
+    msg.push_str("scroll offset stable check failed (expected offset to remain stable)\n");
+    msg.push_str(&format!("bundle: {}\n", bundle_path.display()));
+    for line in failures {
+        msg.push_str("  ");
+        msg.push_str(&line);
+        msg.push('\n');
+    }
+    Err(msg)
+}
+
 pub(super) fn check_bundle_for_vlist_visible_range_refreshes_max(
     bundle_path: &Path,
     out_dir: &Path,

@@ -509,7 +509,10 @@ Perf acceptance:
     - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2`
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 13:45.
   - TODO:
-    - Add a correctness probe to ensure resize stress does not clamp scroll offsets incorrectly.
+    - [x] Add a correctness probe to ensure resize stress does not clamp scroll offsets incorrectly.
+      - Script: `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+      - Gate: `--check-scroll-offset-stable ui-gallery-content-viewport`
+      - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 14:26.
     - If acceptable, flip the default for resize-only (keep invalidation deferral opt-in).
 - [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.
 - [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).

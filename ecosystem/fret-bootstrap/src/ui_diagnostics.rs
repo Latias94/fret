@@ -4103,6 +4103,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
     #[serde(default)]
+    pub scroll_nodes: Vec<UiScrollNodeTelemetryV1>,
+    #[serde(default)]
     pub prepaint_actions: Vec<UiPrepaintActionV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,
@@ -4334,6 +4336,12 @@ impl UiTreeDebugSnapshotV1 {
                 .debug_scroll_handle_changes()
                 .iter()
                 .map(UiScrollHandleChangeV1::from_change)
+                .collect(),
+            scroll_nodes: ui
+                .debug_scroll_nodes()
+                .iter()
+                .copied()
+                .map(UiScrollNodeTelemetryV1::from_telemetry)
                 .collect(),
             prepaint_actions: ui
                 .debug_prepaint_actions()
@@ -5098,6 +5106,54 @@ impl UiScrollHandleChangeV1 {
                 .map(key_to_u64)
                 .collect(),
             upgraded_to_layout_bindings: change.upgraded_to_layout_bindings,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiScrollAxisV1 {
+    X,
+    Y,
+    Both,
+}
+
+impl UiScrollAxisV1 {
+    fn from_axis(axis: fret_ui::tree::UiDebugScrollAxis) -> Self {
+        match axis {
+            fret_ui::tree::UiDebugScrollAxis::X => Self::X,
+            fret_ui::tree::UiDebugScrollAxis::Y => Self::Y,
+            fret_ui::tree::UiDebugScrollAxis::Both => Self::Both,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiScrollNodeTelemetryV1 {
+    pub node: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub element: Option<u64>,
+    pub axis: UiScrollAxisV1,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub viewport_w: f32,
+    pub viewport_h: f32,
+    pub content_w: f32,
+    pub content_h: f32,
+}
+
+impl UiScrollNodeTelemetryV1 {
+    fn from_telemetry(telemetry: fret_ui::tree::UiDebugScrollNodeTelemetry) -> Self {
+        Self {
+            node: key_to_u64(telemetry.node),
+            element: telemetry.element.map(|e| e.0),
+            axis: UiScrollAxisV1::from_axis(telemetry.axis),
+            offset_x: telemetry.offset.x.0,
+            offset_y: telemetry.offset.y.0,
+            viewport_w: telemetry.viewport.width.0,
+            viewport_h: telemetry.viewport.height.0,
+            content_w: telemetry.content.width.0,
+            content_h: telemetry.content.height.0,
         }
     }
 }

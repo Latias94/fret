@@ -902,6 +902,23 @@ pub enum UiDebugScrollHandleChangeKind {
     HitTestOnly,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UiDebugScrollAxis {
+    X,
+    Y,
+    Both,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollNodeTelemetry {
+    pub node: NodeId,
+    pub element: Option<GlobalElementId>,
+    pub axis: UiDebugScrollAxis,
+    pub offset: fret_core::Point,
+    pub viewport: fret_core::Size,
+    pub content: fret_core::Size,
+}
+
 #[derive(Debug, Clone)]
 pub struct UiDebugScrollHandleChange {
     pub handle_key: usize,
@@ -1569,6 +1586,7 @@ pub struct UiTree<H: UiHost> {
     debug_virtual_list_window_shift_samples: Vec<UiDebugVirtualListWindowShiftSample>,
     debug_retained_virtual_list_reconciles: Vec<UiDebugRetainedVirtualListReconcile>,
     debug_scroll_handle_changes: Vec<UiDebugScrollHandleChange>,
+    debug_scroll_nodes: Vec<UiDebugScrollNodeTelemetry>,
     debug_prepaint_actions: Vec<UiDebugPrepaintAction>,
     #[cfg(feature = "diagnostics")]
     debug_set_children_writes: HashMap<NodeId, UiDebugSetChildrenWrite>,
@@ -1999,6 +2017,7 @@ impl<H: UiHost> Default for UiTree<H> {
             debug_virtual_list_window_shift_samples: Vec::new(),
             debug_retained_virtual_list_reconciles: Vec::new(),
             debug_scroll_handle_changes: Vec::new(),
+            debug_scroll_nodes: Vec::new(),
             debug_prepaint_actions: Vec::new(),
             #[cfg(feature = "diagnostics")]
             debug_set_children_writes: HashMap::new(),
@@ -2343,6 +2362,7 @@ impl<H: UiHost> UiTree<H> {
         self.debug_virtual_list_window_shift_samples.clear();
         self.debug_retained_virtual_list_reconciles.clear();
         self.debug_scroll_handle_changes.clear();
+        self.debug_scroll_nodes.clear();
         self.debug_prepaint_actions.clear();
         #[cfg(feature = "diagnostics")]
         {
@@ -2827,6 +2847,21 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         self.debug_virtual_list_windows.push(record);
+    }
+
+    pub(crate) fn debug_record_scroll_node_telemetry(
+        &mut self,
+        record: UiDebugScrollNodeTelemetry,
+    ) {
+        if !self.debug_enabled {
+            return;
+        }
+        // Keep bundles bounded: real apps can have many scroll containers.
+        const MAX_RECORDS: usize = 256;
+        if self.debug_scroll_nodes.len() >= MAX_RECORDS {
+            return;
+        }
+        self.debug_scroll_nodes.push(record);
     }
 
     pub(crate) fn debug_record_retained_virtual_list_reconcile(
@@ -3572,6 +3607,13 @@ impl<H: UiHost> UiTree<H> {
             return &[];
         }
         self.debug_scroll_handle_changes.as_slice()
+    }
+
+    pub fn debug_scroll_nodes(&self) -> &[UiDebugScrollNodeTelemetry] {
+        if !self.debug_enabled {
+            return &[];
+        }
+        self.debug_scroll_nodes.as_slice()
     }
 
     pub fn debug_prepaint_actions(&self) -> &[UiDebugPrepaintAction] {

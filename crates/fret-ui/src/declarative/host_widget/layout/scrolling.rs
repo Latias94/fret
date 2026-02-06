@@ -4,7 +4,10 @@ use crate::declarative::prelude::*;
 
 use crate::cache_key::CacheKeyBuilder;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
-use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
+use crate::tree::{
+    UiDebugInvalidationDetail, UiDebugInvalidationSource, UiDebugScrollAxis,
+    UiDebugScrollNodeTelemetry,
+};
 use fret_core::FrameId;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -913,6 +916,20 @@ impl ElementHostWidget {
             handle.set_content_size_internal(Size::new(content_w, content_h));
             let prev = handle.offset();
             handle.set_offset_internal(prev);
+
+            cx.tree
+                .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                    node: cx.node,
+                    element: Some(self.element),
+                    axis: match props.axis {
+                        crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
+                        crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
+                        crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
+                    },
+                    offset: handle.offset(),
+                    viewport: handle.viewport_size(),
+                    content: handle.content_size(),
+                });
 
             crate::elements::with_element_state(
                 &mut *cx.app,

@@ -32,7 +32,7 @@ use stats::{
     check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_budget,
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
-    check_bundle_for_retained_vlist_reconcile_no_notify_min,
+    check_bundle_for_retained_vlist_reconcile_no_notify_min, check_bundle_for_scroll_offset_stable,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
     check_bundle_for_stale_scene, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
@@ -115,6 +115,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
     let mut check_wheel_scroll_hit_changes_test_id: Option<String> = None;
+    let mut check_scroll_offset_stable_test_id: Option<String> = None;
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
@@ -586,6 +587,14 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     return Err("missing value for --check-wheel-scroll-hit-changes".to_string());
                 };
                 check_wheel_scroll_hit_changes_test_id = Some(v);
+                i += 1;
+            }
+            "--check-scroll-offset-stable" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-scroll-offset-stable".to_string());
+                };
+                check_scroll_offset_stable_test_id = Some(v);
                 i += 1;
             }
             "--check-vlist-visible-range-refreshes-max" => {
@@ -1423,6 +1432,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
+                    || check_scroll_offset_stable_test_id.is_some()
                     || check_prepaint_actions_min.is_some()
                     || check_chart_sampling_window_shifts_min.is_some()
                     || check_node_graph_cull_window_shifts_min.is_some()
@@ -1475,6 +1485,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
                         check_wheel_scroll_hit_changes_test_id.as_deref(),
+                        check_scroll_offset_stable_test_id.as_deref(),
                         check_prepaint_actions_min,
                         check_chart_sampling_window_shifts_min,
                         check_node_graph_cull_window_shifts_min,
@@ -1775,6 +1786,7 @@ See: `docs/tracy.md`.\n";
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
+                        || check_scroll_offset_stable_test_id.is_some()
                         || check_prepaint_actions_min.is_some()
                         || check_chart_sampling_window_shifts_min.is_some()
                         || check_node_graph_cull_window_shifts_min.is_some()
@@ -1825,6 +1837,7 @@ See: `docs/tracy.md`.\n";
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
                             check_wheel_scroll_hit_changes_test_id.as_deref(),
+                            check_scroll_offset_stable_test_id.as_deref(),
                             check_prepaint_actions_min,
                             check_chart_sampling_window_shifts_min,
                             check_node_graph_cull_window_shifts_min,
@@ -3029,6 +3042,7 @@ See: `docs/tracy.md`.\n";
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
+                    || check_scroll_offset_stable_test_id.is_some()
                     || check_prepaint_actions_min.is_some()
                     || check_chart_sampling_window_shifts_min.is_some()
                     || check_node_graph_cull_window_shifts_min.is_some()
@@ -3298,6 +3312,7 @@ See: `docs/tracy.md`.\n";
                         check_wheel_scroll_hit_changes_test_id
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
+                        check_scroll_offset_stable_test_id.as_deref(),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
                         check_chart_sampling_window_shifts_min
                             .or(suite_chart_sampling_window_shifts_min),
@@ -5080,6 +5095,13 @@ See: `docs/tracy.md`.\n";
                     warmup_frames,
                 )?;
             }
+            if let Some(test_id) = check_scroll_offset_stable_test_id.as_deref() {
+                check_bundle_for_scroll_offset_stable(
+                    bundle_path.as_path(),
+                    test_id,
+                    warmup_frames,
+                )?;
+            }
             if let Some(test_id) = check_drag_cache_root_paint_only_test_id.as_deref() {
                 check_bundle_for_drag_cache_root_paint_only(&bundle_path, test_id, warmup_frames)?;
             }
@@ -6769,6 +6791,7 @@ fn apply_post_run_checks(
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
     check_wheel_scroll_hit_changes_test_id: Option<&str>,
+    check_scroll_offset_stable_test_id: Option<&str>,
     check_prepaint_actions_min: Option<u64>,
     check_chart_sampling_window_shifts_min: Option<u64>,
     check_node_graph_cull_window_shifts_min: Option<u64>,
@@ -6822,6 +6845,9 @@ fn apply_post_run_checks(
     }
     if let Some(test_id) = check_wheel_scroll_hit_changes_test_id {
         check_bundle_for_wheel_scroll_hit_changes(bundle_path, test_id, warmup_frames)?;
+    }
+    if let Some(test_id) = check_scroll_offset_stable_test_id {
+        check_bundle_for_scroll_offset_stable(bundle_path, test_id, warmup_frames)?;
     }
     if let Some(min) = check_prepaint_actions_min {
         check_bundle_for_prepaint_actions_min(bundle_path, out_dir, min, warmup_frames)?;
