@@ -259,6 +259,12 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/measured/store.rs`
   - Evidence: `ecosystem/fret-node/src/ui/measured/presenter.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/derived_geometry_invalidation_conformance.rs`
+- [x] Split canvas widget test harness into focused modules (host/services/contexts/graph fixtures) to reduce drift when bridge fields evolve.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/mod.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/host.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/contexts.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/services.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
