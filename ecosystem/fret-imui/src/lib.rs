@@ -4399,9 +4399,56 @@ mod tests {
                 })
             },
         );
+        assert!(!changed.get());
+        assert!(selected.borrow().is_none());
+        assert!(has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select.option.0",
+        ));
+
+        let first_option = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select.option.0",
+        );
+        click_at(&mut ui, &mut app, &mut services, first_option);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
         assert!(changed.get());
         assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
-
         app.advance_frame();
         let changed_out = changed.clone();
         let selected_out = selected.clone();
@@ -4433,6 +4480,134 @@ mod tests {
         );
         assert!(!changed.get());
         assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
+        assert!(!has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select.option.0",
+        ));
+    }
+
+    #[test]
+    fn select_popup_escape_closes_and_restores_trigger_focus() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-escape")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+
+        let trigger = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-escape",
+        );
+        click_at(&mut ui, &mut app, &mut services, trigger);
+        let focus_before_open = ui.focus();
+        assert!(focus_before_open.is_some());
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-escape")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+        assert!(has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-escape.option.0",
+        ));
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Escape,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let _ = ui.select_model_ex(
+                        "Mode",
+                        &model,
+                        &items,
+                        SelectOptions {
+                            test_id: Some(Arc::from("imui-select-escape")),
+                            ..Default::default()
+                        },
+                    );
+                })
+            },
+        );
+        assert!(!has_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui-select-escape.option.0",
+        ));
+        assert_eq!(ui.focus(), focus_before_open);
     }
 
     #[test]

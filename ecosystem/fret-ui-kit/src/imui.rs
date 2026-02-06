@@ -3234,40 +3234,97 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             .unwrap_or_else(|| Arc::from("Select..."));
         let trigger_text: Arc<str> = Arc::from(format!("{label}: {selected_label}"));
 
-        let trigger = self.menu_item_ex(
-            trigger_text,
-            MenuItemOptions {
-                enabled: options.enabled,
-                test_id: options.test_id.clone(),
-                ..Default::default()
-            },
-        );
+        let popup_scope_id: Arc<str> = {
+            let base = options
+                .test_id
+                .as_deref()
+                .map(str::to_owned)
+                .unwrap_or_else(|| label.as_ref().to_string());
+            let mut normalized = String::with_capacity(base.len());
+            for ch in base.chars() {
+                if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.') {
+                    normalized.push(ch);
+                } else {
+                    normalized.push('-');
+                }
+            }
+            Arc::from(format!("imui-select-popup-{normalized}"))
+        };
+        let popup_open = self.popup_open_model(popup_scope_id.as_ref());
 
-        let mut changed = false;
-        if options.enabled && trigger.clicked() && !items.is_empty() {
-            let current_index = selected.as_ref().and_then(|current| {
-                items
-                    .iter()
-                    .position(|item| item.as_ref() == current.as_ref())
-            });
-            let next_index = current_index
-                .map(|index| (index + 1) % items.len())
-                .unwrap_or(0);
-            let next_value = Some(items[next_index].clone());
-            if next_value != selected {
-                let next_for_model = next_value.clone();
-                self.with_cx_mut(|cx| {
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&model, |value| *value = next_for_model.clone());
-                });
-                changed = true;
+        let trigger = self.push_id(format!("{popup_scope_id}.trigger"), |ui| {
+            ui.menu_item_ex(
+                trigger_text,
+                MenuItemOptions {
+                    enabled: options.enabled,
+                    test_id: options.test_id.clone(),
+                    ..Default::default()
+                },
+            )
+        });
+
+        if options.enabled && trigger.clicked() {
+            if let Some(anchor) = trigger.core.rect {
+                self.open_popup_at(popup_scope_id.as_ref(), anchor);
             }
         }
 
+        let selected_before = selected.clone();
+        let model_for_pick = model.clone();
+        let popup_open_for_items = popup_open.clone();
+        let trigger_test_id = options.test_id.clone();
+        let popup_opened = self.begin_popup_menu_ex(
+            popup_scope_id.as_ref(),
+            trigger.id,
+            options.popup,
+            move |ui| {
+                for (index, item) in items.iter().enumerate() {
+                    let checked = selected_before
+                        .as_ref()
+                        .is_some_and(|current| current.as_ref() == item.as_ref());
+                    let item_test_id = trigger_test_id
+                        .as_ref()
+                        .map(|id| Arc::from(format!("{id}.option.{index}")));
+                    let item_response = ui.menu_item_radio_ex(
+                        item.clone(),
+                        checked,
+                        MenuItemOptions {
+                            test_id: item_test_id,
+                            ..Default::default()
+                        },
+                    );
+                    if item_response.clicked() {
+                        if !checked {
+                            let next_value = Some(item.clone());
+                            let _ = ui
+                                .cx_mut()
+                                .app
+                                .models_mut()
+                                .update(&model_for_pick, |value| *value = next_value.clone());
+                        }
+                        let _ = ui
+                            .cx_mut()
+                            .app
+                            .models_mut()
+                            .update(&popup_open_for_items, |value| *value = false);
+                    }
+                }
+            },
+        );
+
+        if !options.enabled && popup_opened {
+            self.close_popup(popup_scope_id.as_ref());
+        }
+
+        let selected_now = self.with_cx_mut(|cx| {
+            cx.read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                .unwrap_or(None)
+        });
+
         let mut response = trigger;
-        response.core.changed = changed;
+        response.core.changed = response.id.is_some_and(|id| {
+            self.with_cx_mut(|cx| model_value_changed_for(cx, id, selected_now.clone()))
+        });
         response
     }
 

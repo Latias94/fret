@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 (Stabilization + Authoring Alignment)
 
-Status: In progress (M0-M2 locked; M3+ pending; planning note, not an ADR)
+Status: In progress (M0-M3 locked; M4+ pending; planning note, not an ADR)
 Last updated: 2026-02-06
 
 This workstream starts after `imui` ecosystem facade v1 is functionally complete.
@@ -20,6 +20,7 @@ Related:
 - `docs/workstreams/imui-ecosystem-facade-v2-m0-contracts.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-m1-response-stability.md`
 - `docs/workstreams/imui-ecosystem-facade-v2-m2-adapter-seam.md`
+- `docs/workstreams/imui-ecosystem-facade-v2-m3-popup-floating-polish.md`
 - `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/docking-multiwindow-imgui-parity.md`
@@ -81,6 +82,7 @@ Main goals:
 
 ### M3 - ImGui-aligned interaction polish (without runtime split)
 
+- M3 popup/select and floating coexistence polish is normative in `docs/workstreams/imui-ecosystem-facade-v2-m3-popup-floating-polish.md`.
 - Improve popup/select/window interaction choreography where thin adapters are currently minimal.
 - Keep focus/restore and dismiss behavior aligned with overlay contracts.
 - Gate changes with `fretboard diag` scripts for drag/resize/menu coexistence.
