@@ -121,7 +121,9 @@ Exit criteria:
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`input_text_model_reports_changed_once_after_text_input`, `textarea_model_reports_changed_once_after_text_input`).
 - [ ] IMUIECO-controls-022 Slider/select/switch wrappers (shadcn-aligned when enabled).
 - [ ] IMUIECO-api-023 Container helpers (`horizontal`, `vertical`, `grid`, `scroll`) that prefer `UiBuilder` patch vocabulary.
-- [ ] IMUIECO-api-024 `push_id` / scoped identity helpers mirroring egui/imgui patterns.
+- [x] IMUIECO-api-024 `push_id` / scoped identity helpers mirroring egui/imgui patterns.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::{id,push_id,for_each_keyed}`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`ImUi::push_id`, `push_id_keeps_changed_signal_stable_after_reorder`).
 
 ---
 
