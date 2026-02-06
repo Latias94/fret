@@ -33,9 +33,10 @@ use stats::{
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
     check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_torture_marker_present,
     check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
-    check_bundle_for_view_cache_reuse_min, check_bundle_for_view_cache_reuse_stable_min,
-    check_bundle_for_viewport_capture_min, check_bundle_for_viewport_input_min,
-    check_bundle_for_vlist_policy_key_stable, check_bundle_for_vlist_visible_range_refreshes_max,
+    check_bundle_for_ui_gallery_code_editor_word_boundary, check_bundle_for_view_cache_reuse_min,
+    check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
+    check_bundle_for_viewport_input_min, check_bundle_for_vlist_policy_key_stable,
+    check_bundle_for_vlist_visible_range_refreshes_max,
     check_bundle_for_vlist_visible_range_refreshes_min,
     check_bundle_for_vlist_window_shifts_explainable,
     check_bundle_for_vlist_window_shifts_have_prepaint_actions,
@@ -108,6 +109,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_pixels_changed_test_id: Option<String> = None;
     let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
+    let mut check_ui_gallery_code_editor_word_boundary: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
@@ -533,6 +535,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-code-editor-torture-undo-redo" => {
                 check_ui_gallery_code_editor_torture_undo_redo = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-word-boundary" => {
+                check_ui_gallery_code_editor_word_boundary = true;
                 i += 1;
             }
             "--check-semantics-changed-repainted" => {
@@ -1379,6 +1385,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_pixels_changed_test_id.is_some()
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1430,6 +1437,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_pixels_changed_test_id.as_deref(),
                         check_ui_gallery_code_editor_torture_marker_present,
                         check_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -1733,6 +1741,7 @@ See: `docs/tracy.md`.\n";
                         || check_pixels_changed_test_id.is_some()
                         || check_ui_gallery_code_editor_torture_marker_present
                         || check_ui_gallery_code_editor_torture_undo_redo
+                        || check_ui_gallery_code_editor_word_boundary
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1782,6 +1791,7 @@ See: `docs/tracy.md`.\n";
                             check_pixels_changed_test_id.as_deref(),
                             check_ui_gallery_code_editor_torture_marker_present,
                             check_ui_gallery_code_editor_torture_undo_redo,
+                            check_ui_gallery_code_editor_word_boundary,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
@@ -2862,6 +2872,7 @@ See: `docs/tracy.md`.\n";
                     || check_pixels_changed_test_id.is_some()
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
+                    || check_ui_gallery_code_editor_word_boundary
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -3022,6 +3033,9 @@ See: `docs/tracy.md`.\n";
                     let suite_ui_gallery_code_editor_torture_undo_redo =
                         ui_gallery_script_requires_code_editor_torture_undo_redo_gate(&src)
                             && !check_ui_gallery_code_editor_torture_undo_redo;
+                    let suite_ui_gallery_code_editor_word_boundary =
+                        ui_gallery_script_requires_code_editor_word_boundary_gate(&src)
+                            && !check_ui_gallery_code_editor_word_boundary;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
                     let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
@@ -3088,6 +3102,8 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_marker_present,
                         check_ui_gallery_code_editor_torture_undo_redo
                             || suite_ui_gallery_code_editor_torture_undo_redo,
+                        check_ui_gallery_code_editor_word_boundary
+                            || suite_ui_gallery_code_editor_word_boundary,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -5421,7 +5437,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 18] {
+fn ui_gallery_suite_scripts() -> [&'static str; 19] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -5441,6 +5457,7 @@ fn ui_gallery_suite_scripts() -> [&'static str; 18] {
         "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
     ]
 }
 
@@ -5585,6 +5602,14 @@ fn ui_gallery_script_requires_code_editor_torture_undo_redo_gate(script: &Path) 
         name,
         "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"
     )
+}
+
+fn ui_gallery_script_requires_code_editor_word_boundary_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(name, "ui-gallery-code-editor-word-boundary-baseline.json")
 }
 
 fn script_requests_screenshots(script: &Path) -> bool {
@@ -5796,6 +5821,7 @@ fn apply_post_run_checks(
     check_pixels_changed_test_id: Option<&str>,
     check_ui_gallery_code_editor_torture_marker_present: bool,
     check_ui_gallery_code_editor_torture_undo_redo: bool,
+    check_ui_gallery_code_editor_word_boundary: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
@@ -5828,6 +5854,87 @@ fn apply_post_run_checks(
     check_retained_vlist_keep_alive_budget: Option<(u64, u64)>,
     warmup_frames: u64,
 ) -> Result<(), String> {
+    // Prefer the most recent export directory recorded by the diagnostics runtime.
+    //
+    // `script.result.json` currently reports the last "auto dump" directory (e.g. `press_key`),
+    // but scripts typically emit explicit `capture_bundle` exports that include additional frames
+    // after the triggering input. Post-run gates should run on the latest export to avoid
+    // sampling before the UI has produced updated semantics.
+    //
+    // Note: the runtime may update `latest.txt` slightly after writing `script.result.json`.
+    // Poll briefly to avoid sampling too early.
+    let bundle_path_for_checks = {
+        fn parse_leading_ts(name: &str) -> Option<u64> {
+            let digits: String = name.chars().take_while(|c| c.is_ascii_digit()).collect();
+            if digits.is_empty() {
+                return None;
+            }
+            digits.parse::<u64>().ok()
+        }
+
+        fn normalize_bundle_path(p: std::path::PathBuf) -> std::path::PathBuf {
+            if p.extension().is_some_and(|ext| ext == "json") {
+                p
+            } else {
+                p.join("bundle.json")
+            }
+        }
+
+        fn path_ts(p: &std::path::Path) -> Option<u64> {
+            let dir = p.parent()?;
+            let name = dir.file_name()?.to_string_lossy();
+            parse_leading_ts(&name)
+        }
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+        let mut best: Option<std::path::PathBuf> = None;
+
+        loop {
+            let from_latest = compare::read_latest_pointer(out_dir).map(normalize_bundle_path);
+            let from_scan = compare::find_latest_export_dir(out_dir)
+                .map(|dir| normalize_bundle_path(dir.join("bundle.json")));
+
+            let candidate = match (from_latest, from_scan) {
+                (Some(a), Some(b)) => match (path_ts(&a), path_ts(&b)) {
+                    (Some(ta), Some(tb)) => {
+                        if tb >= ta {
+                            Some(b)
+                        } else {
+                            Some(a)
+                        }
+                    }
+                    (None, Some(_)) => Some(b),
+                    (Some(_), None) => Some(a),
+                    (None, None) => Some(b),
+                },
+                (Some(a), None) => Some(a),
+                (None, Some(b)) => Some(b),
+                (None, None) => None,
+            }
+            .filter(|p| p.is_file());
+
+            if let Some(path) = candidate {
+                best = Some(path.clone());
+
+                let is_auto_dump = path
+                    .parent()
+                    .and_then(|p| p.file_name())
+                    .map(|v| v.to_string_lossy().contains("script-step-"))
+                    .unwrap_or(false);
+                if !is_auto_dump {
+                    break path;
+                }
+            }
+
+            if std::time::Instant::now() >= deadline {
+                break best.unwrap_or_else(|| bundle_path.to_path_buf());
+            }
+
+            std::thread::sleep(std::time::Duration::from_millis(25));
+        }
+    };
+    let bundle_path = bundle_path_for_checks.as_path();
+
     if let Some(test_id) = check_stale_paint_test_id {
         check_bundle_for_stale_paint(bundle_path, test_id, check_stale_paint_eps)?;
     }
@@ -5848,6 +5955,9 @@ fn apply_post_run_checks(
             bundle_path,
             warmup_frames,
         )?;
+    }
+    if check_ui_gallery_code_editor_word_boundary {
+        check_bundle_for_ui_gallery_code_editor_word_boundary(bundle_path, warmup_frames)?;
     }
     if check_semantics_changed_repainted {
         check_bundle_for_semantics_changed_repainted(
