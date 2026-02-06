@@ -1419,12 +1419,21 @@ impl<'a, TData> Table<'a, TData> {
         }
 
         if !self.options.keep_pinned_rows {
-            let model = self.row_model();
-            let visible: std::collections::HashSet<RowKey> = model
-                .root_rows()
-                .iter()
-                .filter_map(|&i| model.row(i).map(|r| r.key))
-                .collect();
+            let visible: std::collections::HashSet<RowKey> = if self.state.grouping.is_empty() {
+                let model = self.row_model();
+                model
+                    .root_rows()
+                    .iter()
+                    .filter_map(|&i| model.row(i).map(|r| r.key))
+                    .collect()
+            } else {
+                let model = self.grouped_row_model();
+                model
+                    .root_rows()
+                    .iter()
+                    .filter_map(|&i| model.row(i).map(|r| r.key))
+                    .collect()
+            };
             return keys
                 .iter()
                 .copied()
@@ -1432,12 +1441,39 @@ impl<'a, TData> Table<'a, TData> {
                 .collect();
         }
 
-        let core = self.core_row_model();
+        if self.state.grouping.is_empty() {
+            let core = self.core_row_model();
+            return keys
+                .iter()
+                .copied()
+                .filter(|k| {
+                    core.row_by_key(*k).is_some_and(|i| {
+                        super::row_is_all_parents_expanded(core, &self.state.expanding, i)
+                    })
+                })
+                .collect();
+        }
+
+        let grouped = self.grouped_row_model();
         keys.iter()
             .copied()
             .filter(|k| {
-                core.row_by_key(*k).is_some_and(|i| {
-                    super::row_is_all_parents_expanded(core, &self.state.expanding, i)
+                grouped.row_by_key(*k).is_some_and(|mut i| {
+                    loop {
+                        let Some(r) = grouped.row(i) else {
+                            return true;
+                        };
+                        let Some(parent) = r.parent else {
+                            return true;
+                        };
+                        let Some(parent_row) = grouped.row(parent) else {
+                            return true;
+                        };
+                        if !super::is_row_expanded(parent_row.key, &self.state.expanding) {
+                            return false;
+                        }
+                        i = parent;
+                    }
                 })
             })
             .collect()
