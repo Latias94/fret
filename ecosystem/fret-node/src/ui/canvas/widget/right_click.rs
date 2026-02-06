@@ -12,8 +12,8 @@ use crate::ui::commands::{
 };
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
-use super::super::state::{ContextMenuState, ContextMenuTarget, ViewSnapshot};
 use super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, ViewSnapshot};
 
 pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -34,7 +34,8 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
         let this = &*canvas;
         this.graph
             .read_ref(cx.app, |graph| {
-                let order = super::super::geometry::group_order(graph, &snapshot.group_draw_order);
+                let order =
+                    crate::ui::canvas::geometry::group_order(graph, &snapshot.group_draw_order);
                 for group_id in order.iter().rev() {
                     let Some(group) = graph.groups.get(group_id) else {
                         continue;

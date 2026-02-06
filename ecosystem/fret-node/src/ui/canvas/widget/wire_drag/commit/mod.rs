@@ -1,5 +1,7 @@
-use super::super::{HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use super::commit_cx::WireCommitCx;
+use crate::ui::canvas::widget::{
+    HitTestCtx, HitTestScratch, NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+};
 
 mod new_wire;
 mod prelude;

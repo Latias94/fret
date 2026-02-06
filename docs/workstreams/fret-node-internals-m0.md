@@ -261,6 +261,13 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/prelude.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/prelude.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/prelude.rs`
+- [x] Normalize low-risk widget module references from `super::super::*` call sites to explicit `crate::ui::canvas::*` paths.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/left_click/handlers.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/left_click/hit.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/searcher_logic.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit/mod.rs`
 - [x] Split measured-geometry module into small modules to reduce drift (store vs presenter wrappers).
   - Evidence: `ecosystem/fret-node/src/ui/measured/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/measured/store.rs`

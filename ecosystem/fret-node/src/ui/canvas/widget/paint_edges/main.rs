@@ -1,5 +1,5 @@
-use super::super::paint_render_data::RenderData;
 use super::super::*;
+use crate::ui::canvas::widget::paint_render_data::RenderData;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
