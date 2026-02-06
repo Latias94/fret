@@ -4158,3 +4158,27 @@ Notable drift vs v8 (max `top_total_time_us`):
 - `ui-gallery-dialog-escape-focus-restore-steady`: `3392 → 6947` (no obvious related code change; likely noise due to
   per-run process launches + warmup settings; consider re-running with `--reuse-launch` for a steadier baseline).
 - `ui-gallery-window-resize-stress-steady`: `25156 → 24017`
+
+## 2026-02-06 11:20:00 (commit `87de73754`)
+
+Change:
+- Merge the latest upstream `origin/main` on top of the editor regression fix work (refresh local main).
+- Re-validate the editor-class autoscroll torture probe after the merge.
+
+Probe:
+- Script: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json --dir target/fret-diag-codex-after-origin-main-87de73754/editor-autoscroll.perf.r1 --repeat 1 --warmup-frames 5 --timeout-ms 240000 --sort time --top 10 --json --env FRET_UI_GALLERY_VIEW_CACHE=1 --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_DIAG_SEMANTICS=0 --env FRET_DIAG_MAX_SNAPSHOTS=240 --launch -- target/release/fret-ui-gallery
+```
+
+Artifacts:
+- Bundle: `target/fret-diag-codex-after-origin-main-87de73754/editor-autoscroll.perf.r1/1770347988112-ui-gallery-code-editor-torture-autoscroll-steady/bundle.json`
+
+Results (from 240 captured snapshots; `paint_time_us` p50/p95/max):
+- `802 / 889 / 5798`
+
+Notes:
+- The probe remains in the “sub-millisecond paint” regime after pulling upstream. Any further “Zed feel” work should
+  focus on reducing tail outliers and on end-to-end GPU/present timing, not on baseline CPU paint throughput.
