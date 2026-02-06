@@ -4905,3 +4905,78 @@ Evidence files:
 Interpretation:
 - `top_*` remains tied to the selected top snapshot (time-sorted), so it can legitimately stay `0`.
 - New `run_*_max` fields provide the missing counter surface and prevent false negatives in gate-path validation.
+
+## 2026-02-06 19:56:00 (commit `f4a6f422b`)
+
+Change:
+- Wire hit-test-only replay run-max counters into perf gating + baseline flow:
+  - New perf CLI thresholds:
+    - `--min-run-paint-cache-hit-test-only-replay-allowed-max`
+    - `--max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max`
+  - `scan_perf_threshold_failures` now evaluates:
+    - lower-bound gate for `run_paint_cache_hit_test_only_replay_allowed_max`
+    - upper-bound gate for `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`
+  - `--perf-baseline-out` now emits thresholds + measured max for the two run-max counters.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard perf_threshold_scan`
+- `cargo nextest run -p fretboard perf_baseline_parse_reads_script_thresholds`
+
+Probe A (threshold gate wired):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-threshold-v1-r1-debug \
+  --repeat 1 --warmup-frames 1 --sort time --json \
+  --min-run-paint-cache-hit-test-only-replay-allowed-max 10 \
+  --max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max 0 \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Result highlights:
+- JSON row fields:
+  - `run_paint_cache_hit_test_only_replay_allowed_max = 17`
+  - `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+- `check.perf_thresholds.json`:
+  - `rows[0].thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max = 10`
+  - `rows[0].thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+  - `failures = 0`
+
+Probe B (baseline export wired):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-baseline-v1-r1-debug \
+  --repeat 1 --warmup-frames 1 --sort time --json \
+  --perf-baseline-out target/fret-diag-codex-summaries/hit-test-only-probe-threshold-v1-baseline.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Baseline output highlights:
+- `measured_max.run_paint_cache_hit_test_only_replay_allowed_max = 17`
+- `measured_max.run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+- `thresholds.min_run_paint_cache_hit_test_only_replay_allowed_max = 13`
+  - derived via floor policy at `headroom_pct=20` (17 → 13)
+- `thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max = 0`
+
+Evidence files:
+- Threshold-gate run output: `target/fret-diag-codex-summaries/hit-test-only-probe-threshold-v1-r1-debug-perf.json`
+- Threshold gate report: `target/fret-diag-codex-hit-test-only-probe-threshold-v1-r1-debug/check.perf_thresholds.json`
+- Baseline output: `target/fret-diag-codex-summaries/hit-test-only-probe-threshold-v1-baseline.json`
+
+Interpretation:
+- The run-max counters are now first-class perf-gate signals (baseline + CLI + failure scan).
+- This removes the remaining manual `bundle.json` max extraction step for gate-path regressions.

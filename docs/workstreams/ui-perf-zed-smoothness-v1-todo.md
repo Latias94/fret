@@ -532,6 +532,11 @@ Perf acceptance:
     - Implemented by `feat(diag): export per-run hit-test-only replay maxima in perf json` (commit `4c88f6696`); new fields `run_paint_cache_hit_test_only_replay_allowed_max` and `run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max`.
     - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 19:28.
     - `top_*` rows can stay `0` even when bundle-level max counters are non-zero.
+  - [x] Wire run-max counters into perf baseline + threshold gates.
+    - Implemented by `feat(diag): gate hit-test replay run-max in perf baseline` (commit `f4a6f422b`).
+    - Adds CLI thresholds: `--min-run-paint-cache-hit-test-only-replay-allowed-max`, `--max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max`.
+    - Baseline export now includes both `measured_max` and `thresholds` for these counters.
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 19:56.
 - [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` should ever become default.
   - Current status: keep opt-in only; A/B evidence is mixed across repeated resize probes.
 - [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.
