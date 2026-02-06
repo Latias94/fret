@@ -2331,6 +2331,7 @@ fn preview_code_editor_mvp(
         main: code_editor::CodeEditorHandle,
         word_fixture: code_editor::CodeEditorHandle,
         word_gate: code_editor::CodeEditorHandle,
+        a11y_selection_gate: code_editor::CodeEditorHandle,
     }
 
     let handles = cx.with_state(
@@ -2338,12 +2339,14 @@ fn preview_code_editor_mvp(
             main: code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
             word_fixture: code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
             word_gate: code_editor::CodeEditorHandle::new("can't"),
+            a11y_selection_gate: code_editor::CodeEditorHandle::new("hello world"),
         },
         |h| h.clone(),
     );
     let handle = handles.main;
     let word_handle = handles.word_fixture;
     let word_gate_handle = handles.word_gate;
+    let a11y_selection_gate_handle = handles.a11y_selection_gate;
 
     #[derive(Debug, Default, Clone, Copy)]
     struct CodeEditorMvpAppliedFlags {
@@ -2370,6 +2373,7 @@ fn preview_code_editor_mvp(
         handle.set_text_boundary_mode(mode);
         word_handle.set_text_boundary_mode(mode);
         word_gate_handle.set_text_boundary_mode(mode);
+        a11y_selection_gate_handle.set_text_boundary_mode(mode);
         applied_flags.boundary_identifier_enabled = Some(boundary_identifier_enabled);
         applied.set(applied_flags);
     }
@@ -2389,6 +2393,7 @@ fn preview_code_editor_mvp(
     let word_gate_handle_for_harness = word_gate_handle.clone();
     let word_debug_for_harness = word_debug.clone();
     let word_debug_for_render = word_debug.clone();
+    let a11y_selection_gate_handle_for_harness = a11y_selection_gate_handle.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2466,6 +2471,30 @@ fn preview_code_editor_mvp(
                         .a11y_label("Code editor word gate")
                         .viewport_test_id("ui-gallery-code-editor-word-gate-viewport")
                         .into_element(cx);
+                    cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    )
+                }),
+                cx.keyed("a11y-selection-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(
+                        a11y_selection_gate_handle_for_harness.clone(),
+                    )
+                    .key(3)
+                    .overscan(8)
+                    .soft_wrap_cols(None)
+                    .a11y_label("Code editor a11y selection gate")
+                    .viewport_test_id("ui-gallery-code-editor-a11y-selection-gate-viewport")
+                    .into_element(cx);
                     cx.container(
                         decl_style::container_props(
                             theme,
