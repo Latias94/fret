@@ -69,6 +69,25 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ---
 
+## M0.5 — Capability parity contract (API inventory)
+
+Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstream public API surfaces
+(table/row/column/header/cell) and mapping them to Fret equivalents.
+
+- [ ] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy:
+  - Tables: `getRow(id, searchAll?)`, `getRowModel` family, pinning split helpers, sizing offsets, etc.
+  - Rows: `pin`, `getIsPinned`, `getPinnedIndex`, `getLeafRows`, `getParentRows`, selection/expanding helpers.
+  - Columns: sizing/pinning/visibility/grouping helpers and handler updaters.
+  - Headers/cells: IDs and the minimal set of methods required by UI recipes.
+  - Evidence target: a short “API inventory” section in `docs/workstreams/headless-table-tanstack-parity.md` plus
+    TODO references to concrete Rust surfaces.
+- [ ] HTP-id-010 Promote TanStack-style `RowId` to a first-class concept (capability parity).
+  - Rationale: TanStack features operate on string row ids (including grouped row ids like `role:1`), and consumers
+    can pin/select/expand by those ids. We must be able to express the same, even if we keep `RowKey(u64)` for hot paths.
+  - Planned: maintain `rows_by_id` (“rowsById”) alongside `rows_by_key`, and allow `get_row_id` customization.
+
+---
+
 ## M1 — Core types (columns/headers/rows/cells)
 
 - [~] HTP-core-010 Add TanStack-like column tree representation (nested columns).
