@@ -71,14 +71,14 @@ For each perf-affecting PR:
 | M4.0 Steady baseline + anti-outlier selection | Done | Canonical steady baseline + preset policy | `ui-gallery-steady.macos-m4.v18.json`, selection summary in perf log (2026-02-07 00:35) |
 | M4.1 Window-boundary crossing probe | Done | New script for retained VirtualList window crossing under steady wheel traffic | `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`, sampled check outputs + gate evidence in perf log (2026-02-07 00:56) |
 | M4.2 Window-boundary gate promotion | Done | Promote crossing probe into repeatable acceptance recipe with stable thresholds | `tools/perf/diag_vlist_boundary_gate.sh` + 3-run `pass=true` summary (`target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`) |
-| M4.3 Scroll-path rerender reduction | Pending | Reduce full rerender triggers during steady scroll (non-retained fallback path) | `view_cache_roots_needs_rerender` trend and window-shift counters improve vs baseline |
+| M4.3 Scroll-path rerender reduction | In progress | Reduce full rerender triggers during steady scroll (non-retained fallback path) | non-retained crossing sample improved (`prefetch: 1 -> 0`, `non_retained: 1 -> 0`) in 3/3 runs; see perf log (2026-02-07 01:04) |
 | M5.0 Text pipeline stabilization | Pending | Cache-key spec + warmup/cold-path miss gate | Text cache miss gate and miss attribution recorded in bundles |
 | M7.0 GPU/CPU attribution | Pending | GPU timing capture and hitch-class triage flow | One hitch classified with recorded CPU/GPU evidence |
 
 ### Next commit queue (implementation-first, reversible)
 
-1. **M4.3 prefetch tuning**: reduce avoidable non-retained rerender paths under steady wheel scroll.
-2. **M4.3 cache-key audit**: remove unstable cache-key factors causing redundant rerender on scroll.
+1. **M4.3 cache-key audit**: remove unstable cache-key factors causing redundant rerender on scroll.
+2. **M4.3 non-retained escape budget**: add a bounded gate to keep fallback rerender spikes explainable.
 3. **M5.0 text miss gate**: add warmup-aware cache-miss threshold for editor-heavy scripts.
 4. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
 

@@ -5536,3 +5536,58 @@ Result summary:
 Interpretation:
 - M4.2 boundary-crossing gate promotion is complete for the retained VirtualList path.
 - Next focus stays on M4.3: reduce rerender-triggering shifts on non-retained fallback and tighten cache-key stability.
+
+
+## 2026-02-07 01:04:00 (working tree)
+
+Change:
+- Tuned VirtualList prepaint window-shift policy for non-retained + view-cache path:
+  - file: `crates/fret-ui/src/tree/prepaint.rs`
+  - behavior: suppress preemptive/forced prefetch rerender for non-retained lists while
+    the current visible range is still covered by the rendered overscan envelope.
+- Intent:
+  - keep retained-host prefetch behavior unchanged,
+  - reduce avoidable cache-root rerender churn on non-retained fallback.
+
+Baseline (before change, non-retained fallback profile):
+```bash
+cargo run -q -p fretboard -- diag run tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json \
+  --dir target/fret-diag-codex-vlist-boundary-nonretained-before-r1 \
+  --timeout-ms 300000 \
+  --check-vlist-window-shifts-explainable \
+  --check-vlist-window-shifts-have-prepaint-actions \
+  --check-vlist-window-shifts-non-retained-max 9999 \
+  --check-vlist-window-shifts-prefetch-max 9999 \
+  --check-vlist-window-shifts-escape-max 9999 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_UI_GALLERY_VLIST_MINIMAL=1 \
+  --env FRET_UI_GALLERY_VLIST_RETAINED=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+(Repeated for `r1..r3`)
+
+Validation after change (non-retained fallback profile, same command shape):
+- `target/fret-diag-codex-vlist-boundary-nonretained-after3-r1`: `shifts=0`, `prefetch=0`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-vlist-boundary-nonretained-after3-r2`: `shifts=0`, `prefetch=0`, `escape=0`, `non_retained=0`
+- `target/fret-diag-codex-vlist-boundary-nonretained-after3-r3`: `shifts=0`, `prefetch=0`, `escape=0`, `non_retained=0`
+
+Delta (3-run aggregate):
+- `prefetch`: `3 -> 0` (`-100%`)
+- `non_retained`: `3 -> 0` (`-100%`)
+- `escape`: `0 -> 0` (unchanged)
+
+Retained-path regression check:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --out-dir target/fret-diag-codex-vlist-boundary-gate-r2 \
+  --launch-bin target/release/fret-ui-gallery
+```
+- Summary: `target/fret-diag-codex-vlist-boundary-gate-r2/summary.json`
+- Result: `pass=true`, with retained profile still at `prefetch=1`, `escape=0`, `non_retained=0` per run.
+
+Interpretation:
+- M4.3 first optimization slice lands: non-retained fallback no longer pays avoidable prefetch-triggered rerender churn on this steady crossing probe.
+- Next M4.3 slice should audit cache-key instability and add a bounded non-retained escape gate so regressions are caught early.

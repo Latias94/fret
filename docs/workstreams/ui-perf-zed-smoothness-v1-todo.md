@@ -451,6 +451,13 @@ TODO:
     `paint_widget_hotspots kind=Canvas` (see perf log entry 2026-02-05 15:43:55).
   - Goal: translate/replay cached ranges where possible instead of re-emitting large display lists each frame.
 - [ ] Ensure cache-root reuse remains stable under steady scroll/pan.
+- [x] Suppress avoidable non-retained prefetch rerenders on steady wheel crossing.
+  - Change: `crates/fret-ui/src/tree/prepaint.rs` now disables preemptive/forced prefetch shifts for
+    non-retained + view-cache path while visible range remains covered by the rendered overscan envelope.
+  - Non-retained sample (`FRET_UI_GALLERY_VLIST_RETAINED=0`, 3 runs):
+    - before: `prefetch=1`, `non_retained=1` per run
+    - after: `prefetch=0`, `non_retained=0` per run
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 01:04.
 - [x] Add a “window boundary crossing” probe script for retained VirtualList scrolling.
   - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`
   - Sampling status: with `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
@@ -463,8 +470,11 @@ Perf acceptance:
 
 - [ ] `ui-gallery-virtual-list-torture.json`: steady scroll should avoid cache-root rerender in most frames.
 - [x] `ui-gallery-virtual-list-window-boundary-crossing-steady.json`:
-  - Gate target: `prefetch<=3`, `escape<=0`, `non_retained<=0`
+  - Retained gate target: `prefetch<=3`, `escape<=0`, `non_retained<=0`
   - Command profile: enable view-cache env (`FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`) and run `tools/perf/diag_vlist_boundary_gate.sh --runs 3`.
+- [x] `ui-gallery-virtual-list-window-boundary-crossing-steady.json` (non-retained fallback profile):
+  - Run profile: add `FRET_UI_GALLERY_VLIST_RETAINED=0`
+  - Current sampled expectation (3 runs): `prefetch=0`, `escape=0`, `non_retained=0`
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
 - [x] `ui-gallery-code-editor-torture-autoscroll-steady.json`: eliminate the post-merge Canvas paint hotspot.
   - Root cause: accidental per-row `Theme` clone in syntax paint (allocator churn).
