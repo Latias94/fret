@@ -361,6 +361,46 @@ Acceptance:
 
 - Add a perf gate that fails if cache-root reuse rate drops for key scripts (scroll, hover, editor autoscroll).
 
+#### Gap C.2: Window resize currently defeats view-cache reuse (hit-test coupling)
+
+In the steady-state suite, `ui-gallery-window-resize-stress-steady` is still the worst overall script, and the
+worst frame shows a characteristic signature:
+
+- `layout_time_us` dominates (root/widget layout traversal),
+- `paint_time_us` is then dominated by `paint_text_prepare_time_us` where the reason mask is entirely
+  `width_changed` (word wrap reflow), and
+- view-cache roots are present but do not reuse on these frames (reported as `not_marked_reuse_root`).
+
+Evidence (macOS Apple M4; `ui-gallery-steady` baseline v11 era):
+
+- Worst bundle: `target/fret-diag-codex-perf-v11/1770350673752-ui-gallery-window-resize-stress-steady/bundle.json`
+- `fretboard diag stats --sort time --top 1` (selected lines from the worst frame):
+  - `time.us(total/layout/prepaint/paint)=16136/11331/98/4707`
+  - `paint_text_prepare.us(time/calls)=3656/18`
+  - `paint_text_prepare.reasons(.../width/...)=.../18/...`
+  - `top_cache_roots: ... reason=not_marked_reuse_root ...` (3 roots)
+
+Interpretation:
+
+- Fret’s current view-cache reuse gate is conservative and effectively ties “paint reuse” to “hit-test stability”.
+  Window resizing forces hit-test invalidation in the chrome-heavy view-cache page, so cache roots cannot reuse,
+  and the runtime ends up paying repeated layout + text prepare work across frames.
+
+Proposal (fearless refactor friendly):
+
+1) Decouple “paint reuse” from “hit-test invalidation” for view-cache roots:
+   - allow reusing cached paint output while recomputing hit-test data (bounds-tree) when only hit-test is dirty.
+2) Make width-change text reflow cheaper by introducing GPUI-like frame-to-frame line-layout reuse:
+   - keep shaping results stable,
+   - recompute line breaks incrementally for new widths,
+   - gate reuse by explicit keys (text/style/font-stack/scale/wrap width).
+
+Acceptance:
+
+- The `ui-gallery-window-resize-stress-steady` row improves measurably:
+  - reduce `max top_total_time_us` and `max paint_text_prepare_time_us` outliers,
+  - keep correctness (no stale scene/hit-test failures on scripted resize probes).
+
 #### Gap C.1: Stable-frame paint overhead is still opaque (even with cache reuse)
 
 Motivation:

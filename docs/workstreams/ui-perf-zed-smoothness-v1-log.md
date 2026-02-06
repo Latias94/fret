@@ -4270,3 +4270,59 @@ Drift vs v10:
 - Existing rows are broadly stable (max `top_total_time_us` drift is small; see `v11 - v10` diff summary in local notes).
 - Worst overall script remains `ui-gallery-window-resize-stress-steady` with `top_total_time_us=16136`
   (bundle: `target/fret-diag-codex-perf-v11/1770350673752-ui-gallery-window-resize-stress-steady/bundle.json`).
+
+## 2026-02-06 12:36:00 (commit TBD)
+
+Change:
+- Make perf-baseline pointer-move thresholds less flaky by adding slack + quantum rounding.
+- Refresh `ui-gallery-steady` perf baseline (v12).
+
+Context:
+- Baseline v11 validation run was flaky by 1us:
+  - Script: `tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json`
+  - `pointer_move_max_dispatch_time_us=33` exceeded `threshold_us=32`
+  - Evidence: `target/fret-diag-codex-perf-v11-validate/check.perf_thresholds.json`
+
+Baseline command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v12b \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --sort time --top 5 \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json`
+- Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=16935`
+  - Evidence bundle: `target/fret-diag-codex-perf-v12b/1770352388770-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v12-validate \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --sort time --top 3 \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation notes:
+- Gate passes on repeat=3 (no threshold failures).
+- Worst overall in the validation run was still the resize stress script:
+  - `top_total_time_us=15954`
+  - Bundle: `target/fret-diag-codex-perf-v12-validate/1770352514340-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notes:
+- This change is harness-level only (no runtime perf improvement expected).
+- The next real smoothness win still needs to come from the resize path:
+  - reduce `layout_roots_time_us` and `paint_text_prepare_time_us (width_changed)` tail outliers.

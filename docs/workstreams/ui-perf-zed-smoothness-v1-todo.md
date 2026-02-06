@@ -495,6 +495,11 @@ Perf acceptance:
 - [ ] Keep `fret-ui` policy-light (mechanisms only; policy stays in ecosystem; see ADR 0066).
 - [ ] Track GPUI performance gaps explicitly and close them with measurable gates:
   - `docs/workstreams/ui-perf-gpui-gap-v1.md`
+- [x] Stabilize `ui-gallery-steady` perf baseline gates against microsecond jitter.
+  - Adjustment: add slack + quantum rounding for pointer-move thresholds in perf baseline generation.
+  - Refresh baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 12:36.
+- [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.
 - [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).
   - Default script auto-dump can generate hundreds of GB if left on across long perf sessions.
   - Prefer `FRET_DIAG_SCRIPT_AUTO_DUMP=0` for perf probes and clean old run directories periodically.
