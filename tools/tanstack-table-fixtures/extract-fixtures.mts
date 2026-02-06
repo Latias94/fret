@@ -5,6 +5,7 @@ import { execSync } from "child_process"
 
 type CaseId =
   | "demo_process"
+  | "auto_reset"
   | "resets"
   | "pagination"
   | "sort_undefined"
@@ -28,6 +29,14 @@ type CaseId =
 
 type SnapshotId =
   | "baseline"
+  | "auto_reset_sorting_default_resets"
+  | "auto_reset_sorting_manual_pagination_true_no_reset"
+  | "auto_reset_sorting_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_sorting_auto_reset_all_false_disables"
+  | "auto_reset_global_filter_default_resets"
+  | "auto_reset_global_filter_manual_pagination_true_no_reset"
+  | "auto_reset_global_filter_manual_pagination_true_auto_reset_page_index_true_overrides_manual"
+  | "auto_reset_global_filter_auto_reset_all_false_disables"
   | "resets_reset_sorting_restores_initial"
   | "resets_reset_sorting_default_true_clears"
   | "resets_reset_column_filters_restores_initial"
@@ -808,6 +817,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
       const v = argv[i + 1]
       if (
         v !== "demo_process" &&
+        v !== "auto_reset" &&
         v !== "resets" &&
         v !== "pagination" &&
         v !== "sort_undefined" &&
@@ -838,7 +848,7 @@ function parseArgs(argv: string[]): { out: string; case_id: CaseId } {
   }
   if (!out) {
     throw new Error(
-      "usage: node extract-fixtures.mts --out <path> [--case demo_process|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
+      "usage: node extract-fixtures.mts --out <path> [--case demo_process|auto_reset|resets|pagination|sort_undefined|sorting_fns|filtering_fns|headers_cells|visibility_ordering|pinning|pinning_tree|column_pinning|faceting|column_sizing|column_resizing_group_headers|state_shapes|selection|selection_tree|expanding|grouping|grouping_aggregation_fns|render_fallback]",
     )
   }
   return { out, case_id }
@@ -1058,6 +1068,7 @@ async function main(): Promise<void> {
 
   if (
     case_id === "demo_process" ||
+    case_id === "auto_reset" ||
     case_id === "resets" ||
     case_id === "pagination" ||
     case_id === "state_shapes" ||
@@ -2982,6 +2993,71 @@ function snapshotColumnPinning(
     }
   }
 
+  async function snapshotForAutoResetActionsWithFlush(
+    options: TanStackOptions,
+    state: TanStackState,
+    actions: FixtureAction[],
+  ): Promise<FixtureSnapshot["expect"]> {
+    const { table, currentState } = buildTable(options, state)
+
+    // Simulate an initial render pass that computes the full row model. TanStack's row-model
+    // memo debug callbacks register auto-reset behavior without resetting on the first call.
+    table.getRowModel?.()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    for (const action of actions) {
+      if (action.type === "toggleSorting") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        col.toggleSorting(undefined, action.multi ?? false)
+      } else if (action.type === "setColumnFilterValue") {
+        const col = table.getColumn(action.column_id)
+        if (!col) {
+          throw new Error(`Unknown column in action: ${action.column_id}`)
+        }
+        col.setFilterValue(action.value)
+      } else if (action.type === "setGlobalFilterValue") {
+        table.setGlobalFilter(action.value)
+      } else {
+        throw new Error(
+          `snapshotForAutoResetActionsWithFlush does not support action: ${action.type}`,
+        )
+      }
+
+      // Simulate a render pass where derived models are recomputed. The core/filtered/sorted/grouped
+      // row-model memo debug callbacks may queue `_autoResetPageIndex()` via `table._queue`.
+      table.getRowModel?.()
+
+      // Flush the microtask queue to run `table._queue` callbacks (including the reset itself).
+      await Promise.resolve()
+      await Promise.resolve()
+    }
+
+    const expect = snapshotForState(options, currentState)
+
+    return {
+      ...expect,
+      next_state: {
+        sorting: currentState.sorting ?? [],
+        columnFilters: currentState.columnFilters ?? [],
+        globalFilter: currentState.globalFilter,
+        pagination: currentState.pagination,
+        grouping: currentState.grouping ?? [],
+        expanded: currentState.expanded,
+        rowPinning: currentState.rowPinning,
+        rowSelection: currentState.rowSelection ?? {},
+        columnVisibility: currentState.columnVisibility,
+        columnSizing: currentState.columnSizing ?? {},
+        columnSizingInfo: currentState.columnSizingInfo,
+        columnPinning: currentState.columnPinning,
+        columnOrder: currentState.columnOrder,
+      },
+    }
+  }
+
   const defaultOptions: TanStackOptions = {
     manualFiltering: false,
     manualSorting: false,
@@ -3195,6 +3271,76 @@ function snapshotColumnPinning(
           pagination: { pageIndex: 0, pageSize: 2 },
         }),
       },
+    ]
+  } else if (case_id === "auto_reset") {
+    const mkActionsAutoReset = async (
+      id: SnapshotId,
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => {
+      const expect = await snapshotForAutoResetActionsWithFlush(options, state, actions)
+      if (!expect.next_state) {
+        throw new Error(`Missing next_state for snapshot ${id}`)
+      }
+      return {
+        id,
+        options,
+        state,
+        actions,
+        expect,
+      }
+    }
+
+    snapshots = [
+      await mkActionsAutoReset(
+        "auto_reset_sorting_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "toggleSorting", column_id: "cpu_desc_first", multi: false }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_sorting_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "toggleSorting", column_id: "cpu_desc_first", multi: false }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_sorting_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "toggleSorting", column_id: "cpu_desc_first", multi: false }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_sorting_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "toggleSorting", column_id: "cpu_desc_first", multi: false }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_global_filter_default_resets",
+        {},
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setGlobalFilterValue", value: "Renderer" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_global_filter_manual_pagination_true_no_reset",
+        { manualPagination: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setGlobalFilterValue", value: "Renderer" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_global_filter_manual_pagination_true_auto_reset_page_index_true_overrides_manual",
+        { manualPagination: true, autoResetPageIndex: true },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setGlobalFilterValue", value: "Renderer" }],
+      ),
+      await mkActionsAutoReset(
+        "auto_reset_global_filter_auto_reset_all_false_disables",
+        { autoResetAll: false },
+        { pagination: { pageIndex: 1, pageSize: 2 } },
+        [{ type: "setGlobalFilterValue", value: "Renderer" }],
+      ),
     ]
   } else if (case_id === "resets") {
     const options: TanStackOptions = defaultOptions
