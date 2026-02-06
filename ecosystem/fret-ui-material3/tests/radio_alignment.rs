@@ -11249,6 +11249,137 @@ fn material3_headless_search_bar_suite_goldens_v1() {
 }
 
 #[test]
+fn material3_headless_search_view_suite_goldens_v1() {
+    use fret_ui::element::FlexProps;
+    use fret_ui_material3::SearchView;
+
+    let schemes = [
+        (
+            SchemeMode::Dark,
+            DynamicVariant::TonalSpot,
+            "dark.tonal_spot",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::TonalSpot,
+            "light.tonal_spot",
+        ),
+        (
+            SchemeMode::Dark,
+            DynamicVariant::Expressive,
+            "dark.expressive",
+        ),
+        (
+            SchemeMode::Light,
+            DynamicVariant::Expressive,
+            "light.expressive",
+        ),
+    ];
+
+    for scale_factor in [1.0, 1.25, 2.0] {
+        let scale = scale_segment(scale_factor);
+
+        for (mode, variant, label) in schemes {
+            let mut cases: BTreeMap<String, Material3HeadlessGoldenV1> = BTreeMap::new();
+
+            for (case_name, open) in [("closed", false), ("open", true)] {
+                let mut app = TestHost::default();
+                app.set_global(PlatformCapabilities::default());
+                apply_material_theme(&mut app, mode, variant);
+
+                let window = AppWindowId::default();
+                let mut services = FakeUiServices::default();
+                let mut ui: UiTree<TestHost> = UiTree::new();
+                ui.set_window(window);
+
+                let bounds = Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    Size::new(Px(720.0), Px(520.0)),
+                );
+
+                let open_model = app.models_mut().insert(open);
+                let query = app.models_mut().insert(String::new());
+
+                let render = move |ui: &mut UiTree<TestHost>,
+                                   app: &mut TestHost,
+                                   services: &mut dyn UiServices| {
+                    fret_ui::declarative::render_root(
+                        ui,
+                        app,
+                        services,
+                        window,
+                        bounds,
+                        "root",
+                        |cx| {
+                            let content = cx.named("search_view_content", |cx| {
+                                let mut props = FlexProps::default();
+                                props.direction = fret_core::Axis::Vertical;
+                                props.gap = Px(8.0);
+
+                                cx.flex(props, |cx| {
+                                    vec![
+                                        cx.text("Alpha"),
+                                        cx.text("Bravo"),
+                                        cx.text("Charlie"),
+                                        cx.text("Delta"),
+                                    ]
+                                })
+                            });
+
+                            let search_view = SearchView::new(open_model.clone(), query.clone())
+                                .placeholder("Search")
+                                .a11y_label("Search")
+                                .test_id("sv")
+                                .into_element(cx, |_cx| vec![content]);
+
+                            let content = cx.named("search_view_root", |cx| {
+                                let mut root = FlexProps::default();
+                                root.direction = fret_core::Axis::Vertical;
+                                root.gap = Px(16.0);
+                                cx.flex(root, |cx| {
+                                    vec![
+                                        search_view,
+                                        cx.text("Underlay probe"),
+                                        cx.text("Underlay probe 2"),
+                                    ]
+                                })
+                            });
+
+                            vec![with_padding(cx, Px(24.0), content)]
+                        },
+                    )
+                };
+
+                let message = format!(
+                    "expected the Material3 search view overlay scene to be stable ({label}, {scale}, {case_name})"
+                );
+                cases.insert(
+                    case_name.to_string(),
+                    settle_material3_overlay_scene_snapshot_v1(
+                        &mut app,
+                        &mut ui,
+                        &mut services,
+                        window,
+                        bounds,
+                        scale_factor,
+                        28,
+                        72,
+                        &message,
+                        &render,
+                    ),
+                );
+            }
+
+            let suite = Material3HeadlessSuiteV1 { cases };
+            write_or_assert_material3_suite_v1(
+                &format!("material3-search-view.{scale}.{label}"),
+                &suite,
+            );
+        }
+    }
+}
+
+#[test]
 fn dropdown_menu_dismisses_and_restores_focus_across_schemes() {
     use fret_ui_kit::{OverlayController, OverlayStackEntryKind};
     use fret_ui_material3::DropdownMenu;

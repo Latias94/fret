@@ -2,6 +2,8 @@
 //!
 //! Token-driven outcome alignment via `md.comp.search-bar.*` (Material Web v30).
 
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole, SvgFit};
@@ -21,6 +23,14 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::tokens::search_bar as search_bar_tokens;
+use crate::tokens::search_view as search_view_tokens;
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) enum SearchBarHeaderTokens {
+    #[default]
+    SearchBar,
+    SearchView,
+}
 
 #[derive(Debug, Clone)]
 pub struct SearchBar {
@@ -31,6 +41,9 @@ pub struct SearchBar {
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
     test_id: Option<Arc<str>>,
+    input_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    expanded_model: Option<Model<bool>>,
+    header_tokens: SearchBarHeaderTokens,
 }
 
 impl SearchBar {
@@ -43,11 +56,24 @@ impl SearchBar {
             leading_icon: None,
             trailing_icon: None,
             test_id: None,
+            input_id_out: None,
+            expanded_model: None,
+            header_tokens: SearchBarHeaderTokens::default(),
         }
+    }
+
+    pub fn placeholder_opt(mut self, placeholder: Option<Arc<str>>) -> Self {
+        self.placeholder = placeholder;
+        self
     }
 
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn a11y_label_opt(mut self, label: Option<Arc<str>>) -> Self {
+        self.a11y_label = label;
         self
     }
 
@@ -71,14 +97,39 @@ impl SearchBar {
         self
     }
 
+    pub fn test_id_opt(mut self, id: Option<Arc<str>>) -> Self {
+        self.test_id = id;
+        self
+    }
+
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn input_id_out(mut self, input_id_out: Rc<Cell<Option<GlobalElementId>>>) -> Self {
+        self.input_id_out = Some(input_id_out);
+        self
+    }
+
+    pub fn expanded_model(mut self, model: Model<bool>) -> Self {
+        self.expanded_model = Some(model);
+        self
+    }
+
+    pub(crate) fn header_tokens(mut self, header_tokens: SearchBarHeaderTokens) -> Self {
+        self.header_tokens = header_tokens;
         self
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).clone();
+            let expanded = self
+                .expanded_model
+                .as_ref()
+                .and_then(|m| cx.get_model_copied(m, fret_ui::Invalidation::Layout))
+                .unwrap_or(false);
 
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let enabled = !self.disabled;
@@ -131,13 +182,26 @@ impl SearchBar {
                     props.a11y_label = self.a11y_label.clone();
                     props.test_id = self.test_id.clone();
                     props.placeholder = self.placeholder.clone();
-                    props.text_style = search_bar_tokens::input_text_style(&theme);
-                    props.chrome = search_bar_text_input_chrome(&theme, hovered, pressed);
+                    props.expanded = Some(expanded);
+                    props.text_style = match self.header_tokens {
+                        SearchBarHeaderTokens::SearchView => {
+                            search_view_tokens::header_input_text_style(&theme)
+                        }
+                        SearchBarHeaderTokens::SearchBar => {
+                            search_bar_tokens::input_text_style(&theme)
+                        }
+                    };
+                    props.chrome =
+                        search_bar_text_input_chrome(&theme, self.header_tokens, hovered, pressed);
                     props.layout.size.width = Length::Fill;
                     props.layout.size.height = Length::Fill;
                     props.layout.flex.grow = 1.0;
                     props
                 });
+
+                if let Some(out) = self.input_id_out.as_ref() {
+                    out.set(Some(input_id));
+                }
 
                 if enabled && input_id != GlobalElementId(0) {
                     let input_id_for_focus = input_id;
@@ -166,8 +230,16 @@ impl SearchBar {
 
                         let leading_icon = self.leading_icon;
                         let trailing_icon = self.trailing_icon;
-                        let leading_color = search_bar_tokens::leading_icon_color(&theme);
-                        let trailing_color = search_bar_tokens::trailing_icon_color(&theme);
+                        let (leading_color, trailing_color) = match self.header_tokens {
+                            SearchBarHeaderTokens::SearchView => (
+                                search_view_tokens::header_leading_icon_color(&theme),
+                                search_view_tokens::header_trailing_icon_color(&theme),
+                            ),
+                            SearchBarHeaderTokens::SearchBar => (
+                                search_bar_tokens::leading_icon_color(&theme),
+                                search_bar_tokens::trailing_icon_color(&theme),
+                            ),
+                        };
 
                         let content = cx.flex(row, move |cx| {
                             let mut children: Vec<AnyElement> = Vec::new();
@@ -246,6 +318,7 @@ impl SearchBar {
 
 fn search_bar_text_input_chrome(
     theme: &Theme,
+    header_tokens: SearchBarHeaderTokens,
     hovered: bool,
     pressed: bool,
 ) -> fret_ui::TextInputStyle {
@@ -273,8 +346,18 @@ fn search_bar_text_input_chrome(
         a: 0.0,
     };
 
-    style.text_color = search_bar_tokens::input_text_color(theme);
-    style.placeholder_color = search_bar_tokens::supporting_text_color(theme, hovered, pressed);
+    style.text_color = match header_tokens {
+        SearchBarHeaderTokens::SearchView => search_view_tokens::header_input_text_color(theme),
+        SearchBarHeaderTokens::SearchBar => search_bar_tokens::input_text_color(theme),
+    };
+    style.placeholder_color = match header_tokens {
+        SearchBarHeaderTokens::SearchView => {
+            search_view_tokens::header_supporting_text_color(theme)
+        }
+        SearchBarHeaderTokens::SearchBar => {
+            search_bar_tokens::supporting_text_color(theme, hovered, pressed)
+        }
+    };
 
     style.selection_color = theme
         .color_by_key("md.sys.color.primary")

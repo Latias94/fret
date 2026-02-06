@@ -34,6 +34,7 @@ pub mod navigation_rail;
 pub mod progress_indicator;
 pub mod radio;
 pub mod search_bar;
+pub mod search_view;
 pub mod segmented_button;
 pub mod select;
 pub mod slider;
@@ -78,6 +79,7 @@ pub use navigation_rail::{NavigationRail, NavigationRailItem};
 pub use progress_indicator::{CircularProgressIndicator, LinearProgressIndicator};
 pub use radio::{Radio, RadioGroup, RadioGroupItem, RadioGroupOrientation, RadioStyle};
 pub use search_bar::SearchBar;
+pub use search_view::SearchView;
 pub use segmented_button::{SegmentedButtonItem, SegmentedButtonSet};
 pub use select::{Select, SelectItem, SelectStyle, SelectVariant};
 pub use slider::{RangeSlider, Slider, SliderStyle};
@@ -176,6 +178,7 @@ mod tests {
             include_str!("progress_indicator.rs"),
             include_str!("radio.rs"),
             include_str!("search_bar.rs"),
+            include_str!("search_view.rs"),
             include_str!("segmented_button.rs"),
             include_str!("slider.rs"),
             include_str!("select.rs"),
@@ -213,6 +216,7 @@ mod tests {
             include_str!("tokens/segmented_button.rs"),
             include_str!("tokens/sheet_bottom.rs"),
             include_str!("tokens/search_bar.rs"),
+            include_str!("tokens/search_view.rs"),
             include_str!("tokens/tooltip.rs"),
             include_str!("tokens/slider.rs"),
             include_str!("tokens/top_app_bar.rs"),
@@ -291,6 +295,7 @@ mod tests {
             include_str!("slider.rs"),
             include_str!("radio.rs"),
             include_str!("search_bar.rs"),
+            include_str!("search_view.rs"),
             include_str!("select.rs"),
             include_str!("snackbar.rs"),
             include_str!("switch.rs"),
@@ -319,6 +324,7 @@ mod tests {
             include_str!("tokens/dropdown_menu.rs"),
             include_str!("tokens/select.rs"),
             include_str!("tokens/search_bar.rs"),
+            include_str!("tokens/search_view.rs"),
             include_str!("tokens/tooltip.rs"),
             include_str!("tokens/slider.rs"),
         ];
