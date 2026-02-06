@@ -37,6 +37,7 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 
 - Make the UI look good: `fret-ui-ux-guidelines` + `fret-design-system-styles` + `fret-shadcn-app-recipes`
 - App architecture + side effects (persistence, background work): `fret-app-architecture-and-effects`
+- State stack defaults (typed routing + selector + query): `fret-app-architecture-and-effects` + `fret-component-authoring`
 - Align behavior with shadcn/Radix: `fret-shadcn-source-alignment` (then add invariant tests + `fretboard diag` repros)
 - Debug UI regressions: `fret-diag-workflow` (capture bundle/screenshot, script repro, turn into a gate)
 - Build complex editor shells: `fret-docking-and-viewports` + `fret-commands-and-keymap` + overlay/layout skills as needed
@@ -45,7 +46,7 @@ Copy-Item -Recurse -Force .\.agents\skills\fret-* .\.claude\skills\
 
 - `fret-component-authoring`: Declarative component authoring in `fret-ui` + `fret-ui-kit` (identity, element-local state, model observation, `ui()` builder surface).
 - `fret-action-hooks`: Component-owned interaction policy (press/dismiss/roving/typeahead/timers) via runtime action hooks (ADR 0074).
-- `fret-app-architecture-and-effects`: App-level structure (Models + Commands + Effects) and runner-owned concurrency (Dispatcher + Inbox) for persistence/background work.
+- `fret-app-architecture-and-effects`: App-level structure (Models + Commands + Effects), typed routing (`MessageRouter`/`KeyedMessageRouter`), and async state (`fret-query`/`fret-selector`) on top of runner-owned concurrency (Dispatcher + Inbox).
 - `fret-design-system-styles`: Apply a cohesive visual style via shadcn presets + `ThemeConfig` token overrides (density/radius/shadows/rings).
 - `fret-ui-ux-guidelines`: App-level UX + visual hierarchy playbook (spacing rhythm, editor shell patterns, polish) that composes with token/theming skills.
 - `fret-commands-and-keymap`: Commands/menus/palette + `keymap.json` (focus-aware routing, `when` gating, platform bindings).

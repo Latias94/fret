@@ -1,4 +1,4 @@
-﻿# State Management v1 (Tracking)
+# State Management v1 (Tracking)
 
 Last updated: 2026-02-06
 
@@ -87,6 +87,8 @@ Goal: provide a memoized derived-state layer with explicit dependency tracking.
   - Evidence anchors:
     - `docs/workstreams/state-management-v1.md`
     - `docs/workstreams/ecosystem-status.md`
+- `[x]` Publish extension-boundary guidance for `fret-query` + `fret-selector` and third-party integrations.
+  - Evidence anchor: `docs/workstreams/state-management-v1-extension-contract.md`
 - `[x]` Optional: adopt `KeyedMessageRouter` in one view-cached example to replace bespoke lookup tables.
   - Evidence anchor: `apps/fret-ui-gallery/src/spec.rs` (`with_data_grid_row_router` + keyed row command/resolve helpers)
   - Evidence anchor: `apps/fret-ui-gallery/src/ui.rs` (`preview_data_grid` inside `cached_subtree_with(...)` uses `data_grid_row_command`)

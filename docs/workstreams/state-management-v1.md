@@ -6,6 +6,10 @@ Related ADR:
 
 - `docs/adr/1162-authoring-paradigm-app-owned-models-and-state-helpers-v1.md`
 
+Related guidance:
+
+- `docs/workstreams/state-management-v1-extension-contract.md`
+
 This workstream defines a practical, editor-grade “state management story” for Fret apps and
 ecosystem crates, without collapsing kernel boundaries.
 
