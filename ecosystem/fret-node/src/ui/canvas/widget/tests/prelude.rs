@@ -30,3 +30,4 @@ pub(super) use super::super::wire_ctrl_points;
 pub(super) use super::super::wire_distance2;
 pub(super) use super::super::wire_distance2_path;
 pub(super) use super::super::wire_drag;
+pub(super) use crate::ui::canvas::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};

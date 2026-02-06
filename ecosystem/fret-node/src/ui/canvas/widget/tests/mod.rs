@@ -103,8 +103,7 @@ use harness::{
     read_node_pos,
 };
 
-use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
-use super::NodeGraphCanvas;
+use prelude::{NodeDrag, NodeGraphCanvas, ViewSnapshot, WireDrag, WireDragKind};
 
 #[test]
 fn inflate_rect_expands_by_margin() {

@@ -267,6 +267,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/services.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/prelude.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs` (routes shared state types via `prelude`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connect_conformance.rs` (routes widget internals via `prelude`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs` (routes widget internals via `prelude`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_bezier_tangent_conformance.rs` (routes geometry helpers via `prelude`)
