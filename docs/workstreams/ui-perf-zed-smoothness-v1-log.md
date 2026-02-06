@@ -5507,3 +5507,32 @@ Interpretation:
   - `escape <= 0`
   - `non_retained <= 0`
 - Next step: promote this command profile into the M4 acceptance recipe and require repeated `failures=0` validation runs.
+
+
+## 2026-02-07 00:56:00 (working tree)
+
+Change:
+- Promoted the boundary-crossing probe into a reusable gate recipe:
+  - `tools/perf/diag_vlist_boundary_gate.sh`
+- Gate defaults are now explicit and reproducible:
+  - `prefetch_max=3`, `escape_max=0`, `non_retained_max=0`, `runs=3`
+
+Gate command:
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --out-dir target/fret-diag-codex-vlist-boundary-gate-r1 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Result summary:
+- Summary file: `target/fret-diag-codex-vlist-boundary-gate-r1/summary.json`
+- Gate status: `pass=true`, `run_failures=0`
+- Per-run metrics:
+  - run-1: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+  - run-2: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+  - run-3: `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`
+
+Interpretation:
+- M4.2 boundary-crossing gate promotion is complete for the retained VirtualList path.
+- Next focus stays on M4.3: reduce rerender-triggering shifts on non-retained fallback and tighten cache-key stability.

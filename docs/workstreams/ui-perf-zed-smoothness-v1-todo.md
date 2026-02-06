@@ -445,7 +445,7 @@ TODO:
 - [x] Pick the first “editor-class” migration target: **Option A (VirtualList)**.
   - Rationale: fastest path to validate retained prepaint-window behavior and rerender suppression under wheel traffic.
   - Evidence: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`,
-    `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:46.
+    `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries 2026-02-07 00:46 and 2026-02-07 00:56.
 - [ ] Reduce editor-class per-frame scene construction when scrolling/animating.
   - Baseline hotspot: `tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json` can be dominated by
     `paint_widget_hotspots kind=Canvas` (see perf log entry 2026-02-05 15:43:55).
@@ -455,14 +455,16 @@ TODO:
   - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-crossing-steady.json`
   - Sampling status: with `FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`,
     `FRET_UI_GALLERY_VLIST_MINIMAL=1`, runs `r3..r6` show `total_shifts=1`, `prefetch=1`, `escape=0`, `non_retained=0`.
-- [ ] Promote the boundary-crossing probe into a stable acceptance gate recipe (repeat runs + threshold rationale).
+- [x] Promote the boundary-crossing probe into a stable acceptance gate recipe (repeat runs + threshold rationale).
+  - Gate runner: `tools/perf/diag_vlist_boundary_gate.sh`
+  - Validation summary: `target/fret-diag-codex-vlist-boundary-gate-r1/summary.json` (`runs=3`, `run_failures=0`, `pass=true`).
 
 Perf acceptance:
 
 - [ ] `ui-gallery-virtual-list-torture.json`: steady scroll should avoid cache-root rerender in most frames.
-- [ ] `ui-gallery-virtual-list-window-boundary-crossing-steady.json`:
+- [x] `ui-gallery-virtual-list-window-boundary-crossing-steady.json`:
   - Gate target: `prefetch<=3`, `escape<=0`, `non_retained<=0`
-  - Command profile: enable view-cache env (`FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`)
+  - Command profile: enable view-cache env (`FRET_UI_GALLERY_VIEW_CACHE=1`, `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`) and run `tools/perf/diag_vlist_boundary_gate.sh --runs 3`.
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
 - [x] `ui-gallery-code-editor-torture-autoscroll-steady.json`: eliminate the post-merge Canvas paint hotspot.
   - Root cause: accidental per-row `Theme` clone in syntax paint (allocator churn).
