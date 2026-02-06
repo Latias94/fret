@@ -81,7 +81,6 @@ ColumnDef keys referenced by upstream feature implementations:
 
 P0 (core behavior parity, highest user-visible risk):
 
-- HTP-ui-colpin-010: retained table_virtualized path still needs strict left/center/right split + shared width/offset contract to avoid header/body drift.
 - HTP-rowpin-015 + HTP-ui-rowpin-020: grouped-mode row pinning semantics are still partially policy-driven and not fully parity-gated.
 - HTP-filt-050 + HTP-filt-060 + HTP-filt-070: filter depth/meta/manual-filtering semantics remain incomplete.
 - HTP-sort-050: manualSorting + getSortedRowModel override semantics need final parity lock.
@@ -101,7 +100,7 @@ P2 (engineering guardrails for sustained parity):
 
 ## Next milestone plan (functional parity first)
 
-- Milestone A (UI pinning correctness): close HTP-ui-colpin-010 and add a dedicated UI parity gate for header/body column alignment.
+- Milestone A (UI pinning correctness, done): HTP-ui-colpin-010 closed with retained split alignment + dedicated parity gate.
 - Milestone B (grouped pinning semantics): close HTP-rowpin-015 + HTP-ui-rowpin-020 with explicit grouped policy and fixture-backed assertions.
 - Milestone C (manual pipeline parity): close HTP-filt-070 + HTP-sort-050, then lock cross-feature interactions with pagination/grouping.
 - Milestone D (filter depth/meta parity): close HTP-filt-050 + HTP-filt-060 and verify no capability regression in grouped datasets.
@@ -560,13 +559,14 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
   - Topics:
     - Filtering semantics in grouped mode (`keepPinnedRows` vs. “visible-only” pinning).
     - Whether pinning should remove leaf rows from within their group subtrees (UI policy decision).
-- [~] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
+- [x] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
   - Done (retained path parity): `table_virtualized_retained_v0` now computes visible ordered columns,
     splits them by `column_pinning` into `left/center/right`, and renders header/body with the same split contract.
   - Done (shared offset path): header + body center groups now share the same `scroll_x` handle while left/right stay fixed,
     preventing the header/body drift that can show up as misaligned columns in UI gallery.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`)
-  - Remaining: add a dedicated UI parity gate/diag script that asserts alignment under pin/unpin + resize + horizontal scroll.
+  - Done (UI parity gate): retained path now has a dedicated regression test covering pin/unpin + resize + center-overflow alignment.
+    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow`)
 
 ---
 

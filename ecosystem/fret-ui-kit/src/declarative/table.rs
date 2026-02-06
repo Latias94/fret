@@ -620,6 +620,169 @@ mod tests {
             cell_bounds.size.width.0
         );
     }
+
+    #[test]
+    fn table_virtualized_retained_colpin_alignment_gate_across_pin_resize_and_overflow() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut initial = TableState::default();
+        initial.pagination.page_size = 8;
+        initial.column_pinning.left = vec!["a".into()];
+        initial.column_pinning.right = vec!["d".into()];
+        let state = app.models_mut().insert(initial);
+
+        let data: Arc<[u32]> = Arc::from((0u32..32).collect::<Vec<_>>());
+        let mut col_a = ColumnDef::new("a");
+        col_a.size = 120.0;
+        let mut col_b = ColumnDef::new("b");
+        col_b.size = 280.0;
+        let mut col_c = ColumnDef::new("c");
+        col_c.size = 240.0;
+        let mut col_d = ColumnDef::new("d");
+        col_d.size = 140.0;
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![col_a, col_b, col_c, col_d]);
+
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let mut props = TableViewProps::default();
+                props.overscan = 4;
+                props.enable_column_grouping = false;
+
+                let table = table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props,
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    Arc::new(
+                        |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
+                            cx.text(format!("{}-{row}", col.id.as_ref()))
+                        },
+                    ),
+                    Some(Arc::<str>::from("table-retained-colpin-header-")),
+                    Some(Arc::<str>::from("table-retained-colpin-row-")),
+                );
+
+                vec![cx.semantics(
+                    SemanticsProps {
+                        test_id: Some(Arc::<str>::from("table-retained-colpin-root")),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![table],
+                )]
+            })
+        };
+
+        let pump = |ui: &mut UiTree<App>,
+                    app: &mut App,
+                    services: &mut FakeServices,
+                    root: &mut fret_core::NodeId| {
+            for _ in 0..2 {
+                *root = render(ui, app, services);
+                ui.set_root(*root);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, services, bounds, 1.0);
+                let mut scene = fret_core::Scene::default();
+                ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            }
+        };
+
+        let find_bounds = |snap: &fret_core::SemanticsSnapshot, id: &str| {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .map(|n| n.bounds)
+                .unwrap_or_else(|| panic!("expected semantics node `{id}`"))
+        };
+
+        let assert_aligned = |snap: &fret_core::SemanticsSnapshot, col: &str| {
+            let header_id = format!("table-retained-colpin-header-{col}");
+            let row_id = format!("table-retained-colpin-row-0-cell-{col}");
+            let header = find_bounds(snap, &header_id);
+            let body = find_bounds(snap, &row_id);
+            let dx = (header.origin.x.0 - body.origin.x.0).abs();
+            let dw = (header.size.width.0 - body.size.width.0).abs();
+            assert!(
+                dx <= 1.0,
+                "expected header/body x alignment for `{col}` (dx={dx:.2})"
+            );
+            assert!(
+                dw <= 1.0,
+                "expected header/body width alignment for `{col}` (dw={dw:.2})"
+            );
+        };
+
+        let mut root = fret_core::NodeId::default();
+        pump(&mut ui, &mut app, &mut services, &mut root);
+
+        let mut snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after initial render");
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+
+        let _ = app.models_mut().update(&state, |st| {
+            st.column_pinning.left = vec!["a".into()];
+            st.column_pinning.right = vec!["d".into()];
+            st.column_sizing.insert("b".into(), 320.0);
+            st.column_sizing.insert("c".into(), 260.0);
+        });
+        pump(&mut ui, &mut app, &mut services, &mut root);
+        snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after resize update");
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+
+        let root_bounds = find_bounds(&snap, "table-retained-colpin-root");
+        let center_bounds = find_bounds(&snap, "table-retained-colpin-header-c");
+        let root_right = root_bounds.origin.x.0 + root_bounds.size.width.0;
+        let center_right = center_bounds.origin.x.0 + center_bounds.size.width.0;
+        assert!(
+            center_right > root_right + 1.0,
+            "expected center region overflow to exist (root_right={root_right:.2}, center_right={center_right:.2})"
+        );
+
+        let _ = app.models_mut().update(&state, |st| {
+            st.column_pinning.left = vec!["a".into()];
+            st.column_pinning.right = vec!["c".into(), "d".into()];
+        });
+        pump(&mut ui, &mut app, &mut services, &mut root);
+        snap = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after pin/unpin update");
+
+        for col in ["a", "b", "c", "d"] {
+            assert_aligned(&snap, col);
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
