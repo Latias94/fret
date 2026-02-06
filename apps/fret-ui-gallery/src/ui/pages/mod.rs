@@ -4,6 +4,7 @@ mod alert;
 mod alert_dialog;
 mod aspect_ratio;
 mod breadcrumb;
+mod carousel;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -29,6 +30,10 @@ pub(super) fn preview_breadcrumb(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     breadcrumb::preview_breadcrumb(cx, last_action)
+}
+
+pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    carousel::preview_carousel(cx)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

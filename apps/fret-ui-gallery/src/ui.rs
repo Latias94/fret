@@ -8783,40 +8783,7 @@ fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let theme = Theme::global(&*cx.app).clone();
-    let muted = theme.color_required("muted");
-
-    let item = |cx: &mut ElementContext<'_, App>, label: &'static str| {
-        shadcn::Card::new(vec![
-            shadcn::CardHeader::new(vec![shadcn::CardTitle::new(label).into_element(cx)])
-                .into_element(cx),
-            shadcn::CardContent::new(vec![
-                cx.text("Drag to swipe, or use the previous/next buttons."),
-            ])
-            .into_element(cx),
-        ])
-        .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
-        .into_element(cx)
-    };
-
-    let carousel = shadcn::Carousel::new([
-        item(cx, "Slide 1"),
-        item(cx, "Slide 2"),
-        item(cx, "Slide 3"),
-    ])
-    .item_basis_main_px(Px(260.0))
-    .refine_layout(LayoutRefinement::default().w_px(Px(360.0)))
-    .into_element(cx);
-
-    let wrapper = cx.container(
-        fret_ui::element::ContainerProps {
-            background: Some(muted),
-            ..Default::default()
-        },
-        |_cx| vec![carousel],
-    );
-
-    vec![wrapper]
+    pages::preview_carousel(cx)
 }
 
 fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

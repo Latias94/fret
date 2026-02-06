@@ -60,11 +60,11 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] avatar — base demo present; still missing upstream examples (badge/group/sizes/dropdown/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_avatar`, `ecosystem/fret-ui-shadcn/src/avatar.rs`)
 - [~] badge — examples mirrored; missing upstream variants (`apps/fret-ui-gallery/src/ui.rs::preview_badge`)
 - [~] breadcrumb - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs`)
-- [~] button (page examples re-ordered + expanded; still validating interactions)
+- [x] button - examples aligned; interaction parity validated by button hover/active reset + web-golden smoke (`ecosystem/fret-ui-shadcn/src/button.rs::tests::button_clears_hover_and_active_visuals_after_click_and_pointer_leave`, `ecosystem/fret-ui-shadcn/tests/web_goldens_smoke.rs::web_golden_button_default_smoke`)
 - [x] button-group — examples mirrored (`apps/fret-ui-gallery/src/ui.rs::preview_button_group`)
 - [x] calendar — examples mirrored (Basic/Range/Month+Year selector/Presets/Date+Time/Booked/Custom Cell Size/Week Numbers/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_calendar`, `ecosystem/fret-ui-shadcn/src/calendar.rs`)
 - [x] card — examples mirrored + size/action slots (`apps/fret-ui-gallery/src/ui.rs::preview_card`, `ecosystem/fret-ui-shadcn/src/card.rs`)
-- [ ] carousel
+- [~] carousel - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/carousel.rs`)
 - [ ] chart
 - [ ] checkbox
 - [ ] collapsible
