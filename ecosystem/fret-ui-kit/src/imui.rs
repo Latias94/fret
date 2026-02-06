@@ -458,6 +458,73 @@ impl Default for TextAreaOptions {
 }
 
 #[derive(Debug, Clone)]
+pub struct SwitchOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for SwitchOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SliderOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub min: f32,
+    pub max: f32,
+    pub step: f32,
+}
+
+impl Default for SliderOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            min: 0.0,
+            max: 100.0,
+            step: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SelectOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+    pub placeholder: Option<Arc<str>>,
+    pub popup: PopupMenuOptions,
+}
+
+impl Default for SelectOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
+            test_id: None,
+            placeholder: Some(Arc::from("Select?")),
+            popup: PopupMenuOptions::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct HorizontalOptions {
     pub gap: crate::MetricRef,
     pub justify: crate::Justify,
@@ -604,23 +671,70 @@ fn point_add(a: Point, b: Point) -> Point {
     Point::new(Px(a.x.0 + b.x.0), Px(a.y.0 + b.y.0))
 }
 
+fn model_value_changed_for<H: UiHost, T>(
+    cx: &mut ElementContext<'_, H>,
+    id: GlobalElementId,
+    current: T,
+) -> bool
+where
+    T: Clone + PartialEq + 'static,
+{
+    cx.with_state_for(
+        id,
+        || current.clone(),
+        |previous| {
+            let changed = previous != &current;
+            if changed {
+                *previous = current.clone();
+            }
+            changed
+        },
+    )
+}
+
 fn text_model_changed_for<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     id: GlobalElementId,
     current: &str,
 ) -> bool {
-    cx.with_state_for(
-        id,
-        || current.to_string(),
-        |previous| {
-            let changed = previous != current;
-            if changed {
-                previous.clear();
-                previous.push_str(current);
-            }
-            changed
-        },
-    )
+    model_value_changed_for(cx, id, current.to_string())
+}
+
+fn slider_step_or_default(step: f32) -> f32 {
+    if step.is_finite() && step > 0.0 {
+        step
+    } else {
+        1.0
+    }
+}
+
+fn slider_normalize_range(min: f32, max: f32) -> (f32, f32) {
+    if min <= max { (min, max) } else { (max, min) }
+}
+
+fn slider_clamp_and_snap(value: f32, min: f32, max: f32, step: f32) -> f32 {
+    let (min, max) = slider_normalize_range(min, max);
+    if !value.is_finite() {
+        return min;
+    }
+    if (max - min).abs() <= f32::EPSILON {
+        return min;
+    }
+    let step = slider_step_or_default(step);
+    let snapped = min + ((value - min) / step).round() * step;
+    snapped.clamp(min, max)
+}
+
+fn slider_value_from_pointer(bounds: Rect, pointer: Point, min: f32, max: f32, step: f32) -> f32 {
+    let (min, max) = slider_normalize_range(min, max);
+    if (max - min).abs() <= f32::EPSILON {
+        return min;
+    }
+
+    let width = bounds.size.width.0.max(1.0);
+    let t = ((pointer.x.0 - bounds.origin.x.0) / width).clamp(0.0, 1.0);
+    let raw = min + (max - min) * t;
+    slider_clamp_and_snap(raw, min, max, step)
 }
 
 fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAreaStyle {
@@ -1138,6 +1252,70 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     ) -> ResponseExt {
         let focusable = options.enabled && options.focusable;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::textarea_model_ex(self, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn switch_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.switch_model_ex(label, model, SwitchOptions::default())
+    }
+
+    pub fn switch_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: SwitchOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::switch_model_ex(self, label, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn slider_f32_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+    ) -> ResponseExt {
+        self.slider_f32_model_ex(label, model, SliderOptions::default())
+    }
+
+    pub fn slider_f32_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+        options: SliderOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::slider_f32_model_ex(self, label, model, options);
+        self.record_focusable(resp.id, focusable);
+        resp
+    }
+
+    pub fn select_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+    ) -> ResponseExt {
+        self.select_model_ex(label, model, items, SelectOptions::default())
+    }
+
+    pub fn select_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+        options: SelectOptions,
+    ) -> ResponseExt {
+        let focusable = options.enabled && options.focusable;
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::select_model_ex(self, label, model, items, options);
         self.record_focusable(resp.id, focusable);
         resp
     }
@@ -2731,6 +2909,303 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         });
 
         self.add(element);
+        response
+    }
+
+    fn switch_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+    ) -> ResponseExt {
+        self.switch_model_ex(label, model, SwitchOptions::default())
+    }
+
+    fn switch_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<bool>,
+        options: SwitchOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let element = self.with_cx_mut(|cx| {
+            let value = cx
+                .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
+                .unwrap_or(false);
+
+            let mut props = PressableProps::default();
+            props.enabled = options.enabled;
+            props.focusable = options.focusable;
+            props.a11y.test_id = options.test_id.clone();
+            props.a11y = crate::primitives::switch::switch_a11y(
+                options.a11y_label.clone().or_else(|| Some(label.clone())),
+                value,
+            );
+
+            cx.pressable_with_id(props, |cx, state, id| {
+                cx.pressable_clear_on_pointer_down();
+                cx.pressable_clear_on_pointer_move();
+                cx.pressable_clear_on_pointer_up();
+
+                let model_for_activate = model.clone();
+                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                    let _ = host.update_model(&model_for_activate, |v: &mut bool| *v = !*v);
+                    host.record_transient_event(acx, KEY_CLICKED);
+                    host.record_transient_event(acx, KEY_CHANGED);
+                    host.notify(acx);
+                }));
+
+                response.core.hovered = state.hovered;
+                response.core.pressed = state.pressed;
+                response.core.focused = state.focused;
+                response.id = Some(id);
+                response.core.clicked = cx.take_transient_for(id, KEY_CLICKED);
+                response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                let prefix: Arc<str> = if value {
+                    Arc::from("[on] ")
+                } else {
+                    Arc::from("[off] ")
+                };
+                vec![cx.text(Arc::from(format!("{prefix}{label}")))]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn slider_f32_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+    ) -> ResponseExt {
+        self.slider_f32_model_ex(label, model, SliderOptions::default())
+    }
+
+    fn slider_f32_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<f32>,
+        options: SliderOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let model = model.clone();
+        let mut response = ResponseExt::default();
+
+        let min = options.min;
+        let max = options.max;
+        let step = options.step;
+
+        let element = self.with_cx_mut(|cx| {
+            let mut props = PressableProps::default();
+            props.enabled = options.enabled;
+            props.focusable = options.focusable;
+            props.a11y.test_id = options.test_id.clone();
+            props.layout.size.width = Length::Fill;
+            props.layout.size.height = Length::Px(Px(24.0));
+
+            props.a11y = PressableA11y {
+                role: Some(SemanticsRole::Slider),
+                label: options.a11y_label.clone().or_else(|| Some(label.clone())),
+                ..Default::default()
+            };
+
+            cx.pressable_with_id(props, |cx, state, id| {
+                cx.pressable_clear_on_pointer_down();
+                cx.pressable_clear_on_pointer_move();
+                cx.pressable_clear_on_pointer_up();
+                cx.key_clear_on_key_down_for(id);
+
+                let model_for_down = model.clone();
+                cx.pressable_on_pointer_down(Arc::new(move |host, acx, down| {
+                    if down.button != MouseButton::Left {
+                        return PressablePointerDownResult::Continue;
+                    }
+
+                    host.capture_pointer();
+                    host.request_focus(acx.target);
+
+                    let next =
+                        slider_value_from_pointer(host.bounds(), down.position, min, max, step);
+                    let mut changed = false;
+                    let _ = host.update_model(&model_for_down, |value: &mut f32| {
+                        let current = slider_clamp_and_snap(*value, min, max, step);
+                        if (current - next).abs() > f32::EPSILON {
+                            *value = next;
+                            changed = true;
+                        }
+                    });
+                    if changed {
+                        host.record_transient_event(acx, KEY_CHANGED);
+                        host.notify(acx);
+                    }
+
+                    PressablePointerDownResult::Continue
+                }));
+
+                let model_for_move = model.clone();
+                cx.pressable_on_pointer_move(Arc::new(move |host, acx, mv| {
+                    if !mv.buttons.left {
+                        host.release_pointer_capture();
+                        return false;
+                    }
+
+                    let next =
+                        slider_value_from_pointer(host.bounds(), mv.position, min, max, step);
+                    let mut changed = false;
+                    let _ = host.update_model(&model_for_move, |value: &mut f32| {
+                        let current = slider_clamp_and_snap(*value, min, max, step);
+                        if (current - next).abs() > f32::EPSILON {
+                            *value = next;
+                            changed = true;
+                        }
+                    });
+                    if changed {
+                        host.record_transient_event(acx, KEY_CHANGED);
+                        host.notify(acx);
+                    }
+                    changed
+                }));
+
+                cx.pressable_on_pointer_up(Arc::new(move |host, _acx, up| {
+                    if up.button == MouseButton::Left {
+                        host.release_pointer_capture();
+                    }
+                    PressablePointerUpResult::Continue
+                }));
+
+                let model_for_key = model.clone();
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        let (min, max) = slider_normalize_range(min, max);
+                        let step = slider_step_or_default(step);
+                        let delta = match down.key {
+                            KeyCode::ArrowLeft | KeyCode::ArrowDown => Some(-step),
+                            KeyCode::ArrowRight | KeyCode::ArrowUp => Some(step),
+                            KeyCode::PageDown => Some(-step * 10.0),
+                            KeyCode::PageUp => Some(step * 10.0),
+                            _ => None,
+                        };
+
+                        let mut changed = false;
+                        let _ = host.update_model(&model_for_key, |value: &mut f32| {
+                            let current = slider_clamp_and_snap(*value, min, max, step);
+                            let next = match down.key {
+                                KeyCode::Home => min,
+                                KeyCode::End => max,
+                                _ => {
+                                    let Some(delta) = delta else {
+                                        return;
+                                    };
+                                    slider_clamp_and_snap(current + delta, min, max, step)
+                                }
+                            };
+                            if (current - next).abs() > f32::EPSILON {
+                                *value = next;
+                                changed = true;
+                            }
+                        });
+
+                        if changed {
+                            host.record_transient_event(acx, KEY_CHANGED);
+                            host.notify(acx);
+                        }
+
+                        changed
+                    }),
+                );
+
+                let current = cx
+                    .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| {
+                        slider_clamp_and_snap(*v, min, max, step)
+                    })
+                    .unwrap_or_else(|_| slider_clamp_and_snap(min, min, max, step));
+
+                response.core.hovered = state.hovered;
+                response.core.pressed = state.pressed;
+                response.core.focused = state.focused;
+                response.id = Some(id);
+                response.core.changed = cx.take_transient_for(id, KEY_CHANGED);
+                response.core.rect = cx.last_bounds_for_element(id);
+
+                vec![cx.text(Arc::from(format!("{label}: {current:.2}")))]
+            })
+        });
+
+        self.add(element);
+        response
+    }
+
+    fn select_model(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+    ) -> ResponseExt {
+        self.select_model_ex(label, model, items, SelectOptions::default())
+    }
+
+    fn select_model_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        model: &fret_runtime::Model<Option<Arc<str>>>,
+        items: &[Arc<str>],
+        options: SelectOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let model = model.clone();
+        let items: Vec<Arc<str>> = items.to_vec();
+
+        let selected = self.with_cx_mut(|cx| {
+            cx.read_model(&model, fret_ui::Invalidation::Paint, |_app, v| v.clone())
+                .unwrap_or(None)
+        });
+
+        let selected_label: Arc<str> = selected
+            .clone()
+            .or_else(|| options.placeholder.clone())
+            .unwrap_or_else(|| Arc::from("Select..."));
+        let trigger_text: Arc<str> = Arc::from(format!("{label}: {selected_label}"));
+
+        let trigger = self.menu_item_ex(
+            trigger_text,
+            MenuItemOptions {
+                enabled: options.enabled,
+                test_id: options.test_id.clone(),
+                ..Default::default()
+            },
+        );
+
+        let mut changed = false;
+        if options.enabled && trigger.clicked() && !items.is_empty() {
+            let current_index = selected.as_ref().and_then(|current| {
+                items
+                    .iter()
+                    .position(|item| item.as_ref() == current.as_ref())
+            });
+            let next_index = current_index
+                .map(|index| (index + 1) % items.len())
+                .unwrap_or(0);
+            let next_value = Some(items[next_index].clone());
+            if next_value != selected {
+                let next_for_model = next_value.clone();
+                self.with_cx_mut(|cx| {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&model, |value| *value = next_for_model.clone());
+                });
+                changed = true;
+            }
+        }
+
+        let mut response = trigger;
+        response.core.changed = changed;
         response
     }
 

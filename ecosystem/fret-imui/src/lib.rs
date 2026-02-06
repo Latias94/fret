@@ -186,7 +186,7 @@ mod tests {
     use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
     use fret_ui_kit::imui::{
         GridOptions, HorizontalOptions, InputTextOptions, MenuItemOptions, PopupMenuOptions,
-        ScrollOptions, VerticalOptions,
+        ScrollOptions, SelectOptions, SliderOptions, SwitchOptions, VerticalOptions,
     };
 
     #[derive(Default)]
@@ -3906,6 +3906,402 @@ mod tests {
         );
         assert_eq!(changed.borrow().get(&1).copied().unwrap_or(false), false);
         assert_eq!(changed.borrow().get(&2).copied().unwrap_or(false), false);
+    }
+
+    #[test]
+    fn switch_model_reports_changed_once_after_click() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(140.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(false);
+
+        let changed = Rc::new(Cell::new(false));
+        let value = Rc::new(Cell::new(false));
+
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-switch",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.switch_model_ex(
+                            "Power",
+                            &model,
+                            SwitchOptions {
+                                test_id: Some(Arc::from("imui-switch")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(!value.get());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-switch",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.switch_model_ex(
+                            "Power",
+                            &model,
+                            SwitchOptions {
+                                test_id: Some(Arc::from("imui-switch")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert!(value.get());
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-switch",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.switch_model_ex(
+                            "Power",
+                            &model,
+                            SwitchOptions {
+                                test_id: Some(Arc::from("imui-switch")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(value.get());
+    }
+
+    #[test]
+    fn slider_f32_model_reports_changed_once_after_pointer_input() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(140.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(0.0_f32);
+
+        let changed = Rc::new(Cell::new(false));
+        let value = Rc::new(Cell::new(0.0_f32));
+
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-slider",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.slider_f32_model_ex(
+                            "Volume",
+                            &model,
+                            SliderOptions {
+                                min: 0.0,
+                                max: 100.0,
+                                step: 1.0,
+                                test_id: Some(Arc::from("imui-slider")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!((value.get() - 0.0).abs() <= f32::EPSILON);
+
+        let slider_node = ui.children(root)[0];
+        let slider_bounds = ui.debug_node_bounds(slider_node).expect("slider bounds");
+        let at = Point::new(
+            Px(slider_bounds.origin.x.0 + slider_bounds.size.width.0 * 0.9),
+            Px(slider_bounds.origin.y.0 + slider_bounds.size.height.0 * 0.5),
+        );
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-slider",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.slider_f32_model_ex(
+                            "Volume",
+                            &model,
+                            SliderOptions {
+                                min: 0.0,
+                                max: 100.0,
+                                step: 1.0,
+                                test_id: Some(Arc::from("imui-slider")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert!(value.get() >= 70.0);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let value_out = value.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-slider",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.slider_f32_model_ex(
+                            "Volume",
+                            &model,
+                            SliderOptions {
+                                min: 0.0,
+                                max: 100.0,
+                                step: 1.0,
+                                test_id: Some(Arc::from("imui-slider")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui
+                        .cx_mut()
+                        .app
+                        .models()
+                        .get_copied(&model)
+                        .unwrap_or_default();
+                    value_out.set(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(value.get() >= 70.0);
+    }
+
+    #[test]
+    fn select_model_reports_changed_once_after_option_pick() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let items = vec![Arc::<str>::from("Alpha"), Arc::<str>::from("Beta")];
+
+        let changed = Rc::new(Cell::new(false));
+        let selected = Rc::new(RefCell::new(None::<Arc<str>>));
+
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert!(selected.borrow().is_none());
+
+        let trigger = point_for_test_id(&mut ui, &mut app, &mut services, bounds, "imui-select");
+        click_at(&mut ui, &mut app, &mut services, trigger);
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
+        assert!(changed.get());
+        assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
+
+        app.advance_frame();
+        let changed_out = changed.clone();
+        let selected_out = selected.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-select",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    changed_out.set(
+                        ui.select_model_ex(
+                            "Mode",
+                            &model,
+                            &items,
+                            SelectOptions {
+                                test_id: Some(Arc::from("imui-select")),
+                                ..Default::default()
+                            },
+                        )
+                        .changed(),
+                    );
+                    let now = ui.cx_mut().app.models().get_cloned(&model).unwrap_or(None);
+                    selected_out.replace(now);
+                })
+            },
+        );
+        assert!(!changed.get());
+        assert_eq!(selected.borrow().as_deref(), Some("Alpha"));
     }
 
     #[test]

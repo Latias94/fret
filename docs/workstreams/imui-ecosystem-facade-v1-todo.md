@@ -119,7 +119,9 @@ Exit criteria:
 - [x] IMUIECO-controls-021 Input/textarea wrappers (coordinate with the code editor ecosystem; don't duplicate).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`InputTextOptions`, `TextAreaOptions`, `UiWriterImUiFacadeExt::{input_text_model,textarea_model}`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`input_text_model_reports_changed_once_after_text_input`, `textarea_model_reports_changed_once_after_text_input`).
-- [ ] IMUIECO-controls-022 Slider/select/switch wrappers (shadcn-aligned when enabled).
+- [x] IMUIECO-controls-022 Slider/select/switch wrappers (shadcn-aligned when enabled).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`SwitchOptions`, `SliderOptions`, `SelectOptions`, `UiWriterImUiFacadeExt::{switch_model,slider_f32_model,select_model}`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`switch_model_reports_changed_once_after_click`, `slider_f32_model_reports_changed_once_after_pointer_input`, `select_model_reports_changed_once_after_option_pick`).
 - [x] IMUIECO-api-023 Container helpers (`horizontal`, `vertical`, `grid`, `scroll`) that prefer `UiBuilder` patch vocabulary.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`HorizontalOptions`, `VerticalOptions`, `GridOptions`, `ScrollOptions`, `UiWriterImUiFacadeExt::{horizontal,vertical,grid,scroll}`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`container_helpers_layout_horizontal_vertical_grid_and_scroll`).
