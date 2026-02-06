@@ -75,6 +75,7 @@ Current v1 baseline implementation in `fret-router` includes:
 - `MemoryHistory` with explicit `push/replace/back/forward` duplicate-navigation no-op semantics
 - base-path helpers for sub-path deployments (`apply/strip/normalize`)
 - route alias/redirect mapping with loop/hop protection
+- optional query-integration helpers for route-keyed cache conventions
 
 Optional features:
 
@@ -194,6 +195,96 @@ Current v1 baseline supports ecosystem-level legacy route migration:
   - ordered rule application
   - chained resolution
   - cycle detection and max-hop guard (`AliasResolveError`)
+
+## Query integration (optional feature)
+
+`fret-router` keeps query integration as optional glue helpers under the `query-integration`
+feature. The core router remains independent from query runtime ownership.
+
+Current baseline helpers:
+
+- route-key creation:
+  - `route_query_key`
+  - `route_query_key_with`
+- route-change gating:
+  - `RouteChangePolicy`
+  - `route_change_matches`
+- namespace invalidation planning:
+  - `NamespaceInvalidationRule`
+  - `collect_invalidated_namespaces`
+
+Reference integration (current baseline):
+
+- `apps/fret-ui-gallery/src/driver.rs`
+  - applies route-change-aware namespace invalidation on page switch
+  - issues route-keyed prefetch using `route_query_key`
+
+### Recommended keying conventions
+
+- Namespace format:
+  - use stable, scoped names such as `my_app.users.detail.v1`
+  - avoid changing namespace unless contract semantics change
+- Location payload:
+  - build keys from canonical `RouteLocation` only
+  - include only request-relevant route state (path/query)
+- Extra scope:
+  - use `route_query_key_with` for view/variant scopes (for example `"summary"`, `"detail"`)
+  - avoid random/non-deterministic data in key seeds
+
+Example:
+
+```rust
+use fret_router::{RouteLocation, route_query_key, route_query_key_with};
+use fret_query::QueryKey;
+
+const USER_DETAIL_NS: &str = "my_app.users.detail.v1";
+
+fn user_detail_key(location: &RouteLocation) -> QueryKey<UserDetailDto> {
+    route_query_key(USER_DETAIL_NS, location)
+}
+
+fn user_detail_summary_key(location: &RouteLocation) -> QueryKey<UserDetailDto> {
+    route_query_key_with(USER_DETAIL_NS, location, &"summary")
+}
+```
+
+### Command handler integration template
+
+Use router helpers to decide *what to invalidate*, then execute side effects through
+`with_query_client` at app/command layer.
+
+```rust
+use fret_query::with_query_client;
+use fret_router::{
+    collect_invalidated_namespaces, route_query_key, NamespaceInvalidationRule, RouteChangePolicy,
+    RouteLocation,
+};
+
+const USER_DETAIL_NS: &str = "my_app.users.detail.v1";
+const USER_LIST_NS: &str = "my_app.users.list.v1";
+
+fn on_route_committed(app: &mut App, window: AppWindowId, previous: &RouteLocation, current: &RouteLocation) {
+    let invalidated = collect_invalidated_namespaces(
+        previous,
+        current,
+        &[
+            NamespaceInvalidationRule::new(USER_DETAIL_NS, RouteChangePolicy::PathChanged),
+            NamespaceInvalidationRule::new(USER_LIST_NS, RouteChangePolicy::QueryChanged),
+        ],
+    );
+
+    let _ = with_query_client(app, |client, app| {
+        for namespace in invalidated {
+            client.invalidate_namespace(namespace);
+        }
+
+        let key = route_query_key::<UserDetailDto>(USER_DETAIL_NS, current);
+        let _ = client.prefetch(app, window, key, QueryPolicy::default(), |_token| {
+            fetch_user_detail_from_route(current)
+        });
+    });
+}
+```
 
 ## Web verification status (current baseline)
 

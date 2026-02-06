@@ -13,6 +13,11 @@ use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
+use fret_query::{QueryPolicy, with_query_client};
+use fret_router::{
+    NamespaceInvalidationRule, RouteChangePolicy, RouteLocation, collect_invalidated_namespaces,
+    route_query_key,
+};
 use fret_runtime::{
     PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
     WindowCommandEnabledService,
@@ -42,6 +47,66 @@ use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
 use crate::spec::*;
 use crate::ui;
+
+const UI_GALLERY_PAGE_CONTENT_NS: &str = "fret.ui_gallery.page_content.v1";
+const UI_GALLERY_NAV_INDEX_NS: &str = "fret.ui_gallery.nav_index.v1";
+
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct UiGalleryPagePrefetchSeed {
+    selected_page: Arc<str>,
+}
+
+fn route_location_for_page(page: &Arc<str>) -> RouteLocation {
+    RouteLocation::from_path("/gallery")
+        .with_query_value("page", Some(page.to_string()))
+        .with_query_value("source", Some("nav".to_string()))
+}
+
+fn apply_route_query_side_effects(
+    app: &mut App,
+    window: AppWindowId,
+    previous_page: Option<Arc<str>>,
+    current_page: Arc<str>,
+) {
+    let previous_route = previous_page
+        .as_ref()
+        .map(route_location_for_page)
+        .unwrap_or_default();
+    let current_route = route_location_for_page(&current_page);
+
+    let invalidated = collect_invalidated_namespaces(
+        &previous_route,
+        &current_route,
+        &[
+            NamespaceInvalidationRule::new(
+                UI_GALLERY_PAGE_CONTENT_NS,
+                RouteChangePolicy::PathOrQueryChanged,
+            ),
+            NamespaceInvalidationRule::new(
+                UI_GALLERY_NAV_INDEX_NS,
+                RouteChangePolicy::QueryChanged,
+            ),
+        ],
+    );
+
+    let _ = with_query_client(app, |client, app| {
+        for namespace in invalidated {
+            client.invalidate_namespace(namespace);
+        }
+
+        let seed = UiGalleryPagePrefetchSeed {
+            selected_page: current_page.clone(),
+        };
+        let key = route_query_key::<String>(UI_GALLERY_PAGE_CONTENT_NS, &current_route);
+        let policy = QueryPolicy::default();
+        let _ = client.prefetch(app, window, key, policy, move |_token| {
+            Ok::<String, fret_query::QueryError>(format!(
+                "ui_gallery.page_prefetch:{}",
+                seed.selected_page
+            ))
+        });
+    });
+}
 
 #[derive(Default)]
 struct DebugHudState {
@@ -681,6 +746,7 @@ impl UiGalleryDriver {
     fn handle_nav_command(
         app: &mut App,
         state: &mut UiGalleryWindowState,
+        window: AppWindowId,
         command: &CommandId,
     ) -> bool {
         let Some(page) = page_id_for_nav_command(command.as_str()) else {
@@ -688,8 +754,12 @@ impl UiGalleryDriver {
         };
 
         let page: Arc<str> = Arc::from(page);
+        let page_for_selected = page.clone();
         let page_for_tabs = page.clone();
-        let _ = app.models_mut().update(&state.selected_page, |v| *v = page);
+        let previous_page = app.models().get_cloned(&state.selected_page);
+        let _ = app
+            .models_mut()
+            .update(&state.selected_page, |v| *v = page_for_selected);
         let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
             if !tabs.iter().any(|t| t.as_ref() == page_for_tabs.as_ref()) {
                 tabs.push(page_for_tabs.clone());
@@ -704,12 +774,15 @@ impl UiGalleryDriver {
         state
             .workspace_tab_close_by_command
             .insert(cmd, page_for_tabs);
+
+        apply_route_query_side_effects(app, window, previous_page, page.clone());
         true
     }
 
     fn handle_workspace_tab_command(
         app: &mut App,
         state: &mut UiGalleryWindowState,
+        window: AppWindowId,
         command: &CommandId,
     ) -> bool {
         let close_tab_by_id =
@@ -758,7 +831,13 @@ impl UiGalleryDriver {
                     });
 
                 if let Some(next) = next_selected {
+                    let previous_page = app.models().get_cloned(&state.selected_page);
                     let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+                    let current_page = app
+                        .models()
+                        .get_cloned(&state.selected_page)
+                        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                    apply_route_query_side_effects(app, window, previous_page, current_page);
                 }
 
                 true
@@ -787,7 +866,13 @@ impl UiGalleryDriver {
                     (index + tabs.len() - 1) % tabs.len()
                 };
                 if let Some(next) = tabs.get(next_index).cloned() {
+                    let previous_page = app.models().get_cloned(&state.selected_page);
                     let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+                    let current_page = app
+                        .models()
+                        .get_cloned(&state.selected_page)
+                        .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+                    apply_route_query_side_effects(app, window, previous_page, current_page);
                     return true;
                 }
                 false
@@ -1092,6 +1177,13 @@ impl UiGalleryDriver {
             );
             theme.extend_tokens_from_config(&cfg);
         });
+
+        // Ensure the header theme select cannot remain visually open across a full theme swap.
+        // In gallery flows this prevents stale modal barrier/content from overlapping the next
+        // select interaction on the page content.
+        let _ = app
+            .models_mut()
+            .update(&state.theme_preset_open, |open| *open = false);
 
         state.applied_theme_preset = Some(preset);
     }
@@ -2625,12 +2717,12 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
-        if Self::handle_workspace_tab_command(app, state, &command) {
+        if Self::handle_workspace_tab_command(app, state, window, &command) {
             app.request_redraw(window);
             return;
         }
 
-        let did_nav = Self::handle_nav_command(app, state, &command);
+        let did_nav = Self::handle_nav_command(app, state, window, &command);
         let did_gallery = Self::handle_gallery_command(app, state, window, &command);
         if did_nav || did_gallery {
             app.request_redraw(window);

@@ -11,6 +11,8 @@ mod location;
 mod navigation;
 mod path;
 mod query;
+#[cfg(feature = "query-integration")]
+mod query_integration;
 
 pub use alias::{AliasResolveError, QueryKeyAlias, RouteAliasRule, RouteAliasTable};
 pub use base_path::{apply_base_path, normalize_base_path, strip_base_path};
@@ -25,6 +27,11 @@ pub use path::{
 pub use query::{
     QueryPair, first_query_value, first_query_value_from_search_or_hash, format_query_pairs,
     parse_query_pairs, query_values,
+};
+#[cfg(feature = "query-integration")]
+pub use query_integration::{
+    NamespaceInvalidationRule, RouteChangePolicy, collect_invalidated_namespaces,
+    route_change_matches, route_query_key, route_query_key_with,
 };
 
 #[cfg(all(

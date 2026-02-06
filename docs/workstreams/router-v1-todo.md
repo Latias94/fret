@@ -96,9 +96,24 @@ Status legend:
 
 ## Phase 4 - Query and command integration
 
-- `[ ]` Add `query-integration` helpers for route-keyed prefetch/invalidate.
-- `[ ]` Document recommended keying conventions for route params + query state.
-- `[ ]` Add example command handlers with typed route navigation (no string parsing).
+- `[~]` Add `query-integration` helpers for route-keyed prefetch/invalidate.
+  - Progress:
+    - added optional route-key and namespace invalidation planning helpers
+    - kept router core independent from `QueryClient` ownership
+  - Evidence:
+    - `ecosystem/fret-router/src/query_integration.rs`
+- `[~]` Document recommended keying conventions for route params + query state.
+  - Progress:
+    - added namespace and canonical location keying guidance in workstream doc
+  - Evidence:
+    - `docs/workstreams/router-v1.md`
+- `[~]` Add example command handlers with typed route navigation (no string parsing).
+  - Progress:
+    - added route-commit command template for invalidate + prefetch flow
+    - landed app-level reference integration in ui-gallery page switch flow
+  - Evidence:
+    - `docs/workstreams/router-v1.md`
+    - `apps/fret-ui-gallery/src/driver.rs`
 - `[ ]` Add race/cancellation tests for rapid route changes with inflight queries.
 
 ## Phase 5 - App migration
