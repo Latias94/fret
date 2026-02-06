@@ -103,7 +103,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] skeleton ? examples mirrored (Demo/Avatar/Card/Text/Form/Table/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_skeleton`)
 - [x] slider — examples mirrored (Demo/Range/Multiple Thumbs/Vertical/Controlled/Disabled/RTL; extras: inverted) (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
 - [x] sonner — examples mirrored (Demo/Types/Description/Position, with runtime toaster position binding) (`apps/fret-ui-gallery/src/ui.rs::preview_sonner`, `apps/fret-ui-gallery/src/driver.rs`)
-- [ ] spinner
+- [x] spinner — examples mirrored (Demo/Customization/Size/Button/Badge/Input Group/Empty/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_spinner`)
 - [ ] switch
 - [ ] table
 - [ ] tabs
