@@ -133,6 +133,7 @@ struct Node<H: UiHost> {
     measured_size: Size,
     measure_cache: Option<NodeMeasureCache>,
     invalidation: InvalidationFlags,
+    paint_invalidated_by_hit_test_only: bool,
     paint_cache: Option<PaintCacheEntry>,
     interaction_cache: Option<prepaint::InteractionCacheEntry>,
     prepaint_outputs: PrepaintOutputs,
@@ -214,6 +215,7 @@ impl<H: UiHost> Node<H> {
                 paint: true,
                 hit_test: true,
             },
+            paint_invalidated_by_hit_test_only: false,
             paint_cache: None,
             interaction_cache: None,
             prepaint_outputs: PrepaintOutputs::default(),
@@ -2123,6 +2125,20 @@ struct MeasureStackKey {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn mark_node_invalidation_state(node: &mut Node<H>, inv: Invalidation) {
+        match inv {
+            Invalidation::HitTestOnly => {
+                if !node.invalidation.paint {
+                    node.paint_invalidated_by_hit_test_only = true;
+                }
+            }
+            Invalidation::Paint | Invalidation::Layout | Invalidation::HitTest => {
+                node.paint_invalidated_by_hit_test_only = false;
+            }
+        }
+        node.invalidation.mark(inv);
+    }
+
     fn update_invalidation_counters(&mut self, prev: InvalidationFlags, next: InvalidationFlags) {
         if prev.layout != next.layout {
             if next.layout {
@@ -2153,7 +2169,7 @@ impl<H: UiHost> UiTree<H> {
         };
         let prev = n.invalidation;
         let layout_before = n.invalidation.layout;
-        n.invalidation.mark(inv);
+        Self::mark_node_invalidation_state(n, inv);
         let next = n.invalidation;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
@@ -4174,6 +4190,7 @@ impl<H: UiHost> UiTree<H> {
         };
         let layout_before = n.invalidation.layout;
         n.invalidation.clear();
+        n.paint_invalidated_by_hit_test_only = false;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,
@@ -6026,7 +6043,7 @@ impl<H: UiHost> UiTree<H> {
                 };
                 let prev = n.invalidation;
                 let layout_before = n.invalidation.layout;
-                n.invalidation.mark(inv);
+                Self::mark_node_invalidation_state(n, inv);
                 record_layout_invalidation_transition(
                     &mut self.layout_invalidations_count,
                     layout_before,
@@ -6101,7 +6118,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    n.invalidation.mark(inv);
+                    Self::mark_node_invalidation_state(n, inv);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
@@ -6187,7 +6204,7 @@ impl<H: UiHost> UiTree<H> {
                 if source == UiDebugInvalidationSource::Notify || (already & needed) != needed {
                     let prev = n.invalidation;
                     let layout_before = n.invalidation.layout;
-                    n.invalidation.mark(inv);
+                    Self::mark_node_invalidation_state(n, inv);
                     record_layout_invalidation_transition(
                         &mut self.layout_invalidations_count,
                         layout_before,
@@ -6267,7 +6284,7 @@ impl<H: UiHost> UiTree<H> {
                         if (already & needed) != needed {
                             let prev = n.invalidation;
                             let layout_before = n.invalidation.layout;
-                            n.invalidation.mark(inv);
+                            Self::mark_node_invalidation_state(n, inv);
                             record_layout_invalidation_transition(
                                 &mut self.layout_invalidations_count,
                                 layout_before,
