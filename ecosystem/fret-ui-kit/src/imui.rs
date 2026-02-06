@@ -36,6 +36,7 @@ use crate::primitives::popper;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
 use crate::{UiIntoElement, UiPatchTarget};
 
+pub mod adapters;
 mod floating_window_on_area;
 
 /// A value that can be rendered into a declarative element within an `ElementContext`.
@@ -1534,6 +1535,28 @@ where
 /// still compiling down to Fret's declarative element tree and delegating complex policy to
 /// higher-level components.
 pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
+    fn push_id<K: Hash, R>(
+        &mut self,
+        key: K,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>) -> R,
+    ) -> R {
+        let mut result = None;
+        let elements = self.with_cx_mut(|cx| {
+            cx.keyed(key, |cx| {
+                let mut out = Vec::new();
+                let mut ui = ImUiFacade {
+                    cx,
+                    out: &mut out,
+                    build_focus: None,
+                };
+                result = Some(f(&mut ui));
+                out
+            })
+        });
+        self.extend(elements);
+        result.expect("imui push_id closure should produce a result")
+    }
+
     fn text(&mut self, text: impl Into<Arc<str>>) {
         let element = self.with_cx_mut(|cx| cx.text(text));
         self.add(element);

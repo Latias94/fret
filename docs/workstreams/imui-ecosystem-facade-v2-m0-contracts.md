@@ -43,9 +43,9 @@ Non-goals for v2 M0:
 
 ## 2) Post-Freeze Change Policy
 
-1) Existing v1 behavior is the compatibility baseline unless a workstream item explicitly allows breakage.
-2) Additive APIs are preferred (`*_ex`, new option fields, new helpers) over mutation/removal.
-3) Any behavior-changing patch must update:
+1) Existing v1 behavior is the default baseline for reasoning and regression checks.
+2) Pre-release fearless refactor rule: breaking changes are allowed when they reduce duplication, improve layering, or simplify contracts; no compatibility promise is required yet.
+3) Any behavior-changing patch (including breaking changes) must update:
    - `docs/workstreams/imui-ecosystem-facade-v2-todo.md`,
    - evidence anchors (tests/diag/docs),
    - migration notes when call-site expectations change.

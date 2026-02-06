@@ -82,8 +82,8 @@ M1 decision:
 ### 3.1 Stable core policy (Tier A)
 
 - Additive changes only by default.
-- Renames/removals require a deprecation window and migration notes.
-- Semantic changes require explicit workstream entry and compatibility rationale.
+- Renames/removals may be applied directly in pre-release fearless refactor mode.
+- Semantic changes require explicit workstream entry and migration notes for in-tree call sites.
 
 ### 3.2 Facade-stable policy (Tier B)
 

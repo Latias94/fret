@@ -1,6 +1,6 @@
 # imui Ecosystem Facade v2 - TODO Tracker
 
-Status: In progress (M0-M1 complete; M2+ pending)
+Status: In progress (M0-M2 complete; M3+ pending)
 Last updated: 2026-02-06
 
 This tracker covers:
@@ -74,9 +74,14 @@ Exit criteria:
 - Adapter seam contract is documented and validated by examples.
 - Third-party-style extension template is available.
 
-- [ ] IMUIECO2-adapter-020 Specify minimal signal reporter/delegation contract.
-- [ ] IMUIECO2-adapter-021 Add one adapter template doc for external widget crates.
-- [ ] IMUIECO2-adapter-022 Land one non-shadcn adapter example using the seam.
+- [x] IMUIECO2-adapter-020 Specify minimal signal reporter/delegation contract.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m2-adapter-seam.md` (section 1).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/adapters.rs` (`AdapterSignalRecord`, `AdapterSeamOptions`, `report_adapter_signal`).
+- [x] IMUIECO2-adapter-021 Add one adapter template doc for external widget crates.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v2-m2-adapter-seam.md` (section 2).
+- [x] IMUIECO2-adapter-022 Land one non-shadcn adapter example using the seam.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/adapters.rs` (`button_adapter`, `checkbox_model_adapter`).
+  - Evidence (local): `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke`
 
 ---
 
