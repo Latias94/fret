@@ -162,6 +162,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_snackbar_scalars(cfg);
     inject_comp_search_bar_scalars(cfg);
     inject_comp_search_view_scalars(cfg);
+    inject_comp_carousel_item_scalars(cfg);
     inject_comp_dialog_scalars(cfg);
     inject_comp_full_screen_dialog_scalars(cfg);
     inject_comp_divider_scalars(cfg);
@@ -798,6 +799,7 @@ pub fn theme_config_with_colors(
     inject_comp_snackbar_colors_from_sys(&mut cfg);
     inject_comp_search_bar_colors_from_sys(&mut cfg);
     inject_comp_search_view_colors_from_sys(&mut cfg);
+    inject_comp_carousel_item_colors_from_sys(&mut cfg);
     inject_comp_dialog_colors_from_sys(&mut cfg);
     inject_comp_full_screen_dialog_colors_from_sys(&mut cfg);
     inject_comp_divider_colors_from_sys(&mut cfg);
@@ -2151,6 +2153,10 @@ fn inject_comp_search_bar_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_search_view_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_search_view_scalars(cfg);
+}
+
+fn inject_comp_carousel_item_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_carousel_item_scalars(cfg);
 }
 
 fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
@@ -3512,6 +3518,10 @@ fn inject_comp_search_bar_colors_from_sys(cfg: &mut ThemeConfig) {
 
 fn inject_comp_search_view_colors_from_sys(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_search_view_colors_from_sys(cfg);
+}
+
+fn inject_comp_carousel_item_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_carousel_item_colors_from_sys(cfg);
 }
 
 fn inject_comp_snackbar_colors_from_sys(cfg: &mut ThemeConfig) {

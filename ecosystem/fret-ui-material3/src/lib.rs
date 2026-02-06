@@ -10,6 +10,7 @@ pub mod badge;
 pub mod bottom_sheet;
 pub mod button;
 pub mod card;
+pub mod carousel_item;
 pub mod checkbox;
 pub mod chip;
 pub mod chip_set;
@@ -57,6 +58,7 @@ pub use badge::{Badge, BadgePlacement, BadgeValue};
 pub use bottom_sheet::{DockedBottomSheet, DockedBottomSheetVariant, ModalBottomSheet};
 pub use button::{Button, ButtonStyle, ButtonVariant};
 pub use card::{Card, CardStyle, CardVariant};
+pub use carousel_item::{CarouselItem, CarouselItemStyle, CarouselItemVariant};
 pub use checkbox::{Checkbox, CheckboxStyle};
 pub use chip::{AssistChip, AssistChipStyle, AssistChipVariant};
 pub use chip_set::{ChipSet, ChipSetItem};
@@ -160,6 +162,7 @@ mod tests {
             include_str!("badge.rs"),
             include_str!("bottom_sheet.rs"),
             include_str!("card.rs"),
+            include_str!("carousel_item.rs"),
             include_str!("checkbox.rs"),
             include_str!("chip.rs"),
             include_str!("date_picker.rs"),

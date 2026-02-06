@@ -9,6 +9,7 @@ pub(crate) mod autocomplete;
 pub(crate) mod badge;
 pub(crate) mod button;
 pub(crate) mod card;
+pub(crate) mod carousel_item;
 pub(crate) mod checkbox;
 pub(crate) mod chip;
 pub(crate) mod date_picker;
