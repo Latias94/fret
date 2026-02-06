@@ -3,6 +3,8 @@ use std::sync::{Arc, LazyLock};
 use fret_core::SvgFit;
 use resvg::tiny_skia::{Pixmap, Transform};
 
+use crate::upload_counters::record_svg_upload;
+
 pub const SMOOTH_SVG_SCALE_FACTOR: f32 = 2.0;
 
 #[derive(Debug, Clone)]
@@ -258,6 +260,7 @@ pub fn upload_alpha_mask(
     };
 
     if w > 0 && h > 0 {
+        record_svg_upload(data.len());
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &texture,
@@ -327,6 +330,7 @@ pub fn upload_rgba_image(
     };
 
     if w > 0 && h > 0 {
+        record_svg_upload(data.len());
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &texture,

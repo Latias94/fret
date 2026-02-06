@@ -4,6 +4,8 @@ use std::hash::Hash;
 use std::panic::Location;
 use std::sync::Arc;
 
+use smallvec::SmallVec;
+
 use fret_core::{AppWindowId, EffectChain, EffectMode, NodeId, Px, Rect};
 use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
 
@@ -40,11 +42,37 @@ pub struct ElementContext<'a, H: UiHost> {
     pub bounds: Rect,
     window_state: &'a mut WindowElementState,
     stack: Vec<GlobalElementId>,
-    callsite_counters: Vec<HashMap<u64, u32>>,
+    callsite_counters: Vec<CallsiteCounters>,
     view_cache_should_reuse: Option<&'a mut dyn FnMut(NodeId) -> bool>,
 }
 
+type CallsiteCounters = SmallVec<[(u64, u32); 16]>;
+
+fn bump_callsite_counter(counters: &mut CallsiteCounters, callsite: u64) -> u64 {
+    for (seen, next) in counters.iter_mut() {
+        if *seen != callsite {
+            continue;
+        }
+        let slot = (*next) as u64;
+        *next = next.saturating_add(1);
+        return slot;
+    }
+    counters.push((callsite, 1));
+    0
+}
+
 impl<'a, H: UiHost> ElementContext<'a, H> {
+    pub(crate) fn collect_children(
+        &mut self,
+        children: impl IntoIterator<Item = AnyElement>,
+    ) -> Vec<AnyElement> {
+        let iter = children.into_iter();
+        let (min, _) = iter.size_hint();
+        let mut out = self.window_state.take_scratch_element_children_vec(min);
+        out.extend(iter);
+        out
+    }
+
     pub(crate) fn retained_virtual_list_row_any_element(
         &mut self,
         key: crate::ItemKey,
@@ -73,7 +101,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             bounds,
             window_state,
             stack: vec![root],
-            callsite_counters: vec![HashMap::new()],
+            callsite_counters: vec![CallsiteCounters::new()],
             view_cache_should_reuse: None,
         }
     }
@@ -118,7 +146,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             bounds,
             window_state,
             stack: vec![root],
-            callsite_counters: vec![HashMap::new()],
+            callsite_counters: vec![CallsiteCounters::new()],
             view_cache_should_reuse: None,
         }
     }
@@ -244,7 +272,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let prev_counters = std::mem::take(&mut self.callsite_counters);
 
         self.stack = vec![root];
-        self.callsite_counters = vec![HashMap::new()];
+        self.callsite_counters = vec![CallsiteCounters::new()];
 
         let out = f(self);
 
@@ -457,10 +485,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             for (index, item) in items.iter().enumerate() {
                 let k = key(item);
                 let key_hash = stable_hash(&k);
-                if first_dup.is_none() {
-                    if let Some(prev) = seen.insert(key_hash, index) {
-                        first_dup = Some((key_hash, prev, index));
-                    }
+                if first_dup.is_none()
+                    && let Some(prev) = seen.insert(key_hash, index)
+                {
+                    first_dup = Some((key_hash, prev, index));
                 }
                 cx.keyed(k, |cx| f(cx, index, item));
             }
@@ -555,9 +583,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             .callsite_counters
             .last_mut()
             .expect("callsite counters exist");
-        let next = counters.entry(callsite).or_insert(0);
-        let slot = *next as u64;
-        *next = next.saturating_add(1);
+        let slot = bump_callsite_counter(counters, callsite);
 
         let child_salt = key_hash.unwrap_or(slot);
         let id = derive_child_id(parent, callsite, child_salt);
@@ -576,7 +602,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         );
 
         self.stack.push(id);
-        self.callsite_counters.push(HashMap::new());
+        self.callsite_counters.push(CallsiteCounters::new());
         let out = f(self);
         self.callsite_counters.pop();
         self.stack.pop();
@@ -594,7 +620,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Container(props), children)
         })
     }
@@ -619,7 +646,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Semantics(props), children)
         })
     }
@@ -635,7 +663,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::SemanticFlex(props), children)
         })
     }
@@ -651,7 +680,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
     }
@@ -680,13 +710,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 .global::<WindowMetricsService>()
                 .and_then(|svc| svc.scale_factor(cx.window))
                 .unwrap_or(1.0);
-            let key = stable_hash(&(
-                theme_revision,
-                scale_factor.to_bits(),
-                cx.bounds.size.width.0.to_bits(),
-                cx.bounds.size.height.0.to_bits(),
-                props.cache_key,
-            ));
+            let key = stable_hash(&(theme_revision, scale_factor.to_bits(), props.cache_key));
 
             let key_matches = if should_reuse {
                 let matches = cx.window_state.view_cache_key_matches_and_touch(id, key);
@@ -711,7 +735,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             } else {
                 cx.window_state.set_view_cache_key(id, key);
                 cx.window_state.begin_view_cache_scope(id);
-                let children = f(cx).into_iter().collect();
+                let built = f(cx);
+                let children = cx.collect_children(built);
                 cx.window_state.end_view_cache_scope(id);
                 children
             };
@@ -730,7 +755,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx, id).into_iter().collect();
+            let built = f(cx, id);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::FocusScope(props), children)
         })
     }
@@ -750,7 +776,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx, id).into_iter().collect();
+            let built = f(cx, id);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Semantics(props), children)
         })
     }
@@ -778,7 +805,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Opacity(props), children)
         })
     }
@@ -814,7 +842,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::EffectLayer(props), children)
         })
     }
@@ -886,7 +915,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::VisualTransform(props), children)
         })
     }
@@ -902,7 +932,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::RenderTransform(props), children)
         })
     }
@@ -918,7 +949,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::FractionalRenderTransform(props), children)
         })
     }
@@ -934,7 +966,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Anchored(props), children)
         })
     }
@@ -970,7 +1003,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::InteractivityGate(props), children)
         })
     }
@@ -991,16 +1025,15 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
             cx.pressable_clear_on_hover_change();
-            let children = f(
+            let built = f(
                 cx,
                 PressableState {
                     hovered,
                     pressed,
                     focused,
                 },
-            )
-            .into_iter()
-            .collect();
+            );
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
@@ -1021,7 +1054,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let focused = cx.window_state.focused_element == Some(id);
             cx.pressable_clear_on_activate();
             cx.pressable_clear_on_hover_change();
-            let children = f(
+            let built = f(
                 cx,
                 PressableState {
                     hovered,
@@ -1029,9 +1062,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     focused,
                 },
                 id,
-            )
-            .into_iter()
-            .collect();
+            );
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
@@ -1061,7 +1093,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                 },
                 id,
             );
-            let children = children.into_iter().collect();
+            let children = cx.collect_children(children);
             cx.new_any_element(id, ElementKind::Pressable(props), children)
         })
     }
@@ -1371,7 +1403,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.pointer_region_clear_on_pointer_up();
             cx.pointer_region_clear_on_wheel();
             cx.pointer_region_clear_on_pinch_gesture();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::PointerRegion(props), children)
         })
     }
@@ -1392,7 +1425,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.text_input_region_clear_on_clipboard_text();
             cx.text_input_region_clear_on_clipboard_unavailable();
             cx.text_input_region_clear_on_set_selection();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::TextInputRegion(props), children)
         })
     }
@@ -1408,7 +1442,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             cx.internal_drag_region_clear_on_internal_drag();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::InternalDragRegion(props), children)
         })
     }
@@ -2052,7 +2087,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Stack(props), children)
         })
     }
@@ -2064,7 +2100,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Column(props), children)
         })
     }
@@ -2076,7 +2113,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Row(props), children)
         })
     }
@@ -2184,7 +2222,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::ResizablePanelGroup(props), children)
         })
     }
@@ -2298,7 +2337,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         self.scope(|cx| {
             let id = cx.root_id();
             let hovered = cx.window_state.hovered_hover_region == Some(id);
-            let children = f(cx, hovered).into_iter().collect();
+            let built = f(cx, hovered);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::HoverRegion(props), children)
         })
     }
@@ -2314,7 +2354,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::WheelRegion(props), children)
         })
     }
@@ -2326,7 +2367,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Scroll(props), children)
         })
     }
@@ -2532,16 +2574,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
                     state.metrics.sync_keys(&state.keys, options.items_revision);
 
-                    if options.measure_mode == crate::element::VirtualListMeasureMode::Known {
-                        if let Some(height_at) = options.known_row_height_at.as_ref() {
-                            let heights = (0..len).map(|i| height_at(i)).collect::<Vec<_>>();
-                            state.metrics.rebuild_from_known_heights(
-                                heights,
-                                options.estimate_row_height,
-                                options.gap,
-                                options.scroll_margin,
-                            );
-                        }
+                    if options.measure_mode == crate::element::VirtualListMeasureMode::Known
+                        && let Some(height_at) = options.known_row_height_at.as_ref()
+                    {
+                        let heights = (0..len).map(|i| height_at(i)).collect::<Vec<_>>();
+                        state.metrics.rebuild_from_known_heights(
+                            heights,
+                            options.estimate_row_height,
+                            options.gap,
+                            options.scroll_margin,
+                        );
                     }
 
                     if key_cache == crate::element::VirtualListKeyCacheMode::AllKeys {
@@ -2702,7 +2744,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     .collect::<Vec<_>>()
             });
 
-            let children: Vec<AnyElement> = f(cx, &visible_items).into_iter().collect();
+            let built = f(cx, &visible_items);
+            let children = cx.collect_children(built);
             cx.new_any_element(
                 id,
                 ElementKind::VirtualList(VirtualListProps {
@@ -2732,7 +2775,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Flex(props), children)
         })
     }
@@ -2751,7 +2795,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             cx.roving_clear_on_active_change();
             cx.roving_clear_on_typeahead();
             cx.roving_clear_on_navigate();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::RovingFlex(props), children)
         })
     }
@@ -2763,7 +2808,8 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
     {
         self.scope(|cx| {
             let id = cx.root_id();
-            let children = f(cx).into_iter().collect();
+            let built = f(cx);
+            let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::Grid(props), children)
         })
     }
@@ -3043,10 +3089,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     let mut first_dup: Option<(crate::ItemKey, usize, usize)> = None;
                     let mut seen: HashMap<crate::ItemKey, usize> = HashMap::new();
                     for (pos, item) in items.iter().enumerate() {
-                        if first_dup.is_none() {
-                            if let Some(prev) = seen.insert(item.key, pos) {
-                                first_dup = Some((item.key, prev, pos));
-                            }
+                        if first_dup.is_none()
+                            && let Some(prev) = seen.insert(item.key, pos)
+                        {
+                            first_dup = Some((item.key, prev, pos));
                         }
                     }
 

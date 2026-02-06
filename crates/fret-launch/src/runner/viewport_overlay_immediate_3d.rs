@@ -23,21 +23,11 @@ struct ViewportOverlay3dImmediateEntry {
 /// This is intentionally runner-facing (wgpu-facing) and keeps the "pass topology" boundary explicit:
 /// the host still owns command encoder + render pass creation, and calls `record_viewport_overlay_3d(...)`
 /// to execute overlay hooks.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ViewportOverlay3dImmediateService {
     installed: bool,
     config: Overlay3dPipelineConfig,
     entries: HashMap<(AppWindowId, RenderTargetId), ViewportOverlay3dImmediateEntry>,
-}
-
-impl Default for ViewportOverlay3dImmediateService {
-    fn default() -> Self {
-        Self {
-            installed: false,
-            config: Overlay3dPipelineConfig::default(),
-            entries: HashMap::new(),
-        }
-    }
 }
 
 impl ViewportOverlay3dImmediateService {
@@ -46,6 +36,7 @@ impl ViewportOverlay3dImmediateService {
         self
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn upload(
         &mut self,
         device: &wgpu::Device,
@@ -163,6 +154,7 @@ pub fn install_viewport_overlay_3d_immediate(app: &mut App) {
 ///
 /// This also ensures the immediate overlay hook is installed, so `record_viewport_overlay_3d(...)`
 /// will replay the uploaded batches inside the engine pass.
+#[allow(clippy::too_many_arguments)]
 pub fn upload_viewport_overlay_3d_immediate(
     app: &mut App,
     device: &wgpu::Device,

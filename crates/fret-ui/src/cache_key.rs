@@ -69,6 +69,12 @@ impl CacheKeyBuilder {
     }
 }
 
+impl Default for CacheKeyBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn mix(seed: u64, value: u64) -> u64 {
     let mut b = CacheKeyBuilder::new();
     b.write_u64(seed);

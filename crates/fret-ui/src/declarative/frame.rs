@@ -1,4 +1,5 @@
 use super::prelude::*;
+use slotmap::SecondaryMap;
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -15,8 +16,8 @@ pub(crate) struct ElementIdMapCache {
 pub(crate) struct WindowFrame {
     pub(super) frame_id: FrameId,
     pub(super) revision: u64,
-    pub(crate) instances: HashMap<NodeId, ElementRecord>,
-    pub(crate) children: HashMap<NodeId, Arc<[NodeId]>>,
+    pub(crate) instances: SecondaryMap<NodeId, ElementRecord>,
+    pub(crate) children: SecondaryMap<NodeId, Arc<[NodeId]>>,
     pub(super) element_id_map_cache: Option<ElementIdMapCache>,
 }
 
@@ -25,8 +26,8 @@ impl Default for WindowFrame {
         Self {
             frame_id: FrameId(0),
             revision: 0,
-            instances: HashMap::new(),
-            children: HashMap::new(),
+            instances: SecondaryMap::new(),
+            children: SecondaryMap::new(),
             element_id_map_cache: None,
         }
     }
@@ -166,7 +167,7 @@ pub(crate) fn element_record_for_node<H: UiHost>(
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&node))
+            .and_then(|w| w.instances.get(node))
             .cloned()
     })
 }
@@ -181,7 +182,7 @@ pub(crate) fn with_element_record_for_node<H: UiHost, R>(
         frame
             .windows
             .get(&window)
-            .and_then(|w| w.instances.get(&node))
+            .and_then(|w| w.instances.get(node))
             .map(f)
     })
 }
@@ -359,6 +360,59 @@ pub(crate) fn take_changed_scroll_handle_keys<H: UiHost>(
     })
 }
 
+pub(crate) fn peek_changed_scroll_handle_keys<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+) -> Vec<ScrollHandleChange> {
+    app.with_global_mut_untracked(ScrollHandleRegistry::default, |registry, _app| {
+        let Some(window_registry) = registry.windows.get(&window) else {
+            return Vec::new();
+        };
+
+        let mut changed: Vec<ScrollHandleChange> = Vec::new();
+        for (&handle_key, handle) in window_registry.handles.iter() {
+            let revision = handle.revision();
+            let offset = handle.offset();
+            let viewport = handle.viewport_size();
+            let content = handle.content_size();
+
+            let prev_revision = window_registry.last_revision.get(&handle_key).copied();
+            let prev_offset = window_registry.last_offset.get(&handle_key).copied();
+            let prev_viewport = window_registry.last_viewport.get(&handle_key).copied();
+            let prev_content = window_registry.last_content.get(&handle_key).copied();
+
+            if prev_revision != Some(revision) {
+                let offset_changed = prev_offset != Some(offset);
+                let viewport_changed = prev_viewport != Some(viewport);
+                let content_changed = prev_content != Some(content);
+
+                let kind = if !offset_changed {
+                    ScrollHandleChangeKind::Layout
+                } else {
+                    ScrollHandleChangeKind::HitTestOnly
+                };
+
+                changed.push(ScrollHandleChange {
+                    handle_key,
+                    kind,
+                    revision,
+                    prev_revision,
+                    offset,
+                    prev_offset,
+                    viewport,
+                    prev_viewport,
+                    content,
+                    prev_content,
+                    offset_changed,
+                    viewport_changed,
+                    content_changed,
+                });
+            }
+        }
+        changed
+    })
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ScrollHandleChangeKind {
     Layout,
@@ -398,7 +452,7 @@ pub(crate) fn element_id_map_for_window<H: UiHost>(
 
         let mut out = HashMap::with_capacity(window_frame.instances.len());
         for (node, record) in window_frame.instances.iter() {
-            out.insert(record.element.0, *node);
+            out.insert(record.element.0, node);
         }
         let map = Arc::new(out);
         window_frame.element_id_map_cache = Some(ElementIdMapCache {
@@ -455,6 +509,7 @@ pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutSty
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
 

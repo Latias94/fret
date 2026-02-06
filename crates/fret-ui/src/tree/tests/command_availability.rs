@@ -32,7 +32,7 @@ fn command_availability_walks_focus_chain() {
 
     let cmd = CommandId::from("test.cmd");
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let parent = ui.create_node(AvailabilityWidget {
@@ -65,7 +65,7 @@ fn command_availability_blocked_stops_walk() {
 
     let cmd = CommandId::from("test.cmd");
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let parent = ui.create_node(AvailabilityWidget {

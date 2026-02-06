@@ -227,6 +227,7 @@ pub fn paint_state_layer(
 ///
 /// - `bounds` is used for bounded clipping and as the coordinate space for `origin`.
 /// - If `clip_corner_radii` is `Some`, the ripple is clipped to a rounded-rect matching `bounds`.
+#[allow(clippy::too_many_arguments)]
 pub fn paint_ripple(
     scene: &mut Scene,
     order: DrawOrder,

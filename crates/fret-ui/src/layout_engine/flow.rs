@@ -115,6 +115,7 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 #[stacksafe::stacksafe]
 fn build_flow_subtree_impl<H: UiHost>(
     engine: &mut TaffyLayoutEngine,
