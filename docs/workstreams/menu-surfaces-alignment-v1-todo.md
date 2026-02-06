@@ -227,6 +227,8 @@ Exit criteria:
 - [x] MENU-MVP4-test-057 Add a multi-window diag gate that proves `Window > Windows` radio checked state is mutually exclusive across `Window 1/2`.
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-windows-radio-mutual-exclusive.json`
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`ui_gallery.debug.window.open`, `window_create_spec`, dynamic `Window` submenu radio mapping)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`window.activate.*` uses `FRET_DIAG` fast-path focused-window sync to avoid OS-focus flakiness in automation)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER` keeps frame progression stable right after auxiliary window creation)
 
 ---
 

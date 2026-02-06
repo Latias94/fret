@@ -5,7 +5,7 @@ use fret_app::{
 };
 use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
-    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, UiServices,
+    ImageColorInfo, ImageId, ImageUploadToken, SemanticsRole, TimerToken, UiServices,
 };
 use fret_kit::prelude::{
     InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime_with_focus_handle,
@@ -73,7 +73,11 @@ struct UiGalleryRecentItemsService {
 #[derive(Default)]
 struct UiGalleryDebugWindowService {
     next_logical_window_id: u64,
+    script_keepalive_window: Option<AppWindowId>,
+    script_keepalive_frames: u32,
 }
+
+const DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER: TimerToken = TimerToken(0x7569_6761_6c6c_6572);
 
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Clone)]
@@ -1079,10 +1083,27 @@ impl UiGalleryDriver {
                 else {
                     return false;
                 };
-                app.push_effect(Effect::Window(WindowRequest::Raise {
-                    window: target_window,
-                    sender: Some(window),
-                }));
+                let is_diag_automation =
+                    std::env::var_os("FRET_DIAG").is_some_and(|value| !value.is_empty());
+
+                if is_diag_automation {
+                    app.with_global_mut(
+                        UiGalleryHarnessDiagnosticsStore::default,
+                        |store, _app| {
+                            if store.per_window.contains_key(&target_window) {
+                                store.focused_window = Some(target_window);
+                            }
+                        },
+                    );
+                    Self::sync_menu_bar_after_state_change(app, window);
+                    Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+                } else {
+                    app.push_effect(Effect::Window(WindowRequest::Raise {
+                        window: target_window,
+                        sender: Some(window),
+                    }));
+                }
+
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from(format!("window.activate({})", index + 1));
                 });
@@ -1149,6 +1170,20 @@ impl UiGalleryDriver {
                             ..Default::default()
                         },
                     })));
+                    app.push_effect(Effect::Window(WindowRequest::Raise {
+                        window,
+                        sender: Some(window),
+                    }));
+                    app.with_global_mut(UiGalleryDebugWindowService::default, |svc, _app| {
+                        svc.script_keepalive_window = Some(window);
+                        svc.script_keepalive_frames = 180;
+                    });
+                    app.push_effect(Effect::SetTimer {
+                        window: None,
+                        token: DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER,
+                        after: Duration::from_millis(16),
+                        repeat: Some(Duration::from_millis(16)),
+                    });
 
                     let _ = app.models_mut().update(&state.last_action, |v| {
                         *v = Arc::<str>::from(format!("debug.window.open({logical_window_id})"));
@@ -3606,6 +3641,35 @@ impl WinitAppDriver for UiGalleryDriver {
                     state.avatar_demo_image_token = None;
                     tracing::error!(message, "ui-gallery avatar demo image register failed");
                     app.request_redraw(window);
+                }
+            }
+            Event::Timer { token } if *token == DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER => {
+                let (target_window, keep_running) =
+                    app.with_global_mut(UiGalleryDebugWindowService::default, |svc, _app| {
+                        let target_window = svc.script_keepalive_window;
+                        if svc.script_keepalive_frames == 0 {
+                            svc.script_keepalive_window = None;
+                            return (target_window, false);
+                        }
+
+                        svc.script_keepalive_frames = svc.script_keepalive_frames.saturating_sub(1);
+                        if svc.script_keepalive_frames == 0 {
+                            svc.script_keepalive_window = None;
+                            return (target_window, false);
+                        }
+
+                        (target_window, true)
+                    });
+
+                if let Some(target_window) = target_window {
+                    app.request_redraw(target_window);
+                    app.push_effect(Effect::RequestAnimationFrame(target_window));
+                }
+
+                if !keep_running {
+                    app.push_effect(Effect::CancelTimer {
+                        token: DEBUG_WINDOW_OPEN_KEEPALIVE_TIMER,
+                    });
                 }
             }
             Event::WindowFocusChanged(focused) => {
