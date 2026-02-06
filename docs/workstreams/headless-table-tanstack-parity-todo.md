@@ -429,8 +429,13 @@ ColumnDef keys referenced by upstream feature implementations:
     top/center/bottom display rows via the headless engine’s pinned row helpers so “keepPinnedRows”
     and pagination interactions match the engine contract.
     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
-  - Remaining: extend the same strategy to the grouped rows path (and decide how we want to render
-    pinned non-root rows for hierarchical datasets in the UI layer).
+  - Done (grouped rows path, initial): when grouping is active, the grouped display cache now
+    surfaces pinned rows outside pagination by reordering the flattened visible list into
+    `top + center(page slice) + bottom`.
+    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+  - Remaining: reconcile keepPinnedRows semantics with filtering for grouped mode and decide whether
+    pinning should remove leaf rows from within their group subtrees (TanStack’s row pinning API is
+    rooted in `getRowModel().rows`, so grouped interactions are subtle and require explicit UI policy).
 
 ---
 
