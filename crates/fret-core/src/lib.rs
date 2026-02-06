@@ -9,6 +9,7 @@ pub mod image;
 pub mod input;
 pub mod layout_direction;
 pub mod panels;
+pub mod render_text;
 pub mod scene;
 pub mod semantics;
 pub mod services;
@@ -54,6 +55,7 @@ pub use input::{
 pub use input::{MouseButtons, ViewportInputEvent, ViewportInputGeometry, ViewportInputKind};
 pub use layout_direction::LayoutDirection;
 pub use panels::{PanelKey, PanelKind};
+pub use render_text::{RendererGlyphAtlasPerfSnapshot, RendererTextPerfSnapshot};
 pub use scene::{
     Color, DitherMode, DrawOrder, EffectChain, EffectMode, EffectQuality, EffectStep, Scene,
     SceneOp, SceneRecording, SceneValidationError, SceneValidationErrorKind, UvRect,

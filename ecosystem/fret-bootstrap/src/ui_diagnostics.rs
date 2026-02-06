@@ -1079,7 +1079,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.extend(click_events(pos, button));
 
                 active.wait_until = None;
@@ -1136,7 +1136,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.push(move_pointer_event(pos));
 
                 active.wait_until = None;
@@ -1211,7 +1211,7 @@ impl UiDiagnosticsService {
                             return output;
                         };
 
-                        let start = center_of_rect(node.bounds);
+                        let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                         let end = Point::new(
                             fret_core::Px(start.x.0 + delta_x),
                             fret_core::Px(start.y.0 + delta_y),
@@ -1396,7 +1396,7 @@ impl UiDiagnosticsService {
                     return output;
                 };
 
-                let pos = center_of_rect(node.bounds);
+                let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                 output.events.push(wheel_event(pos, delta_x, delta_y));
 
                 active.wait_until = None;
@@ -1535,7 +1535,10 @@ impl UiDiagnosticsService {
                         let container_node =
                             select_semantics_node(snapshot, window, element_runtime, &container);
                         if let Some(container_node) = container_node {
-                            let pos = center_of_rect(container_node.bounds);
+                            let pos = center_of_rect_clamped_to_rect(
+                                container_node.bounds,
+                                window_bounds,
+                            );
                             output.events.push(wheel_event(pos, delta_x, delta_y));
                         }
 
@@ -1602,7 +1605,8 @@ impl UiDiagnosticsService {
                             if let Some(node) =
                                 select_semantics_node(snapshot, window, element_runtime, &target)
                             {
-                                let pos = center_of_rect(node.bounds);
+                                let pos =
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left));
@@ -1689,7 +1693,8 @@ impl UiDiagnosticsService {
                             if let Some(node) =
                                 select_semantics_node(snapshot, window, element_runtime, &menu)
                             {
-                                let pos = center_of_rect(node.bounds);
+                                let pos =
+                                    center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left));
@@ -1793,8 +1798,9 @@ impl UiDiagnosticsService {
                             select_semantics_node(snapshot, window, element_runtime, &from);
                         let to_node = select_semantics_node(snapshot, window, element_runtime, &to);
                         if let (Some(from_node), Some(to_node)) = (from_node, to_node) {
-                            let start = center_of_rect(from_node.bounds);
-                            let end = center_of_rect(to_node.bounds);
+                            let start =
+                                center_of_rect_clamped_to_rect(from_node.bounds, window_bounds);
+                            let end = center_of_rect_clamped_to_rect(to_node.bounds, window_bounds);
                             V2DragPointerState {
                                 step_index,
                                 steps: steps.max(1),
@@ -1905,7 +1911,7 @@ impl UiDiagnosticsService {
 
                             if state.phase == 0 {
                                 let x = clamp_x(left + width * target_t);
-                                let start = center_of_rect(bounds);
+                                let start = center_of_rect_clamped_to_rect(bounds, window_bounds);
                                 let start_x = state.last_drag_x.unwrap_or(start.x.0);
                                 let start = Point::new(fret_core::Px(start_x), start.y);
                                 let end = Point::new(fret_core::Px(x), start.y);
@@ -1946,7 +1952,8 @@ impl UiDiagnosticsService {
                                     } else {
                                         let error = value - observed;
                                         let dx = (error / span) * width;
-                                        let start = center_of_rect(bounds);
+                                        let start =
+                                            center_of_rect_clamped_to_rect(bounds, window_bounds);
                                         let start_x = state.last_drag_x.unwrap_or(start.x.0);
                                         let end_x = clamp_x(start_x + dx);
                                         let start = Point::new(fret_core::Px(start_x), start.y);
@@ -2538,10 +2545,17 @@ impl UiDiagnosticsService {
         let resource_caches = {
             let icon_svg_cache = icon_svg_cache_stats(app);
             let canvas = canvas_cache_stats_for_window(app, window.data().as_ffi());
-            (icon_svg_cache.is_some() || !canvas.is_empty()).then_some(UiResourceCachesV1 {
-                icon_svg_cache,
-                canvas,
-            })
+            let render_text = app
+                .global::<fret_core::RendererTextPerfSnapshot>()
+                .copied()
+                .map(UiRendererTextPerfSnapshotV1::from_core);
+            (icon_svg_cache.is_some() || !canvas.is_empty() || render_text.is_some()).then_some(
+                UiResourceCachesV1 {
+                    icon_svg_cache,
+                    canvas,
+                    render_text,
+                },
+            )
         };
 
         let renderer_perf = app
@@ -3171,6 +3185,8 @@ pub struct UiResourceCachesV1 {
     pub icon_svg_cache: Option<UiRetainedSvgCacheStatsV1>,
     #[serde(default)]
     pub canvas: Vec<UiCanvasCacheEntryV1>,
+    #[serde(default)]
+    pub render_text: Option<UiRendererTextPerfSnapshotV1>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -3196,6 +3212,101 @@ pub struct UiCacheStatsV1 {
     pub release_prune_budget: u64,
     pub release_clear: u64,
     pub release_evict: u64,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiRendererTextPerfSnapshotV1 {
+    pub frame_id: u64,
+
+    pub font_stack_key: u64,
+    pub font_db_revision: u64,
+
+    pub blobs_live: u64,
+    pub blob_cache_entries: u64,
+    pub shape_cache_entries: u64,
+    pub measure_cache_buckets: u64,
+
+    pub frame_cache_resets: u64,
+    pub frame_blob_cache_hits: u64,
+    pub frame_blob_cache_misses: u64,
+    pub frame_blobs_created: u64,
+    pub frame_shape_cache_hits: u64,
+    pub frame_shape_cache_misses: u64,
+    pub frame_shapes_created: u64,
+
+    pub mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+    pub color_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+    pub subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+}
+
+impl UiRendererTextPerfSnapshotV1 {
+    fn from_core(snapshot: fret_core::RendererTextPerfSnapshot) -> Self {
+        Self {
+            frame_id: snapshot.frame_id.0,
+            font_stack_key: snapshot.font_stack_key,
+            font_db_revision: snapshot.font_db_revision,
+            blobs_live: snapshot.blobs_live,
+            blob_cache_entries: snapshot.blob_cache_entries,
+            shape_cache_entries: snapshot.shape_cache_entries,
+            measure_cache_buckets: snapshot.measure_cache_buckets,
+            frame_cache_resets: snapshot.frame_cache_resets,
+            frame_blob_cache_hits: snapshot.frame_blob_cache_hits,
+            frame_blob_cache_misses: snapshot.frame_blob_cache_misses,
+            frame_blobs_created: snapshot.frame_blobs_created,
+            frame_shape_cache_hits: snapshot.frame_shape_cache_hits,
+            frame_shape_cache_misses: snapshot.frame_shape_cache_misses,
+            frame_shapes_created: snapshot.frame_shapes_created,
+            mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
+            color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
+            subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct UiRendererGlyphAtlasPerfSnapshotV1 {
+    pub width: u32,
+    pub height: u32,
+    pub pages: u32,
+    pub entries: u64,
+
+    pub used_px: u64,
+    pub capacity_px: u64,
+
+    pub frame_hits: u64,
+    pub frame_misses: u64,
+    pub frame_inserts: u64,
+    pub frame_evict_glyphs: u64,
+    pub frame_evict_pages: u64,
+    pub frame_out_of_space: u64,
+    pub frame_too_large: u64,
+
+    pub frame_pending_uploads: u64,
+    pub frame_pending_upload_bytes: u64,
+    pub frame_upload_bytes: u64,
+}
+
+impl UiRendererGlyphAtlasPerfSnapshotV1 {
+    fn from_core(snapshot: fret_core::RendererGlyphAtlasPerfSnapshot) -> Self {
+        Self {
+            width: snapshot.width,
+            height: snapshot.height,
+            pages: snapshot.pages,
+            entries: snapshot.entries,
+            used_px: snapshot.used_px,
+            capacity_px: snapshot.capacity_px,
+            frame_hits: snapshot.frame_hits,
+            frame_misses: snapshot.frame_misses,
+            frame_inserts: snapshot.frame_inserts,
+            frame_evict_glyphs: snapshot.frame_evict_glyphs,
+            frame_evict_pages: snapshot.frame_evict_pages,
+            frame_out_of_space: snapshot.frame_out_of_space,
+            frame_too_large: snapshot.frame_too_large,
+            frame_pending_uploads: snapshot.frame_pending_uploads,
+            frame_pending_upload_bytes: snapshot.frame_pending_upload_bytes,
+            frame_upload_bytes: snapshot.frame_upload_bytes,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -8743,6 +8854,36 @@ fn center_of_rect(rect: Rect) -> Point {
     let x = rect.origin.x + rect.size.width * 0.5;
     let y = rect.origin.y + rect.size.height * 0.5;
     Point::new(x, y)
+}
+
+fn center_of_rect_clamped_to_rect(rect: Rect, clamp: Rect) -> Point {
+    if !rects_intersect(rect, clamp) {
+        return center_of_rect(rect);
+    }
+
+    let rx0 = rect.origin.x.0;
+    let ry0 = rect.origin.y.0;
+    let rx1 = rx0 + rect.size.width.0.max(0.0);
+    let ry1 = ry0 + rect.size.height.0.max(0.0);
+
+    let cx0 = clamp.origin.x.0;
+    let cy0 = clamp.origin.y.0;
+    let cx1 = cx0 + clamp.size.width.0.max(0.0);
+    let cy1 = cy0 + clamp.size.height.0.max(0.0);
+
+    let ix0 = rx0.max(cx0);
+    let iy0 = ry0.max(cy0);
+    let ix1 = rx1.min(cx1);
+    let iy1 = ry1.min(cy1);
+
+    if ix1 <= ix0 || iy1 <= iy0 {
+        return center_of_rect(rect);
+    }
+
+    Point::new(
+        fret_core::Px((ix0 + ix1) * 0.5),
+        fret_core::Px((iy0 + iy1) * 0.5),
+    )
 }
 
 fn pick_semantics_node_at<'a>(

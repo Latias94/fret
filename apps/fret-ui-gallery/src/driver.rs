@@ -40,6 +40,10 @@ use time::Date;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::harness::{
+    UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
+};
 use crate::spec::*;
 use crate::ui;
 
@@ -211,6 +215,17 @@ impl UiGalleryDriver {
                 }
             },
         );
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(handle) = app
+                .global::<UiGalleryCodeEditorHandlesStore>()
+                .and_then(|store| store.per_window.get(&window).cloned())
+            {
+                edit_can_undo |= handle.can_undo();
+                edit_can_redo |= handle.can_redo();
+            }
+        }
 
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
             svc.set_snapshot(
@@ -1085,6 +1100,8 @@ impl UiGalleryDriver {
     ) {
         OverlayController::begin_frame(app, window);
         let bisect = ui_gallery_bisect_flags();
+
+        Self::sync_undo_availability(app, window, &state.undo_doc);
 
         let availability = app
             .global::<WindowCommandAvailabilityService>()
@@ -2304,6 +2321,22 @@ pub fn build_app() -> App {
                 let text_input = app.models().get_cloned(&ids.text_input)?;
                 let text_area = app.models().get_cloned(&ids.text_area)?;
 
+                let torture = app
+                    .global::<UiGalleryCodeEditorHandlesStore>()
+                    .and_then(|store| store.per_window.get(&window))
+                    .map(|handle| {
+                        let text = handle.with_buffer(|b| b.text_string());
+                        let selection = handle.selection();
+                        let anchor = selection.anchor.min(text.len()) as u64;
+                        let caret = selection.caret().min(text.len()) as u64;
+                        serde_json::json!({
+                            "schema_version": 1,
+                            "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                            "text_len_bytes": text.len() as u64,
+                            "selection": { "anchor": anchor, "caret": caret },
+                        })
+                    });
+
                 let mut out = serde_json::Map::new();
                 out.insert("schema_version".to_string(), serde_json::json!(1));
                 out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
@@ -2317,6 +2350,7 @@ pub fn build_app() -> App {
                         "syntax_rust": syntax_rust,
                         "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
                         "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                        "torture": torture,
                     }),
                 );
                 out.insert(
