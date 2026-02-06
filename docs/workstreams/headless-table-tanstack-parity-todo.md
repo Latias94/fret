@@ -69,6 +69,47 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ---
 
+## Next execution plan (functional parity first)
+
+- Step 1: Deliver `HTP-ui-colpin-010` so header/body left-center-right splits and offsets stay aligned in `table_virtualized`.
+- Step 2: Close string/grouped `RowId` round-trip gaps under `HTP-state-020` + `HTP-id-015` (remove numeric-id-only assumptions).
+- Step 3: Finish grouped pinning semantics under `HTP-rowpin-015` + `HTP-ui-rowpin-020` (policy + engine/UI parity gates).
+- Step 4: Complete filtering parity backlog: `HTP-filt-050`, `HTP-filt-060`, `HTP-filt-070`.
+- Step 5: Complete remaining sorting/grouping depth: `HTP-sort-050` + `HTP-grp-020` + `HTP-grp-030`.
+
+## Functional parity gap snapshot (must not be weaker than TanStack)
+
+P0 (core behavior parity, highest user-visible risk):
+
+- HTP-ui-colpin-010: retained table_virtualized path still needs strict left/center/right split + shared width/offset contract to avoid header/body drift.
+- HTP-rowpin-015 + HTP-ui-rowpin-020: grouped-mode row pinning semantics are still partially policy-driven and not fully parity-gated.
+- HTP-filt-050 + HTP-filt-060 + HTP-filt-070: filter depth/meta/manual-filtering semantics remain incomplete.
+- HTP-sort-050: manualSorting + getSortedRowModel override semantics need final parity lock.
+
+P1 (capability breadth parity):
+
+- HTP-id-013/014/015/016: complete rowsById + grouped/string RowId parity across all feature paths.
+- HTP-grp-020 + HTP-grp-030: non-u64 aggregations, custom aggregation coverage, and grouped sorting precedence/integration.
+- HTP-state-020: lossless omitted-vs-explicit-default JSON round-trip semantics.
+
+P2 (engineering guardrails for sustained parity):
+
+- HTP-cap-010 + HTP-base-004: full public API inventory and non-option surface tracking.
+- HTP-memo-020 + HTP-perf-010: rebuild-each-frame memo strategy + large-dataset perf regression gate.
+
+---
+
+## Next milestone plan (functional parity first)
+
+- Milestone A (UI pinning correctness): close HTP-ui-colpin-010 and add a dedicated UI parity gate for header/body column alignment.
+- Milestone B (grouped pinning semantics): close HTP-rowpin-015 + HTP-ui-rowpin-020 with explicit grouped policy and fixture-backed assertions.
+- Milestone C (manual pipeline parity): close HTP-filt-070 + HTP-sort-050, then lock cross-feature interactions with pagination/grouping.
+- Milestone D (filter depth/meta parity): close HTP-filt-050 + HTP-filt-060 and verify no capability regression in grouped datasets.
+- Milestone E (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
+- Milestone F (guardrails): close HTP-cap-010, HTP-base-004, HTP-memo-020, and HTP-perf-010.
+
+---
+
 ## M0.5 — Capability parity contract (API inventory)
 
 Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstream public API surfaces
@@ -330,7 +371,6 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
     - `manualGrouping` bypasses grouped row model computation.
     - `onGroupingChange(updater)` controlled-state semantics (fixtures assert `next_state.grouping`).
     - `getGroupedRowModel` override (fixture-only marker `__getGroupedRowModel=pre_grouped`).
-- [ ] HTP-grp-050 Align `groupedColumnMode` behavior and column ordering interactions.
 - [x] HTP-grp-050 Align `groupedColumnMode` behavior and column ordering interactions.
   - Parity-gated via header/cell + core-model snapshots:
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs`
@@ -520,9 +560,13 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
   - Topics:
     - Filtering semantics in grouped mode (`keepPinnedRows` vs. “visible-only” pinning).
     - Whether pinning should remove leaf rows from within their group subtrees (UI policy decision).
-- [ ] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
-  - Goal: keep header/body column splits (`left/center/right`) and column start/after offsets stable so pinned columns
-    cannot drift and cause misalignment in the UI gallery.
+- [~] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
+  - Done (retained path parity): `table_virtualized_retained_v0` now computes visible ordered columns,
+    splits them by `column_pinning` into `left/center/right`, and renders header/body with the same split contract.
+  - Done (shared offset path): header + body center groups now share the same `scroll_x` handle while left/right stay fixed,
+    preventing the header/body drift that can show up as misaligned columns in UI gallery.
+    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs` (`table_virtualized_retained_v0`)
+  - Remaining: add a dedicated UI parity gate/diag script that asserts alignment under pin/unpin + resize + horizontal scroll.
 
 ---
 
