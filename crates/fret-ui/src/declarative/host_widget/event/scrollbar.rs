@@ -30,16 +30,19 @@ pub(super) fn handle_scrollbar<H: UiHost>(
         let Some(node) = node_for_element_in_window_frame(&mut *cx.app, window, target) else {
             return;
         };
-        let inv = element_record_for_node(&mut *cx.app, window, node)
+        let is_vlist = element_record_for_node(&mut *cx.app, window, node)
             .map(|r| {
                 matches!(
                     r.instance,
                     crate::declarative::frame::ElementInstance::VirtualList(_)
                 )
             })
-            .unwrap_or(false)
-            .then_some(Invalidation::Layout)
-            .unwrap_or(Invalidation::HitTestOnly);
+            .unwrap_or(false);
+        let inv = if is_vlist {
+            Invalidation::Layout
+        } else {
+            Invalidation::HitTestOnly
+        };
         cx.invalidate(node, inv);
     };
 

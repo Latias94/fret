@@ -42,36 +42,31 @@
       "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" },
       "delta_y": 240.0
     },
-    {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" },
-      "delta_y": 240.0
-    },
-    {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" },
-      "delta_y": 240.0
-    },
-    {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" },
-      "delta_y": 240.0
-    },
-    {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" },
-      "delta_y": -240.0
-    },
-    {
-      "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" },
-      "delta_y": -240.0
-    },
-    { "type": "wait_frames", "n": 10 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": 240.0 },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-append" } },
+    { "type": "wait_frames", "n": 8 },
+
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-0" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "wait_frames", "n": 30 },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-ai-transcript-torture-scroll"
     }
   ]
 }
-

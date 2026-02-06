@@ -737,5 +737,7 @@ These files are primarily *shared policy primitives*, not one-off component layo
 
 ## Proposed ADRs (drafts)
 
-- `docs/adr/1158-theme-value-kinds-and-themeconfig-v2.md`
-- `docs/adr/1159-material3-state-layer-and-ripple-primitives.md`
+- `docs/adr/1164-theme-value-kinds-and-themeconfig-v2.md`
+- `docs/adr/1165-material3-state-layer-and-ripple-primitives.md`
+
+

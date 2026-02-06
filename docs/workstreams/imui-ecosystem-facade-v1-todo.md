@@ -159,8 +159,9 @@ Exit criteria:
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`floating_window_impl_on_area` using `floating_area_ex`).
   - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (`render_floating_window_in_area`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (floating window tests still pass under nextest).
-- [~] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
+- [x] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingAreaResponse`, `FloatingWindowResponse`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{area,window,window_open,window_resizable}`).
 - [ ] IMUIECO-float-034 Decide OS-window promotion scope:
   - docking-only for v1 (recommended), or
   - generalized capability-gated promotion later.
@@ -176,7 +177,9 @@ Exit criteria:
 - Perf guidance is written down (allocation patterns, caching boundaries, virtualization).
 
 - [ ] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
-- [ ] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
+- [x] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
+  - Evidence: `apps/fret-demo/src/bin/imui_floating_windows_demo.rs`
+  - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
 - [ ] IMUIECO-test-042 Add nextest coverage for facade crates (smoke + key behavior tests):
   - click variants are delivered once (clear-on-read),
   - drag lifecycle is consistent across frames,
@@ -184,4 +187,5 @@ Exit criteria:
 - [ ] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
 - [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
 - [ ] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
-- [ ] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
+- [x] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
+  - Evidence: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`

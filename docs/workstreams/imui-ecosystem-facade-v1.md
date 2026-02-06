@@ -33,6 +33,10 @@ Status snapshot (2026-02-06):
   - `Esc`-to-close when the title bar is focused,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.
   - optional v1 resize handles via `floating_window_resizable(...)` (edges + corners; diagonal cursor supported).
+- `ui.area(...)` / `ui.window(...)` wrappers return meaningful reports (`FloatingAreaResponse`, `FloatingWindowResponse`) for persistence/debugging.
+- A minimal diagnostics demo + scripted repro exists for floating window drag/resize + context-menu overlay coexistence.
+  - Demo: `cargo run -p fret-demo --bin imui_floating_windows_demo`
+  - Script: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
 
 Tracking:
 

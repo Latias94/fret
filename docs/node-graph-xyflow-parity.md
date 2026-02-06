@@ -427,9 +427,12 @@ canonical data flow and invalidation boundaries:
     - `MeasuredGeometryStore` as the mechanism for publishing measured node sizes and port anchor bounds
     - Batch update API (XyFlow-like action): `MeasuredGeometryStore::apply_batch_if_changed(...)` /
       `MeasuredGeometryStore::apply_exclusive_batch_if_changed(...)` in `ecosystem/fret-node/src/ui/measured.rs`
+    - Portal measurement source publishes growth-only node size hints:
+      - `NodeGraphPortalHost` in `ecosystem/fret-node/src/ui/portal.rs`
+      - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
   - TODO: extend measurement sources:
     - canvas-rendered node chrome geometry (ports, header/body)
-    - optional portal-provided measured sizes
+    - portal-provided port anchor bounds (if/when portals render custom handles)
 
 - [~] **Handle/port bounds in window coordinates**
   - XyFlow: `handleBounds` is part of internal node update pipeline (`updateNodeInternalsSystem(...)`)

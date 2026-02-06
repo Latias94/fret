@@ -880,6 +880,11 @@ fn outside_press_observer_works_with_view_cache_root_and_prepaint_reuse() {
 
     // Frame 1: should be able to reuse the cached interaction range for the overlay root.
     app.advance_frame();
+    // Force a non-stable layout pass so the test exercises interaction-cache replay.
+    //
+    // The layout engine can legitimately skip work on a completely stable frame, which would
+    // bypass prepaint recording/replay and make `interaction_cache_hits` remain 0.
+    ui.invalidate(base, Invalidation::Layout);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     assert!(
         ui.debug_stats().interaction_cache_hits >= 1,

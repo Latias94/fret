@@ -28,7 +28,6 @@ impl FrameTargets {
         size: (u32, u32),
         format: wgpu::TextureFormat,
         usage: wgpu::TextureUsages,
-        budget_bytes: u64,
     ) -> wgpu::TextureView {
         let size = (size.0.max(1), size.1.max(1));
         let slot = match target {
@@ -47,7 +46,7 @@ impl FrameTargets {
 
         if let Some(existing) = slot.take() {
             self.bytes_in_use = self.bytes_in_use.saturating_sub(existing.texture.bytes);
-            pool.release(existing.texture, budget_bytes);
+            pool.release(existing.texture);
         }
 
         let texture =
@@ -84,12 +83,7 @@ impl FrameTargets {
         existing.view.clone()
     }
 
-    pub(super) fn release_target(
-        &mut self,
-        pool: &mut IntermediatePool,
-        target: PlanTarget,
-        budget_bytes: u64,
-    ) {
+    pub(super) fn release_target(&mut self, pool: &mut IntermediatePool, target: PlanTarget) {
         let slot = match target {
             PlanTarget::Intermediate0 => &mut self.intermediate0,
             PlanTarget::Intermediate1 => &mut self.intermediate1,
@@ -101,17 +95,18 @@ impl FrameTargets {
         };
         if let Some(t) = slot.take() {
             self.bytes_in_use = self.bytes_in_use.saturating_sub(t.texture.bytes);
-            pool.release(t.texture, budget_bytes);
+            pool.release(t.texture);
         }
     }
 
     pub(super) fn release_all(&mut self, pool: &mut IntermediatePool, budget_bytes: u64) {
-        self.release_target(pool, PlanTarget::Intermediate0, budget_bytes);
-        self.release_target(pool, PlanTarget::Intermediate1, budget_bytes);
-        self.release_target(pool, PlanTarget::Intermediate2, budget_bytes);
-        self.release_target(pool, PlanTarget::Mask0, budget_bytes);
-        self.release_target(pool, PlanTarget::Mask1, budget_bytes);
-        self.release_target(pool, PlanTarget::Mask2, budget_bytes);
+        self.release_target(pool, PlanTarget::Intermediate0);
+        self.release_target(pool, PlanTarget::Intermediate1);
+        self.release_target(pool, PlanTarget::Intermediate2);
+        self.release_target(pool, PlanTarget::Mask0);
+        self.release_target(pool, PlanTarget::Mask1);
+        self.release_target(pool, PlanTarget::Mask2);
+        pool.enforce_budget(budget_bytes);
     }
 
     pub(super) fn in_use_bytes(&self) -> u64 {

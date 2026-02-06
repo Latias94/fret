@@ -1,4 +1,4 @@
-# ADR 0177: UI Frame Pipeline Ordering (Propagate → Mount → Layout/Paint)
+# ADR 0202: UI Frame Pipeline Ordering (Propagate → Mount → Layout/Paint)
 
 - Status: Proposed
 - Date: 2026-01-16
@@ -45,4 +45,3 @@ To reduce call-site mistakes, `fret-ui` provides a small helper:
 
 - This ADR does not define *how* model/global observation is collected.
 - This ADR does not introduce a new caching unit beyond existing ViewCache boundaries.
-

@@ -1,0 +1,202 @@
+{
+  "generated_unix_ms": 1770347651915,
+  "headroom_pct": 30,
+  "kind": "perf_baseline",
+  "out_path": "/Users/frankorz/codes/rust/fret/docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json",
+  "repeat": 7,
+  "rows": [
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 395,
+        "pointer_move_max_hit_test_time_us": 4,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 266,
+        "top_layout_time_us": 3926,
+        "top_total_time_us": 6613
+      },
+      "script": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 514,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 6,
+        "max_top_layout_us": 5104,
+        "max_top_solve_us": 346,
+        "max_top_total_us": 8597
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 382,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 85,
+        "top_layout_time_us": 3089,
+        "top_total_time_us": 3610
+      },
+      "script": "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 497,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 4016,
+        "max_top_solve_us": 111,
+        "max_top_total_us": 4693
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 402,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 1,
+        "top_layout_engine_solve_time_us": 27,
+        "top_layout_time_us": 2714,
+        "top_total_time_us": 2858
+      },
+      "script": "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 523,
+        "max_pointer_move_global_changes": 2,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 3529,
+        "max_top_solve_us": 36,
+        "max_top_total_us": 3716
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 375,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 350,
+        "top_layout_time_us": 4155,
+        "top_total_time_us": 6947
+      },
+      "script": "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 488,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 5402,
+        "max_top_solve_us": 455,
+        "max_top_total_us": 9032
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 406,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 15,
+        "top_layout_time_us": 1858,
+        "top_total_time_us": 2310
+      },
+      "script": "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 528,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 2416,
+        "max_top_solve_us": 20,
+        "max_top_total_us": 3003
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 395,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 51,
+        "top_layout_time_us": 1941,
+        "top_total_time_us": 2402
+      },
+      "script": "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 514,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 2524,
+        "max_top_solve_us": 67,
+        "max_top_total_us": 3123
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 612,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 719,
+        "top_layout_time_us": 5368,
+        "top_total_time_us": 6752
+      },
+      "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 796,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 6979,
+        "max_top_solve_us": 935,
+        "max_top_total_us": 8778
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 322,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 32,
+        "top_layout_time_us": 2820,
+        "top_total_time_us": 3338
+      },
+      "script": "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 419,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 3666,
+        "max_top_solve_us": 42,
+        "max_top_total_us": 4340
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 2600,
+        "pointer_move_max_hit_test_time_us": 3,
+        "pointer_move_snapshots_with_global_changes": 0,
+        "top_layout_engine_solve_time_us": 102,
+        "top_layout_time_us": 10460,
+        "top_total_time_us": 12832
+      },
+      "script": "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 3380,
+        "max_pointer_move_global_changes": 0,
+        "max_pointer_move_hit_test_us": 4,
+        "max_top_layout_us": 13598,
+        "max_top_solve_us": 133,
+        "max_top_total_us": 16682
+      }
+    },
+    {
+      "measured_max": {
+        "pointer_move_max_dispatch_time_us": 5109,
+        "pointer_move_max_hit_test_time_us": 0,
+        "pointer_move_snapshots_with_global_changes": 27,
+        "top_layout_engine_solve_time_us": 2191,
+        "top_layout_time_us": 15094,
+        "top_total_time_us": 24017
+      },
+      "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+      "thresholds": {
+        "max_pointer_move_dispatch_us": 6642,
+        "max_pointer_move_global_changes": 36,
+        "max_pointer_move_hit_test_us": 0,
+        "max_top_layout_us": 19623,
+        "max_top_solve_us": 2849,
+        "max_top_total_us": 31223
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "warmup_frames": 5
+}
