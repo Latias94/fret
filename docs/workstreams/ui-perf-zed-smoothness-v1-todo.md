@@ -525,7 +525,11 @@ Perf acceptance:
   - Export at least: “paint replay allowed by hit-test-only gate” and “hit-test-only replay attempts rejected by key mismatch”.
   - Implemented by `feat(diag): export hit-test-only paint-cache replay counters` (commit `f38f8c1d5`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 17:32.
-  - Add a focused script where `HitTestOnly` dominates and layout stays stable; current resize probes are too noisy.
+  - [x] Add a focused script where `HitTestOnly` dominates and layout stays stable.
+    - Added probe page + script: `hit_test_only_paint_cache_probe` + `tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json`.
+    - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 18:30.
+  - [ ] Export per-run counter maxima in `diag perf --json` for gate-path counters.
+    - Current `top_*` rows can stay `0` even when bundle-level max counters are non-zero.
 - [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` should ever become default.
   - Current status: keep opt-in only; A/B evidence is mixed across repeated resize probes.
 - [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.

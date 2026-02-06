@@ -4798,3 +4798,80 @@ target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-s
 Notes:
 - These probes still do not exercise the gate path itself (counters remain zero),
   but JSON surface completeness is now fixed for downstream tooling.
+
+## 2026-02-06 18:30:00 (working tree)
+
+Change:
+- Added a dedicated probe page in UI Gallery:
+  - `hit_test_only_paint_cache_probe`
+  - pointer-move hook now calls `host.invalidate(Invalidation::HitTestOnly)` on the probe region.
+- Added focused script:
+  - `tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json`
+- Goal: produce deterministic `HitTestOnly` invalidation while keeping layout stable, then verify whether the
+  `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` gate is actually exercised.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fret-ui-gallery`
+
+A/B probe command (repeat 5):
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-off-v4 \
+  --timeout-ms 240000 --repeat 5 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-only-paint-cache-probe-sweep.json \
+  --dir target/fret-diag-codex-hit-test-only-probe-on-v4 \
+  --timeout-ms 240000 --repeat 5 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_START_PAGE=hit_test_only_paint_cache_probe \
+  --env FRET_UI_GALLERY_VIEW_CACHE=0 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=0 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Perf summary (from `diag perf` JSON output):
+- Gate off (`target/fret-diag-codex-hit-test-only-probe-off-v4`):
+  - `total_time_us`: `1332 / 1386 / 1400 / 1400` (min / p50 / p95 / max)
+  - `top_layout_time_us`: `1262 / 1313 / 1325 / 1325`
+- Gate on (`target/fret-diag-codex-hit-test-only-probe-on-v4`):
+  - `total_time_us`: `1348 / 1384 / 1419 / 1419`
+  - `top_layout_time_us`: `1271 / 1310 / 1339 / 1339`
+
+Counter evidence:
+- `diag perf` top-row fields still report
+  - `top_paint_cache_hit_test_only_replay_allowed = 0`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch = 0`
+- Bundle-level max check (per run) shows the gate is actually hit when enabled:
+```bash
+for dir in \
+  target/fret-diag-codex-hit-test-only-probe-off-v4 \
+  target/fret-diag-codex-hit-test-only-probe-on-v4; do
+  for b in $(find "$dir" -name bundle.json | sort); do
+    jq '[.windows[0].snapshots[].debug.stats.paint_cache_hit_test_only_replay_allowed] | max' "$b"
+  done
+done
+```
+- Result:
+  - gate off: `[0, 0, 0, 0, 0]`
+  - gate on: `[12, 17, 17, 17, 17]`
+- Also observed in every run:
+  - `hit_test_only` invalidation walks: `191`
+  - `paint_cache_hits` max: `50`
+  - `paint_cache_hit_test_only_replay_rejected_key_mismatch` max: `0`
+
+Interpretation:
+- The new probe now provides direct evidence that `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1` opens replay attempts
+  on real runs.
+- Current latency impact in this micro-probe is neutral/mixed (p50 nearly unchanged; p95 slightly worse), so this
+  is correctness/path-validation evidence, not a speedup claim.
+- Follow-up: improve `diag perf --json` to expose per-run counter maxima directly (not only the selected `top_*` row)
+  to avoid false negatives when validating gate-path counters.
