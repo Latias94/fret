@@ -4498,3 +4498,83 @@ target/debug/fretboard diag run tools/diag-scripts/ui-gallery-window-resize-scro
 Result:
 - PASS
 - Evidence bundle: `target/fret-diag-codex-scrollbar-thumb-valid-v1b/1770361216367-ui-gallery-window-resize-scrollbar-thumb-valid/bundle.json`
+
+## 2026-02-06 15:28:00 (recheck; no code change)
+
+Change:
+- Re-run `ui-gallery-window-resize-stress-steady` after recent mainline changes to verify whether
+  the earlier resize conclusions still hold.
+- Compare default behavior vs deferred unbounded scroll probe behavior under the same protocol.
+
+Probe (single script):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command (default):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-recheck-default-v1 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Command (defer probe):
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-recheck-defer-v1 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Default (`target/fret-diag-codex-perf-resize-recheck-default-v1`):
+  - `total_time_us`: min/p50/p95/max = `14862/15164/15323/15323`
+  - `layout_time_us`: min/p50/p95/max = `11366/11671/11830/11830`
+  - `paint_time_us`: min/p50/p95/max = `3346/3399/3417/3417`
+- Defer probe (`target/fret-diag-codex-perf-resize-recheck-defer-v1`):
+  - `total_time_us`: min/p50/p95/max = `11640/11672/11889/11889`
+  - `layout_time_us`: min/p50/p95/max = `8171/8220/8393/8393`
+  - `paint_time_us`: min/p50/p95/max = `3319/3347/3407/3407`
+
+Delta (defer vs default):
+- Worst `total_time_us`: `15323 -> 11889` (`-3434us`, about `-22%`).
+- Worst `layout_time_us`: `11830 -> 8393` (`-3437us`, about `-29%`).
+- Worst `paint_time_us`: `3417 -> 3407` (nearly unchanged).
+
+Worst-frame attribution (recheck):
+- Default worst bundle:
+  - `target/fret-diag-codex-perf-resize-recheck-default-v1/1770362421483-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Top frame (`tick=256/frame=332`):
+    - `layout_time_us=11830`, `paint_time_us=3395`, `paint_text_prepare_time_us=1378`
+    - `paint_text_prepare_reason_width_changed=17`
+- Defer worst bundle:
+  - `target/fret-diag-codex-perf-resize-recheck-defer-v1/1770362463869-ui-gallery-window-resize-stress-steady/bundle.json`
+  - Top frame (`tick=305/frame=386`):
+    - `layout_time_us=8393`, `paint_time_us=3390`, `paint_text_prepare_time_us=1409`
+    - `paint_text_prepare_reason_width_changed=18`
+
+Node-level mapping (semantics-enabled one-shot):
+- Bundle:
+  - `target/fret-diag-codex-perf-resize-map-v1/1770362652598-ui-gallery-window-resize-stress-steady/bundle.json`
+- Hottest layout nodes map to:
+  - `node=4294968132` -> `test_id=ui-gallery-content-viewport`
+  - `node=4294968244` -> descendant under `test_id=ui-gallery-view-cache-root`
+- Interpretation:
+  - the current dominant resize cost is still inside the content viewport subtree,
+  - not paint-cache churn,
+  - and not a broad cache-root miss (the sampled worst frames still show `cache_roots_reused=2/2`).
+
+Notes:
+- This recheck confirms the prior finding: deferred unbounded probe is primarily a layout-tail optimization.
+- It does not reduce `paint_text_prepare` width-change work; text reflow remains a separate hotspot.
