@@ -221,6 +221,9 @@ Exit criteria:
 - [x] MENU-MVP4-test-055 Add a diag script that proves dynamic command-backed items execute and update state.
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-recent-window-commands.json`
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`recent.open(...)`, `window.activate(...)`, `ui-gallery-status-last-action`)
+- [x] MENU-MVP4-test-056 Add a diag assertion for `Window > Windows` checked/radio parity on active window.
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-recent-window-commands.json` (`checked_is` on `window.activate.1`)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`WindowFocusChanged` -> focused window tracking -> radio toggle mapping)
 
 ---
 

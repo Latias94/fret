@@ -61,6 +61,7 @@ struct PendingTaffyDumpRequest {
 #[derive(Default)]
 struct UiGalleryHarnessDiagnosticsStore {
     per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
+    focused_window: Option<AppWindowId>,
 }
 
 #[derive(Default)]
@@ -243,6 +244,13 @@ impl UiGalleryDriver {
         windows
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    fn focused_window_menu_item(app: &App) -> Option<AppWindowId> {
+        let store = app.global::<UiGalleryHarnessDiagnosticsStore>()?;
+        let focused = store.focused_window?;
+        store.per_window.contains_key(&focused).then_some(focused)
+    }
+
     fn recent_open_command(index: usize) -> CommandId {
         CommandId::new(format!("{CMD_GALLERY_RECENT_OPEN_PREFIX}{}", index + 1))
     }
@@ -329,6 +337,7 @@ impl UiGalleryDriver {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let windows = Self::window_menu_items(app);
+            let focused_window = Self::focused_window_menu_item(app);
             if !windows.is_empty() {
                 if let Some(menu) = menu_bar
                     .menus
@@ -343,10 +352,13 @@ impl UiGalleryDriver {
                         *items = windows
                             .into_iter()
                             .enumerate()
-                            .map(|(index, _window)| MenuItem::Command {
+                            .map(|(index, window_id)| MenuItem::Command {
                                 command: Self::window_activate_command(index),
                                 when: None,
-                                toggle: None,
+                                toggle: Some(MenuItemToggle {
+                                    kind: MenuItemToggleKind::Radio,
+                                    checked: Some(window_id) == focused_window,
+                                }),
                             })
                             .collect();
                     }
@@ -898,6 +910,9 @@ impl UiGalleryDriver {
                     text_area: state.text_area.clone(),
                 },
             );
+            if store.focused_window.is_none() {
+                store.focused_window = Some(window);
+            }
         });
 
         // Sync once after per-window state is registered so dynamic menu content (e.g. window list)
@@ -3543,10 +3558,30 @@ impl WinitAppDriver for UiGalleryDriver {
                     app.request_redraw(window);
                 }
             }
+            Event::WindowFocusChanged(focused) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
+                    if *focused {
+                        store.focused_window = Some(window);
+                    } else if store.focused_window == Some(window) {
+                        store.focused_window = None;
+                    }
+                });
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+            }
             Event::WindowCloseRequested => {
                 #[cfg(not(target_arch = "wasm32"))]
                 app.with_global_mut(UiGalleryHarnessDiagnosticsStore::default, |store, _app| {
                     store.per_window.remove(&window);
+                    if store.focused_window == Some(window) {
+                        let next_focused = store
+                            .per_window
+                            .keys()
+                            .copied()
+                            .min_by_key(|window_id| format!("{window_id:?}"));
+                        store.focused_window = next_focused;
+                    }
                 });
                 Self::sync_menu_bar_after_state_change(app, window);
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));

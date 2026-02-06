@@ -74,6 +74,29 @@
       "timeout_frames": 240
     },
 
+    {
+      "type": "menu_select",
+      "menu": { "kind": "test_id", "id": "menubar-trigger-window" },
+      "item": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "menubar-item-ui_gallery-window-activate-1" },
+        "checked": true
+      }
+    },
+
     { "type": "capture_bundle", "label": "ui-gallery-menubar-recent-window-commands" }
   ]
 }
