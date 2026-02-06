@@ -2261,6 +2261,39 @@ pub fn build_app() -> App {
             }
         })
         .unwrap_or_else(|| Arc::from("View"));
+    let file_menu_title = app
+        .global::<fret_runtime::fret_i18n::I18nService>()
+        .map(|i18n| {
+            let text = i18n.t("workspace.menu.file".to_string());
+            if text == "workspace.menu.file" {
+                Arc::from("File")
+            } else {
+                Arc::from(text)
+            }
+        })
+        .unwrap_or_else(|| Arc::from("File"));
+    let edit_menu_title = app
+        .global::<fret_runtime::fret_i18n::I18nService>()
+        .map(|i18n| {
+            let text = i18n.t("workspace.menu.edit".to_string());
+            if text == "workspace.menu.edit" {
+                Arc::from("Edit")
+            } else {
+                Arc::from(text)
+            }
+        })
+        .unwrap_or_else(|| Arc::from("Edit"));
+    let window_menu_title = app
+        .global::<fret_runtime::fret_i18n::I18nService>()
+        .map(|i18n| {
+            let text = i18n.t("workspace.menu.window".to_string());
+            if text == "workspace.menu.window" {
+                Arc::from("Window")
+            } else {
+                Arc::from(text)
+            }
+        })
+        .unwrap_or_else(|| Arc::from("Window"));
 
     let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
     cmds.open = Some(CommandId::new(CMD_APP_OPEN));
@@ -2275,7 +2308,10 @@ pub fn build_app() -> App {
     cmds.switch_locale = Some(CommandId::new(
         fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
     ));
+    cmds.file_menu_title = Some(file_menu_title);
+    cmds.edit_menu_title = Some(edit_menu_title);
     cmds.view_menu_title = Some(view_menu_title);
+    cmds.window_menu_title = Some(window_menu_title);
 
     if Platform::current() == Platform::Macos {
         cmds.app_menu_title = Some(Arc::from("Fret"));

@@ -22,8 +22,14 @@ pub struct WorkspaceMenuCommands {
 
     pub command_palette: Option<CommandId>,
     pub switch_locale: Option<CommandId>,
+    /// Optional override for the top-level "File" menu title.
+    pub file_menu_title: Option<Arc<str>>,
+    /// Optional override for the top-level "Edit" menu title.
+    pub edit_menu_title: Option<Arc<str>>,
     /// Optional override for the top-level "View" menu title.
     pub view_menu_title: Option<Arc<str>>,
+    /// Optional override for the top-level "Window" menu title.
+    pub window_menu_title: Option<Arc<str>>,
 
     pub open: Option<CommandId>,
     pub save: Option<CommandId>,
@@ -72,7 +78,10 @@ impl Default for WorkspaceMenuCommands {
 
             command_palette: None,
             switch_locale: None,
+            file_menu_title: None,
+            edit_menu_title: None,
             view_menu_title: None,
+            window_menu_title: None,
 
             open: None,
             save: None,
@@ -225,7 +234,10 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
         quit_app: _,
         command_palette,
         switch_locale,
+        file_menu_title,
+        edit_menu_title,
         view_menu_title,
+        window_menu_title,
         open,
         save,
         save_as,
@@ -286,14 +298,14 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     }
     if !file_items.is_empty() {
         menus.push(Menu {
-            title: Arc::from("File"),
+            title: file_menu_title.unwrap_or_else(|| Arc::from("File")),
             role: Some(MenuRole::File),
             items: file_items,
         });
     }
     if !edit_items.is_empty() {
         menus.push(Menu {
-            title: Arc::from("Edit"),
+            title: edit_menu_title.unwrap_or_else(|| Arc::from("Edit")),
             role: Some(MenuRole::Edit),
             items: edit_items,
         });
@@ -307,7 +319,7 @@ pub fn workspace_default_menu_bar(cmds: WorkspaceMenuCommands) -> MenuBar {
     }
 
     menus.push(Menu {
-        title: Arc::from("Window"),
+        title: window_menu_title.unwrap_or_else(|| Arc::from("Window")),
         role: Some(MenuRole::Window),
         items: vec![
             MenuItem::Command {
@@ -508,5 +520,38 @@ mod tests {
             .expect("view menu should be present");
 
         assert_eq!(view_menu.title.as_ref(), "视图");
+    }
+
+    #[test]
+    fn workspace_default_menu_uses_custom_file_edit_window_titles_when_provided() {
+        let mut cmds = WorkspaceMenuCommands::default();
+        cmds.open = Some(CommandId::new("app.open"));
+        cmds.undo = Some(CommandId::new("edit.undo"));
+        cmds.file_menu_title = Some(Arc::from("文件"));
+        cmds.edit_menu_title = Some(Arc::from("编辑"));
+        cmds.window_menu_title = Some(Arc::from("窗口"));
+
+        let menu_bar = workspace_default_menu_bar(cmds);
+
+        let file_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::File))
+            .expect("file menu should be present");
+        assert_eq!(file_menu.title.as_ref(), "文件");
+
+        let edit_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::Edit))
+            .expect("edit menu should be present");
+        assert_eq!(edit_menu.title.as_ref(), "编辑");
+
+        let window_menu = menu_bar
+            .menus
+            .iter()
+            .find(|menu| menu.role == Some(MenuRole::Window))
+            .expect("window menu should be present");
+        assert_eq!(window_menu.title.as_ref(), "窗口");
     }
 }
