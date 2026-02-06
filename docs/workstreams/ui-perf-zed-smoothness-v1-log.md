@@ -5252,3 +5252,143 @@ Result highlights:
 Interpretation:
 - Seed policy is now file-versionable and replayable without code edits.
 - Teams can keep policy profiles in-repo, then layer temporary CLI overrides for experiments while preserving reproducibility.
+
+## 2026-02-06 23:20:00 (working tree)
+
+Change:
+- Ran a first preset-driven steady baseline trial (`v16`) using:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`
+- Goal: quantify how much threshold tightening we gain over `v15`, and measure gate stability (`false fail` risk)
+  under the same validation profile.
+
+Commands:
+```bash
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v16-preset \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v16.json \
+  --perf-baseline-headroom-pct 20 \
+  --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v16-validate \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v16.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Additional stability sampling:
+- Repeated two more validation runs with the same settings:
+  - `target/fret-diag-codex-perf-v16-validate2`
+  - `target/fret-diag-codex-perf-v16-validate3`
+- Rechecked `v15` once for control:
+  - `target/fret-diag-codex-perf-v15-validate-recheck`
+
+Results:
+- `v16` validation gate status:
+  - `target/fret-diag-codex-perf-v16-validate/check.perf_thresholds.json`: `failures = 1`
+  - `target/fret-diag-codex-perf-v16-validate2/check.perf_thresholds.json`: `failures = 1`
+  - `target/fret-diag-codex-perf-v16-validate3/check.perf_thresholds.json`: `failures = 1`
+- Stable failing metric across all 3 validation runs:
+  - script: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json`
+  - metric: `top_total_time_us`
+  - threshold (`v16`): `6664`
+  - observed actuals: `7351`, `7403`, `7188`
+  - over-threshold margins: `+687`, `+739`, `+524` us
+- `v15` control recheck:
+  - `target/fret-diag-codex-perf-v15-validate-recheck/check.perf_thresholds.json`: `failures = 0`
+
+v15 -> v16 threshold-delta summary (`ui-gallery-steady`, 11 scripts x 8 gated metrics = 88 checks):
+- tightened: `20`
+- unchanged: `43`
+- loosened: `25`
+- aggregate threshold sums:
+  - `max_top_total_us`: `85809 -> 82475` (`-3.89%`)
+  - `max_top_layout_us`: `59762 -> 58147` (`-2.70%`)
+  - `max_top_solve_us`: `4229 -> 4279` (`+1.18%`)
+
+Key root cause candidate:
+- Overlay steady `top_total` got over-tightened by p90 seeding:
+  - `v15 threshold`: `9066` (max-seeded)
+  - `v16 threshold`: `6664` (p90-seeded)
+  - delta: `-2402` (`-26.5%`)
+- This exceeds observed run-to-run jitter envelope on current machine profile.
+
+Interpretation:
+- Preset strategy works technically and provides measurable tightening.
+- Current `ui-gallery-steady.v1` policy is too aggressive for overlay `top_total_time_us`; it introduces consistent
+  false gate failures under repeat=3 validation.
+- Recommended next action: publish `ui-gallery-steady.v2.json` with overlay `top_total_time_us` switched to `p95`
+  (or keep overlay on `max`) while retaining p90 for scripts that remain stable.
+
+## 2026-02-06 23:55:00 (working tree)
+
+Change:
+- Published preset v2 to address the known overlay false-fail hotspot from v1:
+  - `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`
+  - key adjustment: override `tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us` from `p90` to `p95`.
+- Generated new baseline with preset v2:
+  - `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json`
+
+Baseline command (v17):
+```bash
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v17-preset-v2 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json \
+  --perf-baseline-headroom-pct 20 \
+  --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation sample (3 runs):
+```bash
+cargo run -q -p fretboard -- diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v17-validate{1|2|3} \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `target/fret-diag-codex-perf-v17-validate1/check.perf_thresholds.json`: `failures = 0`
+  - `target/fret-diag-codex-perf-v17-validate2/check.perf_thresholds.json`: `failures = 0`
+  - `target/fret-diag-codex-perf-v17-validate3/check.perf_thresholds.json`: `failures = 0`
+- Overlay false-fail fixed vs v16:
+  - `ui-gallery-overlay-torture-steady` `max_top_total_us`: `6664 (v16) -> 7868 (v17)`
+  - v16 had repeated failures at this point; v17 passed all sampled validations.
+- Threshold delta overview (v15 -> v17, 88 checks):
+  - tightened: `22`, unchanged: `45`, loosened: `21`
+- Aggregate threshold sums:
+  - `max_top_total_us`: `85809 -> 88118` (`+2.69%`)
+  - `max_top_layout_us`: `59762 -> 61061` (`+2.17%`)
+  - `max_top_solve_us`: `4229 -> 6105` (`+44.36%`)
+
+Interpretation:
+- Preset v2 resolves the known overlay false fail and restores validation stability.
+- However, this particular v17 generation run carries a resize-heavy outlier (`window-resize-stress-steady`),
+  which loosens global guard strength despite stable gate pass.
+- Follow-up should add robustness against resize-run outliers (multi-pass baseline selection / outlier rejection)
+  before promoting v17 as the long-term canonical baseline.

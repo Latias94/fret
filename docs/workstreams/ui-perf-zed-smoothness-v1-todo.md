@@ -528,6 +528,22 @@ Perf acceptance:
   - Merge precedence: built-in defaults -> preset rules -> explicit `--perf-baseline-seed` overrides.
   - Added preset example: `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v1.json`.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 22:50.
+- [x] Run v16 preset trial and evaluate gate stability.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v16.json`.
+  - Validation sample: `target/fret-diag-codex-perf-v16-validate{,2,3}/check.perf_thresholds.json` (all `failures=1`).
+  - Control: `target/fret-diag-codex-perf-v15-validate-recheck/check.perf_thresholds.json` (`failures=0`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 23:20.
+- [x] Publish `ui-gallery-steady.v2` preset to remove known false-fail hotspot.
+  - Updated: `docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json`.
+  - Change: `tools/diag-scripts/ui-gallery-overlay-torture-steady.json` now uses `p95` override.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json`.
+  - Validation sample: `target/fret-diag-codex-perf-v17-validate{1,2,3}/check.perf_thresholds.json` (all `failures=0`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 23:55.
+- [ ] Harden baseline generation against resize outliers before adopting v17 as canonical.
+  - Problem: current v17 run includes a resize-heavy outlier that loosens aggregate thresholds.
+  - Candidate approach: run two baseline candidates and keep the one with lower `window-resize-stress-steady` p90 envelope, then re-validate x3.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 23:55.
+
 - [x] Coalesce window resizes to once per frame in the desktop runner.
   - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).
   - Commit: `beb2fa315`
