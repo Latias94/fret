@@ -130,6 +130,14 @@ where
                     focus_is_trigger.clone(),
                 ),
             );
+            cx.key_add_on_key_down_for(
+                shell_root,
+                menubar_trigger_row::exit_active_on_escape_when_closed(
+                    group_active.clone(),
+                    last_focus_before_menubar.clone(),
+                    focus_is_trigger.clone(),
+                ),
+            );
         }
 
         let mut topbar_anchor_id: Option<GlobalElementId> = None;

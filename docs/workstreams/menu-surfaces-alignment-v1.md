@@ -219,6 +219,8 @@ incremental tweaks.
       active (ecosystem-owned rendering)
   - Important constraint: no “first letter” heuristics — mnemonics must come from a
     source-of-truth to avoid localization/collision regressions.
+  - Escape outcome: when the menubar is active but no menu is open, Escape cancels activation and
+    restores focus to the previously focused element.
 
 - **Menu key / Shift+F10**
   - Align “open context menu” behavior with in-window menus so keyboard users have a predictable

@@ -1862,6 +1862,14 @@ impl UiGalleryDriver {
                                 focus_is_trigger.clone(),
                             ),
                         );
+                        cx.key_add_on_key_down_for(
+                            panel.id,
+                            fret_ui_kit::primitives::menubar::trigger_row::exit_active_on_escape_when_closed(
+                                group_active.clone(),
+                                last_focus_before_menubar.clone(),
+                                focus_is_trigger.clone(),
+                            ),
+                        );
                     }
 
                     let mut content: Vec<AnyElement> = vec![

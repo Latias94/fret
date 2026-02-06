@@ -99,6 +99,9 @@ Exit criteria:
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-alt-mnemonic.json`
 - [x] MENU-MVP1-kbd-026 Render mnemonic underlines for in-window menubar triggers (presentation).
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (`attributed_title_with_mnemonic_underline`, trigger label rendering)
+- [x] MENU-MVP1-kbd-027 Escape exits "active menubar" state when no menu is open (restore focus).
+  - Evidence: `ecosystem/fret-ui-kit/src/primitives/menubar/trigger_row.rs` (`exit_active_on_escape_when_closed`)
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-escape-exits-active.json`
 - [x] MENU-MVP1-kbd-022 Ensure Escape closes submenu, then menu, then returns focus to trigger (predictable unwind).
   - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (test `escape_unwinds_submenu_then_menu_and_restores_focus`)
 - [x] MENU-MVP1-kbd-023 Add “menu key” (context-menu key / Shift+F10) alignment notes for consistency with context menus.

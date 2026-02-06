@@ -222,6 +222,81 @@ pub fn open_on_mnemonic_when_active(
     })
 }
 
+/// Build a KeyDown handler that exits "menubar active" state when no top-level menu is open.
+///
+/// This matches common Windows outcomes where pressing Escape while the menubar is active (but no
+/// menu is deployed) cancels the activation and restores focus to the previously focused element.
+///
+/// Policy:
+/// - Only handles plain `Escape` (no modifiers).
+/// - Only on Windows/Linux (in-window menubar mnemonic surface).
+/// - Only when the menubar is active and no menu is currently open.
+/// - Requires the current focus to be on the trigger row (to avoid stealing Escape from other
+///   controls).
+pub fn exit_active_on_escape_when_closed(
+    group_active: Model<Option<MenubarActiveTrigger>>,
+    last_focus_before_menubar: Model<Option<GlobalElementId>>,
+    focus_is_trigger: Model<bool>,
+) -> OnKeyDown {
+    Arc::new(move |host, acx, down| {
+        if down.repeat {
+            return false;
+        }
+
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return false;
+        }
+
+        if down.key != KeyCode::Escape {
+            return false;
+        }
+
+        if down.modifiers.alt
+            || down.modifiers.ctrl
+            || down.modifiers.meta
+            || down.modifiers.shift
+            || down.modifiers.alt_gr
+        {
+            return false;
+        }
+
+        let is_trigger_focused = host
+            .models_mut()
+            .read(&focus_is_trigger, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        if !is_trigger_focused {
+            return false;
+        }
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        let Some(active) = active else {
+            return false;
+        };
+
+        let is_open = host
+            .models_mut()
+            .read(&active.open, |v| *v)
+            .ok()
+            .unwrap_or(false);
+        if is_open {
+            return false;
+        }
+
+        let restore = host
+            .models_mut()
+            .get_cloned(&last_focus_before_menubar)
+            .flatten();
+
+        let _ = host.models_mut().update(&group_active, |v| *v = None);
+        if let Some(restore) = restore {
+            host.request_focus(restore);
+        }
+        host.request_redraw(acx.window);
+        true
+    })
+}
+
 fn cancel_hover_switch_timer(host: &mut dyn UiActionHost, timer: &Model<Option<TimerToken>>) {
     let pending = host.models_mut().read(timer, |v| *v).ok().flatten();
     let Some(token) = pending else {
@@ -671,9 +746,11 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Modifiers};
     use fret_ui::action::{ActionCx, KeyDownCx, UiActionHost, UiFocusActionHost};
+    use std::cell::Cell;
 
     struct Host<'a> {
         app: &'a mut App,
+        last_focus_requested: Cell<Option<GlobalElementId>>,
     }
 
     impl UiActionHost for Host<'_> {
@@ -699,14 +776,19 @@ mod tests {
     }
 
     impl UiFocusActionHost for Host<'_> {
-        fn request_focus(&mut self, _target: GlobalElementId) {}
+        fn request_focus(&mut self, target: GlobalElementId) {
+            self.last_focus_requested.set(Some(target));
+        }
     }
 
     #[test]
     fn hover_switch_arms_timer_and_switches_on_fire() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let trigger_a = GlobalElementId(1);
         let trigger_b = GlobalElementId(2);
@@ -779,7 +861,10 @@ mod tests {
     fn hover_switch_does_not_switch_when_hover_clears_before_timer() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let trigger_a = GlobalElementId(1);
         let trigger_b = GlobalElementId(2);
@@ -867,7 +952,10 @@ mod tests {
 
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let trigger_file = GlobalElementId(1);
         let trigger_edit = GlobalElementId(2);
@@ -926,7 +1014,10 @@ mod tests {
 
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let trigger_file = GlobalElementId(1);
         let open_file = host.models_mut().insert(false);
@@ -979,7 +1070,10 @@ mod tests {
 
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let trigger_file = GlobalElementId(1);
         let open_file = host.models_mut().insert(false);
@@ -1029,7 +1123,10 @@ mod tests {
 
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let trigger_file = GlobalElementId(1);
         let open_file = host.models_mut().insert(false);
@@ -1072,10 +1169,60 @@ mod tests {
     }
 
     #[test]
+    fn escape_exits_active_menubar_when_closed_and_restores_focus() {
+        if !matches!(Platform::current(), Platform::Windows | Platform::Linux) {
+            return;
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
+
+        let trigger_file = GlobalElementId(1);
+        let open_file = host.models_mut().insert(false);
+        let group_active: Model<Option<MenubarActiveTrigger>> =
+            host.models_mut().insert(Some(MenubarActiveTrigger {
+                trigger: trigger_file,
+                open: open_file,
+            }));
+        let last_focus_before_menubar = host.models_mut().insert(Some(GlobalElementId(99)));
+        let focus_is_trigger = host.models_mut().insert(true);
+
+        let on_key = exit_active_on_escape_when_closed(
+            group_active.clone(),
+            last_focus_before_menubar,
+            focus_is_trigger,
+        );
+        let handled = on_key(
+            &mut host,
+            ActionCx {
+                window,
+                target: trigger_file,
+            },
+            KeyDownCx {
+                key: KeyCode::Escape,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(handled);
+
+        let active = host.models_mut().get_cloned(&group_active).flatten();
+        assert!(active.is_none());
+        assert_eq!(host.last_focus_requested.get(), Some(GlobalElementId(99)));
+    }
+
+    #[test]
     fn toggle_opens_when_active_but_closed() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let mut host = Host { app: &mut app };
+        let mut host = Host {
+            app: &mut app,
+            last_focus_requested: Cell::new(None),
+        };
 
         let trigger = GlobalElementId(1);
         let open = host.models_mut().insert(false);
