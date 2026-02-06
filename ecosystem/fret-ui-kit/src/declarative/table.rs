@@ -148,7 +148,7 @@ pub struct TableViewProps {
     /// When `None`, the default heuristic is `overscan * 2`.
     ///
     /// Larger values reduce remount/layout churn when the window oscillates across boundaries
-    /// (e.g. scroll “bounce” patterns), at the cost of retaining more offscreen subtrees.
+    /// (e.g. scroll 閳ユ競ounce閳?patterns), at the cost of retaining more offscreen subtrees.
     pub keep_alive: Option<usize>,
     pub default_column_width: Px,
     pub min_column_width: Px,
@@ -189,6 +189,12 @@ pub struct TableViewProps {
     /// - This may be replaced by a formal style option (e.g. `TableGridLines`) or removed entirely
     ///   once a better default grid strategy exists.
     pub optimize_grid_lines: bool,
+    /// Grouped-mode row pinning display policy.
+    ///
+    /// TanStack-style grouped tables keep pinned leaf rows in their group subtrees and do not
+    /// promote them into dedicated top/bottom visual bands. `PreserveHierarchy` matches that
+    /// behavior and is the default.
+    pub grouped_row_pinning_policy: GroupedRowPinningPolicy,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -198,6 +204,15 @@ pub enum TableRowMeasureMode {
     Fixed,
     /// Variable-height body rows (measurement + write-back).
     Measured,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum GroupedRowPinningPolicy {
+    /// Keep pinned leaf rows inside their grouped hierarchy (TanStack-style default behavior).
+    #[default]
+    PreserveHierarchy,
+    /// Promote pinned rows into top/bottom bands and remove duplicates from the paged center rows.
+    PromotePinnedRows,
 }
 
 impl Default for TableViewProps {
@@ -221,6 +236,7 @@ impl Default for TableViewProps {
             draw_frame: true,
             optimize_paint_order: false,
             optimize_grid_lines: false,
+            grouped_row_pinning_policy: GroupedRowPinningPolicy::PreserveHierarchy,
         }
     }
 }
@@ -336,6 +352,78 @@ mod tests {
         };
 
         let out = apply_row_pinning_to_paged_rows(&visible_all, &page_rows, &row_pinning);
+        let keys = out.into_iter().map(|r| r.row_key()).collect::<Vec<_>>();
+        assert_eq!(keys, vec![RowKey(1), RowKey(2), RowKey(3)]);
+    }
+
+    #[test]
+    fn grouped_row_pinning_policy_preserve_hierarchy_keeps_page_rows_center_unchanged() {
+        let visible_all = vec![
+            DisplayRow::Leaf {
+                data_index: 0,
+                row_key: RowKey(1),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 1,
+                row_key: RowKey(2),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 2,
+                row_key: RowKey(3),
+                depth: 0,
+            },
+        ];
+
+        let page_rows_center = vec![visible_all[1].clone(), visible_all[2].clone()];
+        let row_pinning = crate::headless::table::RowPinningState {
+            top: vec![RowKey(1)],
+            bottom: vec![RowKey(3)],
+        };
+
+        let out = apply_grouped_row_pinning_policy(
+            &visible_all,
+            &page_rows_center,
+            &row_pinning,
+            GroupedRowPinningPolicy::PreserveHierarchy,
+        );
+        let keys = out.into_iter().map(|r| r.row_key()).collect::<Vec<_>>();
+        assert_eq!(keys, vec![RowKey(2), RowKey(3)]);
+    }
+
+    #[test]
+    fn grouped_row_pinning_policy_promote_pinned_rows_matches_legacy_behavior() {
+        let visible_all = vec![
+            DisplayRow::Leaf {
+                data_index: 0,
+                row_key: RowKey(1),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 1,
+                row_key: RowKey(2),
+                depth: 0,
+            },
+            DisplayRow::Leaf {
+                data_index: 2,
+                row_key: RowKey(3),
+                depth: 0,
+            },
+        ];
+
+        let page_rows_center = vec![visible_all[1].clone(), visible_all[2].clone()];
+        let row_pinning = crate::headless::table::RowPinningState {
+            top: vec![RowKey(1)],
+            bottom: vec![RowKey(3)],
+        };
+
+        let out = apply_grouped_row_pinning_policy(
+            &visible_all,
+            &page_rows_center,
+            &row_pinning,
+            GroupedRowPinningPolicy::PromotePinnedRows,
+        );
         let keys = out.into_iter().map(|r| r.row_key()).collect::<Vec<_>>();
         assert_eq!(keys, vec![RowKey(1), RowKey(2), RowKey(3)]);
     }
@@ -854,6 +942,20 @@ fn apply_row_pinning_to_paged_rows(
     out
 }
 
+fn apply_grouped_row_pinning_policy(
+    visible_all: &[DisplayRow],
+    page_rows_center: &[DisplayRow],
+    row_pinning: &crate::headless::table::RowPinningState,
+    policy: GroupedRowPinningPolicy,
+) -> Vec<DisplayRow> {
+    match policy {
+        GroupedRowPinningPolicy::PreserveHierarchy => page_rows_center.to_vec(),
+        GroupedRowPinningPolicy::PromotePinnedRows => {
+            apply_row_pinning_to_paged_rows(visible_all, page_rows_center, row_pinning)
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct GroupedBaseDeps {
     items_revision: u64,
@@ -870,6 +972,7 @@ struct GroupedDisplayDeps {
     sorting: crate::headless::table::SortingState,
     expanding: ExpandingState,
     row_pinning: crate::headless::table::RowPinningState,
+    grouped_row_pinning_policy: GroupedRowPinningPolicy,
     page_index: usize,
     page_size: usize,
 }
@@ -2227,6 +2330,7 @@ where
             sorting: state_value.sorting.clone(),
             expanding: state_value.expanding.clone(),
             row_pinning: state_value.row_pinning.clone(),
+            grouped_row_pinning_policy: props.grouped_row_pinning_policy,
             page_index: state_value.pagination.page_index,
             page_size: state_value.pagination.page_size,
         };
@@ -2298,8 +2402,12 @@ where
                         .to_vec()
                 };
 
-                let page_rows =
-                    apply_row_pinning_to_paged_rows(&visible, &page_rows_center, &deps.row_pinning);
+                let page_rows = apply_grouped_row_pinning_policy(
+                    &visible,
+                    &page_rows_center,
+                    &deps.row_pinning,
+                    deps.grouped_row_pinning_policy,
+                );
 
                 cache.deps = Some(deps.clone());
                 cache.page_rows = page_rows.clone();
@@ -2555,8 +2663,12 @@ where
                     .to_vec()
             };
 
-            let page_rows =
-                apply_row_pinning_to_paged_rows(&visible, &page_rows_center, &deps.row_pinning);
+            let page_rows = apply_grouped_row_pinning_policy(
+                &visible,
+                &page_rows_center,
+                &deps.row_pinning,
+                deps.grouped_row_pinning_policy,
+            );
 
             cache.base_deps = Some(deps.base.clone());
             cache.grouped = grouped;
