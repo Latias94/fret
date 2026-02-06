@@ -31,7 +31,8 @@ use stats::{
     check_bundle_for_retained_vlist_keep_alive_reuse_min,
     check_bundle_for_retained_vlist_reconcile_no_notify_min,
     check_bundle_for_semantics_changed_repainted, check_bundle_for_stale_paint,
-    check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_torture_marker_present,
+    check_bundle_for_stale_scene, check_bundle_for_ui_gallery_code_editor_a11y_selection,
+    check_bundle_for_ui_gallery_code_editor_torture_marker_present,
     check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo,
     check_bundle_for_ui_gallery_code_editor_word_boundary, check_bundle_for_view_cache_reuse_min,
     check_bundle_for_view_cache_reuse_stable_min, check_bundle_for_viewport_capture_min,
@@ -110,6 +111,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
     let mut check_ui_gallery_code_editor_word_boundary: bool = false;
+    let mut check_ui_gallery_code_editor_a11y_selection: bool = false;
     let mut check_semantics_changed_repainted: bool = false;
     let mut dump_semantics_changed_repainted_json: bool = false;
     let mut check_wheel_scroll_test_id: Option<String> = None;
@@ -539,6 +541,10 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             }
             "--check-ui-gallery-code-editor-word-boundary" => {
                 check_ui_gallery_code_editor_word_boundary = true;
+                i += 1;
+            }
+            "--check-ui-gallery-code-editor-a11y-selection" => {
+                check_ui_gallery_code_editor_a11y_selection = true;
                 i += 1;
             }
             "--check-semantics-changed-repainted" => {
@@ -1386,6 +1392,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
                     || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1438,6 +1445,7 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_ui_gallery_code_editor_torture_marker_present,
                         check_ui_gallery_code_editor_torture_undo_redo,
                         check_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -1742,6 +1750,7 @@ See: `docs/tracy.md`.\n";
                         || check_ui_gallery_code_editor_torture_marker_present
                         || check_ui_gallery_code_editor_torture_undo_redo
                         || check_ui_gallery_code_editor_word_boundary
+                        || check_ui_gallery_code_editor_a11y_selection
                         || check_semantics_changed_repainted
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -1792,6 +1801,7 @@ See: `docs/tracy.md`.\n";
                             check_ui_gallery_code_editor_torture_marker_present,
                             check_ui_gallery_code_editor_torture_undo_redo,
                             check_ui_gallery_code_editor_word_boundary,
+                            check_ui_gallery_code_editor_a11y_selection,
                             check_semantics_changed_repainted,
                             dump_semantics_changed_repainted_json,
                             check_wheel_scroll_test_id.as_deref(),
@@ -2873,6 +2883,7 @@ See: `docs/tracy.md`.\n";
                     || check_ui_gallery_code_editor_torture_marker_present
                     || check_ui_gallery_code_editor_torture_undo_redo
                     || check_ui_gallery_code_editor_word_boundary
+                    || check_ui_gallery_code_editor_a11y_selection
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
@@ -3104,6 +3115,7 @@ See: `docs/tracy.md`.\n";
                             || suite_ui_gallery_code_editor_torture_undo_redo,
                         check_ui_gallery_code_editor_word_boundary
                             || suite_ui_gallery_code_editor_word_boundary,
+                        check_ui_gallery_code_editor_a11y_selection,
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
                         check_wheel_scroll_test_id.as_deref(),
@@ -5822,6 +5834,7 @@ fn apply_post_run_checks(
     check_ui_gallery_code_editor_torture_marker_present: bool,
     check_ui_gallery_code_editor_torture_undo_redo: bool,
     check_ui_gallery_code_editor_word_boundary: bool,
+    check_ui_gallery_code_editor_a11y_selection: bool,
     check_semantics_changed_repainted: bool,
     dump_semantics_changed_repainted_json: bool,
     check_wheel_scroll_test_id: Option<&str>,
@@ -5958,6 +5971,9 @@ fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_word_boundary {
         check_bundle_for_ui_gallery_code_editor_word_boundary(bundle_path, warmup_frames)?;
+    }
+    if check_ui_gallery_code_editor_a11y_selection {
+        check_bundle_for_ui_gallery_code_editor_a11y_selection(bundle_path, warmup_frames)?;
     }
     if check_semantics_changed_repainted {
         check_bundle_for_semantics_changed_repainted(
@@ -6705,6 +6721,7 @@ mod tests {
         check_bundle_for_retained_vlist_keep_alive_budget_json,
         check_bundle_for_retained_vlist_reconcile_no_notify_min_json,
         check_bundle_for_semantics_changed_repainted_json, check_bundle_for_stale_scene_json,
+        check_bundle_for_ui_gallery_code_editor_a11y_selection_json,
         check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_json,
         check_bundle_for_view_cache_reuse_min_json, check_bundle_for_viewport_capture_min_json,
         check_bundle_for_viewport_input_min_json, check_bundle_for_vlist_window_shifts_explainable,
@@ -9203,5 +9220,103 @@ mod tests {
         )
         .unwrap_err();
         assert!(err.contains("undo/redo gate failed"));
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_a11y_selection_gate_passes_on_sequence() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [0,0] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-selection-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [0,5] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-selection-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [11,11] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-selection-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 4,
+                            "frame_id": 4,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [11,0] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-selection-gate-viewport", "parent": 2 }
+                            ] } }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_a11y_selection_gate_passes");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        check_bundle_for_ui_gallery_code_editor_a11y_selection_json(&bundle, &bundle_path, 0)
+            .unwrap();
+    }
+
+    #[test]
+    fn ui_gallery_code_editor_a11y_selection_gate_fails_without_select_all() {
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": 1,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 1,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [0,0] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-selection-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 2,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [0,5] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-selection-gate-viewport", "parent": 2 }
+                            ] } }
+                        },
+                        {
+                            "tick_id": 3,
+                            "frame_id": 3,
+                            "debug": { "semantics": { "nodes": [
+                                { "id": 2, "role": "text_field", "flags": { "focused": true }, "text_selection": [11,11] },
+                                { "id": 3, "role": "viewport", "test_id": "ui-gallery-code-editor-a11y-selection-gate-viewport", "parent": 2 }
+                            ] } }
+                        }
+                    ]
+                }
+            ]
+        });
+
+        let out_dir = tmp_out_dir("ui_gallery_code_editor_a11y_selection_gate_fails");
+        let _ = std::fs::create_dir_all(&out_dir);
+        let bundle_path = out_dir.join("bundle.json");
+        let err =
+            check_bundle_for_ui_gallery_code_editor_a11y_selection_json(&bundle, &bundle_path, 0)
+                .unwrap_err();
+        assert!(err.contains("a11y-selection gate failed"));
     }
 }
