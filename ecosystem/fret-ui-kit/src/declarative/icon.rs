@@ -50,7 +50,7 @@ impl IconSvgRegistry {
 pub fn preload_icon_svgs<H: UiHost>(app: &mut H, services: &mut dyn UiServices) {
     let resolved: Vec<(IconId, ResolvedSvgOwned)> =
         app.with_global_mut(IconRegistry::default, |icons, app| {
-            let frozen = icons.freeze().unwrap_or_default();
+            let frozen = icons.freeze_or_default_with_context("fret_ui_kit.preload_icon_svgs");
             app.set_global(frozen.clone());
             frozen.collect_owned()
         });
@@ -88,6 +88,29 @@ pub fn preload_icon_svgs<H: UiHost>(app: &mut H, services: &mut dyn UiServices) 
     });
 }
 
+pub fn resolve_svg_source_from_globals<H: UiHost>(
+    app: &mut H,
+    icon: &IconId,
+    context: &str,
+) -> SvgSource {
+    let resolved = app
+        .global::<FrozenIconRegistry>()
+        .map(|frozen| frozen.resolve_or_missing_owned(icon))
+        .unwrap_or_else(|| {
+            app.with_global_mut(IconRegistry::default, |icons, app| {
+                let frozen = icons.freeze_or_default_with_context(context);
+                let resolved = frozen.resolve_or_missing_owned(icon);
+                app.set_global(frozen);
+                resolved
+            })
+        });
+
+    match resolved {
+        ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
+        ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
+    }
+}
+
 #[track_caller]
 pub fn icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -111,23 +134,7 @@ pub fn icon_with<H: UiHost>(
         {
             SvgSource::Id(svg)
         } else {
-            let resolved = cx
-                .app
-                .global::<FrozenIconRegistry>()
-                .map(|frozen| frozen.resolve_or_missing_owned(&icon))
-                .unwrap_or_else(|| {
-                    cx.app.with_global_mut(IconRegistry::default, |icons, app| {
-                        let frozen = icons.freeze().unwrap_or_default();
-                        let resolved = frozen.resolve_or_missing_owned(&icon);
-                        app.set_global(frozen);
-                        resolved
-                    })
-                });
-
-            match resolved {
-                ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
-                ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
-            }
+            resolve_svg_source_from_globals(cx.app, &icon, "fret_ui_kit.icon_with")
         };
 
         let theme = Theme::global(&*cx.app);

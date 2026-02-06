@@ -348,7 +348,8 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self.inner = self.inner.init_app(move |app| {
             app.with_global_mut(IconRegistry::default, |icons, app| {
                 register(icons);
-                let frozen = icons.freeze().unwrap_or_default();
+                let frozen =
+                    icons.freeze_or_default_with_context("fret_bootstrap.register_icon_pack");
                 app.set_global(frozen);
             });
         });

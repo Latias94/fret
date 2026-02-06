@@ -5,7 +5,17 @@
 //! - Icon packs register assets as data (`IconSource`).
 //! - Rendering (SVG raster caching, budgets, atlases) remains in the renderer layer.
 
-use std::{borrow::Cow, collections::HashMap, sync::Arc};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
+};
+
+const MAX_FREEZE_WARNING_LOGS: usize = 8;
+static FREEZE_WARNING_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct IconId(Cow<'static, str>);
@@ -184,6 +194,43 @@ impl IconRegistry {
     pub fn freeze(&self) -> Result<FrozenIconRegistry, Vec<ResolveError>> {
         FrozenIconRegistry::from_registry_ref(self)
     }
+
+    pub fn freeze_or_default_with_context(&self, context: &str) -> FrozenIconRegistry {
+        match self.freeze() {
+            Ok(frozen) => frozen,
+            Err(errors) => {
+                emit_freeze_warning(context, &errors);
+                FrozenIconRegistry::default()
+            }
+        }
+    }
+}
+
+fn emit_freeze_warning(context: &str, errors: &[ResolveError]) {
+    let index = FREEZE_WARNING_COUNT.fetch_add(1, Ordering::Relaxed);
+    if index >= MAX_FREEZE_WARNING_LOGS {
+        return;
+    }
+
+    eprintln!(
+        "[fret-icons] freeze failed: context={context}, errors={}",
+        errors.len()
+    );
+
+    for error in errors.iter().take(3) {
+        eprintln!("[fret-icons]   {error:?}");
+    }
+
+    if errors.len() > 3 {
+        eprintln!("[fret-icons]   ... and {} more", errors.len() - 3);
+    }
+
+    if index + 1 == MAX_FREEZE_WARNING_LOGS {
+        eprintln!(
+            "[fret-icons] further freeze warnings are suppressed after {} logs",
+            MAX_FREEZE_WARNING_LOGS
+        );
+    }
 }
 
 #[derive(Debug, Default)]
@@ -297,6 +344,7 @@ impl FrozenIconRegistry {
     }
 }
 
+#[derive(Debug)]
 pub enum ResolvedSvg<'a> {
     Static(&'static [u8]),
     Bytes(&'a Arc<[u8]>),
@@ -361,5 +409,15 @@ mod tests {
 
         let resolved = frozen.resolve_or_missing_owned(&IconId::new_static("alias"));
         assert_eq!(resolved.as_bytes(), b"<svg/>");
+    }
+
+    #[test]
+    fn freeze_or_default_returns_empty_when_freeze_fails() {
+        let mut registry = IconRegistry::default();
+        registry.alias(IconId::new_static("a"), IconId::new_static("b"));
+        registry.alias(IconId::new_static("b"), IconId::new_static("a"));
+
+        let frozen = registry.freeze_or_default_with_context("test.freeze_or_default");
+        assert!(frozen.is_empty());
     }
 }
