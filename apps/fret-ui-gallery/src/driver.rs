@@ -187,6 +187,7 @@ struct UiGalleryWindowState {
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
+    sonner_position: Model<shadcn::ToastPosition>,
     virtual_list_torture_jump: Model<String>,
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
@@ -518,6 +519,7 @@ impl UiGalleryDriver {
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
+        let sonner_position = app.models_mut().insert(shadcn::ToastPosition::TopCenter);
         let virtual_list_torture_jump = app.models_mut().insert(String::from("9000"));
         let virtual_list_torture_edit_row = app.models_mut().insert(None::<u64>);
         let virtual_list_torture_edit_text = app.models_mut().insert(String::new());
@@ -650,6 +652,7 @@ impl UiGalleryDriver {
             cmdk_open,
             cmdk_query,
             last_action,
+            sonner_position,
             virtual_list_torture_jump,
             virtual_list_torture_edit_row,
             virtual_list_torture_edit_text,
@@ -1207,6 +1210,7 @@ impl UiGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
+        let sonner_position = state.sonner_position.clone();
         let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
         let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
         let virtual_list_torture_edit_text = state.virtual_list_torture_edit_text.clone();
@@ -1598,6 +1602,7 @@ impl UiGalleryDriver {
                                             cmdk_open.clone(),
                                             cmdk_query.clone(),
                                             last_action.clone(),
+                                            sonner_position.clone(),
                                             virtual_list_torture_jump.clone(),
                                             virtual_list_torture_edit_row.clone(),
                                             virtual_list_torture_edit_text.clone(),
@@ -1696,6 +1701,7 @@ impl UiGalleryDriver {
                                         cmdk_open.clone(),
                                         cmdk_query.clone(),
                                         last_action.clone(),
+                                        sonner_position.clone(),
                                         virtual_list_torture_jump.clone(),
                                         virtual_list_torture_edit_row.clone(),
                                         virtual_list_torture_edit_text.clone(),
@@ -1890,7 +1896,12 @@ impl UiGalleryDriver {
                         if (bisect & BISECT_DISABLE_TOASTER) != 0 {
                             cx.text("")
                         } else {
-                            shadcn::Toaster::new().into_element(cx)
+                            {
+                                let position = cx
+                                    .get_model_copied(&sonner_position, Invalidation::Layout)
+                                    .unwrap_or(shadcn::ToastPosition::TopCenter);
+                                shadcn::Toaster::new().position(position).into_element(cx)
+                            }
                         },
                     ];
 
