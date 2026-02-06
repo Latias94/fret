@@ -44,8 +44,8 @@ pub use plugins::{Plugin, PluginHost, PluginId, PluginRegistrar, install_plugins
 
 pub use settings::{
     DockDragInversionModifierV1, DockDragInversionPolicyV1, DockDragInversionSettingsV1,
-    DockingSettingsV1, FontsSettingsV1, MenuBarIntegrationModeV1, MenuBarSettingsV1, SettingsError,
-    SettingsFileV1,
+    DockingSettingsV1, FontsSettingsV1, LocaleSettingsV1, MenuBarIntegrationModeV1,
+    MenuBarSettingsV1, SettingsError, SettingsFileV1,
 };
 
 pub use dock_layout_file::{DockLayoutError, DockLayoutFileV1};

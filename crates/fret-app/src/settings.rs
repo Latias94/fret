@@ -20,6 +20,24 @@ impl Default for MenuBarSettingsV1 {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct LocaleSettingsV1 {
+    pub primary: String,
+    pub fallbacks: Vec<String>,
+    pub pseudo: bool,
+}
+
+impl Default for LocaleSettingsV1 {
+    fn default() -> Self {
+        Self {
+            primary: "en-US".to_string(),
+            fallbacks: Vec::new(),
+            pseudo: false,
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MenuBarIntegrationModeV1 {
@@ -58,6 +76,7 @@ pub struct SettingsFileV1 {
     pub fonts: FontsSettingsV1,
     pub docking: DockingSettingsV1,
     pub menu_bar: MenuBarSettingsV1,
+    pub locale: LocaleSettingsV1,
 }
 
 impl Default for SettingsFileV1 {
@@ -67,6 +86,7 @@ impl Default for SettingsFileV1 {
             fonts: FontsSettingsV1::default(),
             docking: DockingSettingsV1::default(),
             menu_bar: MenuBarSettingsV1::default(),
+            locale: LocaleSettingsV1::default(),
         }
     }
 }
@@ -112,6 +132,34 @@ impl SettingsFileV1 {
             return Ok(None);
         }
         Self::load_json_value(path).map(Some)
+    }
+
+    pub fn resolved_locales(&self) -> Vec<fret_runtime::fret_i18n::LocaleId> {
+        let mut out = Vec::new();
+
+        let primary = parse_locale_or_default(&self.locale.primary);
+        out.push(primary);
+
+        for fallback in &self.locale.fallbacks {
+            let Some(locale) = parse_locale_if_well_formed(fallback) else {
+                continue;
+            };
+            if !out.contains(&locale) {
+                out.push(locale);
+            }
+        }
+
+        if out.is_empty() {
+            out.push(fret_runtime::fret_i18n::LocaleId::default());
+        }
+
+        out
+    }
+
+    pub fn i18n_service(&self) -> fret_runtime::fret_i18n::I18nService {
+        let mut service = fret_runtime::fret_i18n::I18nService::new(self.resolved_locales());
+        service.set_pseudo_enabled(self.locale.pseudo);
+        service
     }
 }
 
@@ -205,6 +253,42 @@ impl SettingsFileV1 {
             dock_hint_scale_outer,
             ..Default::default()
         }
+    }
+}
+
+pub fn apply_settings_globals(app: &mut crate::App, settings: &SettingsFileV1) {
+    app.set_global(settings.clone());
+    app.set_global(settings.docking_interaction_settings());
+
+    let mut i18n = settings.i18n_service();
+    crate::core_commands::ensure_core_i18n_backend(&mut i18n);
+    app.set_global(i18n);
+    crate::core_commands::apply_core_command_localization(app);
+}
+
+fn parse_locale_or_default(input: &str) -> fret_runtime::fret_i18n::LocaleId {
+    parse_locale_if_well_formed(input).unwrap_or_else(fret_runtime::fret_i18n::LocaleId::default)
+}
+
+fn parse_locale_if_well_formed(input: &str) -> Option<fret_runtime::fret_i18n::LocaleId> {
+    let locale = fret_runtime::fret_i18n::LocaleId::parse(input).ok()?;
+    let langid = locale.as_langid();
+
+    let normalized = input.trim();
+    let has_explicit_subtag_separator = normalized.contains('-') || normalized.contains('_');
+
+    let has_region_or_script = langid.region.is_some() || langid.script.is_some();
+    let has_min_length = langid.language.as_str().len() >= 2;
+    let has_variants = langid.variants().len() > 0;
+
+    if has_variants {
+        return None;
+    }
+
+    if has_region_or_script || (has_explicit_subtag_separator && has_min_length) {
+        Some(locale)
+    } else {
+        None
     }
 }
 
@@ -314,6 +398,72 @@ mod tests {
         assert_eq!(
             resolved.dock_hint_scale_outer,
             fret_runtime::DockingInteractionSettings::default().dock_hint_scale_outer
+        );
+    }
+
+    #[test]
+    fn locale_defaults_to_en_us_without_fallbacks() {
+        let settings = SettingsFileV1::default();
+        assert_eq!(settings.locale.primary, "en-US");
+        assert!(settings.locale.fallbacks.is_empty());
+        assert!(!settings.locale.pseudo);
+    }
+
+    #[test]
+    fn resolved_locales_falls_back_to_default_when_primary_is_invalid() {
+        let mut settings = SettingsFileV1::default();
+        settings.locale.primary = "invalid-locale".to_string();
+
+        let locales = settings.resolved_locales();
+        assert_eq!(locales, vec![fret_runtime::fret_i18n::LocaleId::default()]);
+    }
+
+    #[test]
+    fn resolved_locales_dedupes_and_skips_invalid_fallbacks() {
+        let mut settings = SettingsFileV1::default();
+        settings.locale.primary = "en-US".to_string();
+        settings.locale.fallbacks = vec![
+            "zh-CN".to_string(),
+            "invalid".to_string(),
+            "en-US".to_string(),
+        ];
+
+        let locales = settings.resolved_locales();
+        assert_eq!(
+            locales,
+            vec![
+                fret_runtime::fret_i18n::LocaleId::parse("en-US").expect("valid locale"),
+                fret_runtime::fret_i18n::LocaleId::parse("zh-CN").expect("valid locale"),
+            ]
+        );
+    }
+
+    #[test]
+    fn i18n_service_applies_pseudo_from_settings() {
+        let mut settings = SettingsFileV1::default();
+        settings.locale.pseudo = true;
+
+        let service = settings.i18n_service();
+        assert!(service.pseudo_enabled());
+        assert_eq!(service.preferred_locales().len(), 1);
+    }
+
+    #[test]
+    fn apply_settings_globals_sets_i18n_service() {
+        let mut app = crate::App::new();
+
+        let mut settings = SettingsFileV1::default();
+        settings.locale.primary = "zh-CN".to_string();
+        settings.locale.pseudo = true;
+        apply_settings_globals(&mut app, &settings);
+
+        let service = app
+            .global::<fret_runtime::fret_i18n::I18nService>()
+            .expect("i18n service must be installed");
+        assert!(service.pseudo_enabled());
+        assert_eq!(
+            service.preferred_locales(),
+            &[fret_runtime::fret_i18n::LocaleId::parse("zh-CN").expect("valid locale")]
         );
     }
 }

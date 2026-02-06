@@ -219,7 +219,7 @@ struct UiGalleryWindowState {
 struct UiGalleryDriver;
 
 impl UiGalleryDriver {
-    fn build_workspace_menu_commands() -> fret_workspace::menu::WorkspaceMenuCommands {
+    fn build_workspace_menu_commands(app: &App) -> fret_workspace::menu::WorkspaceMenuCommands {
         let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
         cmds.open = Some(CommandId::new(CMD_APP_OPEN));
         cmds.save = Some(CommandId::new(CMD_APP_SAVE));
@@ -230,6 +230,26 @@ impl UiGalleryDriver {
         cmds.paste = Some(CommandId::new(fret_app::core_commands::EDIT_PASTE));
         cmds.select_all = Some(CommandId::new(fret_app::core_commands::EDIT_SELECT_ALL));
         cmds.command_palette = Some(CommandId::new(fret_app::core_commands::COMMAND_PALETTE));
+        cmds.switch_locale = Some(CommandId::new(
+            fret_app::core_commands::APP_LOCALE_SWITCH_NEXT,
+        ));
+
+        let resolve_menu_title = |key: &'static str, fallback: &'static str| -> Arc<str> {
+            app.global::<fret_runtime::fret_i18n::I18nService>()
+                .map(|i18n| {
+                    let text = i18n.t(key.to_string());
+                    if text == key {
+                        Arc::from(fallback)
+                    } else {
+                        Arc::from(text)
+                    }
+                })
+                .unwrap_or_else(|| Arc::from(fallback))
+        };
+        cmds.file_menu_title = Some(resolve_menu_title("workspace-menu-file", "File"));
+        cmds.edit_menu_title = Some(resolve_menu_title("workspace-menu-edit", "Edit"));
+        cmds.view_menu_title = Some(resolve_menu_title("workspace-menu-view", "View"));
+        cmds.window_menu_title = Some(resolve_menu_title("workspace-menu-window", "Window"));
 
         if Platform::current() == Platform::Macos {
             cmds.app_menu_title = Some(Arc::from("Fret"));
@@ -317,8 +337,9 @@ impl UiGalleryDriver {
         let os = settings.menu_bar.os;
         let in_window = settings.menu_bar.in_window;
 
-        let mut menu_bar =
-            fret_workspace::menu::workspace_default_menu_bar(Self::build_workspace_menu_commands());
+        let mut menu_bar = fret_workspace::menu::workspace_default_menu_bar(
+            Self::build_workspace_menu_commands(app),
+        );
 
         let recent_items = Self::recent_menu_items(app);
 
@@ -2755,8 +2776,7 @@ pub fn build_app() -> App {
 
     let config_paths = LayeredConfigPaths::for_project_root(".");
     if let Ok((settings, _report)) = load_layered_settings(&config_paths) {
-        app.set_global(settings.clone());
-        app.set_global(settings.docking_interaction_settings());
+        fret_app::settings::apply_settings_globals(&mut app, &settings);
     }
 
     // Minimal command surface for `CommandDialog::new_with_host_commands`.
@@ -3418,8 +3438,7 @@ impl WinitAppDriver for UiGalleryDriver {
                             let paths = LayeredConfigPaths::for_project_root(".");
                             let (settings, _report) = load_layered_settings(&paths)
                                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-                            app.set_global(settings.clone());
-                            app.set_global(settings.docking_interaction_settings());
+                            fret_app::settings::apply_settings_globals(app, &settings);
                             fret_app::sync_os_menu_bar(app);
                             Ok(())
                         });
@@ -3495,6 +3514,14 @@ impl WinitAppDriver for UiGalleryDriver {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.preferences");
                 });
+            }
+            fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
+                if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
+                    Self::sync_menu_bar_after_state_change(app, window);
+                    let _ = app.models_mut().update(&state.last_action, |v| {
+                        *v = Arc::<str>::from("cmd.locale.switch_next");
+                    });
+                }
             }
             fret_app::core_commands::APP_QUIT => {
                 app.push_effect(Effect::QuitApp);

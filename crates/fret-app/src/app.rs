@@ -77,6 +77,7 @@ impl App {
         app.set_global(default_keymap_service());
 
         app.set_global(fret_runtime::DockingInteractionSettings::default());
+        app.set_global(fret_runtime::fret_i18n::I18nService::default());
 
         crate::core_commands::register_core_commands(app.commands_mut());
         crate::keymap::install_command_default_keybindings_into_keymap(&mut app);
@@ -832,7 +833,9 @@ pub struct Focus {
 mod tests {
     use super::{App, default_keymap_service};
     use fret_core::{KeyCode, Modifiers};
-    use fret_runtime::{CommandId, InputContext, InputDispatchPhase, KeyChord, Platform};
+    use fret_runtime::{
+        CommandId, InputContext, InputDispatchPhase, KeyChord, Platform, fret_i18n,
+    };
     use std::any::TypeId;
     use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -1021,6 +1024,18 @@ mod tests {
         assert_eq!(
             service.keymap.resolve(&ctx(Platform::Macos), cmd_shift_z),
             Some(CommandId::from("edit.redo"))
+        );
+    }
+
+    #[test]
+    fn app_new_installs_default_i18n_service() {
+        let app = App::new();
+        let service = app
+            .global::<fret_i18n::I18nService>()
+            .expect("i18n service should exist by default");
+        assert_eq!(
+            service.preferred_locales(),
+            &[fret_i18n::LocaleId::default()]
         );
     }
 }
