@@ -308,6 +308,14 @@ before continuing component surface work:
       and `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-view.scss`.
     - Compose baseline: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SearchBar.kt`.
 
+- [ ] SearchView (overlay) policy surface.
+  - Goal: implement the expanded “search view” overlay (results list + focus/scroll policies) on top
+    of the `SearchBar` primitive, using `md.comp.search-view.*` tokens for outcome alignment.
+  - Notes:
+    - Prefer reusing the existing overlay + listbox primitives we already hardened for Select / Autocomplete.
+    - Keep the mechanism boundary: only propose `crates/fret-ui` changes if a correct outcome cannot be expressed
+      via `fret-ui-kit` overlays and component policy.
+
 - [x] Autocomplete (outlined + filled) MVP surface.
   - Goal: provide an editable trigger with a listbox overlay using Material Web autocomplete tokens,
     aligned with Compose exposed dropdown menus at the outcome level.
