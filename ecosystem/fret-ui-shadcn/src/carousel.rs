@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Edges, MouseButton, Point, Px, SemanticsRole};
-use fret_icons::IconId;
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
@@ -595,7 +595,7 @@ impl Carousel {
                 .disabled(prev_disabled)
                 .test_id("carousel-previous")
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(cx, IconId::new_static("lucide.arrow-left"))])
+                .children([decl_icon::icon(cx, ids::ui::ARROW_LEFT)])
                 .on_activate(on_prev)
                 .into_element(cx);
 
@@ -605,10 +605,7 @@ impl Carousel {
                 .disabled(next_disabled)
                 .test_id("carousel-next")
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([decl_icon::icon(
-                    cx,
-                    IconId::new_static("lucide.arrow-right"),
-                )])
+                .children([decl_icon::icon(cx, ids::ui::ARROW_RIGHT)])
                 .on_activate(on_next)
                 .into_element(cx);
 

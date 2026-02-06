@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{SemanticsRole, TextOverflow, TextWrap};
-use fret_icons::IconId;
+use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -50,11 +50,11 @@ impl ToolStatus {
 
     pub fn icon_id(self) -> IconId {
         match self {
-            Self::Pending => IconId::new_static("lucide.circle"),
-            Self::Running => IconId::new_static("lucide.clock"),
-            Self::Succeeded => IconId::new_static("lucide.circle-check"),
-            Self::Failed => IconId::new_static("lucide.circle-x"),
-            Self::Cancelled => IconId::new_static("lucide.circle-x"),
+            Self::Pending => ids::ui::STATUS_PENDING,
+            Self::Running => ids::ui::STATUS_RUNNING,
+            Self::Succeeded => ids::ui::STATUS_SUCCEEDED,
+            Self::Failed => ids::ui::STATUS_FAILED,
+            Self::Cancelled => ids::ui::STATUS_FAILED,
         }
     }
 
@@ -131,7 +131,7 @@ impl ToolHeader {
             stack::HStackProps::default().gap(Space::N2).items_center(),
             move |cx| {
                 vec![
-                    decl_icon::icon(cx, IconId::new_static("lucide.wrench")),
+                    decl_icon::icon(cx, ids::ui::TOOL),
                     cx.text(label.clone()),
                     badge,
                 ]
@@ -141,9 +141,9 @@ impl ToolHeader {
         let chevron = decl_icon::icon(
             cx,
             if is_open {
-                IconId::new_static("lucide.chevron-up")
+                ids::ui::CHEVRON_UP
             } else {
-                IconId::new_static("lucide.chevron-down")
+                ids::ui::CHEVRON_DOWN
             },
         );
 

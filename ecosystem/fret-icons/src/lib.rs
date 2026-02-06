@@ -40,17 +40,27 @@ pub mod ids {
     pub mod ui {
         use super::IconId;
 
+        pub const ARROW_LEFT: IconId = IconId::new_static("ui.arrow.left");
+        pub const ARROW_RIGHT: IconId = IconId::new_static("ui.arrow.right");
+        pub const BOOK: IconId = IconId::new_static("ui.book");
         pub const CHECK: IconId = IconId::new_static("ui.check");
+        pub const CHEVRON_LEFT: IconId = IconId::new_static("ui.chevron.left");
         pub const CHEVRON_DOWN: IconId = IconId::new_static("ui.chevron.down");
         pub const CHEVRON_RIGHT: IconId = IconId::new_static("ui.chevron.right");
         pub const CHEVRON_UP: IconId = IconId::new_static("ui.chevron.up");
         pub const CLOSE: IconId = IconId::new_static("ui.close");
+        pub const LOADER: IconId = IconId::new_static("ui.loader");
         pub const MORE_HORIZONTAL: IconId = IconId::new_static("ui.more.horizontal");
         pub const MINUS: IconId = IconId::new_static("ui.minus");
         pub const PLAY: IconId = IconId::new_static("ui.play");
         pub const SEARCH: IconId = IconId::new_static("ui.search");
         pub const SETTINGS: IconId = IconId::new_static("ui.settings");
         pub const SLASH: IconId = IconId::new_static("ui.slash");
+        pub const STATUS_FAILED: IconId = IconId::new_static("ui.status.failed");
+        pub const STATUS_PENDING: IconId = IconId::new_static("ui.status.pending");
+        pub const STATUS_RUNNING: IconId = IconId::new_static("ui.status.running");
+        pub const STATUS_SUCCEEDED: IconId = IconId::new_static("ui.status.succeeded");
+        pub const TOOL: IconId = IconId::new_static("ui.tool");
     }
 }
 
