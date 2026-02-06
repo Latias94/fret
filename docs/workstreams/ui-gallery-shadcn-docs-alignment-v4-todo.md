@@ -109,9 +109,9 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] tabs ? examples mirrored (Demo/Line/Vertical/Disabled/Icons/RTL; line variant uses style approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_tabs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`)
 - [x] textarea ? examples mirrored (Demo/Field/Disabled/Invalid/Button/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_textarea`, `ecosystem/fret-ui-shadcn/src/textarea.rs`)
 - [x] toast ? docs-aligned deprecation notice only (upstream points to Sonner) (`apps/fret-ui-gallery/src/ui.rs::preview_toast`, `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx`)
-- [ ] toggle
-- [ ] toggle-group
-- [ ] tooltip
+- [~] toggle - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle.rs`)
+- [~] toggle-group - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`)
+- [~] tooltip - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/tooltip.rs`)
 - [ ] typography
 
 ---
