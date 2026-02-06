@@ -7,10 +7,10 @@ fn view_cache_invalidation_stops_at_boundary_for_paint() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let a = ui.create_node(TestStack::default());
-    let b = ui.create_node(TestStack::default());
-    let c = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let a = ui.create_node(TestStack);
+    let b = ui.create_node(TestStack);
+    let c = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![a]);
@@ -106,8 +106,8 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
     ui.nodes[boundary].view_cache.enabled = true;
     ui.nodes[boundary].view_cache.contained_layout = true;
 
@@ -140,11 +140,11 @@ fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let outer = ui.create_node(TestStack::default());
-    let mid = ui.create_node(TestStack::default());
-    let inner = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let mid = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![outer]);
@@ -204,8 +204,8 @@ fn view_cache_auto_sized_repair_does_not_promote_hit_test_when_bounds_are_known(
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
     ui.nodes[boundary].view_cache.enabled = true;
     ui.nodes[boundary].view_cache.contained_layout = true;
     ui.nodes[boundary].view_cache.layout_definite = false;
@@ -240,11 +240,11 @@ fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let outer = ui.create_node(TestStack::default());
-    let mid = ui.create_node(TestStack::default());
-    let inner = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let mid = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![outer]);
@@ -275,9 +275,9 @@ fn view_cache_notify_marks_cache_root_needs_rerender() {
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![boundary]);
@@ -304,11 +304,11 @@ fn view_cache_notify_propagates_to_ancestor_cache_roots() {
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let outer = ui.create_node(TestStack::default());
-    let mid = ui.create_node(TestStack::default());
-    let inner = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let mid = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![outer]);
@@ -340,9 +340,9 @@ fn view_cache_scroll_handle_hit_test_only_invalidations_do_not_mark_cache_root_n
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![boundary]);
@@ -385,9 +385,9 @@ fn view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender(
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![boundary]);
@@ -426,9 +426,9 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
     ui.set_window(window);
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
-    let vlist_node = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let vlist_node = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![boundary]);
@@ -516,6 +516,8 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
     for id in [root, boundary, vlist_node] {
         ui.test_clear_node_invalidations(id);
@@ -530,6 +532,8 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
 
     assert!(ui.nodes[boundary].invalidation.hit_test);
@@ -547,9 +551,9 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
     ui.set_window(window);
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
-    let scroll_node = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
+    let scroll_node = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![boundary]);
@@ -602,6 +606,8 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
     for id in [root, boundary, scroll_node] {
         ui.nodes[id].invalidation.clear();
@@ -616,6 +622,8 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         &mut app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        true,
     );
 
     assert!(ui.nodes[boundary].view_cache_needs_rerender);
@@ -641,8 +649,8 @@ fn widget_request_animation_frame_marks_nearest_view_cache_root_dirty() {
         }
     }
 
-    let root = ui.create_node(TestStack::default());
-    let boundary = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let boundary = ui.create_node(TestStack);
     let leaf = ui.create_node(RafWidget);
 
     ui.set_root(root);
@@ -682,9 +690,9 @@ fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_root
     ui.set_window(AppWindowId::default());
     ui.set_view_cache_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let outer = ui.create_node(TestStack::default());
-    let inner = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let outer = ui.create_node(TestStack);
+    let inner = ui.create_node(TestStack);
     let leaf = ui.create_node(PaintObservingWidget {
         model: model.clone(),
     });

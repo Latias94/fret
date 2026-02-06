@@ -62,8 +62,9 @@ The platform runner owns the actual timer mechanism and injects timer events bac
 
 When an element-owned hook schedules a timer, the runtime records the timer token’s **target element**.
 When the runner later injects `Event::Timer { token }`, the UI runtime first attempts to dispatch it
-to the recorded target element (if it is still mounted). If no target is found, the runtime falls
-back to dispatching the timer event to visible layers that have opted into timer delivery.
+to the recorded target element (if it is still mounted). Timer events are delivered to the recorded
+target element only (they do not bubble by default). If no target is found, the runtime falls back
+to dispatching the timer event to visible layers that have opted into timer delivery.
 
 This allows interaction policies (e.g. overlay/menu hover delays) to remain deterministic under
 view caching and multi-layer input routing.

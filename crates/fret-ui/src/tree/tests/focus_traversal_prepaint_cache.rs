@@ -82,7 +82,7 @@ fn focus_traversal_uses_prepaint_cache_for_clean_nodes() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     let scroll = ui.create_node(CountingFocusWidget::new(
         false,
         true,

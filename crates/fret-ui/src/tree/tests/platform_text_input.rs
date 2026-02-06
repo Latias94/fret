@@ -120,8 +120,10 @@ fn platform_text_input_query_can_get_text_ranges_bounds_and_replace() {
     ui.set_window(window);
 
     let mut input = crate::text_input::TextInput::new().with_text("a😀b");
-    let mut style = crate::TextInputStyle::default();
-    style.padding = Edges::all(Px(0.0));
+    let style = crate::TextInputStyle {
+        padding: Edges::all(Px(0.0)),
+        ..Default::default()
+    };
     input.set_chrome_style(style);
 
     let root = ui.create_node(TestStack);
@@ -242,8 +244,10 @@ fn platform_text_input_replace_and_mark_can_drive_caret_anchored_preedit() {
     ui.set_window(window);
 
     let mut input = crate::text_input::TextInput::new().with_text("abc");
-    let mut style = crate::TextInputStyle::default();
-    style.padding = Edges::all(Px(0.0));
+    let style = crate::TextInputStyle {
+        padding: Edges::all(Px(0.0)),
+        ..Default::default()
+    };
     input.set_chrome_style(style);
 
     let root = ui.create_node(TestStack);

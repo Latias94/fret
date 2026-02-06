@@ -8,6 +8,12 @@ struct PendingInvalidation {
     detail: UiDebugInvalidationDetail,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DispatchChainMode {
+    Bubble,
+    SelfOnly,
+}
+
 impl<H: UiHost> UiTree<H> {
     fn event_is_scroll_like(event: &Event) -> bool {
         // Wheel-only for now (trackpad pan / inertial scrolling can be added later as explicit
@@ -100,7 +106,7 @@ impl<H: UiHost> UiTree<H> {
         window: AppWindowId,
         hit_for_hover: Option<NodeId>,
         hit_for_hover_region: Option<NodeId>,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
         needs_redraw: &mut bool,
     ) {
         let hovered_pressable: Option<crate::elements::GlobalElementId> =
@@ -108,7 +114,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(record.instance, declarative::ElementInstance::Pressable(_))
                     {
                         return Some(record.element);
@@ -169,7 +175,7 @@ impl<H: UiHost> UiTree<H> {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover_region;
                 while let Some(id) = node {
-                    if let Some(record) = window_frame.instances.get(&id)
+                    if let Some(record) = window_frame.instances.get(id)
                         && matches!(
                             record.instance,
                             declarative::ElementInstance::HoverRegion(_)
@@ -274,6 +280,7 @@ impl<H: UiHost> UiTree<H> {
             });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn dispatch_pointer_move_layer_observers(
         &mut self,
         app: &mut H,
@@ -282,7 +289,7 @@ impl<H: UiHost> UiTree<H> {
         barrier_root: Option<NodeId>,
         event: &Event,
         needs_redraw: &mut bool,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) {
         let Event::Pointer(PointerEvent::Move {
             pointer_id,
@@ -308,9 +315,10 @@ impl<H: UiHost> UiTree<H> {
             .flatten()
             .filter(|(_, occlusion)| *occlusion != PointerOcclusion::None)
             .map(|(layer, _)| layer);
-        let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
+        self.rebuild_visible_layers_scratch();
         let mut hit_barrier = false;
-        for layer_id in layers.into_iter().rev() {
+        for i in (0..self.scratch_visible_layers.len()).rev() {
+            let layer_id = self.scratch_visible_layers[i];
             let Some((layer_root, visible, wants_pointer_move_events)) = self
                 .layers
                 .get(layer_id)
@@ -379,7 +387,7 @@ impl<H: UiHost> UiTree<H> {
     fn apply_pending_invalidations(
         &mut self,
         pending: HashMap<NodeId, PendingInvalidation>,
-        visited: &mut HashMap<NodeId, u8>,
+        visited: &mut impl InvalidationVisited,
     ) {
         if pending.is_empty() {
             return;
@@ -570,7 +578,7 @@ impl<H: UiHost> UiTree<H> {
         if roots.is_empty() {
             return false;
         }
-        if roots.iter().any(|&root| root == target) {
+        if roots.contains(&target) {
             return true;
         }
 
@@ -599,6 +607,7 @@ impl<H: UiHost> UiTree<H> {
         false
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn dispatch_event_to_node_chain(
         &mut self,
         app: &mut H,
@@ -607,7 +616,8 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         event: &Event,
         needs_redraw: &mut bool,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
+        mode: DispatchChainMode,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
@@ -733,15 +743,14 @@ impl<H: UiHost> UiTree<H> {
 
                 if let Some(capture) = requested_capture
                     && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+                    && let Some(pointer_id) = pointer_id_for_capture
                 {
-                    if let Some(pointer_id) = pointer_id_for_capture {
-                        match capture {
-                            Some(node) => {
-                                self.captured.insert(pointer_id, node);
-                            }
-                            None => {
-                                self.captured.remove(&pointer_id);
-                            }
+                    match capture {
+                        Some(node) => {
+                            self.captured.insert(pointer_id, node);
+                        }
+                        None => {
+                            self.captured.remove(&pointer_id);
                         }
                     }
                 }
@@ -754,6 +763,14 @@ impl<H: UiHost> UiTree<H> {
                         invalidation_visited,
                     );
                     return true;
+                }
+
+                if matches!(mode, DispatchChainMode::SelfOnly) {
+                    self.apply_pending_invalidations(
+                        std::mem::take(&mut pending_invalidations),
+                        invalidation_visited,
+                    );
+                    return false;
                 }
             }
             self.apply_pending_invalidations(
@@ -872,15 +889,14 @@ impl<H: UiHost> UiTree<H> {
 
             if let Some(capture) = requested_capture
                 && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+                && let Some(pointer_id) = pointer_id_for_capture
             {
-                if let Some(pointer_id) = pointer_id_for_capture {
-                    match capture {
-                        Some(node) => {
-                            self.captured.insert(pointer_id, node);
-                        }
-                        None => {
-                            self.captured.remove(&pointer_id);
-                        }
+                match capture {
+                    Some(node) => {
+                        self.captured.insert(pointer_id, node);
+                    }
+                    None => {
+                        self.captured.remove(&pointer_id);
                     }
                 }
             }
@@ -894,6 +910,9 @@ impl<H: UiHost> UiTree<H> {
                 return true;
             }
 
+            if matches!(mode, DispatchChainMode::SelfOnly) {
+                break;
+            }
             node_id = match parent {
                 Some(parent) => parent,
                 None => break,
@@ -918,20 +937,135 @@ impl<H: UiHost> UiTree<H> {
 
         self.begin_debug_frame_if_needed(app.frame_id());
 
+        #[derive(Clone, Copy)]
+        enum DebugDispatchEventClass {
+            Pointer,
+            Timer,
+            Other,
+        }
+
+        fn classify_debug_dispatch_event(event: &Event) -> DebugDispatchEventClass {
+            match event {
+                Event::Pointer(_)
+                | Event::PointerCancel(_)
+                | Event::ExternalDrag(_)
+                | Event::ExternalDropData(_)
+                | Event::InternalDrag(_) => DebugDispatchEventClass::Pointer,
+                Event::Timer { .. } => DebugDispatchEventClass::Timer,
+                _ => DebugDispatchEventClass::Other,
+            }
+        }
+
+        struct DebugDispatchTimer {
+            stats: *mut super::UiDebugFrameStats,
+            started: Option<Instant>,
+        }
+
+        impl Drop for DebugDispatchTimer {
+            fn drop(&mut self) {
+                let Some(started) = self.started else {
+                    return;
+                };
+                // Safety: `dispatch_event` holds an exclusive `&mut self` for its full duration.
+                // The raw pointer refers to `self.debug_stats` and remains valid for the scope.
+                unsafe {
+                    (*self.stats).dispatch_time += started.elapsed();
+                }
+            }
+        }
+
+        let debug_stats_ptr = if self.debug_enabled {
+            &mut self.debug_stats as *mut super::UiDebugFrameStats
+        } else {
+            std::ptr::null_mut()
+        };
+
+        let debug_event_class = classify_debug_dispatch_event(event);
+        if self.debug_enabled {
+            match debug_event_class {
+                DebugDispatchEventClass::Pointer => {
+                    self.debug_stats.dispatch_pointer_events =
+                        self.debug_stats.dispatch_pointer_events.saturating_add(1);
+                }
+                DebugDispatchEventClass::Timer => {
+                    self.debug_stats.dispatch_timer_events =
+                        self.debug_stats.dispatch_timer_events.saturating_add(1);
+                }
+                DebugDispatchEventClass::Other => {
+                    self.debug_stats.dispatch_other_events =
+                        self.debug_stats.dispatch_other_events.saturating_add(1);
+                }
+            }
+        }
+
+        struct DebugDispatchEventClassTimer {
+            stats: *mut super::UiDebugFrameStats,
+            started: Option<Instant>,
+            class: DebugDispatchEventClass,
+        }
+
+        impl Drop for DebugDispatchEventClassTimer {
+            fn drop(&mut self) {
+                let Some(started) = self.started else {
+                    return;
+                };
+                // Safety: `dispatch_event` holds an exclusive `&mut self` for its full duration.
+                // The raw pointer refers to `self.debug_stats` and remains valid for the scope.
+                unsafe {
+                    match self.class {
+                        DebugDispatchEventClass::Pointer => {
+                            (*self.stats).dispatch_pointer_event_time += started.elapsed();
+                        }
+                        DebugDispatchEventClass::Timer => {
+                            (*self.stats).dispatch_timer_event_time += started.elapsed();
+                        }
+                        DebugDispatchEventClass::Other => {
+                            (*self.stats).dispatch_other_event_time += started.elapsed();
+                        }
+                    }
+                }
+            }
+        }
+
+        let _dispatch_timer = DebugDispatchTimer {
+            stats: debug_stats_ptr,
+            started: self.debug_enabled.then(Instant::now),
+        };
+
+        let _dispatch_event_class_timer = DebugDispatchEventClassTimer {
+            stats: debug_stats_ptr,
+            started: self.debug_enabled.then(Instant::now),
+            class: debug_event_class,
+        };
+
+        if self.debug_enabled {
+            self.debug_stats.dispatch_events = self.debug_stats.dispatch_events.saturating_add(1);
+        }
+
         // Keep wheel routing and hover detection in sync with out-of-band scroll handle mutations
         // (e.g. forwarded wheel handlers) by applying scroll-handle-driven invalidations before
         // hit-testing.
         if matches!(event, Event::Pointer(_)) {
+            let started = self.debug_enabled.then(Instant::now);
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                false,
+                false,
             );
+            if let Some(started) = started {
+                self.debug_stats.dispatch_scroll_handle_invalidation_time += started.elapsed();
+            }
         }
 
         let is_wheel = matches!(event, Event::Pointer(PointerEvent::Wheel { .. }));
 
+        let started = self.debug_enabled.then(Instant::now);
         let (active_layers, barrier_root) = self.active_input_layers();
         self.enforce_modal_barrier_scope(&active_layers);
+        if let Some(started) = started {
+            self.debug_stats.dispatch_active_layers_time += started.elapsed();
+        }
 
         // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
         // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
@@ -960,14 +1094,16 @@ impl<H: UiHost> UiTree<H> {
             .as_deref()
             .unwrap_or(active_layers.as_slice());
 
-        let to_remove: Vec<fret_core::PointerId> = self
-            .captured
-            .iter()
-            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, &active_layers)).then_some(*p))
-            .collect();
-        for p in to_remove {
-            self.captured.remove(&p);
-        }
+        let mut pointer_hit: Option<NodeId> = None;
+
+        let nodes = &self.nodes;
+        self.captured.retain(|_, n| {
+            let mut node = *n;
+            while let Some(parent) = nodes.get(node).and_then(|n| n.parent) {
+                node = parent;
+            }
+            nodes.contains_key(node) && active_layers.contains(&node)
+        });
         if self
             .focus
             .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
@@ -979,6 +1115,7 @@ impl<H: UiHost> UiTree<H> {
         self.update_ime_composing_for_event(focus_is_text_input, event);
         self.set_ime_allowed(app, focus_is_text_input);
 
+        let started = self.debug_enabled.then(Instant::now);
         let caps = app
             .global::<PlatformCapabilities>()
             .cloned()
@@ -1016,15 +1153,44 @@ impl<H: UiHost> UiTree<H> {
             let window_arbitration = self.window_input_arbitration_snapshot();
             input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx.clone());
+                    },
+                );
+            }
+        }
+        if let Some(started) = started {
+            self.debug_stats.dispatch_input_context_time += started.elapsed();
         }
 
-        let mut invalidation_visited = HashMap::<NodeId, u8>::new();
+        let mut invalidation_visited = std::mem::take(&mut self.invalidation_dedup);
+        invalidation_visited.begin();
+        struct InvalidationVisitedRestore<H: UiHost> {
+            tree: *mut UiTree<H>,
+            visited: InvalidationDedupTable,
+        }
+
+        impl<H: UiHost> Drop for InvalidationVisitedRestore<H> {
+            fn drop(&mut self) {
+                // Safety: `dispatch_event` holds an exclusive `&mut self` for its full duration.
+                unsafe {
+                    (*self.tree).invalidation_dedup = std::mem::take(&mut self.visited);
+                }
+            }
+        }
+
+        let mut invalidation_visited_restore = InvalidationVisitedRestore {
+            tree: self as *mut UiTree<H>,
+            visited: invalidation_visited,
+        };
+        let invalidation_visited = &mut invalidation_visited_restore.visited;
         let mut needs_redraw = false;
 
         // ADR 0012: when a text input is focused, reserve common IME/navigation keys for the
@@ -1052,7 +1218,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         focus,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::FocusVisiblePolicy,
                     );
@@ -1060,7 +1226,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         base_root,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::FocusVisiblePolicy,
                     );
@@ -1074,7 +1240,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         focus,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::InputModalityPolicy,
                     );
@@ -1082,7 +1248,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_detail(
                         base_root,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Other,
                         UiDebugInvalidationDetail::InputModalityPolicy,
                     );
@@ -1117,35 +1283,106 @@ impl<H: UiHost> UiTree<H> {
             }
             return;
         }
-        if matches!(event, Event::Timer { .. }) {
-            if let Event::Timer { token } = event
-                && let Some(window) = self.window
-                && let Some(node) = crate::elements::timer_target_node(app, window, *token)
-            {
-                let stopped = self.dispatch_event_to_node_chain(
+        if let Event::Timer { token } = event {
+            let routing_started = self.debug_enabled.then(Instant::now);
+
+            let (timer_had_target, targeted_node) = self
+                .window
+                .map(|window| {
+                    let had_target = crate::elements::timer_has_target(app, window, *token);
+                    let node = if had_target {
+                        crate::elements::timer_target_node(app, window, *token)
+                    } else {
+                        None
+                    };
+                    (had_target, node)
+                })
+                .unwrap_or((false, None));
+            if let Some(node) = targeted_node {
+                if self.debug_enabled {
+                    self.debug_stats.dispatch_timer_targeted_events = self
+                        .debug_stats
+                        .dispatch_timer_targeted_events
+                        .saturating_add(1);
+                }
+
+                let _stopped = self.dispatch_event_to_node_chain(
                     app,
                     services,
                     &input_ctx,
                     node,
                     event,
                     &mut needs_redraw,
-                    &mut invalidation_visited,
+                    invalidation_visited,
+                    DispatchChainMode::SelfOnly,
                 );
-                if stopped {
-                    if needs_redraw {
-                        self.request_redraw_coalesced(app);
-                    }
-                    return;
+                if needs_redraw {
+                    self.request_redraw_coalesced(app);
                 }
+
+                if let Some(started) = routing_started {
+                    let elapsed = started.elapsed();
+                    self.debug_stats.dispatch_timer_targeted_time += elapsed;
+                    if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                        self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                        self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                        self.debug_stats.dispatch_timer_slowest_was_broadcast = false;
+                    }
+                }
+
+                return;
             }
 
-            let layers: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-            for layer_id in layers.into_iter().rev() {
+            if timer_had_target {
+                if let Some(window) = self.window {
+                    crate::elements::clear_timer_target(app, window, *token);
+                }
+                if self.debug_enabled {
+                    self.debug_stats.dispatch_timer_targeted_events = self
+                        .debug_stats
+                        .dispatch_timer_targeted_events
+                        .saturating_add(1);
+                }
+                if let Some(started) = routing_started {
+                    let elapsed = started.elapsed();
+                    self.debug_stats.dispatch_timer_targeted_time += elapsed;
+                    if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                        self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                        self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                        self.debug_stats.dispatch_timer_slowest_was_broadcast = false;
+                    }
+                }
+                return;
+            }
+
+            if self.debug_enabled {
+                self.debug_stats.dispatch_timer_broadcast_events = self
+                    .debug_stats
+                    .dispatch_timer_broadcast_events
+                    .saturating_add(1);
+            }
+
+            let started = self.debug_enabled.then(Instant::now);
+            self.rebuild_visible_layers_scratch();
+            if let Some(started) = started {
+                self.debug_stats
+                    .dispatch_timer_broadcast_rebuild_visible_layers_time += started.elapsed();
+            }
+
+            let started = self.debug_enabled.then(Instant::now);
+            for i in (0..self.scratch_visible_layers.len()).rev() {
+                let layer_id = self.scratch_visible_layers[i];
                 let Some(layer) = self.layers.get(layer_id) else {
                     continue;
                 };
                 if !layer.wants_timer_events || !layer.visible {
                     continue;
+                }
+                if self.debug_enabled {
+                    self.debug_stats.dispatch_timer_broadcast_layers_visited = self
+                        .debug_stats
+                        .dispatch_timer_broadcast_layers_visited
+                        .saturating_add(1);
                 }
                 let stopped = self.dispatch_event_to_node_chain(
                     app,
@@ -1154,15 +1391,49 @@ impl<H: UiHost> UiTree<H> {
                     layer.root,
                     event,
                     &mut needs_redraw,
-                    &mut invalidation_visited,
+                    invalidation_visited,
+                    DispatchChainMode::Bubble,
                 );
                 if stopped {
                     if needs_redraw {
                         self.request_redraw_coalesced(app);
                     }
+                    if let Some(started) = started {
+                        self.debug_stats.dispatch_timer_broadcast_loop_time += started.elapsed();
+                    }
+                    if let Some(started) = routing_started {
+                        let elapsed = started.elapsed();
+                        self.debug_stats.dispatch_timer_broadcast_time += elapsed;
+                        if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                            self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                            self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                            self.debug_stats.dispatch_timer_slowest_was_broadcast = true;
+                        }
+                    }
                     return;
                 }
             }
+            if let Some(started) = started {
+                self.debug_stats.dispatch_timer_broadcast_loop_time += started.elapsed();
+            }
+
+            if let Some(started) = routing_started {
+                let elapsed = started.elapsed();
+                self.debug_stats.dispatch_timer_broadcast_time += elapsed;
+                if elapsed > self.debug_stats.dispatch_timer_slowest_event_time {
+                    self.debug_stats.dispatch_timer_slowest_event_time = elapsed;
+                    self.debug_stats.dispatch_timer_slowest_token = Some(*token);
+                    self.debug_stats.dispatch_timer_slowest_was_broadcast = true;
+                }
+            }
+
+            if needs_redraw {
+                self.request_redraw_coalesced(app);
+            }
+
+            // Timer events should not fall through into key/pointer routing, shortcut matching,
+            // cursor queries, etc. Keep timer delivery isolated and cheap.
+            return;
         }
 
         if let Event::TextInput(text) = event {
@@ -1315,18 +1586,26 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(pos) = event_position(event)
         {
+            let hit_test_started = self.debug_enabled.then(Instant::now);
             // Hit-testing is performance-sensitive (especially for pointer move), but must remain
             // correct across discrete interactions like clicks where the pointer position can jump
             // substantially between events.
             //
-            // For now, only allow cached hit-test reuse for pointer-move events; other pointer
-            // events clear the cache and rebuild it from a full hit-test pass.
-            let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+            // For now, allow cached hit-test reuse only for high-frequency, cursor-driven event
+            // streams. Discrete interactions (e.g. clicks) still rebuild the cache from a full
+            // hit-test pass.
+            let hit = if event_allows_hit_test_path_cache_reuse(event) {
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             };
+            pointer_hit = hit;
+            if let Some(started) = hit_test_started {
+                self.debug_stats.hit_test_time += started.elapsed();
+                self.debug_stats.hit_test_queries =
+                    self.debug_stats.hit_test_queries.saturating_add(1);
+            }
 
             if let Event::Pointer(PointerEvent::Up {
                 pointer_id,
@@ -1341,38 +1620,37 @@ impl<H: UiHost> UiTree<H> {
                 } else if let Some(candidate) = self
                     .touch_pointer_down_outside_candidates
                     .remove(pointer_id)
+                    && let Some(layer) = self.layers.get(candidate.layer_id)
                 {
-                    if let Some(layer) = self.layers.get(candidate.layer_id) {
-                        let foreign_capture_active = self.captured.iter().any(|(pid, node)| {
-                            *pid != *pointer_id
-                                && self
-                                    .node_layer(*node)
-                                    .is_some_and(|layer_id| layer_id != candidate.layer_id)
+                    let foreign_capture_active = self.captured.iter().any(|(pid, node)| {
+                        *pid != *pointer_id
+                            && self
+                                .node_layer(*node)
+                                .is_some_and(|layer_id| layer_id != candidate.layer_id)
+                    });
+
+                    if !foreign_capture_active && !candidate.moved {
+                        let hit_root = hit.and_then(|n| self.node_root(n));
+                        let hit_is_inside_layer = hit_root == Some(layer.root);
+                        let hit_is_inside_branch = hit.is_some_and(|hit| {
+                            layer
+                                .pointer_down_outside_branches
+                                .iter()
+                                .copied()
+                                .any(|branch| self.is_descendant(branch, hit))
                         });
 
-                        if !foreign_capture_active && !candidate.moved {
-                            let hit_root = hit.and_then(|n| self.node_root(n));
-                            let hit_is_inside_layer = hit_root == Some(layer.root);
-                            let hit_is_inside_branch = hit.is_some_and(|hit| {
-                                layer
-                                    .pointer_down_outside_branches
-                                    .iter()
-                                    .copied()
-                                    .any(|branch| self.is_descendant(branch, hit))
-                            });
-
-                            if !hit_is_inside_layer && !hit_is_inside_branch {
-                                self.dispatch_event_to_node_chain_observer(
-                                    app,
-                                    services,
-                                    &input_ctx,
-                                    candidate.root,
-                                    &candidate.down_event,
-                                    &mut invalidation_visited,
-                                );
-                                needs_redraw = true;
-                                suppress_touch_up_outside_dispatch = candidate.consume;
-                            }
+                        if !hit_is_inside_layer && !hit_is_inside_branch {
+                            self.dispatch_event_to_node_chain_observer(
+                                app,
+                                services,
+                                &input_ctx,
+                                candidate.root,
+                                &candidate.down_event,
+                                invalidation_visited,
+                            );
+                            needs_redraw = true;
+                            suppress_touch_up_outside_dispatch = candidate.consume;
                         }
                     }
                 }
@@ -1466,7 +1744,7 @@ impl<H: UiHost> UiTree<H> {
                             hit,
                             event,
                         },
-                        &mut invalidation_visited,
+                        invalidation_visited,
                     );
                     if pointer_down_outside.dispatched {
                         needs_redraw = true;
@@ -1486,25 +1764,30 @@ impl<H: UiHost> UiTree<H> {
             };
 
             if hover_capable {
+                let started = self.debug_enabled.then(Instant::now);
                 self.update_hover_state_from_hit(
                     app,
                     window,
                     hit_for_hover,
                     hit,
-                    &mut invalidation_visited,
+                    invalidation_visited,
                     &mut needs_redraw,
                 );
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_hover_update_time += started.elapsed();
+                }
             }
         }
 
-        let mut pointer_hit: Option<NodeId> = None;
         let target = if let Some(captured) = captured {
             Some(captured)
         } else if let Some(target) = internal_drag_target {
             Some(target)
         } else if let Some(pos) = event_position(event) {
             // See the cached hit-test reuse note above.
-            let hit = if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+            let hit = if self.window.is_some() && matches!(event, Event::Pointer(_)) {
+                pointer_hit
+            } else if event_allows_hit_test_path_cache_reuse(event) {
                 self.hit_test_layers_cached(hit_test_layer_roots, pos)
             } else {
                 self.hit_test_path_cache = None;
@@ -1518,7 +1801,7 @@ impl<H: UiHost> UiTree<H> {
                         let window_frame = window_frame?;
                         let mut node = hit?;
                         loop {
-                            if let Some(record) = window_frame.instances.get(&node)
+                            if let Some(record) = window_frame.instances.get(node)
                                 && matches!(
                                     record.instance,
                                     crate::declarative::ElementInstance::InternalDragRegion(p)
@@ -1632,6 +1915,7 @@ impl<H: UiHost> UiTree<H> {
 
         if suppress_pointer_dispatch && matches!(event, Event::Pointer(_)) {
             if matches!(event, Event::Pointer(PointerEvent::Move { .. })) {
+                let started = self.debug_enabled.then(Instant::now);
                 self.dispatch_pointer_move_layer_observers(
                     app,
                     services,
@@ -1639,8 +1923,12 @@ impl<H: UiHost> UiTree<H> {
                     barrier_root,
                     event,
                     &mut needs_redraw,
-                    &mut invalidation_visited,
+                    invalidation_visited,
                 );
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_pointer_move_layer_observers_time +=
+                        started.elapsed();
+                }
             }
             if needs_redraw {
                 self.request_redraw_coalesced(app);
@@ -1653,8 +1941,12 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(hit) = pointer_hit
         {
+            let started = self.debug_enabled.then(Instant::now);
             cursor_choice = self.cursor_icon_query_for_pointer_hit(hit, &input_ctx, event);
             cursor_choice_from_query = cursor_choice.is_some();
+            if let Some(started) = started {
+                self.debug_stats.dispatch_cursor_query_time += started.elapsed();
+            }
         }
 
         if !suppress_pointer_dispatch
@@ -1666,11 +1958,15 @@ impl<H: UiHost> UiTree<H> {
                     | Event::InternalDrag(_)
             )
         {
+            let chain_started = self.debug_enabled.then(Instant::now);
             let chain = if event_position(event).is_some() {
                 self.build_mapped_event_chain(node_id, event)
             } else {
                 self.build_unmapped_event_chain(node_id, event)
             };
+            if let Some(started) = chain_started {
+                self.debug_stats.dispatch_event_chain_build_time += started.elapsed();
+            }
             let should_run_capture_phase = match event {
                 Event::Pointer(PointerEvent::Down { .. })
                 | Event::Pointer(PointerEvent::Up { .. })
@@ -1684,6 +1980,7 @@ impl<H: UiHost> UiTree<H> {
             };
             let mut stopped_in_capture = false;
             if should_run_capture_phase {
+                let started = self.debug_enabled.then(Instant::now);
                 let mut capture_ctx = input_ctx.clone();
                 capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
@@ -1775,19 +2072,19 @@ impl<H: UiHost> UiTree<H> {
                         focus_requested = true;
                     }
 
-                    if let Some(capture) = requested_capture {
-                        if let Some(pointer_id) = event_pointer_id_for_capture {
-                            match capture {
-                                Some(node) => {
-                                    let allow = !dock_drag_affects_window
-                                        || dock_drag_capture_anchor == Some(node);
-                                    if allow {
-                                        self.captured.insert(pointer_id, node);
-                                    }
+                    if let Some(capture) = requested_capture
+                        && let Some(pointer_id) = event_pointer_id_for_capture
+                    {
+                        match capture {
+                            Some(node) => {
+                                let allow = !dock_drag_affects_window
+                                    || dock_drag_capture_anchor == Some(node);
+                                if allow {
+                                    self.captured.insert(pointer_id, node);
                                 }
-                                None => {
-                                    self.captured.remove(&pointer_id);
-                                }
+                            }
+                            None => {
+                                self.captured.remove(&pointer_id);
                             }
                         }
                     }
@@ -1808,9 +2105,13 @@ impl<H: UiHost> UiTree<H> {
                         break;
                     }
                 }
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_widget_capture_time += started.elapsed();
+                }
             }
 
             if !stopped_in_capture {
+                let started = self.debug_enabled.then(Instant::now);
                 let mut bubble_ctx = input_ctx.clone();
                 bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
@@ -1909,19 +2210,19 @@ impl<H: UiHost> UiTree<H> {
                         focus_requested = true;
                     }
 
-                    if let Some(capture) = requested_capture {
-                        if let Some(pointer_id) = event_pointer_id_for_capture {
-                            match capture {
-                                Some(node) => {
-                                    let allow = !dock_drag_affects_window
-                                        || dock_drag_capture_anchor == Some(node);
-                                    if allow {
-                                        self.captured.insert(pointer_id, node);
-                                    }
+                    if let Some(capture) = requested_capture
+                        && let Some(pointer_id) = event_pointer_id_for_capture
+                    {
+                        match capture {
+                            Some(node) => {
+                                let allow = !dock_drag_affects_window
+                                    || dock_drag_capture_anchor == Some(node);
+                                if allow {
+                                    self.captured.insert(pointer_id, node);
                                 }
-                                None => {
-                                    self.captured.remove(&pointer_id);
-                                }
+                            }
+                            None => {
+                                self.captured.remove(&pointer_id);
                             }
                         }
                     }
@@ -1946,268 +2247,24 @@ impl<H: UiHost> UiTree<H> {
                         break;
                     }
                 }
+                if let Some(started) = started {
+                    self.debug_stats.dispatch_widget_bubble_time += started.elapsed();
+                }
             }
-        } else {
-            if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
-                let mut chain: Vec<NodeId> = Vec::new();
-                let mut cur = Some(node_id);
-                while let Some(id) = cur {
-                    chain.push(id);
-                    cur = self.nodes.get(id).and_then(|n| n.parent);
-                }
+        } else if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
+            let mut chain: Vec<NodeId> = Vec::new();
+            let mut cur = Some(node_id);
+            while let Some(id) = cur {
+                chain.push(id);
+                cur = self.nodes.get(id).and_then(|n| n.parent);
+            }
 
-                let mut stopped_in_capture = false;
-                {
-                    let mut capture_ctx = input_ctx.clone();
-                    capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
+            let mut stopped_in_capture = false;
+            {
+                let mut capture_ctx = input_ctx.clone();
+                capture_ctx.dispatch_phase = InputDispatchPhase::Capture;
 
-                    for &node_id in chain.iter().rev() {
-                        let (
-                            invalidations,
-                            requested_focus,
-                            requested_capture,
-                            requested_cursor,
-                            notify_requested,
-                            notify_requested_location,
-                            stop_propagation,
-                        ) = self.with_widget_mut(node_id, |widget, tree| {
-                            let (children, bounds) = tree
-                                .nodes
-                                .get(node_id)
-                                .map(|n| (n.children.as_slice(), n.bounds))
-                                .unwrap_or((&[][..], Rect::default()));
-                            let mut cx = EventCx {
-                                app,
-                                services: &mut *services,
-                                node: node_id,
-                                layer_root: tree.node_root(node_id),
-                                window: tree.window,
-                                pointer_id: event_pointer_id_for_capture,
-                                input_ctx: capture_ctx.clone(),
-                                prevented_default_actions: &mut prevented_default_actions,
-                                children,
-                                focus: tree.focus,
-                                captured: event_pointer_id_for_capture
-                                    .and_then(|p| tree.captured.get(&p).copied()),
-                                bounds,
-                                invalidations: Vec::new(),
-                                requested_focus: None,
-                                requested_capture: None,
-                                requested_cursor: None,
-                                notify_requested: false,
-                                notify_requested_location: None,
-                                stop_propagation: false,
-                            };
-                            widget.event_capture(&mut cx, event);
-                            (
-                                cx.invalidations,
-                                cx.requested_focus,
-                                cx.requested_capture,
-                                cx.requested_cursor,
-                                cx.notify_requested,
-                                cx.notify_requested_location,
-                                cx.stop_propagation,
-                            )
-                        });
-
-                        if !invalidations.is_empty()
-                            || requested_focus.is_some()
-                            || requested_capture.is_some()
-                            || notify_requested
-                        {
-                            needs_redraw = true;
-                        }
-
-                        for (id, inv) in invalidations {
-                            self.mark_invalidation(id, inv);
-                        }
-                        if notify_requested {
-                            self.debug_record_notify_request(
-                                app.frame_id(),
-                                node_id,
-                                notify_requested_location,
-                            );
-                            self.mark_invalidation_with_source(
-                                node_id,
-                                Invalidation::Paint,
-                                UiDebugInvalidationSource::Notify,
-                            );
-                        }
-
-                        if let Some(focus) = requested_focus
-                            && self.focus_request_is_allowed(
-                                app,
-                                self.window,
-                                &active_layers,
-                                focus,
-                            )
-                        {
-                            focus_requested = true;
-                            if let Some(prev) = self.focus {
-                                self.mark_invalidation(prev, Invalidation::Paint);
-                            }
-                            self.focus = Some(focus);
-                            self.mark_invalidation(focus, Invalidation::Paint);
-                            self.scroll_node_into_view(app, focus);
-                        } else if requested_focus.is_some() {
-                            focus_requested = true;
-                        }
-
-                        if let Some(capture) = requested_capture {
-                            if let Some(pointer_id) = event_pointer_id_for_capture {
-                                match capture {
-                                    Some(node) => {
-                                        let allow = !dock_drag_affects_window
-                                            || dock_drag_capture_anchor == Some(node);
-                                        if allow {
-                                            self.captured.insert(pointer_id, node);
-                                        }
-                                    }
-                                    None => {
-                                        self.captured.remove(&pointer_id);
-                                    }
-                                }
-                            }
-                        }
-
-                        if requested_cursor.is_some() && cursor_choice.is_none() {
-                            cursor_choice = requested_cursor;
-                        }
-
-                        if stop_propagation {
-                            stop_propagation_requested = true;
-                            stopped_in_capture = true;
-                            break;
-                        }
-                    }
-                }
-                if !stopped_in_capture {
-                    let mut bubble_ctx = input_ctx.clone();
-                    bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
-
-                    for node_id in chain {
-                        let (
-                            invalidations,
-                            requested_focus,
-                            requested_capture,
-                            requested_cursor,
-                            notify_requested,
-                            notify_requested_location,
-                            stop_propagation,
-                        ) = self.with_widget_mut(node_id, |widget, tree| {
-                            let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                            let _ = parent;
-                            let (children, bounds) = tree
-                                .nodes
-                                .get(node_id)
-                                .map(|n| (n.children.as_slice(), n.bounds))
-                                .unwrap_or((&[][..], Rect::default()));
-                            let mut cx = EventCx {
-                                app,
-                                services: &mut *services,
-                                node: node_id,
-                                layer_root: tree.node_root(node_id),
-                                window: tree.window,
-                                pointer_id: event_pointer_id_for_capture,
-                                input_ctx: bubble_ctx.clone(),
-                                prevented_default_actions: &mut prevented_default_actions,
-                                children,
-                                focus: tree.focus,
-                                captured: event_pointer_id_for_capture
-                                    .and_then(|p| tree.captured.get(&p).copied()),
-                                bounds,
-                                invalidations: Vec::new(),
-                                requested_focus: None,
-                                requested_capture: None,
-                                requested_cursor: None,
-                                notify_requested: false,
-                                notify_requested_location: None,
-                                stop_propagation: false,
-                            };
-                            widget.event(&mut cx, event);
-                            (
-                                cx.invalidations,
-                                cx.requested_focus,
-                                cx.requested_capture,
-                                cx.requested_cursor,
-                                cx.notify_requested,
-                                cx.notify_requested_location,
-                                cx.stop_propagation,
-                            )
-                        });
-
-                        if !invalidations.is_empty()
-                            || requested_focus.is_some()
-                            || requested_capture.is_some()
-                            || notify_requested
-                        {
-                            needs_redraw = true;
-                        }
-
-                        for (id, inv) in invalidations {
-                            self.mark_invalidation(id, inv);
-                        }
-                        if notify_requested {
-                            self.debug_record_notify_request(
-                                app.frame_id(),
-                                node_id,
-                                notify_requested_location,
-                            );
-                            self.mark_invalidation_with_source(
-                                node_id,
-                                Invalidation::Paint,
-                                UiDebugInvalidationSource::Notify,
-                            );
-                        }
-
-                        if let Some(focus) = requested_focus
-                            && self.focus_request_is_allowed(
-                                app,
-                                self.window,
-                                &active_layers,
-                                focus,
-                            )
-                        {
-                            focus_requested = true;
-                            if let Some(prev) = self.focus {
-                                self.mark_invalidation(prev, Invalidation::Paint);
-                            }
-                            self.focus = Some(focus);
-                            self.mark_invalidation(focus, Invalidation::Paint);
-                            self.scroll_node_into_view(app, focus);
-                        } else if requested_focus.is_some() {
-                            focus_requested = true;
-                        }
-
-                        if let Some(capture) = requested_capture {
-                            if let Some(pointer_id) = event_pointer_id_for_capture {
-                                match capture {
-                                    Some(node) => {
-                                        let allow = !dock_drag_affects_window
-                                            || dock_drag_capture_anchor == Some(node);
-                                        if allow {
-                                            self.captured.insert(pointer_id, node);
-                                        }
-                                    }
-                                    None => {
-                                        self.captured.remove(&pointer_id);
-                                    }
-                                }
-                            }
-                        }
-
-                        if requested_cursor.is_some() && cursor_choice.is_none() {
-                            cursor_choice = requested_cursor;
-                        }
-
-                        if stop_propagation {
-                            stop_propagation_requested = true;
-                            break;
-                        }
-                    }
-                }
-            } else {
-                loop {
+                for &node_id in chain.iter().rev() {
                     let (
                         invalidations,
                         requested_focus,
@@ -2216,9 +2273,7 @@ impl<H: UiHost> UiTree<H> {
                         notify_requested,
                         notify_requested_location,
                         stop_propagation,
-                        parent,
                     ) = self.with_widget_mut(node_id, |widget, tree| {
-                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                         let (children, bounds) = tree
                             .nodes
                             .get(node_id)
@@ -2231,7 +2286,7 @@ impl<H: UiHost> UiTree<H> {
                             layer_root: tree.node_root(node_id),
                             window: tree.window,
                             pointer_id: event_pointer_id_for_capture,
-                            input_ctx: input_ctx.clone(),
+                            input_ctx: capture_ctx.clone(),
                             prevented_default_actions: &mut prevented_default_actions,
                             children,
                             focus: tree.focus,
@@ -2246,7 +2301,7 @@ impl<H: UiHost> UiTree<H> {
                             notify_requested_location: None,
                             stop_propagation: false,
                         };
-                        widget.event(&mut cx, event);
+                        widget.event_capture(&mut cx, event);
                         (
                             cx.invalidations,
                             cx.requested_focus,
@@ -2255,9 +2310,9 @@ impl<H: UiHost> UiTree<H> {
                             cx.notify_requested,
                             cx.notify_requested_location,
                             cx.stop_propagation,
-                            parent,
                         )
                     });
+
                     if !invalidations.is_empty()
                         || requested_focus.is_some()
                         || requested_capture.is_some()
@@ -2296,22 +2351,22 @@ impl<H: UiHost> UiTree<H> {
                         focus_requested = true;
                     }
 
-                    if let Some(capture) = requested_capture {
-                        if let Some(pointer_id) = event_pointer_id_for_capture {
-                            match capture {
-                                Some(node) => {
-                                    let allow = !dock_drag_affects_window
-                                        || dock_drag_capture_anchor == Some(node);
-                                    if allow {
-                                        self.captured.insert(pointer_id, node);
-                                    }
-                                }
-                                None => {
-                                    self.captured.remove(&pointer_id);
+                    if let Some(capture) = requested_capture
+                        && let Some(pointer_id) = event_pointer_id_for_capture
+                    {
+                        match capture {
+                            Some(node) => {
+                                let allow = !dock_drag_affects_window
+                                    || dock_drag_capture_anchor == Some(node);
+                                if allow {
+                                    self.captured.insert(pointer_id, node);
                                 }
                             }
+                            None => {
+                                self.captured.remove(&pointer_id);
+                            }
                         }
-                    };
+                    }
 
                     if requested_cursor.is_some() && cursor_choice.is_none() {
                         cursor_choice = requested_cursor;
@@ -2319,22 +2374,259 @@ impl<H: UiHost> UiTree<H> {
 
                     if stop_propagation {
                         stop_propagation_requested = true;
-                        if is_wheel && wheel_stop_node.is_none() {
-                            wheel_stop_node = Some(node_id);
+                        stopped_in_capture = true;
+                        break;
+                    }
+                }
+            }
+            if !stopped_in_capture {
+                let mut bubble_ctx = input_ctx.clone();
+                bubble_ctx.dispatch_phase = InputDispatchPhase::Bubble;
+
+                for node_id in chain {
+                    let (
+                        invalidations,
+                        requested_focus,
+                        requested_capture,
+                        requested_cursor,
+                        notify_requested,
+                        notify_requested_location,
+                        stop_propagation,
+                    ) = self.with_widget_mut(node_id, |widget, tree| {
+                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                        let _ = parent;
+                        let (children, bounds) = tree
+                            .nodes
+                            .get(node_id)
+                            .map(|n| (n.children.as_slice(), n.bounds))
+                            .unwrap_or((&[][..], Rect::default()));
+                        let mut cx = EventCx {
+                            app,
+                            services: &mut *services,
+                            node: node_id,
+                            layer_root: tree.node_root(node_id),
+                            window: tree.window,
+                            pointer_id: event_pointer_id_for_capture,
+                            input_ctx: bubble_ctx.clone(),
+                            prevented_default_actions: &mut prevented_default_actions,
+                            children,
+                            focus: tree.focus,
+                            captured: event_pointer_id_for_capture
+                                .and_then(|p| tree.captured.get(&p).copied()),
+                            bounds,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            requested_capture: None,
+                            requested_cursor: None,
+                            notify_requested: false,
+                            notify_requested_location: None,
+                            stop_propagation: false,
+                        };
+                        widget.event(&mut cx, event);
+                        (
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.requested_capture,
+                            cx.requested_cursor,
+                            cx.notify_requested,
+                            cx.notify_requested_location,
+                            cx.stop_propagation,
+                        )
+                    });
+
+                    if !invalidations.is_empty()
+                        || requested_focus.is_some()
+                        || requested_capture.is_some()
+                        || notify_requested
+                    {
+                        needs_redraw = true;
+                    }
+
+                    for (id, inv) in invalidations {
+                        self.mark_invalidation(id, inv);
+                    }
+                    if notify_requested {
+                        self.debug_record_notify_request(
+                            app.frame_id(),
+                            node_id,
+                            notify_requested_location,
+                        );
+                        self.mark_invalidation_with_source(
+                            node_id,
+                            Invalidation::Paint,
+                            UiDebugInvalidationSource::Notify,
+                        );
+                    }
+
+                    if let Some(focus) = requested_focus
+                        && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    {
+                        focus_requested = true;
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                        self.scroll_node_into_view(app, focus);
+                    } else if requested_focus.is_some() {
+                        focus_requested = true;
+                    }
+
+                    if let Some(capture) = requested_capture
+                        && let Some(pointer_id) = event_pointer_id_for_capture
+                    {
+                        match capture {
+                            Some(node) => {
+                                let allow = !dock_drag_affects_window
+                                    || dock_drag_capture_anchor == Some(node);
+                                if allow {
+                                    self.captured.insert(pointer_id, node);
+                                }
+                            }
+                            None => {
+                                self.captured.remove(&pointer_id);
+                            }
                         }
                     }
 
-                    let captured_now =
-                        event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
-                    if captured_now.is_some() || stop_propagation {
-                        break;
+                    if requested_cursor.is_some() && cursor_choice.is_none() {
+                        cursor_choice = requested_cursor;
                     }
 
-                    node_id = match parent {
-                        Some(parent) => parent,
-                        None => break,
-                    };
+                    if stop_propagation {
+                        stop_propagation_requested = true;
+                        break;
+                    }
                 }
+            }
+        } else {
+            loop {
+                let (
+                    invalidations,
+                    requested_focus,
+                    requested_capture,
+                    requested_cursor,
+                    notify_requested,
+                    notify_requested_location,
+                    stop_propagation,
+                    parent,
+                ) = self.with_widget_mut(node_id, |widget, tree| {
+                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                    let (children, bounds) = tree
+                        .nodes
+                        .get(node_id)
+                        .map(|n| (n.children.as_slice(), n.bounds))
+                        .unwrap_or((&[][..], Rect::default()));
+                    let mut cx = EventCx {
+                        app,
+                        services: &mut *services,
+                        node: node_id,
+                        layer_root: tree.node_root(node_id),
+                        window: tree.window,
+                        pointer_id: event_pointer_id_for_capture,
+                        input_ctx: input_ctx.clone(),
+                        prevented_default_actions: &mut prevented_default_actions,
+                        children,
+                        focus: tree.focus,
+                        captured: event_pointer_id_for_capture
+                            .and_then(|p| tree.captured.get(&p).copied()),
+                        bounds,
+                        invalidations: Vec::new(),
+                        requested_focus: None,
+                        requested_capture: None,
+                        requested_cursor: None,
+                        notify_requested: false,
+                        notify_requested_location: None,
+                        stop_propagation: false,
+                    };
+                    widget.event(&mut cx, event);
+                    (
+                        cx.invalidations,
+                        cx.requested_focus,
+                        cx.requested_capture,
+                        cx.requested_cursor,
+                        cx.notify_requested,
+                        cx.notify_requested_location,
+                        cx.stop_propagation,
+                        parent,
+                    )
+                });
+                if !invalidations.is_empty()
+                    || requested_focus.is_some()
+                    || requested_capture.is_some()
+                    || notify_requested
+                {
+                    needs_redraw = true;
+                }
+
+                for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+                if notify_requested {
+                    self.debug_record_notify_request(
+                        app.frame_id(),
+                        node_id,
+                        notify_requested_location,
+                    );
+                    self.mark_invalidation_with_source(
+                        node_id,
+                        Invalidation::Paint,
+                        UiDebugInvalidationSource::Notify,
+                    );
+                }
+
+                if let Some(focus) = requested_focus
+                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                {
+                    focus_requested = true;
+                    if let Some(prev) = self.focus {
+                        self.mark_invalidation(prev, Invalidation::Paint);
+                    }
+                    self.focus = Some(focus);
+                    self.mark_invalidation(focus, Invalidation::Paint);
+                    self.scroll_node_into_view(app, focus);
+                } else if requested_focus.is_some() {
+                    focus_requested = true;
+                }
+
+                if let Some(capture) = requested_capture
+                    && let Some(pointer_id) = event_pointer_id_for_capture
+                {
+                    match capture {
+                        Some(node) => {
+                            let allow =
+                                !dock_drag_affects_window || dock_drag_capture_anchor == Some(node);
+                            if allow {
+                                self.captured.insert(pointer_id, node);
+                            }
+                        }
+                        None => {
+                            self.captured.remove(&pointer_id);
+                        }
+                    }
+                };
+
+                if requested_cursor.is_some() && cursor_choice.is_none() {
+                    cursor_choice = requested_cursor;
+                }
+
+                if stop_propagation {
+                    stop_propagation_requested = true;
+                    if is_wheel && wheel_stop_node.is_none() {
+                        wheel_stop_node = Some(node_id);
+                    }
+                }
+
+                let captured_now =
+                    event_pointer_id_for_capture.and_then(|p| self.captured.get(&p).copied());
+                if captured_now.is_some() || stop_propagation {
+                    break;
+                }
+
+                node_id = match parent {
+                    Some(parent) => parent,
+                    None => break,
+                };
             }
         }
 
@@ -2367,7 +2659,7 @@ impl<H: UiHost> UiTree<H> {
         {
             let is_scroll_target = declarative::with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
-                let record = window_frame.instances.get(&scroll_target)?;
+                let record = window_frame.instances.get(scroll_target)?;
                 Some(matches!(
                     record.instance,
                     declarative::ElementInstance::Scroll(_)
@@ -2500,7 +2792,7 @@ impl<H: UiHost> UiTree<H> {
             self.mark_invalidation_dedup_with_source(
                 prev_node,
                 Invalidation::Paint,
-                &mut invalidation_visited,
+                invalidation_visited,
                 UiDebugInvalidationSource::Other,
             );
         }
@@ -2518,7 +2810,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_source(
                         node,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Hover,
                     );
                 }
@@ -2539,7 +2831,7 @@ impl<H: UiHost> UiTree<H> {
                     self.mark_invalidation_dedup_with_source(
                         node,
                         Invalidation::Paint,
-                        &mut invalidation_visited,
+                        invalidation_visited,
                         UiDebugInvalidationSource::Hover,
                     );
                 }
@@ -2603,14 +2895,18 @@ impl<H: UiHost> UiTree<H> {
             //
             // We intentionally use observer dispatch to avoid allowing the previous target to
             // mutate focus/capture/cursor routing on the transition frame.
+            let started = self.debug_enabled.then(Instant::now);
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
                 &input_ctx,
                 prev,
                 event,
-                &mut invalidation_visited,
+                invalidation_visited,
             );
+            if let Some(started) = started {
+                self.debug_stats.dispatch_synth_hover_observer_time += started.elapsed();
+            }
             needs_redraw = true;
         }
 
@@ -2630,10 +2926,16 @@ impl<H: UiHost> UiTree<H> {
             self.invalidate_scroll_handle_bindings_for_changed_handles(
                 app,
                 crate::layout_pass::LayoutPassKind::Final,
+                false,
+                false,
             );
 
-            self.hit_test_path_cache = None;
-            let hit = self.hit_test_layers_cached(hit_test_layer_roots, *position);
+            let hit = if event_allows_hit_test_path_cache_reuse(event) {
+                self.hit_test_layers_cached(hit_test_layer_roots, *position)
+            } else {
+                self.hit_test_path_cache = None;
+                self.hit_test_layers_cached(hit_test_layer_roots, *position)
+            };
 
             let mut hit_for_hover = hit;
             if let Some((occlusion_layer, occlusion)) =
@@ -2663,7 +2965,7 @@ impl<H: UiHost> UiTree<H> {
                 window,
                 hit_for_hover,
                 hit,
-                &mut invalidation_visited,
+                invalidation_visited,
                 &mut needs_redraw,
             );
         }
@@ -2675,12 +2977,17 @@ impl<H: UiHost> UiTree<H> {
             let icon = cursor_choice
                 .or(cursor_query_choice)
                 .unwrap_or(fret_core::CursorIcon::Default);
+            let started = self.debug_enabled.then(Instant::now);
             app.push_effect(Effect::CursorSetIcon { window, icon });
+            if let Some(started) = started {
+                self.debug_stats.dispatch_cursor_effect_time += started.elapsed();
+            }
         }
 
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
+        let started = self.debug_enabled.then(Instant::now);
         self.dispatch_pointer_move_layer_observers(
             app,
             services,
@@ -2688,8 +2995,11 @@ impl<H: UiHost> UiTree<H> {
             barrier_root,
             event,
             &mut needs_redraw,
-            &mut invalidation_visited,
+            invalidation_visited,
         );
+        if let Some(started) = started {
+            self.debug_stats.dispatch_pointer_move_layer_observers_time += started.elapsed();
+        }
         if needs_redraw {
             self.request_redraw_coalesced(app);
         }
@@ -2700,6 +3010,7 @@ impl<H: UiHost> UiTree<H> {
 
         // Publish a post-dispatch snapshot so runner-level integration surfaces (e.g. OS menubars)
         // see the latest focus/modal state without waiting for the next paint pass.
+        let started = self.debug_enabled.then(Instant::now);
         if let Some(window) = self.window {
             let (_active_layers, barrier_root) = self.active_input_layers();
             let caps = app
@@ -2738,14 +3049,42 @@ impl<H: UiHost> UiTree<H> {
             let window_arbitration = self.window_input_arbitration_snapshot();
             input_ctx.window_arbitration = Some(window_arbitration);
 
-            app.with_global_mut(
-                fret_runtime::WindowInputContextService::default,
-                |svc, _app| {
-                    svc.set_snapshot(window, input_ctx.clone());
-                },
-            );
+            let needs_update = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .and_then(|svc| svc.snapshot(window))
+                .is_none_or(|prev| prev != &input_ctx);
+            if needs_update {
+                app.with_global_mut(
+                    fret_runtime::WindowInputContextService::default,
+                    |svc, _app| {
+                        svc.set_snapshot(window, input_ctx.clone());
+                    },
+                );
+            }
 
-            self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+            // Command action availability snapshots are intended for integration surfaces (menus,
+            // command palettes) and are not expected to change on hover-only pointer moves.
+            // Avoid publishing on move-only frames to keep pointer sweeps representative.
+            let should_publish_action_availability = match event {
+                Event::Pointer(PointerEvent::Move {
+                    buttons,
+                    pointer_id,
+                    ..
+                }) => {
+                    buttons.left
+                        || buttons.right
+                        || buttons.middle
+                        || self.captured_for(*pointer_id).is_some()
+                }
+                Event::Timer { .. } => false,
+                _ => true,
+            };
+            if should_publish_action_availability {
+                self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+            }
+        }
+        if let Some(started) = started {
+            self.debug_stats.dispatch_post_dispatch_snapshot_time += started.elapsed();
         }
     }
 
@@ -2756,7 +3095,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
-        invalidation_visited: &mut HashMap<NodeId, u8>,
+        invalidation_visited: &mut impl InvalidationVisited,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
             Event::Pointer(PointerEvent::Move { pointer_id, .. })
@@ -3012,7 +3351,7 @@ impl<H: UiHost> UiTree<H> {
             Event::InternalDrag(e) => Event::InternalDrag(fret_core::InternalDragEvent {
                 pointer_id: e.pointer_id,
                 position,
-                kind: e.kind.clone(),
+                kind: e.kind,
                 modifiers: e.modifiers,
             }),
             Event::PointerCancel(e) => {
@@ -3112,9 +3451,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         event: &Event,
     ) -> Option<fret_core::CursorIcon> {
-        if event_position(event).is_none() {
-            return None;
-        }
+        event_position(event)?;
 
         let chain = self.build_mapped_event_chain(start, event);
         for (node_id, mapped_event) in chain {

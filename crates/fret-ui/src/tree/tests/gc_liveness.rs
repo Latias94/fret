@@ -13,8 +13,8 @@ fn removed_subtree_reachability_prefers_frame_context() {
     ui.set_debug_enabled(true);
     ui.begin_debug_frame_if_needed(FrameId(1));
 
-    let root = ui.create_node(TestStack::default());
-    let child = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let child = ui.create_node(TestStack);
     ui.set_root(root);
 
     // Intentionally omit `ui.set_children(root, ..)` so `UiTree` reachability cannot discover

@@ -121,6 +121,50 @@ pub struct RenderPerfSnapshot {
     pub prepare_svg_us: u64,
     pub prepare_text_us: u64,
 
+    // Non-text upload churn (best-effort). These counters attempt to make CPU->GPU texture uploads
+    // visible in diagnostics, beyond text atlas updates.
+    pub svg_uploads: u64,
+    pub svg_upload_bytes: u64,
+    pub image_uploads: u64,
+    pub image_upload_bytes: u64,
+
+    // SVG raster cache (best-effort). These are intended to distinguish one-time warmup from
+    // steady-state thrash (e.g. budget-driven eviction + repeated re-upload).
+    pub svg_raster_budget_bytes: u64,
+    pub svg_rasters_live: u64,
+    pub svg_standalone_bytes_live: u64,
+    pub svg_mask_atlas_pages_live: u64,
+    pub svg_mask_atlas_bytes_live: u64,
+    pub svg_mask_atlas_used_px: u64,
+    pub svg_mask_atlas_capacity_px: u64,
+    pub svg_raster_cache_hits: u64,
+    pub svg_raster_cache_misses: u64,
+    pub svg_raster_budget_evictions: u64,
+    pub svg_mask_atlas_page_evictions: u64,
+    pub svg_mask_atlas_entries_evicted: u64,
+
+    // Text atlas churn (best-effort). These numbers are per-frame signals and should be treated as
+    // diagnostic hints rather than strict correctness metrics.
+    pub text_atlas_revision: u64,
+    pub text_atlas_uploads: u64,
+    pub text_atlas_upload_bytes: u64,
+    pub text_atlas_evicted_glyphs: u64,
+    pub text_atlas_evicted_pages: u64,
+    pub text_atlas_evicted_page_glyphs: u64,
+    pub text_atlas_resets: u64,
+
+    // Intermediate pool churn (best-effort; used for blur/effect pipelines).
+    pub intermediate_budget_bytes: u64,
+    pub intermediate_in_use_bytes: u64,
+    pub intermediate_peak_in_use_bytes: u64,
+    pub intermediate_release_targets: u64,
+    pub intermediate_pool_allocations: u64,
+    pub intermediate_pool_reuses: u64,
+    pub intermediate_pool_releases: u64,
+    pub intermediate_pool_evictions: u64,
+    pub intermediate_pool_free_bytes: u64,
+    pub intermediate_pool_free_textures: u64,
+
     pub draw_calls: u64,
     pub quad_draw_calls: u64,
     pub viewport_draw_calls: u64,
@@ -163,6 +207,43 @@ pub(super) struct RenderPerfStats {
     pub(super) encode_scene: Duration,
     pub(super) prepare_svg: Duration,
     pub(super) prepare_text: Duration,
+
+    pub(super) svg_uploads: u64,
+    pub(super) svg_upload_bytes: u64,
+    pub(super) image_uploads: u64,
+    pub(super) image_upload_bytes: u64,
+
+    pub(super) svg_raster_budget_bytes: u64,
+    pub(super) svg_rasters_live: u64,
+    pub(super) svg_standalone_bytes_live: u64,
+    pub(super) svg_mask_atlas_pages_live: u64,
+    pub(super) svg_mask_atlas_bytes_live: u64,
+    pub(super) svg_mask_atlas_used_px: u64,
+    pub(super) svg_mask_atlas_capacity_px: u64,
+    pub(super) svg_raster_cache_hits: u64,
+    pub(super) svg_raster_cache_misses: u64,
+    pub(super) svg_raster_budget_evictions: u64,
+    pub(super) svg_mask_atlas_page_evictions: u64,
+    pub(super) svg_mask_atlas_entries_evicted: u64,
+
+    pub(super) text_atlas_revision: u64,
+    pub(super) text_atlas_uploads: u64,
+    pub(super) text_atlas_upload_bytes: u64,
+    pub(super) text_atlas_evicted_glyphs: u64,
+    pub(super) text_atlas_evicted_pages: u64,
+    pub(super) text_atlas_evicted_page_glyphs: u64,
+    pub(super) text_atlas_resets: u64,
+
+    pub(super) intermediate_budget_bytes: u64,
+    pub(super) intermediate_in_use_bytes: u64,
+    pub(super) intermediate_peak_in_use_bytes: u64,
+    pub(super) intermediate_release_targets: u64,
+    pub(super) intermediate_pool_allocations: u64,
+    pub(super) intermediate_pool_reuses: u64,
+    pub(super) intermediate_pool_releases: u64,
+    pub(super) intermediate_pool_evictions: u64,
+    pub(super) intermediate_pool_free_bytes: u64,
+    pub(super) intermediate_pool_free_textures: u64,
 
     pub(super) draw_calls: u64,
     pub(super) quad_draw_calls: u64,

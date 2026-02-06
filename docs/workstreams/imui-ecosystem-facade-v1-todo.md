@@ -152,14 +152,16 @@ Exit criteria:
 - [x] IMUIECO-float-032e Add minimal resize handles for floating windows (v1: edges + corners; diagonal cursor supported; min/max configurable).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window_resizable`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_resizes_when_dragging_corner_handle`).
-- [ ] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
-  - title bar, close button, Esc-to-close,
+- [x] IMUIECO-float-032 Layer a floating **window chrome** policy on top of the area:
+  - title bar (drag surface), close button, Esc-to-close,
   - resize handles + resize session state,
-  - focus trap/restore when appropriate (aligned with overlay policy).
-  - Note: title bar + close button + `Esc`-to-close are implemented for `floating_window_open`.
-  - Note: resize is v1-minimal today (right/bottom/corner). Left/top/corner variants remain open.
-- [~] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
-  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
+  - z-order activation when nested in `floating_layer(...)`.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`floating_window_impl_on_area` using `floating_area_ex`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` (`render_floating_window_in_area`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (floating window tests still pass under nextest).
+- [x] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingAreaResponse`, `FloatingWindowResponse`).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{area,window,window_open,window_resizable}`).
 - [ ] IMUIECO-float-034 Decide OS-window promotion scope:
   - docking-only for v1 (recommended), or
   - generalized capability-gated promotion later.

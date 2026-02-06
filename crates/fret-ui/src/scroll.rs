@@ -1,6 +1,6 @@
 use std::{cell::RefCell, ops::Deref, rc::Rc};
 
-use fret_core::{Point, Px, Size};
+use fret_core::{FrameId, Point, Px, Size};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScrollStrategy {
@@ -196,6 +196,7 @@ struct VirtualListScrollHandleState {
     deferred: Option<DeferredScrollToItem>,
     last_consumed: Option<DeferredScrollToItem>,
     last_consumed_revision: u64,
+    last_consumed_frame_id: FrameId,
 }
 
 /// A scroll handle with VirtualList-specific helpers (scroll-to-item).
@@ -257,13 +258,19 @@ impl VirtualListScrollHandle {
         self.state.borrow().deferred.map(|d| (d.index, d.strategy))
     }
 
-    pub(crate) fn clear_deferred_scroll_to_item(&self) {
+    pub(crate) fn clear_deferred_scroll_to_item(&self, frame_id: FrameId) {
         let mut state = self.state.borrow_mut();
         if let Some(deferred) = state.deferred {
             state.last_consumed = Some(deferred);
             state.last_consumed_revision = self.base_handle.revision();
+            state.last_consumed_frame_id = frame_id;
         }
         state.deferred = None;
+    }
+
+    pub(crate) fn scroll_to_item_consumed_in_frame(&self, frame_id: FrameId) -> bool {
+        let state = self.state.borrow();
+        state.last_consumed.is_some() && state.last_consumed_frame_id == frame_id
     }
 }
 
@@ -335,7 +342,7 @@ mod tests {
 
         // Simulate runtime consumption: the request was consumed, but did not necessarily change
         // the offset. Reissuing the same request should not keep bumping the revision forever.
-        handle.clear_deferred_scroll_to_item();
+        handle.clear_deferred_scroll_to_item(FrameId(1));
         handle.scroll_to_item(5, ScrollStrategy::Nearest);
         assert_eq!(handle.revision(), first_rev);
 

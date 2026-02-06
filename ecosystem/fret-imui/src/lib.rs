@@ -2052,7 +2052,8 @@ mod tests {
         root: fret_core::NodeId,
     ) -> (fret_core::NodeId, fret_core::NodeId) {
         let window = ui.children(root)[0];
-        let col = ui.children(window)[0];
+        let chrome = ui.children(window)[0];
+        let col = ui.children(chrome)[0];
         let title_bar = ui.children(col)[0];
         (window, title_bar)
     }
@@ -2485,6 +2486,53 @@ mod tests {
             !path.contains(&area_b),
             "expected area B not to be hit after activation"
         );
+    }
+
+    #[test]
+    fn window_wrapper_reports_position_and_size() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let reported_pos = Rc::new(Cell::new(Point::new(Px(0.0), Px(0.0))));
+        let reported_size = Rc::new(Cell::new(None::<Size>));
+
+        let reported_pos_out = reported_pos.clone();
+        let reported_size_out = reported_size.clone();
+
+        let initial_position = Point::new(Px(10.0), Px(10.0));
+        let initial_size = Size::new(Px(140.0), Px(80.0));
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-window-wrapper-reports-position-and-size",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp =
+                        ui.window_resizable("demo", "Demo", initial_position, initial_size, |ui| {
+                            ui.text("Hello")
+                        });
+                    reported_pos_out.set(resp.position());
+                    reported_size_out.set(resp.size());
+                })
+            },
+        );
+
+        assert_eq!(reported_pos.get(), initial_position);
+        assert_eq!(reported_size.get(), Some(initial_size));
     }
 
     #[test]
