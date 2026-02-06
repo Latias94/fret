@@ -190,9 +190,9 @@ Exit criteria:
 - [x] IMUIECO-float-033 Add `fret-ui-kit` immediate wrappers (`ui.area(...)`, `ui.window(...)`) returning meaningful interaction results.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatingAreaResponse`, `FloatingWindowResponse`).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{area,window,window_open,window_resizable}`).
-- [ ] IMUIECO-float-034 Decide OS-window promotion scope:
-  - docking-only for v1 (recommended), or
-  - generalized capability-gated promotion later.
+- [x] IMUIECO-float-034 Decide OS-window promotion scope:
+  - Decision: docking-only for v1; generalized promotion is capability-gated and deferred.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.6).
 
 ---
 
@@ -218,7 +218,8 @@ Exit criteria:
 - [x] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
   - Evidence: `.github/workflows/ci.yml` (`Wasm Compile Smoke (imui facade)`)
   - Evidence (local): `cargo check -p fret-authoring -p fret-imui -p fret-ui-kit --features imui --target wasm32-unknown-unknown`
-- [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
+- [x] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-perf-v1.md`
 - [x] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
   - Evidence: `docs/workstreams/imui-shadcn-adapter-v1.md` (layering contract + migration checklist).
   - Evidence: `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` (minimal adapter demo).
