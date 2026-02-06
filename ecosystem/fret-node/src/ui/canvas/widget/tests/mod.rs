@@ -80,6 +80,7 @@ mod perf_cache_prune_conformance;
 mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
+mod portal_measured_geometry_conformance;
 mod portal_pointer_passthrough_conformance;
 mod prelude;
 mod selection_mode_conformance;
