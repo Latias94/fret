@@ -3,7 +3,7 @@ use fret_core::{Modifiers, Point, Px, Rect, Size};
 use crate::core::CanvasPoint;
 use crate::io::NodeGraphSelectionMode;
 
-use super::super::NodeGraphCanvas;
+use super::prelude::{NodeGraphCanvas, left_click, marquee};
 use super::{NullServices, event_cx, make_host_graph_view, make_test_graph_two_nodes_with_size};
 use crate::ui::canvas::state::ViewSnapshot;
 
@@ -37,7 +37,7 @@ fn marquee_partial_selects_intersecting_nodes() {
     );
     // Intersects node A (0..40, 0..20) but does not fully contain it.
     let start = Point::new(Px(-10.0), Px(-10.0));
-    assert!(super::super::left_click::handle_left_click_pointer_down(
+    assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -47,7 +47,7 @@ fn marquee_partial_selects_intersecting_nodes() {
     ));
 
     let end = Point::new(Px(30.0), Px(10.0));
-    assert!(super::super::marquee::handle_marquee_move(
+    assert!(marquee::handle_marquee_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -55,7 +55,7 @@ fn marquee_partial_selects_intersecting_nodes() {
         Modifiers::default(),
         snapshot.zoom,
     ));
-    assert!(super::super::marquee::handle_left_up(&mut canvas, &mut cx));
+    assert!(marquee::handle_left_up(&mut canvas, &mut cx));
 
     let selected = view
         .read_ref(&host, |s| s.selected_nodes.clone())
@@ -93,7 +93,7 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
     );
     // Intersects node A (0..40, 0..20) but does not fully contain it.
     let start = Point::new(Px(-10.0), Px(-10.0));
-    assert!(super::super::left_click::handle_left_click_pointer_down(
+    assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -103,7 +103,7 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
     ));
 
     let end = Point::new(Px(30.0), Px(10.0));
-    assert!(super::super::marquee::handle_marquee_move(
+    assert!(marquee::handle_marquee_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -111,7 +111,7 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
         Modifiers::default(),
         snapshot.zoom,
     ));
-    assert!(super::super::marquee::handle_left_up(&mut canvas, &mut cx));
+    assert!(marquee::handle_left_up(&mut canvas, &mut cx));
 
     let selected = view
         .read_ref(&host, |s| s.selected_nodes.clone())
@@ -128,7 +128,7 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
         &mut prevented_default_actions,
     );
     let start = Point::new(Px(-10.0), Px(-10.0));
-    assert!(super::super::left_click::handle_left_click_pointer_down(
+    assert!(left_click::handle_left_click_pointer_down(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -137,7 +137,7 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
         snapshot.zoom,
     ));
     let end = Point::new(Px(80.0), Px(40.0));
-    assert!(super::super::marquee::handle_marquee_move(
+    assert!(marquee::handle_marquee_move(
         &mut canvas,
         &mut cx,
         &snapshot,
@@ -145,7 +145,7 @@ fn marquee_full_requires_nodes_to_be_fully_contained() {
         Modifiers::default(),
         snapshot.zoom,
     ));
-    assert!(super::super::marquee::handle_left_up(&mut canvas, &mut cx));
+    assert!(marquee::handle_left_up(&mut canvas, &mut cx));
 
     let selected = view
         .read_ref(&host, |s| s.selected_nodes.clone())

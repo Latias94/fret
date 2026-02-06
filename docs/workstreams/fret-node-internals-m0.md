@@ -266,6 +266,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/contexts.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/services.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/prelude.rs`
 - [x] Add harness graph/view setup helper API and adopt it in high-churn conformance suites.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs` (`insert_view`, `insert_graph_view`, `make_host_graph_view`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/callbacks_conformance.rs`
