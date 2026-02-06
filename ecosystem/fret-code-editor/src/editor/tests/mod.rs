@@ -44,6 +44,8 @@ fn replace_buffer_resets_state() {
         };
         st.dragging = true;
         st.drag_pointer = Some(fret_core::PointerId(1));
+        st.drag_last_pointer_pos = Some(fret_core::Point::new(Px(12.0), Px(34.0)));
+        st.drag_last_scroll_offset = fret_core::Point::new(Px(0.0), Px(56.0));
         st.row_text_cache.insert(0, ("hello".into(), 1));
         st.row_text_cache_queue.push_back((0, 1));
         st.row_geom_cache.insert(
@@ -73,10 +75,45 @@ fn replace_buffer_resets_state() {
     assert!(st.undo_group.is_none());
     assert!(!st.dragging);
     assert_eq!(st.drag_pointer, None);
+    assert_eq!(st.drag_last_pointer_pos, None);
+    assert_eq!(
+        st.drag_last_scroll_offset,
+        fret_core::Point::new(Px(0.0), Px(0.0))
+    );
     assert_eq!(st.row_text_cache.len(), 0);
     assert_eq!(st.row_text_cache_queue.len(), 0);
     assert_eq!(st.row_geom_cache.len(), 0);
     assert_eq!(st.row_geom_cache_queue.len(), 0);
+}
+
+#[test]
+fn drag_autoscroll_delta_y_is_zero_inside_safe_band() {
+    let delta = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(130.0));
+    assert_eq!(delta, Px(0.0));
+}
+
+#[test]
+fn drag_autoscroll_delta_y_uses_direction_and_clamp() {
+    let up = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(110.0));
+    assert!(up.0 < 0.0);
+
+    let down = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(190.0));
+    assert!(down.0 > 0.0);
+
+    let capped = drag_autoscroll_delta_y(Px(20.0), Px(90.0), Px(100.0), Px(10_000.0));
+    assert!((capped.0 - 3.0).abs() < 1e-6);
+}
+
+#[test]
+fn drag_autoscroll_delta_y_handles_zero_sizes() {
+    assert_eq!(
+        drag_autoscroll_delta_y(Px(0.0), Px(100.0), Px(0.0), Px(20.0)),
+        Px(0.0)
+    );
+    assert_eq!(
+        drag_autoscroll_delta_y(Px(20.0), Px(0.0), Px(0.0), Px(20.0)),
+        Px(0.0)
+    );
 }
 
 #[test]
