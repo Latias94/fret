@@ -1,7 +1,18 @@
 # ADR 0198: Deterministic Graph Diff and Patch Units (`fret-node`)
 
-Status: Proposed  
+Status: Accepted  
 Date: 2026-02-05
+
+## Implementation Status (as of 2026-02-06)
+
+The deterministic diff and patch unit are implemented:
+
+- Deterministic `graph_diff(from, to) -> GraphTransaction`: `ecosystem/fret-node/src/ops/diff.rs`
+- Apply/invert/normalize correctness is covered by conformance tests:
+  - Determinism + roundtrip: `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`)
+  - Cascading removals (node/port): `ecosystem/fret-node/src/ops/tests.rs`
+  - Group removal detaches nodes deterministically: `ecosystem/fret-node/src/ops/tests.rs`
+  - Edge endpoint changes preserve identity (`SetEdgeEndpoints`): `ecosystem/fret-node/src/ops/tests.rs`
 
 ## Context
 

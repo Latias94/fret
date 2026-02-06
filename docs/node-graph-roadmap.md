@@ -191,5 +191,6 @@ Legend:
     - Groups: setters for common edits (`title`, `rect`, `color`) to preserve identity.
     - Sticky notes: setters for common edits (`text`, `rect`, `color`) to preserve identity.
   - Tests: `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`, `graph_diff_roundtrips_when_a_port_changes_structurally`, `graph_diff_roundtrips_when_deleting_a_port_with_incident_edges`)
-- [~] Patch unit minimality follow-ups (optional).
+- [ ] Patch unit minimality follow-ups (optional, deferred).
   - Consider port structural setter ops (key/dir/kind/capacity) if we need more minimal collaboration diffs.
+  - Workstream: `docs/workstreams/fret-node-deterministic-patch-units-m6.md`

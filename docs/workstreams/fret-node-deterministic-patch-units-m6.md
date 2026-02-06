@@ -3,6 +3,8 @@
 This workstream locks the **collaboration patch unit** for `ecosystem/fret-node`:
 `GraphOp` + `GraphTransaction`, and the deterministic diff generator `ops::graph_diff(from, to)`.
 
+Status: **MVP complete** (as of 2026-02-06).
+
 The goal is not "minimal diffs at all costs". The goal is:
 
 - deterministic, stable patch unit shape,
@@ -100,8 +102,14 @@ Evidence:
 
 These are "nice to have" improvements once the MVP contracts are stable:
 
-- [ ] Consider port structural setter ops (key/dir/kind/capacity) if/when we need more minimal
-  collaboration diffs (ensure apply-safe detaching/reattaching semantics stay explicit).
 - [x] Add dedicated conformance tests for:
   - group removal detaches nodes deterministically,
   - edge endpoint changes preserve identity (`SetEdgeEndpoints`) across reconnect flows.
+
+### M6C — Deferred (not in MVP)
+
+- [ ] Consider port structural setter ops (key/dir/kind/capacity) if/when we need more minimal
+  collaboration diffs.
+  - Rationale: remove+add keeps the patch unit apply-safe and deterministic with simpler invariants.
+  - Gate: add conformance tests that lock detaching/reattaching semantics (including incident edges
+    and owning-node `ports` ordering) before switching diff strategy.
