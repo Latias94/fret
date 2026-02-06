@@ -1,4 +1,4 @@
-﻿Status: Active (workstream tracker; keep updated as parity gates land)
+Status: Active (workstream tracker; keep updated as parity gates land)
 
 This document tracks executable TODOs for the TanStack Table v8 `table-core` parity workstream.
 
@@ -71,18 +71,17 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## Next execution plan (functional parity first)
 
-- Step 1: Deliver `HTP-ui-colpin-010` so header/body left-center-right splits and offsets stay aligned in `table_virtualized`.
-- Step 2: Close string/grouped `RowId` round-trip gaps under `HTP-state-020` + `HTP-id-015` (remove numeric-id-only assumptions).
-- Step 3: Grouped pinning is closed; move focus to filtering/sorting remaining parity backlog.
-- Step 4: Complete filtering parity backlog: `HTP-filt-050`, `HTP-filt-060`, `HTP-filt-070`.
-- Step 5: Complete remaining sorting/grouping depth: `HTP-sort-050` + `HTP-grp-020` + `HTP-grp-030`.
+- Step 1: Close the remaining `HTP-filt-060` gap (custom filter meta callback parity + fixture gate).
+- Step 2: Complete manual sorting override parity in `HTP-sort-050`.
+- Step 3: Complete grouped aggregation/sorting depth in `HTP-grp-020` + `HTP-grp-030`.
+- Step 4: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
+- Step 5: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
 P0 (core behavior parity, highest user-visible risk):
 
-- HTP-filt-050 + HTP-filt-060 + HTP-filt-070: filter depth/meta/manual-filtering semantics remain incomplete.
-- HTP-filt-050 + HTP-filt-060 + HTP-filt-070: filter depth/meta/manual-filtering semantics remain incomplete.
+- HTP-filt-060: custom filter meta callback parity (`addMeta`-like behavior) still needs fixture-backed closure.
 - HTP-sort-050: manualSorting + getSortedRowModel override semantics need final parity lock.
 
 P1 (capability breadth parity):
@@ -102,8 +101,8 @@ P2 (engineering guardrails for sustained parity):
 
 - Milestone A (UI pinning correctness, done): HTP-ui-colpin-010 closed with retained split alignment + dedicated parity gate.
 - Milestone B (grouped pinning semantics, done): `HTP-ui-rowpin-020` + `HTP-rowpin-015` closed with fixture-backed assertions.
-- Milestone C (manual pipeline parity): close HTP-filt-070 + HTP-sort-050, then lock cross-feature interactions with pagination/grouping.
-- Milestone D (filter depth/meta parity): close HTP-filt-050 + HTP-filt-060 and verify no capability regression in grouped datasets.
+- Milestone C (manual pipeline parity, in progress): close `HTP-sort-050`, then lock cross-feature interactions with pagination/grouping.
+- Milestone D (filter depth/meta parity, in progress): `HTP-filt-050` + `HTP-filt-070` closed; finish remaining `HTP-filt-060` custom meta callback parity.
 - Milestone E (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
 - Milestone F (guardrails): close HTP-cap-010, HTP-base-004, HTP-memo-020, and HTP-perf-010.
 
@@ -263,10 +262,19 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
 - [x] HTP-filt-040 Implement `resolveFilterValue` and `autoRemove` semantics.
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
   - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
-- [ ] HTP-filt-050 Add `maxLeafRowFilterDepth` semantics.
-- [ ] HTP-filt-060 Track per-row filter pass/fail map and optional filter meta (parity-gated).
-- [ ] HTP-filt-070 Align 鈥渕anual filtering鈥?semantics:
+- [x] HTP-filt-050 Add `maxLeafRowFilterDepth` semantics.
+  - Done (parity-gated): root/leaf recursion both honor `maxLeafRowFilterDepth` + `filterFromLeafRows`.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`filter_row_model` recursion branches)
+  - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`root_filter_depth_zero_preserves_unfiltered_subtree`, `leaf_filter_depth_gate_controls_descendant_bubbling`)
+- [~] HTP-filt-060 Track per-row filter pass/fail map and optional filter meta (parity-gated).
+  - Done: `RowFilterStateSnapshot` + `evaluate_row_filter_state` + table-level `row_filter_state_snapshot()` now track per-row pass/fail and meta containers.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`RowFilterStateSnapshot`, `evaluate_row_filter_state`)
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_filter_state_snapshot`)
+  - Remaining: custom filter meta callback parity (TanStack `addMeta`-like path) + fixture-backed gate.
+- [x] HTP-filt-070 Align manual filtering semantics:
   - `manualFiltering` (and `getFilteredRowModel` override) behavior matches upstream.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::filtered_row_model`, `Table::faceted_row_model`)
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`manual_filtering_skips_filtered_row_model`, `filtered_row_model_override_skips_filtered_and_faceted_row_models`)
 - [x] HTP-filt-080 Align 鈥済lobal filtering can-apply鈥?semantics:
   - `getColumnCanGlobalFilter` default behavior and override hooks.
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`

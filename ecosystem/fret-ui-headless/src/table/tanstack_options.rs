@@ -45,6 +45,10 @@ pub struct TanStackTableOptions {
     pub enable_column_filters: bool,
     #[serde(default = "default_true", rename = "enableGlobalFilter")]
     pub enable_global_filter: bool,
+    #[serde(default, rename = "filterFromLeafRows")]
+    pub filter_from_leaf_rows: bool,
+    #[serde(default, rename = "maxLeafRowFilterDepth")]
+    pub max_leaf_row_filter_depth: Option<usize>,
     #[serde(default, rename = "manualSorting")]
     pub manual_sorting: bool,
     #[serde(default, rename = "manualPagination")]
@@ -114,6 +118,8 @@ impl Default for TanStackTableOptions {
             enable_filters: true,
             enable_column_filters: true,
             enable_global_filter: true,
+            filter_from_leaf_rows: false,
+            max_leaf_row_filter_depth: None,
             manual_sorting: false,
             manual_pagination: false,
             auto_reset_page_index: None,
@@ -160,6 +166,10 @@ impl TanStackTableOptions {
         out.enable_filters = self.enable_filters;
         out.enable_column_filters = self.enable_column_filters;
         out.enable_global_filter = self.enable_global_filter;
+        out.filter_from_leaf_rows = self.filter_from_leaf_rows;
+        out.max_leaf_row_filter_depth = self
+            .max_leaf_row_filter_depth
+            .unwrap_or(out.max_leaf_row_filter_depth);
         out.manual_sorting = self.manual_sorting;
         out.manual_pagination = self.manual_pagination;
         out.auto_reset_page_index = self.auto_reset_page_index;

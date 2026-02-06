@@ -172,6 +172,7 @@ pub struct TableBuilder<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    filtered_row_model_override_pre_filtered: bool,
     expanded_row_model_override_pre_expanded: bool,
     pagination_row_model_override_pre_pagination: bool,
     initial_state: Option<super::TableState>,
@@ -200,6 +201,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_id: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
+            filtered_row_model_override_pre_filtered: false,
             expanded_row_model_override_pre_expanded: false,
             pagination_row_model_override_pre_pagination: false,
             initial_state: None,
@@ -264,7 +266,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
-    /// Configure the table-level 閳ユ竷an global filter閳?hook (TanStack `getColumnCanGlobalFilter`).
+    /// Configure the table-level global filter hook (TanStack `getColumnCanGlobalFilter`).
     pub fn get_column_can_global_filter(
         mut self,
         f: impl Fn(&super::ColumnDef<TData>, &TData) -> bool + 'static,
@@ -293,6 +295,22 @@ impl<'a, TData> TableBuilder<'a, TData> {
 
     pub fn manual_filtering(mut self, manual: bool) -> Self {
         self.options.manual_filtering = manual;
+        self
+    }
+
+    pub fn filter_from_leaf_rows(mut self, enabled: bool) -> Self {
+        self.options.filter_from_leaf_rows = enabled;
+        self
+    }
+
+    pub fn max_leaf_row_filter_depth(mut self, depth: usize) -> Self {
+        self.options.max_leaf_row_filter_depth = depth;
+        self
+    }
+
+    /// TanStack-aligned: override `getFilteredRowModel` to return `getPreFilteredRowModel()`.
+    pub fn override_filtered_row_model_pre_filtered(mut self) -> Self {
+        self.filtered_row_model_override_pre_filtered = true;
         self
     }
 
@@ -481,6 +499,7 @@ pub struct Table<'a, TData> {
     get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
+    filtered_row_model_override_pre_filtered: bool,
     expanded_row_model_override_pre_expanded: bool,
     pagination_row_model_override_pre_pagination: bool,
     /// TanStack-aligned `initialState` snapshot (used by table-level reset APIs).
@@ -586,6 +605,8 @@ impl<'a, TData> Table<'a, TData> {
             get_row_id: builder.get_row_id,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
+            filtered_row_model_override_pre_filtered: builder
+                .filtered_row_model_override_pre_filtered,
             expanded_row_model_override_pre_expanded: builder
                 .expanded_row_model_override_pre_expanded,
             pagination_row_model_override_pre_pagination: builder
@@ -2544,7 +2565,7 @@ impl<'a, TData> Table<'a, TData> {
     }
 
     pub fn filtered_row_model(&self) -> &RowModel<'a, TData> {
-        if self.options.manual_filtering {
+        if self.options.manual_filtering || self.filtered_row_model_override_pre_filtered {
             return self.pre_filtered_row_model();
         }
         self.filtered_row_model.get_or_init(|| {
@@ -2559,6 +2580,22 @@ impl<'a, TData> Table<'a, TData> {
                 self.get_column_can_global_filter.as_deref(),
             )
         })
+    }
+
+    pub fn row_filter_state_snapshot(&self) -> super::RowFilterStateSnapshot {
+        if self.options.manual_filtering || self.filtered_row_model_override_pre_filtered {
+            return super::RowFilterStateSnapshot::default();
+        }
+        super::evaluate_row_filter_state(
+            self.pre_filtered_row_model(),
+            &self.columns,
+            &self.state.column_filters,
+            self.state.global_filter.clone(),
+            self.options,
+            &self.filter_fns,
+            &self.global_filter_fn,
+            self.get_column_can_global_filter.as_deref(),
+        )
     }
 
     pub fn pre_sorted_row_model(&self) -> &RowModel<'a, TData> {
@@ -3013,7 +3050,7 @@ impl<'a, TData> Table<'a, TData> {
     pub fn faceted_row_model(&self, column_id: &str) -> Option<&RowModel<'a, TData>> {
         let column_index = self.column_index(column_id)?;
 
-        if self.options.manual_filtering {
+        if self.options.manual_filtering || self.filtered_row_model_override_pre_filtered {
             return Some(self.pre_filtered_row_model());
         }
 
@@ -3708,6 +3745,54 @@ mod tests {
             table.filtered_row_model(),
             table.core_row_model()
         ));
+    }
+
+    #[test]
+    fn filtered_row_model_override_skips_filtered_and_faceted_row_models() {
+        #[derive(Debug, Clone)]
+        struct Item {
+            label: Arc<str>,
+        }
+
+        let data = vec![
+            Item {
+                label: Arc::from("a"),
+            },
+            Item {
+                label: Arc::from("b"),
+            },
+        ];
+
+        let helper = create_column_helper::<Item>();
+        let columns = vec![
+            helper
+                .accessor("label", |it| it.label.clone())
+                .filter_by(|row, q| row.label.as_ref() == q),
+        ];
+
+        let mut state = TableState::default();
+        state.column_filters = vec![ColumnFilter {
+            column: "label".into(),
+            value: serde_json::Value::String("b".to_string()),
+        }];
+
+        let table = Table::builder(&data)
+            .columns(columns)
+            .state(state)
+            .override_filtered_row_model_pre_filtered()
+            .build();
+
+        assert!(std::ptr::eq(
+            table.filtered_row_model(),
+            table.pre_filtered_row_model()
+        ));
+        let faceted = table.faceted_row_model("label").expect("faceted row model");
+        assert!(std::ptr::eq(faceted, table.pre_filtered_row_model()));
+
+        let snapshot = table.row_filter_state_snapshot();
+        assert!(snapshot.filterable_ids.is_empty());
+        assert!(snapshot.row_column_filters.is_empty());
+        assert!(snapshot.row_column_filters_meta.is_empty());
     }
 
     #[test]

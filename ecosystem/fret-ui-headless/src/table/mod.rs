@@ -67,8 +67,9 @@ pub use faceting::{
     faceted_unique_value_labels, faceted_unique_values,
 };
 pub use filtering::{
-    ColumnFilter, ColumnFiltersState, FilterFnDef, GlobalFilterState,
-    contains_ascii_case_insensitive, filter_row_model, set_column_filter_value_tanstack,
+    ColumnFilter, ColumnFiltersState, FilterFnDef, GlobalFilterState, RowColumnFilters,
+    RowColumnFiltersMeta, RowFilterStateSnapshot, contains_ascii_case_insensitive,
+    evaluate_row_filter_state, filter_row_model, set_column_filter_value_tanstack,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
 pub use grouped_aggregation::{
