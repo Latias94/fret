@@ -43,3 +43,9 @@ Tracking lives in:
 
 - `docs/workstreams/query-lifecycle-v1-todo.md`
 
+Diagnostics implementation notes (Phase 4):
+
+- tracing target: `fret_query::diag`
+- event categories: should-fetch decisions, fetch start/finish, cancellation, retry scheduling,
+  invalidate/invalidate_namespace, GC eviction
+- snapshot surface: `QueryClient::snapshot()` returning data-only metadata suitable for bundle export

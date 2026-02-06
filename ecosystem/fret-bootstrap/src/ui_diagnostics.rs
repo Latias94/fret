@@ -3,6 +3,7 @@ use fret_core::{
     AppWindowId, Event, KeyCode, Modifiers, MouseButton, MouseButtons, NodeId, Point, PointerEvent,
     PointerId, PointerType, Rect, Scene, SemanticsRole,
 };
+use fret_query::{QueryClientSnapshot, QuerySnapshotEntry};
 use fret_ui::elements::ElementRuntime;
 use fret_ui::{Invalidation, UiDebugFrameStats, UiDebugHitTest, UiDebugLayerInfo, UiTree};
 use serde::{Deserialize, Serialize};
@@ -2510,12 +2511,19 @@ impl UiDiagnosticsService {
             .as_ref()
             .and_then(|provider| provider(app, window));
 
+        let snapshot_unix_ms = unix_ms_now();
+
+        let query_snapshot = app
+            .global::<fret_query::QueryClient>()
+            .map(fret_query::QueryClient::snapshot)
+            .map(|snapshot| ui_query_snapshot_from_runtime(snapshot, snapshot_unix_ms));
+
         let snapshot = UiDiagnosticsSnapshotV1 {
             schema_version: 1,
             tick_id: app.tick_id().0,
             frame_id: app.frame_id().0,
             window: window.data().as_ffi(),
-            timestamp_unix_ms: unix_ms_now(),
+            timestamp_unix_ms: snapshot_unix_ms,
             scale_factor,
             window_bounds: RectV1::from(bounds),
             scene_ops: scene.ops_len() as u64,
@@ -2527,6 +2535,7 @@ impl UiDiagnosticsService {
             changed_model_sources_top,
             resource_caches,
             app_snapshot,
+            query_snapshot,
         };
 
         ring.push_snapshot(&self.cfg, snapshot);
@@ -3062,6 +3071,9 @@ pub struct UiDiagnosticsSnapshotV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub app_snapshot: Option<serde_json::Value>,
 
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub query_snapshot: Option<UiQuerySnapshotV1>,
+
     pub debug: UiTreeDebugSnapshotV1,
 }
 
@@ -3078,6 +3090,67 @@ pub struct UiResourceCachesV1 {
     pub icon_svg_cache: Option<UiRetainedSvgCacheStatsV1>,
     #[serde(default)]
     pub canvas: Vec<UiCanvasCacheEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQuerySnapshotV1 {
+    pub captured_at_unix_ms: u64,
+    pub entries: Vec<UiQuerySnapshotEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQuerySnapshotEntryV1 {
+    pub namespace: String,
+    pub hash: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub debug_label: Option<String>,
+    pub type_name: String,
+    pub model_id: u64,
+    pub stale: bool,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inflight: Option<u64>,
+    pub policy: UiQueryPolicyV1,
+    pub retry: UiQueryRetryV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_error_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub updated_at_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_duration_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryPolicyV1 {
+    pub stale_time_ms: u64,
+    pub cache_time_ms: u64,
+    pub dedupe_inflight: bool,
+    pub keep_previous_data_while_loading: bool,
+    pub cancel_mode: String,
+    pub retry_policy: UiQueryRetryPolicyV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryRetryPolicyV1 {
+    pub kind: String,
+    pub max_retries: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delay_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub base_delay_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_delay_ms: Option<u64>,
+    pub retry_on: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiQueryRetryV1 {
+    pub failures: u32,
+    pub max_retries: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_retry_at_unix_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -9506,6 +9579,84 @@ mod tests {
     }
 
     #[test]
+    fn query_snapshot_is_serializable_for_bundle() {
+        let model_id = ModelId::from(KeyData::from_ffi(7));
+        let model_id_ffi = model_id.data().as_ffi();
+
+        let snapshot = QueryClientSnapshot {
+            captured_at: fret_core::time::Instant::now(),
+            entries: vec![QuerySnapshotEntry {
+                namespace: "test.query.v1",
+                hash: 42,
+                debug_label: Some("demo"),
+                type_name: "u32",
+                model_id,
+                policy: fret_query::QueryPolicy {
+                    stale_time: std::time::Duration::from_secs(2),
+                    cache_time: std::time::Duration::from_secs(60),
+                    dedupe_inflight: true,
+                    keep_previous_data_while_loading: true,
+                    cancel_mode: fret_query::QueryCancelMode::CancelInFlight,
+                    retry: fret_query::QueryRetryPolicy::fixed(
+                        2,
+                        std::time::Duration::from_millis(50),
+                    ),
+                },
+                stale: false,
+                status: fret_query::QueryStatus::Success,
+                inflight: None,
+                last_used: fret_core::time::Instant::now(),
+                last_observed_frame: Some(fret_core::FrameId(9)),
+                updated_at: None,
+                last_duration: Some(std::time::Duration::from_millis(8)),
+                retry: fret_query::QueryRetryState {
+                    failures: 0,
+                    max_retries: 2,
+                    next_retry_at: None,
+                },
+                last_error_kind: None,
+                last_error_message: None,
+            }],
+        };
+
+        let ui_snapshot = ui_query_snapshot_from_runtime(snapshot, 1234);
+        let json = serde_json::to_value(&ui_snapshot).expect("query snapshot should serialize");
+
+        assert_eq!(
+            json.get("captured_at_unix_ms").and_then(|v| v.as_u64()),
+            Some(1234)
+        );
+        let entries = json
+            .get("entries")
+            .and_then(|v| v.as_array())
+            .expect("entries should be array");
+        assert_eq!(entries.len(), 1);
+
+        let entry = &entries[0];
+        assert_eq!(
+            entry.get("namespace").and_then(|v| v.as_str()),
+            Some("test.query.v1")
+        );
+        assert_eq!(entry.get("hash").and_then(|v| v.as_u64()), Some(42));
+        assert_eq!(
+            entry.get("model_id").and_then(|v| v.as_u64()),
+            Some(model_id_ffi)
+        );
+        assert_eq!(
+            entry.get("status").and_then(|v| v.as_str()),
+            Some("Success")
+        );
+        assert_eq!(
+            entry
+                .get("policy")
+                .and_then(|v| v.get("retry_policy"))
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str()),
+            Some("fixed")
+        );
+    }
+
+    #[test]
     fn hit_test_snapshot_exposes_focus_barrier_root() {
         let position = Point::new(Px(1.0), Px(2.0));
         let hit_test = UiDebugHitTest {
@@ -9543,6 +9694,103 @@ fn sanitize_path_for_bundle(base_dir: &Path, path: &Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default()
+}
+
+fn ui_query_snapshot_from_runtime(
+    snapshot: QueryClientSnapshot,
+    now_unix_ms: u64,
+) -> UiQuerySnapshotV1 {
+    UiQuerySnapshotV1 {
+        captured_at_unix_ms: now_unix_ms,
+        entries: snapshot
+            .entries
+            .into_iter()
+            .map(|entry| ui_query_snapshot_entry_from_runtime(entry))
+            .collect(),
+    }
+}
+
+fn ui_query_snapshot_entry_from_runtime(entry: QuerySnapshotEntry) -> UiQuerySnapshotEntryV1 {
+    UiQuerySnapshotEntryV1 {
+        namespace: entry.namespace.to_string(),
+        hash: entry.hash,
+        debug_label: entry.debug_label.map(ToString::to_string),
+        type_name: entry.type_name.to_string(),
+        model_id: entry.model_id.data().as_ffi(),
+        stale: entry.stale,
+        status: format!("{:?}", entry.status),
+        inflight: entry.inflight,
+        policy: UiQueryPolicyV1 {
+            stale_time_ms: duration_millis_u64(entry.policy.stale_time),
+            cache_time_ms: duration_millis_u64(entry.policy.cache_time),
+            dedupe_inflight: entry.policy.dedupe_inflight,
+            keep_previous_data_while_loading: entry.policy.keep_previous_data_while_loading,
+            cancel_mode: format!("{:?}", entry.policy.cancel_mode),
+            retry_policy: match entry.policy.retry {
+                fret_query::QueryRetryPolicy::None => UiQueryRetryPolicyV1 {
+                    kind: "none".to_string(),
+                    max_retries: 0,
+                    delay_ms: None,
+                    base_delay_ms: None,
+                    max_delay_ms: None,
+                    retry_on: "transient".to_string(),
+                },
+                fret_query::QueryRetryPolicy::Fixed {
+                    max_retries,
+                    delay,
+                    retry_on,
+                } => UiQueryRetryPolicyV1 {
+                    kind: "fixed".to_string(),
+                    max_retries,
+                    delay_ms: Some(duration_millis_u64(delay)),
+                    base_delay_ms: None,
+                    max_delay_ms: None,
+                    retry_on: format!("{:?}", retry_on).to_ascii_lowercase(),
+                },
+                fret_query::QueryRetryPolicy::Exponential {
+                    max_retries,
+                    base_delay,
+                    max_delay,
+                    retry_on,
+                } => UiQueryRetryPolicyV1 {
+                    kind: "exponential".to_string(),
+                    max_retries,
+                    delay_ms: None,
+                    base_delay_ms: Some(duration_millis_u64(base_delay)),
+                    max_delay_ms: Some(duration_millis_u64(max_delay)),
+                    retry_on: format!("{:?}", retry_on).to_ascii_lowercase(),
+                },
+            },
+        },
+        retry: UiQueryRetryV1 {
+            failures: entry.retry.failures,
+            max_retries: entry.retry.max_retries,
+            next_retry_at_unix_ms: entry.retry.next_retry_at.and_then(instant_to_unix_ms),
+        },
+        last_error_kind: entry
+            .last_error_kind
+            .map(|kind| format!("{:?}", kind).to_ascii_lowercase()),
+        last_error_message: entry.last_error_message.map(|message| message.to_string()),
+        updated_at_unix_ms: entry.updated_at.and_then(instant_to_unix_ms),
+        last_duration_ms: entry.last_duration.map(duration_millis_u64),
+    }
+}
+
+fn duration_millis_u64(duration: std::time::Duration) -> u64 {
+    duration.as_millis().min(u128::from(u64::MAX)) as u64
+}
+
+fn instant_to_unix_ms(instant: std::time::Instant) -> Option<u64> {
+    let now_instant = std::time::Instant::now();
+    let now_unix_ms = unix_ms_now();
+
+    if instant >= now_instant {
+        let delta = instant.duration_since(now_instant);
+        return now_unix_ms.checked_add(duration_millis_u64(delta));
+    }
+
+    let delta = now_instant.duration_since(instant);
+    now_unix_ms.checked_sub(duration_millis_u64(delta))
 }
 
 trait PointerEventExt {

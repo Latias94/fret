@@ -21,7 +21,7 @@
 //! - Ensure the hashed key value is deterministic and only contains the parameters that affect
 //!   the fetch result (avoid `HashMap` iteration order, pointer addresses, random IDs, etc.).
 
-use std::any::{Any, TypeId};
+use std::any::{Any, TypeId, type_name};
 use std::collections::HashMap;
 use std::fmt;
 use std::future::Future;
@@ -464,6 +464,32 @@ impl<T: 'static> QueryHandle<T> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct QueryClientSnapshot {
+    pub captured_at: Instant,
+    pub entries: Vec<QuerySnapshotEntry>,
+}
+
+#[derive(Debug, Clone)]
+pub struct QuerySnapshotEntry {
+    pub namespace: &'static str,
+    pub hash: u64,
+    pub debug_label: Option<&'static str>,
+    pub type_name: &'static str,
+    pub model_id: ModelId,
+    pub policy: QueryPolicy,
+    pub stale: bool,
+    pub status: QueryStatus,
+    pub inflight: Option<u64>,
+    pub last_used: Instant,
+    pub last_observed_frame: Option<FrameId>,
+    pub updated_at: Option<Instant>,
+    pub last_duration: Option<Duration>,
+    pub retry: QueryRetryState,
+    pub last_error_kind: Option<QueryErrorKind>,
+    pub last_error_message: Option<Arc<str>>,
+}
+
 type ApplyFn = fn(&mut dyn Any, QueryApplyMsg) -> bool;
 type ApplyRetryFn = fn(&mut dyn Any, QueryRetryState);
 
@@ -487,6 +513,7 @@ impl Default for QueryRuntimeRetry {
 #[derive(Debug)]
 struct QueryRuntimeEntry {
     type_id: TypeId,
+    type_name: &'static str,
     namespace: &'static str,
     hash: u64,
     debug_label: Option<&'static str>,
@@ -495,6 +522,11 @@ struct QueryRuntimeEntry {
     last_used: Instant,
     last_observed_frame: Option<FrameId>,
     stale: bool,
+    status: QueryStatus,
+    updated_at: Option<Instant>,
+    last_duration: Option<Duration>,
+    last_error_kind: Option<QueryErrorKind>,
+    last_error_message: Option<Arc<str>>,
     inflight: Option<Inflight>,
     retry: QueryRuntimeRetry,
     apply: ApplyFn,
@@ -548,6 +580,13 @@ impl QueryRuntime {
                         .is_some_and(|entry| entry.model_id == model_id)
                 };
                 if exists {
+                    tracing::debug!(
+                        target: "fret_query::diag",
+                        namespace = key.namespace,
+                        hash = key.hash,
+                        model_id = ?model_id,
+                        "query retry wake triggered redraw"
+                    );
                     host.request_redraw(window);
                 }
             }
@@ -558,16 +597,37 @@ impl QueryRuntime {
             return;
         };
 
+        let finished_at = apply_msg.finished_at;
+        let duration = apply_msg.duration;
         let outcome_err = apply_msg.result.as_ref().err().cloned();
 
-        let (apply, apply_retry) = {
+        let (apply, apply_retry, namespace, hash, debug_label, type_name) = {
             let mut entries = self.entries.lock().unwrap_or_else(|p| p.into_inner());
             let Some(entry) = entries.get_mut(&key) else {
+                tracing::debug!(
+                    target: "fret_query::diag",
+                    namespace = key.namespace,
+                    hash = key.hash,
+                    model_id = ?model_id,
+                    inflight_id,
+                    "query completion dropped because entry is missing"
+                );
                 return;
             };
 
             if entry.model_id != model_id {
                 // The query was GC'd and recreated; ignore stale completions.
+                tracing::debug!(
+                    target: "fret_query::diag",
+                    namespace = entry.namespace,
+                    hash = entry.hash,
+                    debug_label = entry.debug_label,
+                    type_name = entry.type_name,
+                    model_id = ?model_id,
+                    entry_model_id = ?entry.model_id,
+                    inflight_id,
+                    "query completion dropped due to model mismatch"
+                );
                 return;
             }
 
@@ -578,7 +638,14 @@ impl QueryRuntime {
                 entry.inflight = None;
             }
 
-            (entry.apply, entry.apply_retry)
+            (
+                entry.apply,
+                entry.apply_retry,
+                entry.namespace,
+                entry.hash,
+                entry.debug_label,
+                entry.type_name,
+            )
         };
 
         let applied = host
@@ -587,10 +654,20 @@ impl QueryRuntime {
             .ok()
             .unwrap_or(false);
         if !applied {
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                inflight_id,
+                "query completion ignored because inflight token no longer matches"
+            );
             return;
         }
 
-        let retry_state = {
+        let (retry_state, retry_delay) = {
             let mut entries = self.entries.lock().unwrap_or_else(|p| p.into_inner());
             let Some(entry) = entries.get_mut(&key) else {
                 return;
@@ -600,9 +677,16 @@ impl QueryRuntime {
             }
 
             let max_retries = entry.policy.retry.max_retries();
+            let mut retry_delay = None;
 
-            match outcome_err {
+            entry.updated_at = Some(finished_at);
+            entry.last_duration = Some(duration);
+
+            match outcome_err.as_ref() {
                 None => {
+                    entry.status = QueryStatus::Success;
+                    entry.last_error_kind = None;
+                    entry.last_error_message = None;
                     entry.retry.failures = 0;
                     entry.retry.next_retry_at = None;
                     if let Some(token) = entry.retry.scheduled_wake.take() {
@@ -610,9 +694,13 @@ impl QueryRuntime {
                     }
                 }
                 Some(err) => {
+                    entry.status = QueryStatus::Error;
+                    entry.last_error_kind = Some(err.kind());
+                    entry.last_error_message = Some(err.message().clone());
                     entry.retry.failures = entry.retry.failures.saturating_add(1);
                     let failures = entry.retry.failures;
                     let delay = entry.policy.retry.next_retry_delay(failures, &err);
+                    retry_delay = delay;
 
                     entry.retry.next_retry_at = delay.map(|d| Instant::now() + d);
 
@@ -638,20 +726,68 @@ impl QueryRuntime {
                         let token = task.token();
                         task.detach();
                         entry.retry.scheduled_wake = Some(token);
+
+                        tracing::debug!(
+                            target: "fret_query::diag",
+                            namespace = entry.namespace,
+                            hash = entry.hash,
+                            debug_label = entry.debug_label,
+                            type_name = entry.type_name,
+                            model_id = ?entry.model_id,
+                            failures,
+                            max_retries,
+                            delay_ms = delay.as_millis() as u64,
+                            "query retry scheduled"
+                        );
                     }
                 }
             }
 
-            QueryRetryState {
-                failures: entry.retry.failures,
-                max_retries,
-                next_retry_at: entry.retry.next_retry_at,
-            }
+            (
+                QueryRetryState {
+                    failures: entry.retry.failures,
+                    max_retries,
+                    next_retry_at: entry.retry.next_retry_at,
+                },
+                retry_delay,
+            )
         };
 
         let _ = host
             .models_mut()
             .update_any(model_id, |any| apply_retry(any, retry_state));
+
+        match outcome_err {
+            None => {
+                tracing::debug!(
+                    target: "fret_query::diag",
+                    namespace,
+                    hash,
+                    debug_label,
+                    type_name,
+                    model_id = ?model_id,
+                    inflight_id,
+                    duration_ms = duration.as_millis() as u64,
+                    "query fetch finished (success)"
+                );
+            }
+            Some(err) => {
+                tracing::debug!(
+                    target: "fret_query::diag",
+                    namespace,
+                    hash,
+                    debug_label,
+                    type_name,
+                    model_id = ?model_id,
+                    inflight_id,
+                    duration_ms = duration.as_millis() as u64,
+                    error_kind = ?err.kind(),
+                    error = %err,
+                    retry_scheduled = retry_delay.is_some(),
+                    "query fetch finished (error)"
+                );
+            }
+        }
 
         if let Some(window) = window {
             host.request_redraw(window);
@@ -991,6 +1127,7 @@ impl QueryClient {
         let Some(entry) = entries.get_mut(&key_id) else {
             return;
         };
+        let had_inflight = entry.inflight.is_some();
         entry.stale = true;
         entry.retry.next_retry_at = None;
         if let Some(token) = entry.retry.scheduled_wake.take() {
@@ -998,7 +1135,29 @@ impl QueryClient {
         }
         if entry.policy.cancel_mode == QueryCancelMode::CancelInFlight {
             entry.inflight = None;
+            if had_inflight {
+                tracing::debug!(
+                    target: "fret_query::diag",
+                    namespace = entry.namespace,
+                    hash = entry.hash,
+                    debug_label = entry.debug_label,
+                    type_name = entry.type_name,
+                    model_id = ?entry.model_id,
+                    cancel_mode = ?entry.policy.cancel_mode,
+                    "query inflight cancelled by invalidate"
+                );
+            }
         }
+
+        tracing::debug!(
+            target: "fret_query::diag",
+            namespace = entry.namespace,
+            hash = entry.hash,
+            debug_label = entry.debug_label,
+            type_name = entry.type_name,
+            model_id = ?entry.model_id,
+            "query invalidated"
+        );
     }
 
     pub fn invalidate_namespace(&mut self, namespace: &'static str) {
@@ -1007,8 +1166,10 @@ impl QueryClient {
             .entries
             .lock()
             .unwrap_or_else(|p| p.into_inner());
+        let mut affected = 0usize;
         for entry in entries.values_mut() {
             if entry.namespace == namespace {
+                let had_inflight = entry.inflight.is_some();
                 entry.stale = true;
                 entry.retry.next_retry_at = None;
                 if let Some(token) = entry.retry.scheduled_wake.take() {
@@ -1016,8 +1177,73 @@ impl QueryClient {
                 }
                 if entry.policy.cancel_mode == QueryCancelMode::CancelInFlight {
                     entry.inflight = None;
+                    if had_inflight {
+                        tracing::debug!(
+                            target: "fret_query::diag",
+                            namespace = entry.namespace,
+                            hash = entry.hash,
+                            debug_label = entry.debug_label,
+                            type_name = entry.type_name,
+                            model_id = ?entry.model_id,
+                            cancel_mode = ?entry.policy.cancel_mode,
+                            "query inflight cancelled by namespace invalidation"
+                        );
+                    }
                 }
+                affected = affected.saturating_add(1);
             }
+        }
+
+        tracing::debug!(
+            target: "fret_query::diag",
+            namespace,
+            affected,
+            "query namespace invalidated"
+        );
+    }
+
+    pub fn snapshot(&self) -> QueryClientSnapshot {
+        let captured_at = Instant::now();
+
+        let mut entries = {
+            let runtime_entries = self
+                .runtime
+                .entries
+                .lock()
+                .unwrap_or_else(|p| p.into_inner());
+
+            runtime_entries
+                .values()
+                .map(|entry| QuerySnapshotEntry {
+                    namespace: entry.namespace,
+                    hash: entry.hash,
+                    debug_label: entry.debug_label,
+                    type_name: entry.type_name,
+                    model_id: entry.model_id,
+                    policy: entry.policy.clone(),
+                    stale: entry.stale,
+                    status: entry.status,
+                    inflight: entry.inflight.as_ref().map(|inflight| inflight.id),
+                    last_used: entry.last_used,
+                    last_observed_frame: entry.last_observed_frame,
+                    updated_at: entry.updated_at,
+                    last_duration: entry.last_duration,
+                    retry: QueryRetryState {
+                        failures: entry.retry.failures,
+                        max_retries: entry.policy.retry.max_retries(),
+                        next_retry_at: entry.retry.next_retry_at,
+                    },
+                    last_error_kind: entry.last_error_kind,
+                    last_error_message: entry.last_error_message.clone(),
+                })
+                .collect::<Vec<_>>()
+        };
+
+        entries.sort_by_key(|entry| (entry.namespace, entry.hash, entry.type_name));
+
+        QueryClientSnapshot {
+            captured_at,
+            entries,
         }
     }
 
@@ -1038,6 +1264,7 @@ impl QueryClient {
             .unwrap_or_else(|p| p.into_inner());
         let entry = entries.entry(key_id).or_insert_with(|| QueryRuntimeEntry {
             type_id: TypeId::of::<T>(),
+            type_name: type_name::<T>(),
             namespace: key.namespace,
             hash: key.hash,
             debug_label: key.debug_label,
@@ -1046,6 +1273,11 @@ impl QueryClient {
             last_used: now,
             last_observed_frame: None,
             stale: true,
+            status: QueryStatus::Idle,
+            updated_at: None,
+            last_duration: None,
+            last_error_kind: None,
+            last_error_message: None,
             inflight: None,
             retry: QueryRuntimeRetry::default(),
             apply: apply_query_result::<T>,
@@ -1086,7 +1318,18 @@ impl QueryClient {
         now: Instant,
         remounted: bool,
     ) -> bool {
-        let (policy, has_inflight, stale, stale_time, next_retry_at) = {
+        let (
+            policy,
+            has_inflight,
+            stale,
+            stale_time,
+            next_retry_at,
+            namespace,
+            hash,
+            debug_label,
+            type_name,
+            model_id,
+        ) = {
             let entries = self
                 .runtime
                 .entries
@@ -1101,6 +1344,11 @@ impl QueryClient {
                 entry.stale,
                 entry.policy.stale_time,
                 entry.retry.next_retry_at,
+                entry.namespace,
+                entry.hash,
+                entry.debug_label,
+                entry.type_name,
+                entry.model_id,
             )
         };
 
@@ -1112,43 +1360,179 @@ impl QueryClient {
         if stale {
             if has_inflight {
                 if policy.dedupe_inflight {
+                    tracing::debug!(
+                        target: "fret_query::diag",
+                        namespace,
+                        hash,
+                        debug_label,
+                        type_name,
+                        model_id = ?model_id,
+                        stale,
+                        has_inflight,
+                        dedupe_inflight = policy.dedupe_inflight,
+                        cancel_mode = ?policy.cancel_mode,
+                        decision = "cancel_or_wait_existing_inflight",
+                        "query should_fetch decision"
+                    );
                     return policy.cancel_mode == QueryCancelMode::CancelInFlight;
                 }
+                tracing::debug!(
+                    target: "fret_query::diag",
+                    namespace,
+                    hash,
+                    debug_label,
+                    type_name,
+                    model_id = ?model_id,
+                    stale,
+                    has_inflight,
+                    dedupe_inflight = policy.dedupe_inflight,
+                    decision = "start_new_fetch_with_parallel_inflight",
+                    "query should_fetch decision"
+                );
                 return true;
             }
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                stale,
+                has_inflight,
+                decision = "start_fetch_stale",
+                "query should_fetch decision"
+            );
             return true;
         }
 
         if policy.dedupe_inflight && has_inflight {
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                stale,
+                has_inflight,
+                dedupe_inflight = policy.dedupe_inflight,
+                decision = "skip_deduped_inflight",
+                "query should_fetch decision"
+            );
             return false;
         }
 
         if state.status == QueryStatus::Idle {
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                decision = "start_fetch_idle",
+                "query should_fetch decision"
+            );
             return true;
         }
 
         if state.status == QueryStatus::Error {
             let Some(next_retry_at) = next_retry_at else {
+                tracing::debug!(
+                    target: "fret_query::diag",
+                    namespace,
+                    hash,
+                    debug_label,
+                    type_name,
+                    model_id = ?model_id,
+                    status = ?state.status,
+                    decision = "skip_error_no_retry",
+                    "query should_fetch decision"
+                );
                 return false;
             };
-            return now >= next_retry_at;
+            let should_retry = now >= next_retry_at;
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                status = ?state.status,
+                next_retry_at = ?next_retry_at,
+                should_retry,
+                decision = if should_retry { "start_fetch_retry_due" } else { "skip_retry_not_due" },
+                "query should_fetch decision"
+            );
+            return should_retry;
         }
 
         if state.status != QueryStatus::Success {
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                status = ?state.status,
+                decision = "skip_non_terminal_status",
+                "query should_fetch decision"
+            );
             return false;
         }
 
         let Some(updated_at) = state.updated_at else {
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                status = ?state.status,
+                decision = "start_missing_updated_at",
+                "query should_fetch decision"
+            );
             return true;
         };
 
         let stale_by_time = now.duration_since(updated_at) >= stale_time;
         if !stale_by_time {
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace,
+                hash,
+                debug_label,
+                type_name,
+                model_id = ?model_id,
+                status = ?state.status,
+                remounted,
+                stale_by_time,
+                decision = "skip_fresh",
+                "query should_fetch decision"
+            );
             return false;
         }
 
         // Becoming stale by time does not automatically refetch: only refetch when an observer
         // is (re)attached after a gap (TanStack-like "mount + stale" behavior).
+        tracing::debug!(
+            target: "fret_query::diag",
+            namespace,
+            hash,
+            debug_label,
+            type_name,
+            model_id = ?model_id,
+            status = ?state.status,
+            remounted,
+            stale_by_time,
+            decision = if remounted { "start_remount_stale" } else { "skip_stale_while_observed" },
+            "query should_fetch decision"
+        );
+
         remounted
     }
 
@@ -1225,17 +1609,41 @@ impl QueryClient {
         if let Some(prev) = entry.inflight.take() {
             let Inflight { task, .. } = prev;
             match policy.cancel_mode {
-                QueryCancelMode::CancelInFlight => drop(task),
+                QueryCancelMode::CancelInFlight => {
+                    tracing::debug!(
+                        target: "fret_query::diag",
+                        namespace = entry.namespace,
+                        hash = entry.hash,
+                        debug_label = entry.debug_label,
+                        type_name = entry.type_name,
+                        model_id = ?entry.model_id,
+                        cancel_mode = ?policy.cancel_mode,
+                        "query inflight cancelled by new fetch"
+                    );
+                    drop(task)
+                }
                 QueryCancelMode::KeepInFlight => task.detach(),
             }
         }
 
         entry.stale = false;
+        entry.status = QueryStatus::Loading;
         entry.inflight = Some(Inflight {
             id: inflight_id,
             started_at,
             task,
         });
+
+        tracing::debug!(
+            target: "fret_query::diag",
+            namespace = entry.namespace,
+            hash = entry.hash,
+            debug_label = entry.debug_label,
+            type_name = entry.type_name,
+            model_id = ?entry.model_id,
+            inflight_id,
+            "query fetch started"
+        );
 
         let _ = app.models_mut().update(&model, |st| {
             st.status = QueryStatus::Loading;
@@ -1316,17 +1724,41 @@ impl QueryClient {
         if let Some(prev) = entry.inflight.take() {
             let Inflight { task, .. } = prev;
             match policy.cancel_mode {
-                QueryCancelMode::CancelInFlight => drop(task),
+                QueryCancelMode::CancelInFlight => {
+                    tracing::debug!(
+                        target: "fret_query::diag",
+                        namespace = entry.namespace,
+                        hash = entry.hash,
+                        debug_label = entry.debug_label,
+                        type_name = entry.type_name,
+                        model_id = ?entry.model_id,
+                        cancel_mode = ?policy.cancel_mode,
+                        "query inflight cancelled by new fetch"
+                    );
+                    drop(task)
+                }
                 QueryCancelMode::KeepInFlight => task.detach(),
             }
         }
 
         entry.stale = false;
+        entry.status = QueryStatus::Loading;
         entry.inflight = Some(Inflight {
             id: inflight_id,
             started_at,
             task,
         });
+
+        tracing::debug!(
+            target: "fret_query::diag",
+            namespace = entry.namespace,
+            hash = entry.hash,
+            debug_label = entry.debug_label,
+            type_name = entry.type_name,
+            model_id = ?entry.model_id,
+            inflight_id,
+            "query fetch started"
+        );
 
         let _ = app.models_mut().update(&model, |st| {
             st.status = QueryStatus::Loading;
@@ -1395,6 +1827,31 @@ impl QueryClient {
                     "FutureSpawner does not support local futures (use a wasm/local spawner or use_query_async)",
                 ));
             });
+
+            let mut entries = self
+                .runtime
+                .entries
+                .lock()
+                .unwrap_or_else(|p| p.into_inner());
+            if let Some(entry) = entries.get_mut(&key_id) {
+                entry.status = QueryStatus::Error;
+                entry.last_error_kind = Some(QueryErrorKind::Permanent);
+                entry.last_error_message = Some(Arc::from(
+                    "FutureSpawner does not support local futures (use a wasm/local spawner or use_query_async)",
+                ));
+                entry.updated_at = Some(now);
+                entry.last_duration = None;
+            }
+
+            tracing::debug!(
+                target: "fret_query::diag",
+                namespace = key.namespace(),
+                hash = key.hash(),
+                debug_label = key.debug_label(),
+                type_name = type_name::<T>(),
+                model_id = ?model_id,
+                "query fetch failed to start: local future spawner unsupported"
+            );
             return;
         };
 
@@ -1415,17 +1872,41 @@ impl QueryClient {
         if let Some(prev) = entry.inflight.take() {
             let Inflight { task, .. } = prev;
             match policy.cancel_mode {
-                QueryCancelMode::CancelInFlight => drop(task),
+                QueryCancelMode::CancelInFlight => {
+                    tracing::debug!(
+                        target: "fret_query::diag",
+                        namespace = entry.namespace,
+                        hash = entry.hash,
+                        debug_label = entry.debug_label,
+                        type_name = entry.type_name,
+                        model_id = ?entry.model_id,
+                        cancel_mode = ?policy.cancel_mode,
+                        "query inflight cancelled by new fetch"
+                    );
+                    drop(task)
+                }
                 QueryCancelMode::KeepInFlight => task.detach(),
             }
         }
 
         entry.stale = false;
+        entry.status = QueryStatus::Loading;
         entry.inflight = Some(Inflight {
             id: inflight_id,
             started_at,
             task,
         });
+
+        tracing::debug!(
+            target: "fret_query::diag",
+            namespace = entry.namespace,
+            hash = entry.hash,
+            debug_label = entry.debug_label,
+            type_name = entry.type_name,
+            model_id = ?entry.model_id,
+            inflight_id,
+            "query fetch started"
+        );
 
         let _ = app.models_mut().update(&model, |st| {
             st.status = QueryStatus::Loading;
@@ -1473,6 +1954,17 @@ impl QueryClient {
                 .lock()
                 .unwrap_or_else(|p| p.into_inner());
             for key in &evict {
+                if let Some(entry) = entries.get(key) {
+                    tracing::debug!(
+                        target: "fret_query::diag",
+                        namespace = entry.namespace,
+                        hash = entry.hash,
+                        debug_label = entry.debug_label,
+                        type_name = entry.type_name,
+                        model_id = ?entry.model_id,
+                        "query cache evicted by gc"
+                    );
+                }
                 entries.remove(key);
             }
         }
@@ -2007,6 +2499,85 @@ mod tests {
     }
 
     #[test]
+    fn remount_does_not_refetch_when_data_is_still_fresh() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test.query.v1", &333u32);
+        let policy = QueryPolicy {
+            stale_time: Duration::from_secs(60),
+            ..Default::default()
+        };
+
+        app.set_frame_id(FrameId(1));
+        let _handle = with_query_client(&mut app, |client, app| {
+            client.use_query(app, window, key, policy.clone(), |_token| Ok(1u32))
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        app.set_frame_id(FrameId(3));
+        with_query_client(&mut app, |client, app| {
+            let _ = client.use_query(app, window, key, policy.clone(), |_token| Ok(2u32));
+        })
+        .unwrap();
+
+        assert_eq!(dispatcher.take_background().len(), 0);
+    }
+
+    #[test]
+    fn remount_does_not_refetch_error_without_retry_policy() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test.query.v1", &444u32);
+        let policy = QueryPolicy {
+            stale_time: Duration::from_secs(60),
+            retry: QueryRetryPolicy::none(),
+            ..Default::default()
+        };
+
+        app.set_frame_id(FrameId(1));
+        let handle = with_query_client(&mut app, |client, app| {
+            client.use_query(app, window, key, policy.clone(), |_token| {
+                Err(QueryError::permanent("boom"))
+            })
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
+        assert_eq!(state.status, QueryStatus::Error);
+        assert!(state.retry.next_retry_at.is_none());
+
+        app.set_frame_id(FrameId(3));
+        with_query_client(&mut app, |client, app| {
+            let _ = client.use_query(app, window, key, policy.clone(), |_token| Ok(123u32));
+        })
+        .unwrap();
+
+        assert_eq!(dispatcher.take_background().len(), 0);
+    }
+
+    #[test]
     fn gc_drops_cached_models() {
         let mut app = App::new();
         let dispatcher = Arc::new(TestDispatcher::default());
@@ -2058,6 +2629,102 @@ mod tests {
         let b = QueryKey::<u32>::new_named("test.query.v1", &123u32, "debug label");
         assert_eq!(a, b);
         assert_eq!(a.id(), b.id());
+    }
+
+    #[test]
+    fn snapshot_reports_query_runtime_metadata() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new_named("test.query.v1", &900u32, "snapshot_meta");
+        let policy = QueryPolicy {
+            stale_time: Duration::from_secs(60),
+            retry: QueryRetryPolicy::fixed(1, Duration::from_millis(10)),
+            ..Default::default()
+        };
+
+        with_query_client(&mut app, |client, app| {
+            let _ = client.use_query(app, window, key, policy.clone(), |_token| {
+                Err(QueryError::transient("boom"))
+            });
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let snapshot = with_query_client(&mut app, |client, _app| client.snapshot()).unwrap();
+        let entry = snapshot
+            .entries
+            .iter()
+            .find(|entry| entry.namespace == "test.query.v1" && entry.hash == key.hash())
+            .expect("snapshot should contain test query entry");
+
+        assert_eq!(entry.status, QueryStatus::Error);
+        assert_eq!(entry.last_error_kind, Some(QueryErrorKind::Transient));
+        assert_eq!(entry.last_error_message.as_deref(), Some("boom"));
+        assert!(entry.last_duration.is_some());
+        assert_eq!(entry.retry.failures, 1);
+        assert_eq!(entry.retry.max_retries, 1);
+        assert_eq!(entry.debug_label, Some("snapshot_meta"));
+        assert!(entry.type_name.contains("u32"));
+    }
+
+    #[test]
+    fn snapshot_excludes_evicted_entries_after_gc() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test.query.v1", &901u32);
+
+        with_query_client(&mut app, |client, app| {
+            let policy = QueryPolicy {
+                cache_time: Duration::ZERO,
+                ..Default::default()
+            };
+            let _ = client.use_query(app, window, key, policy, |_token| Ok(1u32));
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let snapshot_before =
+            with_query_client(&mut app, |client, _app| client.snapshot()).unwrap();
+        assert!(
+            snapshot_before
+                .entries
+                .iter()
+                .any(|entry| entry.namespace == "test.query.v1" && entry.hash == key.hash())
+        );
+
+        with_query_client(&mut app, |client, _app| {
+            client.last_gc_at = None;
+            client.gc(Instant::now());
+        })
+        .unwrap();
+
+        let snapshot_after = with_query_client(&mut app, |client, _app| client.snapshot()).unwrap();
+        assert!(
+            !snapshot_after
+                .entries
+                .iter()
+                .any(|entry| entry.namespace == "test.query.v1" && entry.hash == key.hash())
+        );
     }
 
     #[test]

@@ -23,6 +23,7 @@ enum MathJaxMode {
 }
 
 const MATHJAX_SVG_NAMESPACE: &str = "fret-markdown.mathjax_svg.v1";
+const MATHJAX_SVG_CACHE_WINDOW: Duration = Duration::from_secs(60 * 10);
 
 #[derive(Debug, Clone)]
 struct MathJaxSvgReady {
@@ -38,11 +39,11 @@ enum MathJaxSvgEntry {
 }
 
 fn mathjax_svg_query_policy() -> QueryPolicy {
-    // MathJax SVG conversion is deterministic and purely local, so we treat it as "fresh" for a
-    // long time and rely on cache eviction to bound memory usage.
+    // MathJax SVG conversion is deterministic and purely local.
+    // stale_time only controls freshness (no implicit polling), so we keep stale/cache aligned.
     QueryPolicy {
-        stale_time: Duration::from_secs(60 * 60 * 24 * 365),
-        cache_time: Duration::from_secs(60 * 10),
+        stale_time: MATHJAX_SVG_CACHE_WINDOW,
+        cache_time: MATHJAX_SVG_CACHE_WINDOW,
         keep_previous_data_while_loading: true,
         ..Default::default()
     }
