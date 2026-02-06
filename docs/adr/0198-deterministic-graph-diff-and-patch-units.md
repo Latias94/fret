@@ -98,5 +98,7 @@ Note (MVP compromise):
 
 - Port-level setters exist for the most common "soft" fields:
   - `connectable`, `connectable_start`, `connectable_end`, `ty`, and `data`.
+- Sticky-note setters exist for common edit fields:
+  - `text`, `rect`, and `color`.
 - Structural port changes (owner node, key, dir, kind, capacity) are represented as remove+add
   (and edges are re-added afterwards). This preserves correctness and determinism but is not minimal.

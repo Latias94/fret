@@ -1,7 +1,7 @@
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, GraphImport,
     Group, GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
-    PortKind, Symbol, SymbolId,
+    PortKind, StickyNote, StickyNoteId, Symbol, SymbolId,
 };
 use crate::ops::{
     EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
@@ -854,6 +854,22 @@ fn graph_diff_is_deterministic_and_roundtrips() {
         },
     );
 
+    let note_id = StickyNoteId::new();
+    from.sticky_notes.insert(
+        note_id,
+        StickyNote {
+            text: "N".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 5.0, y: 6.0 },
+                size: CanvasSize {
+                    width: 7.0,
+                    height: 8.0,
+                },
+            },
+            color: None,
+        },
+    );
+
     let mut to = from.clone();
     to.imports.insert(
         imported,
@@ -902,6 +918,11 @@ fn graph_diff_is_deterministic_and_roundtrips() {
         node.expand_parent = Some(true);
         node.hidden = true;
     }
+    if let Some(note) = to.sticky_notes.get_mut(&note_id) {
+        note.text = "M".to_string();
+        note.rect.origin.x = 9.0;
+        note.color = Some("yellow".to_string());
+    }
 
     let tx1 = graph_diff(&from, &to);
     let tx2 = graph_diff(&from, &to);
@@ -947,6 +968,32 @@ fn graph_diff_is_deterministic_and_roundtrips() {
             .iter()
             .any(|op| matches!(op, GraphOp::RemoveGroup { id, .. } if *id == group_id)),
         "diff must not remove groups for color-only changes"
+    );
+
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetStickyNoteText { id, .. } if *id == note_id)),
+        "diff must use sticky note setter ops for field changes"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetStickyNoteRect { id, .. } if *id == note_id)),
+        "diff must use sticky note setter ops for field changes"
+    );
+    assert!(
+        tx1.ops
+            .iter()
+            .any(|op| matches!(op, GraphOp::SetStickyNoteColor { id, .. } if *id == note_id)),
+        "diff must use sticky note setter ops for field changes"
+    );
+    assert!(
+        !tx1.ops.iter().any(|op| {
+            matches!(op, GraphOp::RemoveStickyNote { id, .. } if *id == note_id)
+                || matches!(op, GraphOp::AddStickyNote { id, .. } if *id == note_id)
+        }),
+        "diff must not fall back to remove+add for sticky note field changes"
     );
 
     assert!(

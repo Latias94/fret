@@ -477,14 +477,25 @@ fn diff_groups(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
 fn diff_sticky_notes(from: &Graph, to: &Graph, tx: &mut GraphTransaction) {
     for (id, note_to) in &to.sticky_notes {
         if let Some(note_from) = from.sticky_notes.get(id) {
-            if serde_json::to_value(note_from).ok() != serde_json::to_value(note_to).ok() {
-                tx.ops.push(GraphOp::RemoveStickyNote {
+            if note_from.text != note_to.text {
+                tx.ops.push(GraphOp::SetStickyNoteText {
                     id: *id,
-                    note: note_from.clone(),
+                    from: note_from.text.clone(),
+                    to: note_to.text.clone(),
                 });
-                tx.ops.push(GraphOp::AddStickyNote {
+            }
+            if note_from.rect != note_to.rect {
+                tx.ops.push(GraphOp::SetStickyNoteRect {
                     id: *id,
-                    note: note_to.clone(),
+                    from: note_from.rect,
+                    to: note_to.rect,
+                });
+            }
+            if note_from.color != note_to.color {
+                tx.ops.push(GraphOp::SetStickyNoteColor {
+                    id: *id,
+                    from: note_from.color.clone(),
+                    to: note_to.color.clone(),
                 });
             }
         } else {
