@@ -19,6 +19,10 @@ Conventions:
 
 ## Milestones
 
+Execution plan:
+
+- `docs/workstreams/ui-perf-zed-smoothness-v1-execution-plan.md`
+
 ### M0: Baseline + suite gates (make perf a contract)
 
 - [ ] Decide Tier A / Tier B thresholds per script (initially “best-effort”, then tighten).
