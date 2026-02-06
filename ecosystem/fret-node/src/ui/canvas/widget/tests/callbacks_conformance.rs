@@ -6,7 +6,6 @@ use fret_core::{Event, Modifiers, MouseButton, Point, PointerEvent, PointerType,
 use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::Graph;
-use crate::io::NodeGraphViewState;
 use crate::rules::EdgeEndpoint;
 use crate::runtime::callbacks::{
     ConnectEnd, ConnectStart, NodeDragEnd, NodeDragStart, NodeGraphCallbacks, ViewportMoveEnd,
@@ -15,7 +14,8 @@ use crate::runtime::callbacks::{
 
 use super::super::NodeGraphCanvas;
 use super::{
-    NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+    NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_host_graph_view,
+    make_test_graph_two_nodes_with_ports_spaced_x,
 };
 use crate::ui::canvas::state::{
     NodeDrag, PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDrag, WireDragKind,
@@ -104,8 +104,7 @@ fn click_connect_emits_connect_start_and_committed_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.connect_on_click = true;
@@ -170,8 +169,7 @@ fn escape_cancel_emits_connect_end_canceled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.connect_on_click = true;
@@ -217,8 +215,7 @@ fn rejected_drop_emits_connect_end_rejected() {
     graph_value.ports.get_mut(&b_in).unwrap().kind = crate::core::PortKind::Exec;
     graph_value.nodes.get_mut(&b).unwrap().ports = vec![b_in];
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -314,8 +311,7 @@ fn reconnect_emits_reconnect_start_and_committed_end() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -385,8 +381,7 @@ fn reconnect_escape_cancel_emits_reconnect_end_canceled() {
         },
     );
 
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -423,8 +418,7 @@ fn panning_emits_move_start_and_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -470,8 +464,7 @@ fn escape_cancel_panning_emits_move_end_canceled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -508,8 +501,7 @@ fn node_drag_start_and_escape_cancel_emits_node_drag_end_canceled() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.nodes_draggable = true;
@@ -563,8 +555,7 @@ fn pan_inertia_emits_move_end_after_inertia_stops() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.pan_inertia.enabled = true;
@@ -646,8 +637,7 @@ fn node_drag_pointer_up_emits_node_drag_end_committed() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let start_pos = graph_value.nodes.get(&a).unwrap().pos;
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -708,8 +698,7 @@ fn node_drag_move_emits_on_node_drag() {
     let (graph_value, a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
     let start_pos = graph_value.nodes.get(&a).unwrap().pos;
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let log: Rc<RefCell<Vec<String>>> = Rc::new(RefCell::new(Vec::new()));
     let recorder = Recorder { log: log.clone() };
@@ -755,8 +744,7 @@ fn wheel_zoom_emits_move_start_and_debounced_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_scroll = true;
@@ -813,8 +801,7 @@ fn pinch_zoom_emits_move_start_and_debounced_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_pinch = true;
@@ -869,8 +856,7 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, _a_out, _b, _b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_scroll = false;
@@ -925,9 +911,7 @@ fn wheel_pan_emits_move_start_and_debounced_move_end() {
 
 #[test]
 fn double_click_background_zoom_emits_move_start_and_move_end() {
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(Graph::default());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(Graph::default());
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_double_click = true;
@@ -965,9 +949,7 @@ fn double_click_background_zoom_emits_move_start_and_move_end() {
 
 #[test]
 fn wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom() {
-    let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(Graph::default());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(Graph::default());
 
     let _ = view.update(&mut host, |s, _cx| {
         s.interaction.zoom_on_scroll = false;

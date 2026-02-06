@@ -1,4 +1,4 @@
-# fret-node Internals M0 (Derived Internals / Geometry / Hit-Testing)
+﻿# fret-node Internals M0 (Derived Internals / Geometry / Hit-Testing)
 
 This document is the **contract + execution plan** for fearless refactors of `ecosystem/fret-node`
 internals: derived geometry, spatial indexing, coordinate-space conversions, and deterministic
@@ -265,6 +265,10 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/contexts.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/services.rs`
+- [x] Add harness graph/view setup helper API and adopt it in high-churn conformance suites.
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs` (`insert_graph_view`, `make_host_graph_view`)
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/callbacks_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
@@ -292,3 +296,4 @@ After M0A gates are green:
   `MeasuredGeometryStore`.
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/internals_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_output_store_conformance.rs`
+
