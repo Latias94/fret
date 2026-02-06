@@ -1,6 +1,8 @@
 use fret_ui_headless::table::{
-    ColumnDef, ColumnPinPosition, ColumnSizingRegion, RowKey, RowPinPosition, Table, TableState,
+    ColumnDef, ColumnPinPosition, ColumnSizingRegion, RowId, RowKey, RowPinPosition, Table,
+    TableState,
 };
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 struct DemoRow {
@@ -76,4 +78,34 @@ fn tanstack_v8_capability_smoke_table_row_column_surfaces_exist() {
     let _top = table.top_row_keys();
     let _center = table.center_row_keys();
     let _bottom = table.bottom_row_keys();
+}
+
+#[test]
+fn tanstack_v8_capability_smoke_custom_row_id_affects_lookup_and_cell_ids() {
+    let data = vec![DemoRow {
+        id: 1,
+        a: 10,
+        b: 100,
+    }];
+    let columns = vec![
+        ColumnDef::<DemoRow>::new("a").value_u64_by(|r| r.a),
+        ColumnDef::<DemoRow>::new("b").value_u64_by(|r| r.b),
+    ];
+
+    let table = Table::builder(&data)
+        .columns(columns)
+        .get_row_key(|row, _idx, _parent| RowKey(row.id))
+        .get_row_id(|row, _idx, _parent| RowId(Arc::<str>::from(format!("row:{}", row.id))))
+        .state(TableState::default())
+        .build();
+
+    assert_eq!(table.row_key_for_id("row:1", false), Some(RowKey(1)));
+
+    let cells = table.row_cells(RowKey(1)).expect("row exists");
+    assert!(
+        cells
+            .all
+            .iter()
+            .any(|c| c.id.as_ref() == "row:1_a" && c.column_id.as_ref() == "a")
+    );
 }

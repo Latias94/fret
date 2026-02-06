@@ -91,7 +91,7 @@ pub use row_expanding::{
     row_can_expand, row_is_all_parents_expanded, set_all_rows_expanded, toggle_all_rows_expanded,
     toggle_row_expanded,
 };
-pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
+pub use row_model::{Row, RowId, RowIndex, RowKey, RowModel, Table, TableBuilder};
 pub use row_pinning::{
     RowPinPosition, RowPinningState, center_row_keys, is_row_pinned, is_some_rows_pinned, pin_row,
     pin_row_keys, pin_rows,

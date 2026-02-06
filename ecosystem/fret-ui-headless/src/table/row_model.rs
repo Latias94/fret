@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::cell::OnceCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -18,11 +19,34 @@ impl RowKey {
     }
 }
 
+/// Stable string identity for a row (TanStack `RowId` equivalent).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct RowId(pub Arc<str>);
+
+impl RowId {
+    pub fn as_str(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl AsRef<str> for RowId {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl Borrow<str> for RowId {
+    fn borrow(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
 /// Index into a [`RowModel`] arena.
 pub type RowIndex = usize;
 
 #[derive(Debug)]
 pub struct Row<'a, TData> {
+    pub id: RowId,
     pub key: RowKey,
     pub original: &'a TData,
     pub index: usize,
@@ -35,6 +59,7 @@ pub struct Row<'a, TData> {
 impl<'a, TData> Clone for Row<'a, TData> {
     fn clone(&self) -> Self {
         Self {
+            id: self.id.clone(),
             key: self.key,
             original: self.original,
             index: self.index,
@@ -51,6 +76,7 @@ pub struct RowModel<'a, TData> {
     pub(super) root_rows: Vec<RowIndex>,
     pub(super) flat_rows: Vec<RowIndex>,
     pub(super) rows_by_key: HashMap<RowKey, RowIndex>,
+    pub(super) rows_by_id: HashMap<RowId, RowIndex>,
     pub(super) arena: Vec<Row<'a, TData>>,
 }
 
@@ -60,6 +86,7 @@ impl<'a, TData> Clone for RowModel<'a, TData> {
             root_rows: self.root_rows.clone(),
             flat_rows: self.flat_rows.clone(),
             rows_by_key: self.rows_by_key.clone(),
+            rows_by_id: self.rows_by_id.clone(),
             arena: self.arena.clone(),
         }
     }
@@ -82,8 +109,16 @@ impl<'a, TData> RowModel<'a, TData> {
         self.rows_by_key.get(&key).copied()
     }
 
+    pub fn row_by_id(&self, id: &str) -> Option<RowIndex> {
+        self.rows_by_id.get(id).copied()
+    }
+
     pub fn rows_by_key(&self) -> &HashMap<RowKey, RowIndex> {
         &self.rows_by_key
+    }
+
+    pub fn rows_by_id(&self) -> &HashMap<RowId, RowIndex> {
+        &self.rows_by_id
     }
 
     pub fn arena(&self) -> &[Row<'a, TData>] {
@@ -92,6 +127,7 @@ impl<'a, TData> RowModel<'a, TData> {
 }
 
 type GetRowKeyFn<'a, TData> = Box<dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'a>;
+type GetRowIdFn<'a, TData> = Box<dyn Fn(&TData, usize, Option<&RowId>) -> RowId + 'a>;
 type GetSubRowsFn<'a, TData> = Box<dyn for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]> + 'a>;
 type GetGroupedRowModelFn<'a, TData> = Arc<
     dyn Fn(
@@ -117,6 +153,7 @@ pub struct TableBuilder<'a, TData> {
     get_row_can_expand: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_is_row_expanded: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: Option<GetRowKeyFn<'a, TData>>,
+    get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     expanded_row_model_override_pre_expanded: bool,
@@ -144,6 +181,7 @@ impl<'a, TData> TableBuilder<'a, TData> {
             get_row_can_expand: None,
             get_is_row_expanded: None,
             get_row_key: None,
+            get_row_id: None,
             get_sub_rows: None,
             get_grouped_row_model: None,
             expanded_row_model_override_pre_expanded: false,
@@ -359,6 +397,12 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// TanStack-aligned: set the string row identity function (`options.getRowId` equivalent).
+    pub fn get_row_id(mut self, f: impl Fn(&TData, usize, Option<&RowId>) -> RowId + 'a) -> Self {
+        self.get_row_id = Some(Box::new(f));
+        self
+    }
+
     pub fn get_sub_rows(
         mut self,
         f: impl for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]> + 'a,
@@ -418,6 +462,7 @@ pub struct Table<'a, TData> {
     get_row_can_expand: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_is_row_expanded: Option<Arc<dyn Fn(RowKey, &TData) -> bool>>,
     get_row_key: GetRowKeyFn<'a, TData>,
+    get_row_id: Option<GetRowIdFn<'a, TData>>,
     get_sub_rows: Option<GetSubRowsFn<'a, TData>>,
     get_grouped_row_model: Option<GetGroupedRowModelFn<'a, TData>>,
     expanded_row_model_override_pre_expanded: bool,
@@ -522,6 +567,7 @@ impl<'a, TData> Table<'a, TData> {
             get_row_can_expand: builder.get_row_can_expand,
             get_is_row_expanded: builder.get_is_row_expanded,
             get_row_key,
+            get_row_id: builder.get_row_id,
             get_sub_rows: builder.get_sub_rows,
             get_grouped_row_model: builder.get_grouped_row_model,
             expanded_row_model_override_pre_expanded: builder
@@ -640,6 +686,28 @@ impl<'a, TData> Table<'a, TData> {
                 let core = self.core_row_model();
                 core.row_by_key(row_key).and_then(|i| core.row(i))
             })
+    }
+
+    /// TanStack-aligned: resolve a row by string id, optionally searching outside the current
+    /// paginated row model.
+    pub fn row_by_id(&self, row_id: &str, search_all: bool) -> Option<&Row<'a, TData>> {
+        let first = if search_all {
+            self.pre_pagination_row_model()
+        } else {
+            self.row_model()
+        };
+
+        first
+            .row_by_id(row_id)
+            .and_then(|i| first.row(i))
+            .or_else(|| {
+                let core = self.core_row_model();
+                core.row_by_id(row_id).and_then(|i| core.row(i))
+            })
+    }
+
+    pub fn row_key_for_id(&self, row_id: &str, search_all: bool) -> Option<RowKey> {
+        self.row_by_id(row_id, search_all).map(|r| r.key)
     }
 
     pub fn state(&self) -> &super::TableState {
@@ -1696,13 +1764,13 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn row_cells(&self, row_key: RowKey) -> Option<super::RowCellsSnapshot> {
         let row = self.row(row_key, true)?;
-        let row_id = row.key.0.to_string();
+        let row_id = row.id.as_str();
 
         let all_leaf_columns = self.ordered_columns();
         let (left, center, right) = self.pinned_visible_columns();
 
         Some(super::snapshot_cells_for_row(
-            &row_id,
+            row_id,
             all_leaf_columns.as_slice(),
             left.as_slice(),
             center.as_slice(),
@@ -1738,12 +1806,12 @@ impl<'a, TData> Table<'a, TData> {
             let root: Vec<Arc<str>> = model
                 .root_rows()
                 .iter()
-                .filter_map(|&i| model.row(i).map(|r| Arc::<str>::from(r.key.0.to_string())))
+                .filter_map(|&i| model.row(i).map(|r| r.id.0.clone()))
                 .collect();
             let flat: Vec<Arc<str>> = model
                 .flat_rows()
                 .iter()
-                .filter_map(|&i| model.row(i).map(|r| Arc::<str>::from(r.key.0.to_string())))
+                .filter_map(|&i| model.row(i).map(|r| r.id.0.clone()))
                 .collect();
             super::RowModelIdSnapshot { root, flat }
         }
@@ -2233,7 +2301,12 @@ impl<'a, TData> Table<'a, TData> {
 
     pub fn core_row_model(&self) -> &RowModel<'a, TData> {
         self.core_row_model.get_or_init(|| {
-            build_core_row_model(self.data, &*self.get_row_key, self.get_sub_rows.as_deref())
+            build_core_row_model(
+                self.data,
+                &*self.get_row_key,
+                self.get_row_id.as_deref(),
+                self.get_sub_rows.as_deref(),
+            )
         })
     }
 
@@ -2354,6 +2427,7 @@ impl<'a, TData> Table<'a, TData> {
                     root_rows: Vec::new(),
                     flat_rows: Vec::new(),
                     rows_by_key: HashMap::new(),
+                    rows_by_id: HashMap::new(),
                     arena: Vec::new(),
                 };
             }
@@ -2368,6 +2442,7 @@ impl<'a, TData> Table<'a, TData> {
                     root_rows: Vec::new(),
                     flat_rows: Vec::new(),
                     rows_by_key: HashMap::new(),
+                    rows_by_id: HashMap::new(),
                     arena: Vec::new(),
                 };
             }
@@ -2382,6 +2457,7 @@ impl<'a, TData> Table<'a, TData> {
                     root_rows: Vec::new(),
                     flat_rows: Vec::new(),
                     rows_by_key: HashMap::new(),
+                    rows_by_id: HashMap::new(),
                     arena: Vec::new(),
                 };
             }
@@ -2699,11 +2775,13 @@ fn default_row_key_for_index_path<TData>(
 fn build_core_row_model<'a, TData>(
     data: &'a [TData],
     get_row_key: &dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey,
+    get_row_id: Option<&dyn Fn(&TData, usize, Option<&RowId>) -> RowId>,
     get_sub_rows: Option<&dyn for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]>>,
 ) -> RowModel<'a, TData> {
     let mut root_rows: Vec<RowIndex> = Vec::new();
     let mut flat_rows: Vec<RowIndex> = Vec::new();
     let mut rows_by_key: HashMap<RowKey, RowIndex> = HashMap::new();
+    let mut rows_by_id: HashMap<RowId, RowIndex> = HashMap::new();
     let mut arena: Vec<Row<'a, TData>> = Vec::new();
 
     fn access_rows<'a, TData>(
@@ -2711,18 +2789,26 @@ fn build_core_row_model<'a, TData>(
         depth: u16,
         parent: Option<RowIndex>,
         parent_key: Option<&RowKey>,
+        parent_id: Option<RowId>,
         get_row_key: &dyn Fn(&TData, usize, Option<&RowKey>) -> RowKey,
+        get_row_id: Option<&dyn Fn(&TData, usize, Option<&RowId>) -> RowId>,
         get_sub_rows: Option<&dyn for<'r> Fn(&'r TData, usize) -> Option<&'r [TData]>>,
         root_out: &mut Vec<RowIndex>,
         flat_out: &mut Vec<RowIndex>,
         rows_by_key: &mut HashMap<RowKey, RowIndex>,
+        rows_by_id: &mut HashMap<RowId, RowIndex>,
         arena: &mut Vec<Row<'a, TData>>,
     ) -> Vec<RowIndex> {
         let mut rows: Vec<RowIndex> = Vec::with_capacity(original_rows.len());
         for (index, original) in original_rows.iter().enumerate() {
             let key = get_row_key(original, index, parent_key);
+            let id = match get_row_id {
+                None => RowId(Arc::<str>::from(key.0.to_string())),
+                Some(f) => f(original, index, parent_id.as_ref()),
+            };
             let row_index = arena.len();
             arena.push(Row {
+                id: id.clone(),
                 key,
                 original,
                 index,
@@ -2733,22 +2819,30 @@ fn build_core_row_model<'a, TData>(
             });
             flat_out.push(row_index);
             rows_by_key.insert(key, row_index);
+            rows_by_id.insert(id, row_index);
             rows.push(row_index);
 
             if let Some(get_sub_rows) = get_sub_rows
                 && let Some(sub) = get_sub_rows(original, index)
                 && !sub.is_empty()
             {
+                let next_parent_id = arena
+                    .get(row_index)
+                    .map(|r| r.id.clone())
+                    .unwrap_or_else(|| RowId(Arc::<str>::from(key.0.to_string())));
                 let children = access_rows(
                     sub,
                     depth.saturating_add(1),
                     Some(row_index),
                     Some(&key),
+                    Some(next_parent_id),
                     get_row_key,
+                    get_row_id,
                     Some(get_sub_rows),
                     root_out,
                     flat_out,
                     rows_by_key,
+                    rows_by_id,
                     arena,
                 );
                 if let Some(row) = arena.get_mut(row_index) {
@@ -2769,11 +2863,14 @@ fn build_core_row_model<'a, TData>(
         0,
         None,
         None,
+        None,
         get_row_key,
+        get_row_id,
         get_sub_rows,
         &mut root_rows,
         &mut flat_rows,
         &mut rows_by_key,
+        &mut rows_by_id,
         &mut arena,
     );
 
@@ -2781,6 +2878,7 @@ fn build_core_row_model<'a, TData>(
         root_rows,
         flat_rows,
         rows_by_key,
+        rows_by_id,
         arena,
     }
 }
