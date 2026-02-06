@@ -11,7 +11,7 @@ The central decision: keep `ecosystem/fret-imui` **policy-light and minimal**, a
 egui/imgui” convenience (richer `Response` signals, floating windows/areas, menus, adapters for
 common controls) into **ecosystem facade crates**.
 
-Status snapshot (2026-02-05):
+Status snapshot (2026-02-06):
 
 - The minimal shared `Response` contract lives in `ecosystem/fret-authoring`.
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
@@ -24,8 +24,11 @@ Status snapshot (2026-02-05):
   - Menu items support checkbox/radio semantics (`menu_item_checkbox_ex`, `menu_item_radio_ex`).
 - A minimal modal popup primitive exists (`open_popup` + `begin_popup_modal`), built on `OverlayRequest::modal`.
   - Default policy: `Escape` closes; outside presses are ignored (unless explicitly enabled via options).
+- A minimal in-window floating area primitive exists (`floating_area` + `floating_area_drag_surface_ex`):
+  - drag move + element-local position state,
+  - opt-in `floating_layer(...)` for bring-to-front z-order management.
 - A minimal in-window floating window primitive exists (`floating_window` / `floating_window_open`):
-  - draggable title bar + element-local position state,
+  - draggable title bar + element-local position state (built on the same area state),
   - optional ImGui-style `open` model + close button,
   - `Esc`-to-close when the title bar is focused,
   - opt-in `floating_layer(...)` for bring-to-front z-order management.

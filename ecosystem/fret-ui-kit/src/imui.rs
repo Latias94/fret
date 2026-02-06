@@ -408,6 +408,32 @@ fn float_window_resize_kind_for_element(
     )
 }
 
+#[derive(Debug, Clone)]
+pub struct FloatingAreaOptions {
+    /// A stable semantics test-id prefix used when `test_id` is not provided.
+    ///
+    /// The final test id is `{test_id_prefix}{id}`.
+    pub test_id_prefix: &'static str,
+    /// Explicitly overrides the semantics test-id for the floating area root element.
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for FloatingAreaOptions {
+    fn default() -> Self {
+        Self {
+            test_id_prefix: "imui.float_area.area:",
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct FloatingAreaContext {
+    pub id: GlobalElementId,
+    pub position: Point,
+    pub drag_kind: fret_runtime::DragKindId,
+}
+
 const KEY_FLOAT_WINDOW_ACTIVATE: u64 = fnv1a64(b"fret-ui-kit.imui.float_window.activate.v1");
 
 /// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
@@ -523,12 +549,16 @@ impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUiFacade<'cx, 'a, H> {
 }
 
 #[derive(Debug)]
-struct FloatWindowState {
+struct FloatingAreaState {
     position: Point,
     last_drag_position: Option<Point>,
+    test_id: Arc<str>,
+}
+
+#[derive(Debug)]
+struct FloatWindowState {
     size: Size,
     last_resize_position: Option<Point>,
-    window_test_id: Arc<str>,
     title_bar_test_id: Arc<str>,
     close_button_test_id: Arc<str>,
     resize_left_test_id: Arc<str>,
@@ -539,6 +569,22 @@ struct FloatWindowState {
     resize_top_right_test_id: Arc<str>,
     resize_bottom_left_test_id: Arc<str>,
     resize_corner_test_id: Arc<str>,
+}
+
+fn float_layer_bring_to_front_if_activated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    surface_id: GlobalElementId,
+    window_id: GlobalElementId,
+) {
+    if !cx.take_transient_for(surface_id, KEY_FLOAT_WINDOW_ACTIVATE) {
+        return;
+    }
+    let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() else {
+        return;
+    };
+    cx.with_state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
+        st.bring_to_front(window_id);
+    });
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -572,6 +618,98 @@ impl FloatWindowLayerZOrder {
     }
 }
 
+fn floating_area_drag_surface_element<H: UiHost, Setup, Build>(
+    cx: &mut ElementContext<'_, H>,
+    area: FloatingAreaContext,
+    props: PointerRegionProps,
+    setup: Setup,
+    build: Build,
+) -> AnyElement
+where
+    Setup: FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
+    Build: for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+{
+    let mut build = Some(build);
+    let mut setup = Some(setup);
+    cx.pointer_region(props, move |cx| {
+        let region_id = cx.root_id();
+        float_layer_bring_to_front_if_activated(cx, region_id, area.id);
+
+        if let Some(setup) = setup.take() {
+            setup(cx, region_id);
+        }
+
+        let drag_kind = area.drag_kind;
+        cx.pointer_region_on_pointer_down(Arc::new(move |host, acx, down| {
+            if down.button != MouseButton::Left {
+                return false;
+            }
+
+            host.request_focus(acx.target);
+            host.capture_pointer();
+            if host.drag(down.pointer_id).is_none() {
+                host.begin_drag_with_kind(down.pointer_id, drag_kind, acx.window, down.position);
+            }
+            host.record_transient_event(acx, KEY_FLOAT_WINDOW_ACTIVATE);
+            host.notify(acx);
+            false
+        }));
+
+        cx.pointer_region_on_pointer_move(Arc::new(move |host, acx, mv| {
+            let Some(drag) = host.drag_mut(mv.pointer_id) else {
+                return false;
+            };
+            if drag.kind != drag_kind || drag.source_window != acx.window {
+                return false;
+            }
+
+            drag.current_window = acx.window;
+            drag.position = mv.position;
+
+            if !mv.buttons.left {
+                drag.phase = DragPhase::Canceled;
+                host.cancel_drag(mv.pointer_id);
+                host.release_pointer_capture();
+                host.notify(acx);
+                return false;
+            }
+
+            let d = point_sub(drag.position, drag.start_position);
+            let dist_sq = d.x.0 * d.x.0 + d.y.0 * d.y.0;
+            if !drag.dragging && dist_sq >= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX {
+                drag.dragging = true;
+                drag.phase = DragPhase::Dragging;
+            }
+
+            host.notify(acx);
+            false
+        }));
+
+        cx.pointer_region_on_pointer_up(Arc::new(move |host, acx, up| {
+            if let Some(drag) = host.drag(up.pointer_id)
+                && drag.kind == drag_kind
+                && drag.source_window == acx.window
+            {
+                host.cancel_drag(up.pointer_id);
+            }
+            host.release_pointer_capture();
+            host.notify(acx);
+            false
+        }));
+
+        let mut out = Vec::new();
+        if let Some(build) = build.take() {
+            let mut ui = ImUiFacade {
+                cx,
+                out: &mut out,
+                build_focus: None,
+            };
+            build(&mut ui);
+        }
+        out
+    })
+}
+
 /// Immediate-mode facade helpers for any authoring frontend that implements `UiWriter`.
 ///
 /// This is intentionally a small convenience layer. It aims to feel closer to egui/imgui while
@@ -598,7 +736,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     /// Render a window-scoped floating window layer that manages z-order (bring-to-front).
     ///
     /// Notes:
-    /// - This is an opt-in container; a plain `floating_window(...)` call sequence keeps call-order z.
+    /// - This is an opt-in container; a plain `floating_area(...)` / `floating_window(...)` call
+    ///   sequence keeps call-order z.
     /// - Call this late in the parent tree to ensure the layer paints above base content.
     fn floating_layer(
         &mut self,
@@ -668,6 +807,147 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         });
 
         self.add(element);
+    }
+
+    /// Render a minimal in-window floating area primitive.
+    ///
+    /// This is the lowest-level building block for ImGui-like floating surfaces in-window:
+    ///
+    /// - always in-window (not an OS window / viewport),
+    /// - position is stored as element-local state under the area id scope,
+    /// - movement is driven by a caller-provided drag surface (via `floating_area_drag_surface_ex`),
+    /// - optional z-order activation when nested inside `floating_layer(...)`.
+    ///
+    /// Notes:
+    /// - `id` must be stable across frames (mirrors Dear ImGui's "name is the id" rule).
+    fn floating_area(
+        &mut self,
+        id: &str,
+        initial_position: Point,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>, FloatingAreaContext),
+    ) {
+        self.floating_area_ex(id, initial_position, FloatingAreaOptions::default(), f);
+    }
+
+    fn floating_area_ex(
+        &mut self,
+        id: &str,
+        initial_position: Point,
+        options: FloatingAreaOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>, FloatingAreaContext),
+    ) {
+        let element = self.with_cx_mut(|cx| {
+            cx.named(id, |cx| {
+                let area_id = cx.root_id();
+                if let Some(marker) = cx.inherited_state::<FloatWindowLayerMarker>() {
+                    cx.with_state_for(marker.layer, FloatWindowLayerZOrder::default, |st| {
+                        st.ensure_present(area_id);
+                    });
+                }
+
+                let drag_kind = float_window_drag_kind_for_element(area_id);
+                let drag_snapshot = cx
+                    .app
+                    .find_drag_pointer_id(|d| {
+                        d.kind == drag_kind
+                            && d.source_window == cx.window
+                            && d.current_window == cx.window
+                    })
+                    .and_then(|pointer_id| cx.app.drag(pointer_id))
+                    .filter(|drag| drag.kind == drag_kind)
+                    .map(|drag| (drag.dragging, drag.position, drag.start_position));
+
+                let (position, test_id) = cx.with_state_for(
+                    area_id,
+                    || FloatingAreaState {
+                        position: initial_position,
+                        last_drag_position: None,
+                        test_id: options.test_id.clone().unwrap_or_else(|| {
+                            Arc::from(format!("{}{id}", options.test_id_prefix))
+                        }),
+                    },
+                    |st| {
+                        if let Some(test_id) = options.test_id.clone() {
+                            st.test_id = test_id;
+                        }
+
+                        if let Some((dragging, current, start)) = drag_snapshot {
+                            if dragging {
+                                let prev = st.last_drag_position.unwrap_or(start);
+                                st.position = point_add(st.position, point_sub(current, prev));
+                                st.last_drag_position = Some(current);
+                            } else {
+                                st.last_drag_position = None;
+                            }
+                        } else {
+                            st.last_drag_position = None;
+                        }
+                        (st.position, st.test_id.clone())
+                    },
+                );
+
+                let ctx = FloatingAreaContext {
+                    id: area_id,
+                    position,
+                    drag_kind,
+                };
+
+                let mut out: Vec<AnyElement> = Vec::new();
+                {
+                    let mut ui = ImUiFacade {
+                        cx,
+                        out: &mut out,
+                        build_focus: None,
+                    };
+                    f(&mut ui, ctx);
+                }
+
+                let (final_position, final_test_id) = cx.with_state_for(
+                    area_id,
+                    || FloatingAreaState {
+                        position,
+                        last_drag_position: None,
+                        test_id: test_id.clone(),
+                    },
+                    |st| (st.position, st.test_id.clone()),
+                );
+
+                let mut props = ContainerProps::default();
+                props.layout = LayoutStyle {
+                    position: PositionStyle::Absolute,
+                    inset: InsetStyle {
+                        left: Some(final_position.x),
+                        top: Some(final_position.y),
+                        ..Default::default()
+                    },
+                    overflow: Overflow::Visible,
+                    ..Default::default()
+                };
+
+                let mut area = cx.container(props, move |_cx| out);
+                // `cx.container(...)` introduces a fresh scoped id; normalize the outer area element id
+                // back to the named scope id so z-order state can track areas by `area_id`.
+                area.id = area_id;
+                area.attach_semantics(
+                    fret_ui::element::SemanticsDecoration::default().test_id(final_test_id),
+                )
+            })
+        });
+
+        self.add(element);
+    }
+
+    /// Build a drag surface that moves a floating area (ImGui-style).
+    ///
+    /// The returned element should be placed as part of the area content (e.g. a title bar).
+    fn floating_area_drag_surface_ex(
+        &mut self,
+        area: FloatingAreaContext,
+        props: PointerRegionProps,
+        setup: impl FnOnce(&mut ElementContext<'_, H>, GlobalElementId),
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) -> AnyElement {
+        self.with_cx_mut(|cx| floating_area_drag_surface_element(cx, area, props, setup, f))
     }
 
     /// Returns the internal open model for a named popup scope.
@@ -1854,10 +2134,32 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     None
                 };
 
+                let (position_after_drag, window_test_id) = cx.with_state_for(
+                    window_id,
+                    || FloatingAreaState {
+                        position: initial_position,
+                        last_drag_position: None,
+                        test_id: Arc::from(format!("imui.float_window.window:{id}")),
+                    },
+                    |st| {
+                        if let Some((dragging, current, start)) = drag_snapshot {
+                            if dragging {
+                                let prev = st.last_drag_position.unwrap_or(start);
+                                st.position = point_add(st.position, point_sub(current, prev));
+                                st.last_drag_position = Some(current);
+                            } else {
+                                st.last_drag_position = None;
+                            }
+                        } else {
+                            st.last_drag_position = None;
+                        }
+                        (st.position, st.test_id.clone())
+                    },
+                );
+
                 let (
                     position,
                     size,
-                    window_test_id,
                     title_bar_test_id,
                     close_button_test_id,
                     resize_left_test_id,
@@ -1871,11 +2173,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 ) = cx.with_state_for(
                     window_id,
                     || FloatWindowState {
-                        position: initial_position,
-                        last_drag_position: None,
                         size: initial_size.unwrap_or_else(|| Size::new(Px(0.0), Px(0.0))),
                         last_resize_position: None,
-                        window_test_id: Arc::from(format!("imui.float_window.window:{id}")),
                         title_bar_test_id: Arc::from(format!("imui.float_window.title_bar:{id}")),
                         close_button_test_id: Arc::from(format!("imui.float_window.close:{id}")),
                         resize_left_test_id: Arc::from(format!(
@@ -1902,6 +2201,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         )),
                     },
                     |st| {
+                        let mut position = position_after_drag;
+
                         let resize_cfg = resize.unwrap_or_default();
                         let min = resize_cfg.min_size;
                         let max = resize_cfg.max_size;
@@ -1924,17 +2225,6 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                             st.size.width = clamp_width(st.size.width.0);
                             st.size.height = clamp_height(st.size.height.0);
                         }
-                        if let Some((dragging, current, start)) = drag_snapshot {
-                            if dragging {
-                                let prev = st.last_drag_position.unwrap_or(start);
-                                st.position = point_add(st.position, point_sub(current, prev));
-                                st.last_drag_position = Some(current);
-                            } else {
-                                st.last_drag_position = None;
-                            }
-                        } else {
-                            st.last_drag_position = None;
-                        }
 
                         if let Some((handle, dragging, current, start)) = resize_snapshot {
                             if dragging {
@@ -1943,46 +2233,46 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                                 match handle {
                                     FloatWindowResizeHandle::Left => {
-                                        let right = Px(st.position.x.0 + st.size.width.0);
+                                        let right = Px(position.x.0 + st.size.width.0);
                                         let width = clamp_width(st.size.width.0 - delta.x.0);
                                         st.size.width = width;
-                                        st.position.x = Px(right.0 - width.0);
+                                        position.x = Px(right.0 - width.0);
                                     }
                                     FloatWindowResizeHandle::Right => {
                                         st.size.width = clamp_width(st.size.width.0 + delta.x.0);
                                     }
                                     FloatWindowResizeHandle::Top => {
-                                        let bottom = Px(st.position.y.0 + st.size.height.0);
+                                        let bottom = Px(position.y.0 + st.size.height.0);
                                         let height = clamp_height(st.size.height.0 - delta.y.0);
                                         st.size.height = height;
-                                        st.position.y = Px(bottom.0 - height.0);
+                                        position.y = Px(bottom.0 - height.0);
                                     }
                                     FloatWindowResizeHandle::Bottom => {
                                         st.size.height = clamp_height(st.size.height.0 + delta.y.0);
                                     }
                                     FloatWindowResizeHandle::TopLeft => {
-                                        let right = Px(st.position.x.0 + st.size.width.0);
-                                        let bottom = Px(st.position.y.0 + st.size.height.0);
+                                        let right = Px(position.x.0 + st.size.width.0);
+                                        let bottom = Px(position.y.0 + st.size.height.0);
 
                                         let width = clamp_width(st.size.width.0 - delta.x.0);
                                         let height = clamp_height(st.size.height.0 - delta.y.0);
                                         st.size.width = width;
                                         st.size.height = height;
-                                        st.position.x = Px(right.0 - width.0);
-                                        st.position.y = Px(bottom.0 - height.0);
+                                        position.x = Px(right.0 - width.0);
+                                        position.y = Px(bottom.0 - height.0);
                                     }
                                     FloatWindowResizeHandle::TopRight => {
-                                        let bottom = Px(st.position.y.0 + st.size.height.0);
+                                        let bottom = Px(position.y.0 + st.size.height.0);
                                         st.size.width = clamp_width(st.size.width.0 + delta.x.0);
                                         let height = clamp_height(st.size.height.0 - delta.y.0);
                                         st.size.height = height;
-                                        st.position.y = Px(bottom.0 - height.0);
+                                        position.y = Px(bottom.0 - height.0);
                                     }
                                     FloatWindowResizeHandle::BottomLeft => {
-                                        let right = Px(st.position.x.0 + st.size.width.0);
+                                        let right = Px(position.x.0 + st.size.width.0);
                                         let width = clamp_width(st.size.width.0 - delta.x.0);
                                         st.size.width = width;
-                                        st.position.x = Px(right.0 - width.0);
+                                        position.x = Px(right.0 - width.0);
                                         st.size.height = clamp_height(st.size.height.0 + delta.y.0);
                                     }
                                     FloatWindowResizeHandle::BottomRight => {
@@ -1998,10 +2288,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         } else {
                             st.last_resize_position = None;
                         }
+
                         (
-                            st.position,
+                            position,
                             st.size,
-                            st.window_test_id.clone(),
                             st.title_bar_test_id.clone(),
                             st.close_button_test_id.clone(),
                             st.resize_left_test_id.clone(),
@@ -2015,6 +2305,20 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         )
                     },
                 );
+
+                if position != position_after_drag {
+                    cx.with_state_for(
+                        window_id,
+                        || FloatingAreaState {
+                            position,
+                            last_drag_position: None,
+                            test_id: window_test_id.clone(),
+                        },
+                        |st| {
+                            st.position = position;
+                        },
+                    );
+                }
 
                 let (popover, border, muted) = {
                     let theme = fret_ui::Theme::global(&*cx.app);
@@ -2100,19 +2404,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 move |cx| {
                                     let region_id = cx.root_id();
 
-                                    if cx.take_transient_for(region_id, KEY_FLOAT_WINDOW_ACTIVATE) {
-                                        if let Some(marker) =
-                                            cx.inherited_state::<FloatWindowLayerMarker>()
-                                        {
-                                            cx.with_state_for(
-                                                marker.layer,
-                                                FloatWindowLayerZOrder::default,
-                                                |st| {
-                                                    st.bring_to_front(window_id);
-                                                },
-                                            );
-                                        }
-                                    }
+                                    float_layer_bring_to_front_if_activated(
+                                        cx, region_id, window_id,
+                                    );
 
                                     cx.key_clear_on_key_down_for(region_id);
                                     if let Some(open) = open_for_key.clone() {
@@ -2387,6 +2681,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 ..Default::default()
                             },
                             move |cx| {
+                                let region_id = cx.root_id();
+                                float_layer_bring_to_front_if_activated(cx, region_id, window_id);
+
                                 cx.pointer_region_clear_on_pointer_down();
                                 cx.pointer_region_clear_on_pointer_move();
                                 cx.pointer_region_clear_on_pointer_up();

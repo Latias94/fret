@@ -131,10 +131,12 @@ Exit criteria:
 - [x] IMUIECO-overlays-034 Add checkbox/radio menu items (ImGui-style) with semantics.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`menu_item_checkbox_ex`, `menu_item_radio_ex`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`menu_item_checkbox_stamps_semantics_checked_state`).
-- [ ] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
+- [x] IMUIECO-float-031 Implement a floating **area** primitive in `fret-ui-kit` (policy-heavy):
   - move (drag) + z-order + focus activation,
   - predictable hit-testing with overlays,
   - degrade cleanly when multi-window is unavailable (always in-window).
+  - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::{floating_area,floating_area_drag_surface_ex}`).
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_area_moves_when_dragging_drag_surface`, `floating_area_bring_to_front_updates_hit_test_order`).
 - [x] IMUIECO-float-032a Add a minimal floating window skeleton (in-window) with a draggable title bar.
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`UiWriterImUiFacadeExt::floating_window`).
   - Evidence: `ecosystem/fret-imui/src/lib.rs` (`floating_window_moves_when_dragging_title_bar`).
