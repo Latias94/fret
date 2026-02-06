@@ -63,6 +63,32 @@ struct LaunchedDemo {
     launch_cmd: Vec<String>,
 }
 
+const PERF_SUITE_UI_GALLERY_SCRIPTS: &[&str] = &[
+    "tools/diag-scripts/ui-gallery-overlay-torture.json",
+    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
+    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
+    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
+    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
+    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
+    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
+    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
+    "tools/diag-scripts/ui-gallery-window-resize-stress.json",
+];
+
+const PERF_SUITE_UI_GALLERY_STEADY_SCRIPTS: &[&str] = &[
+    "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+    "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+    "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+    "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+    "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+    "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
+    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+];
+
 pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut out_dir: Option<PathBuf> = None;
     let mut trigger_path: Option<PathBuf> = None;
@@ -3433,38 +3459,19 @@ See: `docs/tracy.md`.\n";
                 );
             }
 
+            let mut perf_suite_labels: Vec<&'static str> = Vec::new();
             let scripts: Vec<PathBuf> = if rest.len() == 1 && rest[0] == "ui-gallery" {
-                [
-                    "tools/diag-scripts/ui-gallery-overlay-torture.json",
-                    "tools/diag-scripts/ui-gallery-dropdown-open-select.json",
-                    "tools/diag-scripts/ui-gallery-context-menu-right-click.json",
-                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore.json",
-                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav.json",
-                    "tools/diag-scripts/ui-gallery-virtual-list-torture.json",
-                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf.json",
-                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf.json",
-                    "tools/diag-scripts/ui-gallery-window-resize-stress.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
+                perf_suite_labels.push("ui-gallery");
+                PERF_SUITE_UI_GALLERY_SCRIPTS
+                    .iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
             } else if rest.len() == 1 && rest[0] == "ui-gallery-steady" {
-                [
-                    "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-                    "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
-                    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
-                    "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
-                    "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
-                    "tools/diag-scripts/ui-gallery-code-editor-torture-autoscroll-steady.json",
-                    "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
-                    "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
-                    "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
-                ]
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect()
+                perf_suite_labels.push("ui-gallery-steady");
+                PERF_SUITE_UI_GALLERY_STEADY_SCRIPTS
+                    .iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect()
             } else {
                 rest.into_iter()
                     .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
@@ -3492,8 +3499,11 @@ See: `docs/tracy.md`.\n";
             let perf_baseline_out = perf_baseline_out
                 .clone()
                 .map(|p| resolve_path(&workspace_root, p));
-            let baseline_seed_policy =
-                build_perf_baseline_seed_policy(&workspace_root, &perf_baseline_seed_rule_specs)?;
+            let baseline_seed_policy = build_perf_baseline_seed_policy(
+                &workspace_root,
+                &perf_suite_labels,
+                &perf_baseline_seed_rule_specs,
+            )?;
             let wants_perf_thresholds = cli_thresholds.any() || perf_baseline.is_some();
             let mut child: Option<LaunchedDemo> = None;
             let launched_by_fretboard = reuse_launch && launch.is_some();
@@ -8038,7 +8048,23 @@ impl BaselineSeedPolicy {
     }
 }
 
-fn default_perf_baseline_seed_rules() -> Vec<BaselineSeedRule> {
+fn perf_suite_scripts_by_name(name: &str) -> Option<&'static [&'static str]> {
+    match name {
+        "ui-gallery" => Some(PERF_SUITE_UI_GALLERY_SCRIPTS),
+        "ui-gallery-steady" => Some(PERF_SUITE_UI_GALLERY_STEADY_SCRIPTS),
+        _ => None,
+    }
+}
+
+fn normalize_script_match_key(workspace_root: &Path, script: &str) -> String {
+    if script == "*" {
+        return "*".to_string();
+    }
+    let resolved = resolve_path(workspace_root, PathBuf::from(script));
+    normalize_repo_relative_path(workspace_root, &resolved)
+}
+
+fn default_perf_baseline_seed_rules(workspace_root: &Path) -> Vec<BaselineSeedRule> {
     [
         "top_total_time_us",
         "top_layout_time_us",
@@ -8046,7 +8072,10 @@ fn default_perf_baseline_seed_rules() -> Vec<BaselineSeedRule> {
     ]
     .into_iter()
     .map(|metric| BaselineSeedRule {
-        script: "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json".to_string(),
+        script: normalize_script_match_key(
+            workspace_root,
+            "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+        ),
         metric: metric.to_string(),
         seed: BaselineSeedKind::P95,
         source: "default",
@@ -8056,11 +8085,16 @@ fn default_perf_baseline_seed_rules() -> Vec<BaselineSeedRule> {
 
 fn build_perf_baseline_seed_policy(
     workspace_root: &Path,
+    active_suites: &[&'static str],
     specs: &[String],
 ) -> Result<BaselineSeedPolicy, String> {
-    let mut rules = default_perf_baseline_seed_rules();
+    let mut rules = default_perf_baseline_seed_rules(workspace_root);
     for spec in specs {
-        rules.push(parse_perf_baseline_seed_rule_spec(workspace_root, spec)?);
+        rules.extend(parse_perf_baseline_seed_rule_spec(
+            workspace_root,
+            active_suites,
+            spec,
+        )?);
     }
     Ok(BaselineSeedPolicy {
         default_seed: BaselineSeedKind::Max,
@@ -8070,16 +8104,17 @@ fn build_perf_baseline_seed_policy(
 
 fn parse_perf_baseline_seed_rule_spec(
     workspace_root: &Path,
+    active_suites: &[&'static str],
     spec: &str,
-) -> Result<BaselineSeedRule, String> {
+) -> Result<Vec<BaselineSeedRule>, String> {
     let (lhs, seed_raw) = spec.split_once('=').ok_or_else(|| {
         format!(
-            "invalid --perf-baseline-seed spec `{spec}` (expected <script>@<metric>=<max|p90|p95>)"
+            "invalid --perf-baseline-seed spec `{spec}` (expected <scope>@<metric>=<max|p90|p95>)"
         )
     })?;
-    let (script_raw, metric_raw) = lhs.rsplit_once('@').ok_or_else(|| {
+    let (scope_raw, metric_raw) = lhs.rsplit_once('@').ok_or_else(|| {
         format!(
-            "invalid --perf-baseline-seed spec `{spec}` (expected <script>@<metric>=<max|p90|p95>)"
+            "invalid --perf-baseline-seed spec `{spec}` (expected <scope>@<metric>=<max|p90|p95>)"
         )
     })?;
 
@@ -8097,26 +8132,66 @@ fn parse_perf_baseline_seed_rule_spec(
         ));
     }
 
-    let script = script_raw.trim();
-    if script.is_empty() {
+    let scope = scope_raw.trim();
+    if scope.is_empty() {
         return Err(format!(
-            "invalid --perf-baseline-seed spec `{spec}` (script cannot be empty)"
+            "invalid --perf-baseline-seed spec `{spec}` (scope cannot be empty)"
         ));
     }
 
-    let script_key = if script == "*" {
-        "*".to_string()
+    let mut targets: Vec<(String, &'static str)> = Vec::new();
+    if scope == "*" {
+        targets.push(("*".to_string(), "cli"));
+    } else if scope == "this-suite" {
+        if active_suites.is_empty() {
+            return Err(
+                "invalid --perf-baseline-seed scope `this-suite` (requires a named perf suite such as `ui-gallery` or `ui-gallery-steady`)".to_string(),
+            );
+        }
+        for suite in active_suites {
+            if let Some(scripts) = perf_suite_scripts_by_name(suite) {
+                for script in scripts {
+                    targets.push((
+                        normalize_script_match_key(workspace_root, script),
+                        "cli-suite",
+                    ));
+                }
+            }
+        }
+    } else if let Some(scope_suite) = scope.strip_prefix("suite:") {
+        let scope_suite = scope_suite.trim();
+        let Some(scripts) = perf_suite_scripts_by_name(scope_suite) else {
+            return Err(format!(
+                "unknown --perf-baseline-seed suite `{scope_suite}` (expected one of: ui-gallery, ui-gallery-steady)"
+            ));
+        };
+        for script in scripts {
+            targets.push((
+                normalize_script_match_key(workspace_root, script),
+                "cli-suite",
+            ));
+        }
+    } else if let Some(scripts) = perf_suite_scripts_by_name(scope) {
+        for script in scripts {
+            targets.push((
+                normalize_script_match_key(workspace_root, script),
+                "cli-suite",
+            ));
+        }
     } else {
-        let resolved = resolve_path(workspace_root, PathBuf::from(script));
-        normalize_repo_relative_path(workspace_root, &resolved)
-    };
+        targets.push((normalize_script_match_key(workspace_root, scope), "cli"));
+    }
 
-    Ok(BaselineSeedRule {
-        script: script_key,
-        metric: metric.to_string(),
-        seed,
-        source: "cli",
-    })
+    let mut rules: Vec<BaselineSeedRule> = Vec::new();
+    for (target, source) in targets {
+        rules.push(BaselineSeedRule {
+            script: target,
+            metric: metric.to_string(),
+            seed,
+            source,
+        });
+    }
+    Ok(rules)
 }
 
 fn baseline_seed_rule_matches_script(rule_script: &str, script: &str) -> bool {
@@ -8505,7 +8580,7 @@ mod tests {
 
     #[test]
     fn baseline_threshold_seed_policy_for_resize_script() {
-        let policy = build_perf_baseline_seed_policy(Path::new("."), &[]).unwrap();
+        let policy = build_perf_baseline_seed_policy(Path::new("."), &[], &[]).unwrap();
         assert_eq!(
             baseline_threshold_seed_for_metric(
                 &policy,
@@ -8545,6 +8620,7 @@ mod tests {
     fn baseline_threshold_seed_policy_can_override_with_p90() {
         let policy = build_perf_baseline_seed_policy(
             Path::new("."),
+            &[],
             &[
                 "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p90"
                     .to_string(),
@@ -8568,6 +8644,7 @@ mod tests {
     fn baseline_threshold_seed_policy_rejects_bad_spec() {
         let err = build_perf_baseline_seed_policy(
             Path::new("."),
+            &[],
             &[
                 "tools/diag-scripts/ui-gallery-overlay-torture-steady.json@top_total_time_us=p80"
                     .to_string(),
@@ -8575,6 +8652,70 @@ mod tests {
         )
         .unwrap_err();
         assert!(err.contains("expected max|p90|p95"));
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_supports_suite_scope() {
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &["ui-gallery-steady@top_total_time_us=p90".to_string()],
+        )
+        .unwrap();
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                6812,
+                7000,
+            ),
+            (6812, "p90".to_string())
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-overlay-torture.json",
+                "top_total_time_us",
+                7000,
+                6600,
+                6800,
+            ),
+            (7000, "max".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_supports_this_suite_scope() {
+        let policy = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &["ui-gallery-steady"],
+            &["this-suite@top_total_time_us=p90".to_string()],
+        )
+        .unwrap();
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                &policy,
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "top_total_time_us",
+                15763,
+                15683,
+                15723,
+            ),
+            (15683, "p90".to_string())
+        );
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_rejects_this_suite_without_named_suite() {
+        let err = build_perf_baseline_seed_policy(
+            Path::new("."),
+            &[],
+            &["this-suite@top_total_time_us=p90".to_string()],
+        )
+        .unwrap_err();
+        assert!(err.contains("requires a named perf suite"));
     }
 
     #[test]

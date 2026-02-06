@@ -519,8 +519,9 @@ Perf acceptance:
   - Validation: `target/fret-diag-codex-perf-v15-validate-seed/check.perf_thresholds.json` (failures=0).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entries 2026-02-06 21:05 and 2026-02-06 21:35.
 - [x] Make baseline seed policy configurable from CLI.
-  - New flag: `--perf-baseline-seed <script@metric=max|p90|p95>` (repeatable).
-  - Example: `--perf-baseline-seed tools/diag-scripts/ui-gallery-window-resize-stress-steady.json@top_total_time_us=p90`.
+  - New flag: `--perf-baseline-seed <scope@metric=max|p90|p95>` (repeatable; scope supports suite names and `this-suite`).
+  - Example: `--perf-baseline-seed ui-gallery-steady@top_total_time_us=p90`.
+  - Template doc: `docs/workstreams/perf-baselines/seed-policy-template.md`.
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 21:35.
 - [x] Coalesce window resizes to once per frame in the desktop runner.
   - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).

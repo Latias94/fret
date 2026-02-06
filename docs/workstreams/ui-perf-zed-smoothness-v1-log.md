@@ -5194,3 +5194,29 @@ Interpretation:
 - Seed policy is now explicit and versioned in baseline JSON, so threshold provenance is auditable.
 - With `--perf-baseline-seed`, we can tighten or relax noisy scripts without code changes and still keep a
   reproducible evidence trail in the baseline artifact.
+
+## 2026-02-06 22:10:00 (commit: feat(diag) add suite-scoped baseline seed templates)
+
+Change:
+- Extended baseline seed scope from per-script to template scopes:
+  - `ui-gallery@...`
+  - `ui-gallery-steady@...`
+  - `this-suite@...`
+  - `suite:<name>@...`
+  - `*@...`
+- Kept rule precedence “last match wins” and preserved default resize `p95` policy.
+- Added a policy template document for repeatable usage:
+  - `docs/workstreams/perf-baselines/seed-policy-template.md`
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script baseline_threshold_seed_policy_can_override_with_p90 baseline_threshold_seed_policy_rejects_bad_spec baseline_threshold_seed_policy_supports_suite_scope baseline_threshold_seed_policy_supports_this_suite_scope baseline_threshold_seed_policy_rejects_this_suite_without_named_suite perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Result highlights:
+- New suite/template scopes are verified by unit tests in `apps/fretboard/src/diag/mod.rs`.
+- No baseline numbers were changed in this step; this is a tooling-surface extension.
+
+Interpretation:
+- Baseline seed tuning is now script-group aware, so tightening policy can happen by suite-level commands without
+  introducing one-off code branches.
