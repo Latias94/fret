@@ -175,6 +175,7 @@ Legend:
   - ADR: `docs/adr/0197-subgraph-graph-references-and-cycle-safe-import.md`
   - Core closure + tests: `ecosystem/fret-node/src/core/imports.rs`, `ecosystem/fret-node/src/core/tests.rs`
   - Subgraph node contract + binding tests: `ecosystem/fret-node/src/core/subgraph.rs`, `ecosystem/fret-node/src/core/tests.rs`
+  - Copy/paste includes referenced imports for subgraph nodes and preserves `graph_id` targets after paste: `ecosystem/fret-node/src/ops/fragment.rs`, `ecosystem/fret-node/src/ops/tests.rs` (`fragment_from_nodes_includes_referenced_subgraph_imports`, `fragment_paste_transaction_keeps_subgraph_target_graph_id_and_adds_import`)
   - Import edit ops (Add/Remove/Alias): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
   - Tests: `ecosystem/fret-node/src/ops/tests.rs`
 - [~] Blackboard variables + typed symbol references (domain-ready).

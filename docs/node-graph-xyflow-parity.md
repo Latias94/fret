@@ -923,6 +923,8 @@ canonical data flow and invalidation boundaries:
     - deterministic fragment payload: `ecosystem/fret-node/src/ops/fragment.rs` (`GraphFragment`)
     - system clipboard integration: `ecosystem/fret-node/src/ui/canvas/widget.rs` (`ClipboardSetText` / `ClipboardGetText`)
     - captures selected nodes + selected groups (including group children) + internal edges
+    - subgraph payload hygiene: referenced imports are included for pasted subgraph nodes, and duplicated imports are filtered at apply points
+      - conformance: `ecosystem/fret-node/src/ops/tests.rs` (`fragment_from_nodes_includes_referenced_subgraph_imports`, `fragment_paste_transaction_keeps_subgraph_target_graph_id_and_adds_import`)
     - symbol-ref payload hygiene: pasted symbol-ref nodes rebind to remapped pasted symbol IDs (no stale source symbol IDs)
       - conformance: `ecosystem/fret-node/src/ops/tests.rs` (`fragment_paste_transaction_remaps_symbol_ref_targets_to_pasted_symbols`)
 
