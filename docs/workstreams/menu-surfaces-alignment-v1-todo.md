@@ -1,7 +1,7 @@
 # Menu Surfaces Alignment v1 — TODO Tracker
 
 Status: Draft
-Last updated: 2026-02-05
+Last updated: 2026-02-06
 
 This tracker covers the work described in:
 
@@ -144,9 +144,23 @@ Exit criteria:
 - Dynamic submenus can update without unstable IDs or excessive rebuild churn.
 - Contribution/override strategy is defined without turning menus into a plugin API prematurely.
 
-- [ ] MENU-MVP3-dyn-040 Define a stable “dynamic submenu” contract (IDs, update frequency, ordering rules).
-- [ ] MENU-MVP3-dyn-041 Implement `Recent` menu MVP (placeholder list + disabled state + later wiring).
-- [ ] MENU-MVP3-dyn-042 Implement a `Window` list MVP for multi-window apps (align with `MenuRole::Window` semantics).
+- [~] MENU-MVP3-dyn-040 Define a stable “dynamic submenu” contract (IDs, update frequency, ordering rules).
+  - Implemented (MVP): data-only `MenuItem::Label` for placeholder/dynamic rows (no `CommandId`), rendered
+    consistently as a disabled item across in-window and OS menubars.
+  - Evidence: `crates/fret-runtime/src/menu.rs` (`MenuItem::Label`)
+  - Evidence: `ecosystem/fret-kit/src/workspace_menu.rs` (in-window bridge for `Label`)
+  - Evidence: `crates/fret-launch/src/runner/desktop/windows_menu.rs` + `crates/fret-launch/src/runner/desktop/macos_menu.rs` (OS mapping for `Label`)
+- [x] MENU-MVP3-dyn-041 Implement `Recent` menu MVP (placeholder list + disabled state + later wiring).
+  - Implemented: stable `File > Recent` submenu anchor with placeholder; UI Gallery can rebuild the submenu items
+    from app state (debug add/clear).
+  - Evidence: `ecosystem/fret-workspace/src/menu.rs` (default `Recent` submenu anchor)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (`UiGalleryRecentItemsService` + dynamic menu rebuild)
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-recent-dynamic-updates.json`
+- [x] MENU-MVP3-dyn-042 Implement a `Window` list MVP for multi-window apps (align with `MenuRole::Window` semantics).
+  - Implemented: stable `Window > Windows` submenu anchor; UI Gallery derives a per-run stable `Window N` list from
+    `UiGalleryHarnessDiagnosticsStore` (non-wasm).
+  - Evidence: `ecosystem/fret-workspace/src/menu.rs` (default `Windows` submenu anchor)
+  - Evidence: `apps/fret-ui-gallery/src/driver.rs` (dynamic window list rebuild)
 - [ ] MENU-MVP3-conf-043 Decide how dynamic items interact with layered `menubar.json` patch ops (what is addressable?).
 
 ---
@@ -172,6 +186,9 @@ Exit criteria:
   - Evidence: `tools/diag-scripts/ui-gallery-menubar-os-radio-checked.json`
   - Evidence: `apps/fret-ui-gallery/src/driver.rs` (updates menubar baseline when settings change)
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`role_is`, `checked_is` predicates)
+- [x] MENU-MVP4-test-054 Add a diag script that proves dynamic menu content updates (Recent + Window list).
+  - Evidence: `tools/diag-scripts/ui-gallery-menubar-recent-dynamic-updates.json`
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`menu_select_path` intent step)
 
 ---
 
