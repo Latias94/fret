@@ -5392,3 +5392,62 @@ Interpretation:
   which loosens global guard strength despite stable gate pass.
 - Follow-up should add robustness against resize-run outliers (multi-pass baseline selection / outlier rejection)
   before promoting v17 as the long-term canonical baseline.
+
+## 2026-02-07 00:35:00 (working tree)
+
+Change:
+- Added baseline candidate-selection automation script:
+  - `tools/perf/diag_perf_baseline_select.sh`
+- Script behavior:
+  - generates multiple baseline candidates (`diag perf --perf-baseline-out`)
+  - validates each candidate multiple times (`diag perf --perf-baseline`)
+  - selects winner by: `fail_total` -> resize `p90(top_total)` -> `sum(max_top_total_us)`
+  - writes machine-readable evidence:
+    - candidate list: `<work-dir>/candidate-results.json`
+    - final summary: `<work-dir>/selection-summary.json`
+
+Selection run (v18):
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-gallery-steady \
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json \
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --candidates 2 \
+  --validate-runs 3 \
+  --repeat 7 \
+  --warmup-frames 5 \
+  --headroom-pct 20 \
+  --work-dir target/fret-diag-codex-perf-v18-select2 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Selection result:
+- Summary: `target/fret-diag-codex-perf-v18-select2/selection-summary.json`
+- Candidate-1:
+  - `fail_total = 0`
+  - `resize_p90_top_total_us = 16110`
+  - `threshold_sum_max_top_total_us = 84611`
+- Candidate-2:
+  - `fail_total = 0`
+  - `resize_p90_top_total_us = 16012`
+  - `threshold_sum_max_top_total_us = 83564`
+- Winner: `candidate-2` copied to
+  - `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json`
+
+Validation stability:
+- Both candidates passed `3/3` validation runs with `failures=0`.
+- This closes the earlier instability issue where single-run baseline promotion could keep a resize-heavy outlier.
+
+Threshold impact:
+- Aggregate sums (`ui-gallery-steady`):
+  - `max_top_total_us`: `v15=85809`, `v17=88118`, `v18=83564`
+  - `max_top_layout_us`: `v15=59762`, `v17=61061`, `v18=57829`
+  - `max_top_solve_us`: `v15=4229`, `v17=6105`, `v18=4348`
+- Delta structure:
+  - `v15 -> v18`: tightened `28`, unchanged `47`, loosened `13` (88 checks)
+  - `v17 -> v18`: tightened `28`, unchanged `46`, loosened `14` (88 checks)
+
+Interpretation:
+- Candidate selection recovers stability and avoids promoting resize-outlier baselines.
+- v18 is both stable (`failures=0` in sampled validations) and tighter than v15/v17 at the suite aggregate level.
+- This workflow is a better default for baseline refreshes than single-pass generation.

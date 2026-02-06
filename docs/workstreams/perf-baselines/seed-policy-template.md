@@ -126,3 +126,35 @@ When updating seed policy:
 3. Update `docs/workstreams/ui-perf-zed-smoothness-v1-todo.md` with the policy decision.
 4. Keep `docs/workstreams/perf-baselines/*.json` policy header (`threshold_seed_policy`) in sync with the run.
 5. For preset changes, bump preset version file (for example `ui-gallery-steady.v2.json`) instead of in-place overwrite.
+
+## Candidate selection workflow (anti-outlier)
+
+When single baseline generations are noisy (especially resize probes), use the selection script:
+
+```bash
+tools/perf/diag_perf_baseline_select.sh \
+  --suite ui-gallery-steady \
+  --baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json \
+  --preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json \
+  --candidates 2 \
+  --validate-runs 3 \
+  --repeat 7 \
+  --warmup-frames 5 \
+  --headroom-pct 20 \
+  --work-dir target/fret-diag-codex-perf-v18-select \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Selection priority:
+
+1. Lower total validation failures across all candidate validation runs.
+2. Lower `window-resize-stress-steady` `measured_p90.top_total_time_us`.
+3. Lower sum of `rows[].thresholds.max_top_total_us`.
+
+Artifacts:
+
+- candidate baselines: `<work-dir>/candidate-*.baseline.json`
+- validation evidence: `<work-dir>/candidate-*-validate-*/check.perf_thresholds.json`
+- selection summary: `<work-dir>/selection-summary.json`
+
+This workflow reduces the chance of promoting a baseline generated from a transient resize outlier.

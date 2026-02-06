@@ -539,10 +539,17 @@ Perf acceptance:
   - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v17.json`.
   - Validation sample: `target/fret-diag-codex-perf-v17-validate{1,2,3}/check.perf_thresholds.json` (all `failures=0`).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 23:55.
-- [ ] Harden baseline generation against resize outliers before adopting v17 as canonical.
-  - Problem: current v17 run includes a resize-heavy outlier that loosens aggregate thresholds.
-  - Candidate approach: run two baseline candidates and keep the one with lower `window-resize-stress-steady` p90 envelope, then re-validate x3.
-  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 23:55.
+- [x] Harden baseline generation workflow against resize outliers (tooling).
+  - Added: `tools/perf/diag_perf_baseline_select.sh` (candidate selection + validation sampling + summary JSON).
+  - Rule: choose candidate by failures -> resize p90 -> threshold-sum.
+  - Template doc updated: `docs/workstreams/perf-baselines/seed-policy-template.md` (`Candidate selection workflow`).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+- [x] Promote selected v18 baseline as canonical after candidate-selection run.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v18.json`.
+  - Selection summary: `target/fret-diag-codex-perf-v18-select2/selection-summary.json`.
+  - Stability: both candidates validated `3/3` with `failures=0`; winner copied to v18 baseline.
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-07 00:35.
+
 
 - [x] Coalesce window resizes to once per frame in the desktop runner.
   - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).
