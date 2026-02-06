@@ -316,6 +316,10 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_semantic_zoom_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/is_valid_connection_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hot_state_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/elevate_on_select_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
@@ -347,5 +351,9 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hit_testing_semantic_zoom_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/only_render_visible_elements_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/connection_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/is_valid_connection_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/hot_state_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/elevate_on_select_conformance.rs`
 
 

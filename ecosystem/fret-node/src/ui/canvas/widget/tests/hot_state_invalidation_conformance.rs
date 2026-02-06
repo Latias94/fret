@@ -1,18 +1,17 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
-use crate::io::NodeGraphViewState;
 use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 
 use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 #[test]
 fn hover_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_index() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let mut canvas = NodeGraphCanvas::new(graph, view);
     let snapshot0 = canvas.sync_view_state(&mut host);
@@ -58,7 +57,7 @@ fn selection_state_updates_do_not_rebuild_canvas_derived_geometry_or_spatial_ind
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let _ = view.update(&mut host, |s, _cx| {
         s.draw_order = vec![a, b];
@@ -127,7 +126,7 @@ fn presenter_geometry_revision_rebuilds_canvas_derived_geometry_and_spatial_inde
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let rev = Arc::new(AtomicU64::new(0));
     let w_bits = Arc::new(AtomicU32::new(420.0f32.to_bits()));
