@@ -4742,3 +4742,59 @@ Interpretation:
 - Therefore, observed on/off timing deltas here are not causal evidence for the gate itself.
 - Keep `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` experiment-only until we add a dedicated script that
   deterministically drives `HitTestOnly` invalidation on cache-eligible nodes.
+
+## 2026-02-06 18:09:00 (commit `3cd778cce`)
+
+Change:
+- Ensure the new hit-test-only paint-cache counters are present in all `diag perf --json` shapes:
+  - single-run row output (`--repeat 1`)
+  - multi-run summary stats (`--repeat > 1`)
+- Rationale: previous wiring covered the per-run list path but missed some JSON surfaces used by quick triage scripts.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+
+Probe A (single-run JSON shape):
+- Script: `tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json`
+- Command:
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-drag-sweep-steady.json \
+  --dir target/fret-diag-codex-hit-test-counter-scan/ui-gallery-hit-test-drag-sweep-steady-v3 \
+  --timeout-ms 180000 \
+  --repeat 1 --warmup-frames 1 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+- Result: output row now includes
+  - `top_paint_cache_hit_test_only_replay_allowed`
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch`
+  (both `0` in this probe)
+
+Probe B (multi-run summary JSON shape):
+- Script: `tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json`
+- Command:
+```bash
+target/release/fretboard diag perf tools/diag-scripts/ui-gallery-hit-test-move-sweep-steady.json \
+  --dir target/fret-diag-codex-hit-test-counter-scan/ui-gallery-hit-test-move-sweep-v4 \
+  --timeout-ms 240000 \
+  --repeat 3 --warmup-frames 3 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1 \
+  --launch -- target/release/fret-ui-gallery
+```
+- Result: output `stats` now includes
+  - `top_paint_cache_hit_test_only_replay_allowed` summary (`min/p50/p95/max`)
+  - `top_paint_cache_hit_test_only_replay_rejected_key_mismatch` summary (`min/p50/p95/max`)
+  (all `0` in this probe)
+
+Notes:
+- These probes still do not exercise the gate path itself (counters remain zero),
+  but JSON surface completeness is now fixed for downstream tooling.
