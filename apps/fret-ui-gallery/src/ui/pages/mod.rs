@@ -14,6 +14,7 @@ mod context_menu;
 mod data_table;
 mod date_picker;
 mod dialog;
+mod field;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -106,6 +107,10 @@ pub(super) fn preview_dialog(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     dialog::preview_dialog(cx, open)
+}
+
+pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    field::preview_field(cx)
 }
 
 pub(super) fn preview_drawer(

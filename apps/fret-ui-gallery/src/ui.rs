@@ -15973,56 +15973,7 @@ fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct FieldPageModels {
-        name: Option<Model<String>>,
-        email: Option<Model<String>>,
-    }
-
-    let (name, email) = cx.with_state(FieldPageModels::default, |st| {
-        (st.name.clone(), st.email.clone())
-    });
-    let (name, email) = match (name, email) {
-        (Some(name), Some(email)) => (name, email),
-        _ => {
-            let name = cx.app.models_mut().insert(String::new());
-            let email = cx.app.models_mut().insert(String::new());
-            cx.with_state(FieldPageModels::default, |st| {
-                st.name = Some(name.clone());
-                st.email = Some(email.clone());
-            });
-            (name, email)
-        }
-    };
-
-    let field_name = shadcn::Field::new(vec![
-        shadcn::FieldLabel::new("Name").into_element(cx),
-        shadcn::FieldDescription::new("Shown in the sidebar and status bar.").into_element(cx),
-        shadcn::FieldContent::new(vec![
-            shadcn::Input::new(name)
-                .a11y_label("Name")
-                .placeholder("Rustacean")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
-    let field_email = shadcn::Field::new(vec![
-        shadcn::FieldLabel::new("Email").into_element(cx),
-        shadcn::FieldDescription::new("Used for notifications (demo only).").into_element(cx),
-        shadcn::FieldContent::new(vec![
-            shadcn::Input::new(email)
-                .a11y_label("Email")
-                .placeholder("name@example.com")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::FieldError::new("Invalid email address").into_element(cx),
-    ])
-    .into_element(cx);
-
-    vec![shadcn::FieldSet::new(vec![field_name, field_email]).into_element(cx)]
+    pages::preview_field(cx)
 }
 
 fn preview_forms(
