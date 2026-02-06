@@ -24,6 +24,7 @@ mod item;
 mod kbd;
 mod label;
 mod menubar;
+mod native_select;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -165,6 +166,10 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
 pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     menubar::preview_menubar(cx)
+}
+
+pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    native_select::preview_native_select(cx)
 }
 
 pub(super) fn preview_drawer(

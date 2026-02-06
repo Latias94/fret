@@ -8328,27 +8328,7 @@ fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     pages::preview_item(cx)
 }
 fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let row = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_px(Px(320.0)))
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                shadcn::NativeSelect::new("Select a fruit").into_element(cx),
-                shadcn::NativeSelect::new("Small select")
-                    .size(shadcn::NativeSelectSize::Sm)
-                    .into_element(cx),
-                shadcn::NativeSelect::new("Invalid")
-                    .aria_invalid(true)
-                    .into_element(cx),
-                shadcn::NativeSelect::new("Disabled")
-                    .disabled(true)
-                    .into_element(cx),
-            ]
-        },
-    );
-    vec![row]
+    pages::preview_native_select(cx)
 }
 
 fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

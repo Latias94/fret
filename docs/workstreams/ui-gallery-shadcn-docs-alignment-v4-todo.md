@@ -88,7 +88,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] kbd - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/kbd.rs`)
 - [~] label - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/label.rs`)
 - [~] menubar - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/menubar.rs`)
-- [ ] native-select
+- [~] native-select - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/native_select.rs`)
 - [ ] navigation-menu
 - [x] pagination — examples mirrored (Demo/Simple/Icons Only/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_pagination`, `ecosystem/fret-ui-shadcn/src/pagination.rs`)
 - [x] popover — examples mirrored (Demo/Basic/Align/With Form/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_popover`, `ecosystem/fret-ui-shadcn/src/popover.rs`)
