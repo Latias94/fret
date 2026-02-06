@@ -1330,7 +1330,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 Size::new(Px(hairline.0.max(1.0)), caret.size.height),
             );
 
-            let ime_rect = if self.is_ime_composing() && !self.preedit_rects.is_empty() {
+            let ime_rect_layout = if self.is_ime_composing() && !self.preedit_rects.is_empty() {
                 let mut min_x = f32::INFINITY;
                 let mut min_y = f32::INFINITY;
                 let mut max_x = f32::NEG_INFINITY;
@@ -1364,6 +1364,8 @@ impl<H: UiHost> Widget<H> for TextArea {
             } else {
                 caret_rect
             };
+
+            let ime_rect = cx.visual_rect_aabb(ime_rect_layout);
 
             if let Some(window) = cx.window
                 && self.last_sent_cursor != Some(ime_rect)

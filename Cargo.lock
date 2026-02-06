@@ -964,6 +964,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-authoring"
+version = "0.1.0"
+dependencies = [
+ "fret-core",
+ "fret-query",
+ "fret-selector",
+ "fret-ui",
+]
+
+[[package]]
 name = "fret-bootstrap"
 version = "0.1.0"
 dependencies = [
@@ -1036,6 +1046,7 @@ dependencies = [
 name = "fret-code-editor-buffer"
 version = "0.1.0"
 dependencies = [
+ "ropey",
  "thiserror 2.0.17",
  "uuid",
 ]
@@ -1054,6 +1065,7 @@ dependencies = [
 name = "fret-code-view"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-core",
  "fret-runtime",
  "fret-syntax",
@@ -1112,6 +1124,7 @@ dependencies = [
 name = "fret-docking"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-core",
  "fret-dnd",
  "fret-runtime",
@@ -1149,20 +1162,24 @@ dependencies = [
  "fret-executor",
  "fret-gizmo",
  "fret-icons",
+ "fret-imui",
  "fret-kit",
  "fret-launch",
  "fret-markdown",
  "fret-node",
  "fret-plot",
  "fret-plot3d",
+ "fret-query",
  "fret-render",
  "fret-runtime",
+ "fret-selector",
  "fret-ui",
  "fret-ui-app",
  "fret-ui-assets",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "fret-undo",
+ "fret-workspace",
  "glam",
  "image",
  "serde_json",
@@ -1181,8 +1198,11 @@ version = "0.1.0"
 dependencies = [
  "fret-core",
  "fret-runtime",
+ "pollster",
  "serde",
  "serde_json",
+ "tokio",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]
@@ -1220,6 +1240,17 @@ dependencies = [
  "fret-core",
  "fret-icons",
  "rust-embed",
+]
+
+[[package]]
+name = "fret-imui"
+version = "0.1.0"
+dependencies = [
+ "fret-authoring",
+ "fret-core",
+ "fret-runtime",
+ "fret-ui",
+ "fret-ui-kit",
 ]
 
 [[package]]
@@ -1280,9 +1311,10 @@ dependencies = [
 name = "fret-markdown"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-code-view",
  "fret-core",
- "fret-executor",
+ "fret-query",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
@@ -1297,6 +1329,7 @@ name = "fret-node"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-authoring",
  "fret-canvas",
  "fret-core",
  "fret-runtime",
@@ -1344,6 +1377,7 @@ dependencies = [
 name = "fret-plot"
 version = "0.1.0"
 dependencies = [
+ "fret-authoring",
  "fret-canvas",
  "fret-core",
  "fret-runtime",
@@ -1359,6 +1393,19 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+]
+
+[[package]]
+name = "fret-query"
+version = "0.1.0"
+dependencies = [
+ "fret-app",
+ "fret-core",
+ "fret-executor",
+ "fret-runtime",
+ "fret-ui",
+ "pollster",
+ "tracing",
 ]
 
 [[package]]
@@ -1427,6 +1474,15 @@ dependencies = [
  "serde_json",
  "slotmap",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "fret-selector"
+version = "0.1.0"
+dependencies = [
+ "fret-runtime",
+ "fret-ui",
+ "tracing",
 ]
 
 [[package]]
@@ -1510,11 +1566,14 @@ name = "fret-ui-ai"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "fret-icons",
+ "fret-markdown",
  "fret-runtime",
  "fret-ui",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1548,6 +1607,7 @@ dependencies = [
  "fret-canvas",
  "fret-chart",
  "fret-code-editor",
+ "fret-code-editor-view",
  "fret-code-view",
  "fret-core",
  "fret-icons",
@@ -1557,6 +1617,7 @@ dependencies = [
  "fret-render",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-ai",
  "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-material3",
@@ -1592,6 +1653,8 @@ name = "fret-ui-headless"
 version = "0.1.0"
 dependencies = [
  "fret-core",
+ "serde",
+ "serde_json",
  "time",
  "virtualizer",
 ]
@@ -1601,6 +1664,7 @@ name = "fret-ui-kit"
 version = "0.1.0"
 dependencies = [
  "fret-app",
+ "fret-authoring",
  "fret-canvas",
  "fret-core",
  "fret-dnd",
@@ -1632,6 +1696,7 @@ dependencies = [
  "material-colors",
  "serde",
  "serde_json",
+ "time",
 ]
 
 [[package]]
@@ -3374,6 +3439,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ropey"
+version = "1.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93411e420bcd1a75ddd1dc3caf18c23155eda2c090631a85af21ba19e97093b5"
+dependencies = [
+ "smallvec",
+ "str_indices",
+]
+
+[[package]]
 name = "roxmltree"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3855,6 +3930,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "str_indices"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d08889ec5408683408db66ad89e0e1f93dff55c73a4ccc71c427d5b277ee47e6"
+
+[[package]]
 name = "streaming-iterator"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4130,6 +4211,15 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+
+[[package]]
+name = "tokio"
+version = "1.49.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72a2903cd7736441aac9df9d7688bd0ce48edccaadf181c3b90be801e81d3d86"
+dependencies = [
+ "pin-project-lite",
+]
 
 [[package]]
 name = "toml_datetime"

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Px, SemanticsRole};
 use fret_ui::element::AnyElement;
 use fret_ui::element::ContainerProps;
 use fret_ui::element::HoverRegionProps;
@@ -15,7 +15,7 @@ use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
 use fret_ui::element::ScrollbarStyle;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
@@ -323,27 +323,23 @@ impl ScrollAreaRoot {
                         layout: scroll_layout,
                         axis,
                         scroll_handle: Some(handle.clone()),
+                        windowed_paint: false,
                         probe_unbounded: viewport_probe_unbounded,
                         intrinsic_measure_mode,
                     },
-                    move |cx| match viewport_test_id {
-                        Some(test_id) => {
-                            let wrapped = cx.semantics(
-                                SemanticsProps {
-                                    role: fret_core::SemanticsRole::Group,
-                                    test_id: Some(test_id),
-                                    ..Default::default()
-                                },
-                                move |_cx| viewport_children,
-                            );
-                            vec![wrapped]
-                        }
-                        None => viewport_children,
-                    },
+                    move |_cx| viewport_children,
                 );
 
                 let scroll_id = scroll.id;
-                let mut children = vec![scroll];
+                let viewport = match viewport_test_id {
+                    Some(test_id) => scroll.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Group)
+                            .test_id(test_id),
+                    ),
+                    None => scroll,
+                };
+                let mut children = vec![viewport];
 
                 let thumb = shadcn_scrollbar_thumb(&theme);
                 let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);

@@ -16,6 +16,7 @@ use fret_ui_kit::headless::table::{
     ColumnDef, ColumnFilter, ColumnPinningState, RowKey, SortSpec, TableState,
     contains_ascii_case_insensitive, create_column_helper,
 };
+use serde_json::Value;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -220,14 +221,14 @@ impl TableStressDriver {
             let enabled = st
                 .column_filters
                 .iter()
-                .any(|f| f.column.as_ref() == "role" && f.value.as_ref() == "Admin");
+                .any(|f| f.column.as_ref() == "role" && f.value.as_str() == Some("Admin"));
 
             st.column_filters
-                .retain(|f| !(f.column.as_ref() == "role" && f.value.as_ref() == "Admin"));
+                .retain(|f| !(f.column.as_ref() == "role" && f.value.as_str() == Some("Admin")));
             if !enabled {
                 st.column_filters.push(ColumnFilter {
                     column: "role".into(),
-                    value: "Admin".into(),
+                    value: Value::from("Admin"),
                 });
             }
 
@@ -240,7 +241,7 @@ impl TableStressDriver {
             if st.global_filter.is_some() {
                 st.global_filter = None;
             } else {
-                st.global_filter = Some(Arc::from("User 1"));
+                st.global_filter = Some(Value::from("User 1"));
             }
 
             st.pagination.page_index = 0;
@@ -537,8 +538,14 @@ impl WinitAppDriver for TableStressDriver {
                         .map(|(_, desc)| if *desc { "desc" } else { "asc" })
                         .unwrap_or("");
                     let sorting_sep = if sorting.is_some() { ":" } else { "" };
-                    let role_filter = role_filter.as_deref().unwrap_or("<none>");
-                    let global_filter = global_filter.as_deref().unwrap_or("<none>");
+                    let role_filter = role_filter
+                        .as_ref()
+                        .map(|v| v.as_str().unwrap_or("<non-string>"))
+                        .unwrap_or("<none>");
+                    let global_filter = global_filter
+                        .as_ref()
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("<none>");
 
                     let header: Arc<str> = Arc::from(format!(
                         "Table stress demo | rows={} | selected={} | sorting={}{}{} | role_filter={} | global_filter={} | items_rev={} | alloc/frame={} ({} B) render={} ({} B) layout={} ({} B) paint={} ({} B) | [S]=toggle sort | [F]=toggle role filter | [G]=toggle global filter | [C]=clear filters | [R]=bump items_rev | [Home]/[End] | [Esc]=close",

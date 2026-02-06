@@ -7,7 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, Length,
-    OpacityProps, Overflow, SemanticsProps, VisualTransformProps,
+    OpacityProps, Overflow, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -69,6 +69,8 @@ pub enum PopoverSide {
     #[default]
     Bottom,
     Left,
+    InlineStart,
+    InlineEnd,
 }
 
 /// shadcn/ui `Popover` (v4).
@@ -425,6 +427,20 @@ impl Popover {
                         PopoverSide::Right => Side::Right,
                         PopoverSide::Bottom => Side::Bottom,
                         PopoverSide::Left => Side::Left,
+                        PopoverSide::InlineStart => {
+                            if direction == direction_prim::LayoutDirection::Rtl {
+                                Side::Right
+                            } else {
+                                Side::Left
+                            }
+                        }
+                        PopoverSide::InlineEnd => {
+                            if direction == direction_prim::LayoutDirection::Rtl {
+                                Side::Left
+                            } else {
+                                Side::Right
+                            }
+                        }
                     };
 
                     let (arrow_options, arrow_protrusion) =
@@ -689,14 +705,11 @@ impl PopoverContent {
             children,
         );
 
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Panel,
-                label,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
-        )
+        container.attach_semantics(SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label,
+            ..Default::default()
+        })
     }
 }
 

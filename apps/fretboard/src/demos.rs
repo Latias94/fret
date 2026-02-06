@@ -44,6 +44,9 @@ pub(crate) fn display_path(path: &Path) -> String {
 
 fn web_demos() -> &'static [&'static str] {
     &[
+        // Full UI Gallery app (pages: `?page=...`).
+        "ui_gallery",
+        // Lightweight examples gallery (separate app from `fret-ui-gallery`).
         "components_gallery",
         "chart_demo",
         "plot_demo",

@@ -302,6 +302,9 @@ Core:
 Semantics export:
 
 - `FRET_DIAG_SEMANTICS=0`: disable exporting `debug.semantics` into bundles (default enabled).
+- `FRET_DIAG_MAX_SEMANTICS_NODES=...`: cap the number of exported semantics nodes per snapshot (default 50000).
+- `FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1`: export only semantics nodes that have a `test_id` (keeps bundles small for large UIs; default disabled).
+- `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0192).
 
 Privacy / size:
 
@@ -362,7 +365,7 @@ Supported selectors (v1 MVP):
 - `move_pointer`
 - `drag_pointer` (optional `button`, `steps`)
 - `wheel` (optional `delta_x`, `delta_y`; default `0`)
-- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`;
+- `press_key` (`key`: `escape`, `enter`, `tab`, `space`, `arrow_up/down/left/right`, `home`, `end`, `page_up/down`, `a-z`, `0-9`;
   optional `modifiers`: `{shift,ctrl,alt,meta}`, optional `repeat`)
 - `type_text`
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
@@ -374,8 +377,11 @@ Supported selectors (v1 MVP):
 
 Notes:
 
-- `capture_bundle` always writes a new `bundle.json` directory. If you need a screenshot for that bundle, follow it with a `capture_screenshot` step.
+- `capture_bundle` always writes a new `bundle.json` directory.
+  - When `FRET_DIAG_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
+  - If you want an explicit screenshot step, follow with `capture_screenshot`.
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
+- `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
 
 ## Script schema v2 (intent-level steps)
 

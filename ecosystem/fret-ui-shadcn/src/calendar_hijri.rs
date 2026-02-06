@@ -311,18 +311,38 @@ fn hijri_day_cell<H: UiHost>(
         let chrome_props = decl_style::container_props(theme, chrome, LayoutRefinement::default());
 
         let children = move |cx: &mut ElementContext<'_, H>| {
-            let mut props = TextProps::new(Arc::clone(&day_text));
-            props.style = Some(TextStyle {
-                font: Default::default(),
-                size: text_sm_px,
-                weight: FontWeight::NORMAL,
-                line_height: Some(text_sm_line_height),
-                ..Default::default()
-            });
-            props.color = Some(fg);
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Clip;
-            vec![cx.text_props(props)]
+            vec![cx.flex(
+                FlexProps {
+                    layout: LayoutStyle {
+                        size: fret_ui::element::SizeStyle {
+                            width: fret_ui::element::Length::Fill,
+                            height: fret_ui::element::Length::Fill,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Vertical,
+                    gap: Px(0.0),
+                    padding: fret_core::Edges::all(Px(0.0)),
+                    justify: fret_ui::element::MainAlign::Center,
+                    align: fret_ui::element::CrossAlign::Center,
+                    wrap: false,
+                },
+                move |cx| {
+                    let mut props = TextProps::new(Arc::clone(&day_text));
+                    props.style = Some(TextStyle {
+                        font: Default::default(),
+                        size: text_sm_px,
+                        weight: FontWeight::NORMAL,
+                        line_height: Some(text_sm_line_height),
+                        ..Default::default()
+                    });
+                    props.color = Some(fg);
+                    props.wrap = TextWrap::None;
+                    props.overflow = TextOverflow::Clip;
+                    vec![cx.text_props(props)]
+                },
+            )]
         };
 
         (pressable, chrome_props, children)
@@ -635,7 +655,8 @@ fn calendar_hidden_cell<H: UiHost>(
             ChromeRefinement::default(),
             LayoutRefinement::default(),
         );
-        chrome_props.layout = layout;
+        // Keep margins on the pressable node so row gaps don't inflate the chrome/background quad.
+        chrome_props.layout.margin = Default::default();
 
         let pressable = PressableProps {
             layout,

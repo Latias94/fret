@@ -62,6 +62,12 @@ pub mod horizontal_bars_demo;
 pub mod image_upload_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod ime_smoke_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod imui_editor_proof_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod imui_hello_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
+pub mod imui_node_graph_demo;
 pub mod inf_lines_demo;
 pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -78,6 +84,8 @@ pub mod plot_demo;
 pub mod plot_image_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot_stress_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod query_demo;
 pub mod shaded_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod sonner_demo;
@@ -109,3 +117,4 @@ pub mod todo_mvu_demo;
 pub mod todo_mvu_interop_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
+pub mod workspace_shell_demo;

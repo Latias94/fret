@@ -116,8 +116,19 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_fret_sys_motion_expressive(cfg);
     material_web_v30::inject_sys_shape(cfg);
     material_web_v30::inject_sys_typescale(cfg, typography);
+    inject_comp_badge_text_styles(cfg);
     inject_comp_button_text_styles(cfg);
+    inject_comp_extended_fab_text_styles(cfg);
+    inject_comp_outlined_segmented_button_text_styles(cfg);
+    inject_comp_top_app_bar_text_styles(cfg);
+    inject_comp_date_picker_text_styles(cfg);
+    inject_comp_time_picker_text_styles(cfg);
+    inject_comp_time_input_text_styles(cfg);
+    inject_comp_badge_scalars(cfg);
     inject_comp_button_scalars(cfg);
+    inject_comp_fab_scalars(cfg);
+    inject_comp_extended_fab_scalars(cfg);
+    inject_comp_outlined_segmented_button_scalars(cfg);
     inject_comp_icon_button_scalars(cfg);
     inject_comp_checkbox_scalars(cfg);
     inject_comp_switch_scalars(cfg);
@@ -126,12 +137,20 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_filled_text_field_scalars(cfg);
     inject_comp_outlined_select_scalars(cfg);
     inject_comp_filled_select_scalars(cfg);
+    inject_comp_outlined_autocomplete_scalars(cfg);
+    inject_comp_filled_autocomplete_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
     inject_comp_navigation_bar_scalars(cfg);
     inject_comp_navigation_drawer_scalars(cfg);
     inject_comp_navigation_rail_scalars(cfg);
     inject_comp_menu_scalars(cfg);
     inject_comp_list_scalars(cfg);
+    inject_comp_top_app_bar_scalars(cfg);
+    inject_comp_sheet_bottom_scalars(cfg);
+    inject_comp_date_picker_docked_scalars(cfg);
+    inject_comp_date_picker_modal_scalars(cfg);
+    inject_comp_time_picker_scalars(cfg);
+    inject_comp_time_input_scalars(cfg);
     inject_comp_plain_tooltip_scalars(cfg);
     inject_comp_rich_tooltip_scalars(cfg);
     inject_comp_snackbar_scalars(cfg);
@@ -228,6 +247,198 @@ fn inject_comp_button_text_styles(cfg: &mut ThemeConfig) {
     ] {
         cfg.text_styles.insert(key.to_string(), label_large.clone());
     }
+}
+
+fn inject_comp_extended_fab_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles
+        .insert("md.comp.extended-fab.label-text".to_string(), label_large);
+}
+
+fn inject_comp_outlined_segmented_button_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.outlined-segmented-button.label-text".to_string(),
+        label_large,
+    );
+}
+
+fn inject_comp_badge_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_small) = cfg.text_styles.get("md.sys.typescale.label-small").cloned() else {
+        return;
+    };
+
+    cfg.text_styles
+        .insert("md.comp.badge.large.label-text".to_string(), label_small);
+}
+
+fn inject_comp_top_app_bar_text_styles(cfg: &mut ThemeConfig) {
+    let Some(title_large) = cfg.text_styles.get("md.sys.typescale.title-large").cloned() else {
+        return;
+    };
+    let Some(headline_small) = cfg
+        .text_styles
+        .get("md.sys.typescale.headline-small")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(headline_medium) = cfg
+        .text_styles
+        .get("md.sys.typescale.headline-medium")
+        .cloned()
+    else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.top-app-bar.small.headline".to_string(),
+        title_large.clone(),
+    );
+    cfg.text_styles.insert(
+        "md.comp.top-app-bar.small.centered.headline".to_string(),
+        title_large,
+    );
+    cfg.text_styles.insert(
+        "md.comp.top-app-bar.medium.headline".to_string(),
+        headline_small,
+    );
+    cfg.text_styles.insert(
+        "md.comp.top-app-bar.large.headline".to_string(),
+        headline_medium,
+    );
+}
+
+fn inject_comp_date_picker_text_styles(cfg: &mut ThemeConfig) {
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+    let Some(headline_large) = cfg
+        .text_styles
+        .get("md.sys.typescale.headline-large")
+        .cloned()
+    else {
+        return;
+    };
+
+    for key in [
+        "md.comp.date-picker.docked.date.label-text",
+        "md.comp.date-picker.docked.weekdays.label-text",
+        "md.comp.date-picker.modal.date.label-text",
+        "md.comp.date-picker.modal.weekdays.label-text",
+    ] {
+        cfg.text_styles.insert(key.to_string(), body_large.clone());
+    }
+
+    cfg.text_styles.insert(
+        "md.comp.date-picker.modal.header.headline".to_string(),
+        headline_large,
+    );
+}
+
+fn inject_comp_time_picker_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_medium) = cfg
+        .text_styles
+        .get("md.sys.typescale.label-medium")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(title_medium) = cfg
+        .text_styles
+        .get("md.sys.typescale.title-medium")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(display_large) = cfg
+        .text_styles
+        .get("md.sys.typescale.display-large")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles
+        .insert("md.comp.time-picker.headline".to_string(), label_medium);
+    cfg.text_styles.insert(
+        "md.comp.time-picker.period-selector.label-text".to_string(),
+        title_medium,
+    );
+    cfg.text_styles.insert(
+        "md.comp.time-picker.time-selector.label-text".to_string(),
+        display_large.clone(),
+    );
+    cfg.text_styles.insert(
+        "md.comp.time-picker.time-selector.separator".to_string(),
+        display_large,
+    );
+    cfg.text_styles.insert(
+        "md.comp.time-picker.clock-dial.label-text".to_string(),
+        body_large,
+    );
+}
+
+fn inject_comp_time_input_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_medium) = cfg
+        .text_styles
+        .get("md.sys.typescale.label-medium")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(title_medium) = cfg
+        .text_styles
+        .get("md.sys.typescale.title-medium")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(display_large) = cfg
+        .text_styles
+        .get("md.sys.typescale.display-large")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(display_medium) = cfg
+        .text_styles
+        .get("md.sys.typescale.display-medium")
+        .cloned()
+    else {
+        return;
+    };
+    let Some(body_small) = cfg.text_styles.get("md.sys.typescale.body-small").cloned() else {
+        return;
+    };
+
+    cfg.text_styles
+        .insert("md.comp.time-input.headline".to_string(), label_medium);
+    cfg.text_styles.insert(
+        "md.comp.time-input.period-selector.label-text".to_string(),
+        title_medium,
+    );
+    cfg.text_styles.insert(
+        "md.comp.time-input.time-input-field.label-text".to_string(),
+        display_medium,
+    );
+    cfg.text_styles.insert(
+        "md.comp.time-input.time-input-field.separator".to_string(),
+        display_large,
+    );
+    cfg.text_styles.insert(
+        "md.comp.time-input.time-input-field.supporting-text".to_string(),
+        body_small,
+    );
 }
 
 /// Injects `md.sys.color.*` roles into `ThemeConfig`.
@@ -447,7 +658,11 @@ pub fn theme_config_with_colors(
 ) -> ThemeConfig {
     let mut cfg = theme_config(typography);
     inject_sys_colors(&mut cfg, colors);
+    inject_comp_badge_colors_from_sys(&mut cfg);
     inject_comp_button_colors_from_sys(&mut cfg);
+    inject_comp_fab_colors_from_sys(&mut cfg);
+    inject_comp_extended_fab_colors_from_sys(&mut cfg);
+    inject_comp_outlined_segmented_button_colors_from_sys(&mut cfg);
     inject_comp_icon_button_colors_from_sys(&mut cfg);
     inject_comp_checkbox_colors_from_sys(&mut cfg);
     inject_comp_switch_colors_from_sys(&mut cfg);
@@ -456,12 +671,20 @@ pub fn theme_config_with_colors(
     inject_comp_filled_text_field_colors_from_sys(&mut cfg);
     inject_comp_outlined_select_colors_from_sys(&mut cfg);
     inject_comp_filled_select_colors_from_sys(&mut cfg);
+    inject_comp_outlined_autocomplete_colors_from_sys(&mut cfg);
+    inject_comp_filled_autocomplete_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
     inject_comp_navigation_bar_colors_from_sys(&mut cfg);
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
     inject_comp_navigation_rail_colors_from_sys(&mut cfg);
     inject_comp_menu_colors_from_sys(&mut cfg);
     inject_comp_list_colors_from_sys(&mut cfg);
+    inject_comp_top_app_bar_colors_from_sys(&mut cfg);
+    inject_comp_sheet_bottom_colors_from_sys(&mut cfg);
+    inject_comp_date_picker_docked_colors_from_sys(&mut cfg);
+    inject_comp_date_picker_modal_colors_from_sys(&mut cfg);
+    inject_comp_time_picker_colors_from_sys(&mut cfg);
+    inject_comp_time_input_colors_from_sys(&mut cfg);
     inject_comp_plain_tooltip_colors_from_sys(&mut cfg);
     inject_comp_rich_tooltip_colors_from_sys(&mut cfg);
     inject_comp_snackbar_colors_from_sys(&mut cfg);
@@ -494,6 +717,70 @@ fn insert_color(cfg: &mut ThemeConfig, key: &str, argb: Argb) {
 
 fn inject_comp_button_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_button_scalars(cfg);
+}
+
+fn inject_comp_badge_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_badge_scalars(cfg);
+}
+
+fn inject_comp_fab_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_fab_scalars(cfg);
+}
+
+fn inject_comp_extended_fab_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_extended_fab_scalars(cfg);
+}
+
+fn inject_comp_outlined_segmented_button_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_segmented_button_scalars(cfg);
+}
+
+fn inject_comp_date_picker_docked_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_date_picker_docked_scalars(cfg);
+}
+
+fn inject_comp_date_picker_modal_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_date_picker_modal_scalars(cfg);
+}
+
+fn inject_comp_time_picker_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_time_picker_scalars(cfg);
+}
+
+fn inject_comp_time_input_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_time_input_scalars(cfg);
+}
+
+fn inject_comp_badge_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_badge_colors_from_sys(cfg);
+}
+
+fn inject_comp_fab_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_fab_colors_from_sys(cfg);
+}
+
+fn inject_comp_extended_fab_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_extended_fab_colors_from_sys(cfg);
+}
+
+fn inject_comp_outlined_segmented_button_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_segmented_button_colors_from_sys(cfg);
+}
+
+fn inject_comp_date_picker_docked_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_date_picker_docked_colors_from_sys(cfg);
+}
+
+fn inject_comp_date_picker_modal_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_date_picker_modal_colors_from_sys(cfg);
+}
+
+fn inject_comp_time_picker_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_time_picker_colors_from_sys(cfg);
+}
+
+fn inject_comp_time_input_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_time_input_colors_from_sys(cfg);
 }
 
 fn inject_comp_button_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -1483,6 +1770,14 @@ fn inject_comp_filled_select_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_select_scalars(cfg);
 }
 
+fn inject_comp_outlined_autocomplete_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_autocomplete_scalars(cfg);
+}
+
+fn inject_comp_filled_autocomplete_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_autocomplete_scalars(cfg);
+}
+
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
 }
@@ -1602,6 +1897,130 @@ fn inject_comp_list_scalars(cfg: &mut ThemeConfig) {
         Corners::all(Px(16.0)),
     );
     material_web_v30::inject_comp_list_scalars(cfg);
+}
+
+fn inject_comp_top_app_bar_scalars(cfg: &mut ThemeConfig) {
+    // Source:
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-small.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-small-centered.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-medium.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-large.scss
+
+    // Heights
+    cfg.metrics.insert(
+        "md.comp.top-app-bar.small.container.height".to_string(),
+        64.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.top-app-bar.small.centered.container.height".to_string(),
+        64.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.top-app-bar.medium.container.height".to_string(),
+        112.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.top-app-bar.large.container.height".to_string(),
+        152.0,
+    );
+
+    // Icon sizes
+    for key in [
+        "md.comp.top-app-bar.small.leading-icon.size",
+        "md.comp.top-app-bar.small.trailing-icon.size",
+        "md.comp.top-app-bar.small.centered.leading-icon.size",
+        "md.comp.top-app-bar.small.centered.trailing-icon.size",
+        "md.comp.top-app-bar.medium.leading-icon.size",
+        "md.comp.top-app-bar.medium.trailing-icon.size",
+        "md.comp.top-app-bar.large.leading-icon.size",
+        "md.comp.top-app-bar.large.trailing-icon.size",
+    ] {
+        cfg.metrics.insert(key.to_string(), 24.0);
+    }
+
+    // Centered avatar (optional)
+    cfg.metrics.insert(
+        "md.comp.top-app-bar.small.centered.avatar.size".to_string(),
+        30.0,
+    );
+
+    // Container shape (corner-none)
+    for key in [
+        "md.comp.top-app-bar.small.container.shape",
+        "md.comp.top-app-bar.small.centered.container.shape",
+        "md.comp.top-app-bar.medium.container.shape",
+        "md.comp.top-app-bar.large.container.shape",
+    ] {
+        cfg.metrics.insert(key.to_string(), 0.0);
+    }
+
+    // Elevation
+    for key in [
+        "md.comp.top-app-bar.small.container.elevation",
+        "md.comp.top-app-bar.small.centered.container.elevation",
+        "md.comp.top-app-bar.medium.container.elevation",
+        "md.comp.top-app-bar.large.container.elevation",
+    ] {
+        cfg.metrics.insert(key.to_string(), 0.0);
+    }
+    cfg.metrics.insert(
+        "md.comp.top-app-bar.small.on-scroll.container.elevation".to_string(),
+        3.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.top-app-bar.small.centered.on-scroll.container.elevation".to_string(),
+        3.0,
+    );
+}
+
+fn inject_comp_sheet_bottom_scalars(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-sheet-bottom.scss
+
+    cfg.metrics.insert(
+        "md.comp.sheet.bottom.docked.drag-handle.height".to_string(),
+        4.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.sheet.bottom.docked.drag-handle.width".to_string(),
+        32.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.sheet.bottom.docked.drag-handle.opacity".to_string(),
+        0.4,
+    );
+
+    cfg.corners.insert(
+        "md.comp.sheet.bottom.docked.container.shape".to_string(),
+        Corners {
+            top_left: Px(28.0),
+            top_right: Px(28.0),
+            bottom_right: Px(0.0),
+            bottom_left: Px(0.0),
+        },
+    );
+    cfg.corners.insert(
+        "md.comp.sheet.bottom.docked.minimized.container.shape".to_string(),
+        Corners::all(Px(0.0)),
+    );
+
+    // Both modal and standard use level1 in Material Web v30.
+    cfg.metrics.insert(
+        "md.comp.sheet.bottom.docked.modal.container.elevation".to_string(),
+        1.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.sheet.bottom.docked.standard.container.elevation".to_string(),
+        1.0,
+    );
+
+    cfg.metrics.insert(
+        "md.comp.sheet.bottom.focus.indicator.outline.offset".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.sheet.bottom.focus.indicator.thickness".to_string(),
+        3.0,
+    );
 }
 
 fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
@@ -2006,6 +2425,14 @@ fn inject_comp_outlined_select_colors_from_sys(cfg: &mut ThemeConfig) {
 
 fn inject_comp_filled_select_colors_from_sys(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_select_colors_from_sys(cfg);
+}
+
+fn inject_comp_outlined_autocomplete_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_autocomplete_colors_from_sys(cfg);
+}
+
+fn inject_comp_filled_autocomplete_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_autocomplete_colors_from_sys(cfg);
 }
 
 fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -2809,6 +3236,72 @@ fn inject_comp_list_colors_from_sys(cfg: &mut ThemeConfig) {
         "md.sys.state.disabled.state-layer-opacity",
     );
     material_web_v30::inject_comp_list_colors_from_sys(cfg);
+}
+
+fn inject_comp_top_app_bar_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source:
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-small.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-small-centered.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-medium.scss
+    // - repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-top-app-bar-large.scss
+
+    for key in [
+        "md.comp.top-app-bar.small.container.color",
+        "md.comp.top-app-bar.small.centered.container.color",
+        "md.comp.top-app-bar.medium.container.color",
+        "md.comp.top-app-bar.large.container.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.surface");
+    }
+
+    for key in [
+        "md.comp.top-app-bar.small.headline.color",
+        "md.comp.top-app-bar.small.centered.headline.color",
+        "md.comp.top-app-bar.medium.headline.color",
+        "md.comp.top-app-bar.large.headline.color",
+        "md.comp.top-app-bar.small.leading-icon.color",
+        "md.comp.top-app-bar.small.centered.leading-icon.color",
+        "md.comp.top-app-bar.medium.leading-icon.color",
+        "md.comp.top-app-bar.large.leading-icon.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.on-surface");
+    }
+
+    for key in [
+        "md.comp.top-app-bar.small.trailing-icon.color",
+        "md.comp.top-app-bar.small.centered.trailing-icon.color",
+        "md.comp.top-app-bar.medium.trailing-icon.color",
+        "md.comp.top-app-bar.large.trailing-icon.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.on-surface-variant");
+    }
+
+    for key in [
+        "md.comp.top-app-bar.small.on-scroll.container.color",
+        "md.comp.top-app-bar.small.centered.on-scroll.container.color",
+    ] {
+        copy_color(cfg, key, "md.sys.color.surface-container");
+    }
+}
+
+fn inject_comp_sheet_bottom_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-sheet-bottom.scss
+
+    copy_color(
+        cfg,
+        "md.comp.sheet.bottom.docked.container.color",
+        "md.sys.color.surface-container-low",
+    );
+    copy_color(
+        cfg,
+        "md.comp.sheet.bottom.docked.drag-handle.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.sheet.bottom.focus.indicator.color",
+        "md.sys.color.secondary",
+    );
 }
 
 fn inject_comp_plain_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {

@@ -117,6 +117,17 @@ pub(crate) fn timer_has_target<H: UiHost>(
         .is_some_and(|st| st.timer_targets.contains_key(&token))
 }
 
+pub(crate) fn record_transient_event<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    element: GlobalElementId,
+    key: u64,
+) {
+    with_window_state(app, window, |st| {
+        st.record_transient_event(element, key);
+    });
+}
+
 pub(crate) fn timer_target_node<H: UiHost>(
     app: &mut H,
     window: AppWindowId,

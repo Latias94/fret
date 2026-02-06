@@ -1,0 +1,239 @@
+{
+  "name": "fret-skills",
+  "version": "0.3.6",
+  "description": "Agent skills for building and debugging editor-grade UI with the Fret Rust UI framework (shadcn/ui v4-aligned).",
+  "last_updated": "2026-02-04",
+  "skills": {
+    "foundation": [
+      "fret-component-authoring",
+      "fret-action-hooks"
+    ],
+    "app_architecture": [
+      "fret-app-architecture-and-effects"
+    ],
+    "design_system": [
+      "fret-design-system-styles"
+    ],
+    "ux": [
+      "fret-ui-ux-guidelines"
+    ],
+    "commands_keymap": [
+      "fret-commands-and-keymap"
+    ],
+    "text_input": [
+      "fret-text-input-and-ime"
+    ],
+    "virtualization": [
+      "fret-scroll-and-virtualization"
+    ],
+    "layout_style": [
+      "fret-layout-and-style"
+    ],
+    "overlays_focus": [
+      "fret-overlays-and-focus"
+    ],
+    "animation": [
+      "fret-animation-and-scheduling"
+    ],
+    "docking": [
+      "fret-docking-and-viewports"
+    ],
+    "debugging": [
+      "fret-diag-workflow"
+    ],
+    "parity": [
+      "fret-shadcn-source-alignment"
+    ],
+    "recipes": [
+      "fret-shadcn-app-recipes"
+    ]
+  },
+  "triggers": {
+    "fret": [
+      "fret",
+      "fret-ui",
+      "fret-ui-shadcn",
+      "fret-ui-kit",
+      "fretboard",
+      "ElementContext"
+    ],
+    "design_system": [
+      "ThemeConfig",
+      "apply_shadcn_new_york_v4",
+      "ShadcnBaseColor",
+      "ShadcnColorScheme",
+      "theme.json",
+      "design system",
+      "tokens",
+      "density",
+      "radius",
+      "shadow",
+      "ring",
+      "glassmorphism",
+      "glass panel"
+    ],
+    "ux": [
+      "polish",
+      "make it look good",
+      "visual hierarchy",
+      "spacing",
+      "typography",
+      "affordance",
+      "empty state",
+      "skeleton",
+      "editor shell",
+      "美观",
+      "好看",
+      "视觉层级",
+      "留白",
+      "排版"
+    ],
+    "commands_keymap": [
+      "CommandId",
+      "CommandRegistry",
+      "CommandMeta",
+      "KeymapService",
+      "keymap.json",
+      "MenuBar",
+      "when expression",
+      "command palette"
+    ],
+    "text_input": [
+      "TextInput",
+      "TextArea",
+      "IME",
+      "ImeEvent",
+      "Utf16Range",
+      "active descendant",
+      "aria-activedescendant"
+    ],
+    "virtualization": [
+      "VirtualList",
+      "VirtualListOptions",
+      "VirtualListScrollHandle",
+      "ScrollHandle",
+      "overscan",
+      "keep_alive",
+      "scroll_to_item"
+    ],
+    "authoring": [
+      "UiBuilder",
+      "UiPatchTarget",
+      "UiIntoElement",
+      "with_state",
+      "keyed",
+      "Model<"
+    ],
+    "hooks": [
+      "action hook",
+      "pressable_on_activate",
+      "dismissible_on_dismiss_request",
+      "roving_on_active_change",
+      "typeahead",
+      "TimerToken"
+    ],
+    "layout_style": [
+      "LayoutRefinement",
+      "ChromeRefinement",
+      "Space::",
+      "Radius::",
+      "MetricRef",
+      "ColorRef",
+      "overflow"
+    ],
+    "overlays": [
+      "OverlayController",
+      "OverlayRequest",
+      "OverlayPresence",
+      "outside press",
+      "placement"
+    ],
+    "animation": [
+      "ContinuousFrames",
+      "request_animation_frame",
+      "fade_presence",
+      "drive_transition"
+    ],
+    "docking": [
+      "DockSpace",
+      "docking",
+      "tear-off",
+      "viewport",
+      "multi-window"
+    ],
+    "diag": [
+      "fretboard diag",
+      "diag-scripts",
+      "capture_bundle",
+      "capture_screenshot",
+      "FRET_DIAG"
+    ],
+    "shadcn_radix": [
+      "shadcn",
+      "radix",
+      "combobox",
+      "dropdown-menu",
+      "hover-card",
+      "hover card",
+      "menubar",
+      "navigation-menu",
+      "navigation menu",
+      "popover",
+      "select",
+      "sonner",
+      "toast",
+      "tabs",
+      "dialog",
+      "sheet",
+      "tooltip",
+      "context-menu",
+      "scroll-area",
+      "scroll area",
+      "resizable",
+      "sidebar",
+      "table",
+      "data-table",
+      "data-grid",
+      "data grid"
+    ],
+    "app_architecture": [
+      "fret-kit",
+      "fret-bootstrap",
+      "fret-launch",
+      "fret-executor",
+      "Dispatcher",
+      "DispatcherHandle",
+      "dispatch_on_main_thread",
+      "dispatch_background",
+      "dispatch_after",
+      "wake",
+      "Inbox",
+      "InboxSender",
+      "InboxDrainer",
+      "InboxDrainRegistry",
+      "Effect::SetTimer",
+      "Effect::RequestAnimationFrame",
+      "Effect::Redraw",
+      "Event::Timer",
+      "TimerToken",
+      "background task",
+      "concurrency",
+      "main thread",
+      "persistence",
+      "serialize",
+      "save",
+      "load",
+      "debounce",
+      "持久化",
+      "保存",
+      "加载",
+      "异步",
+      "后台任务",
+      "防抖",
+      "定时器"
+    ]
+  },
+  "notes": {
+    "pinned_snapshots": "`repo-ref/` is optional and is not necessarily present on GitHub checkouts of this repo."
+  }
+}

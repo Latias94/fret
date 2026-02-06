@@ -4,7 +4,7 @@ use super::frame::{
 };
 use super::host_widget::ElementHostWidget;
 use super::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use std::sync::OnceLock;
 
@@ -16,6 +16,12 @@ fn keep_alive_view_cache_scratch_disabled() -> bool {
         std::env::var_os("FRET_UI_VIEW_CACHE_KEEPALIVE_SCRATCH_DISABLE")
             .is_some_and(|v| !v.is_empty() && v != "0")
     })
+}
+
+#[cfg(feature = "unstable-retained-bridge")]
+#[derive(Default)]
+struct RetainedSubtreeHostState {
+    root: Option<NodeId>,
 }
 
 pub struct RenderRootContext<'a, H: UiHost> {
@@ -260,6 +266,7 @@ where
                     ElementRecord {
                         element: root_id,
                         instance: ElementInstance::Stack(StackProps::default()),
+                        semantics_decoration: None,
                     },
                 )
                 .is_none();
@@ -425,16 +432,25 @@ where
         }
 
         // Node GC is keyed off `last_seen_frame`. Cache-hit frames can legitimately skip
-        // re-mounting cached subtrees, so cache roots must keep the retained subtree alive.
+        // re-mounting cached subtrees, so view-cache reuse must keep the retained subtree alive
+        // via explicit liveness bookkeeping (ADR 0191).
         //
-        // We only sweep nodes that are both stale and detached from any UI layer.
+        // We only sweep nodes that are both stale and unreachable from the window's liveness
+        // roots:
+        // - layer roots (base + overlays),
+        // - view-cache reuse roots, and
+        // - retained windowed-surface keep-alive roots (ADR 0192),
+        // - recorded view-cache subtree memberships (to tolerate temporarily-incomplete child
+        //   edges on cache-hit frames).
         //
-        // Note: `UiTree::node_layer` relies on parent pointers. If a retained subtree becomes
-        // inconsistent (children edges still attached, but parent pointers broken), `node_layer`
-        // can return `None` even though the node is still reachable from the layer root. In that
-        // case, do not sweep: treat reachability from the layer roots as authoritative for
-        // liveness.
+        // Note: `UiTree::node_layer` relies on parent pointers. Parent pointers can transiently
+        // drift under fearless refactors (e.g. when reusing cached subtrees), so `node_layer == None`
+        // must never be treated as a sufficient signal for liveness. Reachability from the
+        // liveness roots is the authoritative predicate for GC.
         let liveness_roots = ui.all_layer_roots();
+        let keep_alive_roots: Vec<NodeId> = window_state
+            .retained_virtual_list_keep_alive_roots()
+            .collect();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
         reachable_from_layers.clear();
@@ -506,7 +522,7 @@ where
                         collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
-                            std::iter::once(root_node),
+                            std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
                             &mut reachable_from_layers,
                             &mut gc_stack,
                         );
@@ -514,10 +530,13 @@ where
                         collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
-                            liveness_roots.iter().copied(),
+                            liveness_roots
+                                .iter()
+                                .copied()
+                                .chain(keep_alive_roots.iter().copied()),
                             &mut reachable_from_layers,
                             &mut gc_stack,
-                        );
+                        )
                     }
                 });
                 reachable_from_layers_computed = true;
@@ -549,7 +568,9 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let root_reachable_from_layer_roots =
+                    reachable_from_layers_computed && reachable_from_layers.contains(&node);
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
                     .then(|| reachable_from_view_cache_roots.contains(&node));
                 let view_cache_reuse_roots: Vec<GlobalElementId> =
@@ -595,6 +616,7 @@ where
                         .children
                         .get(node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    root_reachable_from_layer_roots,
                     root_reachable_from_view_cache_roots,
                     liveness_layer_roots_len,
                     view_cache_reuse_roots_len,
@@ -676,7 +698,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn render_dismissible_root_impl<H: UiHost, F, I>(
+fn render_dismissible_root_impl<H: UiHost + 'static, F, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -773,6 +795,7 @@ where
                         instance: ElementInstance::DismissibleLayer(
                             DismissibleLayerProps::default(),
                         ),
+                        semantics_decoration: None,
                     },
                 )
                 .is_none();
@@ -901,6 +924,9 @@ where
         // See `render_root`: cache-hit frames can skip re-mounting cached subtrees, so we sweep
         // only detached nodes that have been stale beyond the configured lag window.
         let liveness_roots = ui.all_layer_roots();
+        let keep_alive_roots: Vec<NodeId> = window_state
+            .retained_virtual_list_keep_alive_roots()
+            .collect();
         let mut stale: Vec<StaleNodeRecord> = Vec::new();
         let mut reachable_from_layers = ui.take_scratch_gc_reachable_from_layers();
         reachable_from_layers.clear();
@@ -972,7 +998,7 @@ where
                         collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
-                            std::iter::once(root_node),
+                            std::iter::once(root_node).chain(keep_alive_roots.iter().copied()),
                             &mut reachable_from_layers,
                             &mut gc_stack,
                         );
@@ -980,10 +1006,13 @@ where
                         collect_reachable_nodes_for_gc_in_place(
                             ui,
                             window_frame,
-                            liveness_roots.iter().copied(),
+                            liveness_roots
+                                .iter()
+                                .copied()
+                                .chain(keep_alive_roots.iter().copied()),
                             &mut reachable_from_layers,
                             &mut gc_stack,
-                        );
+                        )
                     }
                 });
                 reachable_from_layers_computed = true;
@@ -1015,7 +1044,9 @@ where
             if let Some(ctx) = with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let parent = ui.node_parent(node);
-                let parent_frame_children = parent.and_then(|p| window_frame.children.get(p));
+                let parent_frame_children = parent.and_then(|p| window_frame.children.get(&p));
+                let root_reachable_from_layer_roots =
+                    reachable_from_layers_computed && reachable_from_layers.contains(&node);
                 let root_reachable_from_view_cache_roots = reachable_from_view_cache_roots_active
                     .then(|| reachable_from_view_cache_roots.contains(&node));
                 let view_cache_reuse_roots: Vec<GlobalElementId> =
@@ -1061,6 +1092,7 @@ where
                         .children
                         .get(node)
                         .map(|v| v.len().min(u32::MAX as usize) as u32),
+                    root_reachable_from_layer_roots,
                     root_reachable_from_view_cache_roots,
                     liveness_layer_roots_len,
                     view_cache_reuse_roots_len,
@@ -1120,7 +1152,7 @@ where
 }
 
 #[allow(clippy::too_many_arguments)]
-fn mount_element<H: UiHost>(
+fn mount_element<H: UiHost + 'static>(
     ui: &mut UiTree<H>,
     _window: AppWindowId,
     root_id: GlobalElementId,
@@ -1133,6 +1165,7 @@ fn mount_element<H: UiHost>(
 ) -> NodeId {
     let mut element = element;
     let id = element.id;
+    let semantics_decoration = element.semantics_decoration.clone();
     let mut children = std::mem::take(&mut element.children);
     let existing_node_entry = window_state.node_entry(id);
     let had_existing_node_entry = existing_node_entry.is_some();
@@ -1145,6 +1178,12 @@ fn mount_element<H: UiHost>(
     };
     let reuse_view_cache =
         view_cache_props.is_some() && window_state.should_reuse_view_cache_root(id);
+
+    #[cfg(feature = "unstable-retained-bridge")]
+    let retained_subtree_props = match &element.kind {
+        ElementKind::RetainedSubtree(props) => Some(props.clone()),
+        _ => None,
+    };
 
     let span = if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
         tracing::trace_span!(
@@ -1299,6 +1338,8 @@ fn mount_element<H: UiHost>(
         ElementKind::Grid(p) => ElementInstance::Grid(p),
         ElementKind::Image(p) => ElementInstance::Image(p),
         ElementKind::Canvas(p) => ElementInstance::Canvas(p),
+        #[cfg(feature = "unstable-retained-bridge")]
+        ElementKind::RetainedSubtree(p) => ElementInstance::RetainedSubtree(p),
         ElementKind::ViewportSurface(p) => ElementInstance::ViewportSurface(p),
         ElementKind::SvgIcon(p) => ElementInstance::SvgIcon(p),
         ElementKind::Spinner(p) => ElementInstance::Spinner(p),
@@ -1345,6 +1386,7 @@ fn mount_element<H: UiHost>(
             ElementRecord {
                 element: id,
                 instance,
+                semantics_decoration,
             },
         )
         .is_none();
@@ -1425,6 +1467,44 @@ fn mount_element<H: UiHost>(
             node,
         );
         window_state.restore_scratch_element_children_vec(children);
+        return node;
+    }
+
+    #[cfg(feature = "unstable-retained-bridge")]
+    if let Some(props) = retained_subtree_props {
+        if !element.children.is_empty() {
+            tracing::warn!(
+                element = ?id,
+                children = element.children.len(),
+                "RetainedSubtree ignores declarative children (expected leaf element)",
+            );
+        }
+
+        let retained_root = window_state.with_state_mut(
+            id,
+            RetainedSubtreeHostState::default,
+            |st: &mut RetainedSubtreeHostState| {
+                if let Some(root) = st.root
+                    && ui.node_exists(root)
+                {
+                    return root;
+                }
+
+                let root = props.factory.build(ui);
+                st.root = Some(root);
+                root
+            },
+        );
+
+        let child_nodes = vec![retained_root];
+        if had_existing_node {
+            ui.set_children(node, child_nodes.clone());
+        } else {
+            ui.set_children_in_mount(node, child_nodes.clone());
+        }
+        window_frame
+            .children
+            .insert(node, Arc::<[NodeId]>::from(child_nodes));
         return node;
     }
 
@@ -1516,14 +1596,40 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
     window_frame: &mut WindowFrame,
     scroll_bindings: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
     pending_invalidations: &mut HashMap<NodeId, u8>,
-    elements: Vec<GlobalElementId>,
+    elements: Vec<(
+        GlobalElementId,
+        crate::tree::UiDebugRetainedVirtualListReconcileKind,
+    )>,
 ) {
     if elements.is_empty() {
         return;
     }
 
-    for element in elements {
-        let Some(node) = window_state.node_entry(element).map(|e| e.node) else {
+    for (element, reconcile_kind) in elements {
+        let node = window_state
+            .node_entry(element)
+            .map(|e| e.node)
+            .or_else(|| {
+                // View-cache reuse can skip declarative re-mounting of subtrees, which means the
+                // element runtime may not have a fresh `NodeEntry` mapping for all elements that
+                // still exist in the current `WindowFrame`. Retained-host reconciles must remain
+                // viable on cache-hit frames, so fall back to scanning the frame and (if found)
+                // refresh the runtime mapping.
+                let node = window_frame
+                    .instances
+                    .iter()
+                    .find_map(|(&node, record)| (record.element == element).then_some(node))?;
+                window_state.set_node_entry(
+                    element,
+                    NodeEntry {
+                        node,
+                        last_seen_frame: frame_id,
+                        root: root_id,
+                    },
+                );
+                Some(node)
+            });
+        let Some(node) = node else {
             continue;
         };
 
@@ -1568,21 +1674,36 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
                         return None;
                     }
 
-                    let offset_point = props.scroll_handle.offset();
-                    let offset_axis = match props.axis {
-                        fret_core::Axis::Vertical => offset_point.y,
-                        fret_core::Axis::Horizontal => offset_point.x,
-                    };
-                    let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
-
-                    let range = state.window_range.or_else(|| {
+                    // Prefer the prepaint-derived window range (ADR 0190). This lets retained
+                    // virtual surfaces update row membership on cache-hit frames without
+                    // re-deriving the window from scroll state during reconcile.
+                    let mut window_range =
                         state
-                            .metrics
-                            .visible_range(offset_axis, viewport, props.overscan)
-                    });
-                    state.window_range = range;
-                    state.render_window_range = range;
-                    let range = range?;
+                            .window_range
+                            .or(state.render_window_range)
+                            .filter(|r| {
+                                r.count == props.len
+                                    && r.overscan == props.overscan
+                                    && r.start_index <= r.end_index
+                                    && r.end_index < r.count
+                            });
+
+                    if window_range.is_none() {
+                        let offset_point = props.scroll_handle.offset();
+                        let offset_axis = match props.axis {
+                            fret_core::Axis::Vertical => offset_point.y,
+                            fret_core::Axis::Horizontal => offset_point.x,
+                        };
+                        let offset_axis = state.metrics.clamp_offset(offset_axis, viewport);
+                        window_range =
+                            state
+                                .metrics
+                                .visible_range(offset_axis, viewport, props.overscan);
+                    }
+
+                    state.window_range = window_range;
+                    state.render_window_range = window_range;
+                    let range = window_range?;
 
                     let mut indices = (range_extractor)(range)
                         .into_iter()
@@ -1607,23 +1728,58 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             continue;
         };
 
+        let reconcile_start = std::time::Instant::now();
+
         let prev_items_len = props.visible_items.len();
+        let next_items_len = desired_items.len();
+        let keep_alive_budget = props.keep_alive;
+        let desired_keys: HashSet<crate::ItemKey> =
+            desired_items.iter().map(|item| item.key).collect();
 
         let mut existing_by_key: HashMap<crate::ItemKey, NodeId> = HashMap::new();
+        let mut detached_by_key: Vec<(crate::ItemKey, NodeId)> = Vec::new();
         {
             let current_children = ui.children(node);
             for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
                 existing_by_key.insert(item.key, child);
             }
+
+            if keep_alive_budget > 0 {
+                for (&child, item) in current_children.iter().zip(props.visible_items.iter()) {
+                    if !desired_keys.contains(&item.key) {
+                        detached_by_key.push((item.key, child));
+                    }
+                }
+            }
         }
+
+        let mut keep_alive_state = window_state.with_state_mut(
+            element,
+            crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
+            |st| std::mem::take(st),
+        );
+        let mut keep_alive_by_key: HashMap<crate::ItemKey, NodeId> = keep_alive_state.by_key;
+        let mut keep_alive_order = keep_alive_state.order;
+        let keep_alive_pool_len_before = keep_alive_by_key.len().min(u32::MAX as usize) as u32;
 
         let mut preserved: u32 = 0;
         let mut attached: u32 = 0;
+        let mut reused_from_keep_alive: u32 = 0;
+        let mut kept_alive: u32 = 0;
+        let mut evicted_keep_alive: u32 = 0;
         let mut next_children: Vec<NodeId> = Vec::with_capacity(desired_items.len());
         for item in &desired_items {
             if let Some(existing) = existing_by_key.get(&item.key).copied() {
                 next_children.push(existing);
                 preserved = preserved.saturating_add(1);
+                continue;
+            }
+
+            if let Some(existing) = keep_alive_by_key.remove(&item.key) {
+                window_state.remove_retained_virtual_list_keep_alive_root(existing);
+                next_children.push(existing);
+                preserved = preserved.saturating_add(1);
+                reused_from_keep_alive = reused_from_keep_alive.saturating_add(1);
                 continue;
             }
 
@@ -1659,26 +1815,99 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
 
         let detached =
             (prev_items_len.saturating_sub(preserved as usize)).min(u32::MAX as usize) as u32;
-        ui.debug_record_retained_virtual_list_reconcile(
-            crate::tree::UiDebugRetainedVirtualListReconcile {
-                node,
-                element,
-                prev_items: prev_items_len.min(u32::MAX as usize) as u32,
-                next_items: desired_items.len().min(u32::MAX as usize) as u32,
-                preserved_items: preserved,
-                attached_items: attached,
-                detached_items: detached,
-            },
-        );
 
-        ui.set_children_barrier(node, next_children);
-        sync_window_frame_children(window_frame, node, ui.children_ref(node));
+        if keep_alive_budget == 0 {
+            if !keep_alive_by_key.is_empty() {
+                for node in keep_alive_by_key.values().copied() {
+                    window_state.remove_retained_virtual_list_keep_alive_root(node);
+                }
+                keep_alive_by_key.clear();
+            }
+            keep_alive_order.clear();
+        } else {
+            for (key, child) in detached_by_key {
+                if let Some(prev) = keep_alive_by_key.remove(&key) {
+                    window_state.remove_retained_virtual_list_keep_alive_root(prev);
+                }
+                keep_alive_by_key.insert(key, child);
+                keep_alive_order.push_back(key);
+                window_state.add_retained_virtual_list_keep_alive_root(child);
+                kept_alive = kept_alive.saturating_add(1);
+                while keep_alive_by_key.len() > keep_alive_budget {
+                    let Some(evict_key) = keep_alive_order.pop_front() else {
+                        break;
+                    };
+                    let Some(evicted) = keep_alive_by_key.remove(&evict_key) else {
+                        continue;
+                    };
+                    window_state.remove_retained_virtual_list_keep_alive_root(evicted);
+                    evicted_keep_alive = evicted_keep_alive.saturating_add(1);
+                }
+            }
+            // We allow `keep_alive_order` to contain duplicates to keep the per-detach hot path O(1)
+            // (no `retain` scans). Eviction skips keys that no longer exist in the map.
+            //
+            // Occasionally compact to keep memory bounded and preserve an LRU-like ordering for
+            // evictions (least recent detached keys at the front).
+            let order_len = keep_alive_order.len();
+            let budget = keep_alive_budget.max(1);
+            if order_len > budget.saturating_mul(16).saturating_add(256) {
+                let mut seen: HashSet<crate::ItemKey> = HashSet::new();
+                let mut compact_rev: Vec<crate::ItemKey> =
+                    Vec::with_capacity(keep_alive_by_key.len());
+                for &k in keep_alive_order.iter().rev() {
+                    if !keep_alive_by_key.contains_key(&k) {
+                        continue;
+                    }
+                    if seen.insert(k) {
+                        compact_rev.push(k);
+                    }
+                }
+                compact_rev.reverse();
+                keep_alive_order = VecDeque::from(compact_rev);
+            }
+        }
+
+        let keep_alive_pool_len_after = keep_alive_by_key.len().min(u32::MAX as usize) as u32;
+
+        keep_alive_state.by_key = keep_alive_by_key;
+        keep_alive_state.order = keep_alive_order;
+        window_state.with_state_mut(
+            element,
+            crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
+            |st| *st = keep_alive_state,
+        );
+        ui.set_children_barrier(node, next_children.clone());
+        window_frame
+            .children
+            .insert(node, Arc::<[NodeId]>::from(next_children));
 
         if let Some(record) = window_frame.instances.get_mut(node) {
             if let ElementInstance::VirtualList(props) = &mut record.instance {
                 props.visible_items = desired_items;
             }
         }
+
+        let reconcile_time_us = reconcile_start.elapsed().as_micros().min(u32::MAX as u128) as u32;
+
+        ui.debug_record_retained_virtual_list_reconcile(
+            crate::tree::UiDebugRetainedVirtualListReconcile {
+                node,
+                element,
+                reconcile_kind,
+                reconcile_time_us,
+                prev_items: prev_items_len.min(u32::MAX as usize) as u32,
+                next_items: next_items_len.min(u32::MAX as usize) as u32,
+                preserved_items: preserved,
+                attached_items: attached,
+                detached_items: detached,
+                keep_alive_pool_len_before,
+                reused_from_keep_alive_items: reused_from_keep_alive,
+                kept_alive_items: kept_alive,
+                evicted_keep_alive_items: evicted_keep_alive,
+                keep_alive_pool_len_after,
+            },
+        );
     }
 }
 
@@ -1705,6 +1934,24 @@ fn declarative_instance_change_mask(
     let mut paint_changed = false;
 
     match (previous, next) {
+        (ElementInstance::Container(a), ElementInstance::Container(b)) => {
+            // Container padding/border affect child layout (box-sizing: border-box).
+            if a.padding != b.padding || a.border != b.border {
+                layout_changed = true;
+            }
+
+            if a.background != b.background
+                || a.shadow != b.shadow
+                || a.border_color != b.border_color
+                || a.focus_ring != b.focus_ring
+                || a.focus_border_color != b.focus_border_color
+                || a.focus_within != b.focus_within
+                || a.corner_radii != b.corner_radii
+                || a.snap_to_device_pixels != b.snap_to_device_pixels
+            {
+                paint_changed = true;
+            }
+        }
         (ElementInstance::InteractivityGate(a), ElementInstance::InteractivityGate(b)) => {
             // Presence/interactivity gates affect layout participation, hit-testing, focus traversal,
             // and semantics inclusion. Even when the wrapper layout is unchanged, we need a layout

@@ -33,6 +33,12 @@ For each component page, the exporter writes a JSON file with:
 
 ## Run
 
+Note:
+
+- Positional arguments are **route names** (e.g. `chart-line-interactive`), not output keys.
+- Do not pass suffixes like `.hover-mid` / `.open` as part of the name. Use `--variants=...` and/or
+  `--modes=...` instead.
+
 1) Install deps:
 
 `pnpm -C repo-ref/ui install`
@@ -78,6 +84,13 @@ pass `--freezeDate=YYYY-MM-DD`.
 Example (pick “Tomorrow” with a fixed baseline date):
 
 `node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 --freezeDate=2026-01-15 --style=new-york-v4 --modes=open --variants=preset-tomorrow --openAction=click --openSelector=\"[data-fret-golden-target] button[aria-controls]\" --openSteps=\"click=[data-slot=select-trigger];waitFor=[data-slot=select-content]\" --steps=\"click=[data-radix-select-viewport] [data-slot=select-item]:nth-of-type(2);wait=50\" date-picker-with-presets --update`
+
+Hover-only scripted steps:
+
+Some variants (e.g. “highlight-first”) only require a hover/focus change and do not open a new portal surface.
+Use `hoverNoWait=...` to avoid deadlocking on the default “wait for new portal” heuristic:
+
+`node goldens/shadcn-web/scripts/extract-golden.mts --startServer --baseUrl=http://localhost:4020 --style=new-york-v4 --modes=open --variants=highlight-first-vp375x240 --viewportW=375 --viewportH=240 --openSteps=\"hoverNoWait=[data-slot='dropdown-menu-item']\" dropdown-menu-demo --update`
 
 Extract open overlay states that require non-click input (the script infers the right open action per page):
 
@@ -356,14 +369,15 @@ Current layout gates include:
 - `--openVariants="<variant>=<css>;..."` (optional; writes `name.<variant>.open.json` for each entry; overrides `--openSelector`)
 - `--openAction=click|hover|contextmenu|keys` (optional override for the "open overlay" action; default is inferred per page)
 - `--openKeys=<chord>` (optional; only used when `openAction=keys`; e.g. `Control+KeyJ` or `Meta+KeyJ`; env: `OPEN_KEYS`)
-- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
-- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll`)
+- `--steps="<action>=<value>;..."` (optional; scripted interactions before extraction; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll|scrollTo`)
+- `--openSteps="<action>=<value>;..."` (optional; extra steps after the initial open; actions: `click|hover|contextmenu|keys|type|wait|waitFor|move|scroll|scrollTo`)
   - `keys=<selector>` uses `--openKeys` / `OPEN_KEYS`.
   - `keys=<selector>@<keys>` uses an inline key spec. `<keys>` supports a chord (`Shift+F10`) or a sequence (`ArrowDown ArrowRight` or `ArrowDown,ArrowRight`).
   - `type=<selector>@<text>` sets a controlled `<input>/<textarea>` value and dispatches `input`/`change` (React-friendly).
   - `waitFor=<selector>` waits for a selector to appear (useful for hover-gated ScrollArea scrollbars).
   - `move=<x>,<y>` moves the mouse to an absolute viewport position (useful to force pointerenter/leave).
   - `scroll=<selector>@<dx>,<dy>` scrolls an element via `scrollBy(dx, dy)`.
+  - `scrollTo=<selector>@<left>,<top>` sets `scrollLeft/scrollTop` via `scrollTo(left, top)` (useful when a component re-syncs scroll on open).
 - `--baseUrl=http://localhost:4000`
 - `--startServer` (env: `START_SERVER=1`)
 - `--nextDir=<path>` (env: `NEXT_DIR=...`; default: `repo-ref/ui/apps/v4`)

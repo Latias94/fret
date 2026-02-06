@@ -180,6 +180,39 @@ Evidence anchors:
   (`web_vs_fret_hover_card_demo_panel_size_matches_web`, `web_vs_fret_hover_card_demo_panel_size_matches_web_dark`,
   `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web`, `web_vs_fret_hover_card_demo_tiny_viewport_panel_size_matches_web_dark`)
 
+### Toasts (Sonner) (`sonner-demo*`, `sonner-types*`)
+
+- Open state: **Gated**
+- Toast geometry (rect `x/y/w/h`): **Gated**
+- Constrained height (tiny viewport): **Gated** (`*.vp1440x240.open`)
+
+Notes:
+
+- Sonner's toaster container (`[data-sonner-toaster]`) can have `h=0` in DOM snapshots because toasts are
+  positioned absolutely; gates target the toast item rect (`[data-sonner-toast]`) instead.
+
+Evidence anchors:
+
+- Goldens:
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-demo*.open.json`
+  - `goldens/shadcn-web/v4/new-york-v4/sonner-types*.open.json` (variant matrix + constrained viewport variants)
+- Gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs`
+  (`web_vs_fret_sonner_demo_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_demo_tiny_viewport_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_error_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_promise_loading_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_default_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_success_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_info_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_warning_open_toast_rect_matches_web`,
+  `web_vs_fret_sonner_types_tiny_viewport_error_open_toast_rect_matches_web`)
+
 ## Controls: pressed / disabled states
 
 ### Button (`button-default*`)
@@ -207,9 +240,12 @@ Evidence anchors:
   In Fret, this is modeled as a "surface slot" context installed by the `Popover` recipe for its
   content subtree (see `ecosystem/fret-ui-shadcn/src/surface_slot.rs`, `ecosystem/fret-ui-shadcn/src/popover.rs`).
   CardContent propagation is modeled via `fret_ui_shadcn::card::card_content` (provider-based, for
-  cases where descendants need to observe `data-slot=card-content` semantics). This path currently
-  has a contract gate (transparent background within the scope), but no dedicated shadcn-web page
-  is extracted yet to compare against.
+  cases where descendants need to observe `data-slot=card-content` semantics).
+  - Many upstream `calendar-*` blocks that embed a Calendar inside a Card explicitly pass `className="bg-transparent ..."`,
+    which makes it hard to isolate "selector override works" vs "caller opted in".
+  - We currently keep a contract-only gate for the CardContent scope (transparent background within the scope).
+    A future depth step would be to add a dedicated upstream page (or a repo-local test harness page) that relies
+    solely on the `[[data-slot=card-content]_&]:bg-transparent` override so the behavior can be compared 1:1 against shadcn-web.
 
 Evidence anchors:
 

@@ -237,11 +237,19 @@ fn apply_cursor_area_for_hwnd(hwnd: isize) {
         return;
     }
 
-    let Ok(map) = IME_CURSOR_AREA_BY_HWND.lock() else {
-        return;
-    };
-    let Some((x, y, width, height)) = map.get(&hwnd).copied() else {
-        return;
+    // IMPORTANT: do not hold the map lock while calling into IMM/TSF.
+    //
+    // Some IME operations may synchronously send WM_IME_* messages, which can re-enter
+    // our message hook and attempt to re-lock this mutex. Holding the lock across the
+    // Win32 calls would deadlock.
+    let (x, y, width, height) = {
+        let Ok(map) = IME_CURSOR_AREA_BY_HWND.lock() else {
+            return;
+        };
+        let Some(rect) = map.get(&hwnd).copied() else {
+            return;
+        };
+        rect
     };
     let spot_y = y + height;
 

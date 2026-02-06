@@ -1,6 +1,6 @@
 use super::{RowIndex, RowModel};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PaginationState {
     pub page_index: usize,
     pub page_size: usize,

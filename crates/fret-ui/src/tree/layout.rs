@@ -126,20 +126,47 @@ impl<H: UiHost> UiTree<H> {
                     ) else {
                         continue;
                     };
-                    let Some(record) =
-                        crate::declarative::frame::element_record_for_node(app, window, node)
+                    let Some((
+                        vlist_element,
+                        vlist_axis,
+                        vlist_len,
+                        vlist_items_revision,
+                        vlist_measure_mode,
+                        _vlist_overscan,
+                        vlist_estimate_row_height,
+                        vlist_gap,
+                        vlist_scroll_margin,
+                        vlist_scroll_handle,
+                    )) = crate::declarative::frame::with_element_record_for_node(
+                        app,
+                        window,
+                        node,
+                        |record| match &record.instance {
+                            crate::declarative::frame::ElementInstance::VirtualList(props) => {
+                                Some((
+                                    record.element,
+                                    props.axis,
+                                    props.len,
+                                    props.items_revision,
+                                    props.measure_mode,
+                                    props.overscan,
+                                    props.estimate_row_height,
+                                    props.gap,
+                                    props.scroll_margin,
+                                    props.scroll_handle.clone(),
+                                ))
+                            }
+                            _ => None,
+                        },
+                    )
+                    .flatten()
                     else {
                         continue;
                     };
-                    let crate::declarative::frame::ElementInstance::VirtualList(props) =
-                        record.instance
-                    else {
-                        continue;
-                    };
-                    if props.measure_mode != crate::element::VirtualListMeasureMode::Fixed {
+                    if vlist_measure_mode != crate::element::VirtualListMeasureMode::Fixed {
                         continue;
                     }
-                    let Some((index, strategy)) = props.scroll_handle.deferred_scroll_to_item()
+                    let Some((index, strategy)) = vlist_scroll_handle.deferred_scroll_to_item()
                     else {
                         continue;
                     };
@@ -147,36 +174,37 @@ impl<H: UiHost> UiTree<H> {
                     let applied = crate::elements::with_element_state(
                         &mut *app,
                         window,
-                        record.element,
+                        vlist_element,
                         crate::element::VirtualListState::default,
                         |state| {
                             state.metrics.ensure_with_mode(
-                                props.measure_mode,
-                                props.len,
-                                props.estimate_row_height,
-                                props.gap,
-                                props.scroll_margin,
+                                vlist_measure_mode,
+                                vlist_len,
+                                vlist_estimate_row_height,
+                                vlist_gap,
+                                vlist_scroll_margin,
                             );
+                            state.items_revision = vlist_items_revision;
 
-                            let viewport_size = props.scroll_handle.viewport_size();
-                            let viewport = match props.axis {
+                            let viewport_size = vlist_scroll_handle.viewport_size();
+                            let viewport = match vlist_axis {
                                 fret_core::Axis::Vertical => Px(viewport_size.height.0.max(0.0)),
                                 fret_core::Axis::Horizontal => Px(viewport_size.width.0.max(0.0)),
                             };
-                            if viewport.0 <= 0.0 || props.len == 0 {
+                            if viewport.0 <= 0.0 || vlist_len == 0 {
                                 return None;
                             }
 
-                            let current = match props.axis {
-                                fret_core::Axis::Vertical => props.scroll_handle.offset().y,
-                                fret_core::Axis::Horizontal => props.scroll_handle.offset().x,
+                            let current = match vlist_axis {
+                                fret_core::Axis::Vertical => vlist_scroll_handle.offset().y,
+                                fret_core::Axis::Horizontal => vlist_scroll_handle.offset().x,
                             };
                             let desired = state
                                 .metrics
                                 .scroll_offset_for_item(index, viewport, current, strategy);
                             let desired = state.metrics.clamp_offset(desired, viewport);
 
-                            match props.axis {
+                            match vlist_axis {
                                 fret_core::Axis::Vertical => state.offset_y = desired,
                                 fret_core::Axis::Horizontal => state.offset_x = desired,
                             }
@@ -189,20 +217,16 @@ impl<H: UiHost> UiTree<H> {
                         continue;
                     };
 
-                    let prev = props.scroll_handle.offset();
-                    match props.axis {
+                    let prev = vlist_scroll_handle.offset();
+                    match vlist_axis {
                         fret_core::Axis::Vertical => {
-                            props
-                                .scroll_handle
-                                .set_offset(fret_core::Point::new(prev.x, applied));
+                            vlist_scroll_handle.set_offset(fret_core::Point::new(prev.x, applied));
                         }
                         fret_core::Axis::Horizontal => {
-                            props
-                                .scroll_handle
-                                .set_offset(fret_core::Point::new(applied, prev.y));
+                            vlist_scroll_handle.set_offset(fret_core::Point::new(applied, prev.y));
                         }
                     }
-                    props.scroll_handle.clear_deferred_scroll_to_item();
+                    vlist_scroll_handle.clear_deferred_scroll_to_item();
 
                     consumed_scroll_to_item = true;
                     change_kind = crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly;
@@ -313,6 +337,26 @@ impl<H: UiHost> UiTree<H> {
                 if inv == Invalidation::HitTestOnly
                     && let Some(record) =
                         crate::declarative::frame::element_record_for_node(&mut *app, window, node)
+                    && let crate::declarative::frame::ElementInstance::Scroll(scroll_props) =
+                        &record.instance
+                    && scroll_props.windowed_paint
+                {
+                    // Windowed paint surfaces (ADR 0190) depend on the scroll offset to determine
+                    // which content is painted into the scrollable space. When view-cache reuse is
+                    // enabled, a scroll transform update alone is insufficient: the cached subtree
+                    // must be allowed to rerender so its paint handlers can run for the new visible
+                    // window. Without this, scroll can appear to show stale content.
+                    if self.view_cache_enabled() && change.offset_changed {
+                        self.mark_nearest_view_cache_root_needs_rerender(
+                            node,
+                            UiDebugInvalidationSource::Other,
+                            UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                        );
+                        self.request_redraw_coalesced(app);
+                    }
+                } else if inv == Invalidation::HitTestOnly
+                    && let Some(record) =
+                        crate::declarative::frame::element_record_for_node(&mut *app, window, node)
                     && let crate::declarative::frame::ElementInstance::VirtualList(props) =
                         &record.instance
                 {
@@ -372,17 +416,23 @@ impl<H: UiHost> UiTree<H> {
                         inv = Invalidation::Layout;
                         detail = UiDebugInvalidationDetail::ScrollHandleLayout;
                     } else if requires_window_update {
-                        let retained_host =
-                            crate::elements::with_window_state(&mut *app, window, |window_state| {
+                        let retained_host = crate::elements::with_window_state(
+                            &mut *app,
+                            window,
+                            |window_state| {
                                 let retained = window_state.has_state::<
                                     crate::windowed_surface_host::RetainedVirtualListHostMarker,
                                 >(record.element);
                                 if retained {
                                     window_state
-                                        .mark_retained_virtual_list_needs_reconcile(record.element);
+                                        .mark_retained_virtual_list_needs_reconcile(
+                                            record.element,
+                                            crate::tree::UiDebugRetainedVirtualListReconcileKind::Escape,
+                                        );
                                 }
                                 retained
-                            });
+                            },
+                        );
 
                         if retained_host {
                             // Retained-host virtual surfaces can update row membership without
@@ -487,6 +537,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_collapse_layout_observations_time = Duration::default();
             self.debug_stats.layout_prepaint_after_layout_time = Duration::default();
             self.debug_stats.layout_skipped_engine_frame = false;
+            self.debug_stats.layout_fast_path_taken = false;
+            self.debug_stats.layout_invalidations_count = self.layout_invalidations_count;
             self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
             self.debug_stats.captured = self.captured_for(fret_core::PointerId(0));
@@ -585,6 +637,33 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.layout_expand_view_cache_invalidations_time +=
                     expand_started.elapsed();
             }
+        }
+
+        // Fast path (ADR 0190): if nothing requires layout this frame, skip the layout engine and
+        // only run prepaint/semantics. This keeps scroll-only and cache-hit frames cheap while
+        // still allowing prepaint-windowed surfaces to update their ephemeral outputs.
+        if pass_kind == LayoutPassKind::Final
+            && self.pending_barrier_relayouts.is_empty()
+            && self.last_layout_bounds == Some(bounds)
+            && self.last_layout_scale_factor == Some(scale_factor)
+            && self.layout_invalidations_count == 0
+        {
+            self.debug_stats.layout_fast_path_taken = true;
+            if self.semantics_requested {
+                self.semantics_requested = false;
+                self.refresh_semantics_snapshot(app);
+            }
+
+            self.prepaint_after_layout(app, scale_factor);
+            self.flush_deferred_cleanup(services);
+
+            self.last_layout_bounds = Some(bounds);
+            self.last_layout_scale_factor = Some(scale_factor);
+
+            if let Some(started) = started {
+                self.debug_stats.layout_time = started.elapsed();
+            }
+            return;
         }
 
         let (layout_engine_solves_start, layout_engine_solve_time_start) = {
@@ -753,6 +832,17 @@ impl<H: UiHost> UiTree<H> {
 
         if pass_kind == LayoutPassKind::Final {
             self.layout_engine.end_frame();
+            if let Some(window) = self.window {
+                let frame_id = app.frame_id();
+                crate::elements::with_window_state(app, window, |st| {
+                    st.clear_stale_interaction_targets_for_frame(frame_id);
+                });
+            }
+        }
+
+        if pass_kind == LayoutPassKind::Final {
+            self.last_layout_bounds = Some(bounds);
+            self.last_layout_scale_factor = Some(scale_factor);
         }
 
         if self.debug_enabled {
@@ -1178,6 +1268,12 @@ impl<H: UiHost> UiTree<H> {
         );
 
         self.layout_engine.end_frame();
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            crate::elements::with_window_state(app, window, |st| {
+                st.clear_stale_interaction_targets_for_frame(frame_id);
+            });
+        }
         self.sync_element_bounds_cache_after_layout(app);
         size
     }
@@ -1227,6 +1323,12 @@ impl<H: UiHost> UiTree<H> {
             &mut viewport_cursor,
         );
         self.layout_engine.end_frame();
+        if let Some(window) = self.window {
+            let frame_id = app.frame_id();
+            crate::elements::with_window_state(app, window, |st| {
+                st.clear_stale_interaction_targets_for_frame(frame_id);
+            });
+        }
         self.sync_element_bounds_cache_after_layout(app);
         size
     }
@@ -1485,6 +1587,112 @@ impl<H: UiHost> UiTree<H> {
                 "failed to write taffy debug dump"
             ),
         }
+    }
+
+    /// Write a Taffy layout dump for a subtree rooted at `root`.
+    ///
+    /// The dump includes both local and absolute rects plus a debug label per node. When
+    /// `root_label_filter` is provided, the dump will search for the first node whose debug label
+    /// contains the filter string and use that node as the dump root (falling back to `root` when
+    /// the filter does not match anything).
+    ///
+    /// This is a debug-only escape hatch intended for diagnosing layout regressions and scroll /
+    /// clipping issues. The output is JSON and is written to `out_dir`.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn debug_write_taffy_subtree_json(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+        root_label_filter: Option<&str>,
+        out_dir: impl AsRef<std::path::Path>,
+        filename_tag: &str,
+    ) -> std::io::Result<std::path::PathBuf> {
+        fn sanitize_for_filename(s: &str) -> String {
+            s.chars()
+                .map(|ch| match ch {
+                    'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => ch,
+                    _ => '_',
+                })
+                .collect()
+        }
+
+        let dump_root = if let Some(filter) = root_label_filter {
+            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            if root_label.contains(filter) {
+                root
+            } else {
+                let mut stack: Vec<NodeId> = vec![root];
+                let mut visited: std::collections::HashSet<NodeId> =
+                    std::collections::HashSet::new();
+                let mut found: Option<NodeId> = None;
+                while let Some(node) = stack.pop() {
+                    if !visited.insert(node) {
+                        continue;
+                    }
+
+                    let label =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                            .map(|r| format!("{:?}", r.instance))
+                            .unwrap_or_default();
+                    if label.contains(filter) {
+                        found = Some(node);
+                        break;
+                    }
+
+                    if let Some(node) = self.nodes.get(node) {
+                        stack.extend(node.children.iter().copied());
+                    }
+                }
+
+                found.unwrap_or(root)
+            }
+        } else {
+            root
+        };
+
+        let tag = sanitize_for_filename(filename_tag);
+        let frame = app.frame_id().0;
+        let root_slug = sanitize_for_filename(&format!("{dump_root:?}"));
+        let filename = if tag.is_empty() {
+            format!("taffy_{frame}_{root_slug}.json")
+        } else {
+            format!("taffy_{frame}_{tag}_{root_slug}.json")
+        };
+
+        let dump = self
+            .layout_engine
+            .debug_dump_subtree_json(dump_root, |node| {
+                crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|r| format!("{:?}", r.instance))
+            });
+
+        let wrapped = serde_json::json!({
+            "meta": {
+                "window": format!("{window:?}"),
+                "root_bounds": {
+                    "x": root_bounds.origin.x.0,
+                    "y": root_bounds.origin.y.0,
+                    "w": root_bounds.size.width.0,
+                    "h": root_bounds.size.height.0,
+                },
+                "scale_factor": scale_factor,
+            },
+            "taffy": dump,
+        });
+
+        let out_dir = out_dir.as_ref();
+        std::fs::create_dir_all(out_dir)?;
+        let path = out_dir.join(filename);
+        let bytes = serde_json::to_vec_pretty(&wrapped).map_err(|e| {
+            std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
+        })?;
+        std::fs::write(&path, bytes)?;
+        Ok(path)
     }
 
     fn request_build_window_roots_if_final(
@@ -2228,6 +2436,12 @@ impl<H: UiHost> UiTree<H> {
                 .record(node, global_observations.as_slice());
             if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
                 n.measured_size = size;
+                let prev = n.invalidation;
+                if n.invalidation.layout {
+                    debug_assert!(self.layout_invalidations_count > 0);
+                    self.layout_invalidations_count =
+                        self.layout_invalidations_count.saturating_sub(1);
+                }
                 let prev = n.invalidation;
                 n.invalidation.layout = false;
                 (prev, n.invalidation)

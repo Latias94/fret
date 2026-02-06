@@ -18,7 +18,7 @@ fn view_cache_invalidation_stops_at_boundary_for_paint() {
     ui.set_children(b, vec![c]);
 
     for id in [root, a, b, c] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
     }
     ui.nodes[b].view_cache.enabled = true;
     ui.nodes[b].view_cache.contained_layout = true;
@@ -121,10 +121,10 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
 
     ui.nodes[root].bounds = root_bounds;
     ui.nodes[root].measured_size = root_bounds.size;
-    ui.nodes[root].invalidation.layout = false;
+    ui.test_set_layout_invalidation(root, false);
 
     ui.nodes[boundary].bounds = root_bounds;
-    ui.nodes[boundary].invalidation.layout = true;
+    ui.test_set_layout_invalidation(boundary, true);
 
     let mut services = FakeUiServices;
     ui.layout_all(&mut app, &mut services, root_bounds, 1.0);
@@ -153,7 +153,7 @@ fn view_cache_mark_nearest_root_needs_rerender_propagates_to_ancestor_roots() {
     ui.set_children(inner, vec![leaf]);
 
     for id in [root, outer, mid, inner, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
         ui.nodes[id].view_cache_needs_rerender = false;
     }
     ui.nodes[outer].view_cache.enabled = true;
@@ -214,7 +214,7 @@ fn view_cache_auto_sized_repair_does_not_promote_hit_test_when_bounds_are_known(
     ui.set_children(root, vec![boundary]);
 
     for id in [root, boundary] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
     }
 
     let bounds = Rect::new(
@@ -253,7 +253,7 @@ fn view_cache_nested_boundaries_invalidate_ancestor_cache_roots() {
     ui.set_children(inner, vec![leaf]);
 
     for id in [root, outer, mid, inner, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
     }
     ui.nodes[outer].view_cache.enabled = true;
     ui.nodes[outer].view_cache.contained_layout = true;
@@ -287,7 +287,7 @@ fn view_cache_notify_marks_cache_root_needs_rerender() {
     ui.nodes[boundary].view_cache.contained_layout = true;
 
     for id in [root, boundary, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
         ui.nodes[id].view_cache_needs_rerender = false;
     }
 
@@ -322,7 +322,7 @@ fn view_cache_notify_propagates_to_ancestor_cache_roots() {
     ui.nodes[inner].view_cache.contained_layout = true;
 
     for id in [root, outer, mid, inner, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
         ui.nodes[id].view_cache_needs_rerender = false;
     }
 
@@ -355,7 +355,7 @@ fn view_cache_scroll_handle_hit_test_only_invalidations_do_not_mark_cache_root_n
     );
 
     for id in [root, boundary, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
         ui.nodes[id].view_cache_needs_rerender = false;
     }
 
@@ -400,7 +400,7 @@ fn view_cache_scroll_handle_layout_invalidations_mark_cache_root_needs_rerender(
     );
 
     for id in [root, boundary, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
         ui.nodes[id].view_cache_needs_rerender = false;
     }
 
@@ -488,12 +488,14 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
                         measure_mode: crate::element::VirtualListMeasureMode::Fixed,
                         key_cache: crate::element::VirtualListKeyCacheMode::AllKeys,
                         overscan,
+                        keep_alive: 0,
                         scroll_margin: fret_core::Px(0.0),
                         gap: fret_core::Px(0.0),
                         scroll_handle: scroll_handle.clone(),
                         visible_items: Vec::new(),
                     },
                 ),
+                semantics_decoration: None,
             },
         );
     });
@@ -516,7 +518,7 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
         crate::layout_pass::LayoutPassKind::Final,
     );
     for id in [root, boundary, vlist_node] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
         ui.nodes[id].view_cache_needs_rerender = false;
     }
 
@@ -534,6 +536,93 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
     assert!(ui.nodes[boundary].invalidation.paint);
     assert!(ui.nodes[boundary].view_cache_needs_rerender);
     assert!(!ui.should_reuse_view_cache_node(boundary));
+}
+
+#[test]
+fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
+    let mut app = crate::test_host::TestHost::new();
+
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let root = ui.create_node(TestStack::default());
+    let boundary = ui.create_node(TestStack::default());
+    let scroll_node = ui.create_node(TestStack::default());
+
+    ui.set_root(root);
+    ui.set_children(root, vec![boundary]);
+    ui.set_children(boundary, vec![scroll_node]);
+
+    ui.set_node_view_cache_flags(boundary, true, true, true);
+    ui.nodes[boundary].bounds = Rect::new(
+        Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
+        Size::new(fret_core::Px(100.0), fret_core::Px(100.0)),
+    );
+
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+    let handle_key = scroll_handle.binding_key();
+
+    // Register the element instance + scroll-handle binding used by the invalidation pass.
+    let scroll_element = crate::GlobalElementId(2);
+    crate::declarative::frame::with_window_frame_mut(&mut app, window, |window_frame| {
+        window_frame.instances.insert(
+            scroll_node,
+            crate::declarative::frame::ElementRecord {
+                element: scroll_element,
+                instance: crate::declarative::frame::ElementInstance::Scroll(
+                    crate::element::ScrollProps {
+                        layout: crate::element::LayoutStyle::default(),
+                        axis: crate::element::ScrollAxis::Y,
+                        scroll_handle: Some(scroll_handle.clone()),
+                        intrinsic_measure_mode: crate::element::ScrollIntrinsicMeasureMode::Content,
+                        windowed_paint: true,
+                        probe_unbounded: true,
+                    },
+                ),
+                semantics_decoration: None,
+            },
+        );
+    });
+
+    let frame_id = app.frame_id();
+    crate::declarative::frame::register_scroll_handle_bindings_batch(
+        &mut app,
+        window,
+        frame_id,
+        [crate::declarative::frame::ScrollHandleBinding {
+            handle_key,
+            element: scroll_element,
+            handle: scroll_handle.clone(),
+        }],
+    );
+
+    // Prime scroll-handle revisions so the next change is treated as a delta.
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
+    for id in [root, boundary, scroll_node] {
+        ui.nodes[id].invalidation.clear();
+        ui.nodes[id].view_cache_needs_rerender = false;
+    }
+
+    // Programmatic scroll should mark the cache root dirty so windowed paint surfaces can update.
+    scroll_handle.set_offset(fret_core::Point::new(
+        fret_core::Px(0.0),
+        fret_core::Px(250.0),
+    ));
+    ui.invalidate_scroll_handle_bindings_for_changed_handles(
+        &mut app,
+        crate::layout_pass::LayoutPassKind::Final,
+    );
+
+    assert!(ui.nodes[boundary].view_cache_needs_rerender);
+    assert!(!ui.should_reuse_view_cache_node(boundary));
+    // The scroll node itself remains hit-test-only invalidated; the rerender flag carries the
+    // windowed-paint contract.
+    assert!(ui.nodes[scroll_node].invalidation.hit_test);
 }
 
 #[test]
@@ -564,7 +653,7 @@ fn widget_request_animation_frame_marks_nearest_view_cache_root_dirty() {
     ui.nodes[boundary].view_cache.contained_layout = true;
 
     for id in [root, boundary, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
         ui.nodes[id].view_cache_needs_rerender = false;
     }
 
@@ -620,7 +709,7 @@ fn view_cache_uplifts_observations_to_nearest_root_and_invalidates_ancestor_root
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
     for id in [root, outer, inner, leaf] {
-        ui.nodes[id].invalidation.clear();
+        ui.test_clear_node_invalidations(id);
     }
 
     let observed = ui

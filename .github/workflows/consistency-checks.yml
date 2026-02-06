@@ -29,3 +29,7 @@ jobs:
       - name: Check execution surface
         shell: pwsh
         run: pwsh -NoProfile -File tools/check_execution_surface.ps1
+
+      - name: Check stringly command parsing
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/check_stringly_command_parsing.ps1

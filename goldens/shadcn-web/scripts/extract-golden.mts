@@ -27,10 +27,12 @@ type OpenStep =
   | { action: "attr"; selector: string; name: string; value: string }
   | { action: "mouseDown"; selector: string }
   | { action: "mouseUp"; selector: string }
+  | { action: "hoverNoWait"; selector: string }
   | { action: Exclude<OpenAction, "keys">; selector: string }
   | { action: "keys"; selector: string; keys: KeyChord[] }
   | { action: "type"; selector: string; text: string }
   | { action: "scroll"; selector: string; dx: number; dy: number }
+  | { action: "scrollTo"; selector: string; left: number; top: number }
 
 type GoldenOptions = {
   baseUrl: string
@@ -503,6 +505,39 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "scrollTo") {
+      const at = valueRaw.indexOf("@")
+      if (at === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const selector = valueRaw.slice(0, at).trim()
+      const posRaw = valueRaw.slice(at + 1).trim()
+      if (!selector || !posRaw) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const comma = posRaw.indexOf(",")
+      if (comma === -1) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected "scrollTo=<selector>@<left>,<top>")`
+        )
+      }
+      const leftRaw = posRaw.slice(0, comma).trim()
+      const topRaw = posRaw.slice(comma + 1).trim()
+      const left = Number(leftRaw)
+      const top = Number(topRaw)
+      if (!Number.isFinite(left) || !Number.isFinite(top)) {
+        throw new Error(
+          `invalid --openSteps entry "${part}" (expected finite left,top numbers)`
+        )
+      }
+      out.push({ action: "scrollTo", selector, left, top })
+      continue
+    }
+
     if (actionRaw === "type") {
       const at = valueRaw.indexOf("@")
       if (at === -1) {
@@ -568,13 +603,21 @@ function parseOpenSteps(raw: string, openKeys: KeyChord | undefined): OpenStep[]
       continue
     }
 
+    if (actionRaw === "hoverNoWait") {
+      if (!valueRaw) {
+        throw new Error(`invalid --openSteps entry "${part}" (empty selector for hoverNoWait)`)
+      }
+      out.push({ action: "hoverNoWait", selector: valueRaw })
+      continue
+    }
+
     if (
       actionRaw !== "click" &&
       actionRaw !== "hover" &&
       actionRaw !== "contextmenu"
     ) {
       throw new Error(
-        `invalid --openSteps action "${actionRaw}" (expected click|hover|contextmenu|keys|type|scroll|attr|mouseDown|mouseUp|wait|waitFor|move)`
+        `invalid --openSteps action "${actionRaw}" (expected click|hover|hoverNoWait|contextmenu|keys|type|scroll|scrollTo|attr|mouseDown|mouseUp|wait|waitFor|move)`
       )
     }
 
@@ -634,6 +677,9 @@ async function extractOne(page: puppeteer.Page) {
       "aria-label",
       "aria-labelledby",
       "aria-describedby",
+      "aria-live",
+      "aria-relevant",
+      "aria-atomic",
       "aria-invalid",
       "aria-checked",
       "aria-selected",
@@ -659,6 +705,12 @@ async function extractOne(page: puppeteer.Page) {
       "data-radix-scroll-area-corner",
       // Useful for overlay wrapper alignment.
       "data-radix-popper-content-wrapper",
+      // Sonner (toast) attributes.
+      "data-sonner-toaster",
+      "data-sonner-toast",
+      "data-x-position",
+      "data-y-position",
+      "data-type",
     ];
 
     const styleKeys = [
@@ -833,9 +885,20 @@ async function extractOne(page: puppeteer.Page) {
       // them separate from rect (getBoundingClientRect() can be fractional) so non-web runtimes
       // can gate scroll range behavior 1:1.
       const slot = attrs["data-slot"];
+      const role = attrs["role"];
+      const isSelectViewport =
+        el.hasAttribute("data-radix-select-viewport") || slot === "select-viewport";
+      const isListbox =
+        role === "listbox" &&
+        (out.computedStyle.overflowX === "auto" ||
+          out.computedStyle.overflowX === "scroll" ||
+          out.computedStyle.overflowY === "auto" ||
+          out.computedStyle.overflowY === "scroll");
       const isScrollViewport =
         el.hasAttribute("data-radix-scroll-area-viewport") ||
         slot === "scroll-area-viewport" ||
+        isSelectViewport ||
+        isListbox ||
         out.computedStyle.overflowX === "scroll" ||
         out.computedStyle.overflowY === "scroll";
       if (isScrollViewport) {
@@ -859,11 +922,18 @@ async function extractOne(page: puppeteer.Page) {
       return out;
     }
 
-    const portalCandidates = Array.from(
-      document.querySelectorAll(
-        "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
-      )
-    ).filter((el) => !root.contains(el));
+    const portalCandidates = [
+      ...Array.from(
+        document.querySelectorAll(
+          "[data-state='open'],[data-state='delayed-open'],[data-state='instant-open']"
+        )
+      ),
+      // Sonner does not use Radix-style data-state="open". Treat the toaster container as a
+      // portal-ish surface only when it actually contains at least one toast.
+      ...Array.from(document.querySelectorAll("[data-sonner-toaster]")).filter((el) =>
+        el.querySelector("[data-sonner-toast]")
+      ),
+    ].filter((el) => !root.contains(el));
 
     // Prefer the most specific (leaf-most) open-state nodes so we capture the actual Radix content
     // element rather than wrappers/portals.
@@ -1033,6 +1103,7 @@ async function openOverlay(
     if (outside("[role='menu']").length > 0) return true;
     if (outside("[role='listbox']").length > 0) return true;
     if (outside("[role='dialog']").length > 0) return true;
+    if (outside("[data-sonner-toast]").length > 0) return true;
     return false;
   })()`
 
@@ -1135,7 +1206,13 @@ async function openOverlay(
 async function openOverlayOutsideCounts(
   page: puppeteer.Page,
   rootSel: string
-): Promise<{ popperWrapper: number; roleMenu: number; roleDialog: number; dataStateOpen: number }> {
+): Promise<{
+  popperWrapper: number
+  roleMenu: number
+  roleDialog: number
+  dataStateOpen: number
+  dataSonnerToast: number
+}> {
   const expr = `(() => {
     const root = document.querySelector(${JSON.stringify(rootSel)}) || document.body;
     const outsideCount = (sel) =>
@@ -1146,6 +1223,7 @@ async function openOverlayOutsideCounts(
       roleMenu: outsideCount("[role='menu']"),
       roleDialog: outsideCount("[role='dialog']"),
       dataStateOpen: outsideCount("[data-state='open']"),
+      dataSonnerToast: outsideCount("[data-sonner-toast]"),
     };
   })()`
   return (await page.evaluate(expr)) as {
@@ -1153,6 +1231,7 @@ async function openOverlayOutsideCounts(
     roleMenu: number
     roleDialog: number
     dataStateOpen: number
+    dataSonnerToast: number
   }
 }
 
@@ -1215,18 +1294,184 @@ async function applySteps(
       continue
     }
     if (step.action === "scroll") {
-      const expr = `(() => {
-        const sel = ${JSON.stringify(step.selector)};
-        const dx = ${JSON.stringify(step.dx)};
-        const dy = ${JSON.stringify(step.dy)};
-        const el = document.querySelector(sel);
-        if (!el || !(el instanceof Element)) return false;
-        if (typeof (el).scrollBy !== "function") return false;
-        (el).scrollBy(dx, dy);
-        return true;
-      })()`
+      const ok = await page.evaluate(
+        async ({ selector, dx, dy }) => {
+          const raf2 = () =>
+            new Promise<void>((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r()))
+            )
 
-      const ok = (await page.evaluate(expr)) as boolean
+          const els = Array.from(document.querySelectorAll(selector)).filter(
+            (e): e is Element => e instanceof Element
+          )
+          if (els.length === 0) return false
+
+          const scrollables = els.filter((e) => typeof (e as any).scrollBy === "function")
+          if (scrollables.length === 0) return false
+
+          const clamp = (v: number, min: number, max: number) =>
+            Math.max(min, Math.min(max, v))
+
+          // Prefer the most "meaningfully scrollable" match (helps when a selector matches both
+          // the intended viewport and a wrapper that doesn't actually scroll).
+          let best: Element = scrollables[0]
+          let bestScore = -1
+          for (const el of scrollables) {
+            const anyEl = el as any
+            const scrollableX = Math.max(0, (anyEl.scrollWidth ?? 0) - (anyEl.clientWidth ?? 0))
+            const scrollableY = Math.max(0, (anyEl.scrollHeight ?? 0) - (anyEl.clientHeight ?? 0))
+            const score = scrollableX + scrollableY
+            if (score > bestScore) {
+              bestScore = score
+              best = el
+            }
+          }
+
+          const el = best as any
+
+          // Radix Select (and a few other portals) can update the scroll range after open via
+          // layout effects. Wait for the scroll range to stabilize before applying deltas so the
+          // desired scroll doesn't get clamped to an early, smaller maxTop/maxLeft.
+          let lastMaxLeft = -1
+          let lastMaxTop = -1
+          let stableFrames = 0
+          for (let i = 0; i < 24; i++) {
+            const maxLeft = Math.max(
+              0,
+              (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+            )
+            const maxTop = Math.max(
+              0,
+              (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+            )
+            if (maxLeft === lastMaxLeft && maxTop === lastMaxTop) {
+              stableFrames++
+              if (stableFrames >= 2) break
+            } else {
+              stableFrames = 0
+              lastMaxLeft = maxLeft
+              lastMaxTop = maxTop
+            }
+            await raf2()
+          }
+
+          const beforeLeft = Number(el.scrollLeft ?? 0) || 0
+          const beforeTop = Number(el.scrollTop ?? 0) || 0
+          const maxLeft = Math.max(
+            0,
+            (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+          )
+          const maxTop = Math.max(
+            0,
+            (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+          )
+          const desiredLeft = clamp(beforeLeft + dx, 0, maxLeft)
+          const desiredTop = clamp(beforeTop + dy, 0, maxTop)
+
+          el.scrollBy(dx, dy)
+
+          // Let any post-scroll effects run, then re-assert the desired scroll position to avoid
+          // capturing an intermediate state (Radix Select can re-sync scroll on open).
+          await raf2()
+
+          if (dx !== 0 && Math.abs(Number(el.scrollLeft ?? 0) - desiredLeft) > 1) {
+            el.scrollLeft = desiredLeft
+          }
+          if (dy !== 0 && Math.abs(Number(el.scrollTop ?? 0) - desiredTop) > 1) {
+            el.scrollTop = desiredTop
+          }
+
+          await raf2()
+          return true
+        },
+        { selector: step.selector, dx: step.dx, dy: step.dy }
+      )
+      if (!ok) {
+        throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
+      }
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
+    if (step.action === "scrollTo") {
+      const ok = await page.evaluate(
+        async ({ selector, left, top }) => {
+          const raf2 = () =>
+            new Promise<void>((r) =>
+              requestAnimationFrame(() => requestAnimationFrame(() => r()))
+            )
+
+          const els = Array.from(document.querySelectorAll(selector)).filter(
+            (e): e is Element => e instanceof Element
+          )
+          if (els.length === 0) return false
+
+          const scrollables = els.filter((e) => typeof (e as any).scrollTo === "function")
+          if (scrollables.length === 0) return false
+
+          const clamp = (v: number, min: number, max: number) =>
+            Math.max(min, Math.min(max, v))
+
+          let best: Element = scrollables[0]
+          let bestScore = -1
+          for (const el of scrollables) {
+            const anyEl = el as any
+            const scrollableX = Math.max(0, (anyEl.scrollWidth ?? 0) - (anyEl.clientWidth ?? 0))
+            const scrollableY = Math.max(0, (anyEl.scrollHeight ?? 0) - (anyEl.clientHeight ?? 0))
+            const score = scrollableX + scrollableY
+            if (score > bestScore) {
+              bestScore = score
+              best = el
+            }
+          }
+
+          const el = best as any
+
+          // Wait for the scroll range to reach (or stabilize below) the requested position.
+          let lastMaxTop = -1
+          let stableFrames = 0
+          for (let i = 0; i < 32; i++) {
+            const maxTop = Math.max(
+              0,
+              (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+            )
+            if (maxTop >= top) break
+            if (maxTop === lastMaxTop) {
+              stableFrames++
+              if (stableFrames >= 2) break
+            } else {
+              stableFrames = 0
+              lastMaxTop = maxTop
+            }
+            await raf2()
+          }
+
+          const maxLeft = Math.max(
+            0,
+            (Number(el.scrollWidth ?? 0) || 0) - (Number(el.clientWidth ?? 0) || 0)
+          )
+          const maxTop = Math.max(
+            0,
+            (Number(el.scrollHeight ?? 0) || 0) - (Number(el.clientHeight ?? 0) || 0)
+          )
+          const desiredLeft = clamp(left, 0, maxLeft)
+          const desiredTop = clamp(top, 0, maxTop)
+
+          el.scrollTo(desiredLeft, desiredTop)
+          await raf2()
+
+          if (Math.abs(Number(el.scrollLeft ?? 0) - desiredLeft) > 1) {
+            el.scrollLeft = desiredLeft
+          }
+          if (Math.abs(Number(el.scrollTop ?? 0) - desiredTop) > 1) {
+            el.scrollTop = desiredTop
+          }
+
+          await raf2()
+          return true
+        },
+        { selector: step.selector, left: step.left, top: step.top }
+      )
       if (!ok) {
         throw new Error(`steps failed for ${name}: selector not found: ${step.selector}`)
       }
@@ -1460,6 +1705,39 @@ async function applyOpenSteps(
       continue
     }
 
+    if (step.action === "hoverNoWait") {
+      if (debug) {
+        console.log(`- openSteps: ${name} step[${idx}] hoverNoWait ${step.selector}`)
+      }
+
+      const point = await (async () => {
+        const expr = `(() => {
+          const rootSel = ${JSON.stringify(rootSel)};
+          const sel = ${JSON.stringify(step.selector)};
+
+          const root = document.querySelector(rootSel) || document.body;
+          const el = document.querySelector(sel);
+          if (!el || !(el instanceof Element)) return null;
+
+          el.scrollIntoView({ block: "center", inline: "center" });
+          const r = el.getBoundingClientRect();
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        })()`
+        return (await page.evaluate(expr)) as { x: number; y: number } | null
+      })()
+
+      if (!point) {
+        throw new Error(`openSteps failed for ${name}: selector not found: ${step.selector}`)
+      }
+
+      await page.mouse.move(point.x, point.y, { steps: 4 })
+
+      // Hover styles may not create a new portal surface; yield a couple RAFs for style/layout to settle.
+      await page.evaluate(`new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))`)
+      await waitForFonts(page, Math.min(2000, timeoutMs))
+      continue
+    }
+
     const baseline = await openOverlayOutsideCounts(page, rootSel)
 
     if (debug) {
@@ -1523,12 +1801,14 @@ async function applyOpenSteps(
       const roleMenu = outsideCount("[role='menu']");
       const roleDialog = outsideCount("[role='dialog']");
       const dataStateOpen = outsideCount("[data-state='open']");
+      const dataSonnerToast = outsideCount("[data-sonner-toast]");
 
       return (
         popperWrapper > ${baseline.popperWrapper} ||
         roleMenu > ${baseline.roleMenu} ||
         roleDialog > ${baseline.roleDialog} ||
-        dataStateOpen > ${baseline.dataStateOpen}
+        dataStateOpen > ${baseline.dataStateOpen} ||
+        dataSonnerToast > ${baseline.dataSonnerToast}
       );
     })()`
 
@@ -2577,6 +2857,11 @@ function printHelp() {
   console.log("  --update")
   console.log("  --all")
   console.log("")
+  console.log("Notes:")
+  console.log("  - Positional arguments are *route names* (e.g. \"chart-line-interactive\").")
+  console.log("  - Do not pass output-key suffixes like \".hover-mid\" or \".open\" as part of the name.")
+  console.log("  - Use --variants=... and/or --modes=... instead.")
+  console.log("")
   console.log("Viewport flags:")
   console.log("  --viewportW=1440 --viewportH=900 --deviceScaleFactor=2")
   console.log("")
@@ -2622,6 +2907,17 @@ try {
 
   const finalNames = await resolveNames()
   console.log(`- names: ${finalNames.length}`)
+
+  const invalidNames = finalNames.filter((name) => name.includes("."))
+  if (invalidNames.length > 0) {
+    throw new Error(
+      `invalid route names (must not contain '.', got: ${invalidNames.join(", ")}). ` +
+        `If you meant to update an output key like "chart-line-interactive.hover-mid", ` +
+        `pass the base route name and use --variants=hover-mid. ` +
+        `Example: node goldens/shadcn-web/scripts/extract-golden.mts --startServer ` +
+        `--baseUrl=http://localhost:4020 --variants=hover-mid chart-line-interactive --update`
+    )
+  }
 
   if (startServer) {
     startedServer = await startNextServer(nextDir, baseUrl)

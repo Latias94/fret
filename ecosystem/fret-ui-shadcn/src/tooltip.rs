@@ -21,7 +21,8 @@ use fret_core::{KeyCode, PointerType, Px, Rect, Size, TextOverflow, TextStyle, T
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ElementKind, Elements, HoverRegionProps, InsetStyle, LayoutStyle, Length, Overflow,
-    PointerRegionProps, PositionStyle, SemanticsProps, SizeStyle, SpinnerProps, SvgIconProps,
+    PointerRegionProps, PositionStyle, SemanticsDecoration, SemanticsProps, SizeStyle,
+    SpinnerProps, SvgIconProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -971,12 +972,8 @@ impl TooltipContent {
             .map(|child| apply_tooltip_inherited_fg(child, fg))
             .collect();
         let container = shadcn_layout::container_flow(cx, props, children);
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Tooltip,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
+        container.attach_semantics(
+            SemanticsDecoration::default().role(fret_core::SemanticsRole::Tooltip),
         )
     }
 }
@@ -2923,6 +2920,7 @@ mod tests {
                                     scroll_handle: Some(scroll_handle.clone()),
                                     intrinsic_measure_mode:
                                         fret_ui::element::ScrollIntrinsicMeasureMode::Content,
+                                    windowed_paint: false,
                                     probe_unbounded: true,
                                 },
                                 |cx| {
@@ -3167,6 +3165,7 @@ mod tests {
                                             scroll_handle: Some(scroll_with_trigger_handle.clone()),
                                             intrinsic_measure_mode:
                                                 fret_ui::element::ScrollIntrinsicMeasureMode::Content,
+                                            windowed_paint: false,
                                             probe_unbounded: true,
                                         },
                                         |cx| {
@@ -3237,6 +3236,7 @@ mod tests {
                                             scroll_handle: Some(other_scroll_handle.clone()),
                                             intrinsic_measure_mode:
                                                 fret_ui::element::ScrollIntrinsicMeasureMode::Content,
+                                            windowed_paint: false,
                                             probe_unbounded: true,
                                         },
                                         |cx| {

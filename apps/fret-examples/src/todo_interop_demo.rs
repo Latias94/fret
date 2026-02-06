@@ -1,6 +1,7 @@
 use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices, ViewportFit, ViewportInputEvent};
+use fret_kit::prelude::MessageRouter;
 use fret_launch::{
     EngineFrameUpdate, ViewportRenderTarget, WinitAppDriver, WinitCommandContext,
     WinitEventContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
@@ -17,7 +18,11 @@ use std::sync::Arc;
 
 const CMD_ADD: &str = "todo-interop.add";
 const CMD_CLEAR_DONE: &str = "todo-interop.clear_done";
-const CMD_REMOVE_PREFIX: &str = "todo-interop.remove.";
+
+#[derive(Debug, Clone)]
+enum Msg {
+    Remove(u64),
+}
 
 #[derive(Debug, Clone)]
 struct ExternalViewportStubState {
@@ -47,6 +52,7 @@ struct TodoInteropWindowState {
     ui: UiTree<App>,
     draft: Model<String>,
     todos: Model<Vec<TodoItem>>,
+    router: MessageRouter<Msg>,
     next_id: u64,
 
     // "Foreign runtime" stub: an app-owned offscreen render target embedded via ViewportSurface.
@@ -78,10 +84,12 @@ impl TodoInteropDriver {
         let mut ui = UiTree::new();
         ui.set_window(window);
 
+        let prefix = format!("todo-interop.{window:?}.");
         TodoInteropWindowState {
             ui,
             draft,
             todos,
+            router: MessageRouter::new(prefix),
             next_id: 3,
             external_target: ViewportRenderTarget::new(
                 wgpu::TextureFormat::Bgra8UnormSrgb,
@@ -151,10 +159,12 @@ impl TodoInteropDriver {
         let todos_model = state.todos.clone();
         let ext_target = state.external_target.id();
         let ext_size = state.external_target_px_size;
+        state.router.clear();
+        let router = &mut state.router;
 
         let ui = &mut state.ui;
         let root = declarative::RenderRootContext::new(ui, app, services, window, bounds)
-            .render_root("todo-interop", |cx| {
+            .render_root("todo-interop", move |cx| {
                 let theme = Theme::global(&*cx.app).clone();
                 let ext = cx
                     .watch_global::<ExternalViewportStubState>()
@@ -173,7 +183,7 @@ impl TodoInteropDriver {
                 }
 
                 let root_el = ui::container(cx, |cx| {
-                    let left = todo_panel(cx, &theme, draft.clone(), &todos);
+                    let left = todo_panel(cx, &theme, draft.clone(), &todos, router);
                     let right = external_panel(
                         cx,
                         &theme,
@@ -262,10 +272,11 @@ impl WinitAppDriver for TodoInteropDriver {
             CMD_CLEAR_DONE => Self::on_clear_done(app, state),
             "window.close" => app.push_effect(Effect::Window(WindowRequest::Close(window))),
             _ => {
-                if let Some(rest) = command.as_str().strip_prefix(CMD_REMOVE_PREFIX) {
-                    if let Ok(id) = rest.parse::<u64>() {
-                        Self::on_remove(app, state, id);
-                    }
+                let Some(msg) = state.router.try_take(&command) else {
+                    return;
+                };
+                match msg {
+                    Msg::Remove(id) => Self::on_remove(app, state, id),
                 }
             }
         }
@@ -398,6 +409,7 @@ fn todo_panel(
     theme: &Theme,
     draft_model: Model<String>,
     todos: &[TodoItem],
+    router: &mut MessageRouter<Msg>,
 ) -> AnyElement {
     let draft = shadcn::Input::new(draft_model)
         .a11y_label("Todo")
@@ -414,12 +426,19 @@ fn todo_panel(
         .on_click(CMD_CLEAR_DONE)
         .into_element(cx);
 
+    let rows: Vec<(TodoItem, CommandId)> = todos
+        .iter()
+        .cloned()
+        .map(|t| {
+            let remove_cmd = router.cmd(Msg::Remove(t.id));
+            (t, remove_cmd)
+        })
+        .collect();
+
     let list = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
-        let mut out = Vec::new();
-        for t in todos {
-            out.push(todo_row(cx, theme, t));
-        }
-        out
+        rows.iter()
+            .map(|(t, remove_cmd)| cx.keyed(t.id, |cx| todo_row(cx, theme, t, remove_cmd.clone())))
+            .collect::<Vec<_>>()
     });
 
     let header =
@@ -446,11 +465,12 @@ fn todo_row(
     cx: &mut fret_ui::ElementContext<'_, App>,
     _theme: &Theme,
     item: &TodoItem,
+    remove_cmd: CommandId,
 ) -> AnyElement {
     let remove = shadcn::Button::new("Remove")
         .variant(shadcn::ButtonVariant::Ghost)
         .size(shadcn::ButtonSize::Sm)
-        .on_click(CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", item.id)))
+        .on_click(remove_cmd)
         .into_element(cx);
 
     let checkbox = shadcn::Checkbox::new(item.done.clone())

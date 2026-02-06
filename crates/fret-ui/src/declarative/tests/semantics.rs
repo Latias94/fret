@@ -40,6 +40,122 @@ fn declarative_text_sets_semantics_label() {
 }
 
 #[test]
+fn declarative_attach_semantics_overrides_role_label_and_sets_test_id() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(60.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-attach-semantics",
+        |cx| {
+            vec![
+                cx.text("Hello declarative").attach_semantics(
+                    crate::element::SemanticsDecoration::default()
+                        .test_id("hello")
+                        .role(fret_core::SemanticsRole::Button)
+                        .label("Stamped label"),
+                ),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    assert!(
+        snap.nodes.iter().any(|n| {
+            n.test_id.as_deref() == Some("hello")
+                && n.role == fret_core::SemanticsRole::Button
+                && n.label.as_deref() == Some("Stamped label")
+        }),
+        "expected a semantics node with attached test_id/role/label overrides"
+    );
+}
+
+#[test]
+fn declarative_attach_semantics_can_override_state_and_relations() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-attach-semantics-v2",
+        |cx| {
+            let label = cx
+                .text("Label")
+                .attach_semantics(crate::element::SemanticsDecoration::default().test_id("label"));
+            let labelled_by = label.id.0;
+
+            vec![
+                label,
+                cx.text("Target").attach_semantics(
+                    crate::element::SemanticsDecoration::default()
+                        .test_id("target")
+                        .role(fret_core::SemanticsRole::Checkbox)
+                        .disabled(true)
+                        .selected(true)
+                        .expanded(true)
+                        .checked(Some(true))
+                        .labelled_by_element(labelled_by),
+                ),
+            ]
+        },
+    );
+    ui.set_root(root);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let label_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("label"))
+        .expect("label semantics node");
+    let target_node = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("target"))
+        .expect("target semantics node");
+
+    assert_eq!(target_node.role, fret_core::SemanticsRole::Checkbox);
+    assert!(target_node.flags.disabled);
+    assert!(target_node.flags.selected);
+    assert!(target_node.flags.expanded);
+    assert_eq!(target_node.flags.checked, Some(true));
+    assert!(
+        target_node.labelled_by.contains(&label_node.id),
+        "expected target to be labelled_by the label node"
+    );
+}
+
+#[test]
 fn declarative_text_input_sets_semantics_label() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -125,6 +241,84 @@ fn declarative_text_input_respects_a11y_role_override_and_expanded() {
         }),
         "expected a ComboBox semantics node with expanded=true and correct label/value"
     );
+}
+
+#[test]
+fn declarative_text_input_region_publishes_text_field_semantics_and_ranges_when_focused() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let region_id: std::cell::RefCell<Option<crate::GlobalElementId>> = Default::default();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-text-input-region",
+        |cx| {
+            let mut props = crate::element::TextInputRegionProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.layout.size.height = crate::element::Length::Fill;
+            props.a11y_label = Some("Editor".into());
+            props.a11y_value = Some("hello".into());
+            props.a11y_text_selection = Some((2, 2));
+            props.a11y_text_composition = Some((1, 3));
+
+            let region = cx.text_input_region(props, |_cx| Vec::<AnyElement>::new());
+            *region_id.borrow_mut() = Some(region.id);
+            vec![region]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let region_id = region_id.borrow().expect("region element id");
+    let region =
+        crate::elements::node_for_element(&mut app, window, region_id).expect("region node");
+    ui.set_focus(Some(region));
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    snap.validate().expect("semantics snapshot should validate");
+
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == fret_core::SemanticsRole::TextField && n.label.as_deref() == Some("Editor")
+        })
+        .expect("expected a TextField semantics node for the text input region");
+
+    assert_eq!(node.value.as_deref(), Some("hello"));
+    assert_eq!(node.text_selection, Some((2, 2)));
+    assert_eq!(node.text_composition, Some((1, 3)));
+
+    // When not focused, the ranges are cleared (label/value remain).
+    ui.set_focus(None);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let node = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == fret_core::SemanticsRole::TextField && n.label.as_deref() == Some("Editor")
+        })
+        .expect("expected a TextField semantics node for the text input region");
+    assert_eq!(node.text_selection, None);
+    assert_eq!(node.text_composition, None);
 }
 
 #[test]

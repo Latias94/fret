@@ -3,18 +3,22 @@
 //! This module is always available (no long-lived feature gate).
 
 mod aggregation;
+mod aggregation_fns;
+mod cells;
 mod column;
 mod column_ordering;
 mod column_pinning;
 mod column_sizing;
 mod column_sizing_info;
 mod column_visibility;
+mod core_model;
 mod faceting;
 mod filtering;
 mod flat_row_order;
 mod grouped_aggregation;
 mod grouped_sorting;
 mod grouping;
+mod headers;
 mod memo;
 mod options;
 mod pagination;
@@ -24,16 +28,26 @@ mod row_pinning;
 mod row_selection;
 mod sorting;
 mod state;
+mod tanstack_options;
+mod tanstack_state;
+mod updater;
 
 pub use aggregation::{Aggregation, aggregate_u64};
+pub use aggregation_fns::{
+    AggregationFn, AggregationFnSpec, BuiltInAggregationFn, apply_builtin_aggregation,
+    resolve_auto_aggregation,
+};
+pub use cells::{CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
 pub use column::{
-    ColumnDef, ColumnHelper, ColumnId, FilterFn, SortCmpFn, ValueU64Fn, create_column_helper,
+    BuiltInFilterFn, BuiltInSortingFn, ColumnDef, ColumnHelper, ColumnId, FilterFn,
+    FilteringFnSpec, SortCmpFn, SortUndefined, SortValueFn, SortingFnSpec, TanStackValue,
+    ValueU64Fn, create_column_helper,
 };
 pub use column_ordering::{ColumnOrderState, order_columns};
 pub use column_ordering::{move_column, moved_column, set_column_order, set_column_order_for};
 pub use column_pinning::{
-    ColumnPinPosition, ColumnPinningState, is_column_pinned, pin_column, pinned_column,
-    split_pinned_columns,
+    ColumnPinPosition, ColumnPinningState, is_column_pinned, is_some_columns_pinned, pin_column,
+    pin_columns, pinned_column, pinned_columns, split_pinned_columns,
 };
 pub use column_sizing::{
     ColumnResizeDirection, ColumnResizeMode, begin_column_resize, column_can_resize,
@@ -43,16 +57,22 @@ pub use column_sizing::{ColumnSizingRegion, ColumnSizingState, column_size};
 pub use column_sizing_info::ColumnSizingInfoState;
 pub use column_visibility::{ColumnVisibilityState, is_column_visible, visible_columns};
 pub use column_visibility::{set_column_visible, toggle_column_visible, toggled_column_visible};
+pub use core_model::{
+    ColumnNodeSnapshot, CoreModelSnapshot, CoreRowsSnapshot, LeafColumnsSnapshot,
+    RowModelIdSnapshot,
+};
 pub use faceting::{
     FacetCounts, FacetKey, FacetLabels, faceted_min_max_u64, faceted_row_model_excluding,
     faceted_unique_value_labels, faceted_unique_values,
 };
 pub use filtering::{
-    ColumnFilter, ColumnFiltersState, GlobalFilterState, contains_ascii_case_insensitive,
-    filter_row_model,
+    ColumnFilter, ColumnFiltersState, FilterFnDef, GlobalFilterState,
+    contains_ascii_case_insensitive, filter_row_model, set_column_filter_value_tanstack,
 };
 pub use flat_row_order::{FlatRowOrderCache, FlatRowOrderDeps, compute_flat_row_order};
-pub use grouped_aggregation::compute_grouped_u64_aggregations;
+pub use grouped_aggregation::{
+    compute_grouped_u64_aggregations, compute_grouped_u64_aggregations_from_core,
+};
 pub use grouped_sorting::sort_grouped_row_indices_in_place;
 pub use grouping::{
     GroupedColumnMode, GroupedRow, GroupedRowIndex, GroupedRowKind, GroupedRowModel, GroupingState,
@@ -61,6 +81,7 @@ pub use grouping::{
     toggle_column_grouping, toggle_column_grouping_value, toggled_column_grouping,
     toggled_column_grouping_value,
 };
+pub use headers::{HeaderGroupSnapshot, HeaderSnapshot, build_header_groups};
 pub use options::TableOptions;
 pub use pagination::{PaginationBounds, pagination_bounds};
 pub use pagination::{PaginationState, paginate_row_model};
@@ -72,15 +93,23 @@ pub use row_expanding::{
 pub use row_model::{Row, RowIndex, RowKey, RowModel, Table, TableBuilder};
 pub use row_pinning::{
     RowPinPosition, RowPinningState, center_row_keys, is_row_pinned, is_some_rows_pinned, pin_row,
-    pin_rows,
+    pin_row_keys, pin_rows,
 };
 pub use row_selection::{
-    RowSelectionState, SubRowSelection, is_all_rows_selected, is_row_selected,
-    is_some_rows_selected, is_sub_row_selected, row_is_all_sub_rows_selected, row_is_some_selected,
-    select_rows_fn, selected_flat_row_count, selected_root_row_count,
-    toggle_all_page_rows_selected, toggle_all_rows_selected, toggle_row_selected,
+    RowSelectionState, SubRowSelection, is_all_page_rows_selected, is_all_rows_selected,
+    is_row_selected, is_some_page_rows_selected, is_some_rows_selected, is_sub_row_selected,
+    row_is_all_sub_rows_selected, row_is_some_selected, select_rows_fn, selected_flat_row_count,
+    selected_root_row_count, toggle_all_page_rows_selected, toggle_all_rows_selected,
+    toggle_row_selected,
 };
 pub use sorting::{
-    SortSpec, SortingState, sort_for_column, sort_row_model, toggle_sort_for_column,
+    SortSpec, SortingFnDef, SortingState, sort_for_column, sort_row_model, toggle_sort_for_column,
+    toggle_sorting_handler_tanstack, toggle_sorting_tanstack,
 };
 pub use state::TableState;
+pub use tanstack_options::TanStackTableOptions;
+pub use tanstack_state::{
+    TanStackColumnFilter, TanStackPaginationState, TanStackSortingSpec, TanStackStateError,
+    TanStackTableState,
+};
+pub use updater::{Updater, functional_update};

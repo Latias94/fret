@@ -58,6 +58,7 @@ fn mixed_revision(a: u64, b: u64) -> u64 {
 #[derive(Debug, Clone)]
 pub struct DataTable {
     overscan: usize,
+    keep_alive: Option<usize>,
     row_height: Option<Px>,
     measure_rows: bool,
     chrome: ChromeRefinement,
@@ -69,6 +70,7 @@ impl Default for DataTable {
     fn default() -> Self {
         Self {
             overscan: 4,
+            keep_alive: None,
             row_height: None,
             measure_rows: false,
             chrome: ChromeRefinement::default(),
@@ -85,6 +87,11 @@ impl DataTable {
 
     pub fn overscan(mut self, overscan: usize) -> Self {
         self.overscan = overscan;
+        self
+    }
+
+    pub fn keep_alive(mut self, keep_alive: usize) -> Self {
+        self.keep_alive = Some(keep_alive);
         self
     }
 
@@ -117,6 +124,96 @@ impl DataTable {
         self
     }
 
+    /// A retained-host variant of [`Self::into_element`] that enables composable body rows under
+    /// cache-root reuse (virt-003 / ADR 0192).
+    ///
+    /// Notes (v0):
+    /// - supports fixed-height and measured (variable-height) rows
+    /// - intended for perf/correctness harnesses; API stability is not guaranteed
+    pub fn into_element_retained<H: UiHost + 'static, TData>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        data: Arc<[TData]>,
+        data_revision: u64,
+        state: Model<TableState>,
+        columns: impl Into<Arc<[ColumnDef<TData>]>>,
+        get_row_key: impl Fn(&TData, usize, Option<&RowKey>) -> RowKey + 'static,
+        header_label: impl Fn(&ColumnDef<TData>) -> Arc<str> + 'static,
+        cell_at: impl Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>, &TData) -> AnyElement + 'static,
+        debug_header_cell_test_id_prefix: Option<Arc<str>>,
+        debug_row_test_id_prefix: Option<Arc<str>>,
+    ) -> AnyElement
+    where
+        TData: 'static,
+    {
+        let DataTable {
+            overscan,
+            keep_alive,
+            row_height,
+            measure_rows,
+            chrome,
+            layout,
+            output: _output,
+        } = self;
+
+        let theme = Theme::global(&*cx.app).clone();
+        let border = border_color(&theme);
+
+        let state_revision = state.revision(&*cx.app).unwrap_or(0);
+        let items_revision = mixed_revision(data_revision, state_revision);
+
+        let columns: Arc<[ColumnDef<TData>]> = columns.into();
+
+        let root_chrome = ChromeRefinement::default()
+            .rounded(Radius::Lg)
+            .border_1()
+            .border_color(ColorRef::Color(border))
+            .merge(chrome);
+        let mut root_props = decl_style::container_props(&theme, root_chrome, layout.w_full());
+        root_props.layout.overflow = Overflow::Clip;
+
+        cx.container(root_props, move |cx| {
+            let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
+
+            let get_row_key = Arc::new(get_row_key);
+            let header_label = Arc::new(header_label);
+            let cell_at = Arc::new(cell_at);
+
+            let mut view_props = TableViewProps::default();
+            view_props.overscan = overscan;
+            view_props.keep_alive = keep_alive;
+            view_props.row_height = row_height;
+            view_props.row_measure_mode = if measure_rows {
+                TableRowMeasureMode::Measured
+            } else {
+                TableRowMeasureMode::Fixed
+            };
+            view_props.enable_column_grouping = false;
+            view_props.enable_column_resizing = false;
+            view_props.draw_frame = false;
+
+            let row_key_at = Arc::new(move |d: &TData, index: usize| (get_row_key)(d, index, None));
+
+            vec![
+                fret_ui_kit::declarative::table::table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll_handle,
+                    items_revision,
+                    row_key_at,
+                    None,
+                    view_props,
+                    header_label,
+                    cell_at,
+                    debug_header_cell_test_id_prefix,
+                    debug_row_test_id_prefix,
+                ),
+            ]
+        })
+    }
+
     pub fn into_element<H: UiHost, TData>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -133,6 +230,7 @@ impl DataTable {
     {
         let DataTable {
             overscan,
+            keep_alive,
             row_height,
             measure_rows,
             chrome,
@@ -173,6 +271,7 @@ impl DataTable {
 
             let mut view_props = TableViewProps::default();
             view_props.overscan = overscan;
+            view_props.keep_alive = keep_alive;
             view_props.row_height = row_height;
             view_props.row_measure_mode = if measure_rows {
                 TableRowMeasureMode::Measured
@@ -180,7 +279,7 @@ impl DataTable {
                 TableRowMeasureMode::Fixed
             };
             view_props.enable_column_grouping = false;
-            view_props.enable_column_resizing = false;
+            view_props.enable_column_resizing = true;
             view_props.draw_frame = false;
 
             let row_key_at = move |d: &TData, index: usize| (get_row_key)(d, index, None);

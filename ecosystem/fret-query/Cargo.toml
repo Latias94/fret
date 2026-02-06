@@ -1,0 +1,27 @@
+[package]
+name = "fret-query"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = ["ui"]
+ui = ["dep:fret-ui"]
+tokio = ["fret-executor/tokio"]
+wasm = ["fret-executor/wasm"]
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-executor = { path = "../fret-executor" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui", optional = true }
+tracing.workspace = true
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }
+pollster.workspace = true

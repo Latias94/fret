@@ -3,6 +3,7 @@
   "steps": [
     { "type": "click", "target": { "kind": "test_id", "id": "todo-input" } },
     { "type": "type_text", "text": "自动化任务" },
+    { "type": "wait_frames", "n": 2 },
     { "type": "press_key", "key": "enter" },
     {
       "type": "wait_until",

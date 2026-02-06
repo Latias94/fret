@@ -42,7 +42,9 @@ Design constraints:
 Now / Next / Later (high level):
 
 - **Now**: lock refactor invariants (derived internals + invalidation discipline) via conformance tests (workstream M0).
+  - Detailed contract checklist: `docs/workstreams/fret-node-internals-m0.md`
 - **Next**: stabilize built-in add-ons API (minimap/controls/background theming) without policy bleed (workstream M2).
+  - Workstream: `docs/workstreams/fret-node-addons-api-m2.md`
 - **Later**: scale targets (5k–20k) + deterministic patch units for collaboration (NG3/workstream M5 + future milestones).
 
 ### Headless substrate (present)
@@ -155,23 +157,34 @@ Legend:
 - [x] Implement minimap overlay consuming derived geometry.
 - [x] Implement canvas controls (zoom/fit/reset) and bind to commands.
 - [x] Implement auto-pan during connect/drag near edges.
-- [ ] Add "drag handle tooltip/help" in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
+- [x] Add "drag handle tooltip/help" in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
 
 ### Medium-term
 
 - [x] Clipboard copy/paste for selection with `GraphFragment` + deterministic paste offset.
-- [~] Edge label rendering + per-edge style overrides.
-- [~] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
-- [~] Reroute node + edge split UX (double-click reroute; Alt+double-click and Alt-drag open insert picker).
+- [x] Edge label rendering + per-edge style overrides.
+- [x] Edge markers (end arrow) + routing kinds (straight/step/bezier) polish.
+- [x] Reroute node + edge split UX (double-click reroute; Alt+double-click and Alt-drag open insert picker).
 - [x] Interaction presets (XyFlow vs ShaderGraph) as kit helpers (`NodeGraphInteractionPreset`).
 - [x] Keyboard nudge ops.
 - [x] Selection align/distribute ops.
 
 ### Long-term
 
-- [ ] Subgraph graph references + cycle-safe import.
-- [ ] Blackboard variables + typed symbol references (domain-ready).
+- [~] Subgraph graph references + cycle-safe import.
+  - ADR: `docs/adr/0197-subgraph-graph-references-and-cycle-safe-import.md`
+  - Core closure + tests: `ecosystem/fret-node/src/core/imports.rs`, `ecosystem/fret-node/src/core/tests.rs`
+  - Subgraph node contract + binding tests: `ecosystem/fret-node/src/core/subgraph.rs`, `ecosystem/fret-node/src/core/tests.rs`
+  - Import edit ops (Add/Remove/Alias): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
+  - Tests: `ecosystem/fret-node/src/ops/tests.rs`
+- [~] Blackboard variables + typed symbol references (domain-ready).
+  - Symbol edit ops (name/type/default/meta): `ecosystem/fret-node/src/ops/mod.rs`, `ecosystem/fret-node/src/ops/apply.rs`, `ecosystem/fret-node/src/ops/history.rs`
+  - Tests: `ecosystem/fret-node/src/ops/tests.rs`
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
   - [x] Canvas paint culling for offscreen nodes/edges (`NodeGraphCanvas::paint`).
-- [ ] Deterministic graph diff/patch set for collaboration.
+- [~] Deterministic graph diff/patch set for collaboration.
+  - ADR: `docs/adr/0198-deterministic-graph-diff-and-patch-units.md`
+  - Minimal deterministic diff: `ecosystem/fret-node/src/ops/diff.rs` (`graph_diff`)
+  - Patch units: ports use setter ops for soft fields (connectable/ty/data) and fall back to remove+add only for structural changes.
+  - Tests: `ecosystem/fret-node/src/ops/tests.rs`

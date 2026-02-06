@@ -1,16 +1,24 @@
 use super::*;
 
+pub(super) fn context_menu_size_at_zoom(
+    style: &NodeGraphStyle,
+    item_count: usize,
+    zoom: f32,
+) -> Size {
+    let w = style.context_menu_width / zoom;
+    let item_h = style.context_menu_item_height / zoom;
+    let pad = style.context_menu_padding / zoom;
+    let h = (2.0 * pad + item_h * item_count.max(1) as f32).max(item_h + 2.0 * pad);
+    Size::new(Px(w), Px(h))
+}
+
 pub(super) fn context_menu_rect_at(
     style: &NodeGraphStyle,
     origin: Point,
     item_count: usize,
     zoom: f32,
 ) -> Rect {
-    let w = style.context_menu_width / zoom;
-    let item_h = style.context_menu_item_height / zoom;
-    let pad = style.context_menu_padding / zoom;
-    let h = (2.0 * pad + item_h * item_count.max(1) as f32).max(item_h + 2.0 * pad);
-    Rect::new(origin, Size::new(Px(w), Px(h)))
+    Rect::new(origin, context_menu_size_at_zoom(style, item_count, zoom))
 }
 
 pub(super) fn searcher_visible_rows(searcher: &SearcherState) -> usize {
@@ -27,13 +35,17 @@ pub(super) fn searcher_rect_at(
     row_count: usize,
     zoom: f32,
 ) -> Rect {
+    Rect::new(origin, searcher_size_at_zoom(style, row_count, zoom))
+}
+
+pub(super) fn searcher_size_at_zoom(style: &NodeGraphStyle, row_count: usize, zoom: f32) -> Size {
     let w = style.context_menu_width / zoom;
     let item_h = style.context_menu_item_height / zoom;
     let pad = style.context_menu_padding / zoom;
 
     let list_rows = row_count.max(1) as f32;
     let h = 3.0 * pad + item_h * (1.0 + list_rows);
-    Rect::new(origin, Size::new(Px(w), Px(h)))
+    Size::new(Px(w), Px(h))
 }
 
 pub(super) fn hit_searcher_row(

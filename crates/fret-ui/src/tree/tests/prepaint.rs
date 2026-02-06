@@ -160,3 +160,70 @@ fn prepaint_actions_are_exported_to_debug_snapshot() {
         "expected at least one prepaint request_animation_frame action"
     );
 }
+
+struct PrepaintOutputCounter {
+    seen_prev: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+}
+
+impl<H: UiHost> Widget<H> for PrepaintOutputCounter {
+    fn prepaint(&mut self, cx: &mut crate::widget::PrepaintCx<'_, H>) {
+        use std::sync::atomic::Ordering;
+        let prev = cx.output::<u32>().copied().unwrap_or(0);
+        if prev > 0 {
+            self.seen_prev.fetch_add(1, Ordering::SeqCst);
+        }
+        cx.set_output(prev.saturating_add(1));
+    }
+
+    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        for &child in cx.children {
+            let _ = cx.layout_in(child, cx.bounds);
+        }
+        cx.available
+    }
+}
+
+#[test]
+fn prepaint_output_store_is_keyed_by_cache_root_prepaint_key() {
+    use std::sync::atomic::Ordering;
+
+    let mut app = crate::test_host::TestHost::new();
+    let mut ui = UiTree::new();
+    ui.set_window(AppWindowId::default());
+    ui.set_view_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    let seen_prev = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
+    let root = ui.create_node(TestStack::default());
+    let cache_root = ui.create_node(PrepaintOutputCounter {
+        seen_prev: seen_prev.clone(),
+    });
+    let leaf = ui.create_node(TestStack::default());
+    ui.set_root(root);
+    ui.add_child(root, cache_root);
+    ui.add_child(cache_root, leaf);
+    ui.set_node_view_cache_flags(cache_root, true, false, false);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(seen_prev.load(Ordering::SeqCst), 0);
+    assert_eq!(ui.prepaint_output::<u32>(cache_root).copied(), Some(1));
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    assert_eq!(seen_prev.load(Ordering::SeqCst), 1);
+    assert_eq!(ui.prepaint_output::<u32>(cache_root).copied(), Some(2));
+
+    // Changing the scale factor changes the cache root's prepaint key, so the output store should
+    // reset.
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut services, bounds, 2.0);
+    assert_eq!(seen_prev.load(Ordering::SeqCst), 1);
+    assert_eq!(ui.prepaint_output::<u32>(cache_root).copied(), Some(1));
+}

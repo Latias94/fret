@@ -13,12 +13,12 @@ use crate::runtime::callbacks::{
     ViewportMoveStart,
 };
 
-use super::super::super::state::{
-    NodeDrag, PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDrag, WireDragKind,
-};
 use super::super::NodeGraphCanvas;
 use super::{
     NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports_spaced_x,
+};
+use crate::ui::canvas::state::{
+    NodeDrag, PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDrag, WireDragKind,
 };
 
 #[derive(Clone)]

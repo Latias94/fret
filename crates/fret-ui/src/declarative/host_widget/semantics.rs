@@ -116,6 +116,11 @@ impl ElementHostWidget {
                     cx.set_expanded(expanded);
                 }
                 cx.set_active_descendant(props.active_descendant);
+                if let Some(element) = props.controls_element
+                    && let Some(node) = cx.resolve_declarative_element(element)
+                {
+                    cx.push_controlled(node);
+                }
                 input.semantics(cx);
             }
             ElementInstance::TextArea(props) => {
@@ -215,6 +220,39 @@ impl ElementHostWidget {
             ElementInstance::VirtualList(_) => {
                 cx.set_role(SemanticsRole::List);
             }
+            ElementInstance::TextInputRegion(props) => {
+                cx.set_role(SemanticsRole::TextField);
+                if let Some(label) = props.a11y_label.as_ref() {
+                    cx.set_label(label.as_ref().to_string());
+                }
+                if let Some(value) = props.a11y_value.as_ref() {
+                    cx.set_value(value.as_ref().to_string());
+                }
+                cx.set_disabled(!props.enabled);
+                cx.set_focusable(props.enabled);
+
+                // This is a mechanism-only surface: it can accept selection updates via hooks, but
+                // does not provide an internal buffer for `SetValue` edits.
+                cx.set_value_editable(false);
+                cx.set_text_selection_supported(props.enabled);
+
+                // Only publish ranges when focused, matching TextInput/TextArea behavior.
+                if cx.focus == Some(cx.node) && props.a11y_value.is_some() {
+                    if let Some((anchor, focus)) = props.a11y_text_selection {
+                        cx.set_text_selection(anchor, focus);
+                    } else {
+                        cx.clear_text_selection();
+                    }
+                    if let Some((start, end)) = props.a11y_text_composition {
+                        cx.set_text_composition(start, end);
+                    } else {
+                        cx.clear_text_composition();
+                    }
+                } else {
+                    cx.clear_text_selection();
+                    cx.clear_text_composition();
+                }
+            }
             ElementInstance::Flex(_)
             | ElementInstance::DismissibleLayer(_)
             | ElementInstance::FocusScope(_)
@@ -225,7 +263,6 @@ impl ElementHostWidget {
             }
             ElementInstance::Image(_)
             | ElementInstance::PointerRegion(_)
-            | ElementInstance::TextInputRegion(_)
             | ElementInstance::InternalDragRegion(_)
             | ElementInstance::HoverRegion(_)
             | ElementInstance::Spinner(_)
@@ -242,6 +279,55 @@ impl ElementHostWidget {
                 cx.set_role(SemanticsRole::Viewport);
             }
             _ => {}
+        }
+
+        if let Some(Some(decoration)) = with_element_record_for_node(cx.app, window, cx.node, |r| {
+            r.semantics_decoration.clone()
+        }) {
+            if let Some(role) = decoration.role {
+                cx.set_role(role);
+            }
+            if let Some(label) = decoration.label.as_ref() {
+                cx.set_label(label.as_ref().to_string());
+            }
+            if let Some(test_id) = decoration.test_id.as_ref() {
+                cx.set_test_id(test_id.as_ref().to_string());
+            }
+            if let Some(value) = decoration.value.as_ref() {
+                cx.set_value(value.as_ref().to_string());
+            }
+            if let Some(disabled) = decoration.disabled {
+                cx.set_disabled(disabled);
+            }
+            if let Some(selected) = decoration.selected {
+                cx.set_selected(selected);
+            }
+            if let Some(expanded) = decoration.expanded {
+                cx.set_expanded(expanded);
+            }
+            if let Some(checked) = decoration.checked {
+                cx.set_checked(checked);
+            }
+            if let Some(element) = decoration.active_descendant_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.set_active_descendant(Some(node));
+            }
+            if let Some(element) = decoration.labelled_by_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.push_labelled_by(node);
+            }
+            if let Some(element) = decoration.described_by_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.push_described_by(node);
+            }
+            if let Some(element) = decoration.controls_element
+                && let Some(node) = cx.resolve_declarative_element(element)
+            {
+                cx.push_controlled(node);
+            }
         }
     }
 }

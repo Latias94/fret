@@ -504,10 +504,24 @@ impl<H: UiHost> Widget<H> for TextInput {
                     let padding = self.chrome_style.padding.left;
                     let local_x =
                         Px((position.x.0 - (self.last_bounds.origin.x.0 + padding.0)).max(0.0));
-                    let caret = self
+                    let mut caret = self
                         .text_blob
                         .map(|blob| cx.services.hit_test_x(blob, local_x))
                         .unwrap_or_else(|| self.caret_from_x(local_x));
+
+                    // While IME preedit is active, the displayed text is the base buffer with the
+                    // preedit spliced at the caret (ADR 0071). Pointer hit-testing is performed
+                    // against that composed view, but the widget's internal indices are tracked in
+                    // base-text byte offsets. Map the display index back into base coordinates
+                    // before applying selection/navigation and then cancel the inline preedit
+                    // deterministically (v1 policy).
+                    if !self.preedit.is_empty() {
+                        caret = crate::text_edit::ime::display_to_base_index(
+                            self.caret,
+                            self.preedit.len(),
+                            caret,
+                        );
+                    }
 
                     self.caret = caret;
                     match *click_count {
@@ -1028,10 +1042,24 @@ impl<H: UiHost> Widget<H> for TextInput {
             overflow: TextOverflow::Clip,
             scale_factor: cx.scale_factor,
         };
-        let metrics =
+        // `TextSystem` returns zero-height metrics for empty strings (no shaped lines). Text inputs
+        // want stable line metrics even when the field is empty (caret/placeholder alignment),
+        // so measure a single space as a fallback.
+        let measure_text = if self.text.is_empty() {
+            " "
+        } else {
+            self.text.as_str()
+        };
+        let mut metrics =
             cx.services
                 .text()
-                .measure_str(self.text.as_str(), &self.style, base_constraints);
+                .measure_str(measure_text, &self.style, base_constraints);
+        if metrics.size.height.0 <= 0.01 {
+            metrics = cx
+                .services
+                .text()
+                .measure_str(" ", &self.style, base_constraints);
+        }
         self.text_metrics = Some(metrics);
 
         let base_h = self.text_metrics.map(|m| m.size.height.0).unwrap_or(0.0);
@@ -1308,9 +1336,12 @@ impl<H: UiHost> Widget<H> for TextInput {
             caret_local.size,
         );
 
-        // Anchor IME UI to the *current* caret position (including preedit cursor offset).
-        // This keeps the IME candidate/composition UI tracking the cursor within the preedit text.
-        let ime_rect = caret;
+        // Anchor IME UI to the *visual* caret position (including preedit cursor offset).
+        //
+        // Note that render transforms (scrolling, anchored popovers, etc) do not affect layout
+        // bounds. For platform IME positioning we must apply the accumulated transform so the OS
+        // sees the same coordinates the user sees on screen.
+        let ime_rect = cx.visual_rect_aabb(caret);
 
         if self.last_sent_cursor != Some(ime_rect) {
             self.last_sent_cursor = Some(ime_rect);

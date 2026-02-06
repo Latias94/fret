@@ -9,6 +9,12 @@ repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
 
+[features]
+default = []
+
+ui = []
+imui = ["ui", "dep:fret-authoring"]
+
 [dependencies]
 fret-canvas = { path = "../fret-canvas" }
 fret-core = { path = "../../crates/fret-core" }
@@ -16,3 +22,4 @@ fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
 slotmap.workspace = true
 fret-ui-kit = { path = "../fret-ui-kit" }
+fret-authoring = { path = "../fret-authoring", optional = true }

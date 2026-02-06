@@ -1,8 +1,9 @@
-use fret_core::{Event, Px, Size, TextStyle};
+use fret_core::{Event, Point, Px, Rect, Size, TextStyle};
 use fret_runtime::Model;
 
 use crate::widget::{
-    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx, Widget,
+    CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx,
+    PlatformTextInputCx, Widget,
 };
 use crate::{Invalidation, UiHost};
 
@@ -135,6 +136,92 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         true
     }
 
+    fn platform_text_input_snapshot(&self) -> Option<fret_runtime::WindowTextInputSnapshot> {
+        <TextArea as Widget<H>>::platform_text_input_snapshot(&self.area)
+    }
+
+    fn platform_text_input_selected_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        <TextArea as Widget<H>>::platform_text_input_selected_range_utf16(&self.area)
+    }
+
+    fn platform_text_input_marked_range_utf16(&self) -> Option<fret_runtime::Utf16Range> {
+        <TextArea as Widget<H>>::platform_text_input_marked_range_utf16(&self.area)
+    }
+
+    fn platform_text_input_text_for_range_utf16(
+        &self,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<String> {
+        <TextArea as Widget<H>>::platform_text_input_text_for_range_utf16(&self.area, range)
+    }
+
+    fn platform_text_input_bounds_for_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+    ) -> Option<Rect> {
+        <TextArea as Widget<H>>::platform_text_input_bounds_for_range_utf16(
+            &mut self.area,
+            cx,
+            range,
+        )
+    }
+
+    fn platform_text_input_character_index_for_point_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        point: Point,
+    ) -> Option<u32> {
+        <TextArea as Widget<H>>::platform_text_input_character_index_for_point_utf16(
+            &mut self.area,
+            cx,
+            point,
+        )
+    }
+
+    fn platform_text_input_replace_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+    ) -> bool {
+        let before = self.area.text.clone();
+        let changed = <TextArea as Widget<H>>::platform_text_input_replace_text_in_range_utf16(
+            &mut self.area,
+            cx,
+            range,
+            text,
+        );
+        if changed && self.area.text != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+        }
+        changed
+    }
+
+    fn platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut self,
+        cx: &mut PlatformTextInputCx<'_, H>,
+        range: fret_runtime::Utf16Range,
+        text: &str,
+        marked: Option<fret_runtime::Utf16Range>,
+    ) -> bool {
+        let before = self.area.text.clone();
+        let changed =
+            <TextArea as Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(
+                &mut self.area,
+                cx,
+                range,
+                text,
+                marked,
+            );
+        if changed && self.area.text != before {
+            self.dirty_since_sync = true;
+            self.maybe_update_model(cx.app);
+        }
+        changed
+    }
+
     fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_runtime::CommandId) -> bool {
         if !self.enabled {
             return false;
@@ -228,6 +315,8 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.observe_model(&self.model, Invalidation::Layout);
+        cx.observe_model(&self.model, Invalidation::Paint);
         let force = !self.dirty_since_sync;
         self.sync_from_model(cx.app, force);
         self.area.layout(cx)

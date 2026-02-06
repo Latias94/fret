@@ -3,7 +3,7 @@
 //! This module centralizes token key mapping and fallback chains so list visuals remain stable and
 //! drift-resistant during refactors.
 
-use fret_core::{Color, Corners, Px};
+use fret_core::{Color, Corners, Px, TextStyle};
 use fret_ui::Theme;
 
 use crate::foundation::content::MaterialContentDefaults;
@@ -20,6 +20,12 @@ pub(crate) fn one_line_container_height(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.list.list-item.one-line.container.height")
         .unwrap_or(Px(56.0))
+}
+
+pub(crate) fn two_line_container_height(theme: &Theme) -> Px {
+    theme
+        .metric_by_key("md.comp.list.list-item.two-line.container.height")
+        .unwrap_or(Px(72.0))
 }
 
 pub(crate) fn item_container_shape_with_variant(
@@ -155,6 +161,89 @@ pub(crate) fn trailing_icon_size_with_variant(theme: &Theme, expressive: bool) -
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
+    if enabled {
+        return 1.0;
+    }
+
+    theme
+        .number_by_key(if selected {
+            "md.comp.list.list-item.selected.disabled.supporting-text.opacity"
+        } else {
+            "md.comp.list.list-item.disabled.supporting-text.opacity"
+        })
+        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
+        .unwrap_or(0.38)
+        .clamp(0.0, 1.0)
+}
+
+fn trailing_supporting_text_opacity(theme: &Theme, enabled: bool, selected: bool) -> f32 {
+    if enabled {
+        return 1.0;
+    }
+
+    theme
+        .number_by_key(if selected {
+            "md.comp.list.list-item.selected.disabled.trailing-supporting-text.opacity"
+        } else {
+            // Material Web v30 does not define a dedicated non-selected trailing supporting opacity
+            // token; fall back to the sys disabled opacity.
+            "md.sys.state.disabled.state-layer-opacity"
+        })
+        .or_else(|| theme.number_by_key("md.sys.state.disabled.state-layer-opacity"))
+        .unwrap_or(0.38)
+        .clamp(0.0, 1.0)
+}
+
+pub(crate) fn supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
+    // Material Web v30 exposes supporting text typography via mixins. The stable v1 mapping is
+    // sys `body-small`.
+    theme.text_style_by_key("md.sys.typescale.body-small")
+}
+
+pub(crate) fn trailing_supporting_text_style(theme: &Theme, _selected: bool) -> Option<TextStyle> {
+    // Same mapping strategy as supporting text.
+    theme.text_style_by_key("md.sys.typescale.body-small")
+}
+
+pub(crate) fn supporting_text_color(theme: &Theme, enabled: bool, selected: bool) -> Color {
+    let key = match (selected, enabled) {
+        (true, true) => "md.comp.list.list-item.selected.supporting-text.color",
+        (true, false) => "md.comp.list.list-item.selected.disabled.supporting-text.color",
+        (false, true) => "md.comp.list.list-item.supporting-text.color",
+        (false, false) => "md.comp.list.list-item.disabled.supporting-text.color",
+    };
+    let mut color = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+    color = alpha_mul(color, supporting_text_opacity(theme, enabled, selected));
+    color
+}
+
+pub(crate) fn trailing_supporting_text_color(
+    theme: &Theme,
+    enabled: bool,
+    selected: bool,
+) -> Color {
+    let key = match (selected, enabled) {
+        (true, true) => "md.comp.list.list-item.selected.trailing-supporting-text.color",
+        (true, false) => "md.comp.list.list-item.selected.disabled.trailing-supporting-text.color",
+        // Material Web v30 does not define a dedicated non-selected disabled trailing supporting
+        // color token; use the enabled color with disabled opacity applied.
+        (false, _) => "md.comp.list.list-item.trailing-supporting-text.color",
+    };
+    let mut color = theme
+        .color_by_key(key)
+        .or_else(|| theme.color_by_key("md.sys.color.on-surface-variant"))
+        .unwrap_or_else(|| theme.color_required("md.sys.color.on-surface-variant"));
+    color = alpha_mul(
+        color,
+        trailing_supporting_text_opacity(theme, enabled, selected),
+    );
+    color
 }
 
 pub(crate) fn selected_container_background(theme: &Theme, enabled: bool) -> Color {

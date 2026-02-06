@@ -2,6 +2,7 @@ use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
 
+use crate::cache_key::CacheKeyBuilder;
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use crate::tree::{UiDebugInvalidationDetail, UiDebugInvalidationSource};
 use fret_core::FrameId;
@@ -472,6 +473,26 @@ impl ElementHostWidget {
         };
 
         if cx.tree.debug_enabled() {
+            let policy_key = {
+                let mut b = CacheKeyBuilder::new();
+                b.write_u32(axis as u32);
+                b.write_u32(props.measure_mode as u32);
+                b.write_u64(props.overscan as u64);
+                b.write_px(props.estimate_row_height);
+                b.write_px(props.gap);
+                b.write_px(props.scroll_margin);
+                b.finish()
+            };
+            let inputs_key = {
+                let mut b = CacheKeyBuilder::new();
+                b.write_u64(policy_key);
+                b.write_u64(props.len as u64);
+                b.write_u64(props.items_revision);
+                b.write_px(viewport);
+                b.write_px(offset);
+                b.write_px(content_extent);
+                b.finish()
+            };
             let prev_offset_state = match axis {
                 fret_core::Axis::Vertical => prev_offset_y,
                 fret_core::Axis::Horizontal => prev_offset_x,
@@ -480,6 +501,55 @@ impl ElementHostWidget {
                 fret_core::Axis::Vertical => prev_viewport_h,
                 fret_core::Axis::Horizontal => prev_viewport_w,
             };
+            let (window_shift_reason, window_shift_apply_mode, window_shift_invalidation_detail) =
+                if window_mismatch {
+                    let reason = if deferred_scroll_to_item {
+                        crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem
+                    } else if props.items_revision != prev_items_revision {
+                        crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision
+                    } else if (viewport.0 - prev_viewport_state.0).abs() > 0.01 {
+                        crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize
+                    } else if (offset.0 - prev_offset_state.0).abs() > 0.01 {
+                        crate::tree::UiDebugVirtualListWindowShiftReason::ScrollOffset
+                    } else if prev_window_range.map(|r| (r.count, r.overscan))
+                        != window_range.map(|r| (r.count, r.overscan))
+                    {
+                        crate::tree::UiDebugVirtualListWindowShiftReason::InputsChange
+                    } else {
+                        crate::tree::UiDebugVirtualListWindowShiftReason::Unknown
+                    };
+                    let retained_host = crate::elements::with_window_state(
+                        &mut *cx.app,
+                        window,
+                        |window_state| {
+                            window_state.has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(self.element)
+                        },
+                    );
+                    let mode = if retained_host {
+                        crate::tree::UiDebugVirtualListWindowShiftApplyMode::RetainedReconcile
+                    } else {
+                        crate::tree::UiDebugVirtualListWindowShiftApplyMode::NonRetainedRerender
+                    };
+                    let invalidation_detail = if cx.tree.view_cache_enabled() && !retained_host {
+                        Some(match reason {
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ScrollToItem => {
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                            }
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ViewportResize => {
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+                            }
+                            crate::tree::UiDebugVirtualListWindowShiftReason::ItemsRevision => {
+                                crate::tree::UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+                            }
+                            _ => crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
+                        })
+                    } else {
+                        None
+                    };
+                    (Some(reason), Some(mode), invalidation_detail)
+                } else {
+                    (None, None, None)
+                };
 
             cx.tree
                 .debug_record_virtual_list_window(crate::tree::UiDebugVirtualListWindow {
@@ -493,48 +563,40 @@ impl ElementHostWidget {
                     prev_items_revision,
                     measure_mode: props.measure_mode,
                     overscan: props.overscan,
+                    estimate_row_height: props.estimate_row_height,
+                    gap: props.gap,
+                    scroll_margin: props.scroll_margin,
                     viewport,
                     prev_viewport: prev_viewport_state,
                     offset,
                     prev_offset: prev_offset_state,
+                    content_extent,
+                    policy_key,
+                    inputs_key,
                     window_range,
                     prev_window_range,
                     render_window_range,
                     deferred_scroll_to_item,
                     deferred_scroll_consumed,
                     window_mismatch,
+                    window_shift_kind: if window_mismatch {
+                        crate::tree::UiDebugVirtualListWindowShiftKind::Escape
+                    } else {
+                        crate::tree::UiDebugVirtualListWindowShiftKind::None
+                    },
+                    window_shift_reason,
+                    window_shift_apply_mode,
+                    window_shift_invalidation_detail,
                 });
         }
 
+        // Window-boundary invalidation under view-cache is prepaint-driven (ADR 0190):
+        // - retained hosts reconcile during prepaint,
+        // - non-retained lists schedule a one-shot rerender during prepaint.
+        //
+        // Layout still records window telemetry and updates `VirtualListState`, but should not
+        // duplicate the scheduling side effects.
         if !is_probe_layout && cx.tree.view_cache_enabled() && window_mismatch {
-            let retained_host =
-                crate::elements::with_window_state(&mut *cx.app, window, |window_state| {
-                    let retained = window_state
-                        .has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
-                        self.element,
-                    );
-                    if retained {
-                        window_state.mark_retained_virtual_list_needs_reconcile(self.element);
-                    }
-                    retained
-                });
-
-            if !retained_host {
-                // Virtual list visible-item sets are computed during the declarative render pass.
-                // If the current visible window is outside the previously rendered overscan
-                // window, ensure the nearest view-cache root re-renders on the next frame so it
-                // can rebuild the visible items.
-                //
-                // Important: avoid forcing an additional "contained relayout" pass in the current
-                // frame. We only need to mark the view-cache reuse gate as dirty and schedule a
-                // redraw; the rerender frame will rebuild children and propagate structural
-                // invalidations normally.
-                cx.tree.mark_nearest_view_cache_root_needs_rerender(
-                    cx.node,
-                    UiDebugInvalidationSource::Other,
-                    UiDebugInvalidationDetail::ScrollHandleWindowUpdate,
-                );
-            }
             needs_redraw = true;
         }
 

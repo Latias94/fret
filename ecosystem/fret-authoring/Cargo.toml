@@ -1,0 +1,21 @@
+[package]
+name = "fret-authoring"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+
+[features]
+default = []
+query = ["dep:fret-query"]
+selector = ["dep:fret-selector"]
+
+[dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-query = { path = "../fret-query", optional = true }
+fret-selector = { path = "../fret-selector", optional = true }

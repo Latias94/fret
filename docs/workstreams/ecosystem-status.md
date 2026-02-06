@@ -51,6 +51,21 @@ Non-goals for the core runtime:
 - Declarative elements are the primary authoring model (ADR 0028, ADR 0039).
 - Retained widgets are runtime-internal; component crates author declaratively.
 
+### State management (authoring ergonomics)
+
+Kernel primitives are solid (`Model<T>`, explicit invalidation, driver-boundary inbox draining), but
+apps still need ecosystem-level ergonomics to avoid re-inventing patterns.
+
+Current ecosystem surfaces:
+
+- Typed UI → app routing for dynamic per-item actions: `fret-kit::mvu::MessageRouter<M>` (avoids
+  `"prefix.{id}"` command parsing in demos/templates).
+- Async resource state (loading/error/cache/invalidation): `ecosystem/fret-query` (TanStack Query-like,
+  adapted to ADR 0190 and `Dispatcher.exec_capabilities()`).
+- Derived state (selectors/computed): `ecosystem/fret-selector` (memoized derived values with explicit
+  dependency signatures + `use_selector` UI sugar).
+  - Tracking: `docs/workstreams/state-management-v1.md`
+
 ### Overlays / positioning
 
 - There is a stable anchored overlay placement contract (ADR 0064).

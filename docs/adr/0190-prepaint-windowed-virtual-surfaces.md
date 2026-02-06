@@ -70,6 +70,42 @@ Windowed surfaces MUST compose with view caching:
   view boundary deterministically, without relying on unrelated input-driven `notify()` calls.
   - Examples: `scroll_to_item`, `ensure_line_visible`, `center_on_node`, `zoom_to_fit`.
 
+Conformance note (normative):
+
+- “Ephemeral prepaint update” MUST NOT imply silent structural mutation. It means: update prepaint/paint/interaction
+  outputs (and request redraw / paint invalidation) while keeping the declarative node graph shape unchanged.
+
+### 3A) Two conformance tracks: non-retained vs retained-host windowing (normative)
+
+This ADR covers two distinct implementation tracks that share the same *user-visible* goal (scroll stability) but have
+different structural capabilities.
+
+**Track A (retained host; composable)** — preferred for editor-scale surfaces:
+
+- A window shift MAY be applied during `prepaint` by reconciling retained children inside an explicit retained-host
+  boundary (ADR 0192), without forcing a dirty-view rerender of the parent cache root.
+- The structural churn (attach/detach) MUST be confined within that retained-host boundary, and MUST remain explainable
+  and budgeted (see v2 addendum below).
+
+**Track B (non-retained; plan-only)** — default `VirtualList` path until a retained boundary exists:
+
+- `prepaint` MAY compute and cache a *window plan* (desired visible/required/prefetch ranges) and MAY request a redraw.
+- `prepaint` MUST NOT attach/detach/reorder declarative children. Therefore, any window change that would alter the
+  mounted child subtree MUST schedule a dirty-view rerender for the next frame.
+- If the surface is under view-cache reuse and there is no reliable render-derived window for the current viewport (e.g.
+  because a cache-hit frame skipped declarative render during initial viewport bootstrap), `prepaint` MUST conservatively
+  treat the window as mismatched and schedule a one-shot rerender/reconcile so the mounted child subtree is correct.
+- Scheduling responsibility (to keep behavior explainable and avoid duplicated side effects):
+  - For view-cache enabled surfaces, window-boundary detection and rerender scheduling SHOULD be prepaint-driven,
+    based on the post-layout bounds + current scroll offset, so a single bundle can attribute “why did we rerender?”
+    to one place.
+  - Layout MAY update telemetry/state, but SHOULD NOT independently mark cache roots dirty for window shifts if prepaint
+    will schedule the same rerender. Double-scheduling makes diagnostics noisy and can produce confusing
+    “window changed twice” stories.
+- In this track, “avoid forcing rerender for small scroll deltas” is interpreted as:
+  - do not rerender while the visible range stays within the currently-rendered required/prefetch window, and
+  - allow a single one-shot rerender on “escape” (plus optional staged prefetch that schedules bounded rerenders).
+
 View-cache boundary constraint:
 
 - Nested cache roots inside barrier-driven windowed surfaces (virtual lists, scroll content, etc.) MUST remain safe under
@@ -89,6 +125,62 @@ At minimum, a perf bundle should be able to attribute:
 - dirty views (with sources like `notify_call`),
 - cache-root reuse reasons,
 - and virtual-surface window updates (best-effort).
+
+Virtual-surface explainability requirement (v2; normative for windowed surfaces):
+
+- Every window shift MUST have a stable `window_shift_kind` and `window_shift_reason` that can be extracted from a single
+  bundle (e.g. `prefetch|escape|scroll_to_item|viewport_resize|items_revision`).
+- Every window shift MUST indicate how it was applied:
+  - `apply_mode=retained_reconcile` (Track A) or
+  - `apply_mode=non_retained_rerender` (Track B).
+  This avoids ambiguous “window changed but nothing rerendered” failure modes.
+
+Post-run gate (v2; normative for retained-host suites):
+
+- If a surface is expected to be Track A (retained-host windowing), scripted diagnostics SHOULD gate on:
+  - `fretboard diag stats <bundle> --check-vlist-window-shifts-non-retained-max 0`
+  so regressions where a retained-host window shift falls back to `non_retained_rerender` are caught automatically.
+
+### 5) Addendum (v2): staged prefetch and window-shift budgets
+
+This section extends the v1 contract with a GPUI/Flutter-aligned best practice for reducing scroll-time
+worst-tick spikes when a virtual surface crosses an overscan window boundary.
+
+Definitions:
+
+- **Visible range**: the strict range required to draw the current viewport (no overscan).
+- **Required window**: the minimal range that MUST be available for correctness (often equal to the visible range; may include a small “safety” overscan).
+- **Prefetch window**: an additional range derived from overscan policy intended purely for smoothness.
+- **Escape**: a frame where the visible range leaves the currently-rendered prefetch window.
+
+Contract:
+
+- The runtime MUST treat **required-window coverage** as correctness-critical:
+  - if the visible range leaves the required window, the runtime MUST update window state such that the next frame can render correctly,
+    even if it implies attaching many new items (e.g. a large scroll jump).
+- The runtime SHOULD treat **prefetch** as budgeted work:
+  - prefetch updates may be performed incrementally across multiple frames,
+  - prefetch MUST NOT require rerendering the entire view-cache root for retained hosts,
+  - and the runtime SHOULD cap per-frame structural churn (attach/detach) caused purely by prefetch.
+
+Practical guidance (non-normative, but strongly recommended for perf stability):
+
+- Prefer **early, small window shifts** over “rare, large boundary jumps”.
+  - When the visible range approaches a prefetch boundary (but is still covered), shift the window by a small step (e.g. 1–N items)
+    and request a redraw so the new items attach gradually.
+  - This turns a single “boundary tick” spike into a bounded stream of smaller reconciles.
+- Distinguish work due to **escape** vs **prefetch** in diagnostics:
+  - Escape-driven reconcile is correctness-critical; prefetch-driven reconcile is optional and should be budgeted.
+  - A single `bundle.json` should explain which case occurred for each reconcile.
+
+Diagnostics requirements (v2):
+
+- Bundles SHOULD export, per virtual-list window update:
+  - an explicit `window_shift_kind` (e.g. `none`, `prefetch`, `escape`),
+  - and a stable `policy_key` / `inputs_key` so policy drift is catchable by scripted gates.
+- Bundles SHOULD export, per retained-host reconcile:
+  - `reconcile_kind` (`prefetch` vs `escape`),
+  - and `attached_items` / `detached_items` / keep-alive reuse counters so churn spikes are attributable.
 
 ## Consequences
 
@@ -114,6 +206,10 @@ At minimum, a perf bundle should be able to attribute:
 - Zed/GPUI dirty views + view caching gates:
   - `repo-ref/zed/crates/gpui/src/window.rs`
   - `repo-ref/zed/crates/gpui/src/view.rs`
+- Flutter element lifecycle and virtualization patterns:
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/framework.dart` (`BuildOwner.finalizeTree`, `_InactiveElements`, `Element.deactivateChild`)
+  - `repo-ref/flutter/packages/flutter/lib/src/rendering/sliver_multi_box_adaptor.dart` (`_keepAliveBucket`)
+  - `repo-ref/flutter/packages/flutter/lib/src/widgets/scroll_view.dart` (`cacheExtent`)
 
 ## Implementation Notes (v1 Progress)
 

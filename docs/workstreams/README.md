@@ -10,13 +10,26 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/state-management-v1.md`
+- `docs/workstreams/state-management-v1-todo.md`
+- `docs/workstreams/authoring-paradigm-gpui-style-v1.md`
+- `docs/workstreams/authoring-paradigm-gpui-style-v1-todo.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1.md`
 - `docs/workstreams/ui-automation-and-debug-recipes-v1-todo.md`
+- `docs/workstreams/ai-elements-port.md`
+- `docs/workstreams/ai-elements-port-todo.md`
 - `docs/workstreams/ui-gallery-visual-parity.md`
 - `docs/workstreams/ui-gallery-visual-parity-todo.md`
+- `docs/workstreams/semantics-decorators-adoption-v1-todo.md`
 - `docs/workstreams/text-system-v2-parley.md`
 - `docs/workstreams/table-forms-calendar.md`
 - `docs/workstreams/ecosystem-status.md`
+- `docs/workstreams/imui-authoring-facade-v2.md`
+- `docs/workstreams/imui-authoring-facade-v2-todo.md`
+- `docs/workstreams/imui-ecosystem-facade-v1.md`
+- `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- `docs/workstreams/imui-authoring-facade-v1.md` (baseline / historical reference)
+- `docs/workstreams/imui-authoring-facade-v1-todo.md` (baseline / historical reference)
 - `docs/workstreams/shadcn-web-goldens-v4.md`
 - `docs/workstreams/shadcn-web-goldens-v4-todo.md`
 - `docs/workstreams/state-driven-style-resolution-v1.md`
