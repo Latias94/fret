@@ -177,7 +177,9 @@ Exit criteria:
 - Perf guidance is written down (allocation patterns, caching boundaries, virtualization).
 
 - [ ] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
-- [ ] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
+- [x] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
+  - Evidence: `apps/fret-demo/src/bin/imui_floating_windows_demo.rs`
+  - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
 - [ ] IMUIECO-test-042 Add nextest coverage for facade crates (smoke + key behavior tests):
   - click variants are delivered once (clear-on-read),
   - drag lifecycle is consistent across frames,
@@ -185,4 +187,5 @@ Exit criteria:
 - [ ] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
 - [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
 - [ ] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
-- [ ] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
+- [x] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
+  - Evidence: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
