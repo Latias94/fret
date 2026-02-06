@@ -86,3 +86,40 @@ pub(super) fn map_a11y_offset_to_buffer(
     let byte = window_start.saturating_add(offset).min(window_end);
     buf.clamp_to_char_boundary_left(byte).min(buf.len_bytes())
 }
+
+pub(super) fn map_a11y_offset_to_buffer_with_preedit(
+    buf: &TextBuffer,
+    window_start: usize,
+    window_end: usize,
+    caret: usize,
+    preedit_len: usize,
+    offset: u32,
+) -> usize {
+    let window_start = window_start.min(buf.len_bytes());
+    let window_end = window_end.min(buf.len_bytes()).max(window_start);
+    let caret = buf
+        .clamp_to_char_boundary_left(caret)
+        .min(window_end)
+        .max(window_start);
+
+    let anchor = caret.saturating_sub(window_start);
+    let display_len = window_end
+        .saturating_sub(window_start)
+        .saturating_add(preedit_len);
+    let display_offset = usize::try_from(offset)
+        .unwrap_or(usize::MAX)
+        .min(display_len);
+
+    let base_offset = if preedit_len == 0 {
+        display_offset
+    } else if display_offset <= anchor {
+        display_offset
+    } else if display_offset >= anchor.saturating_add(preedit_len) {
+        display_offset.saturating_sub(preedit_len)
+    } else {
+        anchor
+    };
+
+    let byte = window_start.saturating_add(base_offset).min(window_end);
+    buf.clamp_to_char_boundary_left(byte).min(buf.len_bytes())
+}

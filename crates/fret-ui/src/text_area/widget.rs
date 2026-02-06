@@ -505,9 +505,21 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if !focused {
                     return;
                 }
+
+                let mut anchor = *anchor as usize;
+                let mut focus = *focus as usize;
+                if self.is_ime_composing() {
+                    let caret =
+                        crate::text_edit::utf8::clamp_to_char_boundary(&self.text, self.caret);
+                    let preedit_len = self.preedit.len();
+                    anchor =
+                        crate::text_edit::ime::display_to_base_index(caret, preedit_len, anchor);
+                    focus = crate::text_edit::ime::display_to_base_index(caret, preedit_len, focus);
+                }
+
                 self.clear_preedit();
                 self.edit_state()
-                    .set_selection_grapheme_clamped(*anchor as usize, *focus as usize);
+                    .set_selection_grapheme_clamped(anchor, focus);
                 self.ensure_caret_visible = true;
 
                 cx.invalidate_self(Invalidation::Paint);

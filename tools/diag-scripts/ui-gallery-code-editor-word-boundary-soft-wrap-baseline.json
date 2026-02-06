@@ -112,17 +112,39 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-code-editor-word-gate-viewport"
+          "id": "ui-gallery-code-editor-mvp-soft-wrap"
         }
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-code-editor-word-gate-soft-wrap-viewport"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-code-editor-mvp-soft-wrap"
+      }
+    },
+    {
+      "type": "wait_frames",
+      "n": 4
     },
     {
       "type": "type_text_into",
       "target": {
         "kind": "role_and_name",
         "role": "text_field",
-        "name": "Code editor word gate"
+        "name": "Code editor word gate soft wrap"
       },
       "text": "",
       "timeout_frames": 240
@@ -140,7 +162,7 @@
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-word-boundary-identifier-caret0"
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-identifier-caret0"
     },
     {
       "type": "press_key",
@@ -155,7 +177,7 @@
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-word-boundary-identifier-move-right"
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-identifier-move-right"
     },
     {
       "type": "click",
@@ -173,7 +195,7 @@
       "target": {
         "kind": "role_and_name",
         "role": "text_field",
-        "name": "Code editor word gate"
+        "name": "Code editor word gate soft wrap"
       },
       "text": "",
       "timeout_frames": 240
@@ -191,7 +213,7 @@
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-word-boundary-unicode-caret0"
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-unicode-caret0"
     },
     {
       "type": "press_key",
@@ -206,7 +228,7 @@
     },
     {
       "type": "capture_bundle",
-      "label": "ui-gallery-code-editor-word-boundary-unicode-move-right"
+      "label": "ui-gallery-code-editor-word-boundary-soft-wrap-unicode-move-right"
     }
   ]
 }

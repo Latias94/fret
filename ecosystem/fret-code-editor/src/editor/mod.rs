@@ -41,7 +41,10 @@ mod paint;
 #[cfg(test)]
 mod tests;
 
-use a11y::{a11y_composed_text_window, a11y_text_window_bounds, map_a11y_offset_to_buffer};
+use a11y::{
+    a11y_composed_text_window, a11y_text_window_bounds, map_a11y_offset_to_buffer,
+    map_a11y_offset_to_buffer_with_preedit,
+};
 use geom::{
     RowGeom, RowPreeditMapping, caret_for_pointer, caret_rect_for_selection,
     caret_x_for_buffer_byte_in_row, caret_x_for_index, hit_test_index_from_caret_stops,
@@ -1361,17 +1364,39 @@ impl CodeEditor {
                 cx.text_input_region_on_set_selection(Arc::new(
                     move |host: &mut dyn UiActionHost, action_cx: ActionCx, anchor, focus| {
                         let mut st = sel_state.borrow_mut();
-                        if st.preedit.is_some() {
-                            return false;
-                        }
-
                         let caret = st
                             .buffer
                             .clamp_to_char_boundary_left(st.selection.caret().min(st.buffer.len_bytes()));
                         let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
 
-                        let new_anchor = map_a11y_offset_to_buffer(&st.buffer, start, end, anchor);
-                        let new_focus = map_a11y_offset_to_buffer(&st.buffer, start, end, focus);
+                        let (new_anchor, new_focus) = if let Some(preedit) = st.preedit.as_ref() {
+                            let preedit_len = preedit.text.len();
+                            (
+                                map_a11y_offset_to_buffer_with_preedit(
+                                    &st.buffer,
+                                    start,
+                                    end,
+                                    caret,
+                                    preedit_len,
+                                    anchor,
+                                ),
+                                map_a11y_offset_to_buffer_with_preedit(
+                                    &st.buffer,
+                                    start,
+                                    end,
+                                    caret,
+                                    preedit_len,
+                                    focus,
+                                ),
+                            )
+                        } else {
+                            (
+                                map_a11y_offset_to_buffer(&st.buffer, start, end, anchor),
+                                map_a11y_offset_to_buffer(&st.buffer, start, end, focus),
+                            )
+                        };
+
+                        st.preedit = None;
 
                         st.selection = Selection {
                             anchor: new_anchor,

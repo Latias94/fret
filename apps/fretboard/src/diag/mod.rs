@@ -5407,28 +5407,28 @@ See: `docs/tracy.md`.\n";
                 ignore_scene_fingerprint: compare_ignore_scene_fingerprint,
             };
 
-            // In matrix mode, treat `--check-view-cache-reuse-min 0` as “disabled”.
+            // In matrix mode, treat `--check-view-cache-reuse-min 0` as "disabled".
             let reuse_gate = match check_view_cache_reuse_min {
                 Some(0) => None,
                 Some(v) => Some(v),
                 None => Some(1),
             };
 
-            // In matrix mode, treat `--check-view-cache-reuse-stable-min 0` as “disabled”.
+            // In matrix mode, treat `--check-view-cache-reuse-stable-min 0` as "disabled".
             let reuse_stable_gate = match check_view_cache_reuse_stable_min {
                 Some(0) => None,
                 Some(v) => Some(v),
                 None => None,
             };
 
-            // In matrix mode, treat `--check-overlay-synthesis-min 0` as “disabled”.
+            // In matrix mode, treat `--check-overlay-synthesis-min 0` as "disabled".
             //
             // Default behavior:
             //
             // - If the caller enables shell reuse (`FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`), also
             //   enable a minimal overlay synthesis gate by default. This helps ensure the
-            //   cached-synthesis seam is actually exercised (rather than “view cache enabled but
-            //   overlay producers always rerendered”).
+            //   cached-synthesis seam is actually exercised (rather than "view cache enabled but
+            //   overlay producers always rerendered").
             // - Otherwise, leave the gate off by default to avoid forcing overlay-specific
             //   assumptions onto non-overlay scripts (e.g. virtual-list torture).
             let mut matrix_base_env = launch_env.clone();
@@ -5445,7 +5445,7 @@ See: `docs/tracy.md`.\n";
                 None => shell_reuse_enabled.then_some(1),
             };
 
-            // In matrix mode, treat `--check-viewport-input-min 0` as “disabled”.
+            // In matrix mode, treat `--check-viewport-input-min 0` as "disabled".
             let viewport_input_gate = match check_viewport_input_min {
                 Some(0) => None,
                 Some(v) => Some(v),
@@ -6671,7 +6671,7 @@ fn wait_for_bundle_json_from_script_result(
     None
 }
 
-fn ui_gallery_suite_scripts() -> [&'static str; 19] {
+fn ui_gallery_suite_scripts() -> [&'static str; 21] {
     [
         "tools/diag-scripts/ui-gallery-overlay-torture.json",
         "tools/diag-scripts/ui-gallery-modal-barrier-underlay-block.json",
@@ -6692,14 +6692,18 @@ fn ui_gallery_suite_scripts() -> [&'static str; 19] {
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
     ]
 }
 
-fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 11] {
+fn ui_gallery_code_editor_suite_scripts() -> [&'static str; 13] {
     [
         "tools/diag-scripts/ui-gallery-code-editor-torture-scroll-stability.json",
         "tools/diag-scripts/ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-word-boundary-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json",
+        "tools/diag-scripts/ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-selection-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-baseline.json",
         "tools/diag-scripts/ui-gallery-code-editor-a11y-composition-drag-baseline.json",
@@ -6860,7 +6864,12 @@ fn ui_gallery_script_requires_code_editor_word_boundary_gate(script: &Path) -> b
         return false;
     };
 
-    matches!(name, "ui-gallery-code-editor-word-boundary-baseline.json")
+    matches!(
+        name,
+        "ui-gallery-code-editor-word-boundary-baseline.json"
+            | "ui-gallery-code-editor-word-boundary-soft-wrap-baseline.json"
+            | "ui-gallery-code-editor-word-boundary-soft-wrap-double-click-baseline.json"
+    )
 }
 
 fn ui_gallery_script_requires_code_editor_a11y_selection_gate(script: &Path) -> bool {

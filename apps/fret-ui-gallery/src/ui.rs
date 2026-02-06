@@ -2332,6 +2332,7 @@ fn preview_code_editor_mvp(
         main: code_editor::CodeEditorHandle,
         word_fixture: code_editor::CodeEditorHandle,
         word_gate: code_editor::CodeEditorHandle,
+        word_gate_soft_wrap: code_editor::CodeEditorHandle,
         a11y_selection_gate: code_editor::CodeEditorHandle,
         a11y_composition_gate: code_editor::CodeEditorHandle,
         a11y_selection_wrap_gate: code_editor::CodeEditorHandle,
@@ -2352,6 +2353,7 @@ fn preview_code_editor_mvp(
             main: code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
             word_fixture: code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
             word_gate: code_editor::CodeEditorHandle::new("can't"),
+            word_gate_soft_wrap: code_editor::CodeEditorHandle::new("can't"),
             a11y_selection_gate: code_editor::CodeEditorHandle::new("hello world"),
             a11y_composition_gate: {
                 let handle = code_editor::CodeEditorHandle::new("hello world");
@@ -2378,6 +2380,7 @@ fn preview_code_editor_mvp(
     let handle = handles.main;
     let word_handle = handles.word_fixture;
     let word_gate_handle = handles.word_gate;
+    let word_gate_soft_wrap_handle = handles.word_gate_soft_wrap;
     let a11y_selection_gate_handle = handles.a11y_selection_gate;
     let a11y_composition_gate_handle = handles.a11y_composition_gate;
     let a11y_selection_wrap_gate_handle = handles.a11y_selection_wrap_gate;
@@ -2409,6 +2412,7 @@ fn preview_code_editor_mvp(
         handle.set_text_boundary_mode(mode);
         word_handle.set_text_boundary_mode(mode);
         word_gate_handle.set_text_boundary_mode(mode);
+        word_gate_soft_wrap_handle.set_text_boundary_mode(mode);
         a11y_selection_gate_handle.set_text_boundary_mode(mode);
         a11y_composition_gate_handle.set_text_boundary_mode(mode);
         a11y_selection_wrap_gate_handle.set_text_boundary_mode(mode);
@@ -2429,8 +2433,27 @@ fn preview_code_editor_mvp(
     let boundary_identifier_switch = boundary_identifier.clone();
     let boundary_identifier_for_harness = boundary_identifier.clone();
     let soft_wrap_switch = soft_wrap.clone();
+    let boundary_identifier_set_identifier = boundary_identifier_for_harness.clone();
+    let set_identifier_mode: fret_ui::action::OnActivate =
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host
+                .models_mut()
+                .update(&boundary_identifier_set_identifier, |v| *v = true);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        });
+    let boundary_identifier_set_unicode = boundary_identifier_for_harness.clone();
+    let set_unicode_mode: fret_ui::action::OnActivate =
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host
+                .models_mut()
+                .update(&boundary_identifier_set_unicode, |v| *v = false);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        });
     let word_handle_for_harness = word_handle.clone();
     let word_gate_handle_for_harness = word_gate_handle.clone();
+    let word_gate_soft_wrap_handle_for_harness = word_gate_soft_wrap_handle.clone();
     let word_debug_for_harness = word_debug.clone();
     let word_debug_for_render = word_debug.clone();
     let a11y_selection_gate_handle_for_harness = a11y_selection_gate_handle.clone();
@@ -2485,6 +2508,26 @@ fn preview_code_editor_mvp(
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
                         vec![
+                            shadcn::Button::new("Set Identifier")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-boundary-set-identifier")
+                                .on_activate(set_identifier_mode.clone())
+                                .into_element(cx),
+                            shadcn::Button::new("Set Unicode")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-boundary-set-unicode")
+                                .on_activate(set_unicode_mode.clone())
+                                .into_element(cx),
+                        ]
+                    },
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |cx| {
+                        vec![
                             shadcn::Button::new("Load fonts…")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
@@ -2515,6 +2558,31 @@ fn preview_code_editor_mvp(
                         .a11y_label("Code editor word gate")
                         .viewport_test_id("ui-gallery-code-editor-word-gate-viewport")
                         .into_element(cx);
+                    cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    )
+                }),
+                cx.keyed("word-boundary-soft-wrap-gate", |cx| {
+                    let gate_editor =
+                        code_editor::CodeEditor::new(word_gate_soft_wrap_handle_for_harness.clone())
+                            .key(9)
+                            .overscan(8)
+                            .soft_wrap_cols(Some(4))
+                            .a11y_label("Code editor word gate soft wrap")
+                            .viewport_test_id(
+                                "ui-gallery-code-editor-word-gate-soft-wrap-viewport",
+                            )
+                            .into_element(cx);
                     cx.container(
                         decl_style::container_props(
                             theme,

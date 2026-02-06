@@ -1300,6 +1300,70 @@ mod word_boundary_tests {
             ("foo-1 bar-".len(), "foo-1 bar-99".len())
         );
     }
+
+    #[test]
+    fn unicode_word_selection_aligns_with_unicode_word_indices_across_scripts() {
+        let cjk = "\u{4F60}\u{597D}";
+        let arabic = "\u{0645}\u{0631}\u{062D}\u{0628}\u{0627}";
+        let text = format!("alpha {cjk} beta {arabic}");
+        let words: Vec<(usize, usize)> = text
+            .unicode_word_indices()
+            .map(|(start, word)| (start, start + word.len()))
+            .collect();
+        assert!(
+            !words.is_empty(),
+            "expected unicode_word_indices to produce at least one word"
+        );
+
+        for &(start, end) in &words {
+            assert_eq!(
+                utf8::select_word_range(&text, start, TextBoundaryMode::UnicodeWord),
+                (start, end)
+            );
+            let next = utf8::next_grapheme_boundary(&text, start);
+            if next < end {
+                assert_eq!(
+                    utf8::select_word_range(&text, next, TextBoundaryMode::UnicodeWord),
+                    (start, end)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn identifier_mode_keeps_unicode_letters_digits_and_underscore_together() {
+        let first = "\u{53D8}\u{91CF}_foo42";
+        let second = "\u{03BB}x_1";
+        let text = format!("{first} {second}");
+
+        let idx_first = text.find("foo").expect("expected first identifier") + 1;
+        assert_eq!(
+            utf8::select_word_range(&text, idx_first, TextBoundaryMode::Identifier),
+            (0, first.len())
+        );
+
+        let second_start = first.len() + 1;
+        let idx_second = second_start + second.find('x').expect("expected x in second identifier");
+        assert_eq!(
+            utf8::select_word_range(&text, idx_second, TextBoundaryMode::Identifier),
+            (second_start, text.len())
+        );
+
+        let after_first = utf8::move_word_right(&text, 0, TextBoundaryMode::Identifier);
+        assert_eq!(after_first, first.len());
+
+        let after_second = utf8::move_word_right(&text, after_first, TextBoundaryMode::Identifier);
+        assert_eq!(after_second, text.len());
+
+        let before_second = utf8::move_word_left(&text, text.len(), TextBoundaryMode::Identifier);
+        assert_eq!(before_second, second_start);
+
+        let before_first = utf8::move_word_left(&text, before_second, TextBoundaryMode::Identifier);
+        assert_eq!(before_first, first.len());
+
+        let at_start = utf8::move_word_left(&text, before_first, TextBoundaryMode::Identifier);
+        assert_eq!(at_start, 0);
+    }
 }
 
 #[cfg(test)]

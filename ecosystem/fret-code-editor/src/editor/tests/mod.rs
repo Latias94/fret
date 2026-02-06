@@ -460,6 +460,86 @@ fn a11y_window_includes_preedit_and_reports_composition_range() {
 }
 
 #[test]
+fn a11y_window_maps_offsets_back_to_buffer_selection_with_preedit() {
+    let handle = CodeEditorHandle::new("hello");
+    {
+        let mut st = handle.state.borrow_mut();
+        st.selection = Selection {
+            anchor: 0,
+            focus: 0,
+        };
+        st.preedit = Some(PreeditState {
+            text: "AB".to_string(),
+            cursor: Some((2, 2)),
+        });
+    }
+
+    let st = handle.state.borrow();
+    let (value, _selection, composition) = a11y_composed_text_window(&st);
+    assert_eq!(value.as_str(), "ABhello");
+    assert_eq!(composition, Some((0, 2)));
+
+    let text_len = st.buffer.len_bytes();
+    let caret = st
+        .buffer
+        .clamp_to_char_boundary_left(st.selection.caret().min(text_len));
+    let (start, end) = a11y_text_window_bounds(&st.buffer, caret);
+
+    let mapped = map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 3);
+    assert_eq!(
+        mapped, 1,
+        "display offset after preedit should map into base text"
+    );
+
+    let inside_preedit =
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, 1);
+    assert_eq!(
+        inside_preedit, 0,
+        "display offset inside preedit snaps to insertion caret"
+    );
+
+    let clamped_end =
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, 2, u32::MAX);
+    assert_eq!(clamped_end, st.buffer.len_bytes());
+}
+
+#[test]
+fn a11y_preedit_offset_mapping_honors_window_start() {
+    let handle = CodeEditorHandle::new("0123456789");
+    let st = handle.state.borrow();
+
+    let start = 2;
+    let end = 8;
+    let caret = 5;
+    let preedit_len = 2;
+
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 0),
+        start
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 3),
+        caret
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 4),
+        caret
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 5),
+        caret
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 6),
+        caret + 1
+    );
+    assert_eq!(
+        map_a11y_offset_to_buffer_with_preedit(&st.buffer, start, end, caret, preedit_len, 7),
+        caret + 2
+    );
+}
+
+#[test]
 fn pointer_down_double_click_selects_word_and_cancels_preedit() {
     let handle = CodeEditorHandle::new("foo_bar baz");
     {
@@ -764,6 +844,73 @@ fn move_word_right_respects_text_boundary_mode_for_apostrophe() {
             3,
             "Identifier should split \"can't\" around the apostrophe"
         );
+    }
+}
+
+#[test]
+fn pointer_down_double_click_matches_identifier_boundary_under_soft_wrap_for_mixed_scripts() {
+    let mixed_identifier = format!("{}_foo42", "\u{53D8}\u{91CF}");
+    let text = format!("can't {mixed_identifier}.bar");
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
+    handle.set_soft_wrap_cols(Some(6));
+
+    let mut st = handle.state.borrow_mut();
+    st.preedit = Some(PreeditState {
+        text: "AB".to_string(),
+        cursor: Some((2, 2)),
+    });
+
+    let caret = text.find("foo42").expect("expected mixed identifier token") + 1;
+    let row = st.display_map.byte_to_display_point(&st.buffer, caret).row;
+    let (expect_start, expect_end) =
+        select_word_range_in_buffer(&st.buffer, caret, st.active_text_boundary_mode);
+
+    input::apply_pointer_down_selection(&mut st, row, caret, 2, false);
+
+    let selected = st
+        .buffer
+        .slice_to_string(expect_start..expect_end)
+        .unwrap_or_default();
+    assert_eq!(st.preedit, None);
+    assert_eq!(selected.as_str(), mixed_identifier.as_str());
+    assert_eq!(
+        st.selection,
+        Selection {
+            anchor: expect_start,
+            focus: expect_end,
+        }
+    );
+}
+
+#[test]
+fn move_word_navigation_uses_same_boundaries_under_soft_wrap_with_punctuation() {
+    let text = format!("can't {}_foo42.bar", "\u{53D8}\u{91CF}");
+    let handle = CodeEditorHandle::new(text.as_str());
+    handle.set_text_boundary_mode(TextBoundaryMode::Identifier);
+    handle.set_soft_wrap_cols(Some(5));
+
+    let mut st = handle.state.borrow_mut();
+    st.selection = Selection {
+        anchor: 0,
+        focus: 0,
+    };
+
+    let mut expected = 0usize;
+    for _ in 0..4 {
+        expected = move_word_right_in_buffer(&st.buffer, expected, st.active_text_boundary_mode)
+            .min(st.buffer.len_bytes());
+        assert!(input::move_word(&mut st, 1, false));
+        assert_eq!(st.selection.anchor, st.selection.focus);
+        assert_eq!(st.selection.caret(), expected);
+    }
+
+    for _ in 0..4 {
+        expected = move_word_left_in_buffer(&st.buffer, expected, st.active_text_boundary_mode)
+            .min(st.buffer.len_bytes());
+        assert!(input::move_word(&mut st, -1, false));
+        assert_eq!(st.selection.anchor, st.selection.focus);
+        assert_eq!(st.selection.caret(), expected);
     }
 }
 

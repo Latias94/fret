@@ -156,24 +156,24 @@ pub(super) struct BundleStatsReport {
     snapshots_with_propagated_model_changes: u32,
     snapshots_with_propagated_global_changes: u32,
     pub(super) snapshots_with_hover_layout_invalidations: u32,
-    /// Whether the bundle includes `pointer.move` events (so the derived “pointer move” frame set
+    /// Whether the bundle includes `pointer.move` events (so the derived "pointer move" frame set
     /// can be identified from the event log rather than inferred from dispatch-only frames).
     pub(super) pointer_move_frames_present: bool,
-    /// Count of snapshots in the derived “pointer move” (or fallback) frame set.
+    /// Count of snapshots in the derived "pointer move" (or fallback) frame set.
     pub(super) pointer_move_frames_considered: u32,
-    /// Max dispatch time (us) across the derived “pointer move” (or fallback) frame set.
+    /// Max dispatch time (us) across the derived "pointer move" (or fallback) frame set.
     pub(super) pointer_move_max_dispatch_time_us: u64,
     /// Snapshot identity for `pointer_move_max_dispatch_time_us`.
     pub(super) pointer_move_max_dispatch_window: u64,
     pub(super) pointer_move_max_dispatch_tick_id: u64,
     pub(super) pointer_move_max_dispatch_frame_id: u64,
-    /// Max hit-test time (us) across the derived “pointer move” (or fallback) frame set.
+    /// Max hit-test time (us) across the derived "pointer move" (or fallback) frame set.
     pub(super) pointer_move_max_hit_test_time_us: u64,
     /// Snapshot identity for `pointer_move_max_hit_test_time_us`.
     pub(super) pointer_move_max_hit_test_window: u64,
     pub(super) pointer_move_max_hit_test_tick_id: u64,
     pub(super) pointer_move_max_hit_test_frame_id: u64,
-    /// Number of snapshots within the derived “pointer move” (or fallback) frame set that had
+    /// Number of snapshots within the derived "pointer move" (or fallback) frame set that had
     /// propagated global changes (`debug.stats.global_change_globals > 0`).
     pub(super) pointer_move_snapshots_with_global_changes: u32,
     sum_layout_time_us: u64,
@@ -2931,7 +2931,7 @@ fn semantics_diff_summary(before: &serde_json::Value, after: &serde_json::Value)
 }
 
 fn semantics_node_score_json(node: &serde_json::Value) -> u64 {
-    // Higher is “more useful for debugging”.
+    // Higher is "more useful for debugging".
     let mut score: u64 = 0;
     if node.get("test_id").and_then(|v| v.as_str()).is_some() {
         score += 10_000;
@@ -10105,7 +10105,10 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
     bundle_path: &Path,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    const VIEWPORT_TEST_ID: &str = "ui-gallery-code-editor-word-gate-viewport";
+    const VIEWPORT_TEST_IDS: [&str; 2] = [
+        "ui-gallery-code-editor-word-gate-viewport",
+        "ui-gallery-code-editor-word-gate-soft-wrap-viewport",
+    ];
 
     let windows = bundle
         .get("windows")
@@ -10140,12 +10143,6 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
             }
             examined_snapshots = examined_snapshots.saturating_add(1);
 
-            let viewport_node_id = semantics_node_id_for_test_id(s, VIEWPORT_TEST_ID);
-            let Some(viewport_node_id) = viewport_node_id else {
-                continue;
-            };
-            matched_snapshots = matched_snapshots.saturating_add(1);
-
             let nodes = s
                 .get("debug")
                 .and_then(|v| v.get("semantics"))
@@ -10158,95 +10155,105 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
             }
 
             let parents = semantics_parent_map(s);
-
-            let mut cur = viewport_node_id;
-            let mut text_field: Option<&serde_json::Value> = None;
-            for _ in 0..128 {
-                let node = nodes
-                    .iter()
-                    .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
-                let Some(node) = node else {
-                    break;
+            for viewport_test_id in VIEWPORT_TEST_IDS {
+                let Some(viewport_node_id) = semantics_node_id_for_test_id(s, viewport_test_id)
+                else {
+                    continue;
                 };
-                if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
-                    text_field = Some(node);
-                    break;
+                matched_snapshots = matched_snapshots.saturating_add(1);
+
+                let mut cur = viewport_node_id;
+                let mut text_field: Option<&serde_json::Value> = None;
+                for _ in 0..128 {
+                    let node = nodes
+                        .iter()
+                        .find(|n| n.get("id").and_then(|v| v.as_u64()) == Some(cur));
+                    let Some(node) = node else {
+                        break;
+                    };
+                    if node.get("role").and_then(|v| v.as_str()) == Some("text_field") {
+                        text_field = Some(node);
+                        break;
+                    }
+                    let Some(parent) = parents.get(&cur).copied() else {
+                        break;
+                    };
+                    cur = parent;
                 }
-                let Some(parent) = parents.get(&cur).copied() else {
-                    break;
+
+                let Some(text_field) = text_field else {
+                    continue;
                 };
-                cur = parent;
-            }
 
-            let Some(text_field) = text_field else {
-                continue;
-            };
-
-            let text_selection = text_field.get("text_selection");
-            let selection = text_selection.and_then(|v| {
-                if let Some(arr) = v.as_array()
-                    && arr.len() == 2
-                {
-                    let a = arr[0].as_u64()?;
-                    let b = arr[1].as_u64()?;
-                    return Some((a, b));
-                }
-                if let Some(obj) = v.as_object() {
-                    let a = obj.get("anchor").and_then(|v| v.as_u64())?;
-                    let b = obj.get("focus").and_then(|v| v.as_u64())?;
-                    return Some((a, b));
-                }
-                None
-            });
-
-            let focused = text_field
-                .get("flags")
-                .and_then(|v| v.get("focused"))
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-
-            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
-            last_observed = Some(serde_json::json!({
-                "window": window_id,
-                "tick_id": tick_id,
-                "frame_id": frame_id,
-                "viewport_node": viewport_node_id,
-                "text_field_node": cur,
-                "focused": focused,
-                "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
-                "state": state,
-            }));
-
-            let Some((anchor, caret)) = selection else {
-                continue;
-            };
-            if anchor != caret {
-                continue;
-            }
-            let caret = caret;
-
-            match state {
-                0 => {
-                    if caret == 0 {
-                        state = 1;
+                let text_selection = text_field.get("text_selection");
+                let selection = text_selection.and_then(|v| {
+                    if let Some(arr) = v.as_array()
+                        && arr.len() == 2
+                    {
+                        let a = arr[0].as_u64()?;
+                        let b = arr[1].as_u64()?;
+                        return Some((a, b));
                     }
-                }
-                1 => {
-                    if caret == 3 {
-                        state = 2;
+                    if let Some(obj) = v.as_object() {
+                        let a = obj.get("anchor").and_then(|v| v.as_u64())?;
+                        let b = obj.get("focus").and_then(|v| v.as_u64())?;
+                        return Some((a, b));
                     }
+                    None
+                });
+
+                let focused = text_field
+                    .get("flags")
+                    .and_then(|v| v.get("focused"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+
+                let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+                last_observed = Some(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "viewport_test_id": viewport_test_id,
+                    "viewport_node": viewport_node_id,
+                    "text_field_node": cur,
+                    "focused": focused,
+                    "text_selection": selection.map(|(a,b)| serde_json::json!([a,b])),
+                    "state": state,
+                }));
+
+                let Some((mut a, mut b)) = selection else {
+                    continue;
+                };
+                if !focused {
+                    continue;
                 }
-                2 => {
-                    if caret == 0 {
-                        state = 3;
+                if a > b {
+                    std::mem::swap(&mut a, &mut b);
+                }
+
+                match state {
+                    0 => {
+                        if a == 0 && b == 0 {
+                            state = 1;
+                        }
                     }
-                }
-                3 => {
-                    if caret == 5 {
-                        state = 4;
+                    1 => {
+                        if (a == 3 && b == 3) || (a == 0 && b == 3) || (a == 4 && b == 5) {
+                            state = 2;
+                        }
                     }
+                    2 => {
+                        if a == 0 && b == 0 {
+                            state = 3;
+                        }
+                    }
+                    3 => {
+                        if (a == 5 && b == 5) || (a == 0 && b == 5) {
+                            state = 4;
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
     }
@@ -10265,19 +10272,20 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
         "matched_snapshots": matched_snapshots,
         "state": state,
         "last_observed": last_observed,
-        "viewport_test_id": VIEWPORT_TEST_ID,
+        "viewport_test_ids": VIEWPORT_TEST_IDS,
         "expected_sequence": [
-            {"anchor":0,"caret":0},
-            {"anchor":3,"caret":3},
-            {"anchor":0,"caret":0},
-            {"anchor":5,"caret":5}
+            {"selection":[0,0]},
+            {"selection_any_of":[[3,3],[0,3],[4,5]]},
+            {"selection":[0,0]},
+            {"selection_any_of":[[5,5],[0,5]]}
         ],
     });
     write_json_value(&evidence_path, &payload)?;
 
     if matched_snapshots == 0 {
         return Err(format!(
-            "ui-gallery code-editor word-boundary gate requires semantics snapshots with viewport test_id={VIEWPORT_TEST_ID} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            "ui-gallery code-editor word-boundary gate requires semantics snapshots with viewport test_ids={:?} after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            VIEWPORT_TEST_IDS,
             bundle_path.display(),
             evidence_path.display()
         ));
@@ -10288,7 +10296,7 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary_json(
     }
 
     Err(format!(
-        "ui-gallery code-editor word-boundary gate failed (expected caret sequence 0 -> 3 -> 0 -> 5 for can't)\n  bundle: {}\n  evidence: {}",
+        "ui-gallery code-editor word-boundary gate failed (expected selection sequence [0,0] -> [3,3]/[0,3]/[4,5] -> [0,0] -> [5,5]/[0,5] for can't)\n  bundle: {}\n  evidence: {}",
         bundle_path.display(),
         evidence_path.display()
     ))

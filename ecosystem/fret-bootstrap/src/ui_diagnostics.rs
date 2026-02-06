@@ -1034,7 +1034,11 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
-            UiActionStepV2::Click { target, button } => {
+            UiActionStepV2::Click {
+                target,
+                button,
+                click_count,
+            } => {
                 let Some(snapshot) = semantics_snapshot else {
                     output.request_redraw = true;
                     let label = format!("script-step-{step_index:04}-click-no-semantics");
@@ -1080,7 +1084,7 @@ impl UiDiagnosticsService {
                 };
 
                 let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                output.events.extend(click_events(pos, button));
+                output.events.extend(click_events(pos, button, click_count));
 
                 active.wait_until = None;
                 active.screenshot_wait = None;
@@ -1609,7 +1613,7 @@ impl UiDiagnosticsService {
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
-                                    .extend(click_events(pos, UiMouseButtonV1::Left));
+                                    .extend(click_events(pos, UiMouseButtonV1::Left, 1));
                                 state.phase = 2;
                                 active.v2_step_state = Some(V2StepState::TypeTextInto(state));
                                 output.request_redraw = true;
@@ -1697,7 +1701,7 @@ impl UiDiagnosticsService {
                                     center_of_rect_clamped_to_rect(node.bounds, window_bounds);
                                 output
                                     .events
-                                    .extend(click_events(pos, UiMouseButtonV1::Left));
+                                    .extend(click_events(pos, UiMouseButtonV1::Left, 1));
                                 state.phase = 2;
                                 active.v2_step_state = Some(V2StepState::MenuSelect(state));
                                 output.request_redraw = true;
@@ -1739,7 +1743,7 @@ impl UiDiagnosticsService {
                                 let pos = center_of_rect(node.bounds);
                                 output
                                     .events
-                                    .extend(click_events(pos, UiMouseButtonV1::Left));
+                                    .extend(click_events(pos, UiMouseButtonV1::Left, 1));
                                 active.v2_step_state = None;
                                 active.next_step = active.next_step.saturating_add(1);
                                 output.request_redraw = true;
@@ -3516,6 +3520,8 @@ pub enum UiActionStepV1 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(default = "default_click_count")]
+        click_count: u8,
     },
     ResetDiagnostics,
     MovePointer {
@@ -3581,6 +3587,8 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(default = "default_click_count")]
+        click_count: u8,
     },
     ResetDiagnostics,
     MovePointer {
@@ -3717,7 +3725,15 @@ pub enum UiActionStepV2 {
 impl From<UiActionStepV1> for UiActionStepV2 {
     fn from(value: UiActionStepV1) -> Self {
         match value {
-            UiActionStepV1::Click { target, button } => Self::Click { target, button },
+            UiActionStepV1::Click {
+                target,
+                button,
+                click_count,
+            } => Self::Click {
+                target,
+                button,
+                click_count,
+            },
             UiActionStepV1::ResetDiagnostics => Self::ResetDiagnostics,
             UiActionStepV1::MovePointer { target } => Self::MovePointer { target },
             UiActionStepV1::DragPointer {
@@ -3775,6 +3791,10 @@ impl From<UiActionStepV1> for UiActionStepV2 {
 
 fn default_drag_steps() -> u32 {
     8
+}
+
+fn default_click_count() -> u8 {
+    1
 }
 
 fn default_move_frames_per_step() -> u32 {
@@ -9129,10 +9149,11 @@ fn wheel_event(position: Point, delta_x: f32, delta_y: f32) -> Event {
     })
 }
 
-fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
+fn click_events(position: Point, button: UiMouseButtonV1, click_count: u8) -> [Event; 3] {
     let pointer_id = PointerId(0);
     let modifiers = Modifiers::default();
     let pointer_type = PointerType::Mouse;
+    let click_count = click_count.max(1);
 
     let move_event = Event::Pointer(PointerEvent::Move {
         pointer_id,
@@ -9151,7 +9172,7 @@ fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
         position,
         button,
         modifiers,
-        click_count: 1,
+        click_count,
         pointer_type,
     });
     let up = Event::Pointer(PointerEvent::Up {
@@ -9160,7 +9181,7 @@ fn click_events(position: Point, button: UiMouseButtonV1) -> [Event; 3] {
         button,
         modifiers,
         is_click: true,
-        click_count: 1,
+        click_count,
         pointer_type,
     });
 
