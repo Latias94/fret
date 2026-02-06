@@ -77,6 +77,8 @@ pub mod skeleton;
 pub mod slider;
 pub mod sonner;
 pub mod spinner;
+#[cfg(any(feature = "state-selector", feature = "state-query"))]
+pub mod state;
 pub mod switch;
 pub mod table;
 pub mod tabs;
@@ -300,6 +302,11 @@ pub mod prelude {
         Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
     };
     pub use crate::{decl_style, icon, stack, ui};
+
+    #[cfg(feature = "state-selector")]
+    pub use crate::state::use_selector_badge;
+    #[cfg(feature = "state-query")]
+    pub use crate::state::{query_error_alert, query_status_badge};
 
     pub use fret_core::{AppWindowId, Px, TextOverflow, TextWrap, UiServices};
     pub use fret_icons::IconId;

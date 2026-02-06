@@ -9,6 +9,7 @@ Related ADR:
 Related guidance:
 
 - `docs/workstreams/state-management-v1-extension-contract.md`
+- `docs/workstreams/component-ecosystem-state-integration-v1.md`
 
 This workstream defines a practical, editor-grade “state management story” for Fret apps and
 ecosystem crates, without collapsing kernel boundaries.

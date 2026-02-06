@@ -11,8 +11,12 @@ documentation.workspace = true
 
 [features]
 default = []
-query = ["fret-authoring/query"]
-selector = ["fret-authoring/selector"]
+state-query = ["fret-authoring/query"]
+state-selector = ["fret-authoring/selector"]
+state = ["state-selector", "state-query"]
+# Backward-compatible aliases (to be deprecated later)
+query = ["state-query"]
+selector = ["state-selector"]
 
 [dependencies]
 fret-authoring = { path = "../fret-authoring" }
