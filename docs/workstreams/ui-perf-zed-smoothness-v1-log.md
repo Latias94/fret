@@ -4134,3 +4134,27 @@ Results (from the 247 snapshots captured in the `script-step-0011-press_key` bun
 Interpretation:
 - This was not a renderer encode or text-prepare bottleneck; it was CPU-side allocation churn in the editor paint path.
 - The “Zed feel” gap is often dominated by allocation discipline, not just caching algorithms.
+
+## 2026-02-06 11:14:00 (commit `0d8ad27ac`)
+
+Change:
+- Refresh the `ui-gallery-steady` baseline after the post-merge editor regression fix.
+
+Suite:
+- `ui-gallery-steady`
+
+Command:
+```powershell
+cargo run -p fretboard -- diag perf ui-gallery-steady --repeat 7 --warmup-frames 5 --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json --perf-baseline-headroom-pct 30 --dir target/fret-diag-codex-perf-v9 --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Perf baseline snapshot:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json`
+- Worst overall script in the run: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us=24017`
+  - Evidence bundle: `target/fret-diag-codex-perf-v9/1770347631408-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Notable drift vs v8 (max `top_total_time_us`):
+- `ui-gallery-dialog-escape-focus-restore-steady`: `3392 → 6947` (no obvious related code change; likely noise due to
+  per-run process launches + warmup settings; consider re-running with `--reuse-launch` for a steadier baseline).
+- `ui-gallery-window-resize-stress-steady`: `25156 → 24017`

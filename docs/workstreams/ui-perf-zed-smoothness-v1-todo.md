@@ -44,8 +44,8 @@ Conventions:
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v7.json` (see perf log entry).
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v8.json` (post-merge snapshot;
     evidence + drift notes in the perf log entry for commit `72e6c32df`).
-  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json` (planned: refresh after the
-    post-merge editor regression fix; commit `0d8ad27ac`).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v9.json` (refresh after the
+    post-merge editor regression fix; evidence + drift notes in the perf log entry for commit `0d8ad27ac`).
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
 - [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
