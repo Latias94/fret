@@ -75,6 +75,7 @@ Core suites (code pointers):
 - Viewport helpers + setViewport semantics: `ecosystem/fret-node/src/ui/canvas/widget/tests/set_viewport_conformance.rs`
 - Fit-view invariants: `ecosystem/fret-node/src/ui/canvas/widget/tests/fit_view_options_conformance.rs`
 - Portal safety (pointer/keyboard passthrough): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_keyboard_conformance.rs`
+- Portal measurement → internals integration: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
 - Paint cache/perf guardrails: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs`, `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`
 
 ## Scope (what “parity” means here)

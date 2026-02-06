@@ -430,6 +430,7 @@ canonical data flow and invalidation boundaries:
     - Portal measurement source publishes growth-only node size hints:
       - `NodeGraphPortalHost` in `ecosystem/fret-node/src/ui/portal.rs`
       - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
+      - Integration conformance (canvas observes portal measurement on next paint): `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
   - TODO: extend measurement sources:
     - canvas-rendered node chrome geometry (ports, header/body)
     - portal-provided port anchor bounds (if/when portals render custom handles)

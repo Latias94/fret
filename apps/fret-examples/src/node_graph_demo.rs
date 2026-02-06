@@ -50,12 +50,12 @@ use fret_node::ui::presenter::{
 use fret_node::ui::style::{NodeGraphBackgroundPattern, NodeGraphStyle};
 use fret_node::ui::{
     MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
-    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphControlsOverlay,
-    NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel, NodeGraphPanelPosition,
-    NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphToolbarAlign,
-    NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
+    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphBlackboardOverlay,
+    NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphEdgeToolbar, NodeGraphEdgeTypes,
+    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
+    NodeGraphNodeToolbar, NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState,
+    NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    NodeGraphToolbarAlign, NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
     PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
     register_node_graph_commands,
 };
@@ -88,6 +88,7 @@ const CMD_SPAWN_STRESS_10K: &str = "node_graph_demo.spawn_stress_10k";
 const CMD_UPGRADE_GRAPH: &str = "node_graph_demo.upgrade_graph";
 const CMD_TOGGLE_HELP_OVERLAY: &str = "node_graph_demo.toggle_help_overlay";
 const CMD_TOGGLE_TOOLBARS: &str = "node_graph_demo.toggle_toolbars";
+const CMD_TOGGLE_BLACKBOARD_OVERLAY: &str = "node_graph_demo.toggle_blackboard_overlay";
 const CMD_TOGGLE_CONTROLS_PLACEMENT: &str = "node_graph_demo.toggle_controls_placement";
 const CMD_TOGGLE_MINIMAP_PLACEMENT: &str = "node_graph_demo.toggle_minimap_placement";
 const WEIRD_KIND: &str = "demo.weird_layout";
@@ -129,6 +130,7 @@ impl NodeGraphDemoStyleState {
 struct NodeGraphDemoOverlayToggles {
     show_help: AtomicBool,
     show_toolbars: AtomicBool,
+    show_blackboard: AtomicBool,
     controls_in_panel: AtomicBool,
     minimap_in_panel: AtomicBool,
 }
@@ -138,6 +140,7 @@ impl NodeGraphDemoOverlayToggles {
         Self {
             show_help: AtomicBool::new(true),
             show_toolbars: AtomicBool::new(true),
+            show_blackboard: AtomicBool::new(true),
             controls_in_panel: AtomicBool::new(true),
             minimap_in_panel: AtomicBool::new(true),
         }
@@ -149,6 +152,10 @@ impl NodeGraphDemoOverlayToggles {
 
     fn show_toolbars(&self) -> bool {
         self.show_toolbars.load(Ordering::Relaxed)
+    }
+
+    fn show_blackboard(&self) -> bool {
+        self.show_blackboard.load(Ordering::Relaxed)
     }
 
     fn controls_in_panel(&self) -> bool {
@@ -166,6 +173,11 @@ impl NodeGraphDemoOverlayToggles {
     fn toggle_show_toolbars(&self) {
         self.show_toolbars
             .store(!self.show_toolbars(), Ordering::Relaxed);
+    }
+
+    fn toggle_show_blackboard(&self) {
+        self.show_blackboard
+            .store(!self.show_blackboard(), Ordering::Relaxed);
     }
 
     fn toggle_controls_placement(&self) {
@@ -1515,6 +1527,19 @@ impl NodeGraphDemoDriver {
             None
         };
 
+        let blackboard_node = if toggles.show_blackboard() {
+            Some(ui.create_node_retained(NodeGraphBlackboardOverlay::new(
+                models.graph.clone(),
+                models.view.clone(),
+                models.edits.clone(),
+                models.overlays.clone(),
+                canvas_node,
+                style.clone(),
+            )))
+        } else {
+            None
+        };
+
         let minimap_node = if toggles.minimap_in_panel() {
             let minimap_overlay = NodeGraphMiniMapOverlay::new(
                 canvas_node,
@@ -1579,8 +1604,7 @@ impl NodeGraphDemoDriver {
         };
 
         let root = ui.create_node_retained(NodeGraphEditor::new());
-        let mut children: Vec<fret_core::NodeId> =
-            vec![canvas_node, portal_node, tuning_node, overlay_node];
+        let mut children: Vec<fret_core::NodeId> = vec![canvas_node, portal_node, tuning_node];
         if let Some(n) = controls_node {
             children.push(n);
         }
@@ -1596,6 +1620,12 @@ impl NodeGraphDemoDriver {
         if let Some(n) = help_node {
             children.push(n);
         }
+        if let Some(n) = blackboard_node {
+            children.push(n);
+        }
+        // Overlay host (TextInput-backed rename UI) should be last so it can appear above other
+        // editor overlays when active.
+        children.push(overlay_node);
         ui.set_children(root, children);
         ui.set_root(root);
 
@@ -1838,6 +1868,16 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_show_toolbars();
+            *state = Self::build_ui(app, window);
+            app.request_redraw(window);
+            return;
+        }
+
+        if command.as_str() == CMD_TOGGLE_BLACKBOARD_OVERLAY {
+            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+                return;
+            };
+            toggles.toggle_show_blackboard();
             *state = Self::build_ui(app, window);
             app.request_redraw(window);
             return;
@@ -2285,6 +2325,53 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
     );
 
     registry.register(
+        CommandId::new(CMD_TOGGLE_BLACKBOARD_OVERLAY),
+        CommandMeta::new("Toggle Blackboard Overlay (Symbols)")
+            .with_category("Demo")
+            .with_keywords(["blackboard", "symbols", "variables", "overlay"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                kb(
+                    PlatformFilter::Macos,
+                    KeyCode::KeyB,
+                    Modifiers {
+                        meta: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Windows,
+                    KeyCode::KeyB,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Linux,
+                    KeyCode::KeyB,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+                kb(
+                    PlatformFilter::Web,
+                    KeyCode::KeyB,
+                    Modifiers {
+                        ctrl: true,
+                        shift: true,
+                        ..Default::default()
+                    },
+                ),
+            ]),
+    );
+
+    registry.register(
         CommandId::new(CMD_TOGGLE_CONTROLS_PLACEMENT),
         CommandMeta::new("Toggle Controls Placement (Panel vs Floating)")
             .with_category("Demo")
@@ -2555,7 +2642,7 @@ struct DemoHelpOverlay {
 impl DemoHelpOverlay {
     const PAD_PX: f32 = 10.0;
     const WIDTH_PX: f32 = 360.0;
-    const HEIGHT_PX: f32 = 196.0;
+    const HEIGHT_PX: f32 = 226.0;
 
     fn new(style: NodeGraphStyle, toggles: Arc<NodeGraphDemoOverlayToggles>) -> Self {
         Self {
@@ -2625,6 +2712,11 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
         } else {
             "Off"
         };
+        let blackboard = if self.toggles.show_blackboard() {
+            "On"
+        } else {
+            "Off"
+        };
 
         let mut lines: Vec<String> = vec![
             "NodeGraph demo (built-ins):".to_string(),
@@ -2633,12 +2725,13 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
             "• NodeToolbar + EdgeToolbar overlays (selection-driven)".to_string(),
             "• Background patterns: Cmd/Ctrl+B".to_string(),
             "• Toggle help: Cmd/Ctrl+H; toolbars: Cmd/Ctrl+T".to_string(),
+            "• Toggle blackboard (symbols): Cmd/Ctrl+Shift+B".to_string(),
             "• Toggle placement: Cmd/Ctrl+Shift+C (controls), Cmd/Ctrl+Shift+M (minimap)"
                 .to_string(),
             "• Log internals: Cmd/Ctrl+I; measured stores: Cmd/Ctrl+M".to_string(),
         ];
         lines.push(format!(
-            "• Current: controls={controls}, minimap={minimap}, toolbars={toolbars}"
+            "• Current: controls={controls}, minimap={minimap}, toolbars={toolbars}, blackboard={blackboard}"
         ));
 
         let mut cy = rect.origin.y.0 + Self::PAD_PX;
