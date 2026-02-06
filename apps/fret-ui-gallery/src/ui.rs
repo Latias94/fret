@@ -672,6 +672,7 @@ fn page_preview(
         PAGE_WEB_IME_HARNESS => preview_web_ime_harness(cx, theme, text_input, text_area),
         PAGE_CHART_TORTURE => preview_chart_torture(cx, theme),
         PAGE_CANVAS_CULL_TORTURE => preview_canvas_cull_torture(cx, theme),
+        PAGE_NODE_GRAPH_CULL_TORTURE => preview_node_graph_cull_torture(cx, theme),
         PAGE_CHROME_TORTURE => preview_chrome_torture(
             cx,
             theme,
@@ -4319,13 +4320,14 @@ fn preview_text_measure_overlay(
 
 fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Vec<AnyElement> {
     use delinea::data::{Column, DataTable};
-    use delinea::engine::ChartEngine;
     use delinea::{
         AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisRange, AxisScale,
         ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
         TimeAxisScale,
     };
-    use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
+    use fret_chart::ChartCanvas;
+    use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+    use fret_ui::retained_bridge::RetainedSubtreeProps;
 
     let header = stack::vstack(
         cx,
@@ -4340,150 +4342,133 @@ fn preview_chart_torture(cx: &mut ElementContext<'_, App>, _theme: &Theme) -> Ve
         },
     );
 
-    struct EngineState {
-        model: Option<Model<ChartEngine>>,
-        spec: Option<ChartSpec>,
-    }
+    let chart =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            let dataset_id = delinea::ids::DatasetId::new(1);
+            let grid_id = delinea::ids::GridId::new(1);
+            let x_axis = delinea::AxisId::new(1);
+            let y_axis = delinea::AxisId::new(2);
+            let series_id = delinea::ids::SeriesId::new(1);
+            let x_field = delinea::FieldId::new(1);
+            let y_field = delinea::FieldId::new(2);
 
-    impl Default for EngineState {
-        fn default() -> Self {
-            Self {
-                model: None,
-                spec: None,
-            }
-        }
-    }
-
-    let existing = cx.with_state(EngineState::default, |st| {
-        match (st.model.clone(), st.spec.clone()) {
-            (Some(engine), Some(spec)) => Some((engine, spec)),
-            _ => None,
-        }
-    });
-
-    let (engine, spec) = if let Some((engine, spec)) = existing {
-        (engine, spec)
-    } else {
-        let dataset_id = delinea::ids::DatasetId::new(1);
-        let grid_id = delinea::ids::GridId::new(1);
-        let x_axis = delinea::AxisId::new(1);
-        let y_axis = delinea::AxisId::new(2);
-        let series_id = delinea::ids::SeriesId::new(1);
-        let x_field = delinea::FieldId::new(1);
-        let y_field = delinea::FieldId::new(2);
-
-        let spec = ChartSpec {
-            id: delinea::ids::ChartId::new(1),
-            viewport: None,
-            datasets: vec![DatasetSpec {
-                id: dataset_id,
-                fields: vec![
-                    FieldSpec {
-                        id: x_field,
-                        column: 0,
+            let spec = ChartSpec {
+                id: delinea::ids::ChartId::new(1),
+                viewport: None,
+                datasets: vec![DatasetSpec {
+                    id: dataset_id,
+                    fields: vec![
+                        FieldSpec {
+                            id: x_field,
+                            column: 0,
+                        },
+                        FieldSpec {
+                            id: y_field,
+                            column: 1,
+                        },
+                    ],
+                }],
+                grids: vec![GridSpec { id: grid_id }],
+                axes: vec![
+                    delinea::AxisSpec {
+                        id: x_axis,
+                        name: Some("Time".to_string()),
+                        kind: AxisKind::X,
+                        grid: grid_id,
+                        position: None,
+                        scale: AxisScale::Time(TimeAxisScale),
+                        range: Some(AxisRange::Auto),
                     },
-                    FieldSpec {
-                        id: y_field,
-                        column: 1,
+                    delinea::AxisSpec {
+                        id: y_axis,
+                        name: Some("Value".to_string()),
+                        kind: AxisKind::Y,
+                        grid: grid_id,
+                        position: None,
+                        scale: Default::default(),
+                        range: Some(AxisRange::Auto),
                     },
                 ],
-            }],
-            grids: vec![GridSpec { id: grid_id }],
-            axes: vec![
-                delinea::AxisSpec {
-                    id: x_axis,
-                    name: Some("Time".to_string()),
-                    kind: AxisKind::X,
-                    grid: grid_id,
-                    position: None,
-                    scale: AxisScale::Time(TimeAxisScale),
-                    range: Some(AxisRange::Auto),
+                data_zoom_x: vec![],
+                data_zoom_y: vec![],
+                tooltip: None,
+                axis_pointer: Some(AxisPointerSpec {
+                    enabled: true,
+                    trigger: AxisPointerTrigger::Axis,
+                    pointer_type: AxisPointerType::Line,
+                    label: Default::default(),
+                    snap: false,
+                    trigger_distance_px: 12.0,
+                    throttle_px: 0.75,
+                }),
+                visual_maps: vec![],
+                series: vec![SeriesSpec {
+                    id: series_id,
+                    name: Some("Series".to_string()),
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                }],
+            };
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Px(Px(520.0));
+
+            let props = RetainedSubtreeProps::new::<App>(move |ui| {
+                use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+
+                let mut canvas =
+                    ChartCanvas::new(spec.clone()).expect("chart spec should be valid");
+                canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
+
+                let base_ms = 1_735_689_600_000.0;
+                let interval_ms = 60_000.0;
+
+                let n = 200_000usize;
+                let mut x: Vec<f64> = Vec::with_capacity(n);
+                let mut y: Vec<f64> = Vec::with_capacity(n);
+                for i in 0..n {
+                    let t = i as f64 / (n - 1) as f64;
+                    let xi = base_ms + interval_ms * i as f64;
+                    let theta = t * std::f64::consts::TAU;
+                    let yi = (theta * 8.0).sin() * 0.8;
+                    x.push(xi);
+                    y.push(yi);
+                }
+
+                let mut table = DataTable::default();
+                table.push_column(Column::F64(x));
+                table.push_column(Column::F64(y));
+                canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+
+                let node = ui.create_node_retained(canvas);
+                ui.set_node_view_cache_flags(node, true, true, false);
+                node
+            })
+            .with_layout(layout);
+
+            let subtree = cx.retained_subtree(props);
+            vec![cx.semantics(
+                SemanticsProps {
+                    role: fret_core::SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-chart-torture-root")),
+                    ..Default::default()
                 },
-                delinea::AxisSpec {
-                    id: y_axis,
-                    name: Some("Value".to_string()),
-                    kind: AxisKind::Y,
-                    grid: grid_id,
-                    position: None,
-                    scale: Default::default(),
-                    range: Some(AxisRange::Auto),
-                },
-            ],
-            data_zoom_x: vec![],
-            data_zoom_y: vec![],
-            tooltip: None,
-            axis_pointer: Some(AxisPointerSpec {
-                enabled: true,
-                trigger: AxisPointerTrigger::Axis,
-                pointer_type: AxisPointerType::Line,
-                label: Default::default(),
-                snap: false,
-                trigger_distance_px: 12.0,
-                throttle_px: 0.75,
-            }),
-            visual_maps: vec![],
-            series: vec![SeriesSpec {
-                id: series_id,
-                name: Some("Series".to_string()),
-                kind: SeriesKind::Line,
-                dataset: dataset_id,
-                encode: SeriesEncode {
-                    x: x_field,
-                    y: y_field,
-                    y2: None,
-                },
-                x_axis,
-                y_axis,
-                stack: None,
-                stack_strategy: Default::default(),
-                bar_layout: Default::default(),
-                area_baseline: None,
-                lod: None,
-            }],
-        };
-
-        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
-
-        let base_ms = 1_735_689_600_000.0;
-        let interval_ms = 60_000.0;
-
-        let n = 200_000usize;
-        let mut x: Vec<f64> = Vec::with_capacity(n);
-        let mut y: Vec<f64> = Vec::with_capacity(n);
-        for i in 0..n {
-            let t = i as f64 / (n - 1) as f64;
-            let xi = base_ms + interval_ms * i as f64;
-            let theta = t * std::f64::consts::TAU;
-            let yi = (theta * 8.0).sin() * 0.8;
-            x.push(xi);
-            y.push(yi);
-        }
-
-        let mut table = DataTable::default();
-        table.push_column(Column::F64(x));
-        table.push_column(Column::F64(y));
-        engine.datasets_mut().insert(dataset_id, table);
-
-        let engine = cx.app.models_mut().insert(engine);
-        cx.with_state(EngineState::default, |st| {
-            st.model = Some(engine.clone());
-            st.spec = Some(spec.clone());
+                |_cx| vec![subtree],
+            )]
         });
-
-        (engine, spec)
-    };
-
-    cx.observe_model(&engine, Invalidation::Paint);
-
-    let mut props = ChartCanvasPanelProps::new(spec);
-    props.engine = Some(engine);
-    props.input_map = fret_chart::input_map::ChartInputMap::default();
-
-    let chart = chart_canvas_panel(cx, props).attach_semantics(
-        SemanticsDecoration::default()
-            .role(fret_core::SemanticsRole::Group)
-            .test_id("ui-gallery-chart-torture-root"),
-    );
 
     vec![header, chart]
 }
@@ -4655,6 +4640,311 @@ fn preview_canvas_cull_torture(cx: &mut ElementContext<'_, App>, theme: &Theme) 
         });
 
     vec![header, canvas]
+}
+
+fn preview_node_graph_cull_torture(
+    cx: &mut ElementContext<'_, App>,
+    _theme: &Theme,
+) -> Vec<AnyElement> {
+    use fret_core::{Px, SemanticsRole};
+    use fret_node::io::NodeGraphViewState;
+    use fret_node::ui::NodeGraphCanvas;
+    use fret_node::{
+        Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port, PortCapacity,
+        PortDirection, PortId, PortKey, PortKind, TypeDesc,
+    };
+    use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
+    use fret_ui::retained_bridge::RetainedSubtreeProps;
+
+    fn uuid_from_tag(tag: u64, ix: u64) -> uuid::Uuid {
+        uuid::Uuid::from_u128(((tag as u128) << 64) | (ix as u128))
+    }
+
+    fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
+        let mut graph = Graph::new(graph_id);
+
+        let add_nodes = target_nodes.saturating_sub(1) / 2;
+        let float_nodes = add_nodes.saturating_add(1);
+
+        let cols: usize = 64;
+        let x_step = 360.0f32;
+        let y_step = 220.0f32;
+
+        let float_x_offset = -260.0f32;
+        let float_y_offset = 40.0f32;
+
+        let node_tag = u64::from_le_bytes(*b"NODEGRAF");
+        let port_tag = u64::from_le_bytes(*b"PORTGRAF");
+        let edge_tag = u64::from_le_bytes(*b"EDGEGRAF");
+
+        let node_id = |ix: u64| NodeId(uuid_from_tag(node_tag, ix));
+        let port_id = |ix: u64| PortId(uuid_from_tag(port_tag, ix));
+        let edge_id = |ix: u64| EdgeId(uuid_from_tag(edge_tag, ix));
+
+        let mut next_node_ix: u64 = 1;
+        let mut next_port_ix: u64 = 1;
+        let mut next_edge_ix: u64 = 1;
+
+        let mut float_out_ports: Vec<PortId> = Vec::with_capacity(float_nodes);
+        for i in 0..float_nodes {
+            let node_id = {
+                let id = node_id(next_node_ix);
+                next_node_ix = next_node_ix.saturating_add(1);
+                id
+            };
+            let port_out = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+
+            let col = i % cols;
+            let row = i / cols;
+            let x = col as f32 * x_step + float_x_offset;
+            let y = row as f32 * y_step + float_y_offset;
+            let value = (i as f64) * 0.001;
+
+            graph.nodes.insert(
+                node_id,
+                Node {
+                    kind: NodeKindKey::new("demo.float"),
+                    kind_version: 1,
+                    pos: fret_node::CanvasPoint { x, y },
+                    selectable: None,
+                    draggable: None,
+                    connectable: None,
+                    deletable: None,
+                    parent: None,
+                    extent: None,
+                    expand_parent: None,
+                    size: None,
+                    hidden: false,
+                    collapsed: false,
+                    ports: vec![port_out],
+                    data: serde_json::json!({ "value": value }),
+                },
+            );
+            graph.ports.insert(
+                port_out,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("out"),
+                    dir: PortDirection::Out,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Multi,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+
+            float_out_ports.push(port_out);
+        }
+
+        let mut prev_out: Option<PortId> = None;
+        for i in 0..add_nodes {
+            let node_id = {
+                let id = node_id(next_node_ix);
+                next_node_ix = next_node_ix.saturating_add(1);
+                id
+            };
+            let port_a = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+            let port_b = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+            let port_out = {
+                let id = port_id(next_port_ix);
+                next_port_ix = next_port_ix.saturating_add(1);
+                id
+            };
+
+            let col = i % cols;
+            let row = i / cols;
+            let x = col as f32 * x_step;
+            let y = row as f32 * y_step;
+
+            graph.nodes.insert(
+                node_id,
+                Node {
+                    kind: NodeKindKey::new("demo.add"),
+                    kind_version: 1,
+                    pos: fret_node::CanvasPoint { x, y },
+                    selectable: None,
+                    draggable: None,
+                    connectable: None,
+                    deletable: None,
+                    parent: None,
+                    extent: None,
+                    expand_parent: None,
+                    size: None,
+                    hidden: false,
+                    collapsed: false,
+                    ports: vec![port_a, port_b, port_out],
+                    data: serde_json::Value::Null,
+                },
+            );
+            graph.ports.insert(
+                port_a,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("a"),
+                    dir: PortDirection::In,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+            graph.ports.insert(
+                port_b,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("b"),
+                    dir: PortDirection::In,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Single,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+            graph.ports.insert(
+                port_out,
+                Port {
+                    node: node_id,
+                    key: PortKey::new("out"),
+                    dir: PortDirection::Out,
+                    kind: PortKind::Data,
+                    capacity: PortCapacity::Multi,
+                    connectable: None,
+                    connectable_start: None,
+                    connectable_end: None,
+                    ty: Some(TypeDesc::Float),
+                    data: serde_json::Value::Null,
+                },
+            );
+
+            let port_a_source = prev_out.unwrap_or(float_out_ports[0]);
+            let port_b_source =
+                float_out_ports[(i + 1).min(float_out_ports.len().saturating_sub(1))];
+
+            let edge_a = edge_id(next_edge_ix);
+            next_edge_ix = next_edge_ix.saturating_add(1);
+            graph.edges.insert(
+                edge_a,
+                Edge {
+                    kind: EdgeKind::Data,
+                    from: port_a_source,
+                    to: port_a,
+                    selectable: None,
+                    deletable: None,
+                    reconnectable: None,
+                },
+            );
+
+            let edge_b = edge_id(next_edge_ix);
+            next_edge_ix = next_edge_ix.saturating_add(1);
+            graph.edges.insert(
+                edge_b,
+                Edge {
+                    kind: EdgeKind::Data,
+                    from: port_b_source,
+                    to: port_b,
+                    selectable: None,
+                    deletable: None,
+                    reconnectable: None,
+                },
+            );
+
+            prev_out = Some(port_out);
+        }
+
+        graph
+    }
+
+    let header = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                cx.text("Goal: stress a large node-graph canvas with viewport-driven culling (candidate for prepaint-windowed cull windows)."),
+                cx.text("Use scripted middle-drag + wheel steps to validate correctness and collect perf bundles."),
+            ]
+        },
+    );
+
+    #[derive(Default)]
+    struct HarnessState {
+        graph: Option<Model<Graph>>,
+        view: Option<Model<NodeGraphViewState>>,
+    }
+
+    let existing = cx.with_state(HarnessState::default, |st| {
+        match (st.graph.clone(), st.view.clone()) {
+            (Some(graph), Some(view)) => Some((graph, view)),
+            _ => None,
+        }
+    });
+
+    let (graph, view) = if let Some((graph, view)) = existing {
+        (graph, view)
+    } else {
+        let graph_id = GraphId::from_u128(1);
+        let graph = build_stress_graph(graph_id, 8_000);
+        let graph = cx.app.models_mut().insert(graph);
+        let view = cx.app.models_mut().insert(NodeGraphViewState::default());
+
+        cx.with_state(HarnessState::default, |st| {
+            st.graph = Some(graph.clone());
+            st.view = Some(view.clone());
+        });
+
+        (graph, view)
+    };
+
+    let surface =
+        cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
+            let graph = graph.clone();
+            let view = view.clone();
+
+            let mut layout = LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Px(Px(520.0));
+
+            let props = RetainedSubtreeProps::new::<App>(move |ui| {
+                use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+                let canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
+                ui.create_node_retained(canvas)
+            })
+            .with_layout(layout);
+
+            let subtree = cx.retained_subtree(props);
+            vec![cx.semantics(
+                SemanticsProps {
+                    role: SemanticsRole::Group,
+                    test_id: Some(Arc::<str>::from("ui-gallery-node-graph-cull-root")),
+                    ..Default::default()
+                },
+                |_cx| vec![subtree],
+            )]
+        });
+
+    vec![header, surface]
 }
 
 fn preview_chrome_torture(
@@ -14785,6 +15075,8 @@ fn preview_ai_transcript_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
+    use fret_ui::action::OnActivate;
+
     let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
@@ -14792,15 +15084,29 @@ fn preview_ai_transcript_torture(
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .unwrap_or(5_000);
+    let append_batch: usize = 100;
 
     #[derive(Default)]
     struct TranscriptModels {
-        messages: Option<Arc<[ui_ai::ConversationMessage]>>,
+        messages: Option<Model<Arc<[ui_ai::ConversationMessage]>>>,
     }
 
-    let messages = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
-    let messages = match messages {
-        Some(messages) => messages,
+    let message_text = |i: u64| -> Arc<str> {
+        if variable_height && i % 7 == 0 {
+            Arc::<str>::from(format!(
+                "Message {i}\nDetails: seed={} tokens={} latency={}ms",
+                (i * 31) % 97,
+                16 + (i % 64),
+                10 + (i % 120)
+            ))
+        } else {
+            Arc::<str>::from(format!("Message {i}: hello world"))
+        }
+    };
+
+    let messages_model = cx.with_state(TranscriptModels::default, |st| st.messages.clone());
+    let messages_model = match messages_model {
+        Some(model) => model,
         None => {
             let mut out: Vec<ui_ai::ConversationMessage> = Vec::with_capacity(message_count);
             for i in 0..message_count as u64 {
@@ -14810,25 +15116,51 @@ fn preview_ai_transcript_torture(
                     2 => ui_ai::MessageRole::Tool,
                     _ => ui_ai::MessageRole::System,
                 };
-                let text = if variable_height && i % 7 == 0 {
-                    Arc::<str>::from(format!(
-                        "Message {i}\nDetails: seed={} tokens={} latency={}ms",
-                        (i * 31) % 97,
-                        16 + (i % 64),
-                        10 + (i % 120)
-                    ))
+                out.push(ui_ai::ConversationMessage::new(i, role, message_text(i)));
+            }
+
+            let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
+            let model = cx.app.models_mut().insert(out);
+            cx.with_state(TranscriptModels::default, |st| {
+                st.messages = Some(model.clone())
+            });
+            model
+        }
+    };
+    let messages = cx
+        .get_model_cloned(&messages_model, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::from([]));
+
+    let append_messages_on_activate: OnActivate = {
+        let messages_model = messages_model.clone();
+        Arc::new(move |host, acx, _reason| {
+            let existing = host
+                .models_mut()
+                .get_cloned(&messages_model)
+                .unwrap_or_else(|| Arc::from([]));
+            let start = existing.len() as u64;
+
+            let mut out: Vec<ui_ai::ConversationMessage> = existing.iter().cloned().collect();
+            out.reserve(append_batch);
+            for i in start..start + append_batch as u64 {
+                let role = match i % 4 {
+                    0 => ui_ai::MessageRole::User,
+                    1 => ui_ai::MessageRole::Assistant,
+                    2 => ui_ai::MessageRole::Tool,
+                    _ => ui_ai::MessageRole::System,
+                };
+                let text = if variable_height && i % 5 == 0 {
+                    Arc::<str>::from(format!("Appended {i}\n(extra line)"))
                 } else {
-                    Arc::<str>::from(format!("Message {i}: hello world"))
+                    Arc::<str>::from(format!("Appended {i}"))
                 };
                 out.push(ui_ai::ConversationMessage::new(i, role, text));
             }
 
             let out: Arc<[ui_ai::ConversationMessage]> = Arc::from(out);
-            cx.with_state(TranscriptModels::default, |st| {
-                st.messages = Some(out.clone())
-            });
-            out
-        }
+            let _ = host.models_mut().update(&messages_model, |v| *v = out);
+            host.request_redraw(acx.window);
+        })
     };
 
     let header = stack::vstack(
@@ -14840,6 +15172,10 @@ fn preview_ai_transcript_torture(
             vec![
                 cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
+                fret_ui_shadcn::Button::new(format!("Append {append_batch} messages"))
+                    .test_id("ui-gallery-ai-transcript-append")
+                    .on_activate(append_messages_on_activate)
+                    .into_element(cx),
             ]
         },
     );

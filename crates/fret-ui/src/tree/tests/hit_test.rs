@@ -706,13 +706,13 @@ fn modal_barrier_fallback_delivers_transformed_event_coordinates() {
 fn hit_test_layers_cached_reuses_path_and_respects_layer_order() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
 
-    let base_root = ui.create_node(TestStack::default());
-    let base_leaf = ui.create_node(TestStack::default());
+    let base_root = ui.create_node(TestStack);
+    let base_leaf = ui.create_node(TestStack);
     ui.set_root(base_root);
     ui.set_children(base_root, vec![base_leaf]);
 
-    let overlay_root = ui.create_node(TestStack::default());
-    let overlay_leaf = ui.create_node(TestStack::default());
+    let overlay_root = ui.create_node(TestStack);
+    let overlay_leaf = ui.create_node(TestStack);
     ui.set_children(overlay_root, vec![overlay_leaf]);
 
     let base_bounds = Rect::new(

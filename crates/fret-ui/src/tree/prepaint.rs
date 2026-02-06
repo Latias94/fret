@@ -141,7 +141,10 @@ impl<H: UiHost> UiTree<H> {
             fret_core::Axis::Vertical => offset_point.y,
             fret_core::Axis::Horizontal => offset_point.x,
         };
-        let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some();
+        let deferred_scroll_to_item = inputs.scroll_handle.deferred_scroll_to_item().is_some()
+            || inputs
+                .scroll_handle
+                .scroll_to_item_consumed_in_frame(app.frame_id());
         let retained_host = crate::elements::with_window_state(&mut *app, window, |window_state| {
             window_state.has_state::<crate::windowed_surface_host::RetainedVirtualListHostMarker>(
                 inputs.element,
@@ -482,6 +485,8 @@ impl<H: UiHost> UiTree<H> {
                     element: Some(inputs.element),
                     virtual_list_window_shift_kind: Some(update.window_shift_kind),
                     virtual_list_window_shift_reason: window_shift_reason,
+                    chart_sampling_window_key: None,
+                    node_graph_cull_window_key: None,
                     frame_id: app.frame_id(),
                 });
             }
@@ -833,15 +838,13 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let end = self.interaction_cache.records.len();
-        if is_view_cache_root {
-            if let Some(n) = self.nodes.get_mut(node) {
-                n.interaction_cache = Some(InteractionCacheEntry {
-                    generation: self.interaction_cache.target_generation,
-                    key,
-                    start: start as u32,
-                    end: end as u32,
-                });
-            }
+        if is_view_cache_root && let Some(n) = self.nodes.get_mut(node) {
+            n.interaction_cache = Some(InteractionCacheEntry {
+                generation: self.interaction_cache.target_generation,
+                key,
+                start: start as u32,
+                end: end as u32,
+            });
         }
     }
 }

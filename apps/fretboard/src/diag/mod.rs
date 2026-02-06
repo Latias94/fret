@@ -22,9 +22,11 @@ use gates::{
 };
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
-    apply_pick_to_script, bundle_stats_from_path, check_bundle_for_dock_drag_min,
+    apply_pick_to_script, bundle_stats_from_path,
+    check_bundle_for_chart_sampling_window_shifts_min, check_bundle_for_dock_drag_min,
     check_bundle_for_drag_cache_root_paint_only, check_bundle_for_gc_sweep_liveness,
-    check_bundle_for_layout_fast_path_min, check_bundle_for_notify_hotspot_file_max,
+    check_bundle_for_layout_fast_path_min, check_bundle_for_node_graph_cull_window_shifts_max,
+    check_bundle_for_node_graph_cull_window_shifts_min, check_bundle_for_notify_hotspot_file_max,
     check_bundle_for_overlay_synthesis_min, check_bundle_for_prepaint_actions_min,
     check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_budget,
@@ -115,6 +117,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_drag_cache_root_paint_only_test_id: Option<String> = None;
     let mut check_hover_layout_max: Option<u32> = None;
     let mut check_prepaint_actions_min: Option<u64> = None;
+    let mut check_chart_sampling_window_shifts_min: Option<u64> = None;
+    let mut check_node_graph_cull_window_shifts_min: Option<u64> = None;
+    let mut check_node_graph_cull_window_shifts_max: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_min: Option<u64> = None;
     let mut check_vlist_visible_range_refreshes_max: Option<u64> = None;
     let mut check_vlist_window_shifts_explainable: bool = false;
@@ -676,6 +681,42 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --check-prepaint-actions-min".to_string()
                     })?);
+                i += 1;
+            }
+            "--check-chart-sampling-window-shifts-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-chart-sampling-window-shifts-min".to_string()
+                    );
+                };
+                check_chart_sampling_window_shifts_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-chart-sampling-window-shifts-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-node-graph-cull-window-shifts-min" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-node-graph-cull-window-shifts-min".to_string(),
+                    );
+                };
+                check_node_graph_cull_window_shifts_min = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-node-graph-cull-window-shifts-min".to_string()
+                })?);
+                i += 1;
+            }
+            "--check-node-graph-cull-window-shifts-max" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --check-node-graph-cull-window-shifts-max".to_string(),
+                    );
+                };
+                check_node_graph_cull_window_shifts_max = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --check-node-graph-cull-window-shifts-max".to_string()
+                })?);
                 i += 1;
             }
             "--check-drag-cache-root-paint-only" => {
@@ -1382,6 +1423,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
                     || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_max.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
@@ -1431,6 +1475,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         check_wheel_scroll_test_id.as_deref(),
                         check_wheel_scroll_hit_changes_test_id.as_deref(),
                         check_prepaint_actions_min,
+                        check_chart_sampling_window_shifts_min,
+                        check_node_graph_cull_window_shifts_min,
+                        check_node_graph_cull_window_shifts_max,
                         check_vlist_visible_range_refreshes_min,
                         check_vlist_visible_range_refreshes_max,
                         check_vlist_window_shifts_explainable,
@@ -1728,6 +1775,9 @@ See: `docs/tracy.md`.\n";
                         || check_wheel_scroll_test_id.is_some()
                         || check_wheel_scroll_hit_changes_test_id.is_some()
                         || check_prepaint_actions_min.is_some()
+                        || check_chart_sampling_window_shifts_min.is_some()
+                        || check_node_graph_cull_window_shifts_min.is_some()
+                        || check_node_graph_cull_window_shifts_max.is_some()
                         || check_vlist_visible_range_refreshes_min.is_some()
                         || check_vlist_visible_range_refreshes_max.is_some()
                         || check_vlist_window_shifts_explainable
@@ -1775,6 +1825,9 @@ See: `docs/tracy.md`.\n";
                             check_wheel_scroll_test_id.as_deref(),
                             check_wheel_scroll_hit_changes_test_id.as_deref(),
                             check_prepaint_actions_min,
+                            check_chart_sampling_window_shifts_min,
+                            check_node_graph_cull_window_shifts_min,
+                            check_node_graph_cull_window_shifts_max,
                             check_vlist_visible_range_refreshes_min,
                             check_vlist_visible_range_refreshes_max,
                             check_vlist_window_shifts_explainable,
@@ -2258,10 +2311,22 @@ See: `docs/tracy.md`.\n";
                 rest.len() == 1 && rest[0] == "ui-gallery-retained-measured";
             let is_ui_gallery_ai_transcript_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-ai-transcript-retained";
+            let is_ui_gallery_canvas_cull_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-canvas-cull";
+            let is_ui_gallery_node_graph_cull_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull";
+            let is_ui_gallery_node_graph_cull_window_shifts_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-node-graph-cull-window-shifts";
+            let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = rest.len() == 1
+                && rest[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
+            let is_ui_gallery_chart_torture_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-chart-torture";
             let is_ui_gallery_vlist_window_boundary_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary";
             let is_ui_gallery_vlist_window_boundary_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-vlist-window-boundary-retained";
+            let is_ui_gallery_vlist_no_window_shifts_small_scroll_suite =
+                rest.len() == 1 && rest[0] == "ui-gallery-vlist-no-window-shifts-small-scroll";
             let is_ui_gallery_ui_kit_list_retained_suite =
                 rest.len() == 1 && rest[0] == "ui-gallery-ui-kit-list-retained";
             let is_ui_gallery_inspector_torture_suite =
@@ -2451,11 +2516,88 @@ See: `docs/tracy.md`.\n";
                         Some(BuiltinSuite::UiGallery),
                     )
                 } else if is_ui_gallery_ai_transcript_retained_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT",
+                        "1",
+                    );
                     (
                         vec![resolve_path(
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_canvas_cull_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_node_graph_cull_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_node_graph_cull_window_shifts_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_chart_torture_suite {
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+                    push_env_if_missing(&mut launch_env, "FRET_DIAG_SCREENSHOTS", "1");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -2483,6 +2625,30 @@ See: `docs/tracy.md`.\n";
                             &workspace_root,
                             PathBuf::from(
                                 "tools/diag-scripts/ui-gallery-virtual-list-window-boundary-scroll.json",
+                            ),
+                        )],
+                        Some(BuiltinSuite::UiGallery),
+                    )
+                } else if is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+                    // Guard rail harness: under view-cache + shell, small scroll deltas should
+                    // not force a non-retained VirtualList window shift (which currently implies
+                    // a cache-root rerender to rebuild visible items).
+                    //
+                    // Callers can still override env explicitly via `--env KEY=...`.
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
+                    push_env_if_missing(
+                        &mut launch_env,
+                        "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS",
+                        "1",
+                    );
+                    push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
+                    (
+                        vec![resolve_path(
+                            &workspace_root,
+                            PathBuf::from(
+                                "tools/diag-scripts/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
                             ),
                         )],
                         Some(BuiltinSuite::UiGallery),
@@ -2728,8 +2894,26 @@ See: `docs/tracy.md`.\n";
                     )
                 };
 
-            let mut suite_launch_env = launch_env.clone();
-            let _ = ensure_env_var(&mut suite_launch_env, "FRET_DIAG_RENDERER_PERF", "1");
+            // Suite defaults: most suites only need a small warmup to skip startup churn, but
+            // "no shift" gates should avoid the initial VirtualList window stabilization phase.
+            if warmup_frames == 0 && is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
+                warmup_frames = 32;
+            }
+
+            if warmup_frames == 0
+                && (is_ui_gallery_vlist_window_boundary_suite
+                    || is_ui_gallery_vlist_window_boundary_retained_suite
+                    || is_ui_gallery_canvas_cull_suite
+                    || is_ui_gallery_node_graph_cull_suite
+                    || is_ui_gallery_node_graph_cull_window_shifts_suite
+                    || is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
+                    || is_ui_gallery_chart_torture_suite
+                    || is_ui_gallery_ai_transcript_retained_suite)
+            {
+                warmup_frames = 5;
+            }
+
+            let suite_launch_env = launch_env.clone();
 
             let reuse_process = launch.is_none();
             let mut child = if reuse_process {
@@ -2844,6 +3028,10 @@ See: `docs/tracy.md`.\n";
                     || check_semantics_changed_repainted
                     || check_wheel_scroll_test_id.is_some()
                     || check_wheel_scroll_hit_changes_test_id.is_some()
+                    || check_prepaint_actions_min.is_some()
+                    || check_chart_sampling_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_min.is_some()
+                    || check_node_graph_cull_window_shifts_max.is_some()
                     || check_vlist_visible_range_refreshes_min.is_some()
                     || check_vlist_visible_range_refreshes_max.is_some()
                     || check_vlist_window_shifts_explainable
@@ -2874,8 +3062,11 @@ See: `docs/tracy.md`.\n";
 
                 let wants_post_run_checks_for_script = wants_post_run_checks_for_script
                     || builtin_suite == Some(BuiltinSuite::DockingArbitration)
+                    || is_ui_gallery_canvas_cull_suite
+                    || is_ui_gallery_chart_torture_suite
                     || is_ui_gallery_vlist_window_boundary_suite
                     || is_ui_gallery_vlist_window_boundary_retained_suite
+                    || is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
                     || is_components_gallery_file_tree_suite
                     || is_components_gallery_table_suite
                     || is_components_gallery_table_keep_alive_suite
@@ -2908,6 +3099,13 @@ See: `docs/tracy.md`.\n";
                     let components_gallery_suite = is_components_gallery_file_tree_suite
                         || is_components_gallery_table_suite
                         || is_components_gallery_table_keep_alive_suite;
+                    let pan_zoom_suite =
+                        is_ui_gallery_canvas_cull_suite || is_ui_gallery_chart_torture_suite;
+                    let ai_transcript_suite = is_ui_gallery_ai_transcript_retained_suite;
+                    let suite_wheel_scroll_test_id =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some("ui-gallery-virtual-list-row-0-label")
+                            .filter(|_| check_wheel_scroll_test_id.is_none());
                     let suite_components_gallery_stale_paint_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -2917,6 +3115,9 @@ See: `docs/tracy.md`.\n";
                                     .then_some("components-gallery-table-root")
                             })
                             .filter(|_| check_stale_paint_test_id.is_none());
+                    let suite_ai_transcript_stale_paint_test_id = ai_transcript_suite
+                        .then_some("ui-gallery-ai-transcript-row-0")
+                        .filter(|_| check_stale_paint_test_id.is_none());
                     let suite_components_gallery_wheel_scroll_hit_changes_test_id =
                         is_components_gallery_file_tree_suite
                             .then_some("components-gallery-file-tree-root")
@@ -2934,10 +3135,23 @@ See: `docs/tracy.md`.\n";
                         .filter(|_| check_layout_fast_path_min.is_none());
                     let suite_stale_paint_test_id = vlist_window_boundary_suite
                         .then_some("ui-gallery-virtual-list-root")
+                        .or(suite_ai_transcript_stale_paint_test_id)
                         .filter(|_| check_stale_paint_test_id.is_none());
-                    let suite_view_cache_reuse_min = vlist_window_boundary_suite
+                    let suite_view_cache_reuse_min = (vlist_window_boundary_suite
+                        || pan_zoom_suite)
                         .then_some(1u64)
+                        .or_else(|| ai_transcript_suite.then_some(10u64))
                         .filter(|_| check_view_cache_reuse_min.is_none());
+                    let suite_view_cache_reuse_stable_min = ai_transcript_suite
+                        .then_some(10u64)
+                        .filter(|_| check_view_cache_reuse_stable_min.is_none());
+                    let suite_pixels_changed_test_id = is_ui_gallery_canvas_cull_suite
+                        .then_some("ui-gallery-canvas-cull-root")
+                        .or_else(|| {
+                            is_ui_gallery_chart_torture_suite
+                                .then_some("ui-gallery-chart-torture-root")
+                        })
+                        .filter(|_| check_pixels_changed_test_id.is_none());
                     let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
@@ -2958,6 +3172,21 @@ See: `docs/tracy.md`.\n";
                     let suite_prepaint_actions_min = vlist_window_boundary_suite
                         .then_some(1u64)
                         .filter(|_| check_prepaint_actions_min.is_none());
+                    let suite_hover_layout_max = ai_transcript_suite
+                        .then_some(0u32)
+                        .filter(|_| check_hover_layout_max.is_none());
+                    let suite_chart_sampling_window_shifts_min = is_ui_gallery_chart_torture_suite
+                        .then_some(1u64)
+                        .filter(|_| check_chart_sampling_window_shifts_min.is_none());
+                    let suite_node_graph_cull_window_shifts_min =
+                        is_ui_gallery_node_graph_cull_window_shifts_suite
+                            .then_some(1u64)
+                            .or_else(|| is_ui_gallery_node_graph_cull_suite.then_some(0u64))
+                            .filter(|_| check_node_graph_cull_window_shifts_min.is_none());
+                    let suite_node_graph_cull_window_shifts_max =
+                        is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite
+                            .then_some(0u64)
+                            .filter(|_| check_node_graph_cull_window_shifts_max.is_none());
                     let suite_vlist_window_shifts_have_prepaint_actions =
                         vlist_window_boundary_suite
                             && !check_vlist_window_shifts_have_prepaint_actions;
@@ -2982,19 +3211,32 @@ See: `docs/tracy.md`.\n";
                         script_requires_retained_vlist_reconcile_gate
                             .then_some(0u64)
                             .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
+                    let suite_vlist_small_scroll_window_shifts_non_retained_max =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some(0u64)
+                            .filter(|_| check_vlist_window_shifts_non_retained_max.is_none());
+                    let suite_vlist_small_scroll_window_shifts_prefetch_max =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some(0u64)
+                            .filter(|_| check_vlist_window_shifts_prefetch_max.is_none());
+                    let suite_vlist_small_scroll_window_shifts_escape_max =
+                        is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
+                            .then_some(0u64)
+                            .filter(|_| check_vlist_window_shifts_escape_max.is_none());
                     let suite_vlist_policy_key_stable = components_gallery_suite
                         && script_requires_retained_vlist_reconcile_gate
                         && !check_vlist_policy_key_stable;
                     let script_requires_retained_vlist_keep_alive_reuse_gate =
                         ui_gallery_script_requires_retained_vlist_keep_alive_reuse_gate(&src);
-                    let suite_retained_vlist_reconcile_no_notify_min = ((components_gallery_suite
+                    let retained_vlist_suite = components_gallery_suite
+                        || ai_transcript_suite
+                        || vlist_window_boundary_retained_suite;
+                    let suite_retained_vlist_reconcile_no_notify_min = (retained_vlist_suite
                         && script_requires_retained_vlist_reconcile_gate)
-                        || vlist_window_boundary_retained_suite)
                         .then_some(1u64)
                         .filter(|_| check_retained_vlist_reconcile_no_notify_min.is_none());
-                    let suite_retained_vlist_attach_detach_max = ((components_gallery_suite
+                    let suite_retained_vlist_attach_detach_max = (retained_vlist_suite
                         && script_requires_retained_vlist_reconcile_gate)
-                        || vlist_window_boundary_retained_suite)
                         .then_some(if vlist_window_boundary_retained_suite {
                             64u64
                         } else {
@@ -3044,14 +3286,24 @@ See: `docs/tracy.md`.\n";
                         check_stale_paint_eps,
                         check_stale_scene_test_id.as_deref(),
                         check_stale_scene_eps,
-                        check_pixels_changed_test_id.as_deref(),
+                        check_pixels_changed_test_id
+                            .as_deref()
+                            .or(suite_pixels_changed_test_id),
                         check_semantics_changed_repainted,
                         dump_semantics_changed_repainted_json,
-                        check_wheel_scroll_test_id.as_deref(),
+                        check_wheel_scroll_test_id
+                            .as_deref()
+                            .or(suite_wheel_scroll_test_id),
                         check_wheel_scroll_hit_changes_test_id
                             .as_deref()
                             .or(suite_components_gallery_wheel_scroll_hit_changes_test_id),
                         check_prepaint_actions_min.or(suite_prepaint_actions_min),
+                        check_chart_sampling_window_shifts_min
+                            .or(suite_chart_sampling_window_shifts_min),
+                        check_node_graph_cull_window_shifts_min
+                            .or(suite_node_graph_cull_window_shifts_min),
+                        check_node_graph_cull_window_shifts_max
+                            .or(suite_node_graph_cull_window_shifts_max),
                         check_vlist_visible_range_refreshes_min
                             .or(suite_vlist_visible_range_refreshes_min),
                         check_vlist_visible_range_refreshes_max
@@ -3061,18 +3313,21 @@ See: `docs/tracy.md`.\n";
                         check_vlist_window_shifts_have_prepaint_actions
                             || suite_vlist_window_shifts_have_prepaint_actions,
                         vlist_window_shifts_non_retained_max_for_script
-                            .or(suite_vlist_window_shifts_non_retained_max),
+                            .or(suite_vlist_window_shifts_non_retained_max)
+                            .or(suite_vlist_small_scroll_window_shifts_non_retained_max),
                         check_vlist_window_shifts_prefetch_max
-                            .or(suite_vlist_window_shifts_prefetch_max),
+                            .or(suite_vlist_window_shifts_prefetch_max)
+                            .or(suite_vlist_small_scroll_window_shifts_prefetch_max),
                         check_vlist_window_shifts_escape_max
-                            .or(suite_vlist_window_shifts_escape_max),
+                            .or(suite_vlist_window_shifts_escape_max)
+                            .or(suite_vlist_small_scroll_window_shifts_escape_max),
                         check_vlist_policy_key_stable || suite_vlist_policy_key_stable,
                         check_layout_fast_path_min.or(suite_layout_fast_path_min),
                         check_drag_cache_root_paint_only_test_id.as_deref(),
-                        check_hover_layout_max,
+                        check_hover_layout_max.or(suite_hover_layout_max),
                         check_gc_sweep_liveness || suite_gc_sweep_liveness,
                         &notify_hotspot_file_max_for_script,
-                        check_view_cache_reuse_stable_min,
+                        check_view_cache_reuse_stable_min.or(suite_view_cache_reuse_stable_min),
                         check_view_cache_reuse_min
                             .or(suite_view_cache_reuse_min)
                             .or(suite_components_gallery_view_cache_reuse_min),
@@ -6256,7 +6511,8 @@ fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &Path) -> bo
 
     matches!(
         name,
-        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+        "ui-gallery-ai-transcript-torture-scroll.json"
+            | "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
             | "ui-gallery-tree-window-boundary-scroll-retained.json"
             | "ui-gallery-data-table-window-boundary-scroll-retained.json"
             | "ui-gallery-table-retained-window-boundary-scroll.json"
@@ -6506,6 +6762,9 @@ fn apply_post_run_checks(
     check_wheel_scroll_test_id: Option<&str>,
     check_wheel_scroll_hit_changes_test_id: Option<&str>,
     check_prepaint_actions_min: Option<u64>,
+    check_chart_sampling_window_shifts_min: Option<u64>,
+    check_node_graph_cull_window_shifts_min: Option<u64>,
+    check_node_graph_cull_window_shifts_max: Option<u64>,
     check_vlist_visible_range_refreshes_min: Option<u64>,
     check_vlist_visible_range_refreshes_max: Option<u64>,
     check_vlist_window_shifts_explainable: bool,
@@ -6558,6 +6817,30 @@ fn apply_post_run_checks(
     }
     if let Some(min) = check_prepaint_actions_min {
         check_bundle_for_prepaint_actions_min(bundle_path, out_dir, min, warmup_frames)?;
+    }
+    if let Some(min) = check_chart_sampling_window_shifts_min {
+        check_bundle_for_chart_sampling_window_shifts_min(
+            bundle_path,
+            out_dir,
+            min,
+            warmup_frames,
+        )?;
+    }
+    if let Some(min) = check_node_graph_cull_window_shifts_min {
+        check_bundle_for_node_graph_cull_window_shifts_min(
+            bundle_path,
+            out_dir,
+            min,
+            warmup_frames,
+        )?;
+    }
+    if let Some(max) = check_node_graph_cull_window_shifts_max {
+        check_bundle_for_node_graph_cull_window_shifts_max(
+            bundle_path,
+            out_dir,
+            max,
+            warmup_frames,
+        )?;
     }
     if let Some(min_total_refreshes) = check_vlist_visible_range_refreshes_min {
         check_bundle_for_vlist_visible_range_refreshes_min(
@@ -9110,6 +9393,256 @@ mod tests {
         assert_eq!(
             evidence.get("kind").and_then(|v| v.as_str()),
             Some("prepaint_actions_min")
+        );
+    }
+
+    #[test]
+    fn chart_sampling_window_shifts_min_accepts_matching_action() {
+        let out_dir = tmp_out_dir("chart_sampling_window_shifts_min_ok");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": [{
+                            "node": 10,
+                            "kind": "chart_sampling_window_shift",
+                            "chart_sampling_window_key": 123
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_chart_sampling_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
+            .expect("expected gate to accept chart sampling action");
+
+        let evidence_path = bundle_dir.join("check.chart_sampling_window_shifts_min.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected chart sampling window shifts evidence JSON to be written"
+        );
+    }
+
+    #[test]
+    fn chart_sampling_window_shifts_min_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("chart_sampling_window_shifts_min_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": []
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_chart_sampling_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
+                .unwrap_err();
+        assert!(err.contains("chart sampling window shift"));
+
+        let evidence_path = bundle_dir.join("check.chart_sampling_window_shifts_min.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected chart sampling window shifts evidence JSON to be written"
+        );
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("chart_sampling_window_shifts_min")
+        );
+    }
+
+    #[test]
+    fn node_graph_cull_window_shifts_min_accepts_matching_action() {
+        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_min_ok");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": [{
+                            "node": 10,
+                            "kind": "node_graph_cull_window_shift",
+                            "node_graph_cull_window_key": 456
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_node_graph_cull_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
+            .expect("expected gate to accept node graph cull action");
+
+        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_min.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected node graph cull window shifts evidence JSON to be written"
+        );
+    }
+
+    #[test]
+    fn node_graph_cull_window_shifts_min_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_min_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": []
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_node_graph_cull_window_shifts_min(&bundle_path, &bundle_dir, 1, 0)
+                .unwrap_err();
+        assert!(err.contains("node graph cull window shift"));
+
+        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_min.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected node graph cull window shifts evidence JSON to be written"
+        );
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("node_graph_cull_window_shifts_min")
+        );
+    }
+
+    #[test]
+    fn node_graph_cull_window_shifts_max_accepts_when_under_budget() {
+        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_max_ok");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": [{
+                            "node": 10,
+                            "kind": "node_graph_cull_window_shift",
+                            "node_graph_cull_window_key": 456
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        check_bundle_for_node_graph_cull_window_shifts_max(&bundle_path, &bundle_dir, 1, 0)
+            .expect("expected max gate to accept actions under budget");
+
+        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_max.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected node graph cull window shifts max evidence JSON to be written"
+        );
+    }
+
+    #[test]
+    fn node_graph_cull_window_shifts_max_writes_evidence_json_on_failure() {
+        let out_dir = tmp_out_dir("node_graph_cull_window_shifts_max_evidence");
+        let _ = std::fs::create_dir_all(&out_dir);
+
+        let bundle_dir = out_dir.join("run");
+        let _ = std::fs::create_dir_all(&bundle_dir);
+        let bundle_path = bundle_dir.join("bundle.json");
+
+        let bundle = json!({
+            "schema_version": 1,
+            "windows": [{
+                "window": 1,
+                "snapshots": [{
+                    "tick_id": 1,
+                    "frame_id": 1,
+                    "debug": {
+                        "prepaint_actions": [{
+                            "node": 10,
+                            "kind": "node_graph_cull_window_shift",
+                            "node_graph_cull_window_key": 456
+                        }]
+                    }
+                }]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap())
+            .expect("bundle.json write should succeed");
+
+        let err =
+            check_bundle_for_node_graph_cull_window_shifts_max(&bundle_path, &bundle_dir, 0, 0)
+                .unwrap_err();
+        assert!(err.contains("node graph cull window shift"));
+
+        let evidence_path = bundle_dir.join("check.node_graph_cull_window_shifts_max.json");
+        assert!(
+            evidence_path.is_file(),
+            "expected node graph cull window shifts max evidence JSON to be written"
+        );
+        let evidence: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&evidence_path).unwrap()).unwrap();
+        assert_eq!(
+            evidence.get("kind").and_then(|v| v.as_str()),
+            Some("node_graph_cull_window_shifts_max")
         );
     }
 

@@ -206,9 +206,9 @@ fn snapshot_resets_when_focus_is_not_text_input() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(SplitVertical::default());
-    let text = ui.create_node(FocusTextOnDown::default());
-    let button = ui.create_node(FocusNonTextOnDown::default());
+    let root = ui.create_node(SplitVertical);
+    let text = ui.create_node(FocusTextOnDown);
+    let button = ui.create_node(FocusNonTextOnDown);
     ui.add_child(root, text);
     ui.add_child(root, button);
     ui.set_root(root);

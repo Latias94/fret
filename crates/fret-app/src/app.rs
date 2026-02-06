@@ -119,7 +119,7 @@ impl App {
     pub fn global_changed_at(&self, id: TypeId) -> Option<&'static std::panic::Location<'static>> {
         #[cfg(debug_assertions)]
         {
-            return self.global_last_changed_at.get(&id).copied();
+            self.global_last_changed_at.get(&id).copied()
         }
 
         #[cfg(not(debug_assertions))]
@@ -385,13 +385,11 @@ impl App {
             window: Some(window),
             command,
         } = &effect
-        {
-            if self
+            && self
                 .global::<WindowCommandEnabledService>()
                 .is_some_and(|svc| svc.enabled(*window, command) == Some(false))
-            {
-                return;
-            }
+        {
+            return;
         }
 
         match effect {

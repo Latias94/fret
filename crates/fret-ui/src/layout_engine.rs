@@ -269,7 +269,7 @@ impl TaffyLayoutEngine {
 
         fn key_bits(axis: AvailableSpace) -> u64 {
             match axis {
-                AvailableSpace::Definite(px) => (0u64 << 32) | px.0.to_bits() as u64,
+                AvailableSpace::Definite(px) => px.0.to_bits() as u64,
                 AvailableSpace::MinContent => 1u64 << 32,
                 AvailableSpace::MaxContent => 2u64 << 32,
             }
@@ -569,7 +569,7 @@ impl TaffyLayoutEngine {
             self.mark_solved_subtree(root_node);
             fn key_bits(axis: AvailableSpace) -> u64 {
                 match axis {
-                    AvailableSpace::Definite(px) => (0u64 << 32) | px.0.to_bits() as u64,
+                    AvailableSpace::Definite(px) => px.0.to_bits() as u64,
                     AvailableSpace::MinContent => 1u64 << 32,
                     AvailableSpace::MaxContent => 2u64 << 32,
                 }

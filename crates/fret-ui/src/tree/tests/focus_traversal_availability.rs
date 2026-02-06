@@ -22,8 +22,8 @@ fn focus_next_is_available_when_focusables_exist() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(FocusableLeaf::default());
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusableLeaf);
     ui.set_root(root);
     ui.add_child(root, leaf);
 
@@ -47,7 +47,7 @@ fn focus_next_is_unavailable_when_no_focusables_exist() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let mut services = FakeUiServices;

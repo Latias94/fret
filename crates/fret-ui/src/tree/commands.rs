@@ -125,7 +125,7 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<NodeId> {
         if self
             .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+            .is_some_and(|n| !self.node_in_any_layer(n, active_layers))
         {
             self.focus = None;
         }

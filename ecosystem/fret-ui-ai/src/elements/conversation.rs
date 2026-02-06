@@ -214,7 +214,7 @@ impl ConversationTranscript {
                     return bubble;
                 };
 
-                let test_id: Arc<str> = Arc::from(format!("{prefix}{index}"));
+                let test_id: Arc<str> = Arc::from(format!("{prefix}{}", msg.id));
                 cx.semantics(
                     SemanticsProps {
                         role: SemanticsRole::Group,

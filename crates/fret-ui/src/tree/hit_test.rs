@@ -452,10 +452,10 @@ impl<H: UiHost> UiTree<H> {
                     if p.render_transform_inv.is_some() || !p.clips_hit_test {
                         return None;
                     }
-                } else if let Some(w) = sib.widget.as_ref() {
-                    if w.render_transform(sib.bounds).is_some() || !w.clips_hit_test(sib.bounds) {
-                        return None;
-                    }
+                } else if let Some(w) = sib.widget.as_ref()
+                    && (w.render_transform(sib.bounds).is_some() || !w.clips_hit_test(sib.bounds))
+                {
+                    return None;
                 }
 
                 if sib.bounds.contains(child_position) {

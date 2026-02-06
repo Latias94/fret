@@ -107,8 +107,8 @@ impl DragHost for App {
         App::drag(self, pointer_id)
     }
 
-    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        App::drags(self).any(|d| predicate(d))
+    fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        App::drags(self).any(predicate)
     }
 
     fn find_drag_pointer_id(

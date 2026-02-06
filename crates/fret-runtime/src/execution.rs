@@ -84,20 +84,11 @@ impl InboxDrainRegistry {
 mod tests {
     use super::*;
 
+    #[derive(Default)]
     struct TestHost {
         models: ModelStore,
         redraws: Vec<AppWindowId>,
         effects: Vec<Effect>,
-    }
-
-    impl Default for TestHost {
-        fn default() -> Self {
-            Self {
-                models: ModelStore::default(),
-                redraws: Vec::new(),
-                effects: Vec::new(),
-            }
-        }
     }
 
     impl InboxDrainHost for TestHost {

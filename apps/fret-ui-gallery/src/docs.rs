@@ -349,6 +349,38 @@ let el = pan_zoom_canvas_surface_panel(cx, props, |_painter, _cx| {});
 ```
 "#;
 
+pub(crate) const DOC_NODE_GRAPH_CULL_TORTURE: &str = r#"
+## Node Graph Cull (torture harness)
+
+This page hosts a large `fret-node` canvas surface (nodes + edges) intended to stress:
+
+- viewport-driven culling,
+- pan/zoom interaction routing,
+- paint-cache reuse under view-cache + shell.
+
+It exists to support the GPUI parity workstream:
+
+- promote a real ecosystem surface into the prepaint-windowed migration pipeline (ADR 0190),
+- validate “paint-only” interaction updates for small deltas,
+- provide deterministic script targets for perf investigations.
+"#;
+
+pub(crate) const USAGE_NODE_GRAPH_CULL_TORTURE: &str = r#"
+```rust
+use fret_node::{Graph, GraphId};
+use fret_node::io::NodeGraphViewState;
+use fret_node::ui::NodeGraphCanvas;
+use fret_ui::retained_bridge::{RetainedSubtreeProps, UiTreeRetainedExt};
+
+let graph = models.insert(Graph::new(GraphId::from_u128(1)));
+let view = models.insert(NodeGraphViewState::default());
+
+let el = cx.retained_subtree(RetainedSubtreeProps::new(move |ui| {
+    ui.create_node_retained(NodeGraphCanvas::new(graph.clone(), view.clone()))
+}));
+```
+"#;
+
 pub(crate) const DOC_CHROME_TORTURE: &str = r#"
 ## Chrome (torture harness)
 

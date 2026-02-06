@@ -136,6 +136,8 @@ impl<H: UiHost> UiTree<H> {
         self.invalidate_scroll_handle_bindings_for_changed_handles(
             app,
             crate::layout_pass::LayoutPassKind::Final,
+            false,
+            true,
         );
         if let Some(scroll_inv_started) = scroll_inv_started {
             self.debug_stats.paint_scroll_handle_invalidation_time = self

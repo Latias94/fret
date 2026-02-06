@@ -215,6 +215,7 @@ Rejected: other ecosystems should not depend on `fret-gizmo` just to reuse input
 - Engine-pass gizmo boundary: `docs/adr/0139-viewport-gizmos-engine-pass-and-ui-overlay-boundary.md`
 - Engine render hook substrate: `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`
 - Gizmo plugin contract: `docs/adr/0155-custom-gizmo-plugins-and-handle-contract.md`
-- Gizmo host properties (read-only): `docs/adr/0167-gizmo-host-property-source-readonly-v1.md`
+- Gizmo host properties (read-only): `docs/adr/0179-gizmo-host-property-source-readonly-v1.md`
 - Editor-layer example (deferred): `docs/adr/0049-viewport-tools-input-capture-and-overlays.md`
  - Protocol + helper evidence: `ecosystem/fret-viewport-tooling/src/lib.rs`, `ecosystem/fret-ui-kit/src/viewport_tooling.rs`
+

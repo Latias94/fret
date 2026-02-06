@@ -75,6 +75,8 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         pass_kind: LayoutPassKind,
+        consume_deferred_scroll_to_item: bool,
+        commit_scroll_handle_baselines: bool,
     ) {
         if pass_kind != LayoutPassKind::Final {
             return;
@@ -83,7 +85,13 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let changed = crate::declarative::frame::take_changed_scroll_handle_keys(app, window);
+        let consume_deferred_scroll_to_item =
+            consume_deferred_scroll_to_item && commit_scroll_handle_baselines;
+        let changed = if commit_scroll_handle_baselines {
+            crate::declarative::frame::take_changed_scroll_handle_keys(app, window)
+        } else {
+            crate::declarative::frame::peek_changed_scroll_handle_keys(app, window)
+        };
         if changed.is_empty() {
             return;
         }
@@ -112,10 +120,12 @@ impl<H: UiHost> UiTree<H> {
 
             // If a virtual list requested a scroll-to-item, the scroll handle revision bumps even
             // when offset/viewport/content are unchanged, which makes the change appear as
-            // "layout-affecting". For fixed-size virtual lists, we can consume the deferred
-            // request up-front (using cached metrics + viewport) and convert it into a simple
-            // offset update, avoiding a layout-driven consumption path.
-            if change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout {
+            // "layout-affecting". Consume the deferred request up-front (using cached metrics +
+            // viewport) and convert it into a simple offset update, avoiding a layout-driven
+            // consumption path in the common case.
+            if consume_deferred_scroll_to_item
+                && change_kind == crate::declarative::frame::ScrollHandleChangeKind::Layout
+            {
                 let mut consumed_scroll_to_item = false;
                 for element in &bound {
                     if consumed_scroll_to_item {
@@ -163,9 +173,6 @@ impl<H: UiHost> UiTree<H> {
                     else {
                         continue;
                     };
-                    if vlist_measure_mode != crate::element::VirtualListMeasureMode::Fixed {
-                        continue;
-                    }
                     let Some((index, strategy)) = vlist_scroll_handle.deferred_scroll_to_item()
                     else {
                         continue;
@@ -184,6 +191,7 @@ impl<H: UiHost> UiTree<H> {
                                 vlist_gap,
                                 vlist_scroll_margin,
                             );
+                            state.metrics.sync_keys(&state.keys, vlist_items_revision);
                             state.items_revision = vlist_items_revision;
 
                             let viewport_size = vlist_scroll_handle.viewport_size();
@@ -226,7 +234,7 @@ impl<H: UiHost> UiTree<H> {
                             vlist_scroll_handle.set_offset(fret_core::Point::new(applied, prev.y));
                         }
                     }
-                    vlist_scroll_handle.clear_deferred_scroll_to_item();
+                    vlist_scroll_handle.clear_deferred_scroll_to_item(app.frame_id());
 
                     consumed_scroll_to_item = true;
                     change_kind = crate::declarative::frame::ScrollHandleChangeKind::HitTestOnly;
@@ -557,7 +565,7 @@ impl<H: UiHost> UiTree<H> {
 
         let scroll_started = self.debug_enabled.then(Instant::now);
         let started_phase = profile_layout_all.then(Instant::now);
-        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind);
+        self.invalidate_scroll_handle_bindings_for_changed_handles(app, pass_kind, true, true);
         if let Some(started) = started_phase {
             t_invalidate_scroll_handle_bindings = Some(started.elapsed());
         }
@@ -1076,8 +1084,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
 
-        let mut targets: Vec<(NodeId, Rect, Point)> = Vec::new();
-        targets.reserve(16);
+        let mut targets: Vec<(NodeId, Rect, Point)> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled {
                 continue;
@@ -1394,8 +1401,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let mut targets: Vec<(NodeId, Rect)> = Vec::new();
-        targets.reserve(16);
+        let mut targets: Vec<(NodeId, Rect)> = Vec::with_capacity(16);
         for (id, node) in self.nodes.iter() {
             if !node.view_cache.enabled || !node.view_cache.contained_layout {
                 continue;
@@ -1486,10 +1492,10 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT") {
-            if !format!("{root:?}").contains(&filter) {
-                return;
-            }
+        if let Ok(filter) = std::env::var("FRET_TAFFY_DUMP_ROOT")
+            && !format!("{root:?}").contains(&filter)
+        {
+            return;
         }
 
         // When debugging complex demos or golden-gated layouts, it is often easier to filter by a
@@ -1566,9 +1572,8 @@ impl<H: UiHost> UiTree<H> {
 
         let result = std::fs::create_dir_all(&out_dir)
             .and_then(|_| {
-                serde_json::to_vec_pretty(&wrapped).map_err(|e| {
-                    std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
-                })
+                serde_json::to_vec_pretty(&wrapped)
+                    .map_err(|e| std::io::Error::other(format!("serialize: {e}")))
             })
             .and_then(|bytes| {
                 std::fs::write(std::path::Path::new(&out_dir).join(&filename), bytes)
@@ -1599,6 +1604,7 @@ impl<H: UiHost> UiTree<H> {
     /// This is a debug-only escape hatch intended for diagnosing layout regressions and scroll /
     /// clipping issues. The output is JSON and is written to `out_dir`.
     #[cfg(not(target_arch = "wasm32"))]
+    #[allow(clippy::too_many_arguments)]
     pub fn debug_write_taffy_subtree_json(
         &self,
         app: &mut H,
@@ -1688,9 +1694,8 @@ impl<H: UiHost> UiTree<H> {
         let out_dir = out_dir.as_ref();
         std::fs::create_dir_all(out_dir)?;
         let path = out_dir.join(filename);
-        let bytes = serde_json::to_vec_pretty(&wrapped).map_err(|e| {
-            std::io::Error::new(std::io::ErrorKind::Other, format!("serialize: {e}"))
-        })?;
+        let bytes = serde_json::to_vec_pretty(&wrapped)
+            .map_err(|e| std::io::Error::other(format!("serialize: {e}")))?;
         std::fs::write(&path, bytes)?;
         Ok(path)
     }
@@ -1728,10 +1733,10 @@ impl<H: UiHost> UiTree<H> {
         let phase1_started = profile_layout.then(Instant::now);
         // Phase 1: request/build for stable identity, even if we later skip compute/apply.
         for &root in roots {
-            if !self
+            if self
                 .nodes
                 .get(root)
-                .is_some_and(|node| node.element.is_some())
+                .is_none_or(|node| node.element.is_none())
             {
                 continue;
             }
@@ -1899,10 +1904,10 @@ impl<H: UiHost> UiTree<H> {
                 // Phase 1: request/build newly registered viewport roots for stable identity,
                 // regardless of whether they will be computed this frame.
                 for item in &batch {
-                    if !self
+                    if self
                         .nodes
                         .get(item.root)
-                        .is_some_and(|node| node.element.is_some())
+                        .is_none_or(|node| node.element.is_none())
                     {
                         continue;
                     }
@@ -2173,8 +2178,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let mut batch: Vec<(NodeId, Rect)> = Vec::new();
-        batch.reserve(roots.len());
+        let mut batch: Vec<(NodeId, Rect)> = Vec::with_capacity(roots.len());
         for &(root, root_bounds) in roots {
             let Some(node) = self.nodes.get(root) else {
                 continue;
