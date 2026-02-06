@@ -5383,22 +5383,7 @@ fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
-    let checked = cx
-        .get_model_copied(&model, Invalidation::Layout)
-        .unwrap_or(false);
-    vec![stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            vec![
-                shadcn::Checkbox::new(model)
-                    .a11y_label("Accept terms")
-                    .into_element(cx),
-                ui::label(cx, "Accept terms").into_element(cx),
-                cx.text(format!("checked={}", checked as u8)),
-            ]
-        },
-    )]
+    pages::preview_checkbox(cx, model)
 }
 
 fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {

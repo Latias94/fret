@@ -66,7 +66,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] card — examples mirrored + size/action slots (`apps/fret-ui-gallery/src/ui.rs::preview_card`, `ecosystem/fret-ui-shadcn/src/card.rs`)
 - [~] carousel - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/carousel.rs`)
 - [~] chart - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/chart.rs`)
-- [ ] checkbox
+- [~] checkbox - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/checkbox.rs`)
 - [ ] collapsible
 - [ ] combobox
 - [ ] command

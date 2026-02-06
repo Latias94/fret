@@ -4,6 +4,7 @@ mod alert;
 mod alert_dialog;
 mod aspect_ratio;
 mod breadcrumb;
+mod checkbox;
 mod carousel;
 mod chart;
 mod toggle;
@@ -31,6 +32,10 @@ pub(super) fn preview_breadcrumb(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     breadcrumb::preview_breadcrumb(cx, last_action)
+}
+
+pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+    checkbox::preview_checkbox(cx, model)
 }
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
