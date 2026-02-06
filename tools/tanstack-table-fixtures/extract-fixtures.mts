@@ -183,7 +183,10 @@ type SnapshotId =
   | "row_id_state_ops_group_selection_select_children_false"
   | "row_id_state_ops_group_selection_toggle_off"
   | "row_id_state_ops_nested_group_selection"
+  | "row_id_state_ops_group_selection_on_row_selection_change_noop"
   | "row_id_state_ops_group_expanding"
+  | "row_id_state_ops_group_expanding_on_expanded_change_noop"
+  | "row_id_state_ops_group_pinning_on_row_pinning_change_noop"
   | "row_id_state_ops_group_pinning"
   | "row_id_state_ops_nested_group_pinning"
   | "pagination_baseline"
@@ -3917,14 +3920,40 @@ function snapshotColumnPinning(
         ],
       ),
       mkActions(
+        "row_id_state_ops_group_selection_on_row_selection_change_noop",
+        { __onRowSelectionChange: "noop" },
+        { grouping: ["status"] },
+        [{ type: "toggleRowSelected", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
         "row_id_state_ops_group_expanding",
         {},
         { grouping: ["status"] },
         [{ type: "toggleRowExpanded", row_id: "status:Running", value: true }],
       ),
       mkActions(
+        "row_id_state_ops_group_expanding_on_expanded_change_noop",
+        { __onExpandedChange: "noop" },
+        { grouping: ["status"] },
+        [{ type: "toggleRowExpanded", row_id: "status:Running", value: true }],
+      ),
+      mkActions(
         "row_id_state_ops_group_pinning",
         {},
+        { grouping: ["status"] },
+        [
+          {
+            type: "pinRow",
+            row_id: "status:Running",
+            position: "top",
+            include_leaf_rows: false,
+            include_parent_rows: false,
+          },
+        ],
+      ),
+      mkActions(
+        "row_id_state_ops_group_pinning_on_row_pinning_change_noop",
+        { __onRowPinningChange: "noop" },
         { grouping: ["status"] },
         [
           {

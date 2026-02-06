@@ -1498,6 +1498,284 @@
       }
     },
     {
+      "id": "row_id_state_ops_group_selection_on_row_selection_change_noop",
+      "options": {
+        "__onRowSelectionChange": "noop"
+      },
+      "state": {
+        "grouping": [
+          "status"
+        ]
+      },
+      "actions": [
+        {
+          "type": "toggleRowSelected",
+          "row_id": "status:Running",
+          "value": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "2",
+            "4",
+            "4",
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "2",
+            "4",
+            "4",
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "status:Running",
+            "1",
+            "3",
+            "5",
+            "status:Idle",
+            "2",
+            "status:Disabled",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "status:Running",
+            "1",
+            "3",
+            "5",
+            "status:Idle",
+            "2",
+            "status:Disabled",
+            "4"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 3,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "status"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
       "id": "row_id_state_ops_group_expanding",
       "options": {},
       "state": {
@@ -1791,6 +2069,284 @@
       }
     },
     {
+      "id": "row_id_state_ops_group_expanding_on_expanded_change_noop",
+      "options": {
+        "__onExpandedChange": "noop"
+      },
+      "state": {
+        "grouping": [
+          "status"
+        ]
+      },
+      "actions": [
+        {
+          "type": "toggleRowExpanded",
+          "row_id": "status:Running",
+          "value": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "2",
+            "4",
+            "4",
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "2",
+            "4",
+            "4",
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "status:Running",
+            "1",
+            "3",
+            "5",
+            "status:Idle",
+            "2",
+            "status:Disabled",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "status:Running",
+            "1",
+            "3",
+            "5",
+            "status:Idle",
+            "2",
+            "status:Disabled",
+            "4"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 3,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "status"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
       "id": "row_id_state_ops_group_pinning",
       "options": {},
       "state": {
@@ -2049,6 +2605,286 @@
             "top": [
               "status:Running"
             ],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "row_id_state_ops_group_pinning_on_row_pinning_change_noop",
+      "options": {
+        "__onRowPinningChange": "noop"
+      },
+      "state": {
+        "grouping": [
+          "status"
+        ]
+      },
+      "actions": [
+        {
+          "type": "pinRow",
+          "row_id": "status:Running",
+          "position": "top",
+          "include_leaf_rows": false,
+          "include_parent_rows": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "2",
+            "4",
+            "4",
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "1",
+            "3",
+            "5",
+            "1",
+            "3",
+            "5",
+            "2",
+            "2",
+            "4",
+            "4",
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "status:Running",
+            "1",
+            "3",
+            "5",
+            "status:Idle",
+            "2",
+            "status:Disabled",
+            "4"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "status:Running",
+            "status:Idle",
+            "status:Disabled"
+          ],
+          "flat": [
+            "status:Running",
+            "1",
+            "3",
+            "5",
+            "status:Idle",
+            "2",
+            "status:Disabled",
+            "4"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 3,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": true,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 150,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900,
+            "mem_mb": 1050
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 1050,
+            "status": 900,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "status"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
             "bottom": []
           },
           "rowSelection": {},

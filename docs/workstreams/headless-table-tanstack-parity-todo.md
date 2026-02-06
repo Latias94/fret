@@ -133,7 +133,8 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
         - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_row_id_state_ops_parity.rs`
         - Fixture generator: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`--case row_id_state_ops`)
       - Done (fixture parity, grouped selection edges): `select_children=false`, toggle-off clearing, and nested grouped selection.
-      - Remaining: controlled-hook variants for grouped RowId paths (`onRowSelectionChange` / `onExpandedChange` / `onRowPinningChange`).
+      - Done (fixture parity, controlled hooks): grouped RowId no-op hook paths are covered for selection/expanding/pinning.
+        - Snapshots: `row_id_state_ops_group_selection_on_row_selection_change_noop`, `row_id_state_ops_group_expanding_on_expanded_change_noop`, `row_id_state_ops_group_pinning_on_row_pinning_change_noop`
   - Note: current TanStack JSON state round-trip for row-keyed maps (rowSelection/expanded/rowPinning)
     still assumes numeric ids; this must be generalized to `RowId` strings as part of `HTP-id-015`.
 

@@ -134,6 +134,19 @@ fn tanstack_v8_row_id_state_ops_parity() {
         columns.iter().map(|c| (c.id.as_ref(), c)).collect();
 
     for snap in fixture.snapshots {
+        let on_row_selection_change_mode = snap
+            .options
+            .get("__onRowSelectionChange")
+            .and_then(|v| v.as_str());
+        let on_expanded_change_mode = snap
+            .options
+            .get("__onExpandedChange")
+            .and_then(|v| v.as_str());
+        let on_row_pinning_change_mode = snap
+            .options
+            .get("__onRowPinningChange")
+            .and_then(|v| v.as_str());
+
         let tanstack_options =
             TanStackTableOptions::from_json(&snap.options).expect("tanstack options");
         let options = tanstack_options.to_table_options();
@@ -188,11 +201,17 @@ fn tanstack_v8_row_id_state_ops_parity() {
                     value,
                     select_children,
                 } => {
+                    if on_row_selection_change_mode == Some("noop") {
+                        continue;
+                    }
                     state.row_selection = table
                         .toggled_row_selected_by_id(row_id, true, *value, *select_children)
                         .unwrap_or_else(|| panic!("unknown row id for selection: {row_id}"));
                 }
                 FixtureAction::ToggleRowExpanded { row_id, value } => {
+                    if on_expanded_change_mode == Some("noop") {
+                        continue;
+                    }
                     state.expanding = table
                         .toggled_row_expanded_by_id(row_id, true, *value)
                         .unwrap_or_else(|| panic!("unknown row id for expanding: {row_id}"));
@@ -203,6 +222,9 @@ fn tanstack_v8_row_id_state_ops_parity() {
                     include_leaf_rows,
                     include_parent_rows,
                 } => {
+                    if on_row_pinning_change_mode == Some("noop") {
+                        continue;
+                    }
                     let position = match position.as_deref() {
                         Some("top") => Some(RowPinPosition::Top),
                         Some("bottom") => Some(RowPinPosition::Bottom),
