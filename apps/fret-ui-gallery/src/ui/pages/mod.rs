@@ -11,6 +11,7 @@ mod collapsible;
 mod combobox;
 mod command;
 mod context_menu;
+mod data_table;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -78,6 +79,13 @@ pub(super) fn preview_context_menu(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     context_menu::preview_context_menu(cx, open, last_action)
+}
+
+pub(super) fn preview_data_table(
+    cx: &mut ElementContext<'_, App>,
+    state: Model<fret_ui_headless::table::TableState>,
+) -> Vec<AnyElement> {
+    data_table::preview_data_table(cx, state)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
