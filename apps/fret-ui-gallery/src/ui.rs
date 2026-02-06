@@ -2335,6 +2335,7 @@ fn preview_code_editor_mvp(
         a11y_composition_gate: code_editor::CodeEditorHandle,
         a11y_selection_wrap_gate: code_editor::CodeEditorHandle,
         a11y_composition_wrap_gate: code_editor::CodeEditorHandle,
+        a11y_composition_drag_gate: code_editor::CodeEditorHandle,
     }
 
     fn code_editor_wrap_gate_fixture() -> String {
@@ -2365,6 +2366,11 @@ fn preview_code_editor_mvp(
                 handle.set_caret(78);
                 handle
             },
+            a11y_composition_drag_gate: {
+                let handle = code_editor::CodeEditorHandle::new(code_editor_wrap_gate_fixture());
+                handle.set_caret(78);
+                handle
+            },
         },
         |h| h.clone(),
     );
@@ -2375,6 +2381,7 @@ fn preview_code_editor_mvp(
     let a11y_composition_gate_handle = handles.a11y_composition_gate;
     let a11y_selection_wrap_gate_handle = handles.a11y_selection_wrap_gate;
     let a11y_composition_wrap_gate_handle = handles.a11y_composition_wrap_gate;
+    let a11y_composition_drag_gate_handle = handles.a11y_composition_drag_gate;
 
     #[derive(Debug, Default, Clone, Copy)]
     struct CodeEditorMvpAppliedFlags {
@@ -2405,6 +2412,7 @@ fn preview_code_editor_mvp(
         a11y_composition_gate_handle.set_text_boundary_mode(mode);
         a11y_selection_wrap_gate_handle.set_text_boundary_mode(mode);
         a11y_composition_wrap_gate_handle.set_text_boundary_mode(mode);
+        a11y_composition_drag_gate_handle.set_text_boundary_mode(mode);
         applied_flags.boundary_identifier_enabled = Some(boundary_identifier_enabled);
         applied.set(applied_flags);
     }
@@ -2428,6 +2436,7 @@ fn preview_code_editor_mvp(
     let a11y_composition_gate_handle_for_harness = a11y_composition_gate_handle.clone();
     let a11y_selection_wrap_gate_handle_for_harness = a11y_selection_wrap_gate_handle.clone();
     let a11y_composition_wrap_gate_handle_for_harness = a11y_composition_wrap_gate_handle.clone();
+    let a11y_composition_drag_gate_handle_for_harness = a11y_composition_drag_gate_handle.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -2762,6 +2771,118 @@ fn preview_code_editor_mvp(
                                     "ui-gallery-code-editor-a11y-composition-wrap-clear-preedit",
                                 )
                                 .label("Clear preedit (wrap)"),
+                        );
+
+                    let controls = stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        move |_cx| vec![inject.clone(), clear.clone()],
+                    );
+
+                    let panel = cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    );
+
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N1),
+                        |_cx| vec![panel, controls],
+                    )
+                }),
+                cx.keyed("a11y-composition-drag-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(
+                        a11y_composition_drag_gate_handle_for_harness.clone(),
+                    )
+                    .key(7)
+                    .overscan(8)
+                    .soft_wrap_cols(Some(80))
+                    .a11y_label("Code editor a11y composition drag gate")
+                    .viewport_test_id("ui-gallery-code-editor-a11y-composition-drag-gate-viewport")
+                    .into_element(cx);
+
+                    const WRAP_CARET: usize = 78;
+
+                    let inject = {
+                        let handle = a11y_composition_drag_gate_handle_for_harness.clone();
+                        Arc::new(
+                            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                  action_cx: fret_ui::action::ActionCx,
+                                  _up: fret_ui::action::PointerUpCx| {
+                                handle.set_caret(WRAP_CARET);
+                                handle.set_preedit_debug("ab", None);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                true
+                            },
+                        )
+                    };
+
+                    let clear = {
+                        let handle = a11y_composition_drag_gate_handle_for_harness.clone();
+                        Arc::new(
+                            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                                  action_cx: fret_ui::action::ActionCx,
+                                  _up: fret_ui::action::PointerUpCx| {
+                                handle.set_preedit_debug("", None);
+                                host.notify(action_cx);
+                                host.request_redraw(action_cx.window);
+                                true
+                            },
+                        )
+                    };
+
+                    let inject = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
+                                    );
+                                    true
+                                }));
+                                cx.pointer_region_on_pointer_up(inject.clone());
+                                vec![cx.text("Inject preedit (drag)")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id("ui-gallery-code-editor-a11y-composition-drag-inject-preedit")
+                                .label("Inject preedit (drag)"),
+                        );
+
+                    let clear = cx
+                        .pointer_region(
+                            fret_ui::element::PointerRegionProps::default(),
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(Arc::new(|host, _cx, _down| {
+                                    host.prevent_default(
+                                        fret_runtime::DefaultAction::FocusOnPointerDown,
+                                    );
+                                    true
+                                }));
+                                cx.pointer_region_on_pointer_up(clear.clone());
+                                vec![cx.text("Clear preedit (drag)")]
+                            },
+                        )
+                        .attach_semantics(
+                            SemanticsDecoration::default()
+                                .role(fret_core::SemanticsRole::Button)
+                                .test_id("ui-gallery-code-editor-a11y-composition-drag-clear-preedit")
+                                .label("Clear preedit (drag)"),
                         );
 
                     let controls = stack::hstack(
