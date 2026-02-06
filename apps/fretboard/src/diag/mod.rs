@@ -3921,6 +3921,16 @@ See: `docs/tracy.md`.\n";
 	                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
 	                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
 	                                },
+	                                "p95": {
+	                                    "top_total_time_us": top_total,
+	                                    "top_layout_time_us": top_layout,
+	                                    "top_layout_engine_solve_time_us": top_solve,
+	                                    "pointer_move_max_dispatch_time_us": pointer_move_max_dispatch_time_us,
+	                                    "pointer_move_max_hit_test_time_us": pointer_move_max_hit_test_time_us,
+	                                    "pointer_move_snapshots_with_global_changes": pointer_move_snapshots_with_global_changes,
+	                                    "run_paint_cache_hit_test_only_replay_allowed_max": run_paint_cache_hit_test_only_replay_allowed_max,
+	                                    "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+	                                },
 	                            }));
                         }
                         if wants_perf_thresholds {
@@ -4925,14 +4935,41 @@ See: `docs/tracy.md`.\n";
                         *runs_pointer_move_global_changes.iter().max().unwrap_or(&0);
                     let max_run_paint_cache_hit_test_only_replay_allowed =
                         *runs_paint_cache_hit_test_only_replay_allowed_max
-                        .iter()
-                        .max()
-                        .unwrap_or(&0);
+                            .iter()
+                            .max()
+                            .unwrap_or(&0);
                     let max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch =
                         *runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max
-                        .iter()
-                        .max()
-                        .unwrap_or(&0);
+                            .iter()
+                            .max()
+                            .unwrap_or(&0);
+                    let p95_total =
+                        percentile_linear_interpolated(&runs_total, 0.95).unwrap_or(max_total);
+                    let p95_layout =
+                        percentile_linear_interpolated(&runs_layout, 0.95).unwrap_or(max_layout);
+                    let p95_solve =
+                        percentile_linear_interpolated(&runs_solve, 0.95).unwrap_or(max_solve);
+                    let p95_pointer_move_dispatch =
+                        percentile_linear_interpolated(&runs_pointer_move_dispatch, 0.95)
+                            .unwrap_or(max_pointer_move_dispatch);
+                    let p95_pointer_move_hit_test =
+                        percentile_linear_interpolated(&runs_pointer_move_hit_test, 0.95)
+                            .unwrap_or(max_pointer_move_hit_test);
+                    let p95_pointer_move_global_changes =
+                        percentile_linear_interpolated(&runs_pointer_move_global_changes, 0.95)
+                            .unwrap_or(max_pointer_move_global_changes);
+                    let p95_run_paint_cache_hit_test_only_replay_allowed =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_allowed_max,
+                            0.95,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_allowed);
+                    let p95_run_paint_cache_hit_test_only_replay_rejected_key_mismatch =
+                        percentile_linear_interpolated(
+                            &runs_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
+                            0.95,
+                        )
+                        .unwrap_or(max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch);
                     let script_key = normalize_repo_relative_path(&workspace_root, &src);
 
                     if perf_baseline_out.is_some() {
@@ -4947,6 +4984,16 @@ See: `docs/tracy.md`.\n";
 	                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
 	                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed,
 	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+	                            },
+	                            "p95": {
+	                                "top_total_time_us": p95_total,
+	                                "top_layout_time_us": p95_layout,
+	                                "top_layout_engine_solve_time_us": p95_solve,
+	                                "pointer_move_max_dispatch_time_us": p95_pointer_move_dispatch,
+	                                "pointer_move_max_hit_test_time_us": p95_pointer_move_hit_test,
+	                                "pointer_move_snapshots_with_global_changes": p95_pointer_move_global_changes,
+	                                "run_paint_cache_hit_test_only_replay_allowed_max": p95_run_paint_cache_hit_test_only_replay_allowed,
+	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": p95_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
 	                            },
 	                        }));
                     }
@@ -5086,12 +5133,43 @@ See: `docs/tracy.md`.\n";
                             .get("run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max")
                             .and_then(|v| v.as_u64())
                             .unwrap_or(0);
-	                        let thr_total =
-	                            apply_perf_baseline_headroom(max_total, perf_baseline_headroom_pct);
+                        let p95 = row.get("p95");
+                        let p95_total = p95
+                            .and_then(|m| m.get("top_total_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_total);
+                        let p95_layout = p95
+                            .and_then(|m| m.get("top_layout_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_layout);
+                        let p95_solve = p95
+                            .and_then(|m| m.get("top_layout_engine_solve_time_us"))
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(max_solve);
+                        let (seed_total, seed_total_source) = baseline_threshold_seed_for_metric(
+                            script.as_str(),
+                            "top_total_time_us",
+                            max_total,
+                            p95_total,
+                        );
+                        let (seed_layout, seed_layout_source) = baseline_threshold_seed_for_metric(
+                            script.as_str(),
+                            "top_layout_time_us",
+                            max_layout,
+                            p95_layout,
+                        );
+                        let (seed_solve, seed_solve_source) = baseline_threshold_seed_for_metric(
+                            script.as_str(),
+                            "top_layout_engine_solve_time_us",
+                            max_solve,
+                            p95_solve,
+                        );
+                        let thr_total =
+                            apply_perf_baseline_headroom(seed_total, perf_baseline_headroom_pct);
 	                        let thr_layout =
-	                            apply_perf_baseline_headroom(max_layout, perf_baseline_headroom_pct);
+	                            apply_perf_baseline_headroom(seed_layout, perf_baseline_headroom_pct);
 		                        let thr_solve =
-		                            apply_perf_baseline_headroom(max_solve, perf_baseline_headroom_pct);
+		                            apply_perf_baseline_headroom(seed_solve, perf_baseline_headroom_pct);
 		                        let thr_pointer_move_dispatch =
 		                            apply_perf_baseline_headroom_with_slack_and_quantum(
 		                                max_pointer_move_dispatch,
@@ -5141,6 +5219,21 @@ See: `docs/tracy.md`.\n";
 	                                "pointer_move_snapshots_with_global_changes": max_pointer_move_global_changes,
 	                                "run_paint_cache_hit_test_only_replay_allowed_max": max_run_paint_cache_hit_test_only_replay_allowed,
 	                                "run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch,
+	                            },
+	                            "measured_p95": {
+	                                "top_total_time_us": p95_total,
+	                                "top_layout_time_us": p95_layout,
+	                                "top_layout_engine_solve_time_us": p95_solve,
+	                            },
+	                            "threshold_seed": {
+	                                "top_total_time_us": seed_total,
+	                                "top_layout_time_us": seed_layout,
+	                                "top_layout_engine_solve_time_us": seed_solve,
+	                            },
+	                            "threshold_seed_source": {
+	                                "top_total_time_us": seed_total_source,
+	                                "top_layout_time_us": seed_layout_source,
+	                                "top_layout_engine_solve_time_us": seed_solve_source,
 	                            },
 	                        }))
 	                    })
@@ -7795,6 +7888,54 @@ fn summarize_times_us(values: &[u64]) -> serde_json::Value {
     })
 }
 
+fn baseline_threshold_seed_for_metric(
+    script: &str,
+    metric: &str,
+    max_value: u64,
+    p95_value: u64,
+) -> (u64, &'static str) {
+    let uses_p95 = script.ends_with("ui-gallery-window-resize-stress-steady.json")
+        && matches!(
+            metric,
+            "top_total_time_us" | "top_layout_time_us" | "top_layout_engine_solve_time_us"
+        );
+    if uses_p95 {
+        return (p95_value, "p95");
+    }
+    (max_value, "max")
+}
+
+fn percentile_linear_interpolated(values: &[u64], percentile: f64) -> Option<u64> {
+    if values.is_empty() {
+        return None;
+    }
+    let mut sorted = values.to_vec();
+    sorted.sort_unstable();
+    Some(percentile_linear_interpolated_sorted(&sorted, percentile))
+}
+
+fn percentile_linear_interpolated_sorted(sorted: &[u64], percentile: f64) -> u64 {
+    if sorted.is_empty() {
+        return 0;
+    }
+    if sorted.len() == 1 {
+        return sorted[0];
+    }
+
+    let percentile = percentile.clamp(0.0, 1.0);
+    let max_index = (sorted.len() - 1) as f64;
+    let rank = percentile * max_index;
+    let lower_index = rank.floor() as usize;
+    let upper_index = rank.ceil() as usize;
+    if lower_index == upper_index {
+        return sorted[lower_index];
+    }
+
+    let lower = sorted[lower_index] as f64;
+    let upper = sorted[upper_index] as f64;
+    (lower + (upper - lower) * (rank - lower_index as f64)).round() as u64
+}
+
 fn percentile_nearest_rank_sorted(sorted: &[u64], percentile: f64) -> u64 {
     if sorted.is_empty() {
         return 0;
@@ -8099,6 +8240,43 @@ mod tests {
         assert_eq!(
             summarize_times_us(&values),
             json!({"min":10,"p50":40,"p95":70,"max":70})
+        );
+    }
+
+    #[test]
+    fn perf_percentile_linear_interpolated_reduces_small_sample_tail_noise() {
+        let values = vec![10u64, 20, 30, 40, 50, 60, 120];
+        assert_eq!(percentile_linear_interpolated(&values, 0.95), Some(102));
+    }
+
+    #[test]
+    fn baseline_threshold_seed_policy_for_resize_script() {
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "top_total_time_us",
+                22645,
+                15856,
+            ),
+            (15856, "p95")
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+                "pointer_move_max_dispatch_time_us",
+                3673,
+                3200,
+            ),
+            (3673, "max")
+        );
+        assert_eq!(
+            baseline_threshold_seed_for_metric(
+                "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+                "top_total_time_us",
+                7153,
+                7000,
+            ),
+            (7153, "max")
         );
     }
 

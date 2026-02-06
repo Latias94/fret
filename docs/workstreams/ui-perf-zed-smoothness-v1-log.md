@@ -5048,3 +5048,74 @@ Interpretation:
 - The resize script remains the dominant noise source; one high outlier in the baseline generation run significantly
   raised `max_top_total_us` for that script. Follow-up should consider robust baseline generation
   (e.g., percentile-capped thresholding for known noisy scripts) to avoid over-loose gates.
+
+## 2026-02-06 21:05:00 (commit: feat(diag) anti-noise seeds for steady baseline thresholds)
+
+Change:
+- `diag perf --perf-baseline-out` now records anti-noise seed metadata per row:
+  - `measured_p95`
+  - `threshold_seed`
+  - `threshold_seed_source`
+- Added script-specific threshold-seed policy:
+  - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+    uses p95 seed for `top_total_time_us`, `top_layout_time_us`, `top_layout_engine_solve_time_us`.
+  - other scripts/metrics keep max-seeded thresholds.
+- p95 seed computation for baseline generation uses linear interpolation over run samples so repeat=7
+  does not collapse to max-only seeding.
+
+Validation:
+- `cargo fmt`
+- `cargo check -q -p fretboard`
+- `cargo nextest run -p fretboard baseline_threshold_seed_policy_for_resize_script perf_percentile_linear_interpolated_reduces_small_sample_tail_noise perf_threshold_scan`
+
+Baseline command (v15):
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15h20p95i \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --top 5 --json \
+  --perf-baseline-out docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --perf-baseline-headroom-pct 20 \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Validation command:
+```bash
+target/debug/fretboard diag perf ui-gallery-steady \
+  --dir target/fret-diag-codex-perf-v15-validate-p95i \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 3 --warmup-frames 5 --sort time --top 3 --json \
+  --perf-baseline docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results:
+- Gate status:
+  - `target/fret-diag-codex-perf-v15-validate-p95i/check.perf_thresholds.json`: `failures = 0`.
+- Baseline v15 resize row (`tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`):
+  - `measured_max.top_total_time_us = 16566`
+  - `measured_p95.top_total_time_us = 16379`
+  - `threshold_seed_source.top_total_time_us = "p95"`
+  - `thresholds.max_top_total_us = 19655` (20% headroom over p95 seed)
+- Drift vs v14 baseline (`docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`):
+  - resize measured max top-total: `22645 -> 16566` (`-26.84%`)
+  - resize threshold max-top-total: `27174 -> 19655` (`-27.67%`)
+- Validation run worst overall:
+  - script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+  - `top_total_time_us = 15893`
+  - bundle: `target/fret-diag-codex-perf-v15-validate-p95i/1770382935955-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Interpretation:
+- Baseline rows now expose enough metadata to audit threshold derivation without reverse-engineering scripts.
+- Resize steady thresholds are no longer tied to raw max-only seeds; this tightens gates against single-run
+  outliers while keeping repeat=3 validation stable on the current machine profile.
+- Follow-up: if suite noise rises again, tune seed policy per script (e.g., p90/p95 or higher repeat for
+  specific workloads) and record the policy update in this log.

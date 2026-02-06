@@ -54,6 +54,7 @@ Conventions:
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v12.json` (pointer-move threshold slack/quantum stabilization; see perf log entry around 2026-02-06 12:36).
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v13.json` (refresh after resize-event coalescing work; see perf log entry for commit `beb2fa315`).
   - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json` (schema refresh including run-max hit-test-replay gate fields; evidence + drift notes in perf log entry 2026-02-06 20:12).
+  - macOS (Apple M4): `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json` (adds anti-noise threshold seeding metadata and resize-script p95 seeding with interpolated percentile; evidence + drift notes in perf log entry 2026-02-06 21:05).
 - [x] Add a “how to run locally” snippet to the workstream doc (keep it copy/paste friendly).
 - [ ] Create a “known-noise sources” section (thermal, background apps, debug vs release, shader compile).
 - [x] Pick one canonical view-cache setting for the suite and enforce it via `--env` in scripts.
@@ -509,6 +510,13 @@ Perf acceptance:
   - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v14.json`
   - Validation: `target/fret-diag-codex-perf-v14-validate2/check.perf_thresholds.json` (failures=0).
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 20:12.
+- [x] Add anti-noise threshold seeding metadata for steady baselines.
+  - Baseline row now records `measured_p95`, `threshold_seed`, `threshold_seed_source`.
+  - Script-specific policy: resize steady uses p95 seed for `top_total/layout/solve`; other metrics stay max-seeded.
+  - p95 seed uses linear interpolation so repeat=7 no longer degenerates to max-only seeding.
+  - Baseline: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v15.json`
+  - Validation: `target/fret-diag-codex-perf-v15-validate-p95i/check.perf_thresholds.json` (failures=0).
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 21:05.
 - [x] Coalesce window resizes to once per frame in the desktop runner.
   - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).
   - Commit: `beb2fa315`
