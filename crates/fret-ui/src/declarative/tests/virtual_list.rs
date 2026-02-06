@@ -1161,11 +1161,17 @@ fn retained_virtual_list_prefetches_window_before_escape_without_rerendering_cac
         calls_before_scroll,
         "expected a cache hit before prefetching"
     );
-    let list_element = ui
-        .debug_virtual_list_windows()
-        .last()
-        .expect("expected at least one virtual list window debug record")
-        .element;
+    let cache_node = ui.children(root)[0];
+    let list_node = ui.children(cache_node)[0];
+    let list_element = app
+        .with_global_mut(super::super::frame::ElementFrame::default, |frame, _app| {
+            frame
+                .windows
+                .get(&window)
+                .and_then(|w| w.instances.get(list_node))
+                .map(|record| record.element)
+        })
+        .expect("list instance exists");
 
     // Move near the overscan boundary but stay within it so this is a prefetch (not an escape).
     scroll_handle.set_offset(fret_core::Point::new(Px(0.0), Px(30.0)));

@@ -13501,6 +13501,27 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         .side(material3::TooltipSide::Left)
         .into_element(cx);
 
+        let rich = material3::RichTooltip::new(
+            material3::Button::new("Hover (Rich)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-rich-tooltip-trigger")
+                .into_element(cx),
+            "Rich tooltip supporting text (body medium).",
+        )
+        .title("Rich tooltip title")
+        .side(material3::TooltipSide::Top)
+        .into_element(cx);
+
+        let rich_no_title = material3::RichTooltip::new(
+            material3::Button::new("Hover (Rich / no title)")
+                .variant(outlined)
+                .test_id("ui-gallery-material3-rich-tooltip-no-title-trigger")
+                .into_element(cx),
+            "Rich tooltip supporting text only.",
+        )
+        .side(material3::TooltipSide::Bottom)
+        .into_element(cx);
+
         vec![
                 stack::hstack(
                     cx,
@@ -13508,6 +13529,13 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                         .gap(Space::N4)
                         .layout(LayoutRefinement::default().w_full()),
                     |_cx| [top, right, bottom, left],
+                ),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default()
+                        .gap(Space::N4)
+                        .layout(LayoutRefinement::default().w_full()),
+                    |_cx| [rich, rich_no_title],
                 ),
                 cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
             ]
@@ -13517,7 +13545,7 @@ fn preview_material3_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Tooltip").into_element(cx),
             shadcn::CardDescription::new(
-                "Plain tooltip MVP: delay group + hover intent + safe-hover corridor + token-driven styling.",
+                "Tooltip MVP: delay group + hover intent + safe-hover corridor + token-driven styling (plain + rich).",
             )
             .into_element(cx),
         ])

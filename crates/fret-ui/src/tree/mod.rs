@@ -4071,7 +4071,9 @@ impl<H: UiHost> UiTree<H> {
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
-        self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        if inv.layout {
+            self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        }
         id
     }
 
@@ -4085,6 +4087,9 @@ impl<H: UiHost> UiTree<H> {
         let inv = node.invalidation;
         let id = self.nodes.insert(node);
         self.update_invalidation_counters(InvalidationFlags::default(), inv);
+        if inv.layout {
+            self.layout_invalidations_count = self.layout_invalidations_count.saturating_add(1);
+        }
         id
     }
 
