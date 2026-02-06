@@ -2358,21 +2358,42 @@ fn preview_code_editor_mvp(
         .get_model_copied(&soft_wrap, Invalidation::Layout)
         .unwrap_or(false);
 
-    let handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
-        |h| h.clone(),
-    );
-    let word_handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
-        |h| h.clone(),
-    );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_applied.get() != Some(syntax_enabled) {
-        handle.set_language(if syntax_enabled { Some("rust") } else { None });
-        last_applied.set(Some(syntax_enabled));
+    #[derive(Clone)]
+    struct CodeEditorMvpHandles {
+        main: code_editor::CodeEditorHandle,
+        word_fixture: code_editor::CodeEditorHandle,
+        word_gate: code_editor::CodeEditorHandle,
     }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+
+    let handles = cx.with_state(
+        || CodeEditorMvpHandles {
+            main: code_editor::CodeEditorHandle::new(code_editor_mvp_source()),
+            word_fixture: code_editor::CodeEditorHandle::new(code_editor_word_boundary_fixture()),
+            word_gate: code_editor::CodeEditorHandle::new("can't"),
+        },
+        |h| h.clone(),
+    );
+    let handle = handles.main;
+    let word_handle = handles.word_fixture;
+    let word_gate_handle = handles.word_gate;
+
+    #[derive(Debug, Default, Clone, Copy)]
+    struct CodeEditorMvpAppliedFlags {
+        syntax_enabled: Option<bool>,
+        boundary_identifier_enabled: Option<bool>,
+    }
+
+    let applied = cx.with_state(
+        || Rc::new(Cell::new(CodeEditorMvpAppliedFlags::default())),
+        |v| v.clone(),
+    );
+    let mut applied_flags = applied.get();
+    if applied_flags.syntax_enabled != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        applied_flags.syntax_enabled = Some(syntax_enabled);
+        applied.set(applied_flags);
+    }
+    if applied_flags.boundary_identifier_enabled != Some(boundary_identifier_enabled) {
         let mode = if boundary_identifier_enabled {
             fret_runtime::TextBoundaryMode::Identifier
         } else {
@@ -2380,7 +2401,9 @@ fn preview_code_editor_mvp(
         };
         handle.set_text_boundary_mode(mode);
         word_handle.set_text_boundary_mode(mode);
-        last_boundaries.set(Some(boundary_identifier_enabled));
+        word_gate_handle.set_text_boundary_mode(mode);
+        applied_flags.boundary_identifier_enabled = Some(boundary_identifier_enabled);
+        applied.set(applied_flags);
     }
 
     let word_fixture_loaded = cx.with_state(|| Rc::new(Cell::new(true)), |v| v.clone());
@@ -2395,6 +2418,7 @@ fn preview_code_editor_mvp(
     let boundary_identifier_for_harness = boundary_identifier.clone();
     let soft_wrap_switch = soft_wrap.clone();
     let word_handle_for_harness = word_handle.clone();
+    let word_gate_handle_for_harness = word_gate_handle.clone();
     let word_debug_for_harness = word_debug.clone();
     let word_debug_for_render = word_debug.clone();
     let header = stack::vstack(
@@ -2429,6 +2453,7 @@ fn preview_code_editor_mvp(
                         vec![
                             shadcn::Switch::new(boundary_identifier_switch.clone())
                                 .a11y_label("Toggle identifier word boundaries")
+                                .test_id("ui-gallery-code-editor-boundary-identifier-switch")
                                 .into_element(cx),
                             cx.text(if boundary_identifier_enabled {
                                 "Word boundaries: Identifier"
@@ -2465,6 +2490,28 @@ fn preview_code_editor_mvp(
                         ]
                     },
                 ),
+                cx.keyed("word-boundary-gate", |cx| {
+                    let gate_editor = code_editor::CodeEditor::new(word_gate_handle_for_harness.clone())
+                        .key(2)
+                        .overscan(8)
+                        .soft_wrap_cols(None)
+                        .a11y_label("Code editor word gate")
+                        .viewport_test_id("ui-gallery-code-editor-word-gate-viewport")
+                        .into_element(cx);
+                    cx.container(
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .border_1()
+                                .rounded(Radius::Md)
+                                .bg(ColorRef::Color(theme.color_required("background"))),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .h_px(MetricRef::Px(Px(92.0))),
+                        ),
+                        |_cx| vec![gate_editor],
+                    )
+                }),
                 stack::hstack(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
