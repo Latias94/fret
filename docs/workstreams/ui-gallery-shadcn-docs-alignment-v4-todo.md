@@ -99,7 +99,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [~] select (group semantics + default alignment audited; needs full docs example order)
 - [x] separator ? examples mirrored (Demo/Vertical/Menu/List/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_separator`)
 - [x] sheet ? examples mirrored (Demo/Side/No Close Button/RTL; `showCloseButton` behavior approximated by omitting explicit close actions) (`apps/fret-ui-gallery/src/ui.rs::preview_sheet`)
-- [ ] sidebar
+- [x] sidebar ? examples mirrored (Demo/Controlled/RTL; aligned to docs `sidebar-demo` + controlled state pattern) (`apps/fret-ui-gallery/src/ui.rs::preview_sidebar`)
 - [ ] skeleton
 - [x] slider — examples mirrored (Demo/Range/Multiple Thumbs/Vertical/Controlled/Disabled/RTL; extras: inverted) (`apps/fret-ui-gallery/src/ui.rs::preview_slider`, `ecosystem/fret-ui-shadcn/src/slider.rs`, `tools/diag-scripts/ui-gallery-slider-and-avatar-screenshots.json`)
 - [ ] sonner
