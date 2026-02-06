@@ -3,7 +3,6 @@ use std::sync::Arc;
 use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{CanvasPoint, Graph, GraphId, NodeKindKey, PortId};
-use crate::io::NodeGraphViewState;
 use crate::ui::presenter::{
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem,
 };
@@ -11,7 +10,7 @@ use crate::ui::style::NodeGraphStyle;
 
 use super::super::NodeGraphCanvas;
 use super::super::overlay_hit;
-use super::TestUiHostImpl;
+use super::{TestUiHostImpl, insert_graph_view};
 use crate::ui::canvas::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 
@@ -210,8 +209,7 @@ fn hit_searcher_row_respects_scroll_and_header_region() {
 #[test]
 fn clamp_context_menu_origin_keeps_menu_rect_inside_visible_canvas_rect() {
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint { x: 100.0, y: -50.0 };
@@ -240,8 +238,7 @@ fn clamp_context_menu_origin_keeps_menu_rect_inside_visible_canvas_rect() {
 #[test]
 fn clamp_searcher_origin_keeps_rect_inside_visible_canvas_rect() {
     let mut host = TestUiHostImpl::default();
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
 
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint { x: -250.0, y: 75.0 };

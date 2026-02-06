@@ -12,14 +12,13 @@ use crate::core::{
     CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey, Symbol, SymbolId,
 };
 use crate::core::{SYMBOL_REF_NODE_KIND, symbol_ref_node_data};
-use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::ui::{
     NodeGraphBlackboardOverlay, NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost,
     NodeGraphOverlayState, NodeGraphStyle,
 };
 
-use super::{NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_graph_view};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -66,8 +65,7 @@ fn blackboard_overlay_is_hit_test_transparent_outside_panel() {
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let style = NodeGraphStyle::default();
@@ -107,8 +105,7 @@ fn blackboard_overlay_enter_defaults_to_add_symbol_when_focused() {
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let style = NodeGraphStyle::default();
@@ -154,8 +151,7 @@ fn blackboard_overlay_can_insert_symbol_ref_for_selected_symbol() {
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let style = NodeGraphStyle::default();
@@ -252,8 +248,7 @@ fn blackboard_overlay_delete_removes_symbol_ref_nodes_before_removing_symbol() {
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let style = NodeGraphStyle::default();
@@ -361,8 +356,7 @@ fn blackboard_overlay_rename_action_opens_symbol_rename_overlay() {
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let rename_text = host.models.insert(String::new());
@@ -471,8 +465,7 @@ fn blackboard_overlay_rename_action_then_enter_commits_symbol_rename() {
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let rename_text = host.models.insert(String::new());
@@ -613,8 +606,7 @@ fn blackboard_overlay_rename_action_then_escape_cancels_without_transaction() {
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let rename_text = host.models.insert(String::new());
@@ -749,8 +741,7 @@ fn blackboard_overlay_rename_action_then_enter_unchanged_closes_without_transact
     let mut ui = UiTree::<TestUiHostImpl>::default();
     ui.set_window(AppWindowId::default());
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let edits = host.models.insert(NodeGraphEditQueue::default());
     let overlays = host.models.insert(NodeGraphOverlayState::default());
     let rename_text = host.models.insert(String::new());

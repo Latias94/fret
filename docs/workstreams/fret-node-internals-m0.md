@@ -269,6 +269,13 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/harness/graphs.rs` (`insert_graph_view`, `make_host_graph_view`)
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/callbacks_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/perf_cache.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_symbol_rename_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_minimap_controls_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_toolbars_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_menu_searcher_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_invalidation_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`

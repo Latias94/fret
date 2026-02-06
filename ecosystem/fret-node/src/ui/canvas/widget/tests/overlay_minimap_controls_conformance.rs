@@ -23,7 +23,7 @@ use crate::ui::{
     NodeGraphStyle, NodeGraphViewQueue, NodeGraphViewRequest,
 };
 
-use super::{NullServices, TestUiHostImpl};
+use super::{NullServices, TestUiHostImpl, insert_graph_view};
 
 #[derive(Clone)]
 struct PointerDownCounter {
@@ -561,8 +561,7 @@ fn minimap_pointer_events_fall_through_outside_rect() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
     let style = test_style();
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();
     snap.transform.bounds_size = bounds().size;
@@ -605,8 +604,7 @@ fn minimap_drag_updates_view_state_and_store_when_attached() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
     let graph_value = Graph::new(GraphId::new());
-    let graph = host.models.insert(graph_value.clone());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
 
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
@@ -729,8 +727,7 @@ fn minimap_supports_view_queue_navigation_binding_for_b_layer_wiring() {
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let graph = host.models.insert(Graph::new(GraphId::new()));
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, Graph::new(GraphId::new()));
 
     let queue = host.models.insert(NodeGraphViewQueue::default());
 
@@ -842,8 +839,7 @@ fn minimap_keyboard_pan_updates_view_state_and_store_when_attached() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
 
     let graph_value = Graph::new(GraphId::new());
-    let graph = host.models.insert(graph_value.clone());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),
@@ -909,8 +905,7 @@ fn minimap_keyboard_zoom_updates_view_state_and_store_zoom_about_center() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
 
     let graph_value = Graph::new(GraphId::new());
-    let graph = host.models.insert(graph_value.clone());
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
     let store = host.models.insert(NodeGraphStore::new(
         graph_value,
         NodeGraphViewState::default(),

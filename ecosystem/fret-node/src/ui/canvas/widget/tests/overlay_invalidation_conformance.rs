@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use crate::core::CanvasPoint;
-use crate::io::NodeGraphViewState;
 use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
 
 use super::super::NodeGraphCanvas;
-use super::{TestUiHostImpl, make_test_graph_two_nodes_with_ports_spaced_x};
+use super::{TestUiHostImpl, insert_graph_view, make_test_graph_two_nodes_with_ports_spaced_x};
 use crate::ui::canvas::state::{ContextMenuState, ContextMenuTarget, SearcherState};
 
 #[test]
@@ -13,8 +12,7 @@ fn overlay_state_changes_do_not_rebuild_derived_geometry_or_spatial_index() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     let snapshot0 = canvas.sync_view_state(&mut host);
@@ -74,8 +72,7 @@ fn overlay_hover_and_scroll_updates_do_not_rebuild_derived_geometry_or_spatial_i
     let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, b_in) =
         make_test_graph_two_nodes_with_ports_spaced_x(260.0);
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (graph, view) = insert_graph_view(&mut host, graph_value);
 
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
     let snapshot0 = canvas.sync_view_state(&mut host);
