@@ -74,17 +74,30 @@ ColumnDef keys referenced by upstream feature implementations:
 Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstream public API surfaces
 (table/row/column/header/cell) and mapping them to Fret equivalents.
 
-- [ ] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy:
-  - Tables: `getRow(id, searchAll?)`, `getRowModel` family, pinning split helpers, sizing offsets, etc.
-  - Rows: `pin`, `getIsPinned`, `getPinnedIndex`, `getLeafRows`, `getParentRows`, selection/expanding helpers.
-  - Columns: sizing/pinning/visibility/grouping helpers and handler updaters.
-  - Headers/cells: IDs and the minimal set of methods required by UI recipes.
-  - Evidence target: a short “API inventory” section in `docs/workstreams/headless-table-tanstack-parity.md` plus
-    TODO references to concrete Rust surfaces.
+- [ ] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
+  - Evidence target: expand “Capability Inventory” in `docs/workstreams/headless-table-tanstack-parity.md`
+    with an explicit Table/Row/Column/Header/Cell checklist and per-item status.
+  - Source of truth:
+    - Core: `repo-ref/table/packages/table-core/src/core/*`
+    - Features: `repo-ref/table/packages/table-core/src/features/*.ts`
+    - Glue/types: `repo-ref/table/packages/table-core/src/types.ts`
+  - Deliverables:
+    - A minimal list of “must-have” APIs required by `DataTable` (`fret-ui-shadcn`) and `table_virtualized` (`fret-ui-kit`).
+    - A second list of “capability parity” APIs that must exist to avoid being weaker than upstream.
+- [ ] HTP-cap-020 Add “capability smoke” gates (compile-time + runtime).
+  - Compile-time: a Rust test/module that *calls* the mapped APIs (ensures we do not regress by deleting surfaces).
+  - Runtime: a small set of fixture-backed snapshots that assert outcomes for the most capability-critical APIs
+    (`getRow(searchAll)`, group row ids, pinned split helpers).
 - [ ] HTP-id-010 Promote TanStack-style `RowId` to a first-class concept (capability parity).
   - Rationale: TanStack features operate on string row ids (including grouped row ids like `role:1`), and consumers
     can pin/select/expand by those ids. We must be able to express the same, even if we keep `RowKey(u64)` for hot paths.
-  - Planned: maintain `rows_by_id` (“rowsById”) alongside `rows_by_key`, and allow `get_row_id` customization.
+  - Planned (staged):
+    - [ ] HTP-id-011 Introduce `RowId` type (likely `Arc<str>`) and plumb through state shapes where required.
+    - [ ] HTP-id-012 Add `TableBuilder::get_row_id` (TanStack `_getRowId` equivalent) and default behavior.
+    - [ ] HTP-id-013 Store and gate `rows_by_id` (TanStack `rowsById`) for core/pre-pagination/final models.
+    - [ ] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
+    - [ ] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
+    - [ ] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
 
 ---
 
