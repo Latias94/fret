@@ -30,6 +30,17 @@ Invoke-Checked `
     (Join-Path $repoRoot "tools/check_lucide_generation.ps1")
   )
 
+Invoke-Checked `
+  "radix generate + sync + verify" `
+  "powershell.exe" `
+  @(
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-File",
+    (Join-Path $repoRoot "tools/check_radix_generation.ps1")
+  )
+
 if (-not $SkipDiffCheck) {
   Invoke-Checked `
     "diff check icon-related paths" `
@@ -39,9 +50,11 @@ if (-not $SkipDiffCheck) {
       "--exit-code",
       "--",
       "ecosystem/fret-icons-lucide",
+      "ecosystem/fret-icons-radix",
       "tools",
       ".gitmodules",
-      "third_party/lucide"
+      "third_party/lucide",
+      "third_party/radix-icons"
     )
 }
 

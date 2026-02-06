@@ -8,6 +8,7 @@ These directories are **not** build dependencies of Fret; they exist to avoid â€
 Unlike `repo-ref/`, paths under `third_party/` are intended for versioned, reproducible build inputs.
 
 - `third_party/lucide` is a git submodule used by icon generation scripts.
+- `third_party/radix-icons` is a git submodule used by icon generation scripts.
 - Keep it pinned and update intentionally (submodule bump + regenerated outputs).
 
 ## Important: `repo-ref/` is local state (not committed)

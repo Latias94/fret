@@ -131,6 +131,7 @@ def main() -> None:
         radix_sources = [
             radix_assets,
             root / "third_party" / "radix-icons" / "icons",
+            root / "third_party" / "radix-icons" / "packages" / "radix-icons" / "icons",
             root / "repo-ref" / "icons" / "packages" / "radix-icons" / "icons",
         ]
         _sync_pack(

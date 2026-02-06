@@ -39,3 +39,7 @@ jobs:
       - name: Check Lucide generated artifacts
         shell: pwsh
         run: pwsh -NoProfile -File tools/check_lucide_generation.ps1
+
+      - name: Check Radix generated artifacts
+        shell: pwsh
+        run: pwsh -NoProfile -File tools/check_radix_generation.ps1

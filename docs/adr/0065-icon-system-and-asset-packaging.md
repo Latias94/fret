@@ -82,9 +82,9 @@ Instead, provide dedicated icon-pack crates (examples):
 - `fret-icons-lucide` (Lucide SVGs, curated in-repo).
 - `fret-icons-radix` (Radix icons, curated in-repo).
 
-In this repository, Lucide is maintained as a full vendored set generated from an upstream-pinned submodule source
-to keep updates deterministic and maintenance low. Other icon packs may still choose curated subsets where that is
-the more practical trade-off.
+In this repository, Lucide and Radix are maintained as full vendored sets generated from upstream-pinned submodule
+sources to keep updates deterministic and maintenance low. Other icon packs may still choose curated subsets where
+that is the more practical trade-off.
 
 Each icon-pack crate exports a single registration entrypoint:
 
@@ -156,3 +156,18 @@ emit `SvgSource::Id` directly.
   - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
 - CI consistency gate:
   - `pwsh -NoProfile -File tools/check_lucide_generation.ps1`
+
+## In-repo maintenance (Radix)
+
+- Source-of-truth upstream: `third_party/radix-icons` (git submodule)
+- Generated list: `ecosystem/fret-icons-radix/icon-list.txt`
+- Generated constants: `ecosystem/fret-icons-radix/src/generated_ids.rs`
+- Generate list/constants from submodule:
+  - Windows/macOS/Linux: `python3 tools/gen_radix.py`
+- Sync vendored SVGs from upstream sources:
+  - Windows: `pwsh tools/sync_icons.ps1 -Pack radix -Clean`
+  - macOS/Linux: `python3 tools/sync_icons.py --pack radix --clean`
+- Verify vendor icon references resolve to vendored assets:
+  - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
+- CI consistency gate:
+  - `pwsh -NoProfile -File tools/check_radix_generation.ps1`
