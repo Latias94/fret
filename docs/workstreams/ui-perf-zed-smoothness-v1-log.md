@@ -4372,3 +4372,51 @@ Notes:
 - The remaining gap for resize smoothness is still dominated by:
   - layout traversal/root build costs, and
   - text prepare on `width_changed` (wrap reflow) for chrome-heavy pages.
+
+## 2026-02-06 13:45:00 (experiment; no code change)
+
+Change:
+- Enable deferred unbounded scroll probes during interactive resize:
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
+  - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2`
+
+Why:
+- In `Scroll` layout, the default “unbounded probe” behavior measures scroll content with
+  `AvailableSpace::MaxContent` on the scroll axis to compute extents.
+- During window resize stress, this can become a large repeated cost when content reflows (wrap)
+  on every width change.
+- The scroll implementation already supports deferring the deep measure walk and reusing the last
+  measured size for a small number of frames while the viewport is changing.
+
+Probe (single script):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command:
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-scroll-defer-v3 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Worst overall `top_total_time_us=11810`
+- Evidence bundle: `target/fret-diag-codex-perf-resize-scroll-defer-v3/1770356485833-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Delta vs the coalesced resize run (same script; commit `beb2fa315` entry above):
+- `top_total_time_us` improves from `14219` → `11810` (~-17%).
+
+Notes:
+- This is an env-gated experiment only; it does not ship as default behavior yet.
+- The effect size and behavioral risk depend on scroll offset clamping semantics:
+  if content extents lag behind viewport changes, offsets can clamp earlier/later than “perfect”
+  wrap-aware extents. Before making this default, we should add a correctness probe:
+  - assert scroll offset remains stable across a resize stress sequence, and
+  - validate scrollbar thumb sizing does not glitch (or at least stays within an acceptable tolerance).

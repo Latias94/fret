@@ -409,6 +409,11 @@ Update:
   - Single-script probe worst `top_total_time_us`: `16935` (v12 baseline era) → `14219` (post-coalesce run)
   - Suite baseline worst `top_total_time_us`: `16935` (v12) → `15532` (v13)
   - Details and bundles are recorded in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-06 13:20).
+- Additional experiment (env-gated scroll optimization):
+  - Enabling deferred unbounded scroll probes during resize (`FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`)
+    improves the same single-script resize probe further to `top_total_time_us=11810` (repeat=7).
+  - This suggests a non-trivial portion of the resize tail is `Scroll` “unbounded probe” measurement work.
+  - Evidence and command are recorded in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-06 13:45).
 
 #### Gap C.1: Stable-frame paint overhead is still opaque (even with cache reuse)
 

@@ -503,6 +503,14 @@ Perf acceptance:
   - Change: apply `WindowEvent::SurfaceResized` at `RedrawRequested` (keep latest pending size).
   - Commit: `beb2fa315`
   - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 13:20.
+- [ ] Decide whether “deferred unbounded scroll probes on resize” should become default behavior.
+  - Current mechanism (env-gated):
+    - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1`
+    - `FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 13:45.
+  - TODO:
+    - Add a correctness probe to ensure resize stress does not clamp scroll offsets incorrectly.
+    - If acceptable, flip the default for resize-only (keep invalidation deferral opt-in).
 - [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.
 - [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).
   - Default script auto-dump can generate hundreds of GB if left on across long perf sessions.
