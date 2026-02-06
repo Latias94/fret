@@ -374,16 +374,15 @@ fn resolve_span_ranges<'a>(
 }
 
 fn base_parley_style(style: &TextStyle) -> ParleyTextStyle<'_, [u8; 4]> {
-    let mut out = ParleyTextStyle::default();
-    out.font_size = style.size.0;
-    out.font_weight = ParleyFontWeight::new(style.weight.0 as f32);
-    out.font_style = font_style_for_slant(style.slant);
-    out.letter_spacing = style.letter_spacing_em.unwrap_or(0.0).clamp(-4.0, 4.0) * style.size.0;
-
     let stack = font_stack_for_font_id(&style.font);
-    out.font_stack = parley::style::FontStack::Source(Cow::Owned(stack));
-
-    out
+    ParleyTextStyle {
+        font_size: style.size.0,
+        font_weight: ParleyFontWeight::new(style.weight.0 as f32),
+        font_style: font_style_for_slant(style.slant),
+        letter_spacing: style.letter_spacing_em.unwrap_or(0.0).clamp(-4.0, 4.0) * style.size.0,
+        font_stack: parley::style::FontStack::Source(Cow::Owned(stack)),
+        ..Default::default()
+    }
 }
 
 fn font_stack_for_font_id(font: &FontId) -> String {

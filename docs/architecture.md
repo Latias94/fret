@@ -235,7 +235,7 @@ References: `docs/adr/0006-text-system.md`, `docs/adr/0012-keyboard-ime-and-text
 - Default scheduling is event-driven (idle when nothing is dirty), with explicit continuous mode when requested.
 - Side effects are drained centrally in a bounded loop to keep multi-window behavior deterministic.
 
-References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0190-execution-and-concurrency-surface-v1.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
+References: `docs/adr/0001-app-effects.md`, `docs/adr/0008-threading-logging-errors.md`, `docs/adr/0199-execution-and-concurrency-surface-v1.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`.
 
 ## Settings & Configuration (settings-ui-inspired)
 
@@ -255,3 +255,4 @@ References: `docs/adr/0016-plugin-and-panel-boundaries.md`, `docs/adr/0037-works
 - Module-oriented ADR index: `docs/adr/README.md`
 - Pinned upstream references: `docs/repo-ref.md`
 - Current focus ADRs (decision gates): `docs/adr/0028-declarative-elements-and-element-state.md`, `docs/adr/0039-component-authoring-model-render-renderonce-and-intoelement.md`, `docs/adr/0038-engine-render-hook-and-submission-coordinator.md`, `docs/adr/0031-app-owned-models-and-leasing-updates.md`, `docs/adr/0034-timers-animation-and-redraw-scheduling.md`, `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`, `docs/adr/0037-workspace-boundaries-and-components-repository.md`
+

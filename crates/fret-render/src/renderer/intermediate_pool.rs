@@ -91,14 +91,13 @@ impl IntermediatePool {
         }
     }
 
-    pub(super) fn release(&mut self, texture: PooledTexture, budget_bytes: u64) {
+    pub(super) fn release(&mut self, texture: PooledTexture) {
         self.perf.releases = self.perf.releases.saturating_add(1);
         self.free_bytes = self.free_bytes.saturating_add(texture.bytes);
         self.free
             .entry(texture.key)
             .or_default()
             .push(texture.texture);
-        self.enforce_budget(budget_bytes);
     }
 
     pub(super) fn enforce_budget(&mut self, budget_bytes: u64) {
@@ -245,8 +244,8 @@ mod tests {
         let bytes0 = t0.bytes;
         let bytes1 = t1.bytes;
 
-        pool.release(t0, u64::MAX);
-        pool.release(t1, u64::MAX);
+        pool.release(t0);
+        pool.release(t1);
         assert_eq!(pool.free_bytes(), bytes0 + bytes1);
 
         // Keep only the smaller texture.

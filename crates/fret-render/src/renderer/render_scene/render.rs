@@ -25,6 +25,22 @@ impl Renderer {
         let mut frame_perf = RenderPerfStats::default();
         if perf_enabled {
             frame_perf.frames = 1;
+            self.perf_svg_raster_cache_hits = 0;
+            self.perf_svg_raster_cache_misses = 0;
+            self.perf_svg_raster_budget_evictions = 0;
+            self.perf_svg_mask_atlas_page_evictions = 0;
+            self.perf_svg_mask_atlas_entries_evicted = 0;
+            let counters = crate::upload_counters::take_upload_counters();
+            frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);
+            frame_perf.svg_upload_bytes = frame_perf
+                .svg_upload_bytes
+                .saturating_add(counters.svg_upload_bytes);
+            frame_perf.image_uploads = frame_perf
+                .image_uploads
+                .saturating_add(counters.image_uploads);
+            frame_perf.image_upload_bytes = frame_perf
+                .image_upload_bytes
+                .saturating_add(counters.image_upload_bytes);
         }
 
         #[cfg(debug_assertions)]
@@ -49,6 +65,18 @@ impl Renderer {
         let text_prepare_start = perf_enabled.then(Instant::now);
         self.text_system.prepare_for_scene(scene, frame_index);
         self.text_system.flush_uploads(queue);
+        let text_atlas_revision = self.text_system.atlas_revision();
+        if perf_enabled {
+            let atlas_perf = self.text_system.take_atlas_perf_snapshot();
+            frame_perf.text_atlas_revision = text_atlas_revision;
+            frame_perf.text_atlas_uploads = atlas_perf.uploads;
+            frame_perf.text_atlas_upload_bytes = atlas_perf.upload_bytes;
+            frame_perf.text_atlas_evicted_glyphs = atlas_perf.evicted_glyphs;
+            frame_perf.text_atlas_evicted_pages = atlas_perf.evicted_pages;
+            frame_perf.text_atlas_evicted_page_glyphs = atlas_perf.evicted_page_glyphs;
+            frame_perf.text_atlas_resets = atlas_perf.resets;
+            frame_perf.intermediate_budget_bytes = self.intermediate_budget_bytes;
+        }
         if let Some(text_prepare_start) = text_prepare_start {
             frame_perf.prepare_text += text_prepare_start.elapsed();
         }
@@ -62,6 +90,19 @@ impl Renderer {
         let svg_prepare_start = self.svg_perf_enabled.then(Instant::now);
         let perf_svg_prepare_start = perf_enabled.then(Instant::now);
         self.prepare_svg_ops(device, queue, scene, scale_factor);
+        if perf_enabled {
+            let counters = crate::upload_counters::take_upload_counters();
+            frame_perf.svg_uploads = frame_perf.svg_uploads.saturating_add(counters.svg_uploads);
+            frame_perf.svg_upload_bytes = frame_perf
+                .svg_upload_bytes
+                .saturating_add(counters.svg_upload_bytes);
+            frame_perf.image_uploads = frame_perf
+                .image_uploads
+                .saturating_add(counters.image_uploads);
+            frame_perf.image_upload_bytes = frame_perf
+                .image_upload_bytes
+                .saturating_add(counters.image_upload_bytes);
+        }
         if let Some(svg_prepare_start) = svg_prepare_start {
             self.svg_perf.prepare_svg_ops += svg_prepare_start.elapsed();
         }
@@ -77,7 +118,7 @@ impl Renderer {
             scene_ops_len: scene.ops_len(),
             render_targets_generation: self.render_targets_generation,
             images_generation: self.images_generation,
-            text_atlas_revision: self.text_system.atlas_revision(),
+            text_atlas_revision,
             text_quality_key: self.text_system.text_quality_key(),
         };
 
@@ -483,7 +524,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -492,7 +532,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -501,7 +540,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "SceneDrawRange cannot target mask targets");
@@ -1162,7 +1200,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate1 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -1171,7 +1208,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Intermediate2 => Some(frame_targets.ensure_target(
                             &mut self.intermediate_pool,
@@ -1180,7 +1216,6 @@ impl Renderer {
                             viewport_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "PathMsaaBatch cannot target mask targets");
@@ -1414,7 +1449,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "ScaleNearest dst cannot be mask targets");
@@ -1655,7 +1689,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "Blur dst cannot be mask targets");
@@ -1930,7 +1963,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "FullscreenBlit dst cannot be mask targets");
@@ -1994,7 +2026,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "ColorAdjust dst cannot be mask targets");
@@ -2230,7 +2261,6 @@ impl Renderer {
                             pass.dst_size,
                             format,
                             usage,
-                            self.intermediate_budget_bytes,
                         )),
                         PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
                             debug_assert!(false, "CompositePremul dst cannot be mask targets");
@@ -2395,7 +2425,6 @@ impl Renderer {
                         pass.dst_size,
                         wgpu::TextureFormat::R8Unorm,
                         usage,
-                        self.intermediate_budget_bytes,
                     );
 
                     let pipeline = self
@@ -2459,20 +2488,206 @@ impl Renderer {
                     }
                 }
                 RenderPlanPass::ReleaseTarget(target) => {
-                    frame_targets.release_target(
-                        &mut self.intermediate_pool,
-                        *target,
-                        self.intermediate_budget_bytes,
-                    );
+                    frame_targets.release_target(&mut self.intermediate_pool, *target);
                 }
             }
         }
 
+        let cmd = encoder.finish();
+
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.last_frame_in_use_bytes = frame_targets.in_use_bytes();
+            self.intermediate_perf.last_frame_peak_in_use_bytes = frame_targets.peak_in_use_bytes();
+        }
         if perf_enabled {
+            frame_perf.intermediate_in_use_bytes = frame_targets.in_use_bytes();
+            frame_perf.intermediate_peak_in_use_bytes = frame_targets.peak_in_use_bytes();
+            frame_perf.intermediate_release_targets = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
+                .count() as u64;
+        }
+        if self.intermediate_perf_enabled {
+            self.intermediate_perf.last_frame_release_targets = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::ReleaseTarget(_)))
+                .count() as u64;
+        }
+        frame_targets.release_all(&mut self.intermediate_pool, self.intermediate_budget_bytes);
+
+        if perf_enabled {
+            // Snapshot SVG cache occupancy after `prepare_svg_ops` (which may prune rasters).
+            let pages_live = self
+                .svg_mask_atlas_pages
+                .iter()
+                .filter(|p| p.is_some())
+                .count();
+            let atlas_capacity_px = u64::from(pages_live as u32)
+                .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX))
+                .saturating_mul(u64::from(SVG_MASK_ATLAS_PAGE_SIZE_PX));
+            let atlas_used_px = self
+                .svg_rasters
+                .values()
+                .filter_map(|e| match e.storage {
+                    SvgRasterStorage::MaskAtlas { page_index, .. } => Some((page_index, e.size_px)),
+                    SvgRasterStorage::Standalone { .. } => None,
+                })
+                .filter(|(page_index, _)| {
+                    self.svg_mask_atlas_pages
+                        .get(*page_index)
+                        .is_some_and(|p| p.is_some())
+                })
+                .fold(0u64, |acc, (_, (w, h))| {
+                    let pad = u64::from(SVG_MASK_ATLAS_PADDING_PX.saturating_mul(2));
+                    let w_pad = u64::from(w).saturating_add(pad);
+                    let h_pad = u64::from(h).saturating_add(pad);
+                    acc.saturating_add(w_pad.saturating_mul(h_pad))
+                });
+
+            frame_perf.svg_raster_budget_bytes = self.svg_raster_budget_bytes;
+            frame_perf.svg_rasters_live = self.svg_rasters.len() as u64;
+            frame_perf.svg_standalone_bytes_live = self.svg_raster_bytes;
+            frame_perf.svg_mask_atlas_pages_live = pages_live as u64;
+            frame_perf.svg_mask_atlas_bytes_live = self.svg_mask_atlas_bytes;
+            frame_perf.svg_mask_atlas_used_px = atlas_used_px;
+            frame_perf.svg_mask_atlas_capacity_px = atlas_capacity_px;
+            frame_perf.svg_raster_cache_hits = self.perf_svg_raster_cache_hits;
+            frame_perf.svg_raster_cache_misses = self.perf_svg_raster_cache_misses;
+            frame_perf.svg_raster_budget_evictions = self.perf_svg_raster_budget_evictions;
+            frame_perf.svg_mask_atlas_page_evictions = self.perf_svg_mask_atlas_page_evictions;
+            frame_perf.svg_mask_atlas_entries_evicted = self.perf_svg_mask_atlas_entries_evicted;
+
+            let pool_perf = self.intermediate_pool.take_perf_snapshot();
+            frame_perf.intermediate_pool_allocations = pool_perf.allocations;
+            frame_perf.intermediate_pool_reuses = pool_perf.reuses;
+            frame_perf.intermediate_pool_releases = pool_perf.releases;
+            frame_perf.intermediate_pool_evictions = pool_perf.evictions;
+            frame_perf.intermediate_pool_free_bytes = pool_perf.free_bytes;
+            frame_perf.intermediate_pool_free_textures = pool_perf.free_textures;
+
             self.perf.frames = self.perf.frames.saturating_add(frame_perf.frames);
             self.perf.encode_scene += frame_perf.encode_scene;
             self.perf.prepare_svg += frame_perf.prepare_svg;
             self.perf.prepare_text += frame_perf.prepare_text;
+
+            self.perf.svg_uploads = self.perf.svg_uploads.saturating_add(frame_perf.svg_uploads);
+            self.perf.svg_upload_bytes = self
+                .perf
+                .svg_upload_bytes
+                .saturating_add(frame_perf.svg_upload_bytes);
+            self.perf.image_uploads = self
+                .perf
+                .image_uploads
+                .saturating_add(frame_perf.image_uploads);
+            self.perf.image_upload_bytes = self
+                .perf
+                .image_upload_bytes
+                .saturating_add(frame_perf.image_upload_bytes);
+
+            self.perf.svg_raster_budget_bytes = frame_perf.svg_raster_budget_bytes;
+            self.perf.svg_rasters_live =
+                self.perf.svg_rasters_live.max(frame_perf.svg_rasters_live);
+            self.perf.svg_standalone_bytes_live = self
+                .perf
+                .svg_standalone_bytes_live
+                .max(frame_perf.svg_standalone_bytes_live);
+            self.perf.svg_mask_atlas_pages_live = self
+                .perf
+                .svg_mask_atlas_pages_live
+                .max(frame_perf.svg_mask_atlas_pages_live);
+            self.perf.svg_mask_atlas_bytes_live = self
+                .perf
+                .svg_mask_atlas_bytes_live
+                .max(frame_perf.svg_mask_atlas_bytes_live);
+            self.perf.svg_mask_atlas_used_px = self
+                .perf
+                .svg_mask_atlas_used_px
+                .max(frame_perf.svg_mask_atlas_used_px);
+            self.perf.svg_mask_atlas_capacity_px = self
+                .perf
+                .svg_mask_atlas_capacity_px
+                .max(frame_perf.svg_mask_atlas_capacity_px);
+            self.perf.svg_raster_cache_hits = self
+                .perf
+                .svg_raster_cache_hits
+                .saturating_add(frame_perf.svg_raster_cache_hits);
+            self.perf.svg_raster_cache_misses = self
+                .perf
+                .svg_raster_cache_misses
+                .saturating_add(frame_perf.svg_raster_cache_misses);
+            self.perf.svg_raster_budget_evictions = self
+                .perf
+                .svg_raster_budget_evictions
+                .saturating_add(frame_perf.svg_raster_budget_evictions);
+            self.perf.svg_mask_atlas_page_evictions = self
+                .perf
+                .svg_mask_atlas_page_evictions
+                .saturating_add(frame_perf.svg_mask_atlas_page_evictions);
+            self.perf.svg_mask_atlas_entries_evicted = self
+                .perf
+                .svg_mask_atlas_entries_evicted
+                .saturating_add(frame_perf.svg_mask_atlas_entries_evicted);
+
+            self.perf.text_atlas_revision = frame_perf.text_atlas_revision;
+            self.perf.text_atlas_uploads = self
+                .perf
+                .text_atlas_uploads
+                .saturating_add(frame_perf.text_atlas_uploads);
+            self.perf.text_atlas_upload_bytes = self
+                .perf
+                .text_atlas_upload_bytes
+                .saturating_add(frame_perf.text_atlas_upload_bytes);
+            self.perf.text_atlas_evicted_glyphs = self
+                .perf
+                .text_atlas_evicted_glyphs
+                .saturating_add(frame_perf.text_atlas_evicted_glyphs);
+            self.perf.text_atlas_evicted_pages = self
+                .perf
+                .text_atlas_evicted_pages
+                .saturating_add(frame_perf.text_atlas_evicted_pages);
+            self.perf.text_atlas_evicted_page_glyphs = self
+                .perf
+                .text_atlas_evicted_page_glyphs
+                .saturating_add(frame_perf.text_atlas_evicted_page_glyphs);
+            self.perf.text_atlas_resets = self
+                .perf
+                .text_atlas_resets
+                .saturating_add(frame_perf.text_atlas_resets);
+
+            self.perf.intermediate_budget_bytes = frame_perf.intermediate_budget_bytes;
+            self.perf.intermediate_in_use_bytes = self
+                .perf
+                .intermediate_in_use_bytes
+                .max(frame_perf.intermediate_in_use_bytes);
+            self.perf.intermediate_peak_in_use_bytes = self
+                .perf
+                .intermediate_peak_in_use_bytes
+                .max(frame_perf.intermediate_peak_in_use_bytes);
+            self.perf.intermediate_release_targets = self
+                .perf
+                .intermediate_release_targets
+                .saturating_add(frame_perf.intermediate_release_targets);
+            self.perf.intermediate_pool_allocations = self
+                .perf
+                .intermediate_pool_allocations
+                .saturating_add(frame_perf.intermediate_pool_allocations);
+            self.perf.intermediate_pool_reuses = self
+                .perf
+                .intermediate_pool_reuses
+                .saturating_add(frame_perf.intermediate_pool_reuses);
+            self.perf.intermediate_pool_releases = self
+                .perf
+                .intermediate_pool_releases
+                .saturating_add(frame_perf.intermediate_pool_releases);
+            self.perf.intermediate_pool_evictions = self
+                .perf
+                .intermediate_pool_evictions
+                .saturating_add(frame_perf.intermediate_pool_evictions);
+            self.perf.intermediate_pool_free_bytes = pool_perf.free_bytes;
+            self.perf.intermediate_pool_free_textures = pool_perf.free_textures;
+
             self.perf.draw_calls = self.perf.draw_calls.saturating_add(frame_perf.draw_calls);
             self.perf.quad_draw_calls = self
                 .perf
@@ -2590,15 +2805,77 @@ impl Renderer {
                 .perf
                 .scene_encoding_cache_misses
                 .saturating_add(frame_perf.scene_encoding_cache_misses);
-        }
 
-        let cmd = encoder.finish();
-
-        if self.intermediate_perf_enabled {
-            self.intermediate_perf.last_frame_in_use_bytes = frame_targets.in_use_bytes();
-            self.intermediate_perf.last_frame_peak_in_use_bytes = frame_targets.peak_in_use_bytes();
+            self.last_frame_perf = Some(RenderPerfSnapshot {
+                frames: frame_perf.frames,
+                encode_scene_us: frame_perf.encode_scene.as_micros() as u64,
+                prepare_svg_us: frame_perf.prepare_svg.as_micros() as u64,
+                prepare_text_us: frame_perf.prepare_text.as_micros() as u64,
+                svg_uploads: frame_perf.svg_uploads,
+                svg_upload_bytes: frame_perf.svg_upload_bytes,
+                image_uploads: frame_perf.image_uploads,
+                image_upload_bytes: frame_perf.image_upload_bytes,
+                svg_raster_budget_bytes: frame_perf.svg_raster_budget_bytes,
+                svg_rasters_live: frame_perf.svg_rasters_live,
+                svg_standalone_bytes_live: frame_perf.svg_standalone_bytes_live,
+                svg_mask_atlas_pages_live: frame_perf.svg_mask_atlas_pages_live,
+                svg_mask_atlas_bytes_live: frame_perf.svg_mask_atlas_bytes_live,
+                svg_mask_atlas_used_px: frame_perf.svg_mask_atlas_used_px,
+                svg_mask_atlas_capacity_px: frame_perf.svg_mask_atlas_capacity_px,
+                svg_raster_cache_hits: frame_perf.svg_raster_cache_hits,
+                svg_raster_cache_misses: frame_perf.svg_raster_cache_misses,
+                svg_raster_budget_evictions: frame_perf.svg_raster_budget_evictions,
+                svg_mask_atlas_page_evictions: frame_perf.svg_mask_atlas_page_evictions,
+                svg_mask_atlas_entries_evicted: frame_perf.svg_mask_atlas_entries_evicted,
+                text_atlas_revision: frame_perf.text_atlas_revision,
+                text_atlas_uploads: frame_perf.text_atlas_uploads,
+                text_atlas_upload_bytes: frame_perf.text_atlas_upload_bytes,
+                text_atlas_evicted_glyphs: frame_perf.text_atlas_evicted_glyphs,
+                text_atlas_evicted_pages: frame_perf.text_atlas_evicted_pages,
+                text_atlas_evicted_page_glyphs: frame_perf.text_atlas_evicted_page_glyphs,
+                text_atlas_resets: frame_perf.text_atlas_resets,
+                intermediate_budget_bytes: frame_perf.intermediate_budget_bytes,
+                intermediate_in_use_bytes: frame_perf.intermediate_in_use_bytes,
+                intermediate_peak_in_use_bytes: frame_perf.intermediate_peak_in_use_bytes,
+                intermediate_release_targets: frame_perf.intermediate_release_targets,
+                intermediate_pool_allocations: frame_perf.intermediate_pool_allocations,
+                intermediate_pool_reuses: frame_perf.intermediate_pool_reuses,
+                intermediate_pool_releases: frame_perf.intermediate_pool_releases,
+                intermediate_pool_evictions: frame_perf.intermediate_pool_evictions,
+                intermediate_pool_free_bytes: frame_perf.intermediate_pool_free_bytes,
+                intermediate_pool_free_textures: frame_perf.intermediate_pool_free_textures,
+                draw_calls: frame_perf.draw_calls,
+                quad_draw_calls: frame_perf.quad_draw_calls,
+                viewport_draw_calls: frame_perf.viewport_draw_calls,
+                image_draw_calls: frame_perf.image_draw_calls,
+                text_draw_calls: frame_perf.text_draw_calls,
+                path_draw_calls: frame_perf.path_draw_calls,
+                mask_draw_calls: frame_perf.mask_draw_calls,
+                fullscreen_draw_calls: frame_perf.fullscreen_draw_calls,
+                clip_mask_draw_calls: frame_perf.clip_mask_draw_calls,
+                pipeline_switches: frame_perf.pipeline_switches,
+                pipeline_switches_quad: frame_perf.pipeline_switches_quad,
+                pipeline_switches_viewport: frame_perf.pipeline_switches_viewport,
+                pipeline_switches_mask: frame_perf.pipeline_switches_mask,
+                pipeline_switches_text_mask: frame_perf.pipeline_switches_text_mask,
+                pipeline_switches_text_color: frame_perf.pipeline_switches_text_color,
+                pipeline_switches_text_subpixel: frame_perf.pipeline_switches_text_subpixel,
+                pipeline_switches_path: frame_perf.pipeline_switches_path,
+                pipeline_switches_path_msaa: frame_perf.pipeline_switches_path_msaa,
+                pipeline_switches_composite: frame_perf.pipeline_switches_composite,
+                pipeline_switches_fullscreen: frame_perf.pipeline_switches_fullscreen,
+                pipeline_switches_clip_mask: frame_perf.pipeline_switches_clip_mask,
+                bind_group_switches: frame_perf.bind_group_switches,
+                uniform_bind_group_switches: frame_perf.uniform_bind_group_switches,
+                texture_bind_group_switches: frame_perf.texture_bind_group_switches,
+                scissor_sets: frame_perf.scissor_sets,
+                uniform_bytes: frame_perf.uniform_bytes,
+                instance_bytes: frame_perf.instance_bytes,
+                vertex_bytes: frame_perf.vertex_bytes,
+                scene_encoding_cache_hits: frame_perf.scene_encoding_cache_hits,
+                scene_encoding_cache_misses: frame_perf.scene_encoding_cache_misses,
+            });
         }
-        frame_targets.release_all(&mut self.intermediate_pool, self.intermediate_budget_bytes);
 
         // Keep the most recent encoding for potential reuse on the next frame.
         if cache_hit {

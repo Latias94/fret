@@ -69,6 +69,38 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ---
 
+## M0.5 — Capability parity contract (API inventory)
+
+Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstream public API surfaces
+(table/row/column/header/cell) and mapping them to Fret equivalents.
+
+- [ ] HTP-cap-010 Inventory upstream public APIs and decide the Fret mapping strategy.
+  - Evidence target: expand “Capability Inventory” in `docs/workstreams/headless-table-tanstack-parity.md`
+    with an explicit Table/Row/Column/Header/Cell checklist and per-item status.
+  - Source of truth:
+    - Core: `repo-ref/table/packages/table-core/src/core/*`
+    - Features: `repo-ref/table/packages/table-core/src/features/*.ts`
+    - Glue/types: `repo-ref/table/packages/table-core/src/types.ts`
+  - Deliverables:
+    - A minimal list of “must-have” APIs required by `DataTable` (`fret-ui-shadcn`) and `table_virtualized` (`fret-ui-kit`).
+    - A second list of “capability parity” APIs that must exist to avoid being weaker than upstream.
+- [ ] HTP-cap-020 Add “capability smoke” gates (compile-time + runtime).
+  - Compile-time: a Rust test/module that *calls* the mapped APIs (ensures we do not regress by deleting surfaces).
+  - Runtime: a small set of fixture-backed snapshots that assert outcomes for the most capability-critical APIs
+    (`getRow(searchAll)`, group row ids, pinned split helpers).
+- [ ] HTP-id-010 Promote TanStack-style `RowId` to a first-class concept (capability parity).
+  - Rationale: TanStack features operate on string row ids (including grouped row ids like `role:1`), and consumers
+    can pin/select/expand by those ids. We must be able to express the same, even if we keep `RowKey(u64)` for hot paths.
+  - Planned (staged):
+    - [ ] HTP-id-011 Introduce `RowId` type (likely `Arc<str>`) and plumb through state shapes where required.
+    - [ ] HTP-id-012 Add `TableBuilder::get_row_id` (TanStack `_getRowId` equivalent) and default behavior.
+    - [ ] HTP-id-013 Store and gate `rows_by_id` (TanStack `rowsById`) for core/pre-pagination/final models.
+    - [ ] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
+    - [ ] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
+    - [ ] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
+
+---
+
 ## M1 — Core types (columns/headers/rows/cells)
 
 - [~] HTP-core-010 Add TanStack-like column tree representation (nested columns).
@@ -286,6 +318,14 @@ ColumnDef keys referenced by upstream feature implementations:
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs`
   - Bugfix: TanStack option defaults are `true` for `keepPinnedRows` and `paginateExpandedRows` when omitted.
     - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_options.rs`
+- [~] HTP-rowpin-015 Gate row pinning × grouping interactions (grouped model + pagination).
+  - Parity-gated (leaf-row pinning semantics): `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/grouping.json` +
+    `ecosystem/fret-ui-headless/tests/tanstack_v8_grouping_parity.rs`.
+  - Covered: `keepPinnedRows` now respects grouping parents’ expansion state (TanStack’s
+    `row.getIsAllParentsExpanded()` behavior) for leaf pinned rows.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::pinned_row_keys`).
+  - Note: TanStack’s `getCenterRows()` returns grouped “root rows” (string IDs like `role:1`). Until grouping is fully
+    integrated into the main `RowModel` pipeline, we do not parity-gate `row_pinning.center` under grouping.
 - [x] HTP-rowpin-020 Align `onRowPinningChange` (controlled state hook) behavior.
   - Parity-gated (state transition outcomes): `pinRow` action snapshots in
     `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json`,
@@ -424,18 +464,22 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ### UI integration notes (workstream hygiene)
 
-- [~] HTP-ui-rowpin-010 Wire `TableState.row_pinning` into `table_virtualized` (flat rows path).
+- [x] HTP-ui-rowpin-010 Wire `TableState.row_pinning` into `table_virtualized` (flat rows + grouped path).
   - Done (initial integration): when row pinning is active, `ecosystem/fret-ui-kit` now computes
-    top/center/bottom display rows via the headless engine’s pinned row helpers so “keepPinnedRows”
-    and pagination interactions match the engine contract.
-    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
-  - Done (grouped rows path, initial): when grouping is active, the grouped display cache now
-    surfaces pinned rows outside pagination by reordering the flattened visible list into
-    `top + center(page slice) + bottom`.
-    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
-  - Remaining: reconcile keepPinnedRows semantics with filtering for grouped mode and decide whether
-    pinning should remove leaf rows from within their group subtrees (TanStack’s row pinning API is
-    rooted in `getRowModel().rows`, so grouped interactions are subtle and require explicit UI policy).
+     top/center/bottom display rows via the headless engine’s pinned row helpers so “keepPinnedRows”
+     and pagination interactions match the engine contract.
+     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+   - Done (grouped rows path, initial): when grouping is active, the grouped display cache now
+     surfaces pinned rows outside pagination by reordering the flattened visible list into
+     `top + center(page slice) + bottom`.
+     - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+- [ ] HTP-ui-rowpin-020 Decide grouped-mode pinning policy and align remaining semantics.
+  - Topics:
+    - Filtering semantics in grouped mode (`keepPinnedRows` vs. “visible-only” pinning).
+    - Whether pinning should remove leaf rows from within their group subtrees (UI policy decision).
+- [ ] HTP-ui-colpin-010 Wire `TableState.column_pinning` into `table_virtualized` (headers + body).
+  - Goal: keep header/body column splits (`left/center/right`) and column start/after offsets stable so pinned columns
+    cannot drift and cause misalignment in the UI gallery.
 
 ---
 

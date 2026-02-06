@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use fret_ui_headless::table::{
-    Aggregation, ColumnDef, GroupedRowKind, GroupedRowModel, RowKey, Table, TableState,
-    TanStackTableOptions, TanStackTableState, grouped_row_model_from_leaf,
+    Aggregation, ColumnDef, GroupedRowKind, GroupedRowModel, RowKey, RowPinPosition, Table,
+    TableState, TanStackTableOptions, TanStackTableState, grouped_row_model_from_leaf,
     sort_grouped_row_indices_in_place,
 };
 use serde::Deserialize;
@@ -53,6 +53,22 @@ struct GroupedAggregationU64Expect {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct RowPinningExpect {
+    top: Vec<String>,
+    center: Vec<String>,
+    bottom: Vec<String>,
+    #[serde(default)]
+    can_pin: BTreeMap<String, bool>,
+    #[serde(default)]
+    pin_position: BTreeMap<String, Option<String>>,
+    #[serde(default)]
+    pinned_index: BTreeMap<String, i32>,
+    is_some_rows_pinned: bool,
+    is_some_top_rows_pinned: bool,
+    is_some_bottom_rows_pinned: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
     #[serde(default)]
     grouped_row_model: Option<GroupedRowModelExpect>,
@@ -60,6 +76,8 @@ struct FixtureExpect {
     grouped_aggregations_u64: Option<Vec<GroupedAggregationU64Expect>>,
     #[serde(default)]
     sorted_grouped_row_model: Option<GroupedRowModelExpect>,
+    #[serde(default)]
+    row_pinning: Option<RowPinningExpect>,
     #[serde(default)]
     next_state: Option<serde_json::Value>,
 }
@@ -474,6 +492,116 @@ fn tanstack_v8_grouping_parity() {
         }
 
         let table = builder.build();
+
+        if let Some(expected) = snap.expect.row_pinning.as_ref() {
+            let top: Vec<String> = table
+                .top_row_keys()
+                .into_iter()
+                .map(|k| k.0.to_string())
+                .collect();
+            let center: Vec<String> = table
+                .center_row_keys()
+                .into_iter()
+                .map(|k| k.0.to_string())
+                .collect();
+            let bottom: Vec<String> = table
+                .bottom_row_keys()
+                .into_iter()
+                .map(|k| k.0.to_string())
+                .collect();
+
+            assert_eq!(
+                top, expected.top,
+                "snapshot {} row_pinning.top mismatch",
+                snap.id
+            );
+            // TanStack's `getCenterRows()` returns `table.getRowModel().rows`, which are "root rows".
+            // Under grouping, those are group rows (string IDs like `role:1`). This headless engine
+            // doesn't yet integrate grouping into the main `RowModel` pipeline, so `center_row_keys()`
+            // is only parity-gated for the non-grouped case.
+            if table.state().grouping.is_empty() {
+                assert_eq!(
+                    center, expected.center,
+                    "snapshot {} row_pinning.center mismatch",
+                    snap.id
+                );
+            }
+            assert_eq!(
+                bottom, expected.bottom,
+                "snapshot {} row_pinning.bottom mismatch",
+                snap.id
+            );
+
+            for (row_id, expected_can_pin) in &expected.can_pin {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                let can_pin = table
+                    .row_can_pin(row_key)
+                    .unwrap_or_else(|| panic!("unknown row: {row_id}"));
+                assert_eq!(
+                    can_pin, *expected_can_pin,
+                    "snapshot {} can_pin[{}] mismatch",
+                    snap.id, row_id
+                );
+            }
+
+            for (row_id, expected_pos) in &expected.pin_position {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                let pos = table.row_is_pinned(row_key).map(|p| match p {
+                    RowPinPosition::Top => "top",
+                    RowPinPosition::Bottom => "bottom",
+                });
+                assert_eq!(
+                    pos.as_deref(),
+                    expected_pos.as_deref(),
+                    "snapshot {} pin_position[{}] mismatch",
+                    snap.id,
+                    row_id
+                );
+            }
+
+            for (row_id, expected_index) in &expected.pinned_index {
+                let row_key = RowKey(
+                    row_id
+                        .parse::<u64>()
+                        .unwrap_or_else(|_| panic!("invalid row id: {row_id}")),
+                );
+                let index = table
+                    .row_pinned_index(row_key)
+                    .unwrap_or_else(|| panic!("unknown row: {row_id}"));
+                assert_eq!(
+                    index, *expected_index,
+                    "snapshot {} pinned_index[{}] mismatch",
+                    snap.id, row_id
+                );
+            }
+
+            assert_eq!(
+                table.is_some_rows_pinned(None),
+                expected.is_some_rows_pinned,
+                "snapshot {} is_some_rows_pinned mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.is_some_rows_pinned(Some(RowPinPosition::Top)),
+                expected.is_some_top_rows_pinned,
+                "snapshot {} is_some_top_rows_pinned mismatch",
+                snap.id
+            );
+            assert_eq!(
+                table.is_some_rows_pinned(Some(RowPinPosition::Bottom)),
+                expected.is_some_bottom_rows_pinned,
+                "snapshot {} is_some_bottom_rows_pinned mismatch",
+                snap.id
+            );
+        }
 
         let actual_model = table.grouped_row_model();
         let actual_aggs = table.grouped_u64_aggregations();

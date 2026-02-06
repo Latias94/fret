@@ -41,7 +41,7 @@ fn layout_and_paint_run_inside_stacksafe_protection() {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let layout_is_protected = Arc::new(AtomicBool::new(false));
@@ -87,13 +87,13 @@ fn hit_test_handles_deep_trees_on_small_stacks() {
             let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
             ui.set_window(window);
 
-            let root = ui.create_node(TestStack::default());
+            let root = ui.create_node(TestStack);
             ui.set_root(root);
 
             let mut current = root;
             let depth = 20_000;
             for _ in 0..depth {
-                let child = ui.create_node(TestStack::default());
+                let child = ui.create_node(TestStack);
                 ui.add_child(current, child);
                 current = child;
             }
@@ -125,16 +125,16 @@ fn remove_and_cleanup_handle_deep_trees_on_small_stacks() {
             let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
             ui.set_window(window);
 
-            let root = ui.create_node(TestStack::default());
+            let root = ui.create_node(TestStack);
             ui.set_root(root);
 
-            let first_child = ui.create_node(TestStack::default());
+            let first_child = ui.create_node(TestStack);
             ui.add_child(root, first_child);
 
             let mut current = first_child;
             let depth = 20_000;
             for _ in 0..depth {
-                let child = ui.create_node(TestStack::default());
+                let child = ui.create_node(TestStack);
                 ui.add_child(current, child);
                 current = child;
             }

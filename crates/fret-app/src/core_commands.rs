@@ -37,13 +37,19 @@ pub fn register_core_commands(registry: &mut CommandRegistry) {
 }
 
 pub fn register_app_commands(registry: &mut CommandRegistry) {
-    let mut ctrl_mods = Modifiers::default();
-    ctrl_mods.ctrl = true;
-    let mut meta_mods = Modifiers::default();
-    meta_mods.meta = true;
-    let mut meta_alt_mods = Modifiers::default();
-    meta_alt_mods.meta = true;
-    meta_alt_mods.alt = true;
+    let ctrl_mods = Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    let meta_mods = Modifiers {
+        meta: true,
+        ..Default::default()
+    };
+    let meta_alt_mods = Modifiers {
+        meta: true,
+        alt: true,
+        ..Default::default()
+    };
 
     registry.register(
         CommandId::new(APP_ABOUT),
@@ -121,10 +127,14 @@ pub fn register_app_commands(registry: &mut CommandRegistry) {
 }
 
 pub fn register_command_palette(registry: &mut CommandRegistry) {
-    let mut ctrl_mods = Modifiers::default();
-    ctrl_mods.ctrl = true;
-    let mut meta_mods = Modifiers::default();
-    meta_mods.meta = true;
+    let ctrl_mods = Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    let meta_mods = Modifiers {
+        meta: true,
+        ..Default::default()
+    };
 
     let meta = CommandMeta::new("Command Palette")
         .with_category("App")
@@ -197,10 +207,14 @@ pub fn register_focus_commands(registry: &mut CommandRegistry) {
 }
 
 pub fn register_text_edit_commands(registry: &mut CommandRegistry) {
-    let mut ctrl_mods = Modifiers::default();
-    ctrl_mods.ctrl = true;
-    let mut meta_mods = Modifiers::default();
-    meta_mods.meta = true;
+    let ctrl_mods = Modifiers {
+        ctrl: true,
+        ..Default::default()
+    };
+    let meta_mods = Modifiers {
+        meta: true,
+        ..Default::default()
+    };
 
     let when_text = WhenExpr::parse("focus.is_text_input").expect("valid when expression");
 

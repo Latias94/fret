@@ -1,4 +1,4 @@
-# ADR 0167: Kurbo Geometry Backend for Canvas Hit Testing
+# ADR 0201: Kurbo Geometry Backend for Canvas Hit Testing
 
 - Status: Proposed
 - Date: 2026-01-14

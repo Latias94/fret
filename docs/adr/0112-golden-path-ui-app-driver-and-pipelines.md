@@ -118,7 +118,7 @@ Fret’s `App` and `ModelStore` are main-thread oriented; background threads mus
 We standardize two patterns:
 
 The user-facing execution and wake surface that supports these patterns is locked in
-`docs/adr/0190-execution-and-concurrency-surface-v1.md`.
+`docs/adr/0199-execution-and-concurrency-surface-v1.md`.
 
 **A) “Inbox + timer/RAF” (portable, minimal)**
 
@@ -191,7 +191,7 @@ The golden path must support:
 - Crate layering: `docs/adr/0093-crate-structure-core-backends-apps.md`
 - Bootstrap/tools story: `docs/adr/0108-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
 - Dev hotpatch boundaries: `docs/adr/0107-dev-hotpatch-subsecond-and-hot-reload-safety.md`
-- Execution and concurrency surface: `docs/adr/0190-execution-and-concurrency-surface-v1.md`
+- Execution and concurrency surface: `docs/adr/0199-execution-and-concurrency-surface-v1.md`
 - Resource handles + flush point: `docs/adr/0004-resource-handles.md`
 - Editor project assets (out of scope): `docs/adr/0026-asset-database-and-import-pipeline.md`
 - Action hooks registries (policy in components): `docs/adr/0074-component-owned-interaction-policy-and-runtime-action-hooks.md`
@@ -203,3 +203,4 @@ The golden path must support:
     `repo-ref/zed/crates/gpui/src/window.rs`
   - integration glue and the “real app” surface:
     `repo-ref/zed/crates/gpui_tokio`, `repo-ref/zed/crates/zed`
+

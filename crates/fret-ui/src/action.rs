@@ -111,6 +111,12 @@ impl AutoFocusRequestCx {
     }
 }
 
+impl Default for AutoFocusRequestCx {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct OutsidePressCx {
     pub pointer_id: PointerId,

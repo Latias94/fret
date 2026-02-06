@@ -1,0 +1,142 @@
+{
+  "generated_unix_ms": 1770076110431,
+  "headroom_pct": 30,
+  "kind": "perf_baseline",
+  "out_path": "/Users/frankorz/codes/rust/fret/docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v4.json",
+  "repeat": 7,
+  "rows": [
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 374,
+        "top_layout_time_us": 3970,
+        "top_total_time_us": 6858
+      },
+      "script": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 5161,
+        "max_top_solve_us": 487,
+        "max_top_total_us": 8916
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 178,
+        "top_layout_time_us": 3255,
+        "top_total_time_us": 4067
+      },
+      "script": "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 4232,
+        "max_top_solve_us": 232,
+        "max_top_total_us": 5288
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 83,
+        "top_layout_time_us": 2936,
+        "top_total_time_us": 3297
+      },
+      "script": "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 3817,
+        "max_top_solve_us": 108,
+        "max_top_total_us": 4287
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 208,
+        "top_layout_time_us": 3125,
+        "top_total_time_us": 3893
+      },
+      "script": "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 4063,
+        "max_top_solve_us": 271,
+        "max_top_total_us": 5061
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 17,
+        "top_layout_time_us": 1286,
+        "top_total_time_us": 1807
+      },
+      "script": "tools/diag-scripts/ui-gallery-hover-layout-torture-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 1672,
+        "max_top_solve_us": 23,
+        "max_top_total_us": 2350
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 53,
+        "top_layout_time_us": 1603,
+        "top_total_time_us": 2140
+      },
+      "script": "tools/diag-scripts/ui-gallery-menubar-keyboard-nav-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 2084,
+        "max_top_solve_us": 69,
+        "max_top_total_us": 2782
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 845,
+        "top_layout_time_us": 6140,
+        "top_total_time_us": 7503
+      },
+      "script": "tools/diag-scripts/ui-gallery-virtual-list-torture-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 7982,
+        "max_top_solve_us": 1099,
+        "max_top_total_us": 9754
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 47,
+        "top_layout_time_us": 2467,
+        "top_total_time_us": 3115
+      },
+      "script": "tools/diag-scripts/ui-gallery-material3-tabs-switch-perf-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 3208,
+        "max_top_solve_us": 62,
+        "max_top_total_us": 4050
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 381,
+        "top_layout_time_us": 9588,
+        "top_total_time_us": 10930
+      },
+      "script": "tools/diag-scripts/ui-gallery-view-cache-toggle-perf-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 12465,
+        "max_top_solve_us": 496,
+        "max_top_total_us": 14209
+      }
+    },
+    {
+      "measured_max": {
+        "top_layout_engine_solve_time_us": 2177,
+        "top_layout_time_us": 13410,
+        "top_total_time_us": 16051
+      },
+      "script": "tools/diag-scripts/ui-gallery-window-resize-stress-steady.json",
+      "thresholds": {
+        "max_top_layout_us": 17433,
+        "max_top_solve_us": 2831,
+        "max_top_total_us": 20867
+      }
+    }
+  ],
+  "schema_version": 1,
+  "sort": "time",
+  "warmup_frames": 0
+}

@@ -341,8 +341,8 @@ impl DragHost for TestHost {
         self.drags.get(&pointer_id)
     }
 
-    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        self.drags.values().any(|d| predicate(d))
+    fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        self.drags.values().any(predicate)
     }
 
     fn find_drag_pointer_id(
