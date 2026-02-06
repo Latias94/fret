@@ -92,6 +92,9 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_top_total_us: Option<u64> = None;
     let mut max_top_layout_us: Option<u64> = None;
     let mut max_top_solve_us: Option<u64> = None;
+    let mut max_pointer_move_dispatch_us: Option<u64> = None;
+    let mut max_pointer_move_hit_test_us: Option<u64> = None;
+    let mut max_pointer_move_global_changes: Option<u64> = None;
     let mut max_working_set_bytes: Option<u64> = None;
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
@@ -402,6 +405,38 @@ pub(crate) fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --max-top-solve-us".to_string())?,
                 );
+                i += 1;
+            }
+            "--max-pointer-move-dispatch-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-pointer-move-dispatch-us".to_string());
+                };
+                max_pointer_move_dispatch_us =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-pointer-move-dispatch-us".to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-pointer-move-hit-test-us" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-pointer-move-hit-test-us".to_string());
+                };
+                max_pointer_move_hit_test_us =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-pointer-move-hit-test-us".to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-pointer-move-global-changes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-pointer-move-global-changes".to_string());
+                };
+                max_pointer_move_global_changes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-pointer-move-global-changes".to_string()
+                })?);
                 i += 1;
             }
             "--max-working-set-bytes" => {
@@ -3093,6 +3128,9 @@ See: `docs/tracy.md`.\n";
                 max_top_total_us,
                 max_top_layout_us,
                 max_top_solve_us,
+                max_pointer_move_dispatch_us,
+                max_pointer_move_hit_test_us,
+                max_pointer_move_global_changes,
             };
             let perf_baseline = perf_baseline_path
                 .clone()
@@ -3374,6 +3412,9 @@ See: `docs/tracy.md`.\n";
                                 top_total,
                                 top_layout,
                                 top_solve,
+                                report.pointer_move_max_dispatch_time_us,
+                                report.pointer_move_max_hit_test_time_us,
+                                report.pointer_move_snapshots_with_global_changes as u64,
                             ));
                         }
 
@@ -3579,6 +3620,9 @@ See: `docs/tracy.md`.\n";
                         "top_barrier_relayouts_performed": top_barrier_relayouts_performed,
                         "top_virtual_list_visible_range_checks": top_virtual_list_visible_range_checks,
                         "top_virtual_list_visible_range_refreshes": top_virtual_list_visible_range_refreshes,
+                        "pointer_move_max_dispatch_time_us": report.pointer_move_max_dispatch_time_us,
+                        "pointer_move_max_hit_test_time_us": report.pointer_move_max_hit_test_time_us,
+                        "pointer_move_snapshots_with_global_changes": report.pointer_move_snapshots_with_global_changes,
                         "bundle": bundle_path.display().to_string(),
                     }));
 
@@ -3766,6 +3810,30 @@ See: `docs/tracy.md`.\n";
                             max_total,
                             max_layout,
                             max_solve,
+                            runs_json
+                                .iter()
+                                .filter_map(|r| {
+                                    r.get("pointer_move_max_dispatch_time_us")
+                                        .and_then(|v| v.as_u64())
+                                })
+                                .max()
+                                .unwrap_or(0),
+                            runs_json
+                                .iter()
+                                .filter_map(|r| {
+                                    r.get("pointer_move_max_hit_test_time_us")
+                                        .and_then(|v| v.as_u64())
+                                })
+                                .max()
+                                .unwrap_or(0),
+                            runs_json
+                                .iter()
+                                .filter_map(|r| {
+                                    r.get("pointer_move_snapshots_with_global_changes")
+                                        .and_then(|v| v.as_u64())
+                                })
+                                .max()
+                                .unwrap_or(0),
                         ));
                     }
                 }
@@ -8504,11 +8572,17 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
+                max_pointer_move_dispatch_us: Some(2_000),
+                max_pointer_move_hit_test_us: Some(1_500),
+                max_pointer_move_global_changes: Some(0),
             },
             PerfThresholds::default(),
             99,
             79,
             49,
+            1_999,
+            1_499,
+            0,
         );
         assert!(failures.is_empty());
     }
@@ -8522,13 +8596,19 @@ mod tests {
                 max_top_total_us: Some(100),
                 max_top_layout_us: Some(80),
                 max_top_solve_us: Some(50),
+                max_pointer_move_dispatch_us: Some(2_000),
+                max_pointer_move_hit_test_us: Some(1_500),
+                max_pointer_move_global_changes: Some(0),
             },
             PerfThresholds::default(),
             101,
             81,
             51,
+            2_001,
+            1_501,
+            1,
         );
-        assert_eq!(failures.len(), 3);
+        assert_eq!(failures.len(), 6);
         let metrics: Vec<String> = failures
             .iter()
             .filter_map(|v| {
@@ -8540,6 +8620,9 @@ mod tests {
         assert!(metrics.contains(&"top_total_time_us".to_string()));
         assert!(metrics.contains(&"top_layout_time_us".to_string()));
         assert!(metrics.contains(&"top_layout_engine_solve_time_us".to_string()));
+        assert!(metrics.contains(&"pointer_move_max_dispatch_time_us".to_string()));
+        assert!(metrics.contains(&"pointer_move_max_hit_test_time_us".to_string()));
+        assert!(metrics.contains(&"pointer_move_snapshots_with_global_changes".to_string()));
     }
 
     #[test]
@@ -8563,7 +8646,10 @@ mod tests {
                 "thresholds": {
                     "max_top_total_us": 25000,
                     "max_top_layout_us": 15000,
-                    "max_top_solve_us": 8000
+                    "max_top_solve_us": 8000,
+                    "max_pointer_move_dispatch_us": 3000,
+                    "max_pointer_move_hit_test_us": 2000,
+                    "max_pointer_move_global_changes": 1
                 }
             }]
         });
@@ -8579,6 +8665,9 @@ mod tests {
         assert_eq!(t.max_top_total_us, Some(25_000));
         assert_eq!(t.max_top_layout_us, Some(15_000));
         assert_eq!(t.max_top_solve_us, Some(8_000));
+        assert_eq!(t.max_pointer_move_dispatch_us, Some(3_000));
+        assert_eq!(t.max_pointer_move_hit_test_us, Some(2_000));
+        assert_eq!(t.max_pointer_move_global_changes, Some(1));
     }
 
     #[test]
