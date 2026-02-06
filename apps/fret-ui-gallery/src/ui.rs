@@ -20041,43 +20041,53 @@ fn preview_sonner(
 
 fn preview_toast(
     cx: &mut ElementContext<'_, App>,
-    last_action: Model<Arc<str>>,
+    _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let last = cx
-        .app
-        .models()
-        .get_cloned(&last_action)
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
+    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_center(),
+            move |_cx| [body],
+        )
+    };
 
-    let buttons = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Button::new("Default")
-                    .test_id("ui-gallery-toast-default")
-                    .on_click(CMD_TOAST_DEFAULT)
-                    .into_element(cx),
-                shadcn::Button::new("Success")
-                    .test_id("ui-gallery-toast-success")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .on_click(CMD_TOAST_SUCCESS)
-                    .into_element(cx),
-                shadcn::Button::new("Error")
-                    .test_id("ui-gallery-toast-error")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .on_click(CMD_TOAST_ERROR)
-                    .into_element(cx),
-                shadcn::Button::new("Action + Cancel")
-                    .test_id("ui-gallery-toast-action-cancel")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .on_click(CMD_TOAST_SHOW_ACTION_CANCEL)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let deprecated_card = shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("Toast is deprecated").into_element(cx),
+            shadcn::CardDescription::new(
+                "The toast component is deprecated in shadcn/ui docs. Use Sonner instead.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![
+            shadcn::typography::muted(
+                cx,
+                "This page intentionally keeps only the deprecation guidance to match upstream docs.",
+            ),
+        ])
+        .into_element(cx),
+        shadcn::CardFooter::new(vec![
+            shadcn::Button::new("Open Sonner page")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .on_click(CMD_NAV_SONNER)
+                .test_id("ui-gallery-toast-open-sonner")
+                .into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+    .into_element(cx)
+    .attach_semantics(SemanticsDecoration::default().test_id("ui-gallery-toast-deprecated"));
 
-    vec![buttons, cx.text(format!("last action: {last}"))]
+    let centered_card = centered(cx, deprecated_card);
+
+    vec![
+        cx.text("A succinct message that is displayed temporarily."),
+        centered_card,
+    ]
 }
 
 fn preview_overlay(

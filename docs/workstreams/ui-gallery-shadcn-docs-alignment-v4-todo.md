@@ -108,7 +108,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] table ? examples mirrored (Demo/Footer/Actions/RTL; action trigger uses text icon approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_table`, `ecosystem/fret-ui-shadcn/src/table.rs`)
 - [x] tabs ? examples mirrored (Demo/Line/Vertical/Disabled/Icons/RTL; line variant uses style approximation) (`apps/fret-ui-gallery/src/ui.rs::preview_tabs`, `ecosystem/fret-ui-shadcn/src/tabs.rs`)
 - [x] textarea ? examples mirrored (Demo/Field/Disabled/Invalid/Button/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_textarea`, `ecosystem/fret-ui-shadcn/src/textarea.rs`)
-- [ ] toast
+- [x] toast ? docs-aligned deprecation notice only (upstream points to Sonner) (`apps/fret-ui-gallery/src/ui.rs::preview_toast`, `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx`)
 - [ ] toggle
 - [ ] toggle-group
 - [ ] tooltip
