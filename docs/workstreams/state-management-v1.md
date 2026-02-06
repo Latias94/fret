@@ -102,6 +102,8 @@ Implementation:
     - `fret_query::ui::QueryElementContextExt::use_query(...)`
     - `fret_query::ui::QueryElementContextExt::use_query_async(...)`
     - `fret_query::ui::QueryElementContextExt::use_query_async_local(...)`
+  - lifecycle semantics (stale/refetch/cancel/retry): see
+    `docs/adr/1164-query-lifecycle-and-cache-semantics-v1.md` and `docs/workstreams/query-lifecycle-v1.md`
   - async fetch requires installing a `FutureSpawnerHandle` global (tokio/wasm spawners); see
     `docs/integrating-tokio-and-reqwest.md`
 

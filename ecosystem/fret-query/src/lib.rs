@@ -32,8 +32,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use fret_core::AppWindowId;
 use fret_core::time::Instant;
+use fret_core::{AppWindowId, FrameId};
 #[cfg(feature = "tokio")]
 pub use fret_executor::TokioSpawner;
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
@@ -493,6 +493,7 @@ struct QueryRuntimeEntry {
     model_id: ModelId,
     policy: QueryPolicy,
     last_used: Instant,
+    last_observed_frame: Option<FrameId>,
     stale: bool,
     inflight: Option<Inflight>,
     retry: QueryRuntimeRetry,
@@ -722,6 +723,7 @@ impl QueryClient {
     {
         self.ensure_registered(app);
 
+        let frame_id = app.frame_id();
         let now = Instant::now();
         self.gc(now);
 
@@ -736,9 +738,9 @@ impl QueryClient {
                 model
             });
 
-        self.touch_entry::<T>(key, model.id(), policy.clone(), now);
+        let remounted = self.touch_entry::<T>(key, model.id(), policy.clone(), now, frame_id);
 
-        let should_fetch = self.should_fetch(app, &model, key_id, now);
+        let should_fetch = self.should_fetch(app, &model, key_id, now, remounted);
         if should_fetch {
             self.start_fetch(app, window, key, policy, model.clone(), fetch, now);
         }
@@ -765,6 +767,7 @@ impl QueryClient {
     {
         self.ensure_registered(app);
 
+        let frame_id = app.frame_id();
         let now = Instant::now();
         self.gc(now);
 
@@ -779,9 +782,9 @@ impl QueryClient {
                 model
             });
 
-        self.touch_entry::<T>(key, model.id(), policy.clone(), now);
+        let remounted = self.touch_entry::<T>(key, model.id(), policy.clone(), now, frame_id);
 
-        let should_fetch = self.should_fetch(app, &model, key_id, now);
+        let should_fetch = self.should_fetch(app, &model, key_id, now, remounted);
         if should_fetch {
             let spawner = app.global::<FutureSpawnerHandle>().cloned();
             if let Some(spawner) = spawner {
@@ -824,6 +827,7 @@ impl QueryClient {
     {
         self.ensure_registered(app);
 
+        let frame_id = app.frame_id();
         let now = Instant::now();
         self.gc(now);
 
@@ -838,9 +842,9 @@ impl QueryClient {
                 model
             });
 
-        self.touch_entry::<T>(key, model.id(), policy.clone(), now);
+        let remounted = self.touch_entry::<T>(key, model.id(), policy.clone(), now, frame_id);
 
-        let should_fetch = self.should_fetch(app, &model, key_id, now);
+        let should_fetch = self.should_fetch(app, &model, key_id, now, remounted);
         if should_fetch {
             let spawner = app.global::<FutureSpawnerHandle>().cloned();
             if let Some(spawner) = spawner {
@@ -1024,7 +1028,8 @@ impl QueryClient {
         model_id: ModelId,
         policy: QueryPolicy,
         now: Instant,
-    ) {
+        frame_id: FrameId,
+    ) -> bool {
         let key_id = key.id();
         let mut entries = self
             .runtime
@@ -1039,12 +1044,19 @@ impl QueryClient {
             model_id,
             policy: policy.clone(),
             last_used: now,
+            last_observed_frame: None,
             stale: true,
             inflight: None,
             retry: QueryRuntimeRetry::default(),
             apply: apply_query_result::<T>,
             apply_retry: apply_query_retry_state::<T>,
         });
+
+        let remounted = match entry.last_observed_frame {
+            None => true,
+            Some(prev) => frame_id.0.saturating_sub(prev.0) > 1,
+        };
+        entry.last_observed_frame = Some(frame_id);
 
         if entry.type_id != TypeId::of::<T>() {
             tracing::error!(
@@ -1055,13 +1067,15 @@ impl QueryClient {
                 requested = ?TypeId::of::<T>(),
                 "query key type mismatch"
             );
-            return;
+            return remounted;
         }
 
         entry.model_id = model_id;
         entry.policy = policy;
         entry.last_used = now;
         entry.debug_label = key.debug_label.or(entry.debug_label);
+
+        remounted
     }
 
     fn should_fetch<H: UiHost, T: Any + Send + Sync + 'static>(
@@ -1070,6 +1084,7 @@ impl QueryClient {
         model: &Model<QueryState<T>>,
         key: QueryKeyId,
         now: Instant,
+        remounted: bool,
     ) -> bool {
         let (policy, has_inflight, stale, stale_time, next_retry_at) = {
             let entries = self
@@ -1126,7 +1141,15 @@ impl QueryClient {
         let Some(updated_at) = state.updated_at else {
             return true;
         };
-        now.duration_since(updated_at) >= stale_time
+
+        let stale_by_time = now.duration_since(updated_at) >= stale_time;
+        if !stale_by_time {
+            return false;
+        }
+
+        // Becoming stale by time does not automatically refetch: only refetch when an observer
+        // is (re)attached after a gap (TanStack-like "mount + stale" behavior).
+        remounted
     }
 
     fn start_fetch<H, T>(
@@ -1906,6 +1929,81 @@ mod tests {
         let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
         assert_eq!(state.status, QueryStatus::Success);
         assert_eq!(state.data.as_deref().copied(), Some(2));
+    }
+
+    #[test]
+    fn stale_time_does_not_refetch_while_continuously_observed() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test.query.v1", &111u32);
+        let policy = QueryPolicy {
+            stale_time: Duration::ZERO,
+            ..Default::default()
+        };
+
+        app.set_frame_id(FrameId(1));
+        let handle = with_query_client(&mut app, |client, app| {
+            client.use_query(app, window, key, policy.clone(), |_token| Ok(1u32))
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        let state = handle.model.read_ref(&app, |s| s.clone()).unwrap();
+        assert_eq!(state.status, QueryStatus::Success);
+
+        app.set_frame_id(FrameId(2));
+        with_query_client(&mut app, |client, app| {
+            let _ = client.use_query(app, window, key, policy.clone(), |_token| Ok(2u32));
+        })
+        .unwrap();
+
+        assert_eq!(dispatcher.take_background().len(), 0);
+    }
+
+    #[test]
+    fn stale_time_refetches_on_remount_after_frame_gap() {
+        let mut app = App::new();
+        let dispatcher = Arc::new(TestDispatcher::default());
+        let dispatcher_handle: DispatcherHandle = dispatcher.clone();
+        app.set_global::<DispatcherHandle>(dispatcher_handle);
+
+        let window = AppWindowId::default();
+        let key = QueryKey::<u32>::new("test.query.v1", &222u32);
+        let policy = QueryPolicy {
+            stale_time: Duration::ZERO,
+            ..Default::default()
+        };
+
+        app.set_frame_id(FrameId(1));
+        let _handle = with_query_client(&mut app, |client, app| {
+            client.use_query(app, window, key, policy.clone(), |_token| Ok(1u32))
+        })
+        .unwrap();
+
+        let tasks = dispatcher.take_background();
+        assert_eq!(tasks.len(), 1);
+        for task in tasks {
+            task();
+        }
+        assert!(drain_inboxes(&mut app, Some(window)));
+
+        app.set_frame_id(FrameId(3));
+        with_query_client(&mut app, |client, app| {
+            let _ = client.use_query(app, window, key, policy.clone(), |_token| Ok(2u32));
+        })
+        .unwrap();
+
+        assert_eq!(dispatcher.take_background().len(), 1);
     }
 
     #[test]
