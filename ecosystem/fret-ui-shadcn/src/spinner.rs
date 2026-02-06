@@ -1,5 +1,5 @@
 use fret_core::{Point, Px, Transform2D};
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvg};
+use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned};
 use fret_ui::element::{AnyElement, Length, SvgIconProps, VisualTransformProps};
 use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::scheduling;
@@ -72,15 +72,16 @@ impl Spinner {
             .or_else(|| theme.color_by_key("foreground"))
             .unwrap_or_else(|| theme.color_required("foreground"));
 
-        let svg: SvgSource =
-            cx.app
-                .with_global_mut(IconRegistry::default, |icons, _app| {
-                    match icons.resolve_svg(&self.icon) {
-                        Some(ResolvedSvg::Static(bytes)) => SvgSource::Static(bytes),
-                        Some(ResolvedSvg::Bytes(bytes)) => SvgSource::Bytes(bytes.clone()),
-                        None => SvgSource::Static(MISSING_ICON_SVG),
-                    }
-                });
+        let resolved = cx
+            .app
+            .with_global_mut(IconRegistry::default, |icons, _app| {
+                icons.resolve_or_missing_owned(&self.icon)
+            });
+
+        let svg: SvgSource = match resolved {
+            ResolvedSvgOwned::Static(bytes) => SvgSource::Static(bytes),
+            ResolvedSvgOwned::Bytes(bytes) => SvgSource::Bytes(bytes),
+        };
 
         let mut center = Point::new(Px(8.0), Px(8.0));
         if let (Length::Px(w), Length::Px(h)) = (layout.size.width, layout.size.height) {

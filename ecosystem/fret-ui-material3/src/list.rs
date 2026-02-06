@@ -10,7 +10,7 @@ use std::sync::Arc;
 use fret_core::{
     Axis, Color, Edges, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
 };
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned};
 use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
@@ -22,13 +22,13 @@ use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 
 use crate::foundation::context::{
-    MaterialDesignVariant, resolved_design_variant, theme_default_design_variant,
+    resolved_design_variant, theme_default_design_variant, MaterialDesignVariant,
 };
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
 };
-use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
+use crate::foundation::interaction::{pressable_interaction, PressableInteraction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::tokens::list as list_tokens;
 
@@ -225,7 +225,11 @@ impl List {
                                 let mut idx = current;
                                 for _ in 0..it.len {
                                     idx = if forward {
-                                        if idx + 1 < it.len { idx + 1 } else { 0 }
+                                        if idx + 1 < it.len {
+                                            idx + 1
+                                        } else {
+                                            0
+                                        }
                                     } else if idx > 0 {
                                         idx - 1
                                     } else {
@@ -526,9 +530,7 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
     let resolved = cx
         .app
         .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
+            icons.resolve_or_missing_owned(icon)
         });
 
     match resolved {

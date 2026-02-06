@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use fret_core::{Color, Px};
 use fret_core::{SvgId, UiServices};
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
-use fret_ui::SvgSource;
+use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned, MISSING_ICON_SVG};
 use fret_ui::element::SvgIconProps;
+use fret_ui::SvgSource;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use super::style;
@@ -41,14 +41,9 @@ impl IconSvgRegistry {
 /// This is an optional optimization that allows `icon(...)` to return `SvgSource::Id` without
 /// per-frame SVG registration.
 pub fn preload_icon_svgs<H: UiHost>(app: &mut H, services: &mut dyn UiServices) {
-    let resolved: Vec<(IconId, ResolvedSvgOwned)> =
-        app.with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .iter()
-                .filter_map(|(id, _source)| {
-                    icons.resolve_svg_owned(id).map(|svg| (id.clone(), svg))
-                })
-                .collect()
+    let resolved: Vec<(IconId, ResolvedSvgOwned)> = app
+        .with_global_mut(IconRegistry::default, |icons, _app| {
+            icons.collect_resolved_owned()
         });
 
     let missing = services.svg().register_svg(MISSING_ICON_SVG);
@@ -93,9 +88,7 @@ pub fn icon_with<H: UiHost>(
             let resolved = cx
                 .app
                 .with_global_mut(IconRegistry::default, |icons, _app| {
-                    icons
-                        .resolve_svg_owned(&icon)
-                        .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
+                    icons.resolve_or_missing_owned(&icon)
                 });
 
             match resolved {
@@ -190,7 +183,7 @@ mod tests {
 
         let mut app = fret_app::App::new();
         app.with_global_mut(IconRegistry::default, |icons, _app| {
-            icons.register_svg_static(icon_id.clone(), svg_bytes);
+            let _ = icons.register_svg_static(icon_id.clone(), svg_bytes);
         });
 
         let mut services = FakeUiServices::default();

@@ -3,7 +3,7 @@ use std::hash::{Hash, Hasher};
 
 use fret_app::App;
 use fret_core::UiServices;
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned, MISSING_ICON_SVG};
 
 use fret_canvas::cache::CacheStats;
 use fret_canvas::cache::{SvgBytes, SvgCache};
@@ -43,14 +43,9 @@ fn missing_svg_cache_key() -> u64 {
 /// Unlike the `fret-ui-kit` helper, this uses `fret-canvas` `SvgCache` so repeated calls replace and
 /// unregister old `SvgId`s instead of leaking registered SVGs.
 pub fn preload_icon_svgs(app: &mut App, services: &mut dyn UiServices) {
-    let resolved: Vec<(IconId, ResolvedSvgOwned)> =
-        app.with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .iter()
-                .filter_map(|(id, _source)| {
-                    icons.resolve_svg_owned(id).map(|svg| (id.clone(), svg))
-                })
-                .collect()
+    let resolved: Vec<(IconId, ResolvedSvgOwned)> = app
+        .with_global_mut(IconRegistry::default, |icons, _app| {
+            icons.collect_resolved_owned()
         });
 
     app.with_global_mut(PreloadedIconSvgCache::default, |cache, app| {

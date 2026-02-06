@@ -46,7 +46,7 @@ fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str) {
         Cow::Owned(v) => Arc::from(v),
     };
 
-    reg.register_svg_bytes(IconId::new(format!("lucide.{icon_name}")), bytes);
+    let _ = reg.register_svg_bytes(IconId::new(format!("lucide.{icon_name}")), bytes);
 }
 
 #[cfg(feature = "semantic-ui")]
@@ -54,16 +54,16 @@ mod semantic_ui {
     use super::*;
 
     pub fn register(reg: &mut IconRegistry) {
-        reg.alias(ids::ui::CHECK, IconId::new("lucide.check"));
-        reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("lucide.chevron-down"));
-        reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
-        reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
-        reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
-        reg.alias(ids::ui::MORE_HORIZONTAL, IconId::new("lucide.ellipsis"));
-        reg.alias(ids::ui::MINUS, IconId::new("lucide.minus"));
-        reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));
-        reg.alias(ids::ui::SETTINGS, IconId::new("lucide.settings"));
-        reg.alias(ids::ui::PLAY, IconId::new("lucide.play"));
-        reg.alias(ids::ui::SLASH, IconId::new("lucide.slash"));
+        let _ = reg.alias(ids::ui::CHECK, IconId::new("lucide.check"));
+        let _ = reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("lucide.chevron-down"));
+        let _ = reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
+        let _ = reg.alias(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
+        let _ = reg.alias(ids::ui::CLOSE, IconId::new("lucide.x"));
+        let _ = reg.alias(ids::ui::MORE_HORIZONTAL, IconId::new("lucide.ellipsis"));
+        let _ = reg.alias(ids::ui::MINUS, IconId::new("lucide.minus"));
+        let _ = reg.alias(ids::ui::SEARCH, IconId::new("lucide.search"));
+        let _ = reg.alias(ids::ui::SETTINGS, IconId::new("lucide.settings"));
+        let _ = reg.alias(ids::ui::PLAY, IconId::new("lucide.play"));
+        let _ = reg.alias(ids::ui::SLASH, IconId::new("lucide.slash"));
     }
 }

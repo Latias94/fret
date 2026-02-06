@@ -14,7 +14,7 @@ use fret_core::{
     Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit,
     TextOverflow, TextWrap,
 };
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned, ids};
+use fret_icons::{ids, IconId, IconRegistry, ResolvedSvgOwned};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -27,15 +27,15 @@ use fret_ui::{Invalidation, SvgSource, Theme, UiHost};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
-use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
 use fret_ui_kit::{
-    OverrideSlot, WidgetStateProperty, WidgetStates, merge_override_slot,
-    resolve_override_slot_opt_with, resolve_override_slot_with,
+    merge_override_slot, resolve_override_slot_opt_with, resolve_override_slot_with, OverrideSlot,
+    WidgetStateProperty, WidgetStates,
 };
+use fret_ui_kit::{ColorRef, OverlayController, OverlayPresence};
 
 use crate::foundation::floating_label;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
 };
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
@@ -1195,9 +1195,7 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
     let resolved = cx
         .app
         .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
+            icons.resolve_or_missing_owned(icon)
         });
 
     match resolved {

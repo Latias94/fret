@@ -43,8 +43,12 @@ fn register_vendor_icon(reg: &mut IconRegistry, icon_name: &str) {
 
     let id = IconId::new(format!("radix.{icon_name}"));
     match file.data {
-        Cow::Borrowed(b) => reg.register_svg_bytes(id, Arc::from(b)),
-        Cow::Owned(v) => reg.register_svg_bytes(id, Arc::from(v)),
+        Cow::Borrowed(b) => {
+            let _ = reg.register_svg_bytes(id, Arc::from(b));
+        }
+        Cow::Owned(v) => {
+            let _ = reg.register_svg_bytes(id, Arc::from(v));
+        }
     }
 }
 
@@ -53,13 +57,13 @@ mod semantic_ui {
     use super::*;
 
     pub fn register(reg: &mut IconRegistry) {
-        reg.alias(ids::ui::CHECK, IconId::new("radix.check"));
-        reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("radix.chevron-down"));
-        reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("radix.chevron-right"));
-        reg.alias(ids::ui::CHEVRON_UP, IconId::new("radix.chevron-up"));
-        reg.alias(ids::ui::CLOSE, IconId::new("radix.cross-1"));
-        reg.alias(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
-        reg.alias(ids::ui::SETTINGS, IconId::new("radix.gear"));
-        reg.alias(ids::ui::PLAY, IconId::new("radix.play"));
+        let _ = reg.alias(ids::ui::CHECK, IconId::new("radix.check"));
+        let _ = reg.alias(ids::ui::CHEVRON_DOWN, IconId::new("radix.chevron-down"));
+        let _ = reg.alias(ids::ui::CHEVRON_RIGHT, IconId::new("radix.chevron-right"));
+        let _ = reg.alias(ids::ui::CHEVRON_UP, IconId::new("radix.chevron-up"));
+        let _ = reg.alias(ids::ui::CLOSE, IconId::new("radix.cross-1"));
+        let _ = reg.alias(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));
+        let _ = reg.alias(ids::ui::SETTINGS, IconId::new("radix.gear"));
+        let _ = reg.alias(ids::ui::PLAY, IconId::new("radix.play"));
     }
 }

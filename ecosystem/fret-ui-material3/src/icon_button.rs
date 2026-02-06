@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use fret_core::{Axis, Color, Corners, Edges, Px, SemanticsRole, SvgFit};
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
@@ -16,17 +16,17 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{SvgSource, Theme, UiHost};
 use fret_ui_kit::{
-    ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_opt_with,
-    resolve_override_slot_with,
+    resolve_override_slot_opt_with, resolve_override_slot_with, ColorRef, OverrideSlot,
+    WidgetStateProperty, WidgetStates,
 };
 
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
 };
-use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
+use crate::foundation::interaction::{pressable_interaction, PressableInteraction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_scheme::{sys_spring_in_scope, MotionSchemeKey};
 use crate::motion::{SpringAnimator, SpringSpec};
 use crate::tokens::icon_button as icon_button_tokens;
 
@@ -534,9 +534,7 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
     let resolved = cx
         .app
         .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
+            icons.resolve_or_missing_owned(icon)
         });
 
     match resolved {

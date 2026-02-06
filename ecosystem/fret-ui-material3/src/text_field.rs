@@ -12,7 +12,7 @@ use fret_core::{
     Axis, Color, Corners, Edges, NodeId, Point, Px, SemanticsRole, SvgFit, TextOverflow, TextStyle,
     TextWrap, Transform2D,
 };
-use fret_icons::{IconId, IconRegistry, MISSING_ICON_SVG, ResolvedSvgOwned};
+use fret_icons::{IconId, IconRegistry, ResolvedSvgOwned};
 use fret_runtime::Model;
 use fret_ui::action::{OnPressablePointerDown, PointerDownCx, PressablePointerDownResult};
 use fret_ui::element::{
@@ -23,15 +23,15 @@ use fret_ui::element::{
 use fret_ui::elements::ElementContext;
 use fret_ui::{GlobalElementId, Invalidation, SvgSource, Theme, UiHost};
 use fret_ui_kit::{
-    ColorRef, OverrideSlot, WidgetState, WidgetStateProperty, WidgetStates,
-    resolve_override_slot_with,
+    resolve_override_slot_with, ColorRef, OverrideSlot, WidgetState, WidgetStateProperty,
+    WidgetStates,
 };
 
 use crate::foundation::floating_label;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
 };
-use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::motion_scheme::{sys_spring_in_scope, MotionSchemeKey};
 use crate::motion::SpringAnimator;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
@@ -529,7 +529,11 @@ impl TextField {
                                 };
 
                                 let placeholder_target_opacity = if label.is_some() {
-                                    if focused && !populated { 1.0 } else { 0.0 }
+                                    if focused && !populated {
+                                        1.0
+                                    } else {
+                                        0.0
+                                    }
                                 } else {
                                     1.0
                                 };
@@ -967,9 +971,7 @@ fn svg_source_for_icon<H: UiHost>(cx: &mut ElementContext<'_, H>, icon: &IconId)
     let resolved = cx
         .app
         .with_global_mut(IconRegistry::default, |icons, _app| {
-            icons
-                .resolve_svg_owned(icon)
-                .unwrap_or(ResolvedSvgOwned::Static(MISSING_ICON_SVG))
+            icons.resolve_or_missing_owned(icon)
         });
 
     match resolved {
