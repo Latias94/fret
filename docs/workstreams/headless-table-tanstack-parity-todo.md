@@ -87,6 +87,9 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
 - [~] HTP-cap-020 Add “capability smoke” gates (compile-time + runtime).
   - Done (compile-time, smoke): a minimal API-call coverage gate exists.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
+  - Done (runtime, smoke): RowId-based state resolution and pinning-by-id helpers are covered.
+    - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
+    - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_pinning_updater_by_id`)
   - Remaining (runtime): extend beyond “leaf-only” to cover:
     - `getRow(id, searchAll?)` id lookup across core/pre-pagination/current models,
     - grouped row ids (string ids like `role:1`),
@@ -95,18 +98,22 @@ Goal: ensure we are “not weaker than TanStack” by explicitly tracking upstre
   - Rationale: TanStack features operate on string row ids (including grouped row ids like `role:1`), and consumers
     can pin/select/expand by those ids. We must be able to express the same, even if we keep `RowKey(u64)` for hot paths.
   - Planned (staged):
-    - [~] HTP-id-011 Introduce `RowId` type (likely `Arc<str>`) and plumb through state shapes where required.
+    - [x] HTP-id-011 Introduce `RowId` type (likely `Arc<str>`) and plumb through state shapes where required.
       - Done (engine scaffolding): `RowId` and `RowModel.rows_by_id`.
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
-    - [~] HTP-id-012 Add `TableBuilder::get_row_id` (TanStack `_getRowId` equivalent) and default behavior.
-      - Done (engine scaffolding): `TableBuilder::get_row_id` and core model plumbing.
+    - [x] HTP-id-012 Add `TableBuilder::get_row_id` (TanStack `_getRowId` equivalent) and default behavior.
+      - Done: `TableBuilder::get_row_id` is plumbed and the default RowId strategy matches TanStack (index-path).
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
     - [~] HTP-id-013 Store and gate `rows_by_id` (TanStack `rowsById`) for core/pre-pagination/final models.
       - Done (engine scaffolding): `rows_by_id` is carried through the main row model pipeline for leaf rows.
         - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
       - Remaining (gate): add a fixture-backed gate that asserts `rowsById` semantics beyond smoke coverage.
     - [ ] HTP-id-014 Make grouped row ids first-class (deterministic string ids matching upstream).
-    - [ ] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
+    - [~] HTP-id-015 Support pin/select/expand by `RowId` without losing existing `RowKey` fast paths.
+      - Done (initial): RowId-aware TanStack JSON import path and pinning-by-id helper.
+        - Evidence: `ecosystem/fret-ui-headless/src/table/tanstack_state.rs` (`to_table_state_with_row_model`)
+        - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`row_pinning_updater_by_id`)
+      - Remaining: apply the same pattern across selection/expanding updaters and add grouped-row coverage.
     - [ ] HTP-id-016 Extend fixtures to cover id-based lookup and group row operations.
   - Note: current TanStack JSON state round-trip for row-keyed maps (rowSelection/expanded/rowPinning)
     still assumes numeric ids; this must be generalized to `RowId` strings as part of `HTP-id-015`.
