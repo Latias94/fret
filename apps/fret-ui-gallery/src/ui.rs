@@ -762,9 +762,7 @@ fn page_preview(
         PAGE_CONTEXT_MENU => preview_context_menu(cx, context_menu_open, last_action.clone()),
         PAGE_DIALOG => preview_dialog(cx, dialog_open),
         PAGE_DRAWER => preview_drawer(cx),
-        PAGE_DROPDOWN_MENU => {
-            preview_menus(cx, dropdown_open, context_menu_open, last_action.clone())
-        }
+        PAGE_DROPDOWN_MENU => preview_dropdown_menu(cx, dropdown_open, last_action.clone())
         PAGE_EMPTY => preview_empty(cx),
         PAGE_FORM => preview_forms(cx, text_input, text_area, checkbox, switch),
         PAGE_HOVER_CARD => preview_hover_card(cx),
@@ -19148,6 +19146,14 @@ fn preview_progress(cx: &mut ElementContext<'_, App>, _progress: Model<f32>) -> 
     );
 
     vec![demo, examples]
+}
+
+fn preview_dropdown_menu(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    pages::preview_dropdown_menu(cx, open, last_action)
 }
 
 fn preview_menus(
