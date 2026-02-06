@@ -457,6 +457,84 @@ impl Default for TextAreaOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct HorizontalOptions {
+    pub gap: crate::MetricRef,
+    pub justify: crate::Justify,
+    pub items: crate::Items,
+    pub wrap: bool,
+}
+
+impl Default for HorizontalOptions {
+    fn default() -> Self {
+        Self {
+            gap: crate::MetricRef::space(crate::Space::N0),
+            justify: crate::Justify::Start,
+            items: crate::Items::Center,
+            wrap: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct VerticalOptions {
+    pub gap: crate::MetricRef,
+    pub justify: crate::Justify,
+    pub items: crate::Items,
+    pub wrap: bool,
+}
+
+impl Default for VerticalOptions {
+    fn default() -> Self {
+        Self {
+            gap: crate::MetricRef::space(crate::Space::N0),
+            justify: crate::Justify::Start,
+            items: crate::Items::Stretch,
+            wrap: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct GridOptions {
+    pub columns: usize,
+    pub column_gap: crate::MetricRef,
+    pub row_gap: crate::MetricRef,
+    pub row_justify: crate::Justify,
+    pub row_items: crate::Items,
+}
+
+impl Default for GridOptions {
+    fn default() -> Self {
+        Self {
+            columns: 1,
+            column_gap: crate::MetricRef::space(crate::Space::N0),
+            row_gap: crate::MetricRef::space(crate::Space::N0),
+            row_justify: crate::Justify::Start,
+            row_items: crate::Items::Center,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ScrollOptions {
+    pub axis: fret_ui::element::ScrollAxis,
+    pub show_scrollbar_x: bool,
+    pub show_scrollbar_y: bool,
+    pub handle: Option<fret_ui::scroll::ScrollHandle>,
+}
+
+impl Default for ScrollOptions {
+    fn default() -> Self {
+        Self {
+            axis: fret_ui::element::ScrollAxis::Y,
+            show_scrollbar_x: false,
+            show_scrollbar_y: true,
+            handle: None,
+        }
+    }
+}
+
 #[derive(Clone)]
 struct PopupStoreState {
     open: fret_runtime::Model<bool>,
@@ -566,6 +644,125 @@ fn default_text_area_style_from_theme(theme: &fret_ui::Theme) -> fret_ui::TextAr
     }
 }
 
+fn build_imui_children_with_focus<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    out: &mut Vec<AnyElement>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) {
+    let mut ui = ImUiFacade {
+        cx,
+        out,
+        build_focus,
+    };
+    f(&mut ui);
+}
+
+fn horizontal_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: HorizontalOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut builder = crate::ui::h_flex_build(cx, move |cx, out| {
+        build_imui_children_with_focus(cx, out, build_focus, f);
+    });
+    builder = builder
+        .gap_metric(options.gap)
+        .justify(options.justify)
+        .items(options.items);
+    if options.wrap {
+        builder = builder.wrap();
+    } else {
+        builder = builder.no_wrap();
+    }
+    builder.into_element(cx)
+}
+
+fn vertical_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: VerticalOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut builder = crate::ui::v_flex_build(cx, move |cx, out| {
+        build_imui_children_with_focus(cx, out, build_focus, f);
+    });
+    builder = builder
+        .gap_metric(options.gap)
+        .justify(options.justify)
+        .items(options.items);
+    if options.wrap {
+        builder = builder.wrap();
+    } else {
+        builder = builder.no_wrap();
+    }
+    builder.into_element(cx)
+}
+
+fn scroll_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: ScrollOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut builder = crate::ui::scroll_area_build(cx, move |cx, out| {
+        build_imui_children_with_focus(cx, out, build_focus, f);
+    });
+    builder = builder
+        .axis(options.axis)
+        .show_scrollbars(options.show_scrollbar_x, options.show_scrollbar_y);
+    if let Some(handle) = options.handle {
+        builder = builder.handle(handle);
+    }
+    builder.into_element(cx)
+}
+
+fn grid_container_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    options: GridOptions,
+    f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+) -> AnyElement {
+    let mut cells: Vec<AnyElement> = Vec::new();
+    build_imui_children_with_focus(cx, &mut cells, build_focus, f);
+
+    let columns = options.columns.max(1);
+    let mut rows: Vec<AnyElement> = Vec::new();
+    let mut row_index = 0usize;
+    let mut iter = cells.into_iter();
+
+    loop {
+        let mut row_cells: Vec<AnyElement> = Vec::with_capacity(columns);
+        for _ in 0..columns {
+            let Some(cell) = iter.next() else {
+                break;
+            };
+            row_cells.push(cell);
+        }
+        if row_cells.is_empty() {
+            break;
+        }
+
+        let row = cx.keyed(row_index, |cx| {
+            crate::ui::h_flex(cx, move |_cx| row_cells)
+                .gap_metric(options.column_gap.clone())
+                .justify(options.row_justify)
+                .items(options.row_items)
+                .no_wrap()
+                .into_element(cx)
+        });
+        rows.push(row);
+        row_index += 1;
+    }
+
+    crate::ui::v_flex(cx, move |_cx| rows)
+        .gap_metric(options.row_gap)
+        .justify(crate::Justify::Start)
+        .items(crate::Items::Stretch)
+        .no_wrap()
+        .into_element(cx)
+}
 fn arm_long_press_timer_for(
     host: &mut dyn fret_ui::action::UiActionHost,
     action_cx: fret_ui::action::ActionCx,
@@ -787,6 +984,64 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         for (key, item) in items {
             self.id(&key, |ui| f(ui, &key, item));
         }
+    }
+
+    pub fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.horizontal_ex(HorizontalOptions::default(), f);
+    }
+
+    pub fn horizontal_ex(
+        &mut self,
+        options: HorizontalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element =
+            self.with_cx_mut(|cx| horizontal_container_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.vertical_ex(VerticalOptions::default(), f);
+    }
+
+    pub fn vertical_ex(
+        &mut self,
+        options: VerticalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element =
+            self.with_cx_mut(|cx| vertical_container_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn grid(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.grid_ex(GridOptions::default(), f);
+    }
+
+    pub fn grid_ex(
+        &mut self,
+        options: GridOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self.with_cx_mut(|cx| grid_container_element(cx, build_focus, options, f));
+        self.add(element);
+    }
+
+    pub fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.scroll_ex(ScrollOptions::default(), f);
+    }
+
+    pub fn scroll_ex(
+        &mut self,
+        options: ScrollOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self.with_cx_mut(|cx| scroll_container_element(cx, build_focus, options, f));
+        self.add(element);
     }
 
     pub fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
@@ -1093,6 +1348,58 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             props.layout.size.height = fret_ui::element::Length::Px(fret_core::Px(1.0));
             cx.container(props, |_| Vec::new())
         });
+        self.add(element);
+    }
+
+    fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.horizontal_ex(HorizontalOptions::default(), f);
+    }
+
+    fn horizontal_ex(
+        &mut self,
+        options: HorizontalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| horizontal_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.vertical_ex(VerticalOptions::default(), f);
+    }
+
+    fn vertical_ex(
+        &mut self,
+        options: VerticalOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| vertical_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn grid(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.grid_ex(GridOptions::default(), f);
+    }
+
+    fn grid_ex(
+        &mut self,
+        options: GridOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| grid_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        self.scroll_ex(ScrollOptions::default(), f);
+    }
+
+    fn scroll_ex(
+        &mut self,
+        options: ScrollOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element = self.with_cx_mut(|cx| scroll_container_element(cx, None, options, f));
         self.add(element);
     }
 
