@@ -1,9 +1,7 @@
 use fret_core::{Modifiers, Point, Px, Rect, Size};
 
-use crate::io::NodeGraphViewState;
-
 use super::super::{NodeGraphCanvas, pending_drag, pending_wire_drag};
-use super::{NullServices, TestUiHostImpl, event_cx, make_test_graph_two_nodes_with_ports};
+use super::{NullServices, event_cx, make_host_graph_view, make_test_graph_two_nodes_with_ports};
 use crate::ui::canvas::state::{
     PendingNodeDrag, PendingNodeSelectAction, PendingWireDrag, WireDragKind,
 };
@@ -18,10 +16,8 @@ fn bounds() -> Rect {
 
 #[test]
 fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let threshold_screen = 8.0;
     let eps_screen = 0.1;
@@ -95,10 +91,8 @@ fn node_drag_threshold_is_zoom_invariant_in_screen_space() {
 
 #[test]
 fn connection_drag_threshold_is_zoom_invariant_in_screen_space() {
-    let mut host = TestUiHostImpl::default();
     let (graph_value, _a, _a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let (mut host, graph, view) = make_host_graph_view(graph_value);
 
     let threshold_screen = 8.0;
     let eps_screen = 0.1;

@@ -280,6 +280,13 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/translate_extent_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_animation_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_helper_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/color_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/selection_mode_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/threshold_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/node_origin_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/nudge_step_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/z_order_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
