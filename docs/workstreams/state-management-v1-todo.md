@@ -1,6 +1,6 @@
 # State Management v1 (Tracking)
 
-Last updated: 2026-02-05
+Last updated: 2026-02-06
 
 This file tracks concrete migration work for the state-management authoring story described in:
 
@@ -79,3 +79,14 @@ Goal: provide a memoized derived-state layer with explicit dependency tracking.
   - the workstream docs
   - the recommended crates
   - Evidence anchor: `docs/README.md`
+
+## Phase 5 — Post-v1 polish
+
+- `[x]` Add a view-cache-safe typed routing helper (`KeyedMessageRouter<K, M>`) for stable dynamic commands.
+  - Evidence anchor: `ecosystem/fret-kit/src/mvu.rs`
+- `[x]` Document the `view_cache(...)` caveat + recommended keyed router usage.
+  - Evidence anchors:
+    - `docs/workstreams/state-management-v1.md`
+    - `docs/workstreams/ecosystem-status.md`
+- `[ ]` Optional: adopt `KeyedMessageRouter` in one view-cached example to replace bespoke lookup tables.
+  - Candidate: `apps/fret-ui-gallery/src/spec.rs` (data grid row routing)

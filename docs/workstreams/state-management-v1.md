@@ -138,6 +138,10 @@ Caveat (view-cache reuse):
   This means per-frame routing tables will not be refreshed.
 - For dynamic commands inside a view-cached subtree, prefer **stable** command IDs and a persistent
   lookup table (`CommandId -> message`) owned by the window/app state.
+  - Recommended helper: `fret-kit::mvu::KeyedMessageRouter<K, M>`.
+    - allocate stable command IDs per key (`cmd(key, message)`),
+    - prune on each view build (`retain_keys(...)`) to avoid unbounded growth,
+    - resolve in `on_command(...)` (`try_resolve(...)`).
   - Example: UI Gallery keeps stable command→payload helpers in `apps/fret-ui-gallery/src/spec.rs`.
 
 ## User experience target (“what app authors should feel”)
