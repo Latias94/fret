@@ -71,17 +71,16 @@ ColumnDef keys referenced by upstream feature implementations:
 
 ## Next execution plan (functional parity first)
 
-- Step 1: Close the remaining `HTP-filt-060` gap (custom filter meta callback parity + fixture gate).
-- Step 2: Complete manual sorting override parity in `HTP-sort-050`.
-- Step 3: Complete grouped aggregation/sorting depth in `HTP-grp-020` + `HTP-grp-030`.
-- Step 4: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
-- Step 5: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
+- Step 1: Complete manual sorting override parity in `HTP-sort-050`.
+- Step 2: Complete grouped aggregation/sorting depth in `HTP-grp-020` + `HTP-grp-030`.
+- Step 3: Close `HTP-id-*` + `HTP-state-020` state/ID round-trip hardening.
+- Step 4: Finish guardrails (`HTP-cap-010`, `HTP-base-004`, `HTP-memo-020`, `HTP-perf-010`).
+- Step 5: Expand filtering `getCanFilter`/controlled hooks parity surface.
 
 ## Functional parity gap snapshot (must not be weaker than TanStack)
 
 P0 (core behavior parity, highest user-visible risk):
 
-- HTP-filt-060: custom filter meta callback parity (`addMeta`-like behavior) still needs fixture-backed closure.
 - HTP-sort-050: manualSorting + getSortedRowModel override semantics need final parity lock.
 
 P1 (capability breadth parity):
@@ -102,7 +101,7 @@ P2 (engineering guardrails for sustained parity):
 - Milestone A (UI pinning correctness, done): HTP-ui-colpin-010 closed with retained split alignment + dedicated parity gate.
 - Milestone B (grouped pinning semantics, done): `HTP-ui-rowpin-020` + `HTP-rowpin-015` closed with fixture-backed assertions.
 - Milestone C (manual pipeline parity, in progress): close `HTP-sort-050`, then lock cross-feature interactions with pagination/grouping.
-- Milestone D (filter depth/meta parity, in progress): `HTP-filt-050` + `HTP-filt-070` closed; finish remaining `HTP-filt-060` custom meta callback parity.
+- Milestone D (filter depth/meta parity, done): `HTP-filt-050` + `HTP-filt-060` + `HTP-filt-070` are parity-gated.
 - Milestone E (ID/state hardening): close HTP-id-* remaining items and HTP-state-020 lossless semantics.
 - Milestone F (guardrails): close HTP-cap-010, HTP-base-004, HTP-memo-020, and HTP-perf-010.
 
@@ -266,11 +265,13 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): root/leaf recursion both honor `maxLeafRowFilterDepth` + `filterFromLeafRows`.
   - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`filter_row_model` recursion branches)
   - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`root_filter_depth_zero_preserves_unfiltered_subtree`, `leaf_filter_depth_gate_controls_descendant_bubbling`)
-- [~] HTP-filt-060 Track per-row filter pass/fail map and optional filter meta (parity-gated).
+- [x] HTP-filt-060 Track per-row filter pass/fail map and optional filter meta (parity-gated).
   - Done: `RowFilterStateSnapshot` + `evaluate_row_filter_state` + table-level `row_filter_state_snapshot()` now track per-row pass/fail and meta containers.
+  - Done (parity-gated): custom filter meta callback (`addMeta`-like path) via named filterFns + snapshot assertions.
   - Evidence: `ecosystem/fret-ui-headless/src/table/filtering.rs` (`RowFilterStateSnapshot`, `evaluate_row_filter_state`)
-  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_filter_state_snapshot`)
-  - Remaining: custom filter meta callback parity (TanStack `addMeta`-like path) + fixture-backed gate.
+  - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::row_filter_state_snapshot`, `TableBuilder::filter_fn_value_with_meta`)
+  - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_meta_parity.rs`
+  - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_meta.json`
 - [x] HTP-filt-070 Align manual filtering semantics:
   - `manualFiltering` (and `getFilteredRowModel` override) behavior matches upstream.
   - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`Table::filtered_row_model`, `Table::faceted_row_model`)
@@ -640,6 +641,7 @@ fixture outcomes.
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_resizing_group_headers.json` | `column_resizing_group_headers` | `ColumnSizing` (group header resize fan-out + group entry in `columnSizingStart`) | `ecosystem/fret-ui-headless/tests/tanstack_v8_column_resizing_group_headers_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_fns.json` | `sorting_fns` | `RowSorting` (sortingFn resolution: `auto` + built-ins + registry/custom) | `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json` | `filtering_fns` | `ColumnFiltering` / `GlobalFiltering` (`filterFns`, `resolveFilterValue`, `autoRemove`, gates) | `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` | Partial |
+| `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_meta.json` | `filtering_meta` | `ColumnFiltering` (`row.columnFiltersMeta` / custom `addMeta` callback semantics) | `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_meta_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/headers_cells.json` | `headers_cells` | `core/*` (header groups + cell ids, including pinning split families) | `ecosystem/fret-ui-headless/tests/tanstack_v8_headers_cells_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning.json` | `pinning` | `RowPinning` (`keepPinnedRows` vs sorting/pagination/filtering) | `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_parity.rs` | Partial |
 | `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/pinning_tree.json` | `pinning_tree` | `RowPinning` (includeLeaf/includeParent + expanded gating) | `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_tree_parity.rs` | Partial |

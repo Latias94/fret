@@ -167,9 +167,9 @@ Known “core engine” gaps (as of this workstream start):
 - TanStack core types (`headers`, `cells`, nested column trees / header groups) are not yet
   represented 1:1 in `fret-ui-headless`.
 - Filtering supports typed filter values (via `serde_json::Value`) and parity-gated built-in
-  `filterFns` + `resolveFilterValue` + `autoRemove`, and now includes `filterFromLeafRows` /
-  `maxLeafRowFilterDepth` depth controls plus per-row pass/fail maps. Remaining gap: custom filter
-  meta callback parity and a fully typed `globalFilter` surface.
+  `filterFns` + `resolveFilterValue` + `autoRemove`, plus `filterFromLeafRows` /
+  `maxLeafRowFilterDepth` depth controls and per-row pass/fail + filter meta maps (including
+  custom `addMeta`-like callbacks). Remaining gap: fully typed `globalFilter` surface.
 - Sorting lacks TanStack behaviors like sortingFn auto-selection, and the remaining
   `sortUndefined: false` semantics (see M3 / HTP-sort-010 + HTP-sort-040).
 - “Auto-reset” behaviors are parity-gated, but we do not yet model TanStack’s instance-level
@@ -190,7 +190,7 @@ This matrix is the living checklist. When a row becomes “Aligned”, add at le
 
 | Upstream (`table-core`) | Fret module(s) | Status | Notes (non-exhaustive) |
 | --- | --- | --- | --- |
-| `ColumnFiltering.ts` | `filtering.rs` | Partial | Built-in filterFns + `resolveFilterValue` + `autoRemove` are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`). `filterFromLeafRows` + `maxLeafRowFilterDepth` recursion semantics and per-row pass-map tracking are covered by unit gates in `ecosystem/fret-ui-headless/src/table/filtering.rs` (`root_filter_depth_zero_preserves_unfiltered_subtree`, `leaf_filter_depth_gate_controls_descendant_bubbling`, `evaluate_row_filter_state_tracks_per_row_pass_map`). Remaining: custom filter meta callback parity and `getCanFilter` option-gate surfaces. |
+| `ColumnFiltering.ts` | `filtering.rs` | Partial | Built-in filterFns + `resolveFilterValue` + `autoRemove` are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`). `filterFromLeafRows` + `maxLeafRowFilterDepth` recursion semantics and per-row pass-map tracking are covered by unit gates in `ecosystem/fret-ui-headless/src/table/filtering.rs` (`root_filter_depth_zero_preserves_unfiltered_subtree`, `leaf_filter_depth_gate_controls_descendant_bubbling`, `evaluate_row_filter_state_tracks_per_row_pass_map`). Custom filter `addMeta`-like callback semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_meta_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_meta.json`). Remaining: `getCanFilter` option-gate surfaces. |
 | `GlobalFiltering.ts` | `filtering.rs` | Partial | Global filter row-model behavior (default `globalFilterFn: 'auto'` => includesString) and `getColumnCanGlobalFilter` eligibility semantics are parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`, snapshot: `filtering_fns_global_filter_default_excludes_bool`). Remaining: fully typed `globalFilter` value surface + controlled state hook parity (`onGlobalFilterChange`). |
 | `ColumnFaceting.ts` | `faceting.rs` | Aligned | Parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json`). |
 | `GlobalFaceting.ts` | `faceting.rs` | Aligned | Parity-gated by `ecosystem/fret-ui-headless/tests/tanstack_v8_faceting_parity.rs` (fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/faceting.json`). Note: built-in helpers produce empty/null global unique/minmax since `__global__` is not a real column (fixture captures upstream warning). |

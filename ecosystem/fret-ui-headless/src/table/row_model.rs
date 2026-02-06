@@ -260,6 +260,18 @@ impl<'a, TData> TableBuilder<'a, TData> {
         self
     }
 
+    /// Register a named filter function with TanStack-like `addMeta` support.
+    pub fn filter_fn_value_with_meta(
+        mut self,
+        key: impl Into<Arc<str>>,
+        f: impl Fn(&super::TanStackValue, &serde_json::Value, &mut dyn FnMut(serde_json::Value)) -> bool
+        + 'static,
+    ) -> Self {
+        self.filter_fns
+            .insert(key.into(), super::FilterFnDef::ValueWithMeta(Arc::new(f)));
+        self
+    }
+
     /// Configure the global filter function (TanStack `globalFilterFn`).
     pub fn global_filter_fn(mut self, spec: super::FilteringFnSpec) -> Self {
         self.global_filter_fn = spec;

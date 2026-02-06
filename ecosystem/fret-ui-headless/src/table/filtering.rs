@@ -25,6 +25,7 @@ pub type GlobalFilterState = Option<Value>;
 pub enum FilterFnDef {
     BuiltIn(BuiltInFilterFn),
     Value(Arc<dyn Fn(&TanStackValue, &Value) -> bool>),
+    ValueWithMeta(Arc<dyn Fn(&TanStackValue, &Value, &mut dyn FnMut(Value)) -> bool>),
 }
 
 pub type RowColumnFilters = HashMap<ColumnId, bool>;
@@ -104,6 +105,7 @@ pub fn evaluate_row_filter_state<'a, TData>(
     #[derive(Clone)]
     enum ResolvedFilterFn<TData> {
         Custom(super::FilterFn<TData>),
+        CustomWithMeta(super::FilterFnWithMeta<TData>),
         BuiltIn {
             builtin: BuiltInFilterFn,
             value: SortValueFn<TData>,
@@ -111,6 +113,10 @@ pub fn evaluate_row_filter_state<'a, TData>(
         Value {
             value: SortValueFn<TData>,
             f: Arc<dyn Fn(&TanStackValue, &Value) -> bool>,
+        },
+        ValueWithMeta {
+            value: SortValueFn<TData>,
+            f: Arc<dyn Fn(&TanStackValue, &Value, &mut dyn FnMut(Value)) -> bool>,
         },
     }
 
@@ -125,9 +131,16 @@ pub fn evaluate_row_filter_state<'a, TData>(
             }
         }
 
-        fn apply(&self, row: &TData, _column_id: &ColumnId, filter_value: &Value) -> bool {
+        fn apply_with_meta(
+            &self,
+            row: &TData,
+            _column_id: &ColumnId,
+            filter_value: &Value,
+            add_meta: &mut dyn FnMut(Value),
+        ) -> bool {
             match self {
                 Self::Custom(f) => f(row, filter_value),
+                Self::CustomWithMeta(f) => f(row, filter_value, add_meta),
                 Self::BuiltIn { builtin, value } => {
                     let v = value(row);
                     apply_built_in_filter_fn(*builtin, &v, filter_value)
@@ -135,6 +148,10 @@ pub fn evaluate_row_filter_state<'a, TData>(
                 Self::Value { value, f } => {
                     let v = value(row);
                     f(&v, filter_value)
+                }
+                Self::ValueWithMeta { value, f } => {
+                    let v = value(row);
+                    f(&v, filter_value, add_meta)
                 }
             }
         }
@@ -145,6 +162,9 @@ pub fn evaluate_row_filter_state<'a, TData>(
         column: &ColumnDef<TData>,
         filter_fns: &HashMap<Arc<str>, FilterFnDef>,
     ) -> Option<ResolvedFilterFn<TData>> {
+        if let Some(custom) = column.filter_fn_with_meta.as_ref() {
+            return Some(ResolvedFilterFn::CustomWithMeta(custom.clone()));
+        }
         if let Some(custom) = column.filter_fn.as_ref() {
             return Some(ResolvedFilterFn::Custom(custom.clone()));
         }
@@ -191,6 +211,13 @@ pub fn evaluate_row_filter_state<'a, TData>(
                 Some(FilterFnDef::Value(f)) => {
                     let value = column.sort_value.as_ref()?.clone();
                     Some(ResolvedFilterFn::Value {
+                        value,
+                        f: f.clone(),
+                    })
+                }
+                Some(FilterFnDef::ValueWithMeta(f)) => {
+                    let value = column.sort_value.as_ref()?.clone();
+                    Some(ResolvedFilterFn::ValueWithMeta {
                         value,
                         f: f.clone(),
                     })
@@ -259,7 +286,7 @@ pub fn evaluate_row_filter_state<'a, TData>(
                                 (get_value)(first),
                                 TanStackValue::String(_) | TanStackValue::Number(_)
                             ),
-                            None => col.filter_fn.is_some(),
+                            None => col.filter_fn.is_some() || col.filter_fn_with_meta.is_some(),
                         },
                         _ => false,
                     },
@@ -288,6 +315,12 @@ pub fn evaluate_row_filter_state<'a, TData>(
                                 value,
                                 f: f.clone(),
                             },
+                            Some(FilterFnDef::ValueWithMeta(f)) => {
+                                ResolvedFilterFn::ValueWithMeta {
+                                    value,
+                                    f: f.clone(),
+                                }
+                            }
                             None => {
                                 let builtin = builtin_filter_key(key.as_ref())
                                     .unwrap_or(BuiltInFilterFn::IncludesString);
@@ -300,6 +333,17 @@ pub fn evaluate_row_filter_state<'a, TData>(
                     resolved_global_filters.push(ResolvedGlobalFilter {
                         column_id: col.id.clone(),
                         f: resolved_global,
+                        resolved_value,
+                    });
+                    continue;
+                }
+
+                if let Some(custom) = col.filter_fn_with_meta.as_ref() {
+                    let f = ResolvedFilterFn::CustomWithMeta(custom.clone());
+                    let resolved_value = f.resolve_filter_value(global_filter_value);
+                    resolved_global_filters.push(ResolvedGlobalFilter {
+                        column_id: col.id.clone(),
+                        f,
                         resolved_value,
                     });
                     continue;
@@ -339,22 +383,33 @@ pub fn evaluate_row_filter_state<'a, TData>(
         };
 
         let mut column_filters: RowColumnFilters = HashMap::new();
-        let column_filters_meta: RowColumnFiltersMeta = HashMap::new();
+        let mut column_filters_meta: RowColumnFiltersMeta = HashMap::new();
 
         for spec in &resolved_column_filters {
-            let pass = spec
-                .f
-                .apply(row.original, &spec.column_id, &spec.resolved_value);
+            let mut add_meta = |meta: Value| {
+                column_filters_meta.insert(spec.column_id.clone(), meta);
+            };
+            let pass = spec.f.apply_with_meta(
+                row.original,
+                &spec.column_id,
+                &spec.resolved_value,
+                &mut add_meta,
+            );
             column_filters.insert(spec.column_id.clone(), pass);
         }
 
         if !resolved_global_filters.is_empty() {
             let mut global_pass = false;
             for spec in &resolved_global_filters {
-                if spec
-                    .f
-                    .apply(row.original, &spec.column_id, &spec.resolved_value)
-                {
+                let mut add_meta = |meta: Value| {
+                    column_filters_meta.insert(spec.column_id.clone(), meta);
+                };
+                if spec.f.apply_with_meta(
+                    row.original,
+                    &spec.column_id,
+                    &spec.resolved_value,
+                    &mut add_meta,
+                ) {
                     global_pass = true;
                     break;
                 }
@@ -712,7 +767,7 @@ fn resolve_filter_fn_for_column<TData>(
     column: &ColumnDef<TData>,
     filter_fns: &HashMap<Arc<str>, FilterFnDef>,
 ) -> Option<ResolvedFilterBehavior> {
-    if column.filter_fn.is_some() {
+    if column.filter_fn.is_some() || column.filter_fn_with_meta.is_some() {
         return Some(ResolvedFilterBehavior::Custom);
     }
 
@@ -739,7 +794,9 @@ fn resolve_filter_fn_for_column<TData>(
         FilteringFnSpec::BuiltIn(builtin) => Some(ResolvedFilterBehavior::BuiltIn(*builtin)),
         FilteringFnSpec::Named(key) => match filter_fns.get(key) {
             Some(FilterFnDef::BuiltIn(builtin)) => Some(ResolvedFilterBehavior::BuiltIn(*builtin)),
-            Some(FilterFnDef::Value(_)) => Some(ResolvedFilterBehavior::Custom),
+            Some(FilterFnDef::Value(_) | FilterFnDef::ValueWithMeta(_)) => {
+                Some(ResolvedFilterBehavior::Custom)
+            }
             None => builtin_filter_key(key.as_ref()).map(ResolvedFilterBehavior::BuiltIn),
         },
     }

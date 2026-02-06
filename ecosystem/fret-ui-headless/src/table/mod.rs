@@ -41,8 +41,8 @@ pub use aggregation_fns::{
 pub use cells::{CellSnapshot, RowCellsSnapshot, snapshot_cells_for_row};
 pub use column::{
     BuiltInFilterFn, BuiltInSortingFn, ColumnDef, ColumnHelper, ColumnId, FilterFn,
-    FilteringFnSpec, SortCmpFn, SortUndefined, SortValueFn, SortingFnSpec, TanStackValue,
-    ValueU64Fn, create_column_helper,
+    FilterFnWithMeta, FilteringFnSpec, SortCmpFn, SortUndefined, SortValueFn, SortingFnSpec,
+    TanStackValue, ValueU64Fn, create_column_helper,
 };
 pub use column_ordering::{ColumnOrderState, order_columns};
 pub use column_ordering::{move_column, moved_column, set_column_order, set_column_order_for};
