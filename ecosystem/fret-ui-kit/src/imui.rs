@@ -6,7 +6,7 @@
 //! - `fret-ui-kit` can optionally provide bridges that allow `UiBuilder<T>` patch vocabulary to be
 //!   used from immediate-style control flow.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -266,6 +266,11 @@ impl Default for PopupModalOptions {
 }
 
 #[derive(Debug, Clone)]
+struct ImUiMenuNavState {
+    items: Rc<RefCell<Vec<GlobalElementId>>>,
+}
+
+#[derive(Debug, Clone)]
 pub struct MenuItemOptions {
     pub enabled: bool,
     pub close_popup: Option<fret_runtime::Model<bool>>,
@@ -455,6 +460,33 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
     ) -> ResponseExt {
         let enabled = options.enabled;
         let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_ex(self, label, options);
+        self.record_focusable(resp.id, enabled);
+        resp
+    }
+
+    pub fn menu_item_checkbox_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        checked: bool,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let enabled = options.enabled;
+        let resp = <Self as UiWriterImUiFacadeExt<H>>::menu_item_checkbox_ex(
+            self, label, checked, options,
+        );
+        self.record_focusable(resp.id, enabled);
+        resp
+    }
+
+    pub fn menu_item_radio_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        checked: bool,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let enabled = options.enabled;
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::menu_item_radio_ex(self, label, checked, options);
         self.record_focusable(resp.id, enabled);
         resp
     }
@@ -728,8 +760,8 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 )
             };
 
-            let focus_state = Rc::new(Cell::new(None::<GlobalElementId>));
-            let focus_state_for_build = focus_state.clone();
+            let nav_items = Rc::new(RefCell::new(Vec::<GlobalElementId>::new()));
+            let nav_items_for_state = nav_items.clone();
             let mut menu_id_for_focus: Option<GlobalElementId> = None;
             let mut build = Some(f);
             let panel = cx.with_root_name(root_name.as_str(), |cx| {
@@ -748,7 +780,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         ..Default::default()
                     };
 
-                    let menu = cx.semantics_with_id(semantics, move |cx, _id| {
+                    let menu = cx.semantics_with_id(semantics, move |cx, menu_id| {
+                        cx.with_state_for(
+                            menu_id,
+                            || ImUiMenuNavState {
+                                items: nav_items_for_state.clone(),
+                            },
+                            |st| st.items.borrow_mut().clear(),
+                        );
+
                         let mut panel_props = ContainerProps::default();
                         panel_props.background = Some(popover);
                         panel_props.border = Edges::all(Px(1.0));
@@ -766,7 +806,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 let mut ui = ImUiFacade {
                                     cx,
                                     out: &mut out,
-                                    build_focus: Some(focus_state_for_build.clone()),
+                                    build_focus: None,
                                 };
                                 if let Some(f) = build.take() {
                                     f(&mut ui);
@@ -782,8 +822,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             });
 
             let trigger_id = trigger.unwrap_or(overlay_id);
+            let first_item = nav_items.borrow().first().copied();
             let initial_focus = menu_root::MenuInitialFocusTargets::new()
-                .keyboard_entry_focus(focus_state.get())
+                .keyboard_entry_focus(first_item)
                 .pointer_content_focus(menu_id_for_focus);
             let req = menu_root::dismissible_menu_request_with_modal(
                 cx,
@@ -1014,6 +1055,41 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: MenuItemOptions,
     ) -> ResponseExt {
         let label = label.into();
+        self.menu_item_impl(label, options, SemanticsRole::MenuItem, None)
+    }
+
+    fn menu_item_checkbox_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        checked: bool,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        self.menu_item_impl(
+            label,
+            options,
+            SemanticsRole::MenuItemCheckbox,
+            Some(checked),
+        )
+    }
+
+    fn menu_item_radio_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        checked: bool,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        self.menu_item_impl(label, options, SemanticsRole::MenuItemRadio, Some(checked))
+    }
+
+    fn menu_item_impl(
+        &mut self,
+        label: Arc<str>,
+        options: MenuItemOptions,
+        role: SemanticsRole,
+        checked: Option<bool>,
+    ) -> ResponseExt {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
@@ -1035,10 +1111,33 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             let test_id = options.test_id.clone();
             let enabled = options.enabled;
             let label_for_visuals = label.clone();
+            let role = role;
+            let checked = checked;
 
             cx.stack_props(stack, |cx| {
-                let visuals =
-                    cx.container(panel, move |cx| vec![cx.text(label_for_visuals.clone())]);
+                let visuals = cx.container(panel, move |cx| {
+                    let mut row = RowProps::default();
+                    row.layout.size.width = Length::Fill;
+                    row.layout.size.height = Length::Auto;
+                    row.gap = Px(8.0);
+
+                    let indicator = match (role, checked) {
+                        (SemanticsRole::MenuItemCheckbox, Some(true)) => Some(Arc::from("✓")),
+                        (SemanticsRole::MenuItemCheckbox, Some(false)) => Some(Arc::from(" ")),
+                        (SemanticsRole::MenuItemRadio, Some(true)) => Some(Arc::from("●")),
+                        (SemanticsRole::MenuItemRadio, Some(false)) => Some(Arc::from(" ")),
+                        _ => None,
+                    };
+
+                    vec![cx.row(row, move |cx| {
+                        let mut out: Vec<AnyElement> = Vec::new();
+                        if let Some(indicator) = indicator.clone() {
+                            out.push(cx.text(indicator));
+                        }
+                        out.push(cx.text(label_for_visuals.clone()));
+                        out
+                    })]
+                });
 
                 let mut props = PressableProps::default();
                 props.enabled = enabled;
@@ -1059,9 +1158,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     ..Default::default()
                 };
                 props.a11y = PressableA11y {
-                    role: Some(SemanticsRole::MenuItem),
+                    role: Some(role),
                     label: Some(label.clone()),
                     test_id,
+                    checked,
                     ..Default::default()
                 };
 
@@ -1078,6 +1178,60 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                         host.record_transient_event(acx, KEY_CLICKED);
                         host.notify(acx);
                     }));
+
+                    let nav_items = cx
+                        .inherited_state::<ImUiMenuNavState>()
+                        .map(|st| st.items.clone());
+                    if enabled {
+                        if let Some(nav_items) = nav_items.as_ref() {
+                            nav_items.borrow_mut().push(id);
+                        }
+                    }
+                    if let Some(nav_items) = nav_items {
+                        let item_id = id;
+                        cx.key_on_key_down_for(
+                            id,
+                            Arc::new(move |host, acx, down| {
+                                if down.repeat {
+                                    return false;
+                                }
+                                if down.modifiers != fret_core::Modifiers::default() {
+                                    return false;
+                                }
+
+                                let (dir, jump_to) = match down.key {
+                                    KeyCode::ArrowDown => (1isize, None),
+                                    KeyCode::ArrowUp => (-1isize, None),
+                                    KeyCode::Home => (0isize, Some(0usize)),
+                                    KeyCode::End => (0isize, Some(usize::MAX)),
+                                    _ => return false,
+                                };
+
+                                let items = nav_items.borrow();
+                                if items.is_empty() {
+                                    return false;
+                                }
+                                let len = items.len();
+                                let idx = items.iter().position(|id| *id == item_id);
+                                let next_idx = if let Some(jump) = jump_to {
+                                    if jump == usize::MAX {
+                                        len - 1
+                                    } else {
+                                        jump.min(len - 1)
+                                    }
+                                } else {
+                                    let current =
+                                        idx.unwrap_or_else(|| if dir < 0 { len - 1 } else { 0 });
+                                    ((current as isize + dir + len as isize) % len as isize)
+                                        as usize
+                                };
+
+                                host.request_focus(items[next_idx]);
+                                host.notify(acx);
+                                true
+                            }),
+                        );
+                    }
 
                     response.core.hovered = state.hovered;
                     response.core.pressed = state.pressed;
