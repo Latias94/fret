@@ -149,13 +149,14 @@ emit `SvgSource::Id` directly.
 - Generated constants: `ecosystem/fret-icons-lucide/src/generated_ids.rs`
 - Generate list/constants from submodule:
   - Windows/macOS/Linux: `python3 tools/gen_lucide.py`
+  - Unified entrypoint: `python3 tools/gen_icons.py --pack lucide`
 - Sync vendored SVGs from upstream sources:
   - Windows: `pwsh tools/sync_icons.ps1 -Pack lucide -Clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack lucide --clean`
 - Verify vendor icon references resolve to vendored assets:
   - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
 - CI consistency gate:
-  - `pwsh -NoProfile -File tools/check_lucide_generation.ps1`
+  - `pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack lucide`
 
 ## In-repo maintenance (Radix)
 
@@ -164,10 +165,23 @@ emit `SvgSource::Id` directly.
 - Generated constants: `ecosystem/fret-icons-radix/src/generated_ids.rs`
 - Generate list/constants from submodule:
   - Windows/macOS/Linux: `python3 tools/gen_radix.py`
+  - Unified entrypoint: `python3 tools/gen_icons.py --pack radix`
 - Sync vendored SVGs from upstream sources:
   - Windows: `pwsh tools/sync_icons.ps1 -Pack radix -Clean`
   - macOS/Linux: `python3 tools/sync_icons.py --pack radix --clean`
 - Verify vendor icon references resolve to vendored assets:
   - Windows/macOS/Linux: `python3 tools/verify_icons.py --strict`
 - CI consistency gate:
-  - `pwsh -NoProfile -File tools/check_radix_generation.ps1`
+  - `pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack radix`
+
+## Vendor update quick flow (pre-release)
+
+- Update submodules:
+  - `git submodule update --init --recursive`
+  - `git submodule update --remote third_party/lucide third_party/radix-icons`
+- Regenerate both packs:
+  - `python3 tools/gen_icons.py --pack all`
+- Run unified consistency check:
+  - `pwsh -NoProfile -File tools/check_icons_generation.ps1 -Pack all`
+- Optional release gate:
+  - `pwsh -NoProfile -File tools/pre_release_icons.ps1`
