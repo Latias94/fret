@@ -1,5 +1,6 @@
 use super::*;
 use super::{input, paint};
+use fret_core::Point;
 
 #[derive(Default)]
 struct TestHost {
@@ -114,6 +115,38 @@ fn drag_autoscroll_delta_y_handles_zero_sizes() {
         drag_autoscroll_delta_y(Px(20.0), Px(0.0), Px(0.0), Px(20.0)),
         Px(0.0)
     );
+}
+
+#[test]
+fn display_row_for_pointer_y_clamps_outside_viewport() {
+    let bounds = Rect::new(
+        Point::new(Px(10.0), Px(20.0)),
+        Size::new(Px(100.0), Px(60.0)),
+    );
+
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(5.0), 5),
+        Some(0)
+    );
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(25.0), 5),
+        Some(0)
+    );
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(95.0), 5),
+        Some(4)
+    );
+}
+
+#[test]
+fn display_row_for_pointer_y_rejects_invalid_inputs() {
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0)));
+
+    assert_eq!(
+        display_row_for_pointer_y(bounds, Px(10.0), Px(1.0), 0),
+        None
+    );
+    assert_eq!(display_row_for_pointer_y(bounds, Px(0.0), Px(1.0), 2), None);
 }
 
 #[test]

@@ -216,6 +216,21 @@ fn drag_autoscroll_delta_y(row_h: Px, viewport_h: Px, offset_y: Px, pointer_y: P
     }
 }
 
+fn display_row_for_pointer_y(
+    bounds: Rect,
+    row_h: Px,
+    pointer_y: Px,
+    content_len: usize,
+) -> Option<usize> {
+    if content_len == 0 || row_h.0 <= 0.0 {
+        return None;
+    }
+
+    let local_y = pointer_y.0 - bounds.origin.y.0;
+    let row = (local_y / row_h.0).floor().max(0.0) as usize;
+    Some(row.min(content_len.saturating_sub(1)))
+}
+
 #[derive(Clone)]
 pub struct CodeEditorHandle {
     state: Rc<RefCell<CodeEditorState>>,
@@ -771,13 +786,14 @@ impl CodeEditor {
 
                             st.drag_last_pointer_pos = Some(pointer);
 
-                            if content_len == 0 || row_h.0 <= 0.0 {
+                            let Some(row) = display_row_for_pointer_y(
+                                bounds,
+                                row_h,
+                                pointer.y,
+                                content_len,
+                            ) else {
                                 return;
-                            }
-
-                            let local_y = pointer.y.0 - bounds.origin.y.0;
-                            let row = (local_y / row_h.0).floor().max(0.0) as usize;
-                            let row = row.min(content_len.saturating_sub(1));
+                            };
                             let cell_w = cell_w.get();
                             let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
                             let caret = caret_for_pointer(&st, row, bounds, pointer, cell_w);
@@ -993,7 +1009,7 @@ impl CodeEditor {
                 let on_pointer_move_cell_w = cell_w.clone();
                 let on_pointer_move_scroll = scroll_handle.clone();
                 let on_pointer_move: OnWindowedRowsPointerMove = Arc::new(
-                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, row, mv| {
+                    move |host: &mut dyn UiPointerActionHost, action_cx: ActionCx, _row, mv| {
                         // Show an I-beam cursor while hovering the editor surface, even when not dragging.
                         host.set_cursor_icon(CursorIcon::Text);
                         if !mv.buttons.left {
@@ -1004,38 +1020,50 @@ impl CodeEditor {
                             return false;
                         }
                         st.undo_group = None;
-                        st.drag_last_pointer_pos = Some(mv.position);
-                        st.drag_last_scroll_offset = on_pointer_move_scroll.offset();
 
                         let bounds = host.bounds();
                         st.last_bounds = Some(bounds);
 
-                        let Some(row) = row else {
-                            return false;
-                        };
+                        let offset_before = on_pointer_move_scroll.offset();
+                        let offset_delta_y = offset_before.y.0 - st.drag_last_scroll_offset.y.0;
+                        let mut pointer = fret_core::Point::new(
+                            mv.position.x,
+                            Px(mv.position.y.0 + offset_delta_y),
+                        );
+                        st.drag_last_scroll_offset = offset_before;
 
                         let mut changed = false;
                         let viewport_h = Px(on_pointer_move_scroll.viewport_size().height.0.max(0.0));
-                        let offset = on_pointer_move_scroll.offset();
                         let scroll_delta_y =
-                            drag_autoscroll_delta_y(row_h, viewport_h, offset.y, mv.position.y);
+                            drag_autoscroll_delta_y(row_h, viewport_h, offset_before.y, pointer.y);
                         if scroll_delta_y.0 != 0.0 {
-                            let before = offset;
                             on_pointer_move_scroll.set_offset(fret_core::Point::new(
-                                before.x,
-                                Px(before.y.0 + scroll_delta_y.0),
+                                offset_before.x,
+                                Px(offset_before.y.0 + scroll_delta_y.0),
                             ));
-                            let after = on_pointer_move_scroll.offset();
-                            if (after.y.0 - before.y.0).abs() > 0.0 {
+                            let offset_after = on_pointer_move_scroll.offset();
+                            let applied_delta_y = offset_after.y.0 - offset_before.y.0;
+                            if applied_delta_y.abs() > 0.0 {
+                                pointer = fret_core::Point::new(
+                                    pointer.x,
+                                    Px(pointer.y.0 + applied_delta_y),
+                                );
                                 host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
-                                st.drag_last_scroll_offset = after;
+                                st.drag_last_scroll_offset = offset_after;
                                 changed = true;
                             }
                         }
 
+                        st.drag_last_pointer_pos = Some(pointer);
+
+                        let Some(row) = display_row_for_pointer_y(bounds, row_h, pointer.y, content_len)
+                        else {
+                            return false;
+                        };
+
                         let cell_w = on_pointer_move_cell_w.get();
                         let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
-                        let caret = caret_for_pointer(&st, row, bounds, mv.position, cell_w);
+                        let caret = caret_for_pointer(&st, row, bounds, pointer, cell_w);
                         if caret != st.selection.focus {
                             st.selection.focus = caret;
                             st.caret_preferred_x = None;
