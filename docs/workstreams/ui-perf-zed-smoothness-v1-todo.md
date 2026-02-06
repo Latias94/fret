@@ -517,6 +517,15 @@ Perf acceptance:
       - Gate: `--check-scroll-offset-stable ui-gallery-content-viewport`
       - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 14:26.
     - If acceptable, flip the default for resize-only (keep invalidation deferral opt-in).
+- [x] Add an experiment gate for paint-cache replay under `HitTestOnly` invalidation.
+  - Env: `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
+  - Commit: `e50173f13`
+  - Evidence: `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` entry 2026-02-06 16:12.
+- [ ] Add diagnostics counters for the new gate path before deciding default behavior.
+  - Export at least: “paint replay allowed by hit-test-only gate” and “hit-test-only replay attempts rejected by key mismatch”.
+  - Add a focused script where `HitTestOnly` dominates and layout stays stable; current resize probes are too noisy.
+- [ ] Decide whether `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` should ever become default.
+  - Current status: keep opt-in only; A/B evidence is mixed across repeated resize probes.
 - [ ] Consider gating pointer-move thresholds only when pointer-move frames are present for the script.
 - [ ] Keep diagnostics artifacts bounded (especially `target/fret-diag*` and `target/fret-diag-perf`).
   - Default script auto-dump can generate hundreds of GB if left on across long perf sessions.

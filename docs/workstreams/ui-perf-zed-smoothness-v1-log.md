@@ -4578,3 +4578,67 @@ Node-level mapping (semantics-enabled one-shot):
 Notes:
 - This recheck confirms the prior finding: deferred unbounded probe is primarily a layout-tail optimization.
 - It does not reduce `paint_text_prepare` width-change work; text reflow remains a separate hotspot.
+
+## 2026-02-06 16:12:00 (commit `e50173f13`)
+
+Change:
+- Add an experiment gate to decouple paint-cache replay from `HitTestOnly` invalidation:
+  - `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1`
+- Keep default behavior unchanged (gate-off by default).
+- Add targeted unit coverage for gate off/on behavior and non-`HitTestOnly` regressions.
+
+Why:
+- `HitTestOnly` currently marks both `hit_test` and `paint` dirty, which can block paint-cache replay
+  even when only interaction geometry changes.
+- This experiment checks whether allowing replay in that narrow case improves resize smoothness.
+
+Command (A/B template):
+```bash
+target/debug/fretboard diag perf <script.json> \
+  --dir <out-dir> \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --warmup-frames 5 --sort time --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_ON_INVALIDATION=1 \
+  --env FRET_UI_SCROLL_DEFER_UNBOUNDED_PROBE_STABLE_FRAMES=2 \
+  [--env FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY=1] \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Probe A: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+- Gate off (`target/fret-diag-codex-paint-hit-test-off-v1`):
+  - `total_time_us`: `11358/11483/11621/11621` (min/p50/p95/max)
+  - `layout_time_us`: `8059/8146/8224/8224`
+  - `paint_time_us`: `3198/3219/3305/3305`
+- Gate on (`target/fret-diag-codex-paint-hit-test-on-v1`):
+  - `total_time_us`: `11347/11417/11513/11513`
+  - `layout_time_us`: `8046/8088/8231/8231`
+  - `paint_time_us`: `3191/3232/3282/3282`
+- Delta (on vs off):
+  - worst `total_time_us`: `11621 -> 11513` (`-108us`, about `-0.93%`)
+  - worst `paint_time_us`: `3305 -> 3282` (`-23us`)
+  - worst `layout_time_us`: `8224 -> 8231` (`+7us`, noise-level)
+
+Probe B: `tools/diag-scripts/ui-gallery-window-resize-scroll-offset-stable.json`
+- Round 1:
+  - off (`target/fret-diag-codex-paint-hit-test-off-v1b`): `total max=12006`
+  - on (`target/fret-diag-codex-paint-hit-test-on-v1b`): `total max=14591` (single heavy outlier)
+- Round 2 (recheck):
+  - off (`target/fret-diag-codex-paint-hit-test-off-v2b`): `total max=12005`
+  - on (`target/fret-diag-codex-paint-hit-test-on-v2b`): `total max=11603`
+
+Outlier attribution note (Probe B round 1):
+- Worst ON bundle:
+  - `target/fret-diag-codex-paint-hit-test-on-v1b/1770365327865-ui-gallery-window-resize-scroll-offset-stable/bundle.json`
+- Top frame (`tick=132/frame=179`) is dominated by broader frame work:
+  - `layout_time_us=10311`, `paint_time_us=4179`, `dispatch_time_us=2947`
+  - `paint_cache_hits=0`, `paint_cache_misses=3` (new gate path not clearly exercised in that frame)
+
+Notes:
+- Current evidence is mixed and noisy across resize probes; no robust, repeatable win yet.
+- Keep `FRET_UI_PAINT_CACHE_ALLOW_HIT_TEST_ONLY` as an experiment-only gate.
+- Next step: add diagnostics counters for “replay permitted by hit-test-only gate” and build a
+  focused script where `HitTestOnly` dominates but layout is stable.
