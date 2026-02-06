@@ -481,6 +481,11 @@ Perf acceptance:
   - Validation summary: `target/fret-diag-codex-vlist-boundary-nonretained-gate-r1/summary.json`
     (`runs=3`, `pass=true`, `prefetch=0`, `escape=0`, `non_retained=0`,
     `cache_key_mismatch_max=0`, `needs_rerender_max=0`).
+- [x] Add non-retained boundary stress probe and strict gate recipe.
+  - Script: `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json`
+  - Gate command:
+    `tools/perf/diag_vlist_boundary_gate.sh --runs 3 --script tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json --retained 0 --prefetch-max 0 --escape-max 0 --non-retained-max 0 --max-cache-key-mismatch 0 --max-needs-rerender 0`
+  - Validation summary: `target/fret-diag-codex-vlist-boundary-nonretained-stress-gate-r1/summary.json` (`pass=true`, `run_failures=0`).
 - [ ] `ui-gallery-code-view-scroll-refresh-baseline.json`: no hitch spikes after warmup.
 - [x] `ui-gallery-code-editor-torture-autoscroll-steady.json`: eliminate the post-merge Canvas paint hotspot.
   - Root cause: accidental per-row `Theme` clone in syntax paint (allocator churn).

@@ -5637,3 +5637,40 @@ tools/perf/diag_vlist_boundary_gate.sh \
 Interpretation:
 - We now have a bounded non-retained fallback gate that tracks both shift behavior and cache-key/rerender hygiene.
 - This closes the earlier “non-retained escape budget gate” TODO at tooling level and makes M4.3 regressions easier to catch.
+
+
+## 2026-02-07 01:34:00 (working tree)
+
+Change:
+- Added a stronger non-retained boundary script:
+  - `tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json`
+- Script intent:
+  - same target surface as boundary-crossing probe,
+  - larger wheel deltas (`±360`) with denser cadence to stress window-boundary behavior,
+  - keep diagnostics bounded via explicit `reset_diagnostics` + `capture_bundle`.
+
+Strict gate command (non-retained profile):
+```bash
+tools/perf/diag_vlist_boundary_gate.sh \
+  --runs 3 \
+  --script tools/diag-scripts/ui-gallery-virtual-list-window-boundary-nonretained-stress-steady.json \
+  --retained 0 \
+  --prefetch-max 0 \
+  --escape-max 0 \
+  --non-retained-max 0 \
+  --max-cache-key-mismatch 0 \
+  --max-needs-rerender 0 \
+  --out-dir target/fret-diag-codex-vlist-boundary-nonretained-stress-gate-r1 \
+  --launch-bin target/release/fret-ui-gallery
+```
+
+Results:
+- Summary: `target/fret-diag-codex-vlist-boundary-nonretained-stress-gate-r1/summary.json`
+- Gate status: `pass=true`, `run_failures=0` (3/3)
+- Per-run sample:
+  - `prefetch=0`, `escape=0`, `non_retained=0`
+  - `cache_key_mismatch_max=0`, `needs_rerender_max=0`
+
+Interpretation:
+- Even under a stronger wheel stress profile, non-retained fallback keeps zero shift/rerender churn on this probe.
+- Escape remained zero in this stress script; next M4.3 work should focus on an explicit out-of-band escape trigger path (or dedicated telemetry) if we want a positive escape expectation gate.

@@ -78,7 +78,7 @@ For each perf-affecting PR:
 ### Next commit queue (implementation-first, reversible)
 
 1. **M4.3 cache-key audit**: remove unstable cache-key factors causing redundant rerender on scroll.
-2. **M4.3 non-retained escape stress probe**: add a stronger script that intentionally crosses overscan boundary to keep escape behavior measurable.
+2. **M4.3 escape-trigger observability**: add an out-of-band escape trigger or explicit counter so escape behavior can be asserted when expected.
 3. **M5.0 text miss gate**: add warmup-aware cache-miss threshold for editor-heavy scripts.
 4. **M7.0 GPU trace hook**: add optional GPU timing capture to diag bundles for hitch triage.
 
