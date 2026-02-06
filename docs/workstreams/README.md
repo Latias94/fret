@@ -28,6 +28,7 @@ Active workstreams:
 - `docs/workstreams/imui-authoring-facade-v2-todo.md`
 - `docs/workstreams/imui-ecosystem-facade-v1.md`
 - `docs/workstreams/imui-ecosystem-facade-v1-todo.md`
+- `docs/workstreams/imui-shadcn-adapter-v1.md`
 - `docs/workstreams/imui-authoring-facade-v1.md` (baseline / historical reference)
 - `docs/workstreams/imui-authoring-facade-v1-todo.md` (baseline / historical reference)
 - `docs/workstreams/shadcn-web-goldens-v4.md`

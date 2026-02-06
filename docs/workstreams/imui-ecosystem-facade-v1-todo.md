@@ -219,6 +219,8 @@ Exit criteria:
   - Evidence: `.github/workflows/ci.yml` (`Wasm Compile Smoke (imui facade)`)
   - Evidence (local): `cargo check -p fret-authoring -p fret-imui -p fret-ui-kit --features imui --target wasm32-unknown-unknown`
 - [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
-- [ ] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
+- [x] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
+  - Evidence: `docs/workstreams/imui-shadcn-adapter-v1.md` (layering contract + migration checklist).
+  - Evidence: `apps/fret-examples/src/imui_shadcn_adapter_demo.rs` (minimal adapter demo).
 - [x] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).
   - Evidence: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
