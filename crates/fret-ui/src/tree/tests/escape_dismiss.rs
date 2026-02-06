@@ -10,10 +10,10 @@ fn escape_dismisses_topmost_overlay_without_focus() {
     let mut ui = UiTree::new();
     ui.set_window(window);
 
-    let base = ui.create_node(TestStack::default());
+    let base = ui.create_node(TestStack);
     ui.set_root(base);
 
-    let overlay = ui.create_node(TestStack::default());
+    let overlay = ui.create_node(TestStack);
     let overlay_element = crate::GlobalElementId(0xdead_beef);
     ui.set_node_element(overlay, Some(overlay_element));
     let _layer = ui.push_overlay_root_ex(overlay, false, true);

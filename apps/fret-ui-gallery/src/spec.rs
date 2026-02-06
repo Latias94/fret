@@ -108,6 +108,7 @@ pub(crate) const PAGE_TEXT_MEASURE_OVERLAY: &str = "text_measure_overlay";
 pub(crate) const PAGE_WEB_IME_HARNESS: &str = "web_ime_harness";
 pub(crate) const PAGE_CHART_TORTURE: &str = "chart_torture";
 pub(crate) const PAGE_CANVAS_CULL_TORTURE: &str = "canvas_cull_torture";
+pub(crate) const PAGE_NODE_GRAPH_CULL_TORTURE: &str = "node_graph_cull_torture";
 pub(crate) const PAGE_CHROME_TORTURE: &str = "chrome_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_TORTURE: &str = "windowed_rows_surface_torture";
 pub(crate) const PAGE_WINDOWED_ROWS_SURFACE_INTERACTIVE_TORTURE: &str =
@@ -226,6 +227,8 @@ pub(crate) const CMD_NAV_TEXT_MEASURE_OVERLAY: &str = "ui_gallery.nav.select.tex
 pub(crate) const CMD_NAV_WEB_IME_HARNESS: &str = "ui_gallery.nav.select.web_ime_harness";
 pub(crate) const CMD_NAV_CHART_TORTURE: &str = "ui_gallery.nav.select.chart_torture";
 pub(crate) const CMD_NAV_CANVAS_CULL_TORTURE: &str = "ui_gallery.nav.select.canvas_cull_torture";
+pub(crate) const CMD_NAV_NODE_GRAPH_CULL_TORTURE: &str =
+    "ui_gallery.nav.select.node_graph_cull_torture";
 pub(crate) const CMD_NAV_CHROME_TORTURE: &str = "ui_gallery.nav.select.chrome_torture";
 pub(crate) const CMD_NAV_WINDOWED_ROWS_SURFACE_TORTURE: &str =
     "ui_gallery.nav.select.windowed_rows_surface_torture";
@@ -604,6 +607,24 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 ],
                 docs::DOC_CANVAS_CULL_TORTURE,
                 docs::USAGE_CANVAS_CULL_TORTURE,
+            ),
+            PageSpec::new(
+                PAGE_NODE_GRAPH_CULL_TORTURE,
+                "Node Graph Cull (Torture)",
+                "Node Graph / Pan-Zoom Culling Harness",
+                "fret-node (viewport culling candidate)",
+                CMD_NAV_NODE_GRAPH_CULL_TORTURE,
+                &[
+                    "node_graph",
+                    "canvas",
+                    "culling",
+                    "pan_zoom",
+                    "performance",
+                    "gpui-parity",
+                    "harness",
+                ],
+                docs::DOC_NODE_GRAPH_CULL_TORTURE,
+                docs::USAGE_NODE_GRAPH_CULL_TORTURE,
             ),
             PageSpec::new(
                 PAGE_CHROME_TORTURE,

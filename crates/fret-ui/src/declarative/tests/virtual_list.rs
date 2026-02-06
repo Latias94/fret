@@ -1433,11 +1433,13 @@ fn virtual_list_triggers_visible_range_rerender_on_scrollbar_wheel_when_cached()
                 );
                 list_element_id = Some(list.id);
 
-                let mut scrollbar = crate::element::ScrollbarProps::default();
-                scrollbar.layout = scrollbar_layout;
-                scrollbar.axis = crate::element::ScrollbarAxis::Vertical;
-                scrollbar.scroll_handle = handle.base_handle().clone();
-                scrollbar.scroll_target = list_element_id;
+                let scrollbar = crate::element::ScrollbarProps {
+                    layout: scrollbar_layout,
+                    axis: crate::element::ScrollbarAxis::Vertical,
+                    scroll_handle: handle.base_handle().clone(),
+                    scroll_target: list_element_id,
+                    ..Default::default()
+                };
 
                 vec![list, cx.scrollbar(scrollbar)]
             })]
@@ -1762,6 +1764,105 @@ fn virtual_list_fixed_scroll_to_item_does_not_force_layout_invalidation() {
     assert!(
         scroll_walks.iter().all(|w| w.inv != Invalidation::Layout),
         "expected fixed scroll-to-item to avoid a scroll-handle Layout invalidation; got {:?}",
+        scroll_walks
+    );
+}
+
+#[test]
+fn virtual_list_measured_scroll_to_item_does_not_force_layout_invalidation_in_common_case() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_debug_enabled(true);
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let scroll_handle = crate::scroll::VirtualListScrollHandle::new();
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(30.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_list(
+        cx: &mut ElementContext<'_, TestHost>,
+        scroll_handle: &crate::scroll::VirtualListScrollHandle,
+    ) -> crate::element::AnyElement {
+        cx.virtual_list(
+            100,
+            crate::element::VirtualListOptions::new(Px(10.0), 0),
+            scroll_handle,
+            |cx, items| {
+                items
+                    .iter()
+                    .copied()
+                    .map(|item| cx.keyed(item.key, |cx| cx.text("row")))
+                    .collect::<Vec<_>>()
+            },
+        )
+    }
+
+    // Frame 0: establish viewport height and register scroll-handle bindings.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-measured-scroll-to-hit-test-only",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 1: mount visible items so measured-mode has stable cached metrics to consume against.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp50-vlist-measured-scroll-to-hit-test-only",
+        |cx| vec![build_list(cx, &scroll_handle)],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    app.advance_frame();
+
+    // Frame 2: request scroll-to-item; measured lists should be able to consume without a
+    // scroll-handle Layout invalidation in the common case.
+    let target = 6usize;
+    scroll_handle.scroll_to_item(target, crate::scroll::ScrollStrategy::Nearest);
+    assert_eq!(
+        scroll_handle.deferred_scroll_to_item(),
+        Some((target, crate::scroll::ScrollStrategy::Nearest))
+    );
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    assert!(
+        scroll_handle.deferred_scroll_to_item().is_none(),
+        "expected measured virtual list to consume deferred scroll-to-item"
+    );
+
+    let scroll_walks: Vec<_> = ui
+        .debug_invalidation_walks()
+        .iter()
+        .filter(|w| {
+            matches!(
+                w.detail,
+                crate::tree::UiDebugInvalidationDetail::ScrollHandleHitTestOnly
+                    | crate::tree::UiDebugInvalidationDetail::ScrollHandleLayout
+                    | crate::tree::UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+            )
+        })
+        .collect();
+    assert!(
+        !scroll_walks.is_empty(),
+        "expected scroll-handle invalidation walk"
+    );
+    assert!(
+        scroll_walks.iter().all(|w| w.inv != Invalidation::Layout),
+        "expected measured scroll-to-item to avoid a scroll-handle Layout invalidation in the common case; got {:?}",
         scroll_walks
     );
 }
@@ -2477,8 +2578,10 @@ fn virtual_list_row_view_cache_reuses_rows_across_small_scroll_deltas() {
                 let key = index as u64;
                 let render_counts = Arc::clone(&render_counts);
 
-                let mut view_cache = crate::element::ViewCacheProps::default();
-                view_cache.cache_key = key;
+                let view_cache = crate::element::ViewCacheProps {
+                    cache_key: key,
+                    ..Default::default()
+                };
                 cx.view_cache(view_cache, move |cx| {
                     render_counts
                         .lock()

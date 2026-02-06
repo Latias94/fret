@@ -228,16 +228,11 @@ pub enum WindowRequest {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WindowRole {
     Main,
+    #[default]
     Auxiliary,
-}
-
-impl Default for WindowRole {
-    fn default() -> Self {
-        Self::Auxiliary
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

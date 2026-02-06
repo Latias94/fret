@@ -8,9 +8,9 @@ fn prepaint_interaction_cache_replays_for_clean_view_cache_root() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
-    let cache_root = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let cache_root = ui.create_node(TestStack);
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);
@@ -63,11 +63,11 @@ fn prepaint_hook_runs_for_view_cache_root_even_when_reusing_interaction_cache() 
 
     let calls = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     let cache_root = ui.create_node(PrepaintCountStack {
         calls: calls.clone(),
     });
-    let leaf = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);
@@ -116,9 +116,9 @@ fn prepaint_actions_are_exported_to_debug_snapshot() {
     ui.set_view_cache_enabled(true);
     ui.set_debug_enabled(true);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     let cache_root = ui.create_node(PrepaintActionStack);
-    let leaf = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);
@@ -187,11 +187,11 @@ fn prepaint_output_store_is_keyed_by_cache_root_prepaint_key() {
 
     let seen_prev = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     let cache_root = ui.create_node(PrepaintOutputCounter {
         seen_prev: seen_prev.clone(),
     });
-    let leaf = ui.create_node(TestStack::default());
+    let leaf = ui.create_node(TestStack);
     ui.set_root(root);
     ui.add_child(root, cache_root);
     ui.add_child(cache_root, leaf);

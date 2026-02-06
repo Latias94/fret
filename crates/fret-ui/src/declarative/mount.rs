@@ -133,7 +133,7 @@ pub(crate) fn children_for_node_in_window_frame<H: UiHost>(
 /// Render a declarative element tree into an existing `UiTree` root.
 ///
 /// Call this once per frame *before* `layout_all`/`paint_all`, for the relevant window.
-pub fn render_root<H: UiHost, I>(
+pub fn render_root<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -143,7 +143,7 @@ pub fn render_root<H: UiHost, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NodeId
 where
-    H: 'static,
+    H: UiHost + 'static,
     I: IntoIterator<Item = AnyElement>,
 {
     let frame_id = app.frame_id();
@@ -162,6 +162,8 @@ where
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        false,
     );
 
     let ui_ref: &UiTree<H> = &*ui;
@@ -595,7 +597,7 @@ where
 /// - Escape dismissal (bubbling from any focused descendant).
 /// - Outside-press dismissal via the runtime outside-press observer pass (ADR 0069).
 #[allow(clippy::too_many_arguments)]
-pub fn render_dismissible_root_with_hooks<H: UiHost, I>(
+pub fn render_dismissible_root_with_hooks<H, I>(
     ui: &mut UiTree<H>,
     app: &mut H,
     services: &mut dyn fret_core::UiServices,
@@ -605,7 +607,7 @@ pub fn render_dismissible_root_with_hooks<H: UiHost, I>(
     render: impl FnOnce(&mut ElementContext<'_, H>) -> I,
 ) -> NodeId
 where
-    H: 'static,
+    H: UiHost + 'static,
     I: IntoIterator<Item = AnyElement>,
 {
     render_dismissible_root_impl(ui, app, services, window, bounds, root_name, render)
@@ -634,6 +636,8 @@ where
     ui.invalidate_scroll_handle_bindings_for_changed_handles(
         app,
         crate::layout_pass::LayoutPassKind::Final,
+        false,
+        false,
     );
 
     let ui_ref: &UiTree<H> = &*ui;
@@ -1598,7 +1602,7 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
         let mut keep_alive_state = window_state.with_state_mut(
             element,
             crate::windowed_surface_host::RetainedVirtualListKeepAliveState::default,
-            |st| std::mem::take(st),
+            std::mem::take,
         );
         let mut keep_alive_by_key: HashMap<crate::ItemKey, NodeId> = keep_alive_state.by_key;
         let mut keep_alive_order = keep_alive_state.order;
@@ -1724,10 +1728,10 @@ fn reconcile_retained_virtual_list_hosts<H: UiHost + 'static>(
             .children
             .insert(node, Arc::<[NodeId]>::from(next_children));
 
-        if let Some(record) = window_frame.instances.get_mut(&node) {
-            if let ElementInstance::VirtualList(props) = &mut record.instance {
-                props.visible_items = desired_items;
-            }
+        if let Some(record) = window_frame.instances.get_mut(&node)
+            && let ElementInstance::VirtualList(props) = &mut record.instance
+        {
+            props.visible_items = desired_items;
         }
 
         let reconcile_time_us = reconcile_start.elapsed().as_micros().min(u32::MAX as u128) as u32;
@@ -2017,10 +2021,9 @@ fn collect_declarative_elements_for_existing_subtree<H: UiHost>(
             .map(|r| r.element)
             .or_else(|| ui.node_element(node))
             .or_else(|| window_state.element_for_node(node))
+            && seen.insert(element)
         {
-            if seen.insert(element) {
-                out.push(element);
-            }
+            out.push(element);
         }
 
         push_existing_subtree_children(ui, window_frame, node, &mut stack);
@@ -2048,7 +2051,24 @@ fn collect_reachable_nodes_for_gc<H: UiHost>(
     out
 }
 
+fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
+    ui: &UiTree<H>,
+    window_frame: &WindowFrame,
+    out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
+    root: NodeId,
+) {
+    let mut stack: Vec<NodeId> = vec![root];
+    while let Some(node) = stack.pop() {
+        if let Some(record) = window_frame.instances.get(&node) {
+            collect_scroll_handle_bindings(record.element, &record.instance, out);
+        }
+
+        push_existing_subtree_children(ui, window_frame, node, &mut stack);
+    }
+}
+
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::*;
 
@@ -2079,9 +2099,9 @@ mod tests {
         ui.set_debug_enabled(true);
         ui.begin_debug_frame_if_needed(FrameId(1));
 
-        let root = ui.create_node(TestWidget::default());
-        let ui_child = ui.create_node(TestWidget::default());
-        let frame_child = ui.create_node(TestWidget::default());
+        let root = ui.create_node(TestWidget);
+        let ui_child = ui.create_node(TestWidget);
+        let frame_child = ui.create_node(TestWidget);
 
         ui.set_root(root);
         ui.set_children(root, vec![ui_child]);
@@ -2122,8 +2142,8 @@ mod tests {
         let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
         ui.set_window(AppWindowId::default());
 
-        let root_node = ui.create_node(TestWidget::default());
-        let child_node = ui.create_node(TestWidget::default());
+        let root_node = ui.create_node(TestWidget);
+        let child_node = ui.create_node(TestWidget);
 
         let root_element = GlobalElementId(1);
         let child_element = GlobalElementId(2);
@@ -2155,21 +2175,6 @@ mod tests {
         assert_eq!(entry.node, child_node);
         assert_eq!(entry.last_seen_frame, FrameId(1));
         assert_eq!(entry.root, root_id);
-    }
-}
-fn collect_scroll_handle_bindings_for_existing_subtree<H: UiHost>(
-    ui: &UiTree<H>,
-    window_frame: &WindowFrame,
-    out: &mut Vec<crate::declarative::frame::ScrollHandleBinding>,
-    root: NodeId,
-) {
-    let mut stack: Vec<NodeId> = vec![root];
-    while let Some(node) = stack.pop() {
-        if let Some(record) = window_frame.instances.get(&node) {
-            collect_scroll_handle_bindings(record.element, &record.instance, out);
-        }
-
-        push_existing_subtree_children(ui, window_frame, node, &mut stack);
     }
 }
 

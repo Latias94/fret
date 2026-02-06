@@ -270,9 +270,11 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                 if !clipboard_text {
                     return CommandAvailability::Blocked;
                 }
-                has_selection
-                    .then_some(CommandAvailability::Available)
-                    .unwrap_or(CommandAvailability::Blocked)
+                if has_selection {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
             }
             "text.paste" => {
                 if !clipboard_text {
@@ -280,9 +282,13 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" | "text.clear" => (!self.area.text().is_empty())
-                .then_some(CommandAvailability::Available)
-                .unwrap_or(CommandAvailability::Blocked),
+            "text.select_all" | "text.clear" => {
+                if !self.area.text().is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
             _ => CommandAvailability::NotHandled,
         }
     }

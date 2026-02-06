@@ -756,14 +756,14 @@ impl WindowElementState {
             }
         }
         #[cfg(any(test, feature = "diagnostics"))]
-        if self.strict_ownership {
-            if let Some(prev) = self.nodes.get(&id) {
-                assert_eq!(
-                    prev.root, entry.root,
-                    "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
-                    prev.root, entry.root
-                );
-            }
+        if self.strict_ownership
+            && let Some(prev) = self.nodes.get(&id)
+        {
+            assert_eq!(
+                prev.root, entry.root,
+                "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
+                prev.root, entry.root
+            );
         }
         self.nodes.insert(id, entry);
     }

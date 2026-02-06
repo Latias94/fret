@@ -457,10 +457,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             for (index, item) in items.iter().enumerate() {
                 let k = key(item);
                 let key_hash = stable_hash(&k);
-                if first_dup.is_none() {
-                    if let Some(prev) = seen.insert(key_hash, index) {
-                        first_dup = Some((key_hash, prev, index));
-                    }
+                if first_dup.is_none()
+                    && let Some(prev) = seen.insert(key_hash, index)
+                {
+                    first_dup = Some((key_hash, prev, index));
                 }
                 cx.keyed(k, |cx| f(cx, index, item));
             }
@@ -2532,16 +2532,16 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
                     state.metrics.sync_keys(&state.keys, options.items_revision);
 
-                    if options.measure_mode == crate::element::VirtualListMeasureMode::Known {
-                        if let Some(height_at) = options.known_row_height_at.as_ref() {
-                            let heights = (0..len).map(|i| height_at(i)).collect::<Vec<_>>();
-                            state.metrics.rebuild_from_known_heights(
-                                heights,
-                                options.estimate_row_height,
-                                options.gap,
-                                options.scroll_margin,
-                            );
-                        }
+                    if options.measure_mode == crate::element::VirtualListMeasureMode::Known
+                        && let Some(height_at) = options.known_row_height_at.as_ref()
+                    {
+                        let heights = (0..len).map(|i| height_at(i)).collect::<Vec<_>>();
+                        state.metrics.rebuild_from_known_heights(
+                            heights,
+                            options.estimate_row_height,
+                            options.gap,
+                            options.scroll_margin,
+                        );
                     }
 
                     if key_cache == crate::element::VirtualListKeyCacheMode::AllKeys {
@@ -3043,10 +3043,10 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
                     let mut first_dup: Option<(crate::ItemKey, usize, usize)> = None;
                     let mut seen: HashMap<crate::ItemKey, usize> = HashMap::new();
                     for (pos, item) in items.iter().enumerate() {
-                        if first_dup.is_none() {
-                            if let Some(prev) = seen.insert(item.key, pos) {
-                                first_dup = Some((item.key, prev, pos));
-                            }
+                        if first_dup.is_none()
+                            && let Some(prev) = seen.insert(item.key, pos)
+                        {
+                            first_dup = Some((item.key, prev, pos));
                         }
                     }
 

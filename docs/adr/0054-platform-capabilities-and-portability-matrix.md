@@ -66,7 +66,7 @@ Instead:
 We define a minimal set of booleans/enums that cover the “hard portability” boundaries:
 
 - **Execution / scheduling** (see ADR 0190; primarily diagnostics and portability guardrails)
-  - Note: this reference is `docs/adr/0190-execution-and-concurrency-surface-v1.md` (ADR number collisions exist; prefer full filenames).
+  - Note: this reference is `docs/adr/0199-execution-and-concurrency-surface-v1.md`.
   - `exec.background_work`: enum:
     - `none` (no background execution; UI thread only)
     - `cooperative` (best-effort background work; no threads, time-sliced/cooperative)
@@ -204,10 +204,11 @@ Remaining:
 - ADR 0013: `docs/adr/0013-docking-ops-and-persistence.md`
 - ADR 0017: `docs/adr/0017-multi-window-display-and-dpi.md`
 - ADR 0022: `docs/adr/0022-when-expressions.md`
-- ADR 0190 (execution): `docs/adr/0190-execution-and-concurrency-surface-v1.md`
+- ADR 0190 (execution): `docs/adr/0199-execution-and-concurrency-surface-v1.md`
 - ADR 0034: `docs/adr/0034-timers-animation-and-redraw-scheduling.md`
 - ADR 0036: `docs/adr/0036-observability-tracing-and-ui-inspector-hooks.md`
 - ADR 0041: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
 - ADR 0053: `docs/adr/0053-external-drag-payload-portability.md`
 - Makepad web single entrypoint message pump:
   - `repo-ref/makepad/platform/src/os/web/web.rs`
+
