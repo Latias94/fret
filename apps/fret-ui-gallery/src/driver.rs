@@ -1,6 +1,6 @@
 use fret_app::{
     App, CommandId, CommandMeta, Effect, LayeredConfigPaths, Menu, MenuBar,
-    MenuBarIntegrationModeV1, MenuItem, Model, Platform, SettingsFileV1, WindowRequest,
+    MenuBarIntegrationModeV1, MenuItem, MenuRole, Model, Platform, SettingsFileV1, WindowRequest,
     load_layered_settings,
 };
 use fret_core::{
@@ -61,6 +61,12 @@ struct PendingTaffyDumpRequest {
 #[derive(Default)]
 struct UiGalleryHarnessDiagnosticsStore {
     per_window: HashMap<AppWindowId, UiGalleryHarnessModelIds>,
+}
+
+#[derive(Default)]
+struct UiGalleryRecentItemsService {
+    next_id: u64,
+    items: Vec<Arc<str>>,
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -183,6 +189,7 @@ struct UiGalleryWindowState {
     cmdk_open: Model<bool>,
     cmdk_query: Model<String>,
     last_action: Model<Arc<str>>,
+    menu_bar_seq: Model<u64>,
     virtual_list_torture_jump: Model<String>,
     virtual_list_torture_edit_row: Model<Option<u64>>,
     virtual_list_torture_edit_text: Model<String>,
@@ -227,6 +234,63 @@ impl UiGalleryDriver {
 
         let mut menu_bar =
             fret_workspace::menu::workspace_default_menu_bar(Self::build_workspace_menu_commands());
+
+        let recent_items = app
+            .global::<UiGalleryRecentItemsService>()
+            .map(|svc| svc.items.clone())
+            .unwrap_or_default();
+
+        if let Some(menu) = menu_bar
+            .menus
+            .iter_mut()
+            .find(|m| m.role == Some(MenuRole::File) || m.title.as_ref() == "File")
+        {
+            if let Some(MenuItem::Submenu {
+                title: _, items, ..
+            }) = menu.items.iter_mut().find(
+                |i| matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Recent"),
+            ) {
+                *items = if recent_items.is_empty() {
+                    vec![MenuItem::Label {
+                        title: Arc::from("No recent items"),
+                    }]
+                } else {
+                    recent_items
+                        .iter()
+                        .take(10)
+                        .cloned()
+                        .map(|title| MenuItem::Label { title })
+                        .collect()
+                };
+            }
+        }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(store) = app.global::<UiGalleryHarnessDiagnosticsStore>() {
+            let mut windows: Vec<AppWindowId> = store.per_window.keys().copied().collect();
+            windows.sort_by_key(|w| format!("{w:?}"));
+            if !windows.is_empty() {
+                if let Some(menu) = menu_bar
+                    .menus
+                    .iter_mut()
+                    .find(|m| m.role == Some(MenuRole::Window) || m.title.as_ref() == "Window")
+                {
+                    if let Some(MenuItem::Submenu { title: _, items, .. }) =
+                        menu.items.iter_mut().find(|i| {
+                            matches!(i, MenuItem::Submenu { title, .. } if title.as_ref() == "Windows")
+                        })
+                    {
+                        *items = windows
+                            .into_iter()
+                            .enumerate()
+                            .map(|(idx, _w)| MenuItem::Label {
+                                title: Arc::<str>::from(format!("Window {}", idx + 1)),
+                            })
+                            .collect();
+                    }
+                }
+            }
+        }
 
         let radio = |checked: bool| {
             Some(MenuItemToggle {
@@ -296,6 +360,23 @@ impl UiGalleryDriver {
                                     toggle: radio(in_window == MenuBarIntegrationModeV1::Off),
                                 },
                             ],
+                        },
+                    ],
+                },
+                MenuItem::Separator,
+                MenuItem::Submenu {
+                    title: Arc::from("Debug"),
+                    when: None,
+                    items: vec![
+                        MenuItem::Command {
+                            command: CommandId::new(CMD_GALLERY_DEBUG_RECENT_ADD),
+                            when: None,
+                            toggle: None,
+                        },
+                        MenuItem::Command {
+                            command: CommandId::new(CMD_GALLERY_DEBUG_RECENT_CLEAR),
+                            when: None,
+                            toggle: None,
                         },
                     ],
                 },
@@ -519,12 +600,7 @@ impl UiGalleryDriver {
         if is_diag {
             settings.menu_bar.os = MenuBarIntegrationModeV1::Off;
             settings.menu_bar.in_window = MenuBarIntegrationModeV1::On;
-            Self::apply_menu_bar_settings(
-                app,
-                settings.menu_bar.os,
-                settings.menu_bar.in_window,
-            );
-            Self::sync_menu_bar_after_settings_change(app, window);
+            Self::apply_menu_bar_settings(app, settings.menu_bar.os, settings.menu_bar.in_window);
         }
         let settings_open = app.models_mut().insert(false);
         let settings_menu_bar_os = app
@@ -612,6 +688,7 @@ impl UiGalleryDriver {
         let cmdk_open = app.models_mut().insert(false);
         let cmdk_query = app.models_mut().insert(String::new());
         let last_action = app.models_mut().insert(Arc::<str>::from("<none>"));
+        let menu_bar_seq = app.models_mut().insert(0_u64);
         let virtual_list_torture_jump = app.models_mut().insert(String::from("9000"));
         let virtual_list_torture_edit_row = app.models_mut().insert(None::<u64>);
         let virtual_list_torture_edit_text = app.models_mut().insert(String::new());
@@ -738,6 +815,7 @@ impl UiGalleryDriver {
             cmdk_open,
             cmdk_query,
             last_action,
+            menu_bar_seq,
             virtual_list_torture_jump,
             virtual_list_torture_edit_row,
             virtual_list_torture_edit_text,
@@ -759,6 +837,11 @@ impl UiGalleryDriver {
                 },
             );
         });
+
+        // Sync once after per-window state is registered so dynamic menu content (e.g. window list)
+        // can be derived from the latest app globals.
+        Self::sync_menu_bar_after_state_change(app, window);
+        Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
         state
     }
@@ -889,6 +972,37 @@ impl UiGalleryDriver {
         command: &CommandId,
     ) -> bool {
         match command.as_str() {
+            CMD_GALLERY_DEBUG_RECENT_ADD => {
+                let mut label: Option<Arc<str>> = None;
+                app.with_global_mut(UiGalleryRecentItemsService::default, |svc, _app| {
+                    svc.next_id = svc.next_id.saturating_add(1);
+                    let id = svc.next_id;
+                    let next: Arc<str> = Arc::from(format!("Recent {id}"));
+                    svc.items.insert(0, next.clone());
+                    svc.items.truncate(10);
+                    label = Some(next);
+                });
+
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from(format!(
+                        "debug.recent.add({})",
+                        label.as_deref().unwrap_or("unknown")
+                    ));
+                });
+            }
+            CMD_GALLERY_DEBUG_RECENT_CLEAR => {
+                app.with_global_mut(UiGalleryRecentItemsService::default, |svc, _app| {
+                    svc.items.clear();
+                });
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("debug.recent.clear");
+                });
+            }
             CMD_CODE_EDITOR_LOAD_FONTS => {
                 app.push_effect(Effect::FileDialogOpen {
                     window,
@@ -1084,11 +1198,17 @@ impl UiGalleryDriver {
         });
     }
 
-    fn sync_menu_bar_after_settings_change(app: &mut App, window: AppWindowId) {
+    fn sync_menu_bar_after_state_change(app: &mut App, window: AppWindowId) {
         let menu_bar = Self::build_menu_bar(app);
         fret_app::set_menu_bar_baseline(app, menu_bar);
         fret_app::sync_os_menu_bar(app);
         app.request_redraw(window);
+    }
+
+    fn bump_menu_bar_seq(app: &mut App, seq: &Model<u64>) {
+        let _ = app.models_mut().update(seq, |v| {
+            *v = v.saturating_add(1);
+        });
     }
 
     fn handle_menu_bar_mode_command(
@@ -1130,7 +1250,8 @@ impl UiGalleryDriver {
         };
 
         Self::apply_menu_bar_settings(app, os, in_window);
-        Self::sync_menu_bar_after_settings_change(app, window);
+        Self::sync_menu_bar_after_state_change(app, window);
+        Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
         let _ = app.models_mut().update(&state.settings_menu_bar_os, |v| {
             *v = Some(Self::menu_bar_mode_key(os));
@@ -1337,6 +1458,7 @@ impl UiGalleryDriver {
         let cmdk_open = state.cmdk_open.clone();
         let cmdk_query = state.cmdk_query.clone();
         let last_action = state.last_action.clone();
+        let menu_bar_seq = state.menu_bar_seq.clone();
         let virtual_list_torture_jump = state.virtual_list_torture_jump.clone();
         let virtual_list_torture_edit_row = state.virtual_list_torture_edit_row.clone();
         let virtual_list_torture_edit_text = state.virtual_list_torture_edit_text.clone();
@@ -1872,6 +1994,9 @@ impl UiGalleryDriver {
                             .into_element(cx)
                     });
 
+                    let menu_bar_seq_value = cx
+                        .get_model_copied(&menu_bar_seq, Invalidation::Layout)
+                        .unwrap_or(0);
                     let menu_bar = fret_app::effective_menu_bar(cx.app);
                     let show_in_window_menu_bar = fret_app::should_render_in_window_menu_bar(
                         cx.app,
@@ -1887,13 +2012,15 @@ impl UiGalleryDriver {
                         std::cell::RefCell::new(None);
                     let in_window_menu_bar = if show_in_window_menu_bar {
                         menu_bar.as_ref().map(|menu_bar| {
-                            let (menu, handle) = menubar_from_runtime_with_focus_handle(
-                                cx,
-                                menu_bar,
-                                MenubarFromRuntimeOptions::default(),
-                            );
-                            *menubar_handle.borrow_mut() = Some(handle);
-                            menu
+                            cx.keyed(format!("ui_gallery.menubar.{menu_bar_seq_value}"), |cx| {
+                                let (menu, handle) = menubar_from_runtime_with_focus_handle(
+                                    cx,
+                                    menu_bar,
+                                    MenubarFromRuntimeOptions::default(),
+                                );
+                                *menubar_handle.borrow_mut() = Some(handle);
+                                menu
+                            })
                         })
                     } else {
                         None
@@ -2347,6 +2474,7 @@ impl UiGalleryDriver {
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
+    app.set_global(UiGalleryRecentItemsService::default());
     shadcn::shadcn_themes::apply_shadcn_new_york_v4(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
@@ -2432,6 +2560,18 @@ pub fn build_app() -> App {
         CommandMeta::new("Menu Bar (In-window): Off")
             .with_category("Settings")
             .with_keywords(["menu", "menubar", "in-window", "off"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_DEBUG_RECENT_ADD),
+        CommandMeta::new("Debug: Recent (add item)")
+            .with_category("Debug")
+            .with_keywords(["debug", "menu", "menubar", "recent", "add"]),
+    );
+    app.commands_mut().register(
+        CommandId::new(CMD_GALLERY_DEBUG_RECENT_CLEAR),
+        CommandMeta::new("Debug: Recent (clear)")
+            .with_category("Debug")
+            .with_keywords(["debug", "menu", "menubar", "recent", "clear"]),
     );
 
     for group in PAGE_GROUPS {
@@ -2958,7 +3098,8 @@ impl WinitAppDriver for UiGalleryDriver {
                 let os = Self::menu_bar_mode_from_key(os.as_deref());
                 let in_window = Self::menu_bar_mode_from_key(in_window.as_deref());
                 Self::apply_menu_bar_settings(app, os, in_window);
-                Self::sync_menu_bar_after_settings_change(app, window);
+                Self::sync_menu_bar_after_state_change(app, window);
+                Self::bump_menu_bar_seq(app, &state.menu_bar_seq);
 
                 let _ = app
                     .models_mut()

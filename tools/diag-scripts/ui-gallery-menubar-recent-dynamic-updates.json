@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "menubar-trigger-file" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "menu_select",
+      "menu": { "kind": "test_id", "id": "menubar-trigger-file" },
+      "item": { "kind": "test_id", "id": "menubar-item-menu-file-submenu-recent" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "menubar-item-menu-file-submenu-recent-label-no-recent-items"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "menu_select_path",
+      "path": [
+        { "kind": "test_id", "id": "menubar-trigger-gallery" },
+        { "kind": "test_id", "id": "menubar-item-menu-gallery-submenu-debug" },
+        { "kind": "test_id", "id": "menubar-item-ui_gallery-debug-recent-add" }
+      ],
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "menu_select",
+      "menu": { "kind": "test_id", "id": "menubar-trigger-file" },
+      "item": { "kind": "test_id", "id": "menubar-item-menu-file-submenu-recent" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "menubar-item-menu-file-submenu-recent-label-recent-1"
+        }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "menu_select",
+      "menu": { "kind": "test_id", "id": "menubar-trigger-window" },
+      "item": { "kind": "test_id", "id": "menubar-item-menu-window-submenu-windows" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "menubar-item-menu-window-submenu-windows-label-window-1"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-recent-dynamic-updates" }
+  ]
+}

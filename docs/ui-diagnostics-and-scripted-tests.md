@@ -95,6 +95,10 @@ Workflow tip:
 
    - `FRET_DIAG=1`
 
+   Note:
+   - When using `fretboard diag run --launch`, `--env KEY=VALUE` cannot override reserved variables
+     like `FRET_DIAG`. Set reserved vars in the parent shell environment instead.
+
 2. (Recommended while authoring scripts) disable redaction so you can see semantics labels in bundles:
 
    - `FRET_DIAG_REDACT_TEXT=0`
@@ -408,6 +412,7 @@ Supported intent steps (v2):
 - `scroll_into_view` (wheel a container until a target becomes visible)
 - `type_text_into` (wait + click + type)
 - `menu_select` (wait + open menu + click item)
+- `menu_select_path` (wait + open nested menus + click final item)
 - `drag_to` (drag between two semantics targets)
 - `set_slider_value` (drag a slider to a desired value; requires a parseable semantics `value`)
 

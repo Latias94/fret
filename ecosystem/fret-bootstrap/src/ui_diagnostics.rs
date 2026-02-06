@@ -688,6 +688,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
+                | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragTo { .. }
                 | UiActionStepV2::SetSliderValue { .. }
         );
@@ -1466,6 +1467,90 @@ impl UiDiagnosticsService {
                     output.request_redraw = true;
                 }
             }
+            UiActionStepV2::MenuSelectPath {
+                path,
+                timeout_frames,
+            } => {
+                active.wait_until = None;
+                active.screenshot_wait = None;
+
+                if let Some(snapshot) = semantics_snapshot {
+                    let mut state = match active.v2_step_state.take() {
+                        Some(V2StepState::MenuSelectPath(mut state))
+                            if state.step_index == step_index =>
+                        {
+                            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                            state
+                        }
+                        _ => V2MenuSelectPathState {
+                            step_index,
+                            remaining_frames: timeout_frames,
+                            next_index: 0,
+                        },
+                    };
+
+                    if path.is_empty() {
+                        force_dump_label =
+                            Some(format!("script-step-{step_index:04}-menu_select_path-empty"));
+                        stop_script = true;
+                        failure_reason = Some("menu_select_path_empty".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else if state.next_index >= path.len() {
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if self.cfg.script_auto_dump {
+                            force_dump_label =
+                                Some(format!("script-step-{step_index:04}-menu_select_path"));
+                        }
+                    } else if let Some(node) = select_semantics_node(
+                        snapshot,
+                        window,
+                        element_runtime,
+                        &path[state.next_index],
+                    ) {
+                        let pos = center_of_rect(node.bounds);
+                        output
+                            .events
+                            .extend(click_events(pos, UiMouseButtonV1::Left));
+
+                        state.next_index = state.next_index.saturating_add(1);
+                        if state.next_index >= path.len() {
+                            active.v2_step_state = None;
+                            active.next_step = active.next_step.saturating_add(1);
+                            output.request_redraw = true;
+                            if self.cfg.script_auto_dump {
+                                force_dump_label =
+                                    Some(format!("script-step-{step_index:04}-menu_select_path"));
+                            }
+                        } else {
+                            active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                            output.request_redraw = true;
+                        }
+                    } else if state.remaining_frames == 0 {
+                        force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-menu_select_path-timeout"
+                        ));
+                        stop_script = true;
+                        failure_reason = Some("menu_select_path_timeout".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                    } else {
+                        state.remaining_frames = state.remaining_frames.saturating_sub(1);
+                        active.v2_step_state = Some(V2StepState::MenuSelectPath(state));
+                        output.request_redraw = true;
+                    }
+                } else {
+                    force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-menu_select_path-no-semantics"
+                    ));
+                    stop_script = true;
+                    failure_reason = Some("no_semantics_snapshot".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                }
+            }
             UiActionStepV2::MenuSelect {
                 menu,
                 item,
@@ -1490,9 +1575,13 @@ impl UiDiagnosticsService {
 
                     match state.phase {
                         0 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &menu)
-                                .is_some()
+                            if let Some(node) =
+                                select_semantics_node(snapshot, window, element_runtime, &menu)
                             {
+                                let pos = center_of_rect(node.bounds);
+                                output
+                                    .events
+                                    .extend(click_events(pos, UiMouseButtonV1::Left));
                                 state.phase = 1;
                                 active.v2_step_state = Some(V2StepState::MenuSelect(state));
                                 output.request_redraw = true;
@@ -1512,32 +1601,19 @@ impl UiDiagnosticsService {
                         }
                         1 => {
                             if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &menu)
+                                select_semantics_node(snapshot, window, element_runtime, &item)
                             {
                                 let pos = center_of_rect(node.bounds);
                                 output
                                     .events
                                     .extend(click_events(pos, UiMouseButtonV1::Left));
-                                state.phase = 2;
-                                active.v2_step_state = Some(V2StepState::MenuSelect(state));
-                                output.request_redraw = true;
-                            } else {
-                                force_dump_label = Some(format!(
-                                    "script-step-{step_index:04}-menu_select-menu-no-match"
-                                ));
-                                stop_script = true;
-                                failure_reason = Some("menu_select_menu_no_match".to_string());
                                 active.v2_step_state = None;
+                                active.next_step = active.next_step.saturating_add(1);
                                 output.request_redraw = true;
-                            }
-                        }
-                        2 => {
-                            if select_semantics_node(snapshot, window, element_runtime, &item)
-                                .is_some()
-                            {
-                                state.phase = 3;
-                                active.v2_step_state = Some(V2StepState::MenuSelect(state));
-                                output.request_redraw = true;
+                                if self.cfg.script_auto_dump {
+                                    force_dump_label =
+                                        Some(format!("script-step-{step_index:04}-menu_select"));
+                                }
                             } else if state.remaining_frames == 0 {
                                 force_dump_label = Some(format!(
                                     "script-step-{step_index:04}-menu_select-timeout"
@@ -1552,31 +1628,7 @@ impl UiDiagnosticsService {
                                 output.request_redraw = true;
                             }
                         }
-                        _ => {
-                            if let Some(node) =
-                                select_semantics_node(snapshot, window, element_runtime, &item)
-                            {
-                                let pos = center_of_rect(node.bounds);
-                                output
-                                    .events
-                                    .extend(click_events(pos, UiMouseButtonV1::Left));
-                                active.v2_step_state = None;
-                                active.next_step = active.next_step.saturating_add(1);
-                                output.request_redraw = true;
-                                if self.cfg.script_auto_dump {
-                                    force_dump_label =
-                                        Some(format!("script-step-{step_index:04}-menu_select"));
-                                }
-                            } else {
-                                force_dump_label = Some(format!(
-                                    "script-step-{step_index:04}-menu_select-item-no-match"
-                                ));
-                                stop_script = true;
-                                failure_reason = Some("menu_select_item_no_match".to_string());
-                                active.v2_step_state = None;
-                                output.request_redraw = true;
-                            }
-                        }
+                        _ => unreachable!("menu_select has at most 2 phases"),
                     }
                 } else {
                     force_dump_label = Some(format!(
@@ -3307,6 +3359,11 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    MenuSelectPath {
+        path: Vec<UiSelectorV1>,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     DragTo {
         from: UiSelectorV1,
         to: UiSelectorV1,
@@ -3764,6 +3821,7 @@ enum V2StepState {
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
     MenuSelect(V2MenuSelectState),
+    MenuSelectPath(V2MenuSelectPathState),
     DragTo(V2DragToState),
     SetSliderValue(V2SetSliderValueState),
 }
@@ -3792,6 +3850,13 @@ struct V2MenuSelectState {
     step_index: usize,
     remaining_frames: u32,
     phase: u32,
+}
+
+#[derive(Debug, Clone)]
+struct V2MenuSelectPathState {
+    step_index: usize,
+    remaining_frames: u32,
+    next_index: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -5258,7 +5323,9 @@ fn collect_menu_items(
                     menu_when: when.clone(),
                 });
             }
-            fret_runtime::MenuItem::Separator | fret_runtime::MenuItem::SystemMenu { .. } => {}
+            fret_runtime::MenuItem::Label { .. }
+            | fret_runtime::MenuItem::Separator
+            | fret_runtime::MenuItem::SystemMenu { .. } => {}
             fret_runtime::MenuItem::Submenu {
                 title,
                 when: _,
