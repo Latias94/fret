@@ -401,6 +401,15 @@ Acceptance:
   - reduce `max top_total_time_us` and `max paint_text_prepare_time_us` outliers,
   - keep correctness (no stale scene/hit-test failures on scripted resize probes).
 
+Update:
+
+- Desktop runner now coalesces resize application to once per frame (commit `beb2fa315`), closer to GPUI’s
+  “resize marks dirty; draw happens at the frame boundary” model.
+- Evidence (macOS Apple M4):
+  - Single-script probe worst `top_total_time_us`: `16935` (v12 baseline era) → `14219` (post-coalesce run)
+  - Suite baseline worst `top_total_time_us`: `16935` (v12) → `15532` (v13)
+  - Details and bundles are recorded in `docs/workstreams/ui-perf-zed-smoothness-v1-log.md` (2026-02-06 13:20).
+
 #### Gap C.1: Stable-frame paint overhead is still opaque (even with cache reuse)
 
 Motivation:

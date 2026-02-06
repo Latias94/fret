@@ -4326,3 +4326,49 @@ Notes:
 - This change is harness-level only (no runtime perf improvement expected).
 - The next real smoothness win still needs to come from the resize path:
   - reduce `layout_roots_time_us` and `paint_text_prepare_time_us (width_changed)` tail outliers.
+
+## 2026-02-06 13:20:00 (commit `beb2fa315`)
+
+Change:
+- Coalesce `WindowEvent::SurfaceResized` handling to once per frame (apply pending resize on `RedrawRequested`).
+
+Why:
+- GPUI/Zed effectively applies resize at the frame boundary (resize marks dirty; draw happens via request-frame).
+  Several platforms can emit multiple resize notifications per vblank during interactive drags. Applying each one
+  immediately can waste time reconfiguring the surface and relayouting more often than we can present.
+
+Probe (single script):
+- Script: `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+
+Command:
+```bash
+target/debug/fretboard diag perf tools/diag-scripts/ui-gallery-window-resize-stress-steady.json \
+  --dir target/fret-diag-codex-perf-resize-coalesce-v2 \
+  --timeout-ms 300000 \
+  --reuse-launch --repeat 7 --sort time --top 5 --json \
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 \
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 \
+  --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 \
+  --env FRET_DIAG_SEMANTICS=0 \
+  --launch -- target/release/fret-ui-gallery
+```
+
+Results (us):
+- Worst overall `top_total_time_us=14219`
+- Evidence bundle: `target/fret-diag-codex-perf-resize-coalesce-v2/1770355071995-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Suite baseline refresh:
+- Baseline file: `docs/workstreams/perf-baselines/ui-gallery-steady.macos-m4.v13.json`
+- Run dir: `target/fret-diag-codex-perf-v13`
+- Worst overall script in the run remains `ui-gallery-window-resize-stress-steady`:
+  - `top_total_time_us=15532`
+  - Evidence bundle: `target/fret-diag-codex-perf-v13/1770355191996-ui-gallery-window-resize-stress-steady/bundle.json`
+
+Delta vs v12 baseline:
+- `ui-gallery-window-resize-stress-steady` max `top_total_time_us` improves from `16935` (v12) → `15532` (v13).
+
+Notes:
+- This does not “avoid relayout during resize”. It reduces *redundant* work when multiple size updates arrive before a frame is drawn.
+- The remaining gap for resize smoothness is still dominated by:
+  - layout traversal/root build costs, and
+  - text prepare on `width_changed` (wrap reflow) for chrome-heavy pages.
