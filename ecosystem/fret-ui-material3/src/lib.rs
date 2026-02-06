@@ -87,7 +87,7 @@ pub use text_field::{TextField, TextFieldStyle, TextFieldVariant};
 pub use time_picker::{
     DockedTimePicker, TimePickerDialog, TimePickerDisplayMode, TimePickerVariant,
 };
-pub use tooltip::{PlainTooltip, TooltipAlign, TooltipProvider, TooltipSide};
+pub use tooltip::{PlainTooltip, RichTooltip, TooltipAlign, TooltipProvider, TooltipSide};
 pub use top_app_bar::{TopAppBar, TopAppBarAction, TopAppBarScrollBehavior, TopAppBarVariant};
 
 pub mod context {
