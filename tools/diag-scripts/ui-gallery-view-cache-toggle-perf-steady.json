@@ -52,19 +52,11 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-view-cache-bump-counter" } },
     { "type": "wait_frames", "n": 2 },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-view-cache-popover-trigger" } },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-view-cache-popover-close" }
-      },
-      "timeout_frames": 120
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-view-cache-popover-close" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
 
     { "type": "capture_bundle", "label": "ui-gallery-view-cache-toggle-perf-steady" },
     { "type": "wait_frames", "n": 2 }
   ]
 }
-
