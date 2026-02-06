@@ -8,8 +8,6 @@ use fret_ui::Theme;
 use crate::foundation::token_resolver::MaterialTokenResolver;
 use crate::top_app_bar::TopAppBarVariant;
 
-pub(crate) const COMPONENT_PREFIX: &str = "md.comp.top-app-bar";
-
 fn container_height_key(variant: TopAppBarVariant) -> &'static str {
     match variant {
         TopAppBarVariant::Small => "md.comp.top-app-bar.small.container.height",

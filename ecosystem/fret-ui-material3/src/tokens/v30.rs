@@ -124,6 +124,7 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_text_field_text_styles(cfg);
     inject_comp_menu_text_styles(cfg);
     inject_comp_primary_navigation_tab_text_styles(cfg);
+    inject_comp_tooltip_text_styles(cfg);
     inject_comp_date_picker_text_styles(cfg);
     inject_comp_time_picker_text_styles(cfg);
     inject_comp_time_input_text_styles(cfg);
@@ -363,6 +364,31 @@ fn inject_comp_primary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
         "md.comp.primary-navigation-tab.with-label-text.label-text".to_string(),
         title_small,
     );
+}
+
+fn inject_comp_tooltip_text_styles(cfg: &mut ThemeConfig) {
+    if let Some(body_small) = cfg.text_styles.get("md.sys.typescale.body-small").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.plain-tooltip.supporting-text".to_string(),
+            body_small,
+        );
+    }
+    if let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.rich-tooltip.action.label-text".to_string(),
+            label_large,
+        );
+    }
+    if let Some(title_small) = cfg.text_styles.get("md.sys.typescale.title-small").cloned() {
+        cfg.text_styles
+            .insert("md.comp.rich-tooltip.subhead".to_string(), title_small);
+    }
+    if let Some(body_medium) = cfg.text_styles.get("md.sys.typescale.body-medium").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.rich-tooltip.supporting-text".to_string(),
+            body_medium,
+        );
+    }
 }
 
 fn inject_comp_date_picker_text_styles(cfg: &mut ThemeConfig) {
@@ -3831,6 +3857,15 @@ mod tests {
             cfg.text_styles
                 .contains_key("md.comp.primary-navigation-tab.with-label-text.label-text"),
             "expected primary navigation tab label text style token"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.plain-tooltip.supporting-text"),
+            "expected plain tooltip supporting text style token"
+        );
+        assert!(
+            cfg.text_styles.contains_key("md.comp.rich-tooltip.subhead"),
+            "expected rich tooltip subhead text style token"
         );
 
         let title_medium = cfg

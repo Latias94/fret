@@ -5,7 +5,6 @@
 
 use fret_core::{Color, Edges, Px};
 use fret_ui::Theme;
-use fret_ui::theme::CubicBezier;
 
 pub(crate) fn plain_container_background(theme: &Theme) -> Color {
     theme
@@ -48,26 +47,8 @@ pub(crate) fn shadow_color(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_required("md.sys.color.shadow"))
 }
 
-pub(crate) fn open_duration_ms(theme: &Theme) -> u32 {
-    theme
-        .duration_ms_by_key("md.sys.motion.duration.short2")
-        .unwrap_or(100)
-}
-
 pub(crate) fn close_duration_ms(theme: &Theme) -> u32 {
     theme
         .duration_ms_by_key("md.sys.motion.duration.short1")
         .unwrap_or(50)
-}
-
-pub(crate) fn easing(theme: &Theme) -> CubicBezier {
-    theme
-        .easing_by_key("md.sys.motion.easing.emphasized")
-        .or_else(|| theme.easing_by_key("md.sys.motion.easing.standard"))
-        .unwrap_or(CubicBezier {
-            x1: 0.0,
-            y1: 0.0,
-            x2: 1.0,
-            y2: 1.0,
-        })
 }
