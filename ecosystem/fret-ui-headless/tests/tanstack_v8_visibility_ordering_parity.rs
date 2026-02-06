@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, ColumnSizingRegion, RowKey, Table, TanStackTableOptions, TanStackTableState,
+    ColumnDef, ColumnSizingRegion, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
     set_column_order_for,
 };
 use serde::Deserialize;
@@ -216,6 +216,7 @@ fn tanstack_v8_visibility_ordering_parity() {
             let table = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .state(state.clone())
                 .options(options)
                 .build();
@@ -268,6 +269,7 @@ fn tanstack_v8_visibility_ordering_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .build();

@@ -78,10 +78,12 @@ mod node_sizing_conformance;
 mod nudge_step_conformance;
 mod only_render_visible_elements_conformance;
 mod op_batching_determinism_conformance;
+mod overlay_blackboard_conformance;
 mod overlay_group_rename_conformance;
 mod overlay_invalidation_conformance;
 mod overlay_menu_searcher_conformance;
 mod overlay_minimap_controls_conformance;
+mod overlay_symbol_rename_conformance;
 mod overlay_toolbars_conformance;
 mod perf_cache;
 mod perf_cache_prune_conformance;
@@ -89,6 +91,7 @@ mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
 mod portal_measured_geometry_conformance;
+mod portal_measured_internals_conformance;
 mod portal_pointer_passthrough_conformance;
 mod prelude;
 mod selection_mode_conformance;
@@ -1604,6 +1607,7 @@ fn read_node_pos(
         .flatten()
         .unwrap_or_default()
 }
+
 #[test]
 fn distance_sq_point_to_rect_is_zero_inside_and_positive_outside() {
     let rect = Rect::new(

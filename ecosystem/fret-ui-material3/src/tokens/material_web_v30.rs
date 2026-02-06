@@ -4223,6 +4223,76 @@ pub(crate) fn inject_comp_snackbar_scalars(cfg: &mut ThemeConfig) {
     );
 }
 
+pub(crate) fn inject_comp_search_bar_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.search-bar.`
+
+    cfg.metrics
+        .insert("md.comp.search-bar.avatar.shape".to_string(), 9999.0);
+    cfg.metrics
+        .insert("md.comp.search-bar.avatar.size".to_string(), 30.0);
+    cfg.metrics
+        .insert("md.comp.search-bar.container.elevation".to_string(), 6.0);
+    cfg.metrics
+        .insert("md.comp.search-bar.container.height".to_string(), 56.0);
+    cfg.metrics
+        .insert("md.comp.search-bar.container.shape".to_string(), 9999.0);
+    cfg.metrics.insert(
+        "md.comp.search-bar.focus.indicator.outline.offset".to_string(),
+        2.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.search-bar.focus.indicator.thickness".to_string(),
+        3.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.search-bar.hover.state-layer.opacity".to_string(),
+        0.08,
+    );
+    cfg.numbers
+        .insert("md.comp.search-bar.input-text.weight".to_string(), 400.0);
+    cfg.numbers.insert(
+        "md.comp.search-bar.pressed.state-layer.opacity".to_string(),
+        0.1,
+    );
+    cfg.numbers.insert(
+        "md.comp.search-bar.supporting-text.weight".to_string(),
+        400.0,
+    );
+}
+
+pub(crate) fn inject_comp_search_view_scalars(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.search-view.`
+
+    cfg.metrics
+        .insert("md.comp.search-view.container.elevation".to_string(), 6.0);
+    cfg.metrics.insert(
+        "md.comp.search-view.docked.container.shape".to_string(),
+        28.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.search-view.docked.header.container.height".to_string(),
+        56.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.search-view.full-screen.container.shape".to_string(),
+        0.0,
+    );
+    cfg.metrics.insert(
+        "md.comp.search-view.full-screen.header.container.height".to_string(),
+        72.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.search-view.header.input-text.weight".to_string(),
+        400.0,
+    );
+    cfg.numbers.insert(
+        "md.comp.search-view.header.supporting-text.weight".to_string(),
+        400.0,
+    );
+}
+
 pub(crate) fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
     // Source: Material Web v30 sassvars
     // Prefix: `md.comp.dialog.`
@@ -11908,6 +11978,108 @@ pub(crate) fn inject_comp_snackbar_colors_from_sys(cfg: &mut ThemeConfig) {
         cfg,
         "md.comp.snackbar.supporting-text.color",
         "md.sys.color.inverse-on-surface",
+    );
+}
+
+pub(crate) fn inject_comp_search_bar_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.search-bar.`
+
+    copy_color(
+        cfg,
+        "md.comp.search-bar.container.color",
+        "md.sys.color.surface-container-high",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.container.surface-tint-layer.color",
+        "md.sys.color.surface-tint",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.focus.indicator.color",
+        "md.sys.color.secondary",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.hover.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.hover.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.leading-icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.pressed.state-layer.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.pressed.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-bar.trailing-icon.color",
+        "md.sys.color.on-surface-variant",
+    );
+}
+
+pub(crate) fn inject_comp_search_view_colors_from_sys(cfg: &mut ThemeConfig) {
+    // Source: Material Web v30 sassvars
+    // Prefix: `md.comp.search-view.`
+
+    copy_color(
+        cfg,
+        "md.comp.search-view.container.color",
+        "md.sys.color.surface-container-high",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-view.container.surface-tint-layer.color",
+        "md.sys.color.surface-tint",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-view.divider.color",
+        "md.sys.color.outline",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-view.header.input-text.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-view.header.leading-icon.color",
+        "md.sys.color.on-surface",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-view.header.supporting-text.color",
+        "md.sys.color.on-surface-variant",
+    );
+    copy_color(
+        cfg,
+        "md.comp.search-view.header.trailing-icon.color",
+        "md.sys.color.on-surface-variant",
     );
 }
 

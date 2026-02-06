@@ -63,11 +63,21 @@ Exit criteria:
 - Delegation strategy for `Response` is chosen (no duplicated widget policy).
 - Scope is documented: what lives in `fret-imui` vs `fret-ui-kit` (imui facade) vs `fret-ui-shadcn` (visuals).
 
-- [ ] IMUIECO-scope-010 Decide whether shadcn integration is via an optional feature or a dedicated adapter module/crate.
-- [ ] IMUIECO-scope-011 Choose a canonical delegation seam for returning `Response` from canonical components.
-- [ ] IMUIECO-scope-012 Decide whether “tear-off to OS window” is docking-only for v1 (recommended) or generalized.
-- [ ] IMUIECO-scope-013 Define the `ResponseExt` signal storage model (transient vs element-local state) and document it.
-- [ ] IMUIECO-scope-014 Define a tiered delegation rule for official widgets (primitive wrappers vs canonical component adapters).
+- [x] IMUIECO-scope-010 Decide whether shadcn integration is via an optional feature or a dedicated adapter module/crate.
+  - Decision: dedicated adapter module under `fret-ui-kit` imui facade (`fret_ui_kit::imui::adapters::shadcn`), not a frontend feature toggle on `fret-imui`.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.1).
+- [x] IMUIECO-scope-011 Choose a canonical delegation seam for returning `Response` from canonical components.
+  - Decision: element-id based delegation + reporter hook; canonical components own state machines, facade only maps signals to `ResponseExt`.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.2).
+- [x] IMUIECO-scope-012 Decide whether “tear-off to OS window” is docking-only for v1 (recommended) or generalized.
+  - Decision: docking-only for v1; non-docking `ui.window(...)` / `ui.area(...)` stay in-window.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.3).
+- [x] IMUIECO-scope-013 Define the `ResponseExt` signal storage model (transient vs element-local state) and document it.
+  - Decision: hybrid model (clear-on-read transients for edge events, element-local state for sessions, last-bounds two-frame stabilization for geometry).
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.4).
+- [x] IMUIECO-scope-014 Define a tiered delegation rule for official widgets (primitive wrappers vs canonical component adapters).
+  - Decision: Tier 1 canonical adapters by default, Tier 2 primitive fallback only when necessary, Tier 3 parallel complex-policy implementation disallowed in v1.
+  - Evidence: `docs/workstreams/imui-ecosystem-facade-v1.md` (section 5.6.5).
 
 ---
 
@@ -176,15 +186,20 @@ Exit criteria:
 - Basic tests exist to prevent regressions in signals and floating behavior.
 - Perf guidance is written down (allocation patterns, caching boundaries, virtualization).
 
-- [ ] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
+- [x] IMUIECO-demo-040 Add a minimal demo showing `Response` parity signals (click/drag/context menu).
+  - Evidence: `apps/fret-demo/src/bin/imui_response_signals_demo.rs`
+  - Evidence: `apps/fret-examples/src/imui_response_signals_demo.rs`
 - [x] IMUIECO-demo-041 Add a floating-window demo (in-window float + overlay interactions).
   - Evidence: `apps/fret-demo/src/bin/imui_floating_windows_demo.rs`
   - Evidence: `apps/fret-examples/src/imui_floating_windows_demo.rs`
-- [ ] IMUIECO-test-042 Add nextest coverage for facade crates (smoke + key behavior tests):
+- [x] IMUIECO-test-042 Add nextest coverage for facade crates (smoke + key behavior tests):
   - click variants are delivered once (clear-on-read),
   - drag lifecycle is consistent across frames,
   - context-menu request is stable (mouse + keyboard if supported).
-- [ ] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
+  - Evidence: `ecosystem/fret-imui/src/lib.rs` (tests: `click_sets_clicked_true_once`, `double_click_sets_double_clicked_true_once`, `right_click_sets_context_menu_requested_true_once`, `shift_f10_sets_context_menu_requested_true_once`, `drag_started_stopped_and_delta_are_consistent`)
+- [x] IMUIECO-test-043 Add a wasm compile smoke harness for the facade surface.
+  - Evidence: `.github/workflows/ci.yml` (`Wasm Compile Smoke (imui facade)`)
+  - Evidence (local): `cargo check -p fret-authoring -p fret-imui -p fret-ui-kit --features imui --target wasm32-unknown-unknown`
 - [ ] IMUIECO-perf-044 Add a short perf guide (avoid allocations, prefer keyed identity, use virtualization/caching).
 - [ ] IMUIECO-docs-045 Document extension guidelines for third-party widget crates (author once, adapter modules).
 - [x] IMUIECO-test-046 Add one `fretboard diag` script covering floating window drag/resize + overlay coexistence (regression gate).

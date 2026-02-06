@@ -18,6 +18,26 @@ Non-goals:
   outcomes.
 - Favor suite-style headless goldens + small scripted interaction tests over pixel snapshots.
 
+### Infrastructure notes (2026-02-06)
+
+Recent Material3 and shadcn alignment work uncovered a few mechanism gaps that were worth fixing
+before continuing component surface work:
+
+- Timer dispatch: targeted `Event::Timer { token }` dispatch must still bubble so overlay-root timer
+  hooks can observe descendant timers (e.g. snackbar auto-dismiss). Evidence:
+  `crates/fret-ui/src/tree/dispatch.rs`, tests in
+  `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+  (`snackbar_action_emits_command_and_dismisses`,
+  `snackbar_dismiss_button_dismisses_without_emitting_command`).
+- Popover placement: unconstrained-height popovers should allow main-axis overflow on tiny viewports
+  (Radix/Floating UI style), while constrained/scrollable popovers should clamp to available space.
+  Evidence: `ecosystem/fret-ui-shadcn/src/popover.rs`,
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_{chrome,placement}.rs` (calendar + combobox).
+- Layout max-size: treat `max_width`/`max_height` as border-box constraints for shadcn-style
+  `w-full max-w-*` overlays so centered dialogs match web geometry. Evidence:
+  `crates/fret-ui/src/layout_engine/flow.rs`, overlay placement tests in
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs` (Dialog / AlertDialog).
+
 ## P0 (recommended)
 
 - [x] FAB (Floating Action Button) MVP surface in `ecosystem/fret-ui-material3`.
@@ -265,6 +285,36 @@ Non-goals:
               `Select::error(true)` explicitly.
           - Evidence: `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
             (`material3-select-trigger-error`).
+
+- [x] SearchBar (MVP) token surface + headless goldens.
+  - Goal: add a low-risk, token-driven “search” text-input surface to validate `md.comp.search-bar.*`
+    plumbing before implementing higher-level “search view” policies.
+  - Subtasks:
+    - Import `md.comp.search-bar.*` / `md.comp.search-view.*` scalars/colors via `material3_token_import`.
+    - Wire v30 token injection for search scalars, colors, and text styles.
+    - Implement `SearchBar` container + input + leading/trailing icons with hover/pressed state layer,
+      bounded ripple, and focus-visible ring.
+    - Headless suites: add `material3-search-bar.*.json` into `goldens/material3-headless/v1/`.
+  - Evidence:
+    - `ecosystem/fret-ui-material3/src/search_bar.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/search_bar.rs`
+    - `ecosystem/fret-ui-material3/src/bin/material3_token_import.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/material_web_v30.rs`
+    - `ecosystem/fret-ui-material3/src/tokens/v30.rs`
+    - `ecosystem/fret-ui-material3/tests/radio_alignment.rs` (`material3_headless_search_bar_suite_goldens_v1`)
+    - `goldens/material3-headless/v1/material3-search-bar.scale1_0.dark.tonal_spot.json` (representative; full matrix is generated)
+  - References:
+    - Material Web tokens: `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-bar.scss`
+      and `repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-search-view.scss`.
+    - Compose baseline: `repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/SearchBar.kt`.
+
+- [ ] SearchView (overlay) policy surface.
+  - Goal: implement the expanded “search view” overlay (results list + focus/scroll policies) on top
+    of the `SearchBar` primitive, using `md.comp.search-view.*` tokens for outcome alignment.
+  - Notes:
+    - Prefer reusing the existing overlay + listbox primitives we already hardened for Select / Autocomplete.
+    - Keep the mechanism boundary: only propose `crates/fret-ui` changes if a correct outcome cannot be expressed
+      via `fret-ui-kit` overlays and component policy.
 
 - [x] Autocomplete (outlined + filled) MVP surface.
   - Goal: provide an editable trigger with a listbox overlay using Material Web autocomplete tokens,

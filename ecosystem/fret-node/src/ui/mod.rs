@@ -66,9 +66,10 @@ pub use view_queue::{
 pub use viewport_helper::NodeGraphViewportHelper;
 
 pub use overlays::{
-    GroupRenameOverlay, NodeGraphControlsBindings, NodeGraphControlsCommandBinding,
-    NodeGraphControlsOverlay, NodeGraphEdgeToolbar, NodeGraphMiniMapBindings,
-    NodeGraphMiniMapNavigationBinding, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
-    NodeGraphToolbarSize, NodeGraphToolbarVisibility,
+    GroupRenameOverlay, NodeGraphBlackboardOverlay, NodeGraphControlsBindings,
+    NodeGraphControlsCommandBinding, NodeGraphControlsOverlay, NodeGraphEdgeToolbar,
+    NodeGraphMiniMapBindings, NodeGraphMiniMapNavigationBinding, NodeGraphMiniMapOverlay,
+    NodeGraphNodeToolbar, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphToolbarAlign,
+    NodeGraphToolbarPosition, NodeGraphToolbarSize, NodeGraphToolbarVisibility,
+    SymbolRenameOverlay,
 };

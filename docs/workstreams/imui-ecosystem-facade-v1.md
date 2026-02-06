@@ -16,6 +16,7 @@ Status snapshot (2026-02-06):
 - The minimal shared `Response` contract lives in `ecosystem/fret-authoring`.
 - `ecosystem/fret-imui` is intentionally policy-light (authoring frontend entry points + identity helpers).
 - The initial egui/imgui-like convenience surface is hosted in `ecosystem/fret-ui-kit` behind its `imui` feature.
+- M0 seam decisions are locked for v1 (integration mode, delegation seam, tear-off scope, storage model, tiered delegation).
 - `ResponseExt` now covers common v1 signals (secondary + double click, drag lifecycle + deltas, context-menu request + anchor).
 - A minimal menu-like popup primitive exists (`open_popup_at` + `begin_popup_menu` / `begin_popup_context_menu` + `menu_item`), built on `OverlayController`.
   - Menu popups now use Radix-aligned initial focus policy (pointer-open focuses the menu container; keyboard-open focuses the first focusable item when available).
@@ -37,6 +38,8 @@ Status snapshot (2026-02-06):
 - A minimal diagnostics demo + scripted repro exists for floating window drag/resize + context-menu overlay coexistence.
   - Demo: `cargo run -p fret-demo --bin imui_floating_windows_demo`
   - Script: `tools/diag-scripts/imui-float-window-drag-resize-context-menu.json`
+- A minimal response-signals demo exists for click variants + drag lifecycle + context-menu requests.
+  - Demo: `cargo run -p fret-demo --bin imui_response_signals_demo`
 
 Tracking:
 
@@ -294,6 +297,69 @@ Upstream reference anchors (Dear ImGui docking branch):
 - Hovered-viewport detection (backend contract):
   - `repo-ref/imgui/docs/BACKENDS.md` (HasMouseHoveredViewport, `io.AddMouseViewportEvent`, and handling `ImGuiViewportFlags_NoInputs`)
 
+### 5.6 M0 seam decisions (locked for v1)
+
+This section closes M0 by turning the previous open seams into explicit, implementation-oriented
+contracts.
+
+#### 5.6.1 shadcn integration mode (`IMUIECO-scope-010`)
+
+- Decision: keep shadcn integration in a dedicated adapter module under ui-kit's imui facade (for
+  example, `fret_ui_kit::imui::adapters::shadcn`), not as a `fret-ui-shadcn` optional feature on
+  `fret-imui`.
+- Rationale: preserves `fret-imui` policy-light positioning, keeps dependency direction stable,
+  and avoids feature matrix explosion at the frontend layer.
+- Consequence: shadcn-based immediate wrappers remain opt-in at call site/import level, while
+  `UiWriter` contract stays frontend-agnostic.
+
+#### 5.6.2 canonical delegation seam (`IMUIECO-scope-011`)
+
+- Decision: use element-id based delegation with a small "signal reporter" hook exposed by
+  canonical components/adapters.
+- Canonical seam contract (v1):
+  - canonical component owns interaction policy/state machine,
+  - facade provides an id + optional reporter callback,
+  - reporter emits the element id (and optional stable metadata),
+  - facade resolves `ResponseExt` by querying transients/state from that id.
+- Consequence: no duplicated button/menu/input state machines between declarative and immediate
+  surfaces.
+
+#### 5.6.3 OS-window tear-off scope (`IMUIECO-scope-012`)
+
+- Decision: keep tear-off/promotion to OS window docking-only for v1.
+- Non-docking `ui.window(...)` / `ui.area(...)` remain in-window floating surfaces.
+- Future expansion path: capability-gated generalized promotion only after docking + runner
+  lifecycle parity is stable (separate milestone, separate risk envelope).
+
+#### 5.6.4 `ResponseExt` storage model (`IMUIECO-scope-013`)
+
+- Decision: hybrid model is normative for v1:
+  - transient clear-on-read for edge events (`clicked*`, `context_menu_requested`, etc.),
+  - element-local state for sessions (`drag`, `resize`, accumulated deltas),
+  - geometry from `last_bounds_for_element` with explicit two-frame stabilization semantics.
+- Constraint: facade helpers must not keep duplicate long-lived interaction state when canonical
+  component session state already exists.
+
+#### 5.6.5 tiered delegation rule (`IMUIECO-scope-014`)
+
+- Decision: all official immediate wrappers follow a fixed three-tier rule.
+
+Tier 1 (default): canonical component adapter
+
+- Use canonical component + delegation seam; facade only maps output to `ResponseExt`.
+
+Tier 2 (allowed fallback): primitive wrapper with shared style helpers
+
+- Use mechanism primitives only when Tier 1 is unavailable or would create excessive plumbing.
+- Must reuse shared token/style resolvers to avoid visual drift.
+
+Tier 3 (not allowed in v1): parallel policy implementation for complex widgets
+
+- No second state machine for complex controls (`select`, `combobox`, rich text editor,
+  docking-aware windows).
+- If Tier 1 is unavailable, defer and track in workstream TODO instead of shipping divergent
+  behavior.
+
 ---
 
 ## 6) Text Editing Integration (Explicit Dependency)
@@ -347,15 +413,12 @@ Minimum “v1 done” outcomes:
 
 ## 9) Open Questions
 
-1) What is the best “canonical delegation seam” for returning `Response` without duplication?
-   - `with_id` callbacks,
-   - explicit “signal sink” plumbing,
-   - or a small public mechanism API for transient event recording/querying.
+1) When should generalized non-docking OS-window promotion become eligible for implementation?
+   - Candidate gate: after docking tear-off + multi-viewport arbitration reaches sustained parity
+     across native platforms and has regression gates in diag.
 
-2) How far should non-docking floating windows go toward OS-window tear-off (ImGui multi-viewport)?
-   - Keep docking-only for v1,
-   - or add a capability-gated path in ui-kit + runner for general floating surfaces.
+2) Which subset of `ResponseExt` is stable enough to graduate into shared `fret-authoring`
+   contract (if any), and what compatibility window should we commit to?
 
-3) How should `ResponseExt` evolve before we consider moving any portion into the shared contract?
-   - Keep all “rich” signals in the facade indefinitely, or
-   - graduate a minimal `ResponseCore` + stable “interaction session” types once patterns settle.
+3) What minimum adapter API should canonical component surfaces expose so third-party ecosystem
+   crates can plug into the same delegation seam without leaking runtime internals?

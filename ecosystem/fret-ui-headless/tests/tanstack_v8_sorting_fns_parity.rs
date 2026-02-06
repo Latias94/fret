@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, RowKey, Table, TanStackTableOptions, TanStackTableState, TanStackValue,
+    ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState, TanStackValue,
     toggle_sorting_tanstack,
 };
 use serde::Deserialize;
@@ -203,6 +203,7 @@ fn tanstack_v8_sorting_fns_parity() {
                 fret_ui_headless::table::BuiltInSortingFn::Text,
             )
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .build();

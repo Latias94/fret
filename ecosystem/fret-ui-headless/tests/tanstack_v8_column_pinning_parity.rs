@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, ColumnPinPosition, ColumnSizingRegion, RowKey, Table, TableState,
+    ColumnDef, ColumnPinPosition, ColumnSizingRegion, RowId, RowKey, Table, TableState,
     TanStackTableOptions, TanStackTableState,
 };
 use serde::Deserialize;
@@ -287,6 +287,7 @@ fn tanstack_v8_column_pinning_parity() {
             let table = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .initial_state(initial_state.clone())
                 .state(state.clone())
                 .options(options)
@@ -332,6 +333,7 @@ fn tanstack_v8_column_pinning_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .initial_state(initial_state)
             .state(state)
             .options(options)

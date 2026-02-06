@@ -185,6 +185,13 @@ Legend:
     - Structural validation: `ecosystem/fret-node/src/core/validate.rs`
     - Tests: `ecosystem/fret-node/src/core/tests.rs`
     - Copy/paste includes referenced symbols: `ecosystem/fret-node/src/ops/fragment.rs` + `ecosystem/fret-node/src/ops/tests.rs`
+  - UI overlays (editor affordances):
+    - Blackboard (symbols) overlay: `ecosystem/fret-node/src/ui/overlays/blackboard.rs`
+      - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_blackboard_conformance.rs`
+      - Gates: rename action hands off to `SymbolRenameOverlay`; Enter confirms rename, Escape cancels, and graph edits are deferred until confirm.
+    - Symbol rename overlay (TextInput-hosted): `ecosystem/fret-node/src/ui/overlays/group_rename.rs` (`SymbolRenameOverlay`)
+      - Conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_symbol_rename_conformance.rs`
+      - Gates: Enter commit, Escape cancel + focus restore, and Enter no-op when text is unchanged.
   - Profile concretization (Dataflow demo): `ecosystem/fret-node/src/kit/profiles/dataflow.rs` (ensures symbol-ref nodes have a typed `out` port)
 - [~] Large-graph culling + incremental updates.
   - [x] Portal subtree culling for offscreen nodes (`NodeGraphPortalHost::layout`).
