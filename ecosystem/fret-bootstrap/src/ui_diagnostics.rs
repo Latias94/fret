@@ -6922,6 +6922,10 @@ pub struct UiFrameStatsV1 {
     pub paint_cache_misses: u32,
     pub paint_cache_replayed_ops: u32,
     #[serde(default)]
+    pub paint_cache_hit_test_only_replay_allowed: u32,
+    #[serde(default)]
+    pub paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
+    #[serde(default)]
     pub paint_cache_replay_time_us: u64,
     #[serde(default)]
     pub paint_cache_bounds_translate_time_us: u64,
@@ -7310,6 +7314,10 @@ impl UiFrameStatsV1 {
             paint_cache_hits: stats.paint_cache_hits,
             paint_cache_misses: stats.paint_cache_misses,
             paint_cache_replayed_ops: stats.paint_cache_replayed_ops,
+            paint_cache_hit_test_only_replay_allowed: stats
+                .paint_cache_hit_test_only_replay_allowed,
+            paint_cache_hit_test_only_replay_rejected_key_mismatch: stats
+                .paint_cache_hit_test_only_replay_rejected_key_mismatch,
             paint_cache_replay_time_us: stats.paint_cache_replay_time.as_micros() as u64,
             paint_cache_bounds_translate_time_us: stats
                 .paint_cache_bounds_translate_time

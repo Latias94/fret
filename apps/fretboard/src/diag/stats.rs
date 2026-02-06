@@ -299,6 +299,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_nodes_performed: u32,
     pub(super) paint_nodes_performed: u32,
     pub(super) paint_cache_misses: u32,
+    pub(super) paint_cache_hit_test_only_replay_allowed: u32,
+    pub(super) paint_cache_hit_test_only_replay_rejected_key_mismatch: u32,
     pub(super) paint_cache_replay_time_us: u64,
     pub(super) paint_cache_bounds_translate_time_us: u64,
     pub(super) paint_cache_bounds_translated_nodes: u32,
@@ -1537,6 +1539,14 @@ impl BundleStatsReport {
                 obj.insert(
                     "paint_cache_misses".to_string(),
                     Value::from(row.paint_cache_misses),
+                );
+                obj.insert(
+                    "paint_cache_hit_test_only_replay_allowed".to_string(),
+                    Value::from(row.paint_cache_hit_test_only_replay_allowed),
+                );
+                obj.insert(
+                    "paint_cache_hit_test_only_replay_rejected_key_mismatch".to_string(),
+                    Value::from(row.paint_cache_hit_test_only_replay_rejected_key_mismatch),
                 );
                 obj.insert(
                     "layout_engine_solves".to_string(),
@@ -7238,6 +7248,18 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0)
                 .min(u32::MAX as u64) as u32;
+            let paint_cache_hit_test_only_replay_allowed = stats
+                .and_then(|m| m.get("paint_cache_hit_test_only_replay_allowed"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let paint_cache_hit_test_only_replay_rejected_key_mismatch = stats
+                .and_then(|m| m.get("paint_cache_hit_test_only_replay_rejected_key_mismatch"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
             let paint_cache_replay_time_us = stats
                 .and_then(|m| m.get("paint_cache_replay_time_us"))
                 .and_then(|v| v.as_u64())
@@ -7854,6 +7876,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_nodes_performed,
                 paint_nodes_performed,
                 paint_cache_misses,
+                paint_cache_hit_test_only_replay_allowed,
+                paint_cache_hit_test_only_replay_rejected_key_mismatch,
                 paint_cache_replay_time_us,
                 paint_cache_bounds_translate_time_us,
                 paint_cache_bounds_translated_nodes,

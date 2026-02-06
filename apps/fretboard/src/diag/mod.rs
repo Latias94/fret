@@ -4182,6 +4182,12 @@ See: `docs/tracy.md`.\n";
                     let top_view_cache_roots_layout_invalidated = top
                         .map(|r| r.view_cache_roots_layout_invalidated)
                         .unwrap_or(0);
+                    let top_paint_cache_hit_test_only_replay_allowed = top
+                        .map(|r| r.paint_cache_hit_test_only_replay_allowed)
+                        .unwrap_or(0);
+                    let top_paint_cache_hit_test_only_replay_rejected_key_mismatch = top
+                        .map(|r| r.paint_cache_hit_test_only_replay_rejected_key_mismatch)
+                        .unwrap_or(0);
                     let top_cache_roots_contained_relayout =
                         top.map(|r| r.cache_roots_contained_relayout).unwrap_or(0);
                     let top_set_children_barrier_writes =
@@ -4339,6 +4345,8 @@ See: `docs/tracy.md`.\n";
                         "top_view_cache_roots_cache_key_mismatch": top_view_cache_roots_cache_key_mismatch,
                         "top_view_cache_roots_needs_rerender": top_view_cache_roots_needs_rerender,
                         "top_view_cache_roots_layout_invalidated": top_view_cache_roots_layout_invalidated,
+                        "top_paint_cache_hit_test_only_replay_allowed": top_paint_cache_hit_test_only_replay_allowed,
+                        "top_paint_cache_hit_test_only_replay_rejected_key_mismatch": top_paint_cache_hit_test_only_replay_rejected_key_mismatch,
                         "top_cache_roots_contained_relayout": top_cache_roots_contained_relayout,
                         "top_set_children_barrier_writes": top_set_children_barrier_writes,
                         "top_barrier_relayouts_scheduled": top_barrier_relayouts_scheduled,
