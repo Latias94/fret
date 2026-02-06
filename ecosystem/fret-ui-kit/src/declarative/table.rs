@@ -22,11 +22,12 @@ use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
-    FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind, PaginationBounds,
-    PaginationState, Row, RowKey, SortSpec, Table, TableState, begin_column_resize, column_size,
-    compute_grouped_u64_aggregations, drag_column_resize, end_column_resize, is_column_visible,
-    is_row_expanded, is_row_selected, order_column_refs_for_grouping, order_columns,
-    pagination_bounds, sort_grouped_row_indices_in_place, split_pinned_columns,
+    FilteringFnSpec, FlatRowOrderCache, FlatRowOrderDeps, GroupedColumnMode, GroupedRowKind,
+    PaginationBounds, PaginationState, Row, RowKey, SortSpec, Table, TableOptions, TableState,
+    begin_column_resize, column_size, compute_grouped_u64_aggregations, drag_column_resize,
+    end_column_resize, is_column_visible, is_row_expanded, is_row_selected, is_some_rows_pinned,
+    order_column_refs_for_grouping, order_columns, pagination_bounds,
+    sort_grouped_row_indices_in_place, split_pinned_columns,
 };
 use crate::headless::typeahead::{TypeaheadBuffer, match_prefix_arc_str};
 
@@ -1741,66 +1742,136 @@ where
         Vec::new()
     };
 
-    let row_order = cx.with_state(FlatRowOrderCache::default, |cache| {
-        let deps = FlatRowOrderDeps {
-            items_revision,
-            data_len: data.len(),
-            sorting: sorting_key.clone(),
-            column_filters: state_value.column_filters.clone(),
-            global_filter: state_value.global_filter.clone(),
-        };
+    let has_row_pinning =
+        grouping.is_empty() && is_some_rows_pinned(&state_value.row_pinning, None);
+    let row_order = if grouping.is_empty() && !has_row_pinning {
+        Some(cx.with_state(FlatRowOrderCache::default, |cache| {
+            let deps = FlatRowOrderDeps {
+                items_revision,
+                data_len: data.len(),
+                sorting: sorting_key.clone(),
+                column_filters: state_value.column_filters.clone(),
+                global_filter: state_value.global_filter.clone(),
+            };
 
-        let started = Instant::now();
-        let (order, recomputed) = cache.row_order(data, &columns, deps);
-        let elapsed = started.elapsed();
+            let started = Instant::now();
+            let (order, recomputed) = cache.row_order(data, &columns, deps);
+            let elapsed = started.elapsed();
 
-        if profile && recomputed {
-            tracing::info!(
-                "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
-                data.len(),
-                sorting_key.len(),
-                elapsed.as_secs_f64() * 1000.0
-            );
-        }
+            if profile && recomputed {
+                tracing::info!(
+                    "table_virtualized: recompute row_order len={} sorting={} took {:.2}ms",
+                    data.len(),
+                    sorting_key.len(),
+                    elapsed.as_secs_f64() * 1000.0
+                );
+            }
 
-        order.clone()
-    });
+            order.clone()
+        }))
+    } else {
+        None
+    };
 
     let page_display_rows: Vec<DisplayRow> = if grouping.is_empty() {
-        let total_rows = row_order.len();
-        let bounds = pagination_bounds(total_rows, state_value.pagination);
-        if bounds.page_index != state_value.pagination.page_index {
-            let _ = cx.app.models_mut().update(&state, |st| {
-                st.pagination.page_index = bounds.page_index;
-            });
-        }
-        if let Some(out) = output.clone() {
-            let next = TableViewOutput {
-                filtered_row_count: total_rows,
-                pagination: bounds,
-            };
-            let _ = cx.app.models_mut().update(&out, |v| {
-                if *v != next {
-                    *v = next;
-                }
-            });
-        }
+        if has_row_pinning {
+            let table_pre = Table::builder(data)
+                .columns(columns.to_vec())
+                .global_filter_fn(FilteringFnSpec::Auto)
+                .get_row_key(|row, idx, _parent| row_key_at(row, idx))
+                .state(state_value.clone())
+                .options(TableOptions::default())
+                .build();
 
-        let page_rows: &[usize] = if bounds.page_count == 0 {
-            &[]
+            let total_rows = table_pre.pre_pagination_row_model().root_rows().len();
+            let bounds = pagination_bounds(total_rows, state_value.pagination);
+            if bounds.page_index != state_value.pagination.page_index {
+                let _ = cx.app.models_mut().update(&state, |st| {
+                    st.pagination.page_index = bounds.page_index;
+                });
+            }
+            if let Some(out) = output.clone() {
+                let next = TableViewOutput {
+                    filtered_row_count: total_rows,
+                    pagination: bounds,
+                };
+                let _ = cx.app.models_mut().update(&out, |v| {
+                    if *v != next {
+                        *v = next;
+                    }
+                });
+            }
+
+            let mut render_state = state_value.clone();
+            render_state.pagination.page_index = bounds.page_index;
+            let table = Table::builder(data)
+                .columns(columns.to_vec())
+                .global_filter_fn(FilteringFnSpec::Auto)
+                .get_row_key(|row, idx, _parent| row_key_at(row, idx))
+                .state(render_state)
+                .options(TableOptions::default())
+                .build();
+
+            let core = table.core_row_model();
+            table
+                .top_row_keys()
+                .into_iter()
+                .chain(table.center_row_keys())
+                .chain(table.bottom_row_keys())
+                .filter_map(|row_key| {
+                    let row_index = core.row_by_key(row_key)?;
+                    let row = core.row(row_index)?;
+                    if row.parent.is_some() {
+                        return None;
+                    }
+                    let data_index = row.index;
+                    if data_index >= data.len() {
+                        return None;
+                    }
+                    Some(DisplayRow::Leaf {
+                        data_index,
+                        row_key,
+                        depth: row.depth as usize,
+                    })
+                })
+                .collect()
         } else {
-            row_order
-                .get(bounds.page_start..bounds.page_end)
-                .unwrap_or_default()
-        };
-        page_rows
-            .iter()
-            .map(|&data_index| DisplayRow::Leaf {
-                data_index,
-                row_key: row_key_at(&data[data_index], data_index),
-                depth: 0,
-            })
-            .collect()
+            let row_order = row_order.expect("row_order");
+            let total_rows = row_order.len();
+            let bounds = pagination_bounds(total_rows, state_value.pagination);
+            if bounds.page_index != state_value.pagination.page_index {
+                let _ = cx.app.models_mut().update(&state, |st| {
+                    st.pagination.page_index = bounds.page_index;
+                });
+            }
+            if let Some(out) = output.clone() {
+                let next = TableViewOutput {
+                    filtered_row_count: total_rows,
+                    pagination: bounds,
+                };
+                let _ = cx.app.models_mut().update(&out, |v| {
+                    if *v != next {
+                        *v = next;
+                    }
+                });
+            }
+
+            let page_rows: &[usize] = if bounds.page_count == 0 {
+                &[]
+            } else {
+                row_order
+                    .get(bounds.page_start..bounds.page_end)
+                    .unwrap_or_default()
+            };
+            page_rows
+                .iter()
+                .map(|&data_index| DisplayRow::Leaf {
+                    data_index,
+                    row_key: row_key_at(&data[data_index], data_index),
+                    depth: 0,
+                })
+                .collect()
+        }
     } else {
         let deps = GroupedDisplayDeps {
             base: GroupedBaseDeps {

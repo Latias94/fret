@@ -422,6 +422,16 @@ ColumnDef keys referenced by upstream feature implementations:
     - Fixture snapshots: `visord_set_column_order_on_column_order_change_noop_ignores`
     - Evidence: `tools/tanstack-table-fixtures/extract-fixtures.mts` (`__onColumnOrderChange`)
 
+### UI integration notes (workstream hygiene)
+
+- [~] HTP-ui-rowpin-010 Wire `TableState.row_pinning` into `table_virtualized` (flat rows path).
+  - Done (initial integration): when row pinning is active, `ecosystem/fret-ui-kit` now computes
+    top/center/bottom display rows via the headless engine’s pinned row helpers so “keepPinnedRows”
+    and pagination interactions match the engine contract.
+    - Evidence: `ecosystem/fret-ui-kit/src/declarative/table.rs`
+  - Remaining: extend the same strategy to the grouped rows path (and decide how we want to render
+    pinned non-root rows for hierarchical datasets in the UI layer).
+
 ---
 
 ## M6.5 — Faceting parity
