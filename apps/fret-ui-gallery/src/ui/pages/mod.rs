@@ -19,6 +19,7 @@ mod form;
 mod hover_card;
 mod input;
 mod input_group;
+mod input_otp;
 mod drawer;
 mod dropdown_menu;
 mod empty;
@@ -140,6 +141,10 @@ pub(super) fn preview_input(
 
 pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     input_group::preview_input_group(cx)
+}
+
+pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    input_otp::preview_input_otp(cx)
 }
 
 pub(super) fn preview_drawer(

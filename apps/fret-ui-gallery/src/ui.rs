@@ -7621,23 +7621,7 @@ fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 }
 
 fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    #[derive(Default)]
-    struct InputOtpModels {
-        value: Option<Model<String>>,
-    }
-
-    let value = cx.with_state(InputOtpModels::default, |st| st.value.clone());
-    let value = match value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(InputOtpModels::default, |st| st.value = Some(model.clone()));
-            model
-        }
-    };
-
-    let otp = shadcn::InputOtp::new(value).length(6).into_element(cx);
-    vec![otp]
+    pages::preview_input_otp(cx)
 }
 
 fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
