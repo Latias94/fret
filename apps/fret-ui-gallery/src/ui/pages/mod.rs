@@ -16,6 +16,7 @@ mod date_picker;
 mod dialog;
 mod drawer;
 mod dropdown_menu;
+mod empty;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -119,6 +120,10 @@ pub(super) fn preview_dropdown_menu(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     dropdown_menu::preview_dropdown_menu(cx, open, last_action)
+}
+
+pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    empty::preview_empty(cx)
 }
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

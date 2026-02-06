@@ -10508,21 +10508,7 @@ fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<Any
 }
 
 fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    vec![
-        shadcn::Empty::new([
-            shadcn::empty::EmptyHeader::new([
-                shadcn::empty::EmptyTitle::new("No results.").into_element(cx),
-                shadcn::empty::EmptyDescription::new("Try adjusting your filters.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::empty::EmptyContent::new([
-                shadcn::Button::new("Clear filters").into_element(cx)
-            ])
-            .into_element(cx),
-        ])
-        .into_element(cx),
-    ]
+    pages::preview_empty(cx)
 }
 
 fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
