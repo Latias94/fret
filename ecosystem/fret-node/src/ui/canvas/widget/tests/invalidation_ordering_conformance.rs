@@ -7,13 +7,12 @@ use fret_ui::Invalidation;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::Widget as _;
 
-use crate::io::NodeGraphViewState;
 use crate::ui::internals::NodeGraphInternalsStore;
 use crate::ui::measured::{MeasuredGeometryApplyOptions, MeasuredGeometryExclusiveBatch};
 use crate::ui::{DefaultNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
 
 use super::super::NodeGraphCanvas;
-use super::{NullServices, TestUiHostImpl, make_test_graph_two_nodes_with_ports};
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
 fn paint_once(
     canvas: &mut NodeGraphCanvas,
@@ -58,7 +57,7 @@ fn measured_geometry_updates_are_observed_in_paint_without_layout() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
     let graph = host.models.insert(graph_value);
-    let view = host.models.insert(NodeGraphViewState::default());
+    let view = insert_view(&mut host);
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let measured = Arc::new(MeasuredGeometryStore::new());

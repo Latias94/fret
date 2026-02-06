@@ -301,6 +301,17 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/draw_order_invalidation_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/drag_preview_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_port_anchor_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edge_labels_tile_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/cached_edges_tile_equivalence_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_route_anchor_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_label_style_override_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_bezier_tangent_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_size_zoom_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_step_tangent_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_marker_tangent_fallback_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_types_invalidation_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/invalidation_ordering_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/measured_output_store_conformance.rs`
 - [x] Split canvas geometry module into small modules to reduce drift (order/origin/layout).
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/mod.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/geometry/order.rs`
