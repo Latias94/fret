@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
 use fret_core::{
-    Axis, Color, Corners, Edges, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
-    PressableProps, TextAreaProps, TextInputProps, TextProps,
+    PressableProps, SemanticsProps, TextAreaProps, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -36,6 +37,8 @@ pub enum InputGroupControlKind {
 pub struct InputGroup {
     model: Model<String>,
     control: InputGroupControlKind,
+    test_id: Option<Arc<str>>,
+    control_test_id: Option<Arc<str>>,
     leading: Vec<AnyElement>,
     trailing: Vec<AnyElement>,
     block_start: Vec<AnyElement>,
@@ -63,6 +66,8 @@ impl std::fmt::Debug for InputGroup {
         f.debug_struct("InputGroup")
             .field("model", &"<model>")
             .field("control", &self.control)
+            .field("test_id", &self.test_id.as_deref())
+            .field("control_test_id", &self.control_test_id.as_deref())
             .field("leading_len", &self.leading.len())
             .field("trailing_len", &self.trailing.len())
             .field("block_start_len", &self.block_start.len())
@@ -90,6 +95,8 @@ impl InputGroup {
         Self {
             model,
             control: InputGroupControlKind::Input,
+            test_id: None,
+            control_test_id: None,
             leading: Vec::new(),
             trailing: Vec::new(),
             block_start: Vec::new(),
@@ -120,6 +127,16 @@ impl InputGroup {
 
     pub fn textarea(self) -> Self {
         self.control(InputGroupControlKind::Textarea)
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn control_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.control_test_id = Some(id.into());
+        self
     }
 
     pub fn leading<I>(mut self, children: I) -> Self
@@ -318,6 +335,8 @@ impl InputGroup {
         let cancel_command = self.cancel_command;
         let model = self.model;
         let textarea_min_height = self.textarea_min_height;
+        let test_id = self.test_id;
+        let control_test_id = self.control_test_id;
         let border_width_override = self.border_width_override;
         let corner_radii_override = self.corner_radii_override;
 
@@ -364,7 +383,7 @@ impl InputGroup {
         let block_control_min_height =
             Px((resolved.min_height.0 - root_border.top.0 - root_border.bottom.0).max(0.0));
 
-        cx.container(
+        let root = cx.container(
             fret_ui::element::ContainerProps {
                 layout: root_layout,
                 background: None,
@@ -411,6 +430,7 @@ impl InputGroup {
 
                             let mut input = TextInputProps::new(model.clone());
                             input.a11y_label = a11y_label.clone();
+                            input.test_id = control_test_id.clone();
                             input.submit_command = submit_command;
                             input.cancel_command = cancel_command;
                             input.chrome = chrome;
@@ -441,6 +461,7 @@ impl InputGroup {
 
                             let mut props = TextAreaProps::new(model.clone());
                             props.a11y_label = a11y_label.clone();
+                            props.test_id = control_test_id.clone();
                             props.chrome = chrome;
                             props.text_style = text_style.clone();
                             props.min_height = textarea_min_height;
@@ -618,6 +639,7 @@ impl InputGroup {
 
                     let mut input = TextInputProps::new(model);
                     input.a11y_label = a11y_label;
+                    input.test_id = control_test_id.clone();
                     input.submit_command = submit_command;
                     input.cancel_command = cancel_command;
                     input.chrome = chrome;
@@ -714,6 +736,19 @@ impl InputGroup {
                     )]
                 }
             },
+        );
+
+        let Some(test_id) = test_id else {
+            return root;
+        };
+
+        cx.semantics(
+            SemanticsProps {
+                role: SemanticsRole::Group,
+                test_id: Some(test_id),
+                ..Default::default()
+            },
+            move |_cx| vec![root],
         )
     }
 }

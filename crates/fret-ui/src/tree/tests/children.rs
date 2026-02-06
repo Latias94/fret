@@ -5,9 +5,9 @@ fn set_children_noops_when_unchanged() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
 
-    let root = ui.create_node(TestStack::default());
-    let a = ui.create_node(TestStack::default());
-    let b = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let a = ui.create_node(TestStack);
+    let b = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![a, b]);
@@ -29,9 +29,9 @@ fn set_children_invalidates_parent_when_changed() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(AppWindowId::default());
 
-    let root = ui.create_node(TestStack::default());
-    let a = ui.create_node(TestStack::default());
-    let b = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
+    let a = ui.create_node(TestStack);
+    let b = ui.create_node(TestStack);
 
     ui.set_root(root);
     ui.set_children(root, vec![a, b]);

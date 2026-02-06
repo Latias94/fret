@@ -33,6 +33,11 @@ impl AnyElement {
         }
     }
 
+    /// Attach layout-transparent semantics metadata to this element (ADR 1161).
+    ///
+    /// Prefer this over wrapping a subtree in `Semantics` when you only need to stamp
+    /// `test_id` / `label` / `role` / `value` for diagnostics or UI automation, since `Semantics`
+    /// introduces a real layout node.
     pub fn attach_semantics(mut self, decoration: SemanticsDecoration) -> Self {
         self.semantics_decoration = Some(match self.semantics_decoration.take() {
             Some(existing) => existing.merge(decoration),
@@ -392,6 +397,19 @@ pub struct SemanticsDecoration {
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
     pub test_id: Option<Arc<str>>,
     pub value: Option<Arc<str>>,
+    pub disabled: Option<bool>,
+    pub selected: Option<bool>,
+    pub expanded: Option<bool>,
+    /// Tri-state checked override (Some(None) clears; Some(Some(v)) sets to v).
+    pub checked: Option<Option<bool>>,
+    /// Declarative-only: element ID of the active descendant for composite widgets.
+    pub active_descendant_element: Option<u64>,
+    /// Declarative-only: element ID of a node which labels this node (`aria-labelledby`).
+    pub labelled_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which describes this node (`aria-describedby`).
+    pub described_by_element: Option<u64>,
+    /// Declarative-only: element ID of a node which this node controls (`aria-controls`).
+    pub controls_element: Option<u64>,
 }
 
 impl SemanticsDecoration {
@@ -402,6 +420,16 @@ impl SemanticsDecoration {
             label: other.label.or(self.label),
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
+            disabled: other.disabled.or(self.disabled),
+            selected: other.selected.or(self.selected),
+            expanded: other.expanded.or(self.expanded),
+            checked: other.checked.or(self.checked),
+            active_descendant_element: other
+                .active_descendant_element
+                .or(self.active_descendant_element),
+            labelled_by_element: other.labelled_by_element.or(self.labelled_by_element),
+            described_by_element: other.described_by_element.or(self.described_by_element),
+            controls_element: other.controls_element.or(self.controls_element),
         }
     }
 
@@ -424,12 +452,56 @@ impl SemanticsDecoration {
         self.value = Some(value.into());
         self
     }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn selected(mut self, selected: bool) -> Self {
+        self.selected = Some(selected);
+        self
+    }
+
+    pub fn expanded(mut self, expanded: bool) -> Self {
+        self.expanded = Some(expanded);
+        self
+    }
+
+    pub fn checked(mut self, checked: Option<bool>) -> Self {
+        self.checked = Some(checked);
+        self
+    }
+
+    pub fn active_descendant_element(mut self, element: u64) -> Self {
+        self.active_descendant_element = Some(element);
+        self
+    }
+
+    pub fn labelled_by_element(mut self, element: u64) -> Self {
+        self.labelled_by_element = Some(element);
+        self
+    }
+
+    pub fn described_by_element(mut self, element: u64) -> Self {
+        self.described_by_element = Some(element);
+        self
+    }
+
+    pub fn controls_element(mut self, element: u64) -> Self {
+        self.controls_element = Some(element);
+        self
+    }
 }
 
 /// A transparent semantics wrapper for structuring the accessibility tree.
 ///
 /// This is intentionally input-transparent (hit-test passes through) and paint-transparent: it
 /// only contributes layout and semantics.
+///
+/// Note: `Semantics` is a real layout wrapper. Do not use it only to stamp `test_id` / labels for
+/// UI automation; prefer `AnyElement::attach_semantics` (`SemanticsDecoration`) to avoid subtle
+/// layout regressions.
 #[derive(Debug, Clone)]
 pub struct SemanticsProps {
     pub layout: LayoutStyle,
@@ -572,7 +644,7 @@ impl Default for EffectLayerProps {
 ///
 /// This is a mechanism-only primitive intended to support GPUI-style view caching experiments
 /// without committing to a stable authoring API.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct ViewCacheProps {
     pub layout: LayoutStyle,
     /// Whether the subtree should be treated as layout-contained by the runtime when view caching is enabled.
@@ -582,16 +654,6 @@ pub struct ViewCacheProps {
     /// The runtime will reuse cached output for this view-cache root only when the computed key is
     /// unchanged. This mirrors GPUI's `ViewCacheKey` gating behavior.
     pub cache_key: u64,
-}
-
-impl Default for ViewCacheProps {
-    fn default() -> Self {
-        Self {
-            layout: LayoutStyle::default(),
-            contained_layout: false,
-            cache_key: 0,
-        }
-    }
 }
 
 /// Paint-only transform wrapper for declarative element subtrees.
@@ -697,7 +759,7 @@ impl Default for AnchoredProps {
 ///
 /// This is renderer-friendly: runtimes can approximate blur by drawing multiple expanded quads with
 /// alpha falloff (ADR 0060) until we have a true blur pipeline.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowLayerStyle {
     pub color: Color,
     pub offset_x: Px,
@@ -712,7 +774,7 @@ pub struct ShadowLayerStyle {
 ///
 /// Many Tailwind/shadcn recipes are multi-layer shadows (e.g. `shadow-md`), so we support up to two
 /// layers without forcing heap allocation (keeps `ContainerProps` `Copy`).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ShadowStyle {
     pub primary: ShadowLayerStyle,
     pub secondary: Option<ShadowLayerStyle>,
@@ -860,7 +922,7 @@ pub enum RingPlacement {
 ///
 /// This is intentionally small and renderer-friendly: it maps to one or two `SceneOp::Quad`
 /// operations.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RingStyle {
     pub placement: RingPlacement,
     pub width: Px,
@@ -1022,6 +1084,12 @@ pub struct TextInputProps {
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
     pub active_descendant: Option<NodeId>,
+    /// Declarative-only: element ID of a node which this text input controls.
+    ///
+    /// This is an authoring convenience for relationships like `aria-controls` where the target
+    /// is another declarative element. The runtime resolves this into a `NodeId` during semantics
+    /// snapshot production.
+    pub controls_element: Option<u64>,
     pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
     pub text_style: TextStyle,
@@ -1041,6 +1109,7 @@ impl TextInputProps {
             test_id: None,
             placeholder: None,
             active_descendant: None,
+            controls_element: None,
             expanded: None,
             chrome: TextInputStyle::default(),
             text_style: TextStyle::default(),
@@ -1064,6 +1133,7 @@ impl std::fmt::Debug for TextInputProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
             .field("text_style", &self.text_style)

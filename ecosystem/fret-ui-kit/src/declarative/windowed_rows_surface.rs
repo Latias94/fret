@@ -23,7 +23,7 @@ use std::panic::Location;
 
 use fret_core::{Point, Px, Rect, Size};
 use fret_runtime::FrameId;
-use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, UiPointerActionHost};
+use fret_ui::action::{ActionCx, OnTimer, PointerDownCx, PointerMoveCx, UiPointerActionHost};
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
     AnyElement, CanvasProps, Length, PointerRegionProps, ScrollAxis, ScrollProps,
@@ -131,6 +131,9 @@ impl Default for WindowedRowsSurfaceProps {
         scroll.axis = ScrollAxis::Y;
         scroll.layout.size.width = Length::Fill;
         scroll.layout.size.height = Length::Fill;
+        // This surface's paint output depends on the scroll offset (visible window changes), so
+        // scroll-handle updates must be allowed to invalidate view-cache reuse.
+        scroll.windowed_paint = true;
 
         let mut canvas = CanvasProps::default();
         canvas.layout.size.width = Length::Fill;
@@ -330,6 +333,7 @@ pub struct WindowedRowsSurfacePointerHandlers {
     pub on_pointer_move: Option<OnWindowedRowsPointerMove>,
     pub on_pointer_up: Option<OnWindowedRowsPointerUp>,
     pub on_pointer_cancel: Option<OnWindowedRowsPointerCancel>,
+    pub on_timer: Option<OnTimer>,
 }
 
 fn row_index_for_pointer(
@@ -405,6 +409,7 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         on_pointer_move,
         on_pointer_up,
         on_pointer_cancel,
+        on_timer,
     } = handlers;
 
     let WindowedRowsSurfaceProps {
@@ -484,6 +489,9 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
 
     scroll.axis = ScrollAxis::Y;
     scroll.scroll_handle = Some(scroll_handle.clone());
+    // This surface's paint output depends on the scroll offset (visible window changes), so
+    // scroll-handle updates must be allowed to invalidate view-cache reuse.
+    scroll.windowed_paint = true;
 
     canvas.layout.size.width = Length::Fill;
     canvas.layout.size.height = Length::Px(content_h);
@@ -500,6 +508,10 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
         let on_paint_frame = on_paint_frame.clone();
 
         vec![cx.pointer_region(pointer, move |cx| {
+            if let Some(on_timer) = on_timer.clone() {
+                cx.timer_on_timer_for(cx.root_id(), on_timer);
+            }
+
             if let Some(on_pointer_down) = on_pointer_down.clone() {
                 let scroll_handle = scroll_handle.clone();
                 let metrics = metrics.clone();
@@ -604,4 +616,16 @@ pub fn windowed_rows_surface_with_pointer_region<H: UiHost>(
             }
         })]
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_props_enable_windowed_paint() {
+        let props = WindowedRowsSurfaceProps::default();
+        assert_eq!(props.scroll.axis, ScrollAxis::Y);
+        assert!(props.scroll.windowed_paint);
+    }
 }

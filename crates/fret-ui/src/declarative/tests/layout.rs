@@ -6356,6 +6356,57 @@ fn container_applies_padding_and_paints_background() {
 }
 
 #[test]
+fn container_border_change_invalidates_child_layout() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+    let mut text = FakeTextService::default();
+
+    let mut root: Option<NodeId> = None;
+    for pass in 0..2 {
+        let border = if pass == 0 { Px(0.0) } else { Px(4.0) };
+        let rendered = render_root(
+            &mut ui,
+            &mut app,
+            &mut text,
+            window,
+            bounds,
+            "container-border-change-invalidates-child-layout",
+            |cx| {
+                let container = crate::element::ContainerProps {
+                    border: fret_core::Edges::all(border),
+                    ..Default::default()
+                };
+
+                vec![cx.container(container, |cx| vec![cx.text("hi")])]
+            },
+        );
+        let root_node = *root.get_or_insert(rendered);
+        if pass == 0 {
+            ui.set_root(root_node);
+        } else {
+            assert_eq!(
+                root_node, rendered,
+                "expected stable root node across frames"
+            );
+        }
+
+        ui.layout_all(&mut app, &mut text, bounds, 1.0);
+        let container_node = ui.children(root_node)[0];
+        let text_node = ui.children(container_node)[0];
+        let text_bounds = ui.debug_node_bounds(text_node).expect("text bounds");
+
+        assert_eq!(text_bounds.origin.x, border);
+        assert_eq!(text_bounds.origin.y, border);
+
+        app.advance_frame();
+    }
+}
+
+#[test]
 fn container_shrink_wraps_to_max_child_under_definite_parent_bounds() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -6423,11 +6474,15 @@ fn container_nested_chains_do_not_trigger_extra_engine_solves_when_clean() {
         bounds,
         "container-nested-clean-solves",
         |cx| {
-            let mut outer = crate::element::ContainerProps::default();
-            outer.padding = fret_core::Edges::all(Px(2.0));
+            let outer = crate::element::ContainerProps {
+                padding: fret_core::Edges::all(Px(2.0)),
+                ..Default::default()
+            };
 
-            let mut inner = crate::element::ContainerProps::default();
-            inner.padding = fret_core::Edges::all(Px(1.0));
+            let inner = crate::element::ContainerProps {
+                padding: fret_core::Edges::all(Px(1.0)),
+                ..Default::default()
+            };
 
             vec![cx.container(outer, |cx| {
                 vec![cx.container(inner, |cx| vec![cx.text("x")])]

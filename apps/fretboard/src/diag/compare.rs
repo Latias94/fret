@@ -537,6 +537,14 @@ pub(super) fn read_latest_pointer(out_dir: &Path) -> Option<PathBuf> {
 }
 
 pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
+    fn parse_leading_ts(name: &str) -> Option<u64> {
+        let digits: String = name.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if digits.is_empty() {
+            return None;
+        }
+        digits.parse::<u64>().ok()
+    }
+
     let mut best: Option<(u64, PathBuf)> = None;
     let entries = std::fs::read_dir(out_dir).ok()?;
     for entry in entries.flatten() {
@@ -545,7 +553,7 @@ pub(super) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
             continue;
         }
         let name = entry.file_name().to_string_lossy().to_string();
-        let Ok(ts) = name.parse::<u64>() else {
+        let Some(ts) = parse_leading_ts(&name) else {
             continue;
         };
         match &best {
@@ -1290,6 +1298,9 @@ pub(super) struct PerfThresholds {
     pub(super) max_top_total_us: Option<u64>,
     pub(super) max_top_layout_us: Option<u64>,
     pub(super) max_top_solve_us: Option<u64>,
+    pub(super) max_pointer_move_dispatch_us: Option<u64>,
+    pub(super) max_pointer_move_hit_test_us: Option<u64>,
+    pub(super) max_pointer_move_global_changes: Option<u64>,
 }
 
 impl PerfThresholds {
@@ -1297,6 +1308,9 @@ impl PerfThresholds {
         self.max_top_total_us.is_some()
             || self.max_top_layout_us.is_some()
             || self.max_top_solve_us.is_some()
+            || self.max_pointer_move_dispatch_us.is_some()
+            || self.max_pointer_move_hit_test_us.is_some()
+            || self.max_pointer_move_global_changes.is_some()
     }
 }
 
@@ -1385,6 +1399,15 @@ pub(super) fn read_perf_baseline_file(
             max_top_solve_us: t
                 .and_then(|m| m.get("max_top_solve_us"))
                 .and_then(|v| v.as_u64()),
+            max_pointer_move_dispatch_us: t
+                .and_then(|m| m.get("max_pointer_move_dispatch_us"))
+                .and_then(|v| v.as_u64()),
+            max_pointer_move_hit_test_us: t
+                .and_then(|m| m.get("max_pointer_move_hit_test_us"))
+                .and_then(|v| v.as_u64()),
+            max_pointer_move_global_changes: t
+                .and_then(|m| m.get("max_pointer_move_global_changes"))
+                .and_then(|v| v.as_u64()),
         };
 
         thresholds_by_script.insert(script.to_string(), thresholds);
@@ -1422,6 +1445,9 @@ pub(super) fn scan_perf_threshold_failures(
     max_total_time_us: u64,
     max_layout_time_us: u64,
     max_layout_engine_solve_time_us: u64,
+    max_pointer_move_dispatch_time_us: u64,
+    max_pointer_move_hit_test_time_us: u64,
+    max_pointer_move_global_changes: u64,
 ) -> Vec<serde_json::Value> {
     let mut out: Vec<serde_json::Value> = Vec::new();
     let (threshold_total, source_total) =
@@ -1430,6 +1456,19 @@ pub(super) fn scan_perf_threshold_failures(
         resolve_threshold(cli.max_top_layout_us, baseline.max_top_layout_us);
     let (threshold_solve, source_solve) =
         resolve_threshold(cli.max_top_solve_us, baseline.max_top_solve_us);
+    let (threshold_pointer_move_dispatch, source_pointer_move_dispatch) = resolve_threshold(
+        cli.max_pointer_move_dispatch_us,
+        baseline.max_pointer_move_dispatch_us,
+    );
+    let (threshold_pointer_move_hit_test, source_pointer_move_hit_test) = resolve_threshold(
+        cli.max_pointer_move_hit_test_us,
+        baseline.max_pointer_move_hit_test_us,
+    );
+    let (threshold_pointer_move_global_changes, source_pointer_move_global_changes) =
+        resolve_threshold(
+            cli.max_pointer_move_global_changes,
+            baseline.max_pointer_move_global_changes,
+        );
 
     if let Some(threshold_us) = threshold_total
         && max_total_time_us > threshold_us
@@ -1463,6 +1502,42 @@ pub(super) fn scan_perf_threshold_failures(
             "threshold_us": threshold_us,
             "threshold_source": source_solve,
             "actual_us": max_layout_engine_solve_time_us,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    if let Some(threshold_us) = threshold_pointer_move_dispatch
+        && max_pointer_move_dispatch_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "pointer_move_max_dispatch_time_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_pointer_move_dispatch,
+            "actual_us": max_pointer_move_dispatch_time_us,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    if let Some(threshold_us) = threshold_pointer_move_hit_test
+        && max_pointer_move_hit_test_time_us > threshold_us
+    {
+        out.push(serde_json::json!({
+            "metric": "pointer_move_max_hit_test_time_us",
+            "threshold_us": threshold_us,
+            "threshold_source": source_pointer_move_hit_test,
+            "actual_us": max_pointer_move_hit_test_time_us,
+            "script": script,
+            "sort": sort.as_str(),
+        }));
+    }
+    if let Some(threshold) = threshold_pointer_move_global_changes
+        && max_pointer_move_global_changes > threshold
+    {
+        out.push(serde_json::json!({
+            "metric": "pointer_move_snapshots_with_global_changes",
+            "threshold": threshold,
+            "threshold_source": source_pointer_move_global_changes,
+            "actual": max_pointer_move_global_changes,
             "script": script,
             "sort": sort.as_str(),
         }));

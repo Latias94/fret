@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, RowKey, Table, TanStackTableOptions, TanStackTableState, set_column_order_for,
+    ColumnDef, ColumnSizingRegion, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
+    set_column_order_for,
 };
 use serde::Deserialize;
 
@@ -40,7 +42,64 @@ struct CoreModelExpect {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+struct RowModelSnapshot {
+    root: Vec<String>,
+    flat: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ColumnSizingExpect {
+    total_size: f32,
+    left_total_size: f32,
+    center_total_size: f32,
+    right_total_size: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ColumnStartExpect {
+    all: HashMap<String, f32>,
+    left: HashMap<String, Option<f32>>,
+    center: HashMap<String, Option<f32>>,
+    right: HashMap<String, Option<f32>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ColumnAfterExpect {
+    all: HashMap<String, f32>,
+    left: HashMap<String, Option<f32>>,
+    center: HashMap<String, Option<f32>>,
+    right: HashMap<String, Option<f32>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 struct FixtureExpect {
+    core: RowModelSnapshot,
+    filtered: RowModelSnapshot,
+    sorted: RowModelSnapshot,
+    expanded: RowModelSnapshot,
+    paginated: RowModelSnapshot,
+    row_model: RowModelSnapshot,
+    page_count: i32,
+    row_count: usize,
+    can_previous_page: bool,
+    can_next_page: bool,
+    page_options: Vec<usize>,
+    selected: RowModelSnapshot,
+    filtered_selected: RowModelSnapshot,
+    grouped_selected: RowModelSnapshot,
+    is_all_rows_selected: bool,
+    is_some_rows_selected: bool,
+    is_all_page_rows_selected: bool,
+    is_some_page_rows_selected: bool,
+    is_all_rows_expanded: bool,
+    is_some_rows_expanded: bool,
+    can_some_rows_expand: bool,
+    #[serde(rename = "column_sizing")]
+    sizing: ColumnSizingExpect,
+    #[serde(rename = "column_start")]
+    starts: ColumnStartExpect,
+    #[serde(rename = "column_after")]
+    after: ColumnAfterExpect,
     core_model: CoreModelExpect,
     #[serde(default)]
     next_state: Option<serde_json::Value>,
@@ -81,6 +140,22 @@ struct Fixture {
     columns_meta: Vec<FixtureColumnMeta>,
     data: Vec<FixtureRow>,
     snapshots: Vec<FixtureSnapshot>,
+}
+
+fn snapshot_row_model<'a, TData>(
+    model: &fret_ui_headless::table::RowModel<'a, TData>,
+) -> RowModelSnapshot {
+    let root = model
+        .root_rows()
+        .iter()
+        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .collect();
+    let flat = model
+        .flat_rows()
+        .iter()
+        .filter_map(|&i| model.row(i).map(|r| r.key.0.to_string()))
+        .collect();
+    RowModelSnapshot { root, flat }
 }
 
 #[test]
@@ -126,24 +201,45 @@ fn tanstack_v8_visibility_ordering_parity() {
         let tanstack_state = TanStackTableState::from_json(&snap.state).expect("tanstack state");
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
+        let column_visibility_hook_noop = snap
+            .options
+            .get("__onColumnVisibilityChange")
+            .and_then(|v| v.as_str())
+            .is_some_and(|v| v == "noop");
+        let column_order_hook_noop = snap
+            .options
+            .get("__onColumnOrderChange")
+            .and_then(|v| v.as_str())
+            .is_some_and(|v| v == "noop");
+
         for action in &snap.actions {
             let table = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .state(state.clone())
                 .options(options)
                 .build();
 
             match action {
                 FixtureAction::ToggleColumnVisibility { column_id, value } => {
+                    if column_visibility_hook_noop {
+                        continue;
+                    }
                     state.column_visibility = table
                         .toggled_column_visibility(column_id.as_str(), *value)
                         .unwrap_or_else(|| panic!("unknown column in action: {column_id}"));
                 }
                 FixtureAction::ToggleAllColumnsVisible { value } => {
+                    if column_visibility_hook_noop {
+                        continue;
+                    }
                     state.column_visibility = table.toggled_all_columns_visible(*value);
                 }
                 FixtureAction::SetColumnOrder { order } => {
+                    if column_order_hook_noop {
+                        continue;
+                    }
                     set_column_order_for(
                         &mut state.column_order,
                         order.iter().map(|id| id.as_str()),
@@ -173,9 +269,278 @@ fn tanstack_v8_visibility_ordering_parity() {
         let table = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .state(state)
             .options(options)
             .build();
+
+        let core = snapshot_row_model(table.core_row_model());
+        let filtered = snapshot_row_model(table.filtered_row_model());
+        let sorted = snapshot_row_model(table.sorted_row_model());
+        let expanded = snapshot_row_model(table.expanded_row_model());
+        let row_model = snapshot_row_model(table.row_model());
+
+        assert_eq!(
+            core.root, snap.expect.core.root,
+            "snapshot {} core root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            core.flat, snap.expect.core.flat,
+            "snapshot {} core flat mismatch",
+            snap.id
+        );
+        assert_eq!(
+            filtered.root, snap.expect.filtered.root,
+            "snapshot {} filtered root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            filtered.flat, snap.expect.filtered.flat,
+            "snapshot {} filtered flat mismatch",
+            snap.id
+        );
+        assert_eq!(
+            sorted.root, snap.expect.sorted.root,
+            "snapshot {} sorted root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            sorted.flat, snap.expect.sorted.flat,
+            "snapshot {} sorted flat mismatch",
+            snap.id
+        );
+        assert_eq!(
+            expanded.root, snap.expect.expanded.root,
+            "snapshot {} expanded root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            expanded.flat, snap.expect.expanded.flat,
+            "snapshot {} expanded flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            row_model.root, snap.expect.row_model.root,
+            "snapshot {} row_model root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            row_model.flat, snap.expect.row_model.flat,
+            "snapshot {} row_model flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            row_model.root, snap.expect.paginated.root,
+            "snapshot {} paginated root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            row_model.flat, snap.expect.paginated.flat,
+            "snapshot {} paginated flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.page_count(),
+            snap.expect.page_count,
+            "snapshot {} page_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.row_count(),
+            snap.expect.row_count,
+            "snapshot {} row_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_previous_page(),
+            snap.expect.can_previous_page,
+            "snapshot {} can_previous_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_next_page(),
+            snap.expect.can_next_page,
+            "snapshot {} can_next_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.page_options(),
+            snap.expect.page_options,
+            "snapshot {} page_options mismatch",
+            snap.id
+        );
+
+        let selected = snapshot_row_model(table.selected_row_model());
+        assert_eq!(
+            selected.root, snap.expect.selected.root,
+            "snapshot {} selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            selected.flat, snap.expect.selected.flat,
+            "snapshot {} selected flat mismatch",
+            snap.id
+        );
+
+        let filtered_selected = snapshot_row_model(table.filtered_selected_row_model());
+        assert_eq!(
+            filtered_selected.root, snap.expect.filtered_selected.root,
+            "snapshot {} filtered_selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            filtered_selected.flat, snap.expect.filtered_selected.flat,
+            "snapshot {} filtered_selected flat mismatch",
+            snap.id
+        );
+
+        let grouped_selected = snapshot_row_model(table.grouped_selected_row_model());
+        assert_eq!(
+            grouped_selected.root, snap.expect.grouped_selected.root,
+            "snapshot {} grouped_selected root mismatch",
+            snap.id
+        );
+        assert_eq!(
+            grouped_selected.flat, snap.expect.grouped_selected.flat,
+            "snapshot {} grouped_selected flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.is_all_rows_selected(),
+            snap.expect.is_all_rows_selected,
+            "snapshot {} is_all_rows_selected mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_some_rows_selected(),
+            snap.expect.is_some_rows_selected,
+            "snapshot {} is_some_rows_selected mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_all_page_rows_selected(),
+            snap.expect.is_all_page_rows_selected,
+            "snapshot {} is_all_page_rows_selected mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_some_page_rows_selected(),
+            snap.expect.is_some_page_rows_selected,
+            "snapshot {} is_some_page_rows_selected mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.is_all_rows_expanded(),
+            snap.expect.is_all_rows_expanded,
+            "snapshot {} is_all_rows_expanded mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.is_some_rows_expanded(),
+            snap.expect.is_some_rows_expanded,
+            "snapshot {} is_some_rows_expanded mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_some_rows_expand(),
+            snap.expect.can_some_rows_expand,
+            "snapshot {} can_some_rows_expand mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.total_size(),
+            snap.expect.sizing.total_size,
+            "snapshot {} column_sizing.total_size mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.left_total_size(),
+            snap.expect.sizing.left_total_size,
+            "snapshot {} column_sizing.left_total_size mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.center_total_size(),
+            snap.expect.sizing.center_total_size,
+            "snapshot {} column_sizing.center_total_size mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.right_total_size(),
+            snap.expect.sizing.right_total_size,
+            "snapshot {} column_sizing.right_total_size mismatch",
+            snap.id
+        );
+
+        for (col_id, expected) in &snap.expect.starts.all {
+            let actual = table.column_start(col_id.as_str(), ColumnSizingRegion::All);
+            assert_eq!(
+                actual,
+                Some(*expected),
+                "snapshot {} column_start(all,{col_id}) mismatch",
+                snap.id
+            );
+        }
+        for (col_id, expected) in &snap.expect.after.all {
+            let actual = table.column_after(col_id.as_str(), ColumnSizingRegion::All);
+            assert_eq!(
+                actual,
+                Some(*expected),
+                "snapshot {} column_after(all,{col_id}) mismatch",
+                snap.id
+            );
+        }
+
+        let starts = [
+            (ColumnSizingRegion::Left, &snap.expect.starts.left, "left"),
+            (
+                ColumnSizingRegion::Center,
+                &snap.expect.starts.center,
+                "center",
+            ),
+            (
+                ColumnSizingRegion::Right,
+                &snap.expect.starts.right,
+                "right",
+            ),
+        ];
+        for (region, by_col, label) in starts {
+            for (col_id, expected) in by_col {
+                let actual = table.column_start(col_id.as_str(), region);
+                assert_eq!(
+                    actual, *expected,
+                    "snapshot {} column_start({label},{col_id}) mismatch",
+                    snap.id
+                );
+            }
+        }
+
+        let after = [
+            (ColumnSizingRegion::Left, &snap.expect.after.left, "left"),
+            (
+                ColumnSizingRegion::Center,
+                &snap.expect.after.center,
+                "center",
+            ),
+            (ColumnSizingRegion::Right, &snap.expect.after.right, "right"),
+        ];
+        for (region, by_col, label) in after {
+            for (col_id, expected) in by_col {
+                let actual = table.column_after(col_id.as_str(), region);
+                assert_eq!(
+                    actual, *expected,
+                    "snapshot {} column_after({label},{col_id}) mismatch",
+                    snap.id
+                );
+            }
+        }
 
         let model = table.core_model_snapshot();
         let actual = LeafColumnsExpect {

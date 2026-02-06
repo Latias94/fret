@@ -7,7 +7,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InteractivityGateProps, LayoutStyle, Length,
-    OpacityProps, Overflow, SemanticsProps, VisualTransformProps,
+    OpacityProps, Overflow, SemanticsDecoration, VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -26,32 +26,60 @@ use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 
-fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
-    fn visit(node: &AnyElement, best: &mut Option<Size>) {
-        if let ElementKind::Container(ContainerProps { layout, .. }) = &node.kind {
+#[derive(Debug, Clone, Copy)]
+struct SizeHintPx {
+    fixed_width: Option<Px>,
+    fixed_height: Option<Px>,
+    max_height: Option<Px>,
+}
+
+fn size_hint_px(element: &AnyElement) -> SizeHintPx {
+    fn visit(node: &AnyElement, hint: &mut SizeHintPx) {
+        let layout = match &node.kind {
+            ElementKind::Container(ContainerProps { layout, .. }) => Some(layout),
+            ElementKind::Scroll(fret_ui::element::ScrollProps { layout, .. }) => Some(layout),
+            _ => None,
+        };
+        if let Some(layout) = layout {
             if let Length::Px(w) = layout.size.width {
-                let h = match layout.size.height {
-                    Length::Px(h) => h,
-                    _ => Px(160.0),
-                };
-                let candidate = Size::new(w, h);
-                if best
-                    .map(|cur| candidate.width.0 > cur.width.0)
-                    .unwrap_or(true)
-                {
-                    *best = Some(candidate);
-                }
+                hint.fixed_width = Some(
+                    hint.fixed_width
+                        .map(|cur| if w.0 > cur.0 { w } else { cur })
+                        .unwrap_or(w),
+                );
+            }
+            if let Length::Px(h) = layout.size.height {
+                hint.fixed_height = Some(
+                    hint.fixed_height
+                        .map(|cur| if h.0 > cur.0 { h } else { cur })
+                        .unwrap_or(h),
+                );
+            }
+            if let Some(max_h) = layout.size.max_height {
+                hint.max_height = Some(
+                    hint.max_height
+                        .map(|cur| if max_h.0 > cur.0 { max_h } else { cur })
+                        .unwrap_or(max_h),
+                );
             }
         }
 
         for child in &node.children {
-            visit(child, best);
+            visit(child, hint);
         }
     }
 
-    let mut best: Option<Size> = None;
-    visit(element, &mut best);
-    best
+    let mut hint = SizeHintPx {
+        fixed_width: None,
+        fixed_height: None,
+        max_height: None,
+    };
+    visit(element, &mut hint);
+    hint
+}
+
+fn has_height_constraint_px(hint: SizeHintPx) -> bool {
+    hint.fixed_height.is_some() || hint.max_height.is_some()
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -69,6 +97,8 @@ pub enum PopoverSide {
     #[default]
     Bottom,
     Left,
+    InlineStart,
+    InlineEnd,
 }
 
 /// shadcn/ui `Popover` (v4).
@@ -393,7 +423,7 @@ impl Popover {
                     let inner_id: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                         Rc::new(Cell::new(None));
                     let inner_id_for_scope = inner_id.clone();
-                    let inner_size_hint: Rc<Cell<Option<Size>>> = Rc::new(Cell::new(None));
+                    let inner_size_hint: Rc<Cell<Option<SizeHintPx>>> = Rc::new(Cell::new(None));
                     let inner_size_hint_for_scope = inner_size_hint.clone();
                     let content = radix_popover::popover_dialog_wrapper(cx, None, move |cx| {
                         let inner = with_surface_slot_provider(
@@ -402,7 +432,7 @@ impl Popover {
                             |cx| content(cx, anchor_fallback.unwrap_or_default()),
                         );
                         inner_id_for_scope.set(Some(inner.id));
-                        inner_size_hint_for_scope.set(fixed_size_hint_px(&inner));
+                        inner_size_hint_for_scope.set(Some(size_hint_px(&inner)));
                         vec![inner]
                     });
                     dialog_id_for_trigger.set(Some(content.id));
@@ -410,10 +440,21 @@ impl Popover {
                     let measure_id = inner_id.get().unwrap_or(content.id);
                     let last_content_size = cx.last_bounds_for_element(measure_id).map(|r| r.size);
                     let estimated = Size::new(Px(288.0), Px(160.0));
-                    let content_size = inner_size_hint
-                        .get()
-                        .or(last_content_size)
-                        .unwrap_or(estimated);
+                    let hint = inner_size_hint.get().unwrap_or(SizeHintPx {
+                        fixed_width: None,
+                        fixed_height: None,
+                        max_height: None,
+                    });
+                    let hint_width = hint.fixed_width;
+                    let hint_height = hint.fixed_height.or(hint.max_height);
+                    let content_size = Size::new(
+                        hint_width
+                            .or_else(|| last_content_size.map(|s| s.width))
+                            .unwrap_or(estimated.width),
+                        hint_height
+                            .or_else(|| last_content_size.map(|s| s.height))
+                            .unwrap_or(estimated.height),
+                    );
 
                     let align = match align {
                         PopoverAlign::Start => Align::Start,
@@ -425,6 +466,20 @@ impl Popover {
                         PopoverSide::Right => Side::Right,
                         PopoverSide::Bottom => Side::Bottom,
                         PopoverSide::Left => Side::Left,
+                        PopoverSide::InlineStart => {
+                            if direction == direction_prim::LayoutDirection::Rtl {
+                                Side::Right
+                            } else {
+                                Side::Left
+                            }
+                        }
+                        PopoverSide::InlineEnd => {
+                            if direction == direction_prim::LayoutDirection::Rtl {
+                                Side::Left
+                            } else {
+                                Side::Right
+                            }
+                        }
                     };
 
                     let (arrow_options, arrow_protrusion) =
@@ -444,17 +499,31 @@ impl Popover {
                     let border = theme.color_required("border");
 
                     let anchor = anchor_fallback.unwrap_or_default();
-                    let layout =
-                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                    let constrained_height = has_height_constraint_px(hint);
+                    let layout = if constrained_height {
+                        popper::popper_content_layout_sized(outer, anchor, content_size, placement)
+                    } else {
+                        popper::popper_content_layout_unclamped(
+                            outer,
+                            anchor,
+                            content_size,
+                            placement,
+                        )
+                    };
                     let wrapper_insets = popper_arrow::wrapper_insets(&layout, arrow_protrusion);
 
-                    let panel = popper_content::popper_panel_at(
-                        cx,
-                        layout.rect,
-                        wrapper_insets,
-                        Overflow::Visible,
-                        move |_cx| vec![content],
-                    );
+                    let allow_intrinsic_wrapper = !arrow && !constrained_height;
+                    let panel_or_content = if allow_intrinsic_wrapper {
+                        content
+                    } else {
+                        popper_content::popper_panel_at(
+                            cx,
+                            layout.rect,
+                            wrapper_insets,
+                            Overflow::Visible,
+                            move |_cx| vec![content],
+                        )
+                    };
 
                     let arrow_el = popper_arrow::diamond_arrow_element(
                         cx,
@@ -489,16 +558,21 @@ impl Popover {
                     // We model this by:
                     // - positioning the layer root via `InteractivityGate` (absolute layout),
                     // - applying opacity + `VisualTransform` on an inner fill node (paint-only).
-                    let wrapper_layout =
-                        popper_content::popper_wrapper_layout(layout.rect, wrapper_insets);
+                    let wrapper_layout = if allow_intrinsic_wrapper {
+                        popper_content::popper_wrapper_layout_autosize(layout.rect.origin)
+                    } else {
+                        popper_content::popper_wrapper_layout(layout.rect, wrapper_insets)
+                    };
                     let mut fill = LayoutStyle::default();
-                    fill.size.width = Length::Fill;
-                    fill.size.height = Length::Fill;
+                    if !allow_intrinsic_wrapper {
+                        fill.size.width = Length::Fill;
+                        fill.size.height = Length::Fill;
+                    }
 
                     let overlay_children = if let Some(arrow_el) = arrow_el {
-                        vec![arrow_el, panel]
+                        vec![arrow_el, panel_or_content]
                     } else {
-                        vec![panel]
+                        vec![panel_or_content]
                     };
 
                     let overlay_content = cx.interactivity_gate_props(
@@ -689,14 +763,11 @@ impl PopoverContent {
             children,
         );
 
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Panel,
-                label,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
-        )
+        container.attach_semantics(SemanticsDecoration {
+            role: Some(SemanticsRole::Panel),
+            label,
+            ..Default::default()
+        })
     }
 }
 

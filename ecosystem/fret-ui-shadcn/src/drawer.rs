@@ -9,7 +9,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, MarginEdge, MarginEdges, PointerRegionProps,
-    RenderTransformProps, SemanticsProps, SizeStyle,
+    RenderTransformProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -117,12 +117,12 @@ fn drawer_vertical_max_height(viewport_height: Px) -> Px {
 }
 
 fn drawer_drag_snap_height(drawer_height: Px, side: DrawerSide) -> Px {
-    // DrawerContent applies a 1px border on the edge that meets the viewport.
-    // The snap-point math should be based on the border-box height, so account for that inset.
-    match side {
-        DrawerSide::Bottom | DrawerSide::Top => Px(drawer_height.0 + 1.0),
-        DrawerSide::Left | DrawerSide::Right => drawer_height,
-    }
+    // Snap-point math should be based on the border-box height.
+    //
+    // The layout engine treats max-size constraints as border-box under Tailwind-style
+    // `box-sizing: border-box`, so the measured drawer bounds already include the edge border.
+    let _ = side;
+    drawer_height
 }
 
 /// shadcn/ui `DrawerContent` (v4).
@@ -292,13 +292,7 @@ impl DrawerContent {
             )]
         });
 
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Dialog,
-                ..Default::default()
-            },
-            move |_cx| vec![content],
-        )
+        content.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Dialog))
     }
 }
 

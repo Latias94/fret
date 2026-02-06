@@ -100,8 +100,8 @@ fn action_availability_snapshot_skips_unhandled_commands() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(AvailabilityLeaf::default());
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(AvailabilityLeaf);
     ui.set_root(root);
     ui.add_child(root, leaf);
     ui.set_focus(Some(leaf));
@@ -147,7 +147,7 @@ fn action_availability_snapshot_publishes_focus_traversal_gating() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
+    let root = ui.create_node(TestStack);
     ui.set_root(root);
 
     let mut services = FakeUiServices;
@@ -168,7 +168,7 @@ fn action_availability_snapshot_publishes_focus_traversal_gating() {
         Some(false)
     );
 
-    let leaf = ui.create_node(FocusableLeaf::default());
+    let leaf = ui.create_node(FocusableLeaf);
     ui.add_child(root, leaf);
     ui.layout_all(&mut app, &mut services, bounds, 1.0);
     publish_snapshot(&mut ui, &mut app, window);
@@ -200,8 +200,8 @@ fn action_availability_snapshot_publishes_focus_menu_bar_gating() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(FocusableLeaf::default());
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusableLeaf);
     ui.set_root(root);
     ui.add_child(root, leaf);
     ui.set_focus(Some(leaf));
@@ -280,8 +280,8 @@ fn dispatch_event_publishes_action_availability_snapshot() {
     let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
     ui.set_window(window);
 
-    let root = ui.create_node(TestStack::default());
-    let leaf = ui.create_node(FocusOnPointerDownAvailable::default());
+    let root = ui.create_node(TestStack);
+    let leaf = ui.create_node(FocusOnPointerDownAvailable);
     ui.set_root(root);
     ui.add_child(root, leaf);
 

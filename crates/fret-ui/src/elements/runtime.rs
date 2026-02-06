@@ -12,6 +12,7 @@ use slotmap::Key as _;
 #[cfg(feature = "diagnostics")]
 use std::sync::Arc as StdArc;
 
+use crate::element::AnyElement;
 use crate::widget::Invalidation;
 
 use super::GlobalElementId;
@@ -160,6 +161,12 @@ pub struct WindowElementState {
     pub(super) observed_globals_rendered: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) observed_globals_next: HashMap<GlobalElementId, Vec<(TypeId, Invalidation)>>,
     pub(super) timer_targets: HashMap<TimerToken, GlobalElementId>,
+    scratch_view_cache_keep_alive_elements: HashSet<GlobalElementId>,
+    scratch_view_cache_keep_alive_visited_roots: HashSet<GlobalElementId>,
+    scratch_view_cache_keep_alive_stack: Vec<GlobalElementId>,
+    scratch_element_children_vec_pool: Vec<Vec<AnyElement>>,
+    element_children_vec_pool_reuses: u32,
+    element_children_vec_pool_misses: u32,
     transient_events: HashMap<(GlobalElementId, u64), FrameId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
@@ -207,6 +214,85 @@ pub struct NodeEntryRootOverwrite {
 }
 
 impl WindowElementState {
+    pub(crate) fn element_children_vec_pool_reuses(&self) -> u32 {
+        self.element_children_vec_pool_reuses
+    }
+
+    pub(crate) fn element_children_vec_pool_misses(&self) -> u32 {
+        self.element_children_vec_pool_misses
+    }
+
+    pub(crate) fn take_scratch_element_children_vec(
+        &mut self,
+        min_capacity: usize,
+    ) -> Vec<AnyElement> {
+        if let Some(mut out) = self.scratch_element_children_vec_pool.pop() {
+            self.element_children_vec_pool_reuses =
+                self.element_children_vec_pool_reuses.saturating_add(1);
+            out.clear();
+            if out.capacity() < min_capacity {
+                out.reserve(min_capacity - out.capacity());
+            }
+            return out;
+        }
+        self.element_children_vec_pool_misses =
+            self.element_children_vec_pool_misses.saturating_add(1);
+        Vec::with_capacity(min_capacity)
+    }
+
+    pub(crate) fn restore_scratch_element_children_vec(&mut self, mut scratch: Vec<AnyElement>) {
+        const POOL_MAX: usize = 2048;
+        const MAX_RETAIN_BYTES: usize = 64 * 1024;
+        if self.scratch_element_children_vec_pool.len() >= POOL_MAX {
+            return;
+        }
+        let bytes = scratch
+            .capacity()
+            .saturating_mul(std::mem::size_of::<AnyElement>());
+        if bytes > MAX_RETAIN_BYTES {
+            return;
+        }
+        scratch.clear();
+        self.scratch_element_children_vec_pool.push(scratch);
+    }
+
+    pub(crate) fn take_scratch_view_cache_keep_alive_elements(
+        &mut self,
+    ) -> HashSet<GlobalElementId> {
+        std::mem::take(&mut self.scratch_view_cache_keep_alive_elements)
+    }
+
+    pub(crate) fn restore_scratch_view_cache_keep_alive_elements(
+        &mut self,
+        scratch: HashSet<GlobalElementId>,
+    ) {
+        self.scratch_view_cache_keep_alive_elements = scratch;
+    }
+
+    pub(crate) fn take_scratch_view_cache_keep_alive_visited_roots(
+        &mut self,
+    ) -> HashSet<GlobalElementId> {
+        std::mem::take(&mut self.scratch_view_cache_keep_alive_visited_roots)
+    }
+
+    pub(crate) fn restore_scratch_view_cache_keep_alive_visited_roots(
+        &mut self,
+        scratch: HashSet<GlobalElementId>,
+    ) {
+        self.scratch_view_cache_keep_alive_visited_roots = scratch;
+    }
+
+    pub(crate) fn take_scratch_view_cache_keep_alive_stack(&mut self) -> Vec<GlobalElementId> {
+        std::mem::take(&mut self.scratch_view_cache_keep_alive_stack)
+    }
+
+    pub(crate) fn restore_scratch_view_cache_keep_alive_stack(
+        &mut self,
+        scratch: Vec<GlobalElementId>,
+    ) {
+        self.scratch_view_cache_keep_alive_stack = scratch;
+    }
+
     #[cfg(any(test, feature = "diagnostics"))]
     #[allow(dead_code)]
     pub(crate) fn set_strict_ownership(&mut self, strict: bool) {
@@ -226,6 +312,8 @@ impl WindowElementState {
             .retain(|_, recorded| recorded.0 >= cutoff);
         self.raf_notify_roots.clear();
         self.view_cache_key_mismatch_roots.clear();
+        self.element_children_vec_pool_reuses = 0;
+        self.element_children_vec_pool_misses = 0;
 
         std::mem::swap(
             &mut self.view_cache_keys_rendered,
@@ -267,13 +355,24 @@ impl WindowElementState {
         self.observed_globals_next.clear();
 
         // Keep cross-frame geometry queries stable even when layout/paint skips subtrees due to
-        // caching: seed the current-frame maps from the previous-frame maps, and overwrite entries
-        // opportunistically as bounds are recorded this frame.
-        std::mem::swap(&mut self.prev_bounds, &mut self.cur_bounds);
-        self.cur_bounds.clone_from(&self.prev_bounds);
+        // caching:
+        // - `prev_*` stores the last committed snapshot (used by cross-frame queries).
+        // - `cur_*` stores only the current frame's recorded deltas.
+        //
+        // Committing deltas at frame boundaries avoids cloning full maps on cache-hit frames.
+        if !self.cur_bounds.is_empty() {
+            self.prev_bounds.reserve(self.cur_bounds.len());
+            self.prev_bounds.extend(self.cur_bounds.drain());
+        }
+        self.cur_bounds.clear();
 
-        std::mem::swap(&mut self.prev_visual_bounds, &mut self.cur_visual_bounds);
-        self.cur_visual_bounds.clone_from(&self.prev_visual_bounds);
+        if !self.cur_visual_bounds.is_empty() {
+            self.prev_visual_bounds
+                .reserve(self.cur_visual_bounds.len());
+            self.prev_visual_bounds
+                .extend(self.cur_visual_bounds.drain());
+        }
+        self.cur_visual_bounds.clear();
 
         self.focused_element = None;
 
@@ -756,47 +855,46 @@ impl WindowElementState {
             }
         }
         #[cfg(any(test, feature = "diagnostics"))]
-        if self.strict_ownership {
-            if let Some(prev) = self.nodes.get(&id) {
-                assert_eq!(
-                    prev.root, entry.root,
-                    "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
-                    prev.root, entry.root
-                );
-            }
+        if self.strict_ownership
+            && let Some(prev) = self.nodes.get(&id)
+        {
+            assert_eq!(
+                prev.root, entry.root,
+                "ownership root overwrite detected for element {id:?}: old_root={:?} new_root={:?} (cross-root reparenting must be explicit; see ADR 0191)",
+                prev.root, entry.root
+            );
         }
         self.nodes.insert(id, entry);
     }
 
     pub(crate) fn retain_nodes(&mut self, f: impl FnMut(&GlobalElementId, &mut NodeEntry) -> bool) {
         self.nodes.retain(f);
-        let frame_id = self.prepared_frame;
-        let is_live_this_frame =
-            |id: GlobalElementId, nodes: &HashMap<GlobalElementId, NodeEntry>| {
-                nodes
-                    .get(&id)
-                    .is_some_and(|entry| entry.last_seen_frame == frame_id)
-            };
         if let Some(selection) = self.active_text_selection
             && !self.nodes.contains_key(&selection.element)
         {
             self.active_text_selection = None;
         }
-        if self
-            .hovered_pressable
-            .is_some_and(|id| !is_live_this_frame(id, &self.nodes))
+    }
+
+    pub(crate) fn clear_stale_interaction_targets_for_frame(&mut self, frame_id: FrameId) {
+        let is_live_this_frame = |id: GlobalElementId| {
+            self.nodes
+                .get(&id)
+                .is_some_and(|entry| entry.last_seen_frame == frame_id)
+        };
+
+        if let Some(id) = self.hovered_pressable
+            && !is_live_this_frame(id)
         {
             self.hovered_pressable = None;
         }
-        if self
-            .pressed_pressable
-            .is_some_and(|id| !is_live_this_frame(id, &self.nodes))
+        if let Some(id) = self.pressed_pressable
+            && !is_live_this_frame(id)
         {
             self.pressed_pressable = None;
         }
-        if self
-            .hovered_hover_region
-            .is_some_and(|id| !is_live_this_frame(id, &self.nodes))
+        if let Some(id) = self.hovered_hover_region
+            && !is_live_this_frame(id)
         {
             self.hovered_hover_region = None;
         }
@@ -826,7 +924,10 @@ impl WindowElementState {
     }
 
     pub(crate) fn current_bounds(&self, element: GlobalElementId) -> Option<Rect> {
-        self.cur_bounds.get(&element).copied()
+        self.cur_bounds
+            .get(&element)
+            .copied()
+            .or_else(|| self.prev_bounds.get(&element).copied())
     }
 
     pub(crate) fn record_visual_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
@@ -838,7 +939,10 @@ impl WindowElementState {
     }
 
     pub(crate) fn current_visual_bounds(&self, element: GlobalElementId) -> Option<Rect> {
-        self.cur_visual_bounds.get(&element).copied()
+        self.cur_visual_bounds
+            .get(&element)
+            .copied()
+            .or_else(|| self.prev_visual_bounds.get(&element).copied())
     }
 
     pub(crate) fn wants_continuous_frames(&self) -> bool {

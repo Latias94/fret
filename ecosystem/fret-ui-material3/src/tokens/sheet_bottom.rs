@@ -26,13 +26,6 @@ pub(crate) fn docked_container_shape(theme: &Theme) -> Corners {
         })
 }
 
-pub(crate) fn docked_minimized_container_shape(theme: &Theme) -> Corners {
-    theme
-        .corners_by_key("md.comp.sheet.bottom.docked.minimized.container.shape")
-        .or_else(|| theme.corners_by_key("md.sys.shape.corner.none"))
-        .unwrap_or(Corners::all(Px(0.0)))
-}
-
 pub(crate) fn docked_modal_elevation(theme: &Theme) -> Px {
     theme
         .metric_by_key("md.comp.sheet.bottom.docked.modal.container.elevation")

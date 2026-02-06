@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
+use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::Model;
 use fret_ui::action::{OnCloseAutoFocus, OnDismissRequest, OnOpenAutoFocus};
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, MarginEdge, MarginEdges, Overflow,
-    PositionStyle, SemanticsProps, SizeStyle,
+    PositionStyle, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -549,13 +549,8 @@ impl SheetContent {
             children,
         );
 
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Dialog,
-                ..Default::default()
-            },
-            move |_cx| vec![container],
-        )
+        container
+            .attach_semantics(SemanticsDecoration::default().role(fret_core::SemanticsRole::Dialog))
     }
 }
 

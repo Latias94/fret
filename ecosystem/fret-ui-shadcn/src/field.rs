@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::{Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, MainAlign, RowProps,
+    SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -184,8 +185,18 @@ fn responsive_md_width_auto(mut element: AnyElement) -> AnyElement {
 }
 
 fn is_radio_group_element(element: &AnyElement) -> bool {
+    if element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.role)
+        .is_some_and(|role| role == SemanticsRole::RadioGroup)
+    {
+        return true;
+    }
+
     match &element.kind {
         ElementKind::Semantics(props) if props.role == SemanticsRole::RadioGroup => true,
+        ElementKind::SemanticFlex(props) if props.role == SemanticsRole::RadioGroup => true,
         ElementKind::Pressable(props)
             if props
                 .a11y
@@ -199,8 +210,18 @@ fn is_radio_group_element(element: &AnyElement) -> bool {
 }
 
 fn is_checkbox_group_element(element: &AnyElement) -> bool {
+    if element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.role)
+        .is_some_and(|role| role == SemanticsRole::List)
+    {
+        return true;
+    }
+
     match &element.kind {
         ElementKind::Semantics(props) if props.role == SemanticsRole::List => true,
+        ElementKind::SemanticFlex(props) if props.role == SemanticsRole::List => true,
         _ => false,
     }
 }
@@ -528,14 +549,9 @@ impl FieldGroup {
 
         match self.slot {
             FieldGroupSlot::Default => column,
-            FieldGroupSlot::CheckboxGroup => cx.semantics(
-                fret_ui::element::SemanticsProps {
-                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
-                    role: SemanticsRole::List,
-                    ..Default::default()
-                },
-                move |_cx| vec![column],
-            ),
+            FieldGroupSlot::CheckboxGroup => {
+                column.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List))
+            }
         }
     }
 }
@@ -1021,5 +1037,36 @@ impl Field {
 
             vec![inner]
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+
+    #[test]
+    fn checkbox_group_stamps_list_role_without_layout_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(80.0)));
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            FieldGroup::new([cx.text("A")])
+                .checkbox_group()
+                .into_element(cx)
+        });
+
+        assert!(
+            !matches!(element.kind, ElementKind::Semantics(_)),
+            "expected checkbox group to avoid `Semantics` wrappers; use `attach_semantics` instead"
+        );
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::List)
+        );
     }
 }

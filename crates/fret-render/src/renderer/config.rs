@@ -2,6 +2,17 @@ use super::*;
 use crate::text::{TextFontFamilyConfig, TextQualitySettings};
 
 impl Renderer {
+    pub fn begin_text_diagnostics_frame(&mut self) {
+        self.text_system.begin_frame_diagnostics();
+    }
+
+    pub fn text_diagnostics_snapshot(
+        &self,
+        frame_id: fret_core::FrameId,
+    ) -> fret_core::RendererTextPerfSnapshot {
+        self.text_system.diagnostics_snapshot(frame_id)
+    }
+
     pub fn set_perf_enabled(&mut self, enabled: bool) {
         self.perf_enabled = enabled;
         self.perf = RenderPerfStats::default();
@@ -17,6 +28,39 @@ impl Renderer {
             encode_scene_us: self.perf.encode_scene.as_micros() as u64,
             prepare_svg_us: self.perf.prepare_svg.as_micros() as u64,
             prepare_text_us: self.perf.prepare_text.as_micros() as u64,
+            svg_uploads: self.perf.svg_uploads,
+            svg_upload_bytes: self.perf.svg_upload_bytes,
+            image_uploads: self.perf.image_uploads,
+            image_upload_bytes: self.perf.image_upload_bytes,
+            svg_raster_budget_bytes: self.perf.svg_raster_budget_bytes,
+            svg_rasters_live: self.perf.svg_rasters_live,
+            svg_standalone_bytes_live: self.perf.svg_standalone_bytes_live,
+            svg_mask_atlas_pages_live: self.perf.svg_mask_atlas_pages_live,
+            svg_mask_atlas_bytes_live: self.perf.svg_mask_atlas_bytes_live,
+            svg_mask_atlas_used_px: self.perf.svg_mask_atlas_used_px,
+            svg_mask_atlas_capacity_px: self.perf.svg_mask_atlas_capacity_px,
+            svg_raster_cache_hits: self.perf.svg_raster_cache_hits,
+            svg_raster_cache_misses: self.perf.svg_raster_cache_misses,
+            svg_raster_budget_evictions: self.perf.svg_raster_budget_evictions,
+            svg_mask_atlas_page_evictions: self.perf.svg_mask_atlas_page_evictions,
+            svg_mask_atlas_entries_evicted: self.perf.svg_mask_atlas_entries_evicted,
+            text_atlas_revision: self.perf.text_atlas_revision,
+            text_atlas_uploads: self.perf.text_atlas_uploads,
+            text_atlas_upload_bytes: self.perf.text_atlas_upload_bytes,
+            text_atlas_evicted_glyphs: self.perf.text_atlas_evicted_glyphs,
+            text_atlas_evicted_pages: self.perf.text_atlas_evicted_pages,
+            text_atlas_evicted_page_glyphs: self.perf.text_atlas_evicted_page_glyphs,
+            text_atlas_resets: self.perf.text_atlas_resets,
+            intermediate_budget_bytes: self.perf.intermediate_budget_bytes,
+            intermediate_in_use_bytes: self.perf.intermediate_in_use_bytes,
+            intermediate_peak_in_use_bytes: self.perf.intermediate_peak_in_use_bytes,
+            intermediate_release_targets: self.perf.intermediate_release_targets,
+            intermediate_pool_allocations: self.perf.intermediate_pool_allocations,
+            intermediate_pool_reuses: self.perf.intermediate_pool_reuses,
+            intermediate_pool_releases: self.perf.intermediate_pool_releases,
+            intermediate_pool_evictions: self.perf.intermediate_pool_evictions,
+            intermediate_pool_free_bytes: self.perf.intermediate_pool_free_bytes,
+            intermediate_pool_free_textures: self.perf.intermediate_pool_free_textures,
             draw_calls: self.perf.draw_calls,
             quad_draw_calls: self.perf.quad_draw_calls,
             viewport_draw_calls: self.perf.viewport_draw_calls,
@@ -51,6 +95,13 @@ impl Renderer {
 
         self.perf = RenderPerfStats::default();
         Some(snap)
+    }
+
+    pub fn take_last_frame_perf_snapshot(&mut self) -> Option<RenderPerfSnapshot> {
+        if !self.perf_enabled {
+            return None;
+        }
+        self.last_frame_perf.take()
     }
 
     pub fn set_svg_perf_enabled(&mut self, enabled: bool) {

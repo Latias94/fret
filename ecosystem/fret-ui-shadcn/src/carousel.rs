@@ -6,7 +6,7 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, ActivateReason, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, MainAlign,
-    PointerRegionProps, RenderTransformProps, SemanticsProps,
+    PointerRegionProps, RenderTransformProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -495,33 +495,37 @@ impl Carousel {
                                 decl_style::layout_style(&theme_for_items, item_layout);
                             let test_id = Arc::from(format!("carousel-item-{}", idx + 1));
 
-                            cx.semantics(
-                                SemanticsProps {
-                                    layout: item_layout,
-                                    role: SemanticsRole::Group,
-                                    test_id: Some(test_id),
+                            let padding = match track_direction {
+                                fret_core::Axis::Horizontal => Edges {
+                                    left: item_pad,
+                                    ..Edges::all(Px(0.0))
+                                },
+                                fret_core::Axis::Vertical => Edges {
+                                    top: item_pad,
+                                    ..Edges::all(Px(0.0))
+                                },
+                            };
+
+                            let inner = cx.container(
+                                fret_ui::element::ContainerProps {
+                                    padding,
                                     ..Default::default()
                                 },
-                                move |cx| {
-                                    let padding = match track_direction {
-                                        fret_core::Axis::Horizontal => Edges {
-                                            left: item_pad,
-                                            ..Edges::all(Px(0.0))
-                                        },
-                                        fret_core::Axis::Vertical => Edges {
-                                            top: item_pad,
-                                            ..Edges::all(Px(0.0))
-                                        },
-                                    };
+                                move |_cx| vec![content.clone()],
+                            );
 
-                                    vec![cx.container(
-                                        fret_ui::element::ContainerProps {
-                                            padding,
-                                            ..Default::default()
-                                        },
-                                        move |_cx| vec![content.clone()],
-                                    )]
+                            let item = cx.container(
+                                fret_ui::element::ContainerProps {
+                                    layout: item_layout,
+                                    ..Default::default()
                                 },
+                                move |_cx| vec![inner],
+                            );
+
+                            item.attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(SemanticsRole::Group)
+                                    .test_id(test_id),
                             )
                         })
                         .collect::<Vec<_>>()
@@ -669,14 +673,18 @@ impl Carousel {
                 move |_cx| vec![next_button],
             );
 
-            cx.semantics(
-                SemanticsProps {
+            let root = cx.container(
+                fret_ui::element::ContainerProps {
                     layout: root_layout,
-                    role: SemanticsRole::Group,
-                    test_id: Some(root_test_id),
                     ..Default::default()
                 },
                 move |_cx| vec![viewport, prev_wrapper, next_wrapper],
+            );
+
+            root.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Group)
+                    .test_id(root_test_id),
             )
         })
     }

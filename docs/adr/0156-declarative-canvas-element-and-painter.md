@@ -114,6 +114,9 @@ Locked details:
 - The cache key input is **required** (no "magic hashing" of arbitrary inputs in v1).
 - The runtime must always incorporate the relevant scale factor bits into the effective cache key
   (even when the caller key is stable) to prevent stale reuse under DPI/zoom changes.
+- Any “shared text caching” convenience API (hashing caller inputs) must be **explicitly opted into** by the call site
+  and must not be used implicitly by the keyed `text/text_with_blob` helpers. This avoids accidental high-entropy cache
+  pollution in tight paint loops.
 - The runtime does **not** infer zoom from transforms. Callers that want higher-resolution prepared
   resources under a canvas zoom must pass `scale_factor = dpi * zoom` (e.g. via
   `fret_canvas::scale::effective_scale_factor`).

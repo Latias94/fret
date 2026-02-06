@@ -2,6 +2,8 @@ use fret_core::ImageId;
 pub use fret_core::{AlphaMode, ImageColorSpace};
 use slotmap::SlotMap;
 
+use crate::upload_counters::record_image_upload;
+
 pub struct UploadedRgba8Image {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -170,6 +172,7 @@ pub fn upload_rgba8_image(
     };
 
     if w > 0 && h > 0 {
+        record_image_upload(data.len());
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 texture: &texture,
@@ -251,6 +254,7 @@ pub fn write_rgba8_texture_region(
         (&owned[..], aligned_bpr)
     };
 
+    record_image_upload(bytes.len());
     queue.write_texture(
         wgpu::TexelCopyTextureInfo {
             texture,

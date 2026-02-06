@@ -11,12 +11,14 @@ documentation.workspace = true
 
 [features]
 default = []
+query = ["fret-authoring/query"]
+selector = ["fret-authoring/selector"]
 
 [dependencies]
 fret-authoring = { path = "../fret-authoring" }
-fret-core = { path = "../../crates/fret-core" }
-fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 
 [dev-dependencies]
+fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["imui"] }

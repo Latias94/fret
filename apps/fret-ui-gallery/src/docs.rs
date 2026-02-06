@@ -76,6 +76,32 @@ let subtree = cx.view_cache(ViewCacheProps::default(), |cx| {
 ```
 "#;
 
+pub(crate) const DOC_HIT_TEST_TORTURE: &str = r#"
+## Hit Test (torture harness)
+
+This page exists to stress the runtime's pointer hit-testing path under editor-grade UI workloads:
+
+- many hit-testable regions (pointer listeners),
+- stable layout (no relayout on pointer move),
+- pointer moves that change the hovered target every frame (to defeat path caching),
+- ability to A/B test spatial indices (e.g. bounds tree) against the fallback traversal.
+
+The goal is to make `top_hit_test_time_us` large enough to be a meaningful slice of the frame budget so
+we can validate improvements and gate regressions.
+"#;
+
+pub(crate) const USAGE_HIT_TEST_TORTURE: &str = r#"
+```rust
+// Customize the stress level.
+// Defaults are chosen to create a large number of PointerRegion interaction records.
+//
+// - stripes: hit target changes frequently (defeats hit-test path cache).
+// - noise: many tiny pointer regions that should never be hit, but are expensive for fallback scans.
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_STRIPES", "256");
+std::env::set_var("FRET_UI_GALLERY_HIT_TEST_TORTURE_NOISE", "50000");
+```
+"#;
+
 pub(crate) const DOC_VIRTUAL_LIST_TORTURE: &str = r#"
 ## Virtual List (torture harness)
 
@@ -323,6 +349,38 @@ let el = pan_zoom_canvas_surface_panel(cx, props, |_painter, _cx| {});
 ```
 "#;
 
+pub(crate) const DOC_NODE_GRAPH_CULL_TORTURE: &str = r#"
+## Node Graph Cull (torture harness)
+
+This page hosts a large `fret-node` canvas surface (nodes + edges) intended to stress:
+
+- viewport-driven culling,
+- pan/zoom interaction routing,
+- paint-cache reuse under view-cache + shell.
+
+It exists to support the GPUI parity workstream:
+
+- promote a real ecosystem surface into the prepaint-windowed migration pipeline (ADR 0190),
+- validate “paint-only” interaction updates for small deltas,
+- provide deterministic script targets for perf investigations.
+"#;
+
+pub(crate) const USAGE_NODE_GRAPH_CULL_TORTURE: &str = r#"
+```rust
+use fret_node::{Graph, GraphId};
+use fret_node::io::NodeGraphViewState;
+use fret_node::ui::NodeGraphCanvas;
+use fret_ui::retained_bridge::{RetainedSubtreeProps, UiTreeRetainedExt};
+
+let graph = models.insert(Graph::new(GraphId::from_u128(1)));
+let view = models.insert(NodeGraphViewState::default());
+
+let el = cx.retained_subtree(RetainedSubtreeProps::new(move |ui| {
+    ui.create_node_retained(NodeGraphCanvas::new(graph.clone(), view.clone()))
+}));
+```
+"#;
+
 pub(crate) const DOC_CHROME_TORTURE: &str = r#"
 ## Chrome (torture harness)
 
@@ -484,6 +542,28 @@ let transcript = ConversationTranscript::new(vec![
 ```
 "#;
 
+pub(crate) const DOC_AI_CHAT_DEMO: &str = r#"
+## AI chat (demo)
+
+This page is a small, interactive demo for the `fret-ui-ai` chat surfaces:
+
+- `ConversationTranscript` for a short transcript,
+- `PromptInput` for composing + sending messages,
+- stable `test_id` anchors for automation.
+
+It exists to validate:
+
+- prompt input ergonomics (send/stop/disabled/loading),
+- transcript append behavior + stick-to-bottom eligibility,
+- a keyboard-first automation path via `fretboard diag`.
+"#;
+
+pub(crate) const USAGE_AI_CHAT_DEMO: &str = r#"
+```rust
+use fret_ui_ai::{ConversationTranscript, PromptInput};
+```
+"#;
+
 pub(crate) const DOC_INSPECTOR_TORTURE: &str = r#"
 ## Inspector (torture harness)
 
@@ -534,6 +614,8 @@ pub(crate) const DOC_BUTTON: &str = r#"
 Validate `variant` / `size` behaviors and default styling consistency.
 
 This layer is **visual recipes**. Interaction policies (hover intent, focus trap, etc.) should live in `fret-ui-kit` / ecosystem crates.
+
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/button.mdx`.
 "#;
 
 pub(crate) const USAGE_BUTTON: &str = r#"
@@ -931,6 +1013,49 @@ let select = m3::Select::new(model)
 ```
 "#;
 
+pub(crate) const DOC_MATERIAL3_AUTOCOMPLETE: &str = r#"
+## Material 3 Autocomplete (MVP)
+
+This page validates a Material 3 autocomplete surface:
+
+- token-driven input + menu outcomes via `md.comp.{outlined,filled}-autocomplete.*`
+- combobox semantics (ADR 0073): `active_descendant` + `controls` ↔ `labelled_by`
+- non-modal popover menu that stays interactive while typing (click-through)
+- composition surface: `ExposedDropdown` (searchable select policy over `Autocomplete`)
+"#;
+
+pub(crate) const USAGE_MATERIAL3_AUTOCOMPLETE: &str = r#"
+```rust
+use fret_ui_material3 as m3;
+use std::sync::Arc;
+
+let query = app.models_mut().insert(String::new());
+let selected_value = app.models_mut().insert(None::<Arc<str>>);
+let items = [
+    m3::AutocompleteItem::new("alpha", "Alpha"),
+    m3::AutocompleteItem::new("beta", "Beta"),
+];
+
+let ac = m3::Autocomplete::new(query)
+    .selected_value(selected_value)
+    .label("Search")
+    .placeholder("Type to filter")
+    .items(items)
+    .into_element(cx);
+
+// Composition: searchable select.
+let committed = app
+    .models_mut()
+    .insert(Some(Arc::<str>::from("beta")) as Option<Arc<str>>);
+let exposed_query = app.models_mut().insert(String::new());
+let exposed = m3::ExposedDropdown::new(committed)
+    .query(exposed_query)
+    .label("Searchable select")
+    .items(items)
+    .into_element(cx);
+```
+"#;
+
 pub(crate) const DOC_MATERIAL3_TEXT_FIELD: &str = r#"
 ## Material 3 Text Field (MVP)
 
@@ -1198,11 +1323,16 @@ let _id = controller.show(host, acx.window, m3::Snackbar::new("Saved").action("U
 pub(crate) const DOC_MATERIAL3_TOOLTIP: &str = r#"
 ## Material 3 Tooltip (MVP)
 
-This page validates a Material 3 plain tooltip surface:
+This page validates Material 3 tooltip surfaces (plain + rich):
 
 - Radix-aligned delay group + hover intent + safe-hover corridor (via `fret-ui-kit`)
-- deterministic open/close motion driven by `md.sys.motion.*` (duration + cubic-bezier)
-- token-driven container/text styling via `md.comp.plain-tooltip.*`
+- deterministic open/close motion driven by `md.sys.motion.spring.*` (fast spatial/effects springs)
+- token-driven container/text styling via `md.comp.{plain,rich}-tooltip.*`
+
+Notes:
+
+- In Fret, `OverlayKind::Tooltip` is click-through, so rich tooltip actions are currently out of
+  scope.
 "#;
 
 pub(crate) const USAGE_MATERIAL3_TOOLTIP: &str = r#"
@@ -1211,7 +1341,16 @@ use fret_ui_material3 as m3;
 
 m3::TooltipProvider::new().with_elements(cx, |cx| {
     let trigger = m3::Button::new("Hover me").into_element(cx);
-    [m3::PlainTooltip::new(trigger, "Tooltip text").into_element(cx)]
+
+    let plain = m3::PlainTooltip::new(trigger, "Plain tooltip text").into_element(cx);
+    let rich = m3::RichTooltip::new(
+        m3::Button::new("Hover me (rich)").into_element(cx),
+        "Supporting text",
+    )
+    .title("Title")
+    .into_element(cx);
+
+    [plain, rich]
 })
 ```
 "#;
@@ -2003,12 +2142,20 @@ let label = shadcn::Label::new("Email").into_element(cx);
 pub(crate) const DOC_MENUBAR: &str = r#"
 ## Menubar
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/menubar.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/menubar.mdx`.
 "#;
 
 pub(crate) const USAGE_MENUBAR: &str = r#"
 ```rust
-// Gallery preview is a smoke stub.
+use fret_ui_shadcn as shadcn;
+
+let file = shadcn::MenubarMenu::new("File").entries([
+    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("New Tab")),
+    shadcn::MenubarEntry::Separator,
+    shadcn::MenubarEntry::Item(shadcn::MenubarItem::new("Print...")),
+]);
+
+let bar = shadcn::Menubar::new([file]).into_element(cx);
 ```
 "#;
 
@@ -2027,12 +2174,33 @@ pub(crate) const USAGE_NATIVE_SELECT: &str = r#"
 pub(crate) const DOC_NAVIGATION_MENU: &str = r#"
 ## Navigation Menu
 
-Reference: `repo-ref/ui/apps/v4/content/docs/components/navigation-menu.mdx`.
+Reference: `repo-ref/ui/apps/v4/content/docs/components/base/navigation-menu.mdx`.
 "#;
 
 pub(crate) const USAGE_NAVIGATION_MENU: &str = r#"
 ```rust
-// Gallery preview is a smoke stub.
+use fret_ui_shadcn as shadcn;
+use std::sync::Arc;
+
+let value = cx.app.models_mut().insert(None::<Arc<str>>);
+
+let item = shadcn::NavigationMenuItem::new(
+    "getting_started",
+    "Getting started",
+    [
+        shadcn::NavigationMenuLink::new(value.clone(), [cx.text("Introduction")])
+            .on_click("app.open")
+            .into_element(cx),
+    ],
+);
+
+let menu = shadcn::NavigationMenu::new(value.clone())
+    .list(shadcn::NavigationMenuList::new([
+        item,
+        // Items with empty content behave like the shadcn `navigationMenuTriggerStyle()` link.
+        shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty()),
+    ]))
+    .into_element(cx);
 ```
 "#;
 

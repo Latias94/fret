@@ -69,8 +69,9 @@ fn apply_container_insets(style: &mut Style, props: &crate::element::ContainerPr
 
     adjust_border_box_dimension(&mut style.min_size.width, inset_w);
     adjust_border_box_dimension(&mut style.min_size.height, inset_h);
-    adjust_border_box_dimension(&mut style.max_size.width, inset_w);
-    adjust_border_box_dimension(&mut style.max_size.height, inset_h);
+    // NOTE: Taffy applies `max_size` constraints after border/padding are resolved. Treating
+    // `max_width`/`max_height` as border-box constraints (Tailwind preflight) without additional
+    // subtraction keeps shadcn-style `w-full max-w-*` overlays aligned with web snapshots.
 }
 
 pub(crate) fn build_flow_subtree<H: UiHost>(
@@ -115,6 +116,7 @@ pub(crate) fn build_viewport_flow_subtree<H: UiHost>(
     );
 }
 
+#[allow(clippy::too_many_arguments)]
 #[stacksafe::stacksafe]
 fn build_flow_subtree_impl<H: UiHost>(
     engine: &mut TaffyLayoutEngine,

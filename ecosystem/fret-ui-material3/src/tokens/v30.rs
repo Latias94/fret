@@ -121,9 +121,15 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_extended_fab_text_styles(cfg);
     inject_comp_outlined_segmented_button_text_styles(cfg);
     inject_comp_top_app_bar_text_styles(cfg);
+    inject_comp_text_field_text_styles(cfg);
+    inject_comp_menu_text_styles(cfg);
+    inject_comp_primary_navigation_tab_text_styles(cfg);
+    inject_comp_tooltip_text_styles(cfg);
     inject_comp_date_picker_text_styles(cfg);
     inject_comp_time_picker_text_styles(cfg);
     inject_comp_time_input_text_styles(cfg);
+    inject_comp_search_bar_text_styles(cfg);
+    inject_comp_search_view_text_styles(cfg);
     inject_comp_badge_scalars(cfg);
     inject_comp_button_scalars(cfg);
     inject_comp_fab_scalars(cfg);
@@ -137,6 +143,8 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_filled_text_field_scalars(cfg);
     inject_comp_outlined_select_scalars(cfg);
     inject_comp_filled_select_scalars(cfg);
+    inject_comp_outlined_autocomplete_scalars(cfg);
+    inject_comp_filled_autocomplete_scalars(cfg);
     inject_comp_primary_navigation_tab_scalars(cfg);
     inject_comp_navigation_bar_scalars(cfg);
     inject_comp_navigation_drawer_scalars(cfg);
@@ -152,6 +160,9 @@ pub fn inject_tokens(cfg: &mut ThemeConfig, typography: &TypographyOptions) {
     inject_comp_plain_tooltip_scalars(cfg);
     inject_comp_rich_tooltip_scalars(cfg);
     inject_comp_snackbar_scalars(cfg);
+    inject_comp_search_bar_scalars(cfg);
+    inject_comp_search_view_scalars(cfg);
+    inject_comp_carousel_item_scalars(cfg);
     inject_comp_dialog_scalars(cfg);
     inject_comp_full_screen_dialog_scalars(cfg);
     inject_comp_divider_scalars(cfg);
@@ -313,6 +324,78 @@ fn inject_comp_top_app_bar_text_styles(cfg: &mut ThemeConfig) {
     );
 }
 
+fn inject_comp_text_field_text_styles(cfg: &mut ThemeConfig) {
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+    let Some(body_small) = cfg.text_styles.get("md.sys.typescale.body-small").cloned() else {
+        return;
+    };
+
+    for key in [
+        "md.comp.filled-text-field.input-text",
+        "md.comp.filled-text-field.label-text",
+        "md.comp.outlined-text-field.input-text",
+        "md.comp.outlined-text-field.label-text",
+    ] {
+        cfg.text_styles.insert(key.to_string(), body_large.clone());
+    }
+
+    for key in [
+        "md.comp.filled-text-field.supporting-text",
+        "md.comp.filled-text-field.label-text.populated",
+        "md.comp.outlined-text-field.supporting-text",
+        "md.comp.outlined-text-field.label-text.populated",
+    ] {
+        cfg.text_styles.insert(key.to_string(), body_small.clone());
+    }
+}
+
+fn inject_comp_menu_text_styles(cfg: &mut ThemeConfig) {
+    let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles
+        .insert("md.comp.menu.list-item.label-text".to_string(), label_large);
+}
+
+fn inject_comp_primary_navigation_tab_text_styles(cfg: &mut ThemeConfig) {
+    let Some(title_small) = cfg.text_styles.get("md.sys.typescale.title-small").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.primary-navigation-tab.with-label-text.label-text".to_string(),
+        title_small,
+    );
+}
+
+fn inject_comp_tooltip_text_styles(cfg: &mut ThemeConfig) {
+    if let Some(body_small) = cfg.text_styles.get("md.sys.typescale.body-small").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.plain-tooltip.supporting-text".to_string(),
+            body_small,
+        );
+    }
+    if let Some(label_large) = cfg.text_styles.get("md.sys.typescale.label-large").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.rich-tooltip.action.label-text".to_string(),
+            label_large,
+        );
+    }
+    if let Some(title_small) = cfg.text_styles.get("md.sys.typescale.title-small").cloned() {
+        cfg.text_styles
+            .insert("md.comp.rich-tooltip.subhead".to_string(), title_small);
+    }
+    if let Some(body_medium) = cfg.text_styles.get("md.sys.typescale.body-medium").cloned() {
+        cfg.text_styles.insert(
+            "md.comp.rich-tooltip.supporting-text".to_string(),
+            body_medium,
+        );
+    }
+}
+
 fn inject_comp_date_picker_text_styles(cfg: &mut ThemeConfig) {
     let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
         return;
@@ -436,6 +519,34 @@ fn inject_comp_time_input_text_styles(cfg: &mut ThemeConfig) {
     cfg.text_styles.insert(
         "md.comp.time-input.time-input-field.supporting-text".to_string(),
         body_small,
+    );
+}
+
+fn inject_comp_search_bar_text_styles(cfg: &mut ThemeConfig) {
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.search-bar.input-text".to_string(),
+        body_large.clone(),
+    );
+    cfg.text_styles
+        .insert("md.comp.search-bar.supporting-text".to_string(), body_large);
+}
+
+fn inject_comp_search_view_text_styles(cfg: &mut ThemeConfig) {
+    let Some(body_large) = cfg.text_styles.get("md.sys.typescale.body-large").cloned() else {
+        return;
+    };
+
+    cfg.text_styles.insert(
+        "md.comp.search-view.header.input-text".to_string(),
+        body_large.clone(),
+    );
+    cfg.text_styles.insert(
+        "md.comp.search-view.header.supporting-text".to_string(),
+        body_large,
     );
 }
 
@@ -669,6 +780,8 @@ pub fn theme_config_with_colors(
     inject_comp_filled_text_field_colors_from_sys(&mut cfg);
     inject_comp_outlined_select_colors_from_sys(&mut cfg);
     inject_comp_filled_select_colors_from_sys(&mut cfg);
+    inject_comp_outlined_autocomplete_colors_from_sys(&mut cfg);
+    inject_comp_filled_autocomplete_colors_from_sys(&mut cfg);
     inject_comp_primary_navigation_tab_colors_from_sys(&mut cfg);
     inject_comp_navigation_bar_colors_from_sys(&mut cfg);
     inject_comp_navigation_drawer_colors_from_sys(&mut cfg);
@@ -684,6 +797,9 @@ pub fn theme_config_with_colors(
     inject_comp_plain_tooltip_colors_from_sys(&mut cfg);
     inject_comp_rich_tooltip_colors_from_sys(&mut cfg);
     inject_comp_snackbar_colors_from_sys(&mut cfg);
+    inject_comp_search_bar_colors_from_sys(&mut cfg);
+    inject_comp_search_view_colors_from_sys(&mut cfg);
+    inject_comp_carousel_item_colors_from_sys(&mut cfg);
     inject_comp_dialog_colors_from_sys(&mut cfg);
     inject_comp_full_screen_dialog_colors_from_sys(&mut cfg);
     inject_comp_divider_colors_from_sys(&mut cfg);
@@ -1766,6 +1882,14 @@ fn inject_comp_filled_select_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_select_scalars(cfg);
 }
 
+fn inject_comp_outlined_autocomplete_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_autocomplete_scalars(cfg);
+}
+
+fn inject_comp_filled_autocomplete_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_autocomplete_scalars(cfg);
+}
+
 fn inject_comp_primary_navigation_tab_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_primary_navigation_tab_scalars(cfg);
 }
@@ -2021,6 +2145,18 @@ fn inject_comp_rich_tooltip_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_snackbar_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_snackbar_scalars(cfg);
+}
+
+fn inject_comp_search_bar_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_bar_scalars(cfg);
+}
+
+fn inject_comp_search_view_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_view_scalars(cfg);
+}
+
+fn inject_comp_carousel_item_scalars(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_carousel_item_scalars(cfg);
 }
 
 fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
@@ -2413,6 +2549,14 @@ fn inject_comp_outlined_select_colors_from_sys(cfg: &mut ThemeConfig) {
 
 fn inject_comp_filled_select_colors_from_sys(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_filled_select_colors_from_sys(cfg);
+}
+
+fn inject_comp_outlined_autocomplete_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_outlined_autocomplete_colors_from_sys(cfg);
+}
+
+fn inject_comp_filled_autocomplete_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_filled_autocomplete_colors_from_sys(cfg);
 }
 
 fn inject_comp_primary_navigation_tab_colors_from_sys(cfg: &mut ThemeConfig) {
@@ -3368,6 +3512,18 @@ fn inject_comp_rich_tooltip_colors_from_sys(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_rich_tooltip_colors_from_sys(cfg);
 }
 
+fn inject_comp_search_bar_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_bar_colors_from_sys(cfg);
+}
+
+fn inject_comp_search_view_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_search_view_colors_from_sys(cfg);
+}
+
+fn inject_comp_carousel_item_colors_from_sys(cfg: &mut ThemeConfig) {
+    material_web_v30::inject_comp_carousel_item_colors_from_sys(cfg);
+}
+
 fn inject_comp_snackbar_colors_from_sys(cfg: &mut ThemeConfig) {
     // Source: repo-ref/material-web/tokens/versions/v30_0/sass/_md-comp-snackbar.scss
 
@@ -3746,6 +3902,30 @@ mod tests {
         assert!(
             cfg.text_styles.contains_key("md.sys.typescale.body-large"),
             "expected composed body-large text style"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.filled-text-field.input-text"),
+            "expected text field input text style token"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.menu.list-item.label-text"),
+            "expected menu list-item label text style token"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.primary-navigation-tab.with-label-text.label-text"),
+            "expected primary navigation tab label text style token"
+        );
+        assert!(
+            cfg.text_styles
+                .contains_key("md.comp.plain-tooltip.supporting-text"),
+            "expected plain tooltip supporting text style token"
+        );
+        assert!(
+            cfg.text_styles.contains_key("md.comp.rich-tooltip.subhead"),
+            "expected rich tooltip subhead text style token"
         );
 
         let title_medium = cfg

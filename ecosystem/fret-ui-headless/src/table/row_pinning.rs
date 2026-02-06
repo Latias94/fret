@@ -64,9 +64,18 @@ pub fn pin_row<'a, TData>(
     include_leaf_rows: bool,
     include_parent_rows: bool,
 ) {
+    let keys = pin_row_keys(row_model, row_key, include_leaf_rows, include_parent_rows);
+    pin_rows(state, position, keys);
+}
+
+pub fn pin_row_keys<'a, TData>(
+    row_model: &RowModel<'a, TData>,
+    row_key: RowKey,
+    include_leaf_rows: bool,
+    include_parent_rows: bool,
+) -> Vec<RowKey> {
     let Some(row_index) = row_model.row_by_key(row_key) else {
-        pin_rows(state, position, [row_key]);
-        return;
+        return vec![row_key];
     };
 
     let mut keys: Vec<RowKey> = Vec::new();
@@ -111,7 +120,7 @@ pub fn pin_row<'a, TData>(
         push_descendant_keys(row_model, row_index, &mut keys);
     }
 
-    pin_rows(state, position, keys);
+    keys
 }
 
 pub fn center_row_keys<'a, TData>(

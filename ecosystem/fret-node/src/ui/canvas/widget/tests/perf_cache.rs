@@ -719,6 +719,46 @@ fn paint_reuses_static_edge_scene_cache_without_revisiting_presenter() {
 }
 
 #[test]
+fn paint_invalidates_static_edge_scene_cache_when_edge_types_change() {
+    let mut host = TestUiHostImpl::default();
+    let graph = host.models.insert(make_graph_two_nodes_one_edge());
+    let view = host.models.insert(crate::io::NodeGraphViewState::default());
+
+    let presenter = CountingPresenter::default();
+    let counts = presenter.counts.clone();
+    let mut canvas = NodeGraphCanvas::new(graph, view.clone()).with_presenter(presenter);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+    let mut services = CountingServices::default();
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let first_edge_hint = counts.edge_render_hint.load(Ordering::Relaxed);
+    assert!(first_edge_hint > 0);
+
+    // Mutate the edge type registry so `edge_types_rev` changes and static scene cache keys miss.
+    canvas.edge_types = Some(crate::ui::NodeGraphEdgeTypes::new().with_fallback_path(
+        |_g, _e, _style, _hint, input| {
+            Some(crate::ui::edge_types::EdgeCustomPath {
+                cache_key: 1,
+                commands: vec![fret_core::PathCommand::MoveTo(input.from)],
+            })
+        },
+    ));
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+    let second_edge_hint = counts.edge_render_hint.load(Ordering::Relaxed);
+    assert!(
+        second_edge_hint > first_edge_hint,
+        "expected edge_render_hint to be revisited after edge_types_rev changes; before={first_edge_hint}, after={second_edge_hint}"
+    );
+}
+
+#[test]
 fn paint_reuses_static_edge_scene_cache_when_panning_back_across_tiles() {
     let mut host = TestUiHostImpl::default();
     let graph = host.models.insert(make_graph_two_nodes_one_edge());

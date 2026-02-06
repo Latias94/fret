@@ -35,7 +35,13 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         GraphOp::AddNode { node, .. } => node
             .size
             .and_then(|s| (!size_is_finite(s)).then_some("AddNode.node.size"))
-            .or_else(|| (!point_is_finite(node.pos)).then_some("AddNode.node.pos")),
+            .or_else(|| (!point_is_finite(node.pos)).then_some("AddNode.node.pos"))
+            .or_else(|| match node.extent {
+                Some(crate::core::NodeExtent::Rect { rect }) => {
+                    (!rect_is_finite(rect)).then_some("AddNode.node.extent.rect")
+                }
+                Some(crate::core::NodeExtent::Parent) | None => None,
+            }),
         GraphOp::AddGroup { group, .. } => (!rect_is_finite(group.rect)).then_some("AddGroup.rect"),
         GraphOp::AddStickyNote { note, .. } => {
             (!rect_is_finite(note.rect)).then_some("AddStickyNote.rect")
@@ -43,15 +49,44 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
 
         GraphOp::SetNodePos { to, .. } => (!point_is_finite(*to)).then_some("SetNodePos.to"),
         GraphOp::SetGroupRect { to, .. } => (!rect_is_finite(*to)).then_some("SetGroupRect.to"),
+        GraphOp::SetStickyNoteRect { to, .. } => {
+            (!rect_is_finite(*to)).then_some("SetStickyNoteRect.to")
+        }
         GraphOp::SetNodeSize { to, .. } => {
             to.and_then(|s| (!size_is_finite(s)).then_some("SetNodeSize.to"))
         }
+        GraphOp::SetNodeExtent { to, .. } => match to {
+            Some(crate::core::NodeExtent::Rect { rect }) => {
+                (!rect_is_finite(*rect)).then_some("SetNodeExtent.to.rect")
+            }
+            Some(crate::core::NodeExtent::Parent) | None => None,
+        },
 
         GraphOp::SetEdgeEndpoints { from, to, .. } => (!endpoints_is_finite(*from))
             .then_some("SetEdgeEndpoints.from")
             .or_else(|| (!endpoints_is_finite(*to)).then_some("SetEdgeEndpoints.to")),
 
-        GraphOp::RemoveNode { .. }
+        GraphOp::AddImport { .. }
+        | GraphOp::RemoveImport { .. }
+        | GraphOp::SetImportAlias { .. }
+        | GraphOp::SetSymbolName { .. }
+        | GraphOp::SetSymbolType { .. }
+        | GraphOp::SetSymbolDefaultValue { .. }
+        | GraphOp::SetNodeSelectable { .. }
+        | GraphOp::SetNodeDraggable { .. }
+        | GraphOp::SetNodeConnectable { .. }
+        | GraphOp::SetNodeDeletable { .. }
+        | GraphOp::SetNodeExpandParent { .. }
+        | GraphOp::SetNodeHidden { .. }
+        | GraphOp::SetPortConnectable { .. }
+        | GraphOp::SetPortConnectableStart { .. }
+        | GraphOp::SetPortConnectableEnd { .. }
+        | GraphOp::SetPortType { .. }
+        | GraphOp::SetPortData { .. }
+        | GraphOp::SetEdgeSelectable { .. }
+        | GraphOp::SetEdgeDeletable { .. }
+        | GraphOp::SetEdgeReconnectable { .. }
+        | GraphOp::RemoveNode { .. }
         | GraphOp::SetNodeKind { .. }
         | GraphOp::SetNodeKindVersion { .. }
         | GraphOp::SetNodeParent { .. }
@@ -59,6 +94,9 @@ fn op_non_finite_field(op: &GraphOp) -> Option<&'static str> {
         | GraphOp::SetNodePorts { .. }
         | GraphOp::SetNodeData { .. }
         | GraphOp::SetGroupTitle { .. }
+        | GraphOp::SetGroupColor { .. }
+        | GraphOp::SetStickyNoteText { .. }
+        | GraphOp::SetStickyNoteColor { .. }
         | GraphOp::AddPort { .. }
         | GraphOp::RemovePort { .. }
         | GraphOp::AddEdge { .. }

@@ -281,10 +281,11 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                 if !clipboard_text {
                     return CommandAvailability::Blocked;
                 }
-                self.input
-                    .has_selection()
-                    .then_some(CommandAvailability::Available)
-                    .unwrap_or(CommandAvailability::Blocked)
+                if self.input.has_selection() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
             }
             "text.paste" => {
                 if !clipboard_text {
@@ -292,9 +293,13 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                 }
                 CommandAvailability::Available
             }
-            "text.select_all" | "text.clear" => (!self.input.text().is_empty())
-                .then_some(CommandAvailability::Available)
-                .unwrap_or(CommandAvailability::Blocked),
+            "text.select_all" | "text.clear" => {
+                if !self.input.text().is_empty() {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
             _ => CommandAvailability::NotHandled,
         }
     }
@@ -345,6 +350,8 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
     }
 
     fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+        cx.observe_model(&self.model, Invalidation::Layout);
+        cx.observe_model(&self.model, Invalidation::Paint);
         let force = !self.dirty_since_sync;
         self.sync_from_model(cx.app, force);
         self.input.layout(cx)

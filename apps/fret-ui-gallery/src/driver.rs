@@ -20,7 +20,7 @@ use fret_runtime::{
 };
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::declarative;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
@@ -33,7 +33,6 @@ use fret_workspace::commands::{
 use fret_workspace::{
     WorkspaceFrame, WorkspaceStatusBar, WorkspaceTab, WorkspaceTabStrip, WorkspaceTopBar,
 };
-#[cfg(not(target_arch = "wasm32"))]
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -42,6 +41,10 @@ use time::Date;
 #[cfg(not(target_arch = "wasm32"))]
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
+#[cfg(not(target_arch = "wasm32"))]
+use crate::harness::{
+    UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
+};
 use crate::spec::*;
 use crate::ui;
 
@@ -124,6 +127,7 @@ struct UiGalleryWindowState {
     selected_page: Model<Arc<str>>,
     workspace_tabs: Model<Vec<Arc<str>>>,
     workspace_dirty_tabs: Model<Vec<Arc<str>>>,
+    workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>>,
     nav_query: Model<String>,
     content_tab: Model<Option<Arc<str>>>,
     theme_preset: Model<Option<Arc<str>>>,
@@ -190,6 +194,10 @@ struct UiGalleryWindowState {
     material3_text_field_value: Model<String>,
     material3_text_field_disabled: Model<bool>,
     material3_text_field_error: Model<bool>,
+    material3_autocomplete_value: Model<String>,
+    material3_autocomplete_disabled: Model<bool>,
+    material3_autocomplete_error: Model<bool>,
+    material3_autocomplete_dialog_open: Model<bool>,
     material3_menu_open: Model<bool>,
     text_input: Model<String>,
     text_area: Model<String>,
@@ -505,6 +513,17 @@ impl UiGalleryDriver {
             },
         );
 
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Some(handle) = app
+                .global::<UiGalleryCodeEditorHandlesStore>()
+                .and_then(|store| store.per_window.get(&window).cloned())
+            {
+                edit_can_undo |= handle.can_undo();
+                edit_can_redo |= handle.can_redo();
+            }
+        }
+
         app.with_global_mut(WindowCommandAvailabilityService::default, |svc, _app| {
             svc.set_snapshot(
                 window,
@@ -666,6 +685,16 @@ impl UiGalleryDriver {
         {
             workspace_tabs_init.push(start_page);
         }
+
+        let mut workspace_tab_close_by_command: HashMap<Arc<str>, Arc<str>> = HashMap::new();
+        for tab_id in workspace_tabs_init.iter() {
+            let cmd: Arc<str> = Arc::from(format!(
+                "{}{}",
+                CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+                tab_id.as_ref()
+            ));
+            workspace_tab_close_by_command.insert(cmd, tab_id.clone());
+        }
         let workspace_tabs = app.models_mut().insert(workspace_tabs_init);
         let workspace_dirty_tabs = app
             .models_mut()
@@ -767,6 +796,10 @@ impl UiGalleryDriver {
         let material3_text_field_value = app.models_mut().insert(String::new());
         let material3_text_field_disabled = app.models_mut().insert(false);
         let material3_text_field_error = app.models_mut().insert(false);
+        let material3_autocomplete_value = app.models_mut().insert(String::new());
+        let material3_autocomplete_disabled = app.models_mut().insert(false);
+        let material3_autocomplete_error = app.models_mut().insert(false);
+        let material3_autocomplete_dialog_open = app.models_mut().insert(false);
         let material3_menu_open = app.models_mut().insert(false);
         let text_input = app.models_mut().insert(String::new());
         let text_area = app.models_mut().insert(String::new());
@@ -830,6 +863,7 @@ impl UiGalleryDriver {
             selected_page,
             workspace_tabs,
             workspace_dirty_tabs,
+            workspace_tab_close_by_command,
             nav_query,
             content_tab,
             theme_preset,
@@ -894,6 +928,10 @@ impl UiGalleryDriver {
             material3_text_field_value,
             material3_text_field_disabled,
             material3_text_field_error,
+            material3_autocomplete_value,
+            material3_autocomplete_disabled,
+            material3_autocomplete_error,
+            material3_autocomplete_dialog_open,
             material3_menu_open,
             text_input,
             text_area,
@@ -939,10 +977,10 @@ impl UiGalleryDriver {
 
     fn handle_nav_command(
         app: &mut App,
-        state: &UiGalleryWindowState,
+        state: &mut UiGalleryWindowState,
         command: &CommandId,
     ) -> bool {
-        let Some(page) = command.as_str().strip_prefix(CMD_NAV_SELECT_PREFIX) else {
+        let Some(page) = page_id_for_nav_command(command.as_str()) else {
             return false;
         };
 
@@ -951,59 +989,77 @@ impl UiGalleryDriver {
         let _ = app.models_mut().update(&state.selected_page, |v| *v = page);
         let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
             if !tabs.iter().any(|t| t.as_ref() == page_for_tabs.as_ref()) {
-                tabs.push(page_for_tabs);
+                tabs.push(page_for_tabs.clone());
             }
         });
+
+        let cmd: Arc<str> = Arc::from(format!(
+            "{}{}",
+            CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+            page_for_tabs.as_ref()
+        ));
+        state
+            .workspace_tab_close_by_command
+            .insert(cmd, page_for_tabs);
         true
     }
 
     fn handle_workspace_tab_command(
         app: &mut App,
-        state: &UiGalleryWindowState,
+        state: &mut UiGalleryWindowState,
         command: &CommandId,
     ) -> bool {
-        let close_tab_by_id = |app: &mut App, tab_id: Arc<str>| -> bool {
-            let selected = app
-                .models()
-                .get_cloned(&state.selected_page)
-                .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
+        let close_tab_by_id =
+            |app: &mut App, state: &mut UiGalleryWindowState, tab_id: Arc<str>| -> bool {
+                let selected = app
+                    .models()
+                    .get_cloned(&state.selected_page)
+                    .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
 
-            let mut closed = false;
-            let mut next_selected: Option<Arc<str>> = None;
+                let mut closed = false;
+                let mut next_selected: Option<Arc<str>> = None;
 
-            let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
-                let Some(index) = tabs.iter().position(|t| t.as_ref() == tab_id.as_ref()) else {
-                    return;
-                };
-                if tabs.len() <= 1 {
-                    return;
-                }
+                let _ = app.models_mut().update(&state.workspace_tabs, |tabs| {
+                    let Some(index) = tabs.iter().position(|t| t.as_ref() == tab_id.as_ref())
+                    else {
+                        return;
+                    };
+                    if tabs.len() <= 1 {
+                        return;
+                    }
 
-                tabs.remove(index);
-                closed = true;
+                    tabs.remove(index);
+                    closed = true;
 
-                if selected.as_ref() == tab_id.as_ref() {
-                    let next_index = index.min(tabs.len().saturating_sub(1));
-                    next_selected = tabs.get(next_index).cloned();
-                }
-            });
-
-            if !closed {
-                return false;
-            }
-
-            let _ = app
-                .models_mut()
-                .update(&state.workspace_dirty_tabs, |dirty| {
-                    dirty.retain(|t| t.as_ref() != tab_id.as_ref());
+                    if selected.as_ref() == tab_id.as_ref() {
+                        let next_index = index.min(tabs.len().saturating_sub(1));
+                        next_selected = tabs.get(next_index).cloned();
+                    }
                 });
 
-            if let Some(next) = next_selected {
-                let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
-            }
+                if !closed {
+                    return false;
+                }
 
-            true
-        };
+                let cmd: Arc<str> = Arc::from(format!(
+                    "{}{}",
+                    CMD_WORKSPACE_TAB_CLOSE_PREFIX,
+                    tab_id.as_ref()
+                ));
+                state.workspace_tab_close_by_command.remove(cmd.as_ref());
+
+                let _ = app
+                    .models_mut()
+                    .update(&state.workspace_dirty_tabs, |dirty| {
+                        dirty.retain(|t| t.as_ref() != tab_id.as_ref());
+                    });
+
+                if let Some(next) = next_selected {
+                    let _ = app.models_mut().update(&state.selected_page, |v| *v = next);
+                }
+
+                true
+            };
 
         match command.as_str() {
             CMD_WORKSPACE_TAB_NEXT | CMD_WORKSPACE_TAB_PREV => {
@@ -1038,18 +1094,15 @@ impl UiGalleryDriver {
                     .models()
                     .get_cloned(&state.selected_page)
                     .unwrap_or_else(|| Arc::<str>::from(PAGE_INTRO));
-                close_tab_by_id(app, selected)
+                close_tab_by_id(app, state, selected)
             }
             _ => {
-                if let Some(suffix) = command
-                    .as_str()
-                    .strip_prefix(CMD_WORKSPACE_TAB_CLOSE_PREFIX)
+                if let Some(tab_id) = state
+                    .workspace_tab_close_by_command
+                    .get(command.as_str())
+                    .cloned()
                 {
-                    let suffix = suffix.trim();
-                    if suffix.is_empty() {
-                        return false;
-                    }
-                    return close_tab_by_id(app, Arc::<str>::from(suffix));
+                    return close_tab_by_id(app, state, tab_id);
                 }
                 false
             }
@@ -1553,6 +1606,8 @@ impl UiGalleryDriver {
         OverlayController::begin_frame(app, window);
         let bisect = ui_gallery_bisect_flags();
 
+        Self::sync_undo_availability(app, window, &state.undo_doc);
+
         let availability = app
             .global::<WindowCommandAvailabilityService>()
             .and_then(|svc| svc.snapshot(window))
@@ -1644,6 +1699,10 @@ impl UiGalleryDriver {
         let material3_text_field_value = state.material3_text_field_value.clone();
         let material3_text_field_disabled = state.material3_text_field_disabled.clone();
         let material3_text_field_error = state.material3_text_field_error.clone();
+        let material3_autocomplete_value = state.material3_autocomplete_value.clone();
+        let material3_autocomplete_disabled = state.material3_autocomplete_disabled.clone();
+        let material3_autocomplete_error = state.material3_autocomplete_error.clone();
+        let material3_autocomplete_dialog_open = state.material3_autocomplete_dialog_open.clone();
         let material3_menu_open = state.material3_menu_open.clone();
         let text_input = state.text_input.clone();
         let text_area = state.text_area.clone();
@@ -2032,6 +2091,10 @@ impl UiGalleryDriver {
                                             material3_text_field_value.clone(),
                                             material3_text_field_disabled.clone(),
                                             material3_text_field_error.clone(),
+                                            material3_autocomplete_value.clone(),
+                                            material3_autocomplete_disabled.clone(),
+                                            material3_autocomplete_error.clone(),
+                                            material3_autocomplete_dialog_open.clone(),
                                             material3_menu_open.clone(),
                                             text_input.clone(),
                                             text_area.clone(),
@@ -2126,6 +2189,10 @@ impl UiGalleryDriver {
                                         material3_text_field_value.clone(),
                                         material3_text_field_disabled.clone(),
                                         material3_text_field_error.clone(),
+                                        material3_autocomplete_value.clone(),
+                                        material3_autocomplete_disabled.clone(),
+                                        material3_autocomplete_error.clone(),
+                                        material3_autocomplete_dialog_open.clone(),
                                         material3_menu_open.clone(),
                                         text_input.clone(),
                                         text_area.clone(),
@@ -2173,11 +2240,14 @@ impl UiGalleryDriver {
                                 WorkspaceTab::new(
                                     tab_id.clone(),
                                     title,
-                                    CommandId::new(format!(
-                                        "{}{}",
-                                        CMD_NAV_SELECT_PREFIX,
-                                        tab_id.as_ref()
-                                    )),
+                                    page_spec(tab_id.as_ref())
+                                        .map(|spec| CommandId::from(spec.command))
+                                        .unwrap_or_else(|| {
+                                            CommandId::new(format!(
+                                                "ui_gallery.nav.select.{}",
+                                                tab_id.as_ref()
+                                            ))
+                                        }),
                                 )
                                 .close_command(CommandId::new(format!(
                                     "{}{}",
@@ -2302,13 +2372,10 @@ impl UiGalleryDriver {
                         .bottom(status_bar)
                         .into_element(cx);
 
-                    let panel = cx.semantics(
-                        SemanticsProps {
-                            role: SemanticsRole::Panel,
-                            label: Some(Arc::from("fret-ui-gallery")),
-                            ..Default::default()
-                        },
-                        |_cx| vec![frame],
+                    let panel = frame.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Panel)
+                            .label("fret-ui-gallery"),
                     );
                     if let Some(handle) = menubar_handle.borrow().clone() {
                         let group_active = handle.group_active.clone();
@@ -2842,6 +2909,22 @@ pub fn build_app() -> App {
                 let text_input = app.models().get_cloned(&ids.text_input)?;
                 let text_area = app.models().get_cloned(&ids.text_area)?;
 
+                let torture = app
+                    .global::<UiGalleryCodeEditorHandlesStore>()
+                    .and_then(|store| store.per_window.get(&window))
+                    .map(|handle| {
+                        let text = handle.with_buffer(|b| b.text_string());
+                        let selection = handle.selection();
+                        let anchor = selection.anchor.min(text.len()) as u64;
+                        let caret = selection.caret().min(text.len()) as u64;
+                        serde_json::json!({
+                            "schema_version": 1,
+                            "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                            "text_len_bytes": text.len() as u64,
+                            "selection": { "anchor": anchor, "caret": caret },
+                        })
+                    });
+
                 let mut out = serde_json::Map::new();
                 out.insert("schema_version".to_string(), serde_json::json!(1));
                 out.insert("kind".to_string(), serde_json::json!("fret_ui_gallery"));
@@ -2855,6 +2938,7 @@ pub fn build_app() -> App {
                         "syntax_rust": syntax_rust,
                         "text_boundary_mode": if boundary_identifier { "identifier" } else { "unicode_word" },
                         "soft_wrap_cols": if soft_wrap { Some(80u32) } else { None },
+                        "torture": torture,
                     }),
                 );
                 out.insert(
@@ -3181,36 +3265,16 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
-        if let Some(suffix) = command
-            .as_str()
-            .strip_prefix(CMD_VIRTUAL_LIST_TORTURE_ROW_EDIT_PREFIX)
-        {
-            if let Ok(row) = suffix.parse::<u64>() {
-                let _ = app
-                    .models_mut()
-                    .update(&state.virtual_list_torture_edit_row, |v| *v = Some(row));
-                let _ = app
-                    .models_mut()
-                    .update(&state.virtual_list_torture_edit_text, |v| {
-                        *v = format!("Row {row}");
-                    });
-                app.request_redraw(window);
-                return;
-            }
-        }
-
-        if let Some(suffix) = command.as_str().strip_prefix(CMD_DATA_GRID_ROW_PREFIX) {
-            if let Ok(row) = suffix.parse::<u64>() {
-                let _ = app.models_mut().update(&state.data_grid_selected_row, |v| {
-                    if *v == Some(row) {
-                        *v = None;
-                    } else {
-                        *v = Some(row);
-                    }
-                });
-                app.request_redraw(window);
-                return;
-            }
+        if let Some(row) = data_grid_row_for_command(command.as_str()) {
+            let _ = app.models_mut().update(&state.data_grid_selected_row, |v| {
+                if *v == Some(row) {
+                    *v = None;
+                } else {
+                    *v = Some(row);
+                }
+            });
+            app.request_redraw(window);
+            return;
         }
 
         match command.as_str() {

@@ -78,6 +78,20 @@ impl ElementHostWidget {
             return;
         }
 
+        // Text input widgets may stop propagation for navigation keys (ArrowUp/ArrowDown, etc.).
+        // Give component-owned key hooks a chance to intercept before the widget consumes them.
+        if let Event::KeyDown {
+            key,
+            modifiers,
+            repeat,
+        } = event
+            && cx.focus == Some(cx.node)
+            && is_text_input
+            && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
+        {
+            return;
+        }
+
         match instance {
             ElementInstance::SelectableText(props) => {
                 selectable_text::handle_selectable_text(self, cx, window, props, event);
@@ -95,24 +109,16 @@ impl ElementHostWidget {
                 text::handle_resizable_panel_group(self, cx, props, event);
             }
             ElementInstance::VirtualList(props) => {
-                if scroll::handle_virtual_list(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = scroll::handle_virtual_list(self, cx, window, props, event);
             }
             ElementInstance::Scroll(props) => {
-                if scroll::handle_scroll(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = scroll::handle_scroll(self, cx, window, props, event);
             }
             ElementInstance::Scrollbar(props) => {
-                if scrollbar::handle_scrollbar(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = scrollbar::handle_scrollbar(self, cx, window, props, event);
             }
             ElementInstance::WheelRegion(props) => {
-                if wheel_region::handle_wheel_region(self, cx, window, props, event) {
-                    return;
-                }
+                let _ = wheel_region::handle_wheel_region(self, cx, window, props, event);
             }
             ElementInstance::DismissibleLayer(props) => {
                 dismissible::handle_dismissible_layer(self, cx, window, props, event);
@@ -131,17 +137,6 @@ impl ElementHostWidget {
             }
             _ => {}
         }
-
-        if is_text_input
-            && !cx.stop_propagation
-            && let Event::KeyDown {
-                key,
-                modifiers,
-                repeat,
-            } = event
-            && cx.focus == Some(cx.node)
-            && hooks::try_key_hook(self, cx, window, *key, *modifiers, *repeat)
-        {}
     }
 
     pub(super) fn event_observer_impl<H: UiHost>(
@@ -156,11 +151,8 @@ impl ElementHostWidget {
             return;
         };
 
-        match instance {
-            ElementInstance::DismissibleLayer(props) => {
-                dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
-            }
-            _ => {}
+        if let ElementInstance::DismissibleLayer(props) = instance {
+            dismissible::handle_dismissible_layer_observer(self, cx, window, props, event);
         }
     }
 }

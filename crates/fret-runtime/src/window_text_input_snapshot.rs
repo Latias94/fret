@@ -9,7 +9,7 @@ use fret_core::{AppWindowId, Rect};
 ///
 /// Indices are expressed in UTF-16 code units over the widget's **composed view**:
 /// base buffer text with the active IME preedit spliced at the caret.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct WindowTextInputSnapshot {
     pub focus_is_text_input: bool,
     pub is_composing: bool,
@@ -23,19 +23,6 @@ pub struct WindowTextInputSnapshot {
     ///
     /// On Windows/winit this is the primary hook for positioning the candidate window.
     pub ime_cursor_area: Option<Rect>,
-}
-
-impl Default for WindowTextInputSnapshot {
-    fn default() -> Self {
-        Self {
-            focus_is_text_input: false,
-            is_composing: false,
-            text_len_utf16: 0,
-            selection_utf16: None,
-            marked_utf16: None,
-            ime_cursor_area: None,
-        }
-    }
 }
 
 #[derive(Debug, Default)]

@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use crate::core::{
     CanvasPoint, Edge, EdgeId, Graph, Group, GroupId, Node, NodeId, Port, PortId, StickyNote,
-    StickyNoteId, Symbol, SymbolId,
+    StickyNoteId, Symbol, SymbolId, symbol_ref_target_symbol_id,
 };
 use crate::ops::{GraphOp, GraphTransaction};
 
@@ -56,7 +56,10 @@ impl GraphFragment {
     /// - their ports,
     /// - edges that connect between selected nodes.
     ///
-    /// Groups/notes/symbols are currently not inferred; callers may add them explicitly.
+    /// Groups/notes are not inferred; callers may add them explicitly.
+    ///
+    /// Symbols are inferred for built-in symbol-ref nodes (`core::SYMBOL_REF_NODE_KIND`) so
+    /// copy/paste can remain self-contained for the "blackboard variables" contract.
     pub fn from_nodes(graph: &Graph, nodes: impl IntoIterator<Item = NodeId>) -> Self {
         Self::from_selection(graph, nodes, std::iter::empty())
     }
@@ -101,6 +104,15 @@ impl GraphFragment {
                     node.parent = None;
                 }
                 out.nodes.insert(*node_id, node);
+            }
+        }
+
+        for (node_id, node) in &out.nodes {
+            let Ok(Some(symbol_id)) = symbol_ref_target_symbol_id(*node_id, node) else {
+                continue;
+            };
+            if let Some(symbol) = graph.symbols.get(&symbol_id) {
+                out.symbols.insert(symbol_id, symbol.clone());
             }
         }
 

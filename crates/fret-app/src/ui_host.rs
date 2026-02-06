@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::any::{Any, TypeId};
 
 use fret_core::{AppWindowId, Point, PointerId};
 use fret_runtime::{
@@ -17,6 +17,10 @@ impl GlobalsHost for App {
 
     fn global<T: Any>(&self) -> Option<&T> {
         App::global(self)
+    }
+
+    fn global_revision(&self, global: TypeId) -> Option<u64> {
+        App::global_revision(self, global)
     }
 
     #[track_caller]
@@ -103,8 +107,8 @@ impl DragHost for App {
         App::drag(self, pointer_id)
     }
 
-    fn any_drag_session(&self, mut predicate: impl FnMut(&DragSession) -> bool) -> bool {
-        App::drags(self).any(|d| predicate(d))
+    fn any_drag_session(&self, predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        App::drags(self).any(predicate)
     }
 
     fn find_drag_pointer_id(

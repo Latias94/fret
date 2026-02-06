@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use serde_json::Value;
 
-use super::Aggregation;
+use super::{Aggregation, AggregationFnSpec, BuiltInAggregationFn};
 
 pub type ColumnId = Arc<str>;
 
@@ -32,7 +32,7 @@ pub enum TanStackValue {
     DateTime(f64),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltInSortingFn {
     Alphanumeric,
     AlphanumericCaseSensitive,
@@ -42,7 +42,7 @@ pub enum BuiltInSortingFn {
     Basic,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SortingFnSpec {
     /// TanStack `sortingFn: 'auto'`.
     Auto,
@@ -52,7 +52,7 @@ pub enum SortingFnSpec {
     Named(Arc<str>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BuiltInFilterFn {
     IncludesString,
     IncludesStringSensitive,
@@ -65,7 +65,7 @@ pub enum BuiltInFilterFn {
     InNumberRange,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FilteringFnSpec {
     /// TanStack `filterFn: 'auto'`.
     Auto,
@@ -75,7 +75,7 @@ pub enum FilteringFnSpec {
     Named(Arc<str>),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SortUndefined {
     /// TanStack `sortUndefined: false` (disable the pre-pass undefined ordering).
     Disabled,
@@ -108,6 +108,7 @@ pub struct ColumnDef<TData> {
     pub enable_column_filter: bool,
     pub enable_global_filter: bool,
     pub aggregation: Aggregation,
+    pub aggregation_fn: AggregationFnSpec,
     pub enable_hiding: bool,
     pub enable_ordering: bool,
     pub enable_pinning: bool,
@@ -140,6 +141,7 @@ impl<TData> Clone for ColumnDef<TData> {
             enable_column_filter: self.enable_column_filter,
             enable_global_filter: self.enable_global_filter,
             aggregation: self.aggregation,
+            aggregation_fn: self.aggregation_fn.clone(),
             enable_hiding: self.enable_hiding,
             enable_ordering: self.enable_ordering,
             enable_pinning: self.enable_pinning,
@@ -182,6 +184,7 @@ impl<TData> ColumnDef<TData> {
             enable_column_filter: true,
             enable_global_filter: true,
             aggregation: Aggregation::None,
+            aggregation_fn: AggregationFnSpec::Auto,
             enable_hiding: true,
             enable_ordering: true,
             enable_pinning: true,
@@ -207,6 +210,30 @@ impl<TData> ColumnDef<TData> {
     /// Provide a TanStack-like `getValue(columnId)` accessor for built-in sortingFn behaviors.
     pub fn sort_value_by(mut self, get_value: impl Fn(&TData) -> TanStackValue + 'static) -> Self {
         self.sort_value = Some(Arc::new(get_value));
+        self
+    }
+
+    /// TanStack-aligned: configure `aggregationFn: 'auto'`.
+    pub fn aggregation_fn_auto(mut self) -> Self {
+        self.aggregation_fn = AggregationFnSpec::Auto;
+        self
+    }
+
+    /// TanStack-aligned: configure a built-in aggregation function key.
+    pub fn aggregation_fn_builtin(mut self, agg: BuiltInAggregationFn) -> Self {
+        self.aggregation_fn = AggregationFnSpec::BuiltIn(agg);
+        self
+    }
+
+    /// TanStack-aligned: configure `aggregationFn: <string>` resolved via `options.aggregationFns`.
+    pub fn aggregation_fn_named(mut self, key: impl Into<Arc<str>>) -> Self {
+        self.aggregation_fn = AggregationFnSpec::Named(key.into());
+        self
+    }
+
+    /// Disable aggregation for this column.
+    pub fn aggregation_fn_none(mut self) -> Self {
+        self.aggregation_fn = AggregationFnSpec::None;
         self
     }
 

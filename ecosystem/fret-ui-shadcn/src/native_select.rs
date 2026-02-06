@@ -4,7 +4,7 @@ use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_ui::element::PressableState;
 use fret_ui::element::{
     AnyElement, ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps,
-    SemanticsProps, SizeStyle,
+    SemanticsDecoration, SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -246,14 +246,12 @@ pub fn native_select<H: UiHost>(
     };
 
     let out = cx.container(props, move |_cx| vec![content, icon, pressable]);
-    let out = cx.semantics(
-        SemanticsProps {
-            role: fret_core::SemanticsRole::ComboBox,
-            label: a11y_label,
-            ..Default::default()
-        },
-        move |_cx| vec![out],
-    );
+    let out = out.attach_semantics(SemanticsDecoration {
+        role: Some(fret_core::SemanticsRole::ComboBox),
+        label: a11y_label.clone(),
+        disabled: disabled.then_some(true),
+        ..Default::default()
+    });
     if disabled {
         cx.opacity(0.5, move |_cx| vec![out])
     } else {

@@ -65,7 +65,7 @@ use crate::ui::presenter::{
     NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
     PortAnchorHint,
 };
-use crate::ui::style::{NodeGraphColorMode, NodeGraphStyle};
+use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
@@ -102,6 +102,7 @@ mod derived_geometry;
 mod edge_drag;
 mod edge_insert;
 mod edge_insert_drag;
+mod edge_path_ctx;
 mod event_clipboard;
 mod event_keyboard;
 mod event_pointer_down;
@@ -116,6 +117,7 @@ mod graph_construction;
 mod group_drag;
 mod group_resize;
 mod hit_test;
+use hit_test::{HitTestCtx, HitTestScratch};
 mod hover;
 mod insert_node_drag;
 mod interaction_policy;
@@ -136,6 +138,8 @@ mod paint_overlay_elements;
 mod paint_overlays;
 mod paint_render_data;
 mod paint_root;
+mod paint_root_helpers;
+mod paint_searcher;
 mod pan_zoom;
 mod pending_drag;
 mod pending_group_drag;
@@ -146,6 +150,7 @@ mod pointer_up;
 mod preview;
 mod reconnect;
 mod rect_math;
+mod retained_widget;
 mod right_click;
 mod searcher;
 mod searcher_logic;
@@ -161,9 +166,10 @@ mod wire_drag;
 mod wire_drag_helpers;
 mod wire_math;
 
+use edge_path_ctx::EdgePathContext;
 use overlay_hit::{
-    context_menu_rect_at, hit_context_menu_item, hit_searcher_row, searcher_rect_at,
-    searcher_visible_rows,
+    context_menu_rect_at, context_menu_size_at_zoom, hit_context_menu_item, hit_searcher_row,
+    searcher_rect_at, searcher_size_at_zoom, searcher_visible_rows,
 };
 use rect_math::{
     edge_bounds_rect, inflate_rect, path_bounds_rect, rect_from_points, rect_union, rects_intersect,
@@ -185,10 +191,10 @@ use super::searcher::{SEARCHER_MAX_VISIBLE_ROWS, SearcherRow, SearcherRowKind};
 use super::snaplines::SnapGuides;
 use super::spatial::CanvasSpatialIndex;
 use super::state::{
-    ContextMenuState, ContextMenuTarget, DragPreviewCache, DragPreviewKind, GeometryCache,
-    GeometryCacheKey, InteractionState, InternalsCacheKey, MarqueeDrag, NodeResizeHandle,
-    PanInertiaState, PasteSeries, PendingPaste, SearcherState, ToastState, ViewSnapshot, WireDrag,
-    WireDragKind,
+    ContextMenuState, ContextMenuTarget, DerivedBaseKey, DragPreviewCache, DragPreviewKind,
+    GeometryCache, GeometryCacheKey, InteractionState, InternalsCacheKey, InternalsViewKey,
+    MarqueeDrag, NodeResizeHandle, PanInertiaState, PasteSeries, PendingPaste, SearcherState,
+    SpatialIndexCacheKey, ToastState, ViewSnapshot, WireDrag, WireDragKind,
 };
 use super::workflow;
 
@@ -231,6 +237,7 @@ pub struct NodeGraphCanvasWith<M> {
     callbacks: Option<Box<dyn NodeGraphCallbacks>>,
     middleware: M,
     style: NodeGraphStyle,
+    background_override: Option<NodeGraphBackgroundStyle>,
     color_mode: Option<NodeGraphColorMode>,
     color_mode_last: Option<NodeGraphColorMode>,
     color_mode_theme_rev: Option<u64>,
@@ -256,6 +263,7 @@ pub struct NodeGraphCanvasWith<M> {
 
     cached_pan: CanvasPoint,
     cached_zoom: f32,
+    last_cull_window_key: Option<u64>,
     history: GraphHistory,
     geometry: GeometryCache,
 
@@ -349,12 +357,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     }
 
     fn edge_render_hint(&self, graph: &Graph, edge_id: EdgeId) -> EdgeRenderHint {
-        let base = self.presenter.edge_render_hint(graph, edge_id, &self.style);
-        if let Some(edge_types) = self.edge_types.as_ref() {
-            edge_types.apply(graph, edge_id, &self.style, base)
-        } else {
-            base
-        }
+        EdgePathContext::new(&self.style, &*self.presenter, self.edge_types.as_ref())
+            .edge_render_hint(graph, edge_id)
     }
 
     fn edge_custom_path(
@@ -366,13 +370,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         to: Point,
         zoom: f32,
     ) -> Option<crate::ui::edge_types::EdgeCustomPath> {
-        self.edge_types.as_ref()?.custom_path(
-            graph,
-            edge_id,
-            &self.style,
-            hint,
-            crate::ui::edge_types::EdgePathInput { from, to, zoom },
-        )
+        EdgePathContext::new(&self.style, &*self.presenter, self.edge_types.as_ref())
+            .edge_custom_path(graph, edge_id, hint, from, to, zoom)
     }
 
     pub fn new_with_middleware(
@@ -394,6 +393,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             callbacks: None,
             middleware,
             style: NodeGraphStyle::default(),
+            background_override: None,
             color_mode: None,
             color_mode_last: None,
             color_mode_theme_rev: None,
@@ -413,6 +413,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             internals_key: None,
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
+            last_cull_window_key: None,
             history: GraphHistory::default(),
             geometry: GeometryCache::default(),
             paint_cache: CanvasPaintCache::default(),
@@ -469,6 +470,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             callbacks: self.callbacks,
             middleware,
             style: self.style,
+            background_override: self.background_override,
             color_mode: self.color_mode,
             color_mode_last: self.color_mode_last,
             color_mode_theme_rev: self.color_mode_theme_rev,
@@ -488,6 +490,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             internals_key: self.internals_key,
             cached_pan: self.cached_pan,
             cached_zoom: self.cached_zoom,
+            last_cull_window_key: self.last_cull_window_key,
             history: self.history,
             geometry: self.geometry,
             paint_cache: self.paint_cache,
@@ -526,10 +529,26 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub fn with_style(mut self, style: NodeGraphStyle) -> Self {
         self.style = style;
+        self.background_override = None;
         self.color_mode = None;
         self.color_mode_last = None;
         self.color_mode_theme_rev = None;
-        self.geometry.key = None;
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
+        self
+    }
+
+    pub fn background_style(&self) -> NodeGraphBackgroundStyle {
+        self.style.background_style()
+    }
+
+    pub fn with_background_style(mut self, background: NodeGraphBackgroundStyle) -> Self {
+        self.style = self.style.with_background_style(background);
+        self.background_override = Some(background);
+        // Background theming must not rebuild derived geometry; it is a paint-only concern.
+        // Clear the grid cache to avoid retaining tiles for unused background variants.
+        self.grid_scene_cache.clear();
         self
     }
 
@@ -537,7 +556,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.color_mode = Some(mode);
         self.color_mode_last = None;
         self.color_mode_theme_rev = None;
-        self.geometry.key = None;
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
         self
     }
 
@@ -571,12 +592,19 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         };
 
         self.style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
-        self.geometry.key = None;
+        if let Some(background) = self.background_override {
+            let style = std::mem::take(&mut self.style);
+            self.style = style.with_background_style(background);
+        }
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
 
         if let Some(services) = services {
             self.paint_cache.clear(services);
         }
 
+        self.grid_scene_cache.clear();
         self.groups_scene_cache.clear();
         self.nodes_scene_cache.clear();
         self.edges_scene_cache.clear();
@@ -687,275 +715,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.did_fit_view_on_mount = true;
         }
         did
-    }
-}
-
-impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<M> {
-    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        self.paint_cache.clear(services);
-        self.groups_scene_cache.clear();
-        self.nodes_scene_cache.clear();
-        self.edges_scene_cache.clear();
-        self.edge_labels_scene_cache.clear();
-        self.edges_build_states.clear();
-        self.edge_labels_build_states.clear();
-        self.edge_labels_build_state = None;
-    }
-
-    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &CommandId) -> bool {
-        let theme = cx.theme().snapshot();
-        self.sync_style_from_color_mode(theme, Some(cx.services));
-        let snapshot = self.sync_view_state(cx.app);
-        if cx.input_ctx.focus_is_text_input
-            && (command.as_str().starts_with("node_graph.")
-                || matches!(
-                    command.as_str(),
-                    "edit.copy" | "edit.cut" | "edit.paste" | "edit.select_all"
-                ))
-        {
-            return false;
-        }
-
-        let mw_outcome = {
-            let mw_ctx = NodeGraphCanvasMiddlewareCx {
-                graph: &self.graph,
-                view_state: &self.view_state,
-                style: &self.style,
-                bounds: self.interaction.last_bounds,
-                pan: snapshot.pan,
-                zoom: snapshot.zoom,
-            };
-            self.middleware.handle_command(cx, &mw_ctx, command)
-        };
-        if mw_outcome == NodeGraphCanvasCommandOutcome::Handled {
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-            return true;
-        }
-
-        self.handle_command(cx, &snapshot, command)
-    }
-
-    fn command_availability(
-        &self,
-        cx: &mut CommandAvailabilityCx<'_, H>,
-        command: &CommandId,
-    ) -> CommandAvailability {
-        if cx.focus != Some(cx.node) {
-            return CommandAvailability::NotHandled;
-        }
-
-        let clipboard_text = cx.input_ctx.caps.clipboard.text;
-        match command.as_str() {
-            "edit.copy" | CMD_NODE_GRAPH_COPY => {
-                if !clipboard_text {
-                    return CommandAvailability::Blocked;
-                }
-
-                let has_copyable_selection = self
-                    .view_state
-                    .read_ref(cx.app, |state| {
-                        !state.selected_nodes.is_empty() || !state.selected_groups.is_empty()
-                    })
-                    .ok()
-                    .unwrap_or(false);
-
-                if has_copyable_selection {
-                    CommandAvailability::Available
-                } else {
-                    CommandAvailability::Blocked
-                }
-            }
-            "edit.cut" | CMD_NODE_GRAPH_CUT => {
-                if !clipboard_text {
-                    return CommandAvailability::Blocked;
-                }
-
-                let has_any_selection = self
-                    .view_state
-                    .read_ref(cx.app, |state| {
-                        !state.selected_nodes.is_empty()
-                            || !state.selected_edges.is_empty()
-                            || !state.selected_groups.is_empty()
-                    })
-                    .ok()
-                    .unwrap_or(false);
-
-                if has_any_selection {
-                    CommandAvailability::Available
-                } else {
-                    CommandAvailability::Blocked
-                }
-            }
-            "edit.paste" | CMD_NODE_GRAPH_PASTE => {
-                if !clipboard_text || cx.window.is_none() {
-                    return CommandAvailability::Blocked;
-                }
-                CommandAvailability::Available
-            }
-            "edit.select_all" | CMD_NODE_GRAPH_SELECT_ALL => {
-                let has_any_content = self
-                    .graph
-                    .read_ref(cx.app, |graph| {
-                        !graph.nodes.is_empty() || !graph.groups.is_empty()
-                    })
-                    .ok()
-                    .unwrap_or(false);
-
-                if has_any_content {
-                    CommandAvailability::Available
-                } else {
-                    CommandAvailability::Blocked
-                }
-            }
-            _ => CommandAvailability::NotHandled,
-        }
-    }
-
-    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        let theme = Theme::global(&*cx.app).snapshot();
-        self.sync_style_from_color_mode(theme, None);
-        self.interaction.last_bounds = Some(cx.bounds);
-        let snapshot = self.sync_view_state(cx.app);
-
-        cx.set_role(fret_core::SemanticsRole::Viewport);
-        cx.set_focusable(true);
-        cx.set_label(self.presenter.a11y_canvas_label().as_ref());
-
-        let active_descendant = match (
-            self.interaction.focused_port.is_some(),
-            self.interaction.focused_edge.is_some(),
-            self.interaction.focused_node.is_some(),
-        ) {
-            (true, _, _) => cx.children.get(0).copied(),
-            (false, true, _) => cx.children.get(1).copied(),
-            (false, false, true) => cx.children.get(2).copied(),
-            _ => None,
-        };
-        cx.set_active_descendant(active_descendant);
-
-        let (focused_node, focused_port, focused_edge) = (
-            self.interaction.focused_node,
-            self.interaction.focused_port,
-            self.interaction.focused_edge,
-        );
-
-        let style = self.style.clone();
-        let value = self
-            .graph
-            .read_ref(cx.app, |graph| {
-                let mut parts: Vec<String> = Vec::new();
-                parts.push(format!("zoom {:.3}", snapshot.zoom));
-                parts.push(format!(
-                    "selected nodes {}, edges {}, groups {}",
-                    snapshot.selected_nodes.len(),
-                    snapshot.selected_edges.len(),
-                    snapshot.selected_groups.len(),
-                ));
-
-                if self.interaction.wire_drag.is_some() {
-                    parts.push("connecting".to_string());
-                }
-
-                if let Some(node) = focused_node {
-                    if let Some(label) = self.presenter.a11y_node_label(graph, node) {
-                        parts.push(format!("focused node {}", label));
-                    } else {
-                        parts.push(format!("focused node {:?}", node));
-                    }
-                }
-
-                if let Some(port) = focused_port {
-                    if let Some(label) = self.presenter.a11y_port_label(graph, port) {
-                        parts.push(format!("focused port {}", label));
-                    } else {
-                        parts.push(format!("focused port {:?}", port));
-                    }
-                }
-
-                if let Some(edge) = focused_edge {
-                    if let Some(label) = self.presenter.a11y_edge_label(graph, edge, &style) {
-                        parts.push(format!("focused edge {}", label));
-                    } else {
-                        parts.push(format!("focused edge {:?}", edge));
-                    }
-                }
-
-                parts.join("; ")
-            })
-            .ok()
-            .unwrap_or_else(|| format!("zoom {:.3}", snapshot.zoom));
-
-        cx.set_value(value);
-    }
-
-    fn render_transform(&self, bounds: Rect) -> Option<Transform2D> {
-        let view = PanZoom2D {
-            pan: Point::new(Px(self.cached_pan.x), Px(self.cached_pan.y)),
-            zoom: self.cached_zoom,
-        };
-        view.render_transform(bounds)
-    }
-
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-        let theme = cx.theme().snapshot();
-        self.sync_style_from_color_mode(theme, Some(cx.services));
-        cx.observe_model(&self.graph, Invalidation::Layout);
-        cx.observe_model(&self.view_state, Invalidation::Layout);
-        if let Some(queue) = self.edit_queue.as_ref() {
-            cx.observe_model(queue, Invalidation::Layout);
-        }
-        if let Some(queue) = self.view_queue.as_ref() {
-            cx.observe_model(queue, Invalidation::Layout);
-        }
-        for &child in cx.children {
-            cx.layout_in(child, cx.bounds);
-        }
-        self.interaction.last_bounds = Some(cx.bounds);
-        self.sync_view_state(cx.app);
-        self.drain_edit_queue(cx.app, cx.window);
-        self.update_auto_measured_node_sizes(cx);
-        let did_view_queue = self.drain_view_queue(cx.app, cx.window);
-        let did_fit_on_mount =
-            self.maybe_fit_view_on_mount(cx.app, cx.window, cx.bounds, did_view_queue);
-        if did_view_queue || did_fit_on_mount {
-            cx.request_redraw();
-        }
-        cx.available
-    }
-
-    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-        let theme = cx.theme().snapshot();
-        self.sync_style_from_color_mode(theme, Some(cx.services));
-        let snapshot = self.sync_view_state(cx.app);
-        self.interaction.last_bounds = Some(cx.bounds);
-
-        let mw_outcome = {
-            let mw_ctx = NodeGraphCanvasMiddlewareCx {
-                graph: &self.graph,
-                view_state: &self.view_state,
-                style: &self.style,
-                bounds: Some(cx.bounds),
-                pan: snapshot.pan,
-                zoom: snapshot.zoom,
-            };
-            self.middleware.handle_event(cx, &mw_ctx, event)
-        };
-        if mw_outcome == NodeGraphCanvasEventOutcome::Handled {
-            cx.stop_propagation();
-            cx.request_redraw();
-            cx.invalidate_self(Invalidation::Paint);
-            return;
-        }
-
-        self.handle_event(cx, event, &snapshot);
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        let theme = cx.theme().snapshot();
-        self.sync_style_from_color_mode(theme, Some(cx.services));
-        self.paint_root(cx);
     }
 }
 

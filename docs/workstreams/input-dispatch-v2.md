@@ -143,6 +143,13 @@ See `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md` for the detailed
 - Menu open modality: pointer-open focuses content and prevents entry focus; keyboard-open allows entry focus (Radix `onOpenAutoFocus` outcomes).
   - Evidence: `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`,
     `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,menubar.rs,context_menu.rs}`
+- Timer routing: targeted `Event::Timer` delivery must still bubble so overlay-root policies can
+  observe descendant timers (e.g. snackbar/hover-intent layers that register on the overlay root
+  but schedule timers for children).
+  - Evidence: `crates/fret-ui/src/tree/dispatch.rs`,
+    `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+    (`snackbar_action_emits_command_and_dismisses`,
+    `snackbar_dismiss_button_dismisses_without_emitting_command`).
 
 ## Compatibility with “per-frame rebuilt” UI
 

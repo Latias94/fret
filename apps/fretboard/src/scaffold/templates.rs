@@ -48,6 +48,8 @@ pub(super) fn todo_template_cargo_toml(
         .join(", ");
 
     let fret_kit_path = join_workspace_path(workspace_prefix, "ecosystem/fret-kit");
+    let fret_query_path = join_workspace_path(workspace_prefix, "ecosystem/fret-query");
+    let fret_selector_path = join_workspace_path(workspace_prefix, "ecosystem/fret-selector");
 
     format!(
         r#"[package]
@@ -58,6 +60,8 @@ edition = "2024"
 [dependencies]
 anyhow = "1"
 fret-kit = {{ path = "{fret_kit_path}", default-features = false, features = [{kit_features}] }}
+fret-query = {{ path = "{fret_query_path}" }}
+fret-selector = {{ path = "{fret_selector_path}" }}
 [workspace]
 "#
     )
@@ -160,12 +164,16 @@ pub(super) fn todo_template_main_rs(_package_name: &str, opts: ScaffoldOptions) 
     };
 
     const TEMPLATE: &str = r#"use std::sync::Arc;
+use std::time::Duration;
 
 use fret_kit::prelude::*;
+use fret_query::ui::QueryElementContextExt as _;
+use fret_query::{QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+use fret_selector::ui::SelectorElementContextExt as _;
 
 const CMD_ADD: &str = "todo.add";
 const CMD_CLEAR_DONE: &str = "todo.clear_done";
-const CMD_REMOVE_PREFIX: &str = "todo.remove.";
+const CMD_REFRESH_TIP: &str = "todo.refresh_tip";
 
 #[derive(Clone)]
 struct TodoItem {
@@ -177,7 +185,37 @@ struct TodoItem {
 struct TodoState {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
+    router: MessageRouter<Msg>,
     next_id: u64,
+}
+
+#[derive(Debug, Clone)]
+enum Msg {
+    Remove(u64),
+}
+
+#[derive(Debug)]
+struct TipData {
+    text: Arc<str>,
+}
+
+fn tip_key() -> QueryKey<TipData> {
+    QueryKey::new("todo.tip.v1", &0u8)
+}
+
+fn tip_policy() -> QueryPolicy {
+    QueryPolicy {
+        stale_time: Duration::from_secs(10),
+        cache_time: Duration::from_secs(60),
+        keep_previous_data_while_loading: true,
+        ..Default::default()
+    }
+}
+
+#[derive(Clone, PartialEq)]
+struct TodoDerivedDeps {
+    todos_rev: u64,
+    done_revs: Vec<u64>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -187,7 +225,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
+fn init_window(app: &mut App, window: AppWindowId) -> TodoState {
     let done_1 = app.models_mut().insert(false);
     let done_2 = app.models_mut().insert(true);
     let todos = app.models_mut().insert(vec![
@@ -203,9 +241,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> TodoState {
         },
     ]);
 
+    let prefix = format!("todo.{window:?}.");
     TodoState {
         todos,
         draft: app.models_mut().insert(String::new()),
+        router: MessageRouter::new(prefix),
         next_id: 3,
     }
 }
@@ -223,6 +263,109 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
         .unwrap_or_default();
 
     let theme = Theme::global(&*cx.app).clone();
+    st.router.clear();
+
+    let (done_count, total_count) = cx.use_selector(
+        |cx| {
+            let (todos_rev, done) = cx
+                .watch_model(&st.todos)
+                .layout()
+                .read(|host, todos| {
+                    let todos_rev = st.todos.revision(host).unwrap_or(0);
+                    let done = todos
+                        .iter()
+                        .map(|t| (t.done.id(), t.done.revision(host).unwrap_or(0)))
+                        .collect::<Vec<_>>();
+                    (todos_rev, done)
+                })
+                .ok()
+                .unwrap_or((0, Vec::new()));
+
+            for (id, _rev) in &done {
+                cx.observe_model_id(*id, Invalidation::Layout);
+            }
+
+            TodoDerivedDeps {
+                todos_rev,
+                done_revs: done.into_iter().map(|(_, rev)| rev).collect(),
+            }
+        },
+        |cx| {
+            cx.watch_model(&st.todos)
+                .layout()
+                .read(|host, todos| {
+                    let mut done_count = 0usize;
+                    for t in todos {
+                        let done = host.models().get_copied(&t.done).unwrap_or(false);
+                        if done {
+                            done_count += 1;
+                        }
+                    }
+                    (done_count, todos.len())
+                })
+                .ok()
+                .unwrap_or((0, 0))
+        },
+    );
+
+    let tip_handle = cx.use_query(tip_key(), tip_policy(), move |_token| {
+        #[cfg(not(target_arch = "wasm32"))]
+        std::thread::sleep(Duration::from_millis(150));
+
+        Ok(TipData {
+            text: Arc::from(format!("Tip fetched at {:?}", std::time::SystemTime::now())),
+        })
+    });
+
+    let tip_state = cx
+        .watch_model(tip_handle.model())
+        .layout()
+        .cloned()
+        .unwrap_or_else(|| QueryState::<TipData>::default());
+
+    let (tip_text, tip_color_key): (Arc<str>, &'static str) = match tip_state.status {
+        QueryStatus::Idle | QueryStatus::Loading => (Arc::from("Tip: loading…"), "muted-foreground"),
+        QueryStatus::Error => {
+            let err = tip_state
+                .error
+                .as_ref()
+                .map(|e| e.to_string())
+                .unwrap_or_else(|| String::from("unknown error"));
+            (Arc::from(format!("Tip error: {err}")), "destructive")
+        }
+        QueryStatus::Success => {
+            let text = tip_state
+                .data
+                .as_ref()
+                .map(|d| d.text.clone())
+                .unwrap_or_else(|| Arc::<str>::from("<no tip>"));
+            (text, "muted-foreground")
+        }
+    };
+
+    let progress = shadcn::Badge::new(format!("{done_count}/{total_count} done"))
+        .variant(shadcn::BadgeVariant::Secondary)
+        .into_element(cx);
+
+    let clear_done_btn = shadcn::Button::new("Clear done")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .disabled(done_count == 0)
+        .on_click(CMD_CLEAR_DONE)
+        .into_element(cx);
+
+    let refresh_tip_btn = shadcn::Button::new("Refresh tip")
+        .variant(shadcn::ButtonVariant::Ghost)
+        .on_click(CMD_REFRESH_TIP)
+        .into_element(cx);
+
+    let header_actions = ui::h_flex(cx, |_cx| [progress, clear_done_btn, refresh_tip_btn])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
+
+    let tip_line = ui::raw_text(cx, tip_text)
+        .text_color(ColorRef::Color(theme.color_required(tip_color_key)))
+        .into_element(cx);
 
     let add_enabled = !draft_value.trim().is_empty();
 __ADD_BTN_DEF__
@@ -238,7 +381,12 @@ __ADD_BTN_DEF__
         .w_full()
         .into_element(cx);
 
-    let rows = ui::v_flex(cx, |cx| todos.iter().map(|t| cx.keyed(t.id, |cx| todo_row(cx, &theme, t))))
+    let rows = ui::v_flex_build(cx, |cx, out| {
+        for t in &todos {
+            let remove_cmd = st.router.cmd(Msg::Remove(t.id));
+            out.push(cx.keyed(t.id, |cx| todo_row(cx, &theme, t, remove_cmd.clone())));
+        }
+    })
         .gap(Space::N3)
         .w_full()
         .into_element(cx);
@@ -247,6 +395,8 @@ __ADD_BTN_DEF__
         shadcn::CardHeader::new([
             shadcn::CardTitle::new("Todo").into_element(cx),
             shadcn::CardDescription::new("A minimal Fret + shadcn template.").into_element(cx),
+            header_actions,
+            tip_line,
         ])
         .into_element(cx),
         shadcn::CardContent::new([
@@ -283,7 +433,12 @@ __ADD_BTN_DEF__
     vec![page].into()
 }
 
-fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) -> AnyElement {
+fn todo_row(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    item: &TodoItem,
+    remove_cmd: CommandId,
+) -> AnyElement {
     let done = cx
         .watch_model(&item.done)
         .layout()
@@ -291,7 +446,6 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: &Theme, item: &TodoItem) ->
         .unwrap_or(false);
 
     let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
-    let remove_cmd = CommandId::new(format!("{}{}", CMD_REMOVE_PREFIX, item.id));
 __REMOVE_BTN_DEF__
 
     let label = cx.text_props(TextProps {
@@ -332,7 +486,7 @@ __REMOVE_BTN_DEF__
 fn on_command(
     app: &mut App,
     _services: &mut dyn UiServices,
-    _window: AppWindowId,
+    window: AppWindowId,
     _ui: &mut UiTree<App>,
     state: &mut TodoState,
     cmd: &CommandId,
@@ -364,6 +518,7 @@ fn on_command(
             let _ = app.models_mut().update(&state.draft, |s| {
                 s.clear();
             });
+            app.request_redraw(window);
         }
         CMD_CLEAR_DONE => {
             let snapshot = app
@@ -383,13 +538,25 @@ fn on_command(
             let _ = app.models_mut().update(&state.todos, |todos| {
                 *todos = keep;
             });
+            app.request_redraw(window);
         }
-        other => {
-            if let Some(id) = other.strip_prefix(CMD_REMOVE_PREFIX) {
-                if let Ok(id) = id.parse::<u64>() {
+        CMD_REFRESH_TIP => {
+            let _ = with_query_client(app, |client, app| {
+                client.invalidate(app, tip_key());
+            });
+            app.request_redraw(window);
+        }
+        _ => {
+            let Some(msg) = state.router.try_take(cmd) else {
+                return;
+            };
+
+            match msg {
+                Msg::Remove(id) => {
                     let _ = app.models_mut().update(&state.todos, |todos| {
                         todos.retain(|t| t.id != id);
                     });
+                    app.request_redraw(window);
                 }
             }
         }

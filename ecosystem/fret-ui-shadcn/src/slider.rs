@@ -8,7 +8,6 @@ use fret_ui::action::{ActionCx, PointerDownCx, PointerMoveCx, PointerUpCx, UiPoi
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, LayoutStyle, Length, MainAlign,
     MarginEdge, MarginEdges, OpacityProps, Overflow, PointerRegionProps, PositionStyle, RowProps,
-    SemanticsProps,
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -19,6 +18,8 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, OverrideSlot, WidgetState, WidgetStateProperty,
     WidgetStates,
 };
+
+use crate::test_id::attach_test_id_suffix;
 
 type OnValueCommit =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Vec<f32>) + 'static>;
@@ -888,38 +889,11 @@ pub fn slider<H: UiHost>(
                                     align: CrossAlign::Stretch,
                                 },
                                 |cx| {
-                                    let range_el = if let Some(test_id) = test_id_prefix.as_ref() {
-                                        // `Semantics` wrappers use a 1x1 grid container by default
-                                        // (see `crates/fret-ui/src/layout_engine/flow.rs`). That
-                                        // means children are not stretched unless they explicitly
-                                        // request `Fill` sizing. The range segment relies on flex
-                                        // sizing in the track row/column, so we move the flex
-                                        // sizing onto the semantics wrapper and paint with a
-                                        // `Fill` child.
-                                        let mut range_paint_layout = LayoutStyle::default();
-                                        range_paint_layout.size.width = Length::Fill;
-                                        range_paint_layout.size.height = Length::Fill;
-                                        let range_paint = ContainerProps {
-                                            layout: range_paint_layout,
-                                            background: Some(range_bg),
-                                            corner_radii: Corners::all(Px(0.0)),
-                                            ..Default::default()
-                                        };
-                                        cx.semantics(
-                                            SemanticsProps {
-                                                layout: range.layout,
-                                                test_id: Some(Arc::<str>::from(format!(
-                                                    "{test_id}-range"
-                                                ))),
-                                                ..Default::default()
-                                            },
-                                            move |cx| {
-                                                vec![cx.container(range_paint, |_| Vec::new())]
-                                            },
-                                        )
-                                    } else {
-                                        cx.container(range, |_| Vec::new())
-                                    };
+                                    let range_el = attach_test_id_suffix(
+                                        cx.container(range, |_| Vec::new()),
+                                        test_id_prefix.as_ref(),
+                                        "range",
+                                    );
 
                                     vec![
                                         cx.container(start, |_| Vec::new()),
@@ -945,31 +919,11 @@ pub fn slider<H: UiHost>(
                                     align: CrossAlign::Stretch,
                                 },
                                 |cx| {
-                                    let range_el = if let Some(test_id) = test_id_prefix.as_ref() {
-                                        let mut range_paint_layout = LayoutStyle::default();
-                                        range_paint_layout.size.width = Length::Fill;
-                                        range_paint_layout.size.height = Length::Fill;
-                                        let range_paint = ContainerProps {
-                                            layout: range_paint_layout,
-                                            background: Some(range_bg),
-                                            corner_radii: Corners::all(Px(0.0)),
-                                            ..Default::default()
-                                        };
-                                        cx.semantics(
-                                            SemanticsProps {
-                                                layout: range.layout,
-                                                test_id: Some(Arc::<str>::from(format!(
-                                                    "{test_id}-range"
-                                                ))),
-                                                ..Default::default()
-                                            },
-                                            move |cx| {
-                                                vec![cx.container(range_paint, |_| Vec::new())]
-                                            },
-                                        )
-                                    } else {
-                                        cx.container(range, |_| Vec::new())
-                                    };
+                                    let range_el = attach_test_id_suffix(
+                                        cx.container(range, |_| Vec::new()),
+                                        test_id_prefix.as_ref(),
+                                        "range",
+                                    );
 
                                     vec![
                                         cx.container(start, |_| Vec::new()),
@@ -981,18 +935,8 @@ pub fn slider<H: UiHost>(
                         }
                     });
 
-                    let track_el = if let Some(test_id) = test_id_prefix.as_ref() {
-                        cx.semantics(
-                            SemanticsProps {
-                                layout: track.layout,
-                                test_id: Some(Arc::<str>::from(format!("{test_id}-track"))),
-                                ..Default::default()
-                            },
-                            move |_cx| vec![track_el],
-                        )
-                    } else {
-                        track_el
-                    };
+                    let track_el =
+                        attach_test_id_suffix(track_el, test_id_prefix.as_ref(), "track");
 
                     let mut out = vec![track_el];
 
@@ -1453,9 +1397,11 @@ mod tests {
             bounds,
             "shadcn-slider-updates-model-on-pointer-down",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1515,9 +1461,11 @@ mod tests {
             bounds,
             "shadcn-slider-updates-closest-thumb-when-multi-value",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1579,12 +1527,14 @@ mod tests {
             bounds,
             "shadcn-slider-respects-min-steps-between-thumbs",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .step(1.0)
-                    .min_steps_between_thumbs(5)
-                    .style(SliderStyle::default())
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .step(1.0)
+                        .min_steps_between_thumbs(5)
+                        .style(SliderStyle::default())
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1651,9 +1601,11 @@ mod tests {
             bounds,
             "shadcn-slider-does-not-jump-when-pointer-down-on-thumb",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1709,10 +1661,12 @@ mod tests {
             bounds,
             "shadcn-slider-range-bounds-horizontal",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .test_id("slider")
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .test_id("slider")
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1758,11 +1712,13 @@ mod tests {
             bounds,
             "shadcn-slider-range-bounds-vertical",
             |cx| {
-                vec![Slider::new(model.clone())
-                    .range(0.0, 100.0)
-                    .orientation(radix_slider::SliderOrientation::Vertical)
-                    .test_id("slider")
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .test_id("slider")
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1813,13 +1769,15 @@ mod tests {
             "shadcn-slider-on-value-commit-pointer",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1904,13 +1862,15 @@ mod tests {
             "shadcn-slider-on-value-commit-key",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -1968,14 +1928,16 @@ mod tests {
             "shadcn-slider-rtl-key-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .dir(radix_direction::LayoutDirection::Rtl)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .dir(radix_direction::LayoutDirection::Rtl)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2033,14 +1995,16 @@ mod tests {
             "shadcn-slider-inverted-horizontal-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .inverted(true)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .inverted(true)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2139,15 +2103,17 @@ mod tests {
             "shadcn-slider-inverted-vertical-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .orientation(radix_slider::SliderOrientation::Vertical)
-                    .inverted(true)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .inverted(true)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2246,14 +2212,16 @@ mod tests {
             "shadcn-slider-vertical-mapping",
             move |cx| {
                 let commits_for_cb = commits_for_render.clone();
-                vec![Slider::new(model_for_render.clone())
-                    .range(0.0, 100.0)
-                    .orientation(radix_slider::SliderOrientation::Vertical)
-                    .test_id("slider")
-                    .on_value_commit(move |_host, _cx, values| {
-                        commits_for_cb.borrow_mut().push(values);
-                    })
-                    .into_element(cx)]
+                vec![
+                    Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .orientation(radix_slider::SliderOrientation::Vertical)
+                        .test_id("slider")
+                        .on_value_commit(move |_host, _cx, values| {
+                            commits_for_cb.borrow_mut().push(values);
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

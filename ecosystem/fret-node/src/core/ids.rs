@@ -39,6 +39,11 @@ impl NodeId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
+
+    /// Creates a node id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
+    }
 }
 
 /// Stable identifier for a port instance.
@@ -50,6 +55,11 @@ impl PortId {
     /// Generates a new random port id.
     pub fn new() -> Self {
         Self(Uuid::new_v4())
+    }
+
+    /// Creates a port id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
     }
 }
 
@@ -63,6 +73,11 @@ impl EdgeId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
+
+    /// Creates an edge id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
+    }
 }
 
 /// Stable identifier for a graph-scoped symbol.
@@ -74,6 +89,11 @@ impl SymbolId {
     /// Generates a new random symbol id.
     pub fn new() -> Self {
         Self(Uuid::new_v4())
+    }
+
+    /// Creates a symbol id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
     }
 }
 
@@ -87,6 +107,11 @@ impl GroupId {
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }
+
+    /// Creates a group id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
+    }
 }
 
 /// Stable identifier for a sticky note.
@@ -98,6 +123,11 @@ impl StickyNoteId {
     /// Generates a new random sticky note id.
     pub fn new() -> Self {
         Self(Uuid::new_v4())
+    }
+
+    /// Creates a sticky note id from a stable 128-bit value.
+    pub fn from_u128(value: u128) -> Self {
+        Self(Uuid::from_u128(value))
     }
 }
 

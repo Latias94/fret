@@ -375,7 +375,7 @@ It complements (but does not replace) ADRs:
 
 - **Standardize stable identity (keying) + cache boundaries for expensive subtrees**
   - Goal: ensure per-frame rebuild does not allocate/re-measure large subtrees unnecessarily (markdown/code-view/tab strips/lists).
-  - ADRs: `docs/adr/1152-view-cache-subtree-reuse-and-state-retention.md`, `docs/adr/1155-cache-root-tracing-contract-v1.md`
+  - ADRs: `docs/adr/1163-view-cache-subtree-reuse-and-state-retention.md`, `docs/adr/1155-cache-root-tracing-contract-v1.md`
   - TODO:
     - require `cx.keyed(...)` for list-like rendering and block rendering (e.g. Markdown blocks via `BlockId`);
     - promote `ViewCache` usage in demos for heavy blocks (Markdown, code-view) and audit hover does not bust cache roots;
@@ -446,3 +446,4 @@ It complements (but does not replace) ADRs:
   - Problem: `crates/fret-platform` is now intentionally portable contracts-only, while the concrete native backend lives in `crates/fret-platform-native` and the event loop/effect draining live in `crates/fret-launch`; decide how much window registry/event translation should live in the runner as more backends (web/mobile) arrive.
   - ADRs: `docs/adr/0003-platform-boundary.md`
   - Code: `crates/fret-platform-native/src/*`, `crates/fret-runner-winit/src/lib.rs`, `crates/fret-launch/src/runner/*`
+

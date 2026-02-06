@@ -1,6 +1,6 @@
 use super::{RowIndex, RowModel};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct PaginationState {
     pub page_index: usize,
     pub page_size: usize,
@@ -64,6 +64,7 @@ pub fn paginate_row_model<'a, TData>(
             root_rows: Vec::new(),
             flat_rows: Vec::new(),
             rows_by_key: row_model.rows_by_key().clone(),
+            rows_by_id: row_model.rows_by_id().clone(),
             arena: row_model.arena().to_vec(),
         };
     }

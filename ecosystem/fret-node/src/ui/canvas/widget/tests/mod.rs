@@ -2,14 +2,13 @@ use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
     TextBlobId,
 };
-use fret_runtime::CommandId;
 use fret_runtime::ui_host::{
     CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost,
 };
 use fret_runtime::{
-    ClipboardToken, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect, FrameId,
+    ClipboardToken, CommandId, CommandRegistry, DragKindId, DragSession, DragSessionId, Effect,
+    FrameId, ModelHost, ModelStore, TickId, TimerToken,
 };
-use fret_runtime::{ModelHost, ModelStore, TickId, TimerToken};
 use fret_ui::retained_bridge::Widget as _;
 use serde_json::Value;
 use std::any::{Any, TypeId};
@@ -20,12 +19,39 @@ use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,
     Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey, PortKind,
 };
+use crate::rules::EdgeEndpoint;
+use crate::ui::commands::{
+    CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
+    CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X,
+    CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
+    CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
+    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
+};
 
+mod a11y_active_descendant_conformance;
+mod background_style_conformance;
+mod cached_edge_labels_tile_equivalence_conformance;
+mod cached_edges_tile_equivalence_conformance;
 mod callbacks_conformance;
 mod color_mode_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod custom_edge_path_conformance;
+mod derived_geometry_invalidation_conformance;
+mod derived_geometry_updates_conformance;
+mod drag_preview_conformance;
+mod draw_order_invalidation_conformance;
+mod edge_drag_conformance;
+mod edge_hit_width_conformance;
+mod edge_insert_conformance;
+mod edge_insert_gestures_conformance;
+mod edge_label_route_anchor_conformance;
+mod edge_label_style_override_conformance;
+mod edge_marker_bezier_tangent_conformance;
+mod edge_marker_size_zoom_conformance;
+mod edge_marker_step_tangent_conformance;
+mod edge_marker_tangent_fallback_conformance;
+mod edge_types_invalidation_conformance;
 mod edit_command_availability_conformance;
 mod elevate_on_select_conformance;
 mod fit_view_nodes_conformance;
@@ -33,27 +59,53 @@ mod fit_view_on_mount_conformance;
 mod fit_view_options_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
+mod group_preview_conformance;
 mod hit_testing_conformance;
+mod hit_testing_semantic_zoom_conformance;
+mod hot_state_invalidation_conformance;
 mod insert_node_drag_conformance;
+mod insert_node_drag_drop_conformance;
 mod interaction_conformance;
 mod internals_conformance;
 mod invalidation_ordering_conformance;
 mod is_valid_connection_conformance;
+mod measured_output_store_conformance;
+mod measured_port_anchor_conformance;
 mod middleware_conformance;
 mod node_origin_conformance;
+mod node_resize_preview_conformance;
 mod node_sizing_conformance;
+mod nudge_step_conformance;
 mod only_render_visible_elements_conformance;
+mod op_batching_determinism_conformance;
+mod overlay_blackboard_conformance;
+mod overlay_group_rename_conformance;
+mod overlay_invalidation_conformance;
+mod overlay_menu_searcher_conformance;
+mod overlay_minimap_controls_conformance;
+mod overlay_symbol_rename_conformance;
+mod overlay_toolbars_conformance;
 mod perf_cache;
+mod perf_cache_prune_conformance;
 mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_lifecycle_conformance;
+mod portal_measured_geometry_conformance;
+mod portal_measured_internals_conformance;
 mod portal_pointer_passthrough_conformance;
+mod prelude;
 mod selection_mode_conformance;
 mod set_viewport_conformance;
+mod spatial_index_equivalence_conformance;
+mod threshold_zoom_conformance;
+mod translate_extent_conformance;
 mod viewport_animation_conformance;
 mod viewport_helper_conformance;
 mod xyflow_style_conformance;
 mod z_order_conformance;
+
+use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
+use super::NodeGraphCanvas;
 
 #[test]
 fn inflate_rect_expands_by_margin() {
@@ -912,266 +964,6 @@ fn shift_double_click_background_zooms_out_about_pointer() {
 }
 
 #[test]
-fn double_click_edge_inserts_reroute_when_enabled() {
-    let mut host = TestUiHostImpl::default();
-    let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
-        make_test_graph_two_nodes_with_ports_spaced_x(420.0);
-    let edge_id = EdgeId::new();
-    graph_value.edges.insert(
-        edge_id,
-        Edge {
-            kind: EdgeKind::Data,
-            from: a_out,
-            to: b_in,
-            selectable: None,
-            deletable: None,
-            reconnectable: None,
-        },
-    );
-
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.zoom_on_double_click = true;
-        s.interaction.reroute_on_edge_double_click = true;
-    });
-
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(800.0), Px(600.0)),
-    );
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds,
-        &mut prevented_default_actions,
-    );
-
-    let snap = canvas.sync_view_state(cx.app);
-    let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
-    let from = geom.port_center(a_out).expect("from port center");
-    let to = geom.port_center(b_in).expect("to port center");
-    let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
-    let pos = super::cubic_bezier(from, c1, c2, to, 0.5);
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: pos,
-            button: MouseButton::Left,
-            modifiers: Modifiers::default(),
-            click_count: 2,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
-    let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
-    assert_eq!(nodes_len, 3);
-    assert_eq!(edges_len, 2);
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g.edges.contains_key(&edge_id))
-            .unwrap_or(false)
-    );
-    assert!(
-        graph
-            .read_ref(cx.app, |g| g
-                .nodes
-                .values()
-                .any(|n| n.kind.0 == crate::REROUTE_KIND))
-            .unwrap_or(false)
-    );
-
-    let after = canvas.sync_view_state(cx.app);
-    assert_eq!(after.selected_edges.len(), 0);
-    assert_eq!(after.selected_nodes.len(), 1);
-    assert_eq!(after.zoom, 1.0);
-}
-
-#[test]
-fn alt_double_click_edge_opens_insert_node_picker() {
-    let mut host = TestUiHostImpl::default();
-    let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
-        make_test_graph_two_nodes_with_ports_spaced_x(420.0);
-    let edge_id = EdgeId::new();
-    graph_value.edges.insert(
-        edge_id,
-        Edge {
-            kind: EdgeKind::Data,
-            from: a_out,
-            to: b_in,
-            selectable: None,
-            deletable: None,
-            reconnectable: None,
-        },
-    );
-
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
-
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(800.0), Px(600.0)),
-    );
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds,
-        &mut prevented_default_actions,
-    );
-
-    let snap = canvas.sync_view_state(cx.app);
-    let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
-    let from = geom.port_center(a_out).expect("from port center");
-    let to = geom.port_center(b_in).expect("to port center");
-    let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
-    let pos = super::cubic_bezier(from, c1, c2, to, 0.5);
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: pos,
-            button: MouseButton::Left,
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            click_count: 2,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
-    let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
-    assert_eq!(nodes_len, 2);
-    assert_eq!(edges_len, 1);
-
-    let Some(searcher) = canvas.interaction.searcher.as_ref() else {
-        panic!("expected searcher to be open");
-    };
-    assert!(matches!(
-        searcher.target,
-        super::super::state::ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_id
-    ));
-}
-
-#[test]
-fn alt_drag_edge_opens_insert_node_picker_when_enabled() {
-    let mut host = TestUiHostImpl::default();
-    let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
-        make_test_graph_two_nodes_with_ports_spaced_x(420.0);
-    let edge_id = EdgeId::new();
-    graph_value.edges.insert(
-        edge_id,
-        Edge {
-            kind: EdgeKind::Data,
-            from: a_out,
-            to: b_in,
-            selectable: None,
-            deletable: None,
-            reconnectable: None,
-        },
-    );
-
-    let graph = host.models.insert(graph_value);
-    let view = host.models.insert(crate::io::NodeGraphViewState::default());
-    let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.edge_insert_on_alt_drag = true;
-    });
-
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view.clone());
-    let bounds = Rect::new(
-        Point::new(Px(0.0), Px(0.0)),
-        Size::new(Px(800.0), Px(600.0)),
-    );
-    let mut services = NullServices::default();
-    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
-    let mut cx = event_cx(
-        &mut host,
-        &mut services,
-        bounds,
-        &mut prevented_default_actions,
-    );
-
-    let snap = canvas.sync_view_state(cx.app);
-    let (geom, _index) = canvas.canvas_derived(&*cx.app, &snap);
-    let from = geom.port_center(a_out).expect("from port center");
-    let to = geom.port_center(b_in).expect("to port center");
-    let (c1, c2) = super::wire_ctrl_points(from, to, snap.zoom);
-    let edge_pos = super::cubic_bezier(from, c1, c2, to, 0.5);
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Down {
-            pointer_id: fret_core::PointerId::default(),
-            position: edge_pos,
-            button: MouseButton::Left,
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            click_count: 1,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Move {
-            pointer_id: fret_core::PointerId::default(),
-            position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
-            buttons: MouseButtons {
-                left: true,
-                ..MouseButtons::default()
-            },
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    canvas.event(
-        &mut cx,
-        &Event::Pointer(PointerEvent::Up {
-            pointer_id: fret_core::PointerId::default(),
-            position: Point::new(Px(edge_pos.x.0 + 16.0), edge_pos.y),
-            button: MouseButton::Left,
-            modifiers: Modifiers {
-                alt: true,
-                ..Modifiers::default()
-            },
-            is_click: true,
-            click_count: 1,
-            pointer_type: fret_core::PointerType::Mouse,
-        }),
-    );
-
-    let nodes_len = graph.read_ref(cx.app, |g| g.nodes.len()).unwrap_or(0);
-    let edges_len = graph.read_ref(cx.app, |g| g.edges.len()).unwrap_or(0);
-    assert_eq!(nodes_len, 2);
-    assert_eq!(edges_len, 1);
-
-    let Some(searcher) = canvas.interaction.searcher.as_ref() else {
-        panic!("expected searcher to be open");
-    };
-    assert!(matches!(
-        searcher.target,
-        super::super::state::ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_id
-    ));
-}
-
-#[test]
 fn internal_drag_drop_candidate_on_edge_splits_edge() {
     use std::sync::Arc;
 
@@ -1296,17 +1088,6 @@ fn internal_drag_drop_candidate_on_edge_splits_edge() {
     assert_eq!(after.selected_nodes.len(), 1);
     assert_eq!(after.selected_edges.len(), 0);
 }
-use crate::rules::EdgeEndpoint;
-use crate::ui::commands::{
-    CMD_NODE_GRAPH_ACTIVATE, CMD_NODE_GRAPH_ALIGN_CENTER_X, CMD_NODE_GRAPH_ALIGN_LEFT,
-    CMD_NODE_GRAPH_ALIGN_RIGHT, CMD_NODE_GRAPH_DELETE_SELECTION, CMD_NODE_GRAPH_DISTRIBUTE_X,
-    CMD_NODE_GRAPH_FOCUS_NEXT, CMD_NODE_GRAPH_FOCUS_NEXT_PORT, CMD_NODE_GRAPH_FOCUS_PORT_LEFT,
-    CMD_NODE_GRAPH_FOCUS_PORT_RIGHT, CMD_NODE_GRAPH_FOCUS_PREV, CMD_NODE_GRAPH_FOCUS_PREV_PORT,
-    CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_NUDGE_RIGHT_FAST, CMD_NODE_GRAPH_SELECT_ALL,
-};
-
-use super::super::state::{NodeDrag, ViewSnapshot, WireDrag, WireDragKind};
-use super::NodeGraphCanvas;
 
 #[derive(Default)]
 struct NullServices;
@@ -1573,6 +1354,7 @@ fn event_cx<'a>(
         requested_capture: None,
         requested_cursor: None,
         notify_requested: false,
+        notify_requested_location: None,
         stop_propagation: false,
     }
 }

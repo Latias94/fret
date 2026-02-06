@@ -1,0 +1,4430 @@
+{
+  "upstream": {
+    "package": "@tanstack/table-core",
+    "version": "8.21.3",
+    "commit": "e172109fca4cc403a07236ed8fa103450ceba5e9",
+    "commit_short": "e172109f",
+    "source": "repo-ref/table/packages/table-core"
+  },
+  "case_id": "resets",
+  "data": [
+    {
+      "id": 1,
+      "name": "Renderer",
+      "status": "Running",
+      "cpu": 12,
+      "mem_mb": 420
+    },
+    {
+      "id": 2,
+      "name": "Asset Cache",
+      "status": "Idle",
+      "cpu": 0,
+      "mem_mb": 128
+    },
+    {
+      "id": 3,
+      "name": "Indexer",
+      "status": "Running",
+      "cpu": 38,
+      "mem_mb": 860
+    },
+    {
+      "id": 4,
+      "name": "Spellcheck",
+      "status": "Disabled",
+      "cpu": 0,
+      "mem_mb": 0
+    },
+    {
+      "id": 5,
+      "name": "Language Server",
+      "status": "Running",
+      "cpu": 7,
+      "mem_mb": 512
+    }
+  ],
+  "snapshots": [
+    {
+      "id": "resets_reset_sorting_restores_initial",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetSorting",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_sorting_default_true_clears",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetSorting",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_column_filters_restores_initial",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetColumnFilters",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [],
+          "flat": []
+        },
+        "sorted": {
+          "root": [],
+          "flat": []
+        },
+        "expanded": {
+          "root": [],
+          "flat": []
+        },
+        "paginated": {
+          "root": [],
+          "flat": []
+        },
+        "row_model": {
+          "root": [],
+          "flat": []
+        },
+        "page_count": 0,
+        "row_count": 0,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_column_filters_default_true_clears",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetColumnFilters",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_global_filter_restores_initial",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetGlobalFilter",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [],
+          "flat": []
+        },
+        "sorted": {
+          "root": [],
+          "flat": []
+        },
+        "expanded": {
+          "root": [],
+          "flat": []
+        },
+        "paginated": {
+          "root": [],
+          "flat": []
+        },
+        "row_model": {
+          "root": [],
+          "flat": []
+        },
+        "page_count": 0,
+        "row_count": 0,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_global_filter_default_true_clears",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetGlobalFilter",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_grouping_restores_initial",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetGrouping",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "status"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_grouping_default_true_clears",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetGrouping",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_column_visibility_restores_initial",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetColumnVisibility",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 900,
+            "status": 150,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 900,
+            "status": 150,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 1050,
+            "status": 750,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 1050,
+            "status": 750,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_column_visibility_default_true_clears",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetColumnVisibility",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1200,
+          "left_total_size": 0,
+          "center_total_size": 1200,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 300,
+            "mem_mb": 450,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 750,
+            "cpu_no_sort": 900,
+            "cpu_invert": 1050
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 300,
+            "mem_mb": 450,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 750,
+            "cpu_no_sort": 900,
+            "cpu_invert": 1050
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 1050,
+            "cpu": 900,
+            "status": 750,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 1050,
+            "cpu": 900,
+            "status": 750,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {},
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_column_order_restores_initial",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetColumnOrder",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "mem_mb": 0,
+            "name": 150,
+            "status": 900,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "mem_mb": null,
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "mem_mb": 0,
+            "name": 150,
+            "status": 900,
+            "cpu": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "mem_mb": null,
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "mem_mb": 900,
+            "name": 750,
+            "status": 1050,
+            "cpu": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "mem_mb": null,
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "mem_mb": 900,
+            "name": 750,
+            "status": 1050,
+            "cpu": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "mem_mb": null,
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_column_order_default_true_clears",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetColumnOrder",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "filtered_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "grouped_selected": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "is_all_rows_selected": true,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": true,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "status": 900,
+            "cpu": 150,
+            "cpu_desc_first": 300,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 600,
+            "cpu_invert": 750,
+            "mem_mb": 900
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 0,
+            "status": 900,
+            "cpu": 150,
+            "cpu_desc_first": 300,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 600,
+            "cpu_invert": 750,
+            "mem_mb": 900
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "status": 1050,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "left": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          },
+          "center": {
+            "name": 900,
+            "status": 1050,
+            "cpu": 750,
+            "cpu_desc_first": 600,
+            "cpu_no_multi": 450,
+            "cpu_no_sort": 300,
+            "cpu_invert": 150,
+            "mem_mb": 0
+          },
+          "right": {
+            "name": null,
+            "status": null,
+            "cpu": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null,
+            "mem_mb": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "2": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": []
+        }
+      }
+    },
+    {
+      "id": "resets_reset_row_selection_restores_initial",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetRowSelection",
+          "default_state": false
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [
+            "1",
+            "3"
+          ],
+          "flat": [
+            "1",
+            "3"
+          ]
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    },
+    {
+      "id": "resets_reset_row_selection_default_true_clears",
+      "options": {
+        "manualFiltering": false,
+        "manualSorting": false,
+        "manualPagination": false,
+        "manualExpanding": false,
+        "paginateExpandedRows": true,
+        "keepPinnedRows": true,
+        "enableSorting": true,
+        "enableMultiSort": true,
+        "enableSortingRemoval": true,
+        "enableMultiRemove": true,
+        "initialState": {
+          "sorting": [
+            {
+              "id": "cpu",
+              "desc": true
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Running"
+            }
+          ],
+          "globalFilter": "Renderer",
+          "grouping": [
+            "status"
+          ],
+          "rowSelection": {
+            "1": true,
+            "3": true
+          },
+          "columnVisibility": {
+            "cpu": false
+          },
+          "columnOrder": [
+            "mem_mb",
+            "name",
+            "status",
+            "cpu"
+          ]
+        }
+      },
+      "state": {
+        "sorting": [
+          {
+            "id": "mem_mb",
+            "desc": false
+          }
+        ],
+        "columnFilters": [
+          {
+            "id": "status",
+            "value": "Idle"
+          }
+        ],
+        "globalFilter": "Idle",
+        "grouping": [
+          "name"
+        ],
+        "rowSelection": {
+          "2": true
+        },
+        "columnVisibility": {
+          "status": false
+        },
+        "columnOrder": [
+          "name",
+          "cpu",
+          "status",
+          "mem_mb"
+        ]
+      },
+      "actions": [
+        {
+          "type": "resetRowSelection",
+          "default_state": true
+        }
+      ],
+      "expect": {
+        "core": {
+          "root": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "flat": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        "filtered": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "sorted": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "expanded": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "paginated": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "row_model": {
+          "root": [
+            "2"
+          ],
+          "flat": [
+            "2"
+          ]
+        },
+        "page_count": 1,
+        "row_count": 1,
+        "can_previous_page": false,
+        "can_next_page": false,
+        "page_options": [
+          0
+        ],
+        "selected": {
+          "root": [],
+          "flat": []
+        },
+        "filtered_selected": {
+          "root": [],
+          "flat": []
+        },
+        "grouped_selected": {
+          "root": [],
+          "flat": []
+        },
+        "is_all_rows_selected": false,
+        "is_some_rows_selected": false,
+        "is_all_page_rows_selected": false,
+        "is_some_page_rows_selected": false,
+        "is_all_rows_expanded": false,
+        "is_some_rows_expanded": false,
+        "can_some_rows_expand": false,
+        "column_sizing": {
+          "total_size": 1050,
+          "left_total_size": 0,
+          "center_total_size": 1050,
+          "right_total_size": 0
+        },
+        "column_start": {
+          "all": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 0,
+            "cpu": 150,
+            "status": 900,
+            "mem_mb": 300,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 600,
+            "cpu_no_sort": 750,
+            "cpu_invert": 900
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "column_after": {
+          "all": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "left": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          },
+          "center": {
+            "name": 900,
+            "cpu": 750,
+            "status": 1050,
+            "mem_mb": 600,
+            "cpu_desc_first": 450,
+            "cpu_no_multi": 300,
+            "cpu_no_sort": 150,
+            "cpu_invert": 0
+          },
+          "right": {
+            "name": null,
+            "cpu": null,
+            "status": null,
+            "mem_mb": null,
+            "cpu_desc_first": null,
+            "cpu_no_multi": null,
+            "cpu_no_sort": null,
+            "cpu_invert": null
+          }
+        },
+        "next_state": {
+          "sorting": [
+            {
+              "id": "mem_mb",
+              "desc": false
+            }
+          ],
+          "columnFilters": [
+            {
+              "id": "status",
+              "value": "Idle"
+            }
+          ],
+          "globalFilter": "Idle",
+          "pagination": {
+            "pageIndex": 0,
+            "pageSize": 10
+          },
+          "grouping": [
+            "name"
+          ],
+          "expanded": {},
+          "rowPinning": {
+            "top": [],
+            "bottom": []
+          },
+          "rowSelection": {},
+          "columnVisibility": {
+            "status": false
+          },
+          "columnSizing": {},
+          "columnSizingInfo": {
+            "startOffset": null,
+            "startSize": null,
+            "deltaOffset": null,
+            "deltaPercentage": null,
+            "isResizingColumn": false,
+            "columnSizingStart": []
+          },
+          "columnPinning": {
+            "left": [],
+            "right": []
+          },
+          "columnOrder": [
+            "name",
+            "cpu",
+            "status",
+            "mem_mb"
+          ]
+        }
+      }
+    }
+  ]
+}

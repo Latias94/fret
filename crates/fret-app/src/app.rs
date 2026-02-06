@@ -27,6 +27,7 @@ pub struct App {
     global_type_names: HashMap<TypeId, &'static str>,
     #[cfg(debug_assertions)]
     global_last_changed_at: HashMap<TypeId, &'static std::panic::Location<'static>>,
+    global_revisions: HashMap<TypeId, u64>,
     changed_globals: Vec<TypeId>,
     changed_globals_dedup: HashSet<TypeId>,
     models: ModelStore,
@@ -55,6 +56,7 @@ impl App {
             global_type_names: HashMap::new(),
             #[cfg(debug_assertions)]
             global_last_changed_at: HashMap::new(),
+            global_revisions: HashMap::new(),
             changed_globals: Vec::new(),
             changed_globals_dedup: HashSet::new(),
             models: ModelStore::default(),
@@ -98,6 +100,10 @@ impl App {
             self.global_last_changed_at.insert(id, at);
         }
         let _ = at;
+        self.global_revisions
+            .entry(id)
+            .and_modify(|rev| *rev = rev.saturating_add(1))
+            .or_insert(1);
         self.mark_global_changed(id);
     }
 
@@ -113,7 +119,7 @@ impl App {
     pub fn global_changed_at(&self, id: TypeId) -> Option<&'static std::panic::Location<'static>> {
         #[cfg(debug_assertions)]
         {
-            return self.global_last_changed_at.get(&id).copied();
+            self.global_last_changed_at.get(&id).copied()
         }
 
         #[cfg(not(debug_assertions))]
@@ -121,6 +127,10 @@ impl App {
             let _ = id;
             None
         }
+    }
+
+    pub fn global_revision(&self, id: TypeId) -> Option<u64> {
+        self.global_revisions.get(&id).copied()
     }
 
     #[track_caller]
@@ -375,13 +385,11 @@ impl App {
             window: Some(window),
             command,
         } = &effect
-        {
-            if self
+            && self
                 .global::<WindowCommandEnabledService>()
                 .is_some_and(|svc| svc.enabled(*window, command) == Some(false))
-            {
-                return;
-            }
+        {
+            return;
         }
 
         match effect {
@@ -901,6 +909,41 @@ mod tests {
         );
         let changed = app.take_changed_globals();
         assert_eq!(changed, vec![TypeId::of::<u32>()]);
+    }
+
+    #[test]
+    fn global_revision_bumps_on_tracked_mutations_but_not_untracked() {
+        let mut app = App::new();
+
+        let ty = TypeId::of::<u32>();
+        assert_eq!(app.global_revision(ty), None);
+
+        app.set_global::<u32>(1);
+        let r1 = app
+            .global_revision(ty)
+            .expect("global revision must exist after set");
+
+        app.with_global_mut(
+            || 0u32,
+            |v, _app| {
+                *v = v.saturating_add(1);
+            },
+        );
+        let r2 = app
+            .global_revision(ty)
+            .expect("global revision must exist after mutation");
+        assert!(r2 > r1);
+
+        app.with_global_mut_untracked(
+            || 0u32,
+            |v, _app| {
+                *v = v.saturating_add(1);
+            },
+        );
+        let r3 = app
+            .global_revision(ty)
+            .expect("global revision must still exist");
+        assert_eq!(r3, r2);
     }
 
     #[test]

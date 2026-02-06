@@ -2,10 +2,11 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use fret_ui_headless::table::{
-    ColumnDef, RowKey, Table, TanStackTableOptions, TanStackTableState,
+    ColumnDef, RowId, RowKey, Table, TanStackTableOptions, TanStackTableState,
     contains_ascii_case_insensitive,
 };
 use serde::Deserialize;
+use serde_json::Value;
 
 #[derive(Debug, Clone, Deserialize)]
 struct FixtureRow {
@@ -32,6 +33,16 @@ struct FixtureExpect {
     expanded: RowModelSnapshot,
     paginated: RowModelSnapshot,
     row_model: RowModelSnapshot,
+    #[serde(default)]
+    page_count: i32,
+    #[serde(default)]
+    row_count: usize,
+    #[serde(default)]
+    can_previous_page: bool,
+    #[serde(default)]
+    can_next_page: bool,
+    #[serde(default)]
+    page_options: Vec<usize>,
     #[serde(default)]
     is_all_rows_expanded: bool,
     #[serde(default)]
@@ -74,6 +85,10 @@ struct Fixture {
     case_id: String,
     data: Vec<FixtureRow>,
     snapshots: Vec<FixtureSnapshot>,
+}
+
+fn option_marker<'a>(options: &'a Value, key: &str) -> Option<&'a str> {
+    options.get(key)?.as_str()
 }
 
 fn snapshot_row_model<'a, TData>(
@@ -130,6 +145,11 @@ fn tanstack_v8_expanding_parity() {
         columns.iter().map(|c| (c.id.as_ref(), c)).collect();
 
     for snap in fixture.snapshots {
+        let get_row_can_expand_mode = option_marker(&snap.options, "__getRowCanExpand");
+        let get_is_row_expanded_mode = option_marker(&snap.options, "__getIsRowExpanded");
+        let on_expanded_change_mode = option_marker(&snap.options, "__onExpandedChange");
+        let get_expanded_row_model_mode = option_marker(&snap.options, "__getExpandedRowModel");
+
         let tanstack_options =
             TanStackTableOptions::from_json(&snap.options).expect("tanstack options");
         let options = tanstack_options.to_table_options();
@@ -138,19 +158,27 @@ fn tanstack_v8_expanding_parity() {
         let mut state = tanstack_state.to_table_state().expect("state conversion");
 
         for action in &snap.actions {
-            let table = Table::builder(&data)
+            let mut builder = Table::builder(&data)
                 .columns(columns.clone())
                 .get_row_key(|row, _idx, _parent| RowKey(row.id))
+                .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
                 .get_sub_rows(|row, _idx| {
                     if row.sub_rows.is_empty() {
                         None
                     } else {
                         Some(row.sub_rows.as_slice())
                     }
-                })
-                .state(state.clone())
-                .options(options)
-                .build();
+                });
+            if get_row_can_expand_mode == Some("only_root_1") {
+                builder = builder.get_row_can_expand_by(|row_key, _row| row_key.0 == 1);
+            }
+            if get_is_row_expanded_mode == Some("always_false") {
+                builder = builder.get_is_row_expanded_by(|_row_key, _row| false);
+            }
+            if get_expanded_row_model_mode == Some("pre_expanded") {
+                builder = builder.override_expanded_row_model_pre_expanded();
+            }
+            let table = builder.state(state.clone()).options(options).build();
 
             match action {
                 FixtureAction::ToggleRowExpanded { row_id, value } => {
@@ -159,10 +187,14 @@ fn tanstack_v8_expanding_parity() {
                             .parse::<u64>()
                             .unwrap_or_else(|_| panic!("invalid row_id: {row_id}")),
                     );
-                    state.expanding = table.toggled_row_expanded(row_key, *value);
+                    if on_expanded_change_mode != Some("noop") {
+                        state.expanding = table.toggled_row_expanded(row_key, *value);
+                    }
                 }
                 FixtureAction::ToggleAllRowsExpanded { value } => {
-                    state.expanding = table.toggled_all_rows_expanded(*value);
+                    if on_expanded_change_mode != Some("noop") {
+                        state.expanding = table.toggled_all_rows_expanded(*value);
+                    }
                 }
             }
         }
@@ -180,19 +212,27 @@ fn tanstack_v8_expanding_parity() {
             );
         }
 
-        let table = Table::builder(&data)
+        let mut builder = Table::builder(&data)
             .columns(columns.clone())
             .get_row_key(|row, _idx, _parent| RowKey(row.id))
+            .get_row_id(|row, _idx, _parent| RowId::new(row.id.to_string()))
             .get_sub_rows(|row, _idx| {
                 if row.sub_rows.is_empty() {
                     None
                 } else {
                     Some(row.sub_rows.as_slice())
                 }
-            })
-            .state(state)
-            .options(options)
-            .build();
+            });
+        if get_row_can_expand_mode == Some("only_root_1") {
+            builder = builder.get_row_can_expand_by(|row_key, _row| row_key.0 == 1);
+        }
+        if get_is_row_expanded_mode == Some("always_false") {
+            builder = builder.get_is_row_expanded_by(|_row_key, _row| false);
+        }
+        if get_expanded_row_model_mode == Some("pre_expanded") {
+            builder = builder.override_expanded_row_model_pre_expanded();
+        }
+        let table = builder.state(state).options(options).build();
 
         let core = snapshot_row_model(table.core_row_model());
         let filtered = snapshot_row_model(table.filtered_row_model());
@@ -263,6 +303,37 @@ fn tanstack_v8_expanding_parity() {
         assert_eq!(
             paginated.flat, snap.expect.paginated.flat,
             "snapshot {} paginated flat mismatch",
+            snap.id
+        );
+
+        assert_eq!(
+            table.page_count(),
+            snap.expect.page_count,
+            "snapshot {} page_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.row_count(),
+            snap.expect.row_count,
+            "snapshot {} row_count mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_previous_page(),
+            snap.expect.can_previous_page,
+            "snapshot {} can_previous_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.can_next_page(),
+            snap.expect.can_next_page,
+            "snapshot {} can_next_page mismatch",
+            snap.id
+        );
+        assert_eq!(
+            table.page_options(),
+            snap.expect.page_options,
+            "snapshot {} page_options mismatch",
             snap.id
         );
 

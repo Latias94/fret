@@ -1,165 +1,36 @@
 //! Immediate-mode authoring facade for Fret.
 //!
-//! This crate provides a small, policy-light API that feels closer to `egui` / Dear ImGui while
-//! compiling down to Fret's declarative element tree (`AnyElement` via `ElementContext`).
+//! This crate provides a small, policy-light *authoring frontend* that compiles down to Fret's
+//! declarative element tree (`AnyElement` via `ElementContext`).
+//!
+//! The "egui/imgui-like experience" (richer response signals, widget helpers, floating areas,
+//! overlays, etc.) is intentionally hosted in ecosystem facade crates (e.g. `fret-ui-kit` behind its
+//! `imui` feature) to keep this crate minimal and third-party-friendly.
 //!
 //! Notes:
 //! - This crate intentionally does not depend on platform or renderer crates.
 //! - Styling/recipes should live in separate ecosystem crates (e.g. shadcn/material adapters).
 
 use std::hash::Hash;
-use std::sync::Arc;
 
+pub use fret_authoring::Response;
 use fret_authoring::UiWriter;
-use fret_core::{Px, Rect, SemanticsRole};
-use fret_runtime::Model;
-use fret_ui::action::UiActionHostExt as _;
-use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, Elements, Length, PressableA11y, PressableProps,
-    RowProps,
-};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::element::{AnyElement, ColumnProps, Elements, Length, RowProps};
+use fret_ui::{ElementContext, UiHost};
+
+#[cfg(feature = "query")]
+pub mod query;
+#[cfg(feature = "selector")]
+pub mod selector;
 
 pub mod prelude {
-    pub use crate::{ImUi, Response, UiWriterImUiExt as _, imui, imui_build, imui_vstack};
+    #[cfg(feature = "query")]
+    pub use crate::query::UiWriterQueryExt as _;
+    #[cfg(feature = "selector")]
+    pub use crate::selector::UiWriterSelectorExt as _;
+    pub use crate::{ImUi, Response, imui, imui_build, imui_vstack};
     pub use fret_authoring::UiWriter;
 }
-
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Response {
-    pub hovered: bool,
-    pub pressed: bool,
-    pub focused: bool,
-    pub clicked: bool,
-    pub changed: bool,
-    pub rect: Option<Rect>,
-}
-
-impl Response {
-    pub fn clicked(self) -> bool {
-        self.clicked
-    }
-
-    pub fn changed(self) -> bool {
-        self.changed
-    }
-}
-
-const fn fnv1a64(bytes: &[u8]) -> u64 {
-    let mut hash = 0xcbf2_9ce4_8422_2325u64;
-    let mut i = 0usize;
-    while i < bytes.len() {
-        hash ^= bytes[i] as u64;
-        hash = hash.wrapping_mul(0x0000_0100_0000_01b3u64);
-        i += 1;
-    }
-    hash
-}
-
-const KEY_CLICKED: u64 = fnv1a64(b"fret-imui.clicked.v1");
-const KEY_CHANGED: u64 = fnv1a64(b"fret-imui.changed.v1");
-
-/// Immediate-mode widget helpers for any authoring frontend that implements `UiWriter`.
-///
-/// This allows third-party widget crates to accept a single surface:
-/// `fn widget<H: UiHost>(ui: &mut impl UiWriter<H>, ...) -> Response`.
-pub trait UiWriterImUiExt<H: UiHost>: UiWriter<H> {
-    fn text(&mut self, text: impl Into<Arc<str>>) {
-        let element = self.with_cx_mut(|cx| cx.text(text));
-        self.add(element);
-    }
-
-    fn separator(&mut self) {
-        let element = self.with_cx_mut(|cx| {
-            let mut props = ContainerProps::default();
-            let theme = Theme::global(&*cx.app);
-            props.background = Some(theme.color_required("border"));
-            props.layout.size.width = Length::Fill;
-            props.layout.size.height = Length::Px(Px(1.0));
-            cx.container(props, |_| Vec::new())
-        });
-        self.add(element);
-    }
-
-    fn button(&mut self, label: impl Into<Arc<str>>) -> Response {
-        let label = label.into();
-        let mut response = Response::default();
-
-        let element = self.with_cx_mut(|cx| {
-            let mut props = PressableProps::default();
-            props.a11y = PressableA11y {
-                role: Some(SemanticsRole::Button),
-                label: Some(label.clone()),
-                ..Default::default()
-            };
-
-            cx.pressable_with_id(props, |cx, state, id| {
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
-                    host.record_transient_event(acx, KEY_CLICKED);
-                    host.notify(acx);
-                }));
-
-                response.hovered = state.hovered;
-                response.pressed = state.pressed;
-                response.focused = state.focused;
-                response.clicked = cx.take_transient_for(id, KEY_CLICKED);
-                response.rect = cx.last_bounds_for_element(id);
-
-                vec![cx.text(label.clone())]
-            })
-        });
-
-        self.add(element);
-        response
-    }
-
-    fn checkbox_model(&mut self, label: impl Into<Arc<str>>, model: &Model<bool>) -> Response {
-        let label = label.into();
-        let model = model.clone();
-
-        let mut response = Response::default();
-        let element = self.with_cx_mut(|cx| {
-            let value = cx
-                .read_model(&model, fret_ui::Invalidation::Paint, |_app, v| *v)
-                .unwrap_or(false);
-
-            let mut props = PressableProps::default();
-            props.a11y = PressableA11y {
-                role: Some(SemanticsRole::Checkbox),
-                label: Some(label.clone()),
-                checked: Some(value),
-                ..Default::default()
-            };
-
-            cx.pressable_with_id(props, |cx, state, id| {
-                let model = model.clone();
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
-                    let _ = host.update_model(&model, |v: &mut bool| *v = !*v);
-                    host.record_transient_event(acx, KEY_CHANGED);
-                    host.notify(acx);
-                }));
-
-                response.hovered = state.hovered;
-                response.pressed = state.pressed;
-                response.focused = state.focused;
-                response.changed = cx.take_transient_for(id, KEY_CHANGED);
-                response.rect = cx.last_bounds_for_element(id);
-
-                let prefix: Arc<str> = if value {
-                    Arc::from("[x] ")
-                } else {
-                    Arc::from("[ ] ")
-                };
-                vec![cx.text(Arc::from(format!("{prefix}{label}")))]
-            })
-        });
-
-        self.add(element);
-        response
-    }
-}
-
-impl<H: UiHost, T: UiWriter<H> + ?Sized> UiWriterImUiExt<H> for T {}
 
 pub fn imui<'a, H: UiHost>(
     cx: &mut ElementContext<'a, H>,
@@ -287,12 +158,13 @@ mod tests {
         cell::Cell,
         collections::{HashMap, HashSet},
         rc::Rc,
+        sync::Arc,
     };
 
-    use crate::UiWriterImUiExt as _;
     use fret_core::{
-        AppWindowId, CaretAffinity, Event, Modifiers, MouseButton, Point, PointerId, PointerType,
-        Px, Rect, Size, TextConstraints, TextMetrics, TextService,
+        AppWindowId, CaretAffinity, Event, KeyCode, Modifiers, MouseButton, MouseButtons, Point,
+        PointerId, PointerType, Px, Rect, SemanticsRole, Size, TextConstraints, TextMetrics,
+        TextService,
     };
     use fret_runtime::{
         ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
@@ -300,7 +172,11 @@ mod tests {
         ModelsHost, PlatformCapabilities, TickId, TimeHost, TimerToken,
     };
     use fret_ui::declarative::render_root;
+    use fret_ui::element::Length;
     use fret_ui::{ElementContext, UiTree};
+    use fret_ui_kit::OverlayController;
+    use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
+    use fret_ui_kit::imui::{MenuItemOptions, PopupMenuOptions};
 
     #[derive(Default)]
     struct FakeTextService;
@@ -610,7 +486,9 @@ mod tests {
         root_name: &str,
         render: impl FnOnce(&mut ElementContext<'_, TestHost>) -> crate::Elements,
     ) -> fret_core::NodeId {
+        OverlayController::begin_frame(app, window);
         let root = render_root(ui, app, services, window, bounds, root_name, render);
+        OverlayController::render(ui, app, services, window, bounds);
         ui.layout_all(app, services, bounds, 1.0);
         root
     }
@@ -648,6 +526,110 @@ mod tests {
         );
     }
 
+    fn double_click_at(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 2,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 2,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    fn right_click_at(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Right,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: PointerId(0),
+                position: at,
+                button: MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    fn pointer_move_at(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+        buttons: MouseButtons,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: PointerId(0),
+                position: at,
+                buttons,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+    }
+
+    fn key_down(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        key: KeyCode,
+        modifiers: Modifiers,
+    ) {
+        ui.dispatch_event(
+            app,
+            services,
+            &Event::KeyDown {
+                key,
+                modifiers,
+                repeat: false,
+            },
+        );
+    }
+
     fn pointer_down_at(
         ui: &mut UiTree<TestHost>,
         app: &mut TestHost,
@@ -674,6 +656,16 @@ mod tests {
         services: &mut FakeTextService,
         at: Point,
     ) {
+        pointer_up_at_with_is_click(ui, app, services, at, true);
+    }
+
+    fn pointer_up_at_with_is_click(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        at: Point,
+        is_click: bool,
+    ) {
         ui.dispatch_event(
             app,
             services,
@@ -682,7 +674,7 @@ mod tests {
                 position: at,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
-                is_click: true,
+                is_click,
                 click_count: 1,
                 pointer_type: PointerType::Mouse,
             }),
@@ -765,9 +757,981 @@ mod tests {
         assert!(!clicked.get());
     }
 
+    #[test]
+    fn right_click_sets_context_menu_requested_true_once() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let requested = Rc::new(Cell::new(false));
+        let secondary_clicked = Rc::new(Cell::new(false));
+        let requested_out = requested.clone();
+        let secondary_clicked_out = secondary_clicked.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-right-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    requested_out.set(resp.context_menu_requested());
+                    secondary_clicked_out.set(resp.secondary_clicked());
+                })
+            },
+        );
+        assert!(!requested.get());
+        assert!(!secondary_clicked.get());
+
+        let at = first_child_point(&ui, root);
+        right_click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let secondary_clicked_out = secondary_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-right-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    requested_out.set(resp.context_menu_requested());
+                    secondary_clicked_out.set(resp.secondary_clicked());
+                })
+            },
+        );
+        assert!(requested.get());
+        assert!(secondary_clicked.get());
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let secondary_clicked_out = secondary_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-right-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    requested_out.set(resp.context_menu_requested());
+                    secondary_clicked_out.set(resp.secondary_clicked());
+                })
+            },
+        );
+        assert!(!requested.get());
+        assert!(!secondary_clicked.get());
+    }
+
+    #[test]
+    fn context_menu_popup_opens_on_right_click_and_closes_on_outside_click() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = Rc::new(Cell::new(false));
+        let open_out = open.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
+                        ui.text("Menu");
+                    }));
+                })
+            },
+        );
+        assert!(!open.get());
+
+        let at = first_child_point(&ui, root);
+        right_click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
+                        ui.text("Menu");
+                    }));
+                })
+            },
+        );
+        assert!(open.get());
+
+        click_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            Point::new(Px(230.0), Px(110.0)),
+        );
+
+        app.advance_frame();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |ui| {
+                        ui.text("Menu");
+                    }));
+                })
+            },
+        );
+        assert!(!open.get());
+    }
+
+    fn bounds_for_test_id(ui: &UiTree<TestHost>, test_id: &str) -> Rect {
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("expected node with test_id={test_id}"));
+        node.bounds
+    }
+
+    #[test]
+    fn context_menu_popup_item_click_closes_popup() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = Rc::new(Cell::new(false));
+        let open_out = open.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-item-close",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(120.0), Px(60.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let open_model = ui.popup_open_model("ctx");
+                            ui.menu_item_ex(
+                                "Close",
+                                MenuItemOptions {
+                                    close_popup: Some(open_model),
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-close")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(!open.get());
+
+        let at = first_child_point(&ui, root);
+        right_click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-item-close",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(120.0), Px(60.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            let open_model = ui.popup_open_model("ctx");
+                            ui.menu_item_ex(
+                                "Close",
+                                MenuItemOptions {
+                                    close_popup: Some(open_model),
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-close")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(open.get());
+
+        let item_bounds = bounds_for_test_id(&ui, "imui-popup-ctx-item-close");
+        let click_point = Point::new(
+            Px(item_bounds.origin.x.0 + item_bounds.size.width.0 * 0.5),
+            Px(item_bounds.origin.y.0 + item_bounds.size.height.0 * 0.5),
+        );
+        let hit = ui.debug_hit_test(click_point).hit.expect("hit node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let hit_test_id = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == hit)
+            .and_then(|n| n.test_id.as_deref());
+        assert_eq!(
+            hit_test_id,
+            Some("imui-popup-ctx-item-close"),
+            "expected click to hit the menu item pressable"
+        );
+
+        click_at(&mut ui, &mut app, &mut services, click_point);
+
+        app.advance_frame();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-item-close",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |_ui| {}));
+                })
+            },
+        );
+        assert!(!open.get());
+    }
+
+    #[test]
+    fn context_menu_popup_keyboard_open_focuses_first_item_and_escape_restores_trigger_focus() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = Rc::new(Cell::new(false));
+        let open_out = open.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-keyboard-open",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_ex(
+                                "Item A",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-a")),
+                                    ..Default::default()
+                                },
+                            );
+                            ui.menu_item_ex(
+                                "Item B",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-b")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(!open.get());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+        let focus_before_open = ui.focus();
+        assert!(
+            focus_before_open.is_some(),
+            "expected trigger to take focus"
+        );
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::ContextMenu,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-keyboard-open",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_ex(
+                                "Item A",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-a")),
+                                    ..Default::default()
+                                },
+                            );
+                            ui.menu_item_ex(
+                                "Item B",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-b")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(open.get());
+
+        let focus = ui.focus().expect("focus");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focused_test_id = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .and_then(|n| n.test_id.as_deref());
+        assert_eq!(focused_test_id, Some("imui-popup-ctx-item-a"));
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Escape,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        let open_out = open.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-keyboard-open",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    open_out.set(ui.begin_popup_context_menu("ctx", resp, |_ui| {}));
+                })
+            },
+        );
+        assert!(!open.get());
+        assert_eq!(ui.focus(), focus_before_open);
+    }
+
+    #[test]
+    fn context_menu_popup_arrow_keys_move_focus_between_items() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = Rc::new(Cell::new(false));
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-arrow-nav",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    let open_out = open.clone();
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_ex(
+                                "Item A",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-a")),
+                                    ..Default::default()
+                                },
+                            );
+                            ui.menu_item_ex(
+                                "Item B",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-b")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(!open.get());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::ContextMenu,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-arrow-nav",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    let open_out = open.clone();
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_ex(
+                                "Item A",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-a")),
+                                    ..Default::default()
+                                },
+                            );
+                            ui.menu_item_ex(
+                                "Item B",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-b")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(open.get());
+
+        let focus = ui.focus().expect("focus");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focused_test_id = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .and_then(|n| n.test_id.as_deref());
+        assert_eq!(focused_test_id, Some("imui-popup-ctx-item-a"));
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::ArrowDown,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-arrow-nav",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    let open_out = open.clone();
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_ex(
+                                "Item A",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-a")),
+                                    ..Default::default()
+                                },
+                            );
+                            ui.menu_item_ex(
+                                "Item B",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-b")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+
+        let focus = ui.focus().expect("focus");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focused_test_id = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .and_then(|n| n.test_id.as_deref());
+        assert_eq!(focused_test_id, Some("imui-popup-ctx-item-b"));
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::ArrowUp,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-popup-context-menu-arrow-nav",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    let open_out = open.clone();
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_ex(
+                                "Item A",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-a")),
+                                    ..Default::default()
+                                },
+                            );
+                            ui.menu_item_ex(
+                                "Item B",
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-b")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+
+        let focus = ui.focus().expect("focus");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focused_test_id = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focus)
+            .and_then(|n| n.test_id.as_deref());
+        assert_eq!(focused_test_id, Some("imui-popup-ctx-item-a"));
+    }
+
+    #[test]
+    fn menu_item_checkbox_stamps_semantics_checked_state() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = Rc::new(Cell::new(false));
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-menu-item-checkbox-semantics",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    let open_out = open.clone();
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_checkbox_ex(
+                                "Flag",
+                                true,
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-flag")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(!open.get());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::ContextMenu,
+            Modifiers::default(),
+        );
+
+        app.advance_frame();
+        ui.request_semantics_snapshot();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-menu-item-checkbox-semantics",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    let open_out = open.clone();
+                    open_out.set(ui.begin_popup_context_menu_ex(
+                        "ctx",
+                        resp,
+                        PopupMenuOptions {
+                            estimated_size: Size::new(Px(160.0), Px(90.0)),
+                            ..Default::default()
+                        },
+                        |ui| {
+                            ui.menu_item_checkbox_ex(
+                                "Flag",
+                                true,
+                                MenuItemOptions {
+                                    test_id: Some(Arc::from("imui-popup-ctx-item-flag")),
+                                    ..Default::default()
+                                },
+                            );
+                        },
+                    ));
+                })
+            },
+        );
+        assert!(open.get());
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("imui-popup-ctx-item-flag"))
+            .expect("checkbox node");
+        assert_eq!(node.role, SemanticsRole::MenuItemCheckbox);
+        assert_eq!(node.flags.checked, Some(true));
+    }
+
+    #[test]
+    fn double_click_sets_double_clicked_true_once() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let double_clicked = Rc::new(Cell::new(false));
+        let double_clicked_out = double_clicked.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-double-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    double_clicked_out.set(ui.button("OK").double_clicked());
+                })
+            },
+        );
+        assert!(!double_clicked.get());
+
+        let at = first_child_point(&ui, root);
+        double_click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let double_clicked_out = double_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-double-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    double_clicked_out.set(ui.button("OK").double_clicked());
+                })
+            },
+        );
+        assert!(double_clicked.get());
+
+        app.advance_frame();
+        let double_clicked_out = double_clicked.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-double-click",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    double_clicked_out.set(ui.button("OK").double_clicked());
+                })
+            },
+        );
+        assert!(!double_clicked.get());
+    }
+
+    #[test]
+    fn shift_f10_sets_context_menu_requested_true_once() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let requested = Rc::new(Cell::new(false));
+        let requested_out = requested.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(!requested.get());
+
+        let at = first_child_point(&ui, root);
+        click_at(&mut ui, &mut app, &mut services, at);
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(!requested.get());
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::F10,
+            Modifiers {
+                shift: true,
+                ..Modifiers::default()
+            },
+        );
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(requested.get());
+
+        app.advance_frame();
+        let requested_out = requested.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-context-menu-shift-f10",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    requested_out.set(ui.button("OK").context_menu_requested());
+                })
+            },
+        );
+        assert!(!requested.get());
+    }
+
     #[allow(dead_code)]
-    fn ui_writer_imui_ext_smoke<H: fret_ui::UiHost>(ui: &mut impl fret_authoring::UiWriter<H>) {
-        use crate::UiWriterImUiExt as _;
+    fn ui_writer_imui_facade_ext_smoke<H: fret_ui::UiHost>(
+        ui: &mut impl fret_authoring::UiWriter<H>,
+    ) {
+        use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
 
         ui.text("Hello");
         ui.separator();
@@ -775,7 +1739,7 @@ mod tests {
     }
 
     #[test]
-    fn ui_writer_imui_ext_compiles() {}
+    fn ui_writer_imui_facade_ext_compiles() {}
 
     #[test]
     fn ui_kit_builder_can_be_rendered_from_imui() {
@@ -899,6 +1863,1220 @@ mod tests {
             },
         );
         assert!(!clicked.get());
+    }
+
+    #[test]
+    fn drag_started_stopped_and_delta_are_consistent() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let started = Rc::new(Cell::new(false));
+        let dragging = Rc::new(Cell::new(false));
+        let stopped = Rc::new(Cell::new(false));
+        let delta = Rc::new(Cell::new(Point::default()));
+
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(!stopped.get());
+
+        let start = first_child_point(&ui, root);
+        pointer_down_at(&mut ui, &mut app, &mut services, start);
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(!stopped.get());
+
+        // Move below the threshold.
+        let p1 = Point::new(Px(start.x.0 + 2.0), Px(start.y.0));
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            p1,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(!stopped.get());
+
+        // Move past the threshold to start dragging (delta should be the frame delta, not the total).
+        let p2 = Point::new(Px(start.x.0 + 6.0), Px(start.y.0));
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            p2,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(started.get());
+        assert!(dragging.get());
+        assert!(!stopped.get());
+        assert_eq!(delta.get(), Point::new(Px(4.0), Px(0.0)));
+
+        pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, p2, false);
+
+        app.advance_frame();
+        let started_out = started.clone();
+        let dragging_out = dragging.clone();
+        let stopped_out = stopped.clone();
+        let delta_out = delta.clone();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-drag-signals",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp = ui.button("OK");
+                    started_out.set(resp.drag_started());
+                    dragging_out.set(resp.dragging());
+                    stopped_out.set(resp.drag_stopped());
+                    delta_out.set(resp.drag_delta());
+                })
+            },
+        );
+        assert!(!started.get());
+        assert!(!dragging.get());
+        assert!(stopped.get());
+    }
+
+    fn floating_window_nodes(
+        ui: &UiTree<TestHost>,
+        root: fret_core::NodeId,
+    ) -> (fret_core::NodeId, fret_core::NodeId) {
+        let window = ui.children(root)[0];
+        let chrome = ui.children(window)[0];
+        let col = ui.children(chrome)[0];
+        let title_bar = ui.children(col)[0];
+        (window, title_bar)
+    }
+
+    fn point_for_test_id(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        bounds: Rect,
+        test_id: &str,
+    ) -> Point {
+        let node = node_for_test_id(ui, app, services, bounds, test_id);
+        let bounds = ui.debug_node_bounds(node).expect("node bounds");
+        Point::new(Px(bounds.origin.x.0 + 1.0), Px(bounds.origin.y.0 + 1.0))
+    }
+
+    fn node_for_test_id(
+        ui: &mut UiTree<TestHost>,
+        app: &mut TestHost,
+        services: &mut FakeTextService,
+        bounds: Rect,
+        test_id: &str,
+    ) -> fret_core::NodeId {
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("expected semantics node with test_id {test_id:?}"))
+            .id
+    }
+
+    #[test]
+    fn floating_window_moves_when_dragging_title_bar() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-drag",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window("demo", "Demo", Point::new(Px(10.0), Px(10.0)), |ui| {
+                        ui.text("Hello");
+                    });
+                })
+            },
+        );
+
+        let (window_node, _title_bar_node) = floating_window_nodes(&ui, root);
+        let before = ui.debug_node_bounds(window_node).expect("window bounds");
+        let start = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:demo",
+        );
+
+        pointer_down_at(&mut ui, &mut app, &mut services, start);
+        let moved = Point::new(Px(start.x.0 + 6.0), start.y);
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            moved,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-drag",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window("demo", "Demo", Point::new(Px(10.0), Px(10.0)), |ui| {
+                        ui.text("Hello");
+                    });
+                })
+            },
+        );
+
+        let (window_node, _title_bar_node) = floating_window_nodes(&ui, root);
+        let after = ui.debug_node_bounds(window_node).expect("window bounds");
+        assert!(
+            after.origin.x.0 > before.origin.x.0,
+            "expected floating window to move right"
+        );
+
+        pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, moved, false);
+    }
+
+    #[test]
+    fn floating_area_moves_when_dragging_drag_surface() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-area-drag",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_area("demo", Point::new(Px(10.0), Px(10.0)), |ui, area| {
+                        let mut props = fret_ui::element::PointerRegionProps::default();
+                        props.layout.size.width = Length::Px(Px(140.0));
+                        props.layout.size.height = Length::Px(Px(24.0));
+                        let drag = ui
+                            .floating_area_drag_surface_ex(area, props, |_cx, _id| {}, |_ui| {})
+                            .attach_semantics(
+                                fret_ui::element::SemanticsDecoration::default()
+                                    .test_id(Arc::from("imui.float_area.drag:demo")),
+                            );
+                        ui.add(drag);
+                    });
+                })
+            },
+        );
+
+        let area_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.area:demo",
+        );
+        let before = ui.debug_node_bounds(area_node).expect("area bounds");
+        let start = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.drag:demo",
+        );
+
+        pointer_down_at(&mut ui, &mut app, &mut services, start);
+        let moved = Point::new(Px(start.x.0 + 6.0), start.y);
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            moved,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-area-drag",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_area("demo", Point::new(Px(10.0), Px(10.0)), |ui, area| {
+                        let mut props = fret_ui::element::PointerRegionProps::default();
+                        props.layout.size.width = Length::Px(Px(140.0));
+                        props.layout.size.height = Length::Px(Px(24.0));
+                        let drag = ui
+                            .floating_area_drag_surface_ex(area, props, |_cx, _id| {}, |_ui| {})
+                            .attach_semantics(
+                                fret_ui::element::SemanticsDecoration::default()
+                                    .test_id(Arc::from("imui.float_area.drag:demo")),
+                            );
+                        ui.add(drag);
+                    });
+                })
+            },
+        );
+
+        let area_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.area:demo",
+        );
+        let after = ui.debug_node_bounds(area_node).expect("area bounds");
+        assert!(
+            after.origin.x.0 > before.origin.x.0,
+            "expected floating area to move right"
+        );
+
+        pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, moved, false);
+        let _ = ui.children(root);
+    }
+
+    #[test]
+    fn floating_area_bring_to_front_updates_hit_test_order() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-area-z-order",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        ui.floating_area("a", Point::new(Px(10.0), Px(10.0)), |ui, area| {
+                            let mut props = fret_ui::element::PointerRegionProps::default();
+                            props.layout.size.width = Length::Px(Px(140.0));
+                            props.layout.size.height = Length::Px(Px(80.0));
+                            let drag = ui
+                                .floating_area_drag_surface_ex(area, props, |_cx, _id| {}, |_ui| {})
+                                .attach_semantics(
+                                    fret_ui::element::SemanticsDecoration::default()
+                                        .test_id(Arc::from("imui.float_area.drag:a")),
+                                );
+                            ui.add(drag);
+                        });
+                        ui.floating_area("b", Point::new(Px(60.0), Px(10.0)), |ui, area| {
+                            let mut props = fret_ui::element::PointerRegionProps::default();
+                            props.layout.size.width = Length::Px(Px(140.0));
+                            props.layout.size.height = Length::Px(Px(80.0));
+                            let drag = ui
+                                .floating_area_drag_surface_ex(area, props, |_cx, _id| {}, |_ui| {})
+                                .attach_semantics(
+                                    fret_ui::element::SemanticsDecoration::default()
+                                        .test_id(Arc::from("imui.float_area.drag:b")),
+                                );
+                            ui.add(drag);
+                        });
+                    });
+                })
+            },
+        );
+
+        let _ = ui.children(root);
+        let area_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.area:a",
+        );
+        let area_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.area:b",
+        );
+
+        let a_bounds = ui.debug_node_bounds(area_a).expect("area a bounds");
+        let b_bounds = ui.debug_node_bounds(area_b).expect("area b bounds");
+
+        let overlap_left = a_bounds.origin.x.0.max(b_bounds.origin.x.0);
+        let overlap_top = a_bounds.origin.y.0.max(b_bounds.origin.y.0);
+        let overlap_right = (a_bounds.origin.x.0 + a_bounds.size.width.0)
+            .min(b_bounds.origin.x.0 + b_bounds.size.width.0);
+        let overlap_bottom = (a_bounds.origin.y.0 + a_bounds.size.height.0)
+            .min(b_bounds.origin.y.0 + b_bounds.size.height.0);
+        assert!(
+            overlap_right > overlap_left + 4.0 && overlap_bottom > overlap_top + 4.0,
+            "expected areas to overlap for z-order hit testing"
+        );
+        let overlap = Point::new(Px(overlap_left + 2.0), Px(overlap_top + 2.0));
+
+        let layer_stack = ui.children(root)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == area_a)
+            .expect("expected area A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == area_b)
+            .expect("expected area B to be a stack child");
+        assert!(
+            stack_idx_b > stack_idx_a,
+            "expected area B to be after A initially"
+        );
+
+        let hit = ui
+            .debug_hit_test(overlap)
+            .hit
+            .expect("expected overlap point to hit a node");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&area_b),
+            "expected area B to be top initially"
+        );
+        assert!(
+            !path.contains(&area_a),
+            "expected area A not to be hit initially"
+        );
+
+        let handle_a = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.drag:a",
+        );
+        click_at(&mut ui, &mut app, &mut services, handle_a);
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-area-z-order",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        ui.floating_area("a", Point::new(Px(10.0), Px(10.0)), |ui, area| {
+                            let mut props = fret_ui::element::PointerRegionProps::default();
+                            props.layout.size.width = Length::Px(Px(140.0));
+                            props.layout.size.height = Length::Px(Px(80.0));
+                            let drag = ui
+                                .floating_area_drag_surface_ex(area, props, |_cx, _id| {}, |_ui| {})
+                                .attach_semantics(
+                                    fret_ui::element::SemanticsDecoration::default()
+                                        .test_id(Arc::from("imui.float_area.drag:a")),
+                                );
+                            ui.add(drag);
+                        });
+                        ui.floating_area("b", Point::new(Px(60.0), Px(10.0)), |ui, area| {
+                            let mut props = fret_ui::element::PointerRegionProps::default();
+                            props.layout.size.width = Length::Px(Px(140.0));
+                            props.layout.size.height = Length::Px(Px(80.0));
+                            let drag = ui
+                                .floating_area_drag_surface_ex(area, props, |_cx, _id| {}, |_ui| {})
+                                .attach_semantics(
+                                    fret_ui::element::SemanticsDecoration::default()
+                                        .test_id(Arc::from("imui.float_area.drag:b")),
+                                );
+                            ui.add(drag);
+                        });
+                    });
+                })
+            },
+        );
+
+        let area_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.area:a",
+        );
+        let area_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_area.area:b",
+        );
+
+        let layer_stack = ui.children(root)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == area_a)
+            .expect("expected area A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == area_b)
+            .expect("expected area B to be a stack child");
+        assert!(
+            stack_idx_a > stack_idx_b,
+            "expected area A to be after B after activation"
+        );
+
+        let hit = ui
+            .debug_hit_test(overlap)
+            .hit
+            .expect("expected overlap point to hit a node");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&area_a),
+            "expected area A to be top after activating it"
+        );
+        assert!(
+            !path.contains(&area_b),
+            "expected area B not to be hit after activation"
+        );
+    }
+
+    #[test]
+    fn window_wrapper_reports_position_and_size() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let reported_pos = Rc::new(Cell::new(Point::new(Px(0.0), Px(0.0))));
+        let reported_size = Rc::new(Cell::new(None::<Size>));
+
+        let reported_pos_out = reported_pos.clone();
+        let reported_size_out = reported_size.clone();
+
+        let initial_position = Point::new(Px(10.0), Px(10.0));
+        let initial_size = Size::new(Px(140.0), Px(80.0));
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-window-wrapper-reports-position-and-size",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    let resp =
+                        ui.window_resizable("demo", "Demo", initial_position, initial_size, |ui| {
+                            ui.text("Hello")
+                        });
+                    reported_pos_out.set(resp.position());
+                    reported_size_out.set(resp.size());
+                })
+            },
+        );
+
+        assert_eq!(reported_pos.get(), initial_position);
+        assert_eq!(reported_size.get(), Some(initial_size));
+    }
+
+    #[test]
+    fn floating_window_close_button_sets_open_false() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = app.models_mut().insert(true);
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-close",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_open(
+                        "demo",
+                        "Demo",
+                        &open,
+                        Point::new(Px(10.0), Px(10.0)),
+                        |ui| {
+                            ui.text("Hello");
+                        },
+                    );
+                })
+            },
+        );
+
+        let _ = floating_window_nodes(&ui, root);
+        let close = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.close:demo",
+        );
+        click_at(&mut ui, &mut app, &mut services, close);
+        assert!(!app.models().get_copied(&open).unwrap_or(true));
+    }
+
+    #[test]
+    fn floating_window_escape_sets_open_false_after_focusing_title_bar() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let open = app.models_mut().insert(true);
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-escape",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_open(
+                        "demo",
+                        "Demo",
+                        &open,
+                        Point::new(Px(10.0), Px(10.0)),
+                        |ui| {
+                            ui.text("Hello");
+                        },
+                    );
+                })
+            },
+        );
+
+        let _ = floating_window_nodes(&ui, root);
+        let title_bar = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:demo",
+        );
+        click_at(&mut ui, &mut app, &mut services, title_bar);
+        assert!(ui.focus().is_some(), "expected title bar to take focus");
+
+        key_down(
+            &mut ui,
+            &mut app,
+            &mut services,
+            KeyCode::Escape,
+            Modifiers::default(),
+        );
+        assert!(!app.models().get_copied(&open).unwrap_or(true));
+    }
+
+    #[test]
+    fn floating_layer_bring_to_front_updates_hit_test_order() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-layer-z-order",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        ui.floating_window("a", "A", Point::new(Px(10.0), Px(10.0)), |ui| {
+                            let element = ui.cx_mut().container(
+                                {
+                                    let mut props = fret_ui::element::ContainerProps::default();
+                                    props.layout.size.width =
+                                        fret_ui::element::Length::Px(Px(140.0));
+                                    props.layout.size.height =
+                                        fret_ui::element::Length::Px(Px(80.0));
+                                    props
+                                },
+                                |_cx| Vec::new(),
+                            );
+                            ui.add(element);
+                        });
+                        ui.floating_window("b", "B", Point::new(Px(60.0), Px(10.0)), |ui| {
+                            let element = ui.cx_mut().container(
+                                {
+                                    let mut props = fret_ui::element::ContainerProps::default();
+                                    props.layout.size.width =
+                                        fret_ui::element::Length::Px(Px(140.0));
+                                    props.layout.size.height =
+                                        fret_ui::element::Length::Px(Px(80.0));
+                                    props
+                                },
+                                |_cx| Vec::new(),
+                            );
+                            ui.add(element);
+                        });
+                    });
+                })
+            },
+        );
+
+        let _ = ui.children(root);
+        let window_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:a",
+        );
+        let window_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:b",
+        );
+
+        let a_bounds = ui.debug_node_bounds(window_a).expect("window a bounds");
+        let b_bounds = ui.debug_node_bounds(window_b).expect("window b bounds");
+
+        let overlap_left = a_bounds.origin.x.0.max(b_bounds.origin.x.0);
+        let overlap_top = a_bounds.origin.y.0.max(b_bounds.origin.y.0);
+        let overlap_right = (a_bounds.origin.x.0 + a_bounds.size.width.0)
+            .min(b_bounds.origin.x.0 + b_bounds.size.width.0);
+        let overlap_bottom = (a_bounds.origin.y.0 + a_bounds.size.height.0)
+            .min(b_bounds.origin.y.0 + b_bounds.size.height.0);
+        assert!(
+            overlap_right > overlap_left + 4.0 && overlap_bottom > overlap_top + 4.0,
+            "expected windows to overlap for z-order hit testing"
+        );
+        let overlap = Point::new(Px(overlap_left + 2.0), Px(overlap_top + 2.0));
+
+        let layer_stack = ui.children(root)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == window_a)
+            .expect("expected window A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == window_b)
+            .expect("expected window B to be a stack child");
+        assert!(
+            stack_idx_b > stack_idx_a,
+            "expected window B to be after A initially"
+        );
+
+        let hit = ui
+            .debug_hit_test(overlap)
+            .hit
+            .expect("expected overlap point to hit a node");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&window_b),
+            "expected window B to be top initially"
+        );
+        assert!(
+            !path.contains(&window_a),
+            "expected window A not to be hit initially"
+        );
+
+        let title_a = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.title_bar:a",
+        );
+        click_at(&mut ui, &mut app, &mut services, title_a);
+
+        app.advance_frame();
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-layer-z-order",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_layer("layer", |ui| {
+                        ui.floating_window("a", "A", Point::new(Px(10.0), Px(10.0)), |ui| {
+                            let element = ui.cx_mut().container(
+                                {
+                                    let mut props = fret_ui::element::ContainerProps::default();
+                                    props.layout.size.width =
+                                        fret_ui::element::Length::Px(Px(140.0));
+                                    props.layout.size.height =
+                                        fret_ui::element::Length::Px(Px(80.0));
+                                    props
+                                },
+                                |_cx| Vec::new(),
+                            );
+                            ui.add(element);
+                        });
+                        ui.floating_window("b", "B", Point::new(Px(60.0), Px(10.0)), |ui| {
+                            let element = ui.cx_mut().container(
+                                {
+                                    let mut props = fret_ui::element::ContainerProps::default();
+                                    props.layout.size.width =
+                                        fret_ui::element::Length::Px(Px(140.0));
+                                    props.layout.size.height =
+                                        fret_ui::element::Length::Px(Px(80.0));
+                                    props
+                                },
+                                |_cx| Vec::new(),
+                            );
+                            ui.add(element);
+                        });
+                    });
+                })
+            },
+        );
+
+        let window_a = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:a",
+        );
+        let window_b = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:b",
+        );
+
+        let layer_stack = ui.children(root)[0];
+        let stack_children = ui.children(layer_stack);
+        let stack_idx_a = stack_children
+            .iter()
+            .position(|n| *n == window_a)
+            .expect("expected window A to be a stack child");
+        let stack_idx_b = stack_children
+            .iter()
+            .position(|n| *n == window_b)
+            .expect("expected window B to be a stack child");
+        assert!(
+            stack_idx_a > stack_idx_b,
+            "expected window A to be after B after activation"
+        );
+
+        let hit = ui
+            .debug_hit_test(overlap)
+            .hit
+            .expect("expected overlap point to hit a node");
+        let path = ui.debug_node_path(hit);
+        assert!(
+            path.contains(&window_a),
+            "expected window A to be top after activating it"
+        );
+        assert!(
+            !path.contains(&window_b),
+            "expected window B not to be hit after activation"
+        );
+    }
+
+    #[test]
+    fn floating_window_resizes_when_dragging_corner_handle() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let _root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-resize",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_resizable(
+                        "demo",
+                        "Demo",
+                        Point::new(Px(10.0), Px(10.0)),
+                        Size::new(Px(140.0), Px(80.0)),
+                        |ui| {
+                            ui.text("Hello");
+                        },
+                    );
+                })
+            },
+        );
+
+        let window_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:demo",
+        );
+        let before = ui.debug_node_bounds(window_node).expect("window bounds");
+
+        let corner = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.resize.corner:demo",
+        );
+        pointer_down_at(&mut ui, &mut app, &mut services, corner);
+        let moved = Point::new(Px(corner.x.0 + 20.0), Px(corner.y.0 + 10.0));
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            moved,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-resize",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_resizable(
+                        "demo",
+                        "Demo",
+                        Point::new(Px(10.0), Px(10.0)),
+                        Size::new(Px(140.0), Px(80.0)),
+                        |ui| {
+                            ui.text("Hello");
+                        },
+                    );
+                })
+            },
+        );
+        let _ = ui.children(root);
+
+        let window_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:demo",
+        );
+        let after = ui.debug_node_bounds(window_node).expect("window bounds");
+        assert!(
+            after.size.width.0 > before.size.width.0,
+            "expected window to grow wider"
+        );
+        assert!(
+            after.size.height.0 > before.size.height.0,
+            "expected window to grow taller"
+        );
+
+        pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, moved, false);
+    }
+
+    #[test]
+    fn floating_window_resizes_from_left_updates_origin_and_width() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(240.0)),
+        );
+
+        let mut ui = UiTree::new();
+        ui.set_window(window);
+
+        let mut app = TestHost::new();
+        app.set_global(PlatformCapabilities::default());
+        let mut services = FakeTextService::default();
+
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-resize-left",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_resizable(
+                        "demo",
+                        "Demo",
+                        Point::new(Px(80.0), Px(40.0)),
+                        Size::new(Px(140.0), Px(80.0)),
+                        |ui| ui.text("Hello"),
+                    );
+                })
+            },
+        );
+
+        let _ = ui.children(root);
+        let window_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:demo",
+        );
+        let before = ui.debug_node_bounds(window_node).expect("window bounds");
+
+        let left = point_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.resize.left:demo",
+        );
+        pointer_down_at(&mut ui, &mut app, &mut services, left);
+        let moved = Point::new(Px(left.x.0 - 18.0), left.y);
+        pointer_move_at(
+            &mut ui,
+            &mut app,
+            &mut services,
+            moved,
+            MouseButtons {
+                left: true,
+                ..MouseButtons::default()
+            },
+        );
+
+        app.advance_frame();
+        let root = run_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "imui-floating-window-resize-left",
+            |cx| {
+                crate::imui(cx, |ui| {
+                    ui.floating_window_resizable(
+                        "demo",
+                        "Demo",
+                        Point::new(Px(80.0), Px(40.0)),
+                        Size::new(Px(140.0), Px(80.0)),
+                        |ui| ui.text("Hello"),
+                    );
+                })
+            },
+        );
+        let _ = ui.children(root);
+
+        let window_node = node_for_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            bounds,
+            "imui.float_window.window:demo",
+        );
+        let after = ui.debug_node_bounds(window_node).expect("window bounds");
+        assert!(
+            after.origin.x.0 < before.origin.x.0,
+            "expected origin.x to move left when resizing from left"
+        );
+        assert!(
+            after.size.width.0 > before.size.width.0,
+            "expected width to grow when resizing from left"
+        );
+
+        pointer_up_at_with_is_click(&mut ui, &mut app, &mut services, moved, false);
     }
 
     #[test]
