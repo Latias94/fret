@@ -38,6 +38,19 @@ When completing an item, prefer leaving 1–3 evidence anchors:
   - Evidence:
     - `tools/report_largest_files.ps1`
 
+## M0.5 — Code-quality audit program (make best-practice reviews repeatable)
+
+- [ ] BU-FR-audit-006 Add a stable per-crate audit template and an audits index.
+  - Goal: make “read each crate and review best practices” actionable and trackable.
+  - Evidence:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+    - `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audits.md`
+
+- [ ] BU-FR-audit-007 Decide audit levels + minimum gates per level (L0/L1/L2).
+  - Goal: scale audits across a large workspace without blocking progress.
+  - Start from:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+
 ## M1 — Core contracts closure
 
 - [ ] BU-FR-core-010 Produce a short “core kernel surface map” (what is stable, what is experimental) for:

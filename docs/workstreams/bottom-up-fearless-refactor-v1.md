@@ -376,6 +376,57 @@ Use this checklist when refactoring a crate bottom-up:
 6. **Docs alignment**
    - Link the work to ADRs and update `docs/adr/IMPLEMENTATION_ALIGNMENT.md` when relevant.
 
+## 4.3) Code-quality audits (crate-by-crate, bottom-up)
+
+The directory/module reshuffles in this workstream are only the first pass. To converge toward a
+“Bevy-like” baseline, we will likely need a second pass that is explicitly **code-quality driven**:
+
+- read each crate end-to-end (or at least its critical paths),
+- audit for Rust best practices and architectural intent,
+- and land small, gated refactors that reduce long-term maintenance risk.
+
+### Audit outputs (lightweight, reviewable artifacts)
+
+- A stable template: `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audit-template.md`
+- A single index for progress tracking: `docs/workstreams/bottom-up-fearless-refactor-v1-crate-audits.md`
+- One “crate audit note” per crate (linked from the index) once we start doing deep dives.
+
+### Audit levels (so we can scale across a large repo)
+
+- **L0 — Quick scan (30–60 min)**: surface map, top hazards, biggest files, dependency smells.
+- **L1 — Targeted deep dive (half-day)**: critical paths + invariants, remove obvious footguns,
+  add at least one executable gate.
+- **L2 — Closure audit (multi-day)**: contract closure + portability review + perf/interaction gates,
+  plus alignment updates if ADR-covered behavior is touched.
+
+### What “Rust best practices” means in this repo (non-normative)
+
+We prioritize changes that reduce risk and improve reviewability over micro-optimizations.
+Common targets to look for during audits:
+
+- **API surface hygiene**
+  - Keep public exports intentional; avoid “accidental” re-exports.
+  - Prefer data-only contract types in portable crates; keep platform bindings behind adapters.
+- **Ownership clarity**
+  - Avoid “god modules” and unclear ownership; split by responsibility and keep facades thin.
+  - Prefer directory modules once a subsystem is non-trivial.
+- **Error handling**
+  - Use structured error types (`thiserror`) for contract surfaces; reserve `anyhow`-style context for
+    app/backends where the contract is “best effort”.
+  - Avoid `unwrap()`/`expect()` in production paths (tests are fine).
+- **Determinism and testability**
+  - Prefer deterministic iteration and explicit ordering in user-visible behavior.
+  - Extract pure helpers where possible and add unit tests around invariants.
+- **Hot-path discipline**
+  - Avoid accidental allocations/clones in dispatch/layout/paint hot paths.
+  - Avoid blocking I/O or long CPU work on the UI thread; push it behind effects/dispatchers.
+- **Unsafe and platform glue**
+  - Keep `unsafe` localized, documented, and covered by tests where possible.
+  - Prefer capability modeling over ad-hoc `cfg` forks in portable layers.
+
+If a refactor changes an ADR-covered contract, it must go through ADR alignment workflow (see repo
+guidelines in `docs/README.md`).
+
 ## 5) Where this workstream plugs in (existing trackers)
 
 This program should not duplicate detailed plans; it should link and provide cross-cutting guardrails.
