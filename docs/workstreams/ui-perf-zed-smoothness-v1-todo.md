@@ -23,8 +23,10 @@ Conventions:
   `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`.
   - Companion probe (width jitter / live-drag approximation):
     `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`.
-  - Use `debug.layout_hotspots[]` attribution (now includes `element_kind` and best-effort `element_path`,
-    plus `layout_engine_child_rect_*` counters) to identify the dominant layout contributors (commit `3d6f0870e`).
+  - Use `debug.layout_hotspots[]` (exclusive) and `debug.layout_inclusive_hotspots[]` (inclusive) attribution to
+    identify dominant layout contributors even when time is distributed across child widgets (commit `69111ebde`).
+    - `layout_hotspots[]` includes `element_kind` and best-effort `element_path`, plus
+      `layout_engine_child_rect_*` counters (commit `3d6f0870e`).
 - [ ] **P1 Text under width jitter**: stabilize wrapped-text cache keys (and consider bucketed widths during resize).
 - [ ] **P2 GPU vs CPU attribution**: make “GPU stall vs CPU work” obvious from diag bundles / captures.
 
@@ -120,6 +122,9 @@ Execution plan:
     `paint_record_visual_bounds_calls`.
   - Implemented by `feat(diag): add paint pass breakdown metrics` (commit `f2bee87a`).
   - Tracking: `docs/workstreams/ui-perf-paint-pass-breakdown-v1.md`
+- [x] Export top inclusive layout hotspots (to complement exclusive-only `debug.layout_hotspots[]`).
+  - Field: `debug.layout_inclusive_hotspots[]`
+  - Implemented by `feat(diag): add inclusive layout hotspots` (commit `69111ebde`).
 - [x] Export initial paint micro-breakdown timers (paint-all plumbing).
   - Adds: `paint_input_context_time_us`, `paint_scroll_handle_invalidation_time_us`,
     `paint_collect_roots_time_us`, `paint_publish_text_input_snapshot_time_us`,

@@ -104,6 +104,9 @@ must keep a clear order of operations based on *how often the hot path executes*
   Target probes:
   - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json` (large-step resize stress).
   - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json` (small-step width jitter; live-drag approximation).
+  Attribution helpers (bundles):
+  - `debug.layout_hotspots[]` (top *exclusive* layout time; often “who is measuring?”).
+  - `debug.layout_inclusive_hotspots[]` (top *inclusive* layout time; “which subtree dominates?”; commit `69111ebde`).
 - **P1: Text pipeline stability under width jitter**  
   Target probes: editor autoscroll + resize.
 - **P2: GPU vs CPU attribution + upload churn**  

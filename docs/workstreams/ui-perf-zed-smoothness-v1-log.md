@@ -6021,3 +6021,51 @@ jq '(.windows[0].snapshots | map(select(.debug.stats != null)) | max_by(.debug.s
 - In this run, the top layout hotspots are `Scroll` element hosts (exclusive layout time in the ms range), suggesting
   the next concrete investigation should focus on scroll layout policy during live resize (including width-jitter text
   preparation and unbounded-probe behavior).
+
+## 2026-02-07 14:35 — Add `layout_inclusive_hotspots[]` for resize attribution; rerun resize probes gate
+
+Commit:
+- `feat(diag): add inclusive layout hotspots` (`69111ebde`)
+
+Motivation:
+- `debug.layout_hotspots[]` is sorted by **exclusive** widget time. When the true cost is spread across many child
+  widgets, the “heavy subtree” can be obscured even though the overall layout budget is dominated by it.
+- Add a complementary `debug.layout_inclusive_hotspots[]` list so resize traces can answer both:
+  - “who is doing expensive *self* work?” (exclusive), and
+  - “which subtree dominates overall?” (inclusive).
+
+Evidence run:
+```bash
+cargo build -p fret-ui-gallery --release
+
+tools/perf/diag_resize_probes_gate.sh \
+  --out-dir target/fret-diag-resize-probes-gate-r8 \
+  --repeat 3 \
+  --warmup-frames 5
+```
+
+Result:
+- `pass=true` (`target/fret-diag-resize-probes-gate-r8/summary.json`)
+
+Worst frame totals (from `target/fret-diag-resize-probes-gate-r8/stdout.json`):
+- resize-stress: `worst_top_total_time_us=16040`
+- drag-jitter: `worst_top_total_time_us=15344`
+
+Attribution example (resize-stress worst bundle):
+- Bundle: `target/fret-diag-resize-probes-gate-r8/1770445498597-ui-gallery-window-resize-stress-steady/bundle.json`
+- Max-layout snapshot extraction:
+```bash
+jq '(.windows[0].snapshots | max_by(.debug.stats.layout_time_us)) as $s |
+  {layout_time_us: $s.debug.stats.layout_time_us,
+   top_exclusive: ($s.debug.layout_hotspots | .[0]),
+   top_inclusive: ($s.debug.layout_inclusive_hotspots | .[0])}' \
+  target/fret-diag-resize-probes-gate-r8/1770445498597-ui-gallery-window-resize-stress-steady/bundle.json
+```
+
+Observed (in this bundle):
+- Top exclusive hotspot: `Scroll` with `layout_time_us=4722` (`inclusive_time_us=8324`).
+- Top inclusive hotspot: root `Stack` with `inclusive_time_us=8543` (expected: “entire UI subtree”).
+
+Follow-ups:
+- Some resize-critical layout hotspots still have `element_path=null` (even with `element_kind` present). Fixing this
+  is important so we can reliably jump from the perf bundle to the exact callsite that declares the hot `Scroll`.
