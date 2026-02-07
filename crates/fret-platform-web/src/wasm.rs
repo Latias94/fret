@@ -15,6 +15,8 @@ use web_sys::{
     HtmlTextAreaElement, InputEvent, KeyboardEvent, Node,
 };
 
+use crate::ime_dom_state::{DomInputDisposition, WebImeDomState};
+
 type WebChangeCallback = wasm_bindgen::closure::Closure<dyn FnMut(WebSysEvent)>;
 type WebWaker = Rc<dyn Fn()>;
 
@@ -198,8 +200,7 @@ struct WebImeBridge {
     textarea: HtmlTextAreaElement,
     position_mode: WebImePositionMode,
     enabled: bool,
-    composing: Rc<Cell<bool>>,
-    suppress_next_input: Rc<Cell<bool>>,
+    dom_state: Rc<RefCell<WebImeDomState>>,
     queued_events: Rc<RefCell<Vec<Event>>>,
     waker: Option<WebWaker>,
     listeners: Vec<(String, WebChangeCallback)>,
@@ -218,9 +219,11 @@ enum WebImePositionMode {
 
 impl std::fmt::Debug for WebImeBridge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let dom_state = self.dom_state.borrow();
         f.debug_struct("WebImeBridge")
             .field("enabled", &self.enabled)
-            .field("composing", &self.composing.get())
+            .field("composing", &dom_state.composing())
+            .field("suppress_next_input", &dom_state.suppress_next_input())
             .field("listeners", &self.listeners.len())
             .field("last_cursor_area", &self.last_cursor_area)
             .field("position_mode", &self.position_mode)
@@ -341,8 +344,7 @@ impl WebImeBridge {
             }
         }
 
-        let composing = Rc::new(Cell::new(false));
-        let suppress_next_input = Rc::new(Cell::new(false));
+        let dom_state = Rc::new(RefCell::new(WebImeDomState::default()));
 
         #[cfg(debug_assertions)]
         {
@@ -372,8 +374,7 @@ impl WebImeBridge {
             textarea,
             position_mode,
             enabled: false,
-            composing,
-            suppress_next_input,
+            dom_state,
             queued_events,
             waker,
             listeners: Vec::new(),
@@ -448,7 +449,7 @@ impl WebImeBridge {
         // Key events: needed because the textarea becomes the focused element while IME is enabled.
         {
             let textarea = self.textarea.clone();
-            let suppress_next_input = self.suppress_next_input.clone();
+            let dom_state = self.dom_state.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
             #[cfg(debug_assertions)]
@@ -503,7 +504,7 @@ impl WebImeBridge {
                     )
                 {
                     k.prevent_default();
-                    suppress_next_input.set(true);
+                    dom_state.borrow_mut().on_shortcut_suppressed();
                     textarea.set_value("");
                     #[cfg(debug_assertions)]
                     {
@@ -576,13 +577,13 @@ impl WebImeBridge {
 
         // Composition events → `Event::Ime`.
         {
-            let composing = self.composing.clone();
+            let dom_state = self.dom_state.clone();
             #[cfg(debug_assertions)]
             let debug = self.debug.clone();
             #[cfg(debug_assertions)]
             let textarea = self.textarea.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
-                composing.set(true);
+                dom_state.borrow_mut().on_composition_start();
                 #[cfg(debug_assertions)]
                 {
                     let mut st = debug.borrow_mut();
@@ -604,16 +605,14 @@ impl WebImeBridge {
 
         {
             let textarea = self.textarea.clone();
-            let composing = self.composing.clone();
+            let dom_state = self.dom_state.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
             #[cfg(debug_assertions)]
             let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
-                if !composing.get() {
-                    // Some browsers may fire update without start; treat as composing.
-                    composing.set(true);
-                }
+                // Some browsers may fire update without start; treat as composing.
+                dom_state.borrow_mut().on_composition_update();
                 let text = textarea.value();
                 let cursor = textarea
                     .selection_start()
@@ -675,15 +674,13 @@ impl WebImeBridge {
 
         {
             let textarea = self.textarea.clone();
-            let composing = self.composing.clone();
-            let suppress_next_input = self.suppress_next_input.clone();
+            let dom_state = self.dom_state.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
             #[cfg(debug_assertions)]
             let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |_e: WebSysEvent| {
-                composing.set(false);
-                suppress_next_input.set(true);
+                dom_state.borrow_mut().on_composition_end();
 
                 let text = textarea.value();
                 textarea.set_value("");
@@ -735,29 +732,29 @@ impl WebImeBridge {
         // Input events → `Event::TextInput` for committed insertion.
         {
             let textarea = self.textarea.clone();
-            let composing = self.composing.clone();
-            let suppress_next_input = self.suppress_next_input.clone();
+            let dom_state = self.dom_state.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
             #[cfg(debug_assertions)]
             let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
-                if composing.get() {
-                    return;
-                }
-                if suppress_next_input.replace(false) {
-                    textarea.set_value("");
-                    #[cfg(debug_assertions)]
-                    {
-                        let mut st = debug.borrow_mut();
-                        st.snapshot.suppress_next_input = false;
-                        st.snapshot.suppressed_input_seen =
-                            st.snapshot.suppressed_input_seen.saturating_add(1);
-                        st.dirty = true;
+                match dom_state.borrow_mut().input_disposition() {
+                    DomInputDisposition::IgnoreComposing => return,
+                    DomInputDisposition::IgnoreSuppressed => {
+                        textarea.set_value("");
+                        #[cfg(debug_assertions)]
+                        {
+                            let mut st = debug.borrow_mut();
+                            st.snapshot.suppress_next_input = false;
+                            st.snapshot.suppressed_input_seen =
+                                st.snapshot.suppressed_input_seen.saturating_add(1);
+                            st.dirty = true;
+                        }
+                        #[cfg(debug_assertions)]
+                        debug_update_textarea_metrics(&textarea, &debug);
+                        return;
                     }
-                    #[cfg(debug_assertions)]
-                    debug_update_textarea_metrics(&textarea, &debug);
-                    return;
+                    DomInputDisposition::Process => {}
                 }
 
                 let Ok(input) = e.dyn_into::<InputEvent>() else {
@@ -814,36 +811,35 @@ impl WebImeBridge {
         // relying on the post-mutation `input` event for common typing paths (ADR 0195).
         {
             let textarea = self.textarea.clone();
-            let composing = self.composing.clone();
-            let suppress_next_input = self.suppress_next_input.clone();
+            let dom_state = self.dom_state.clone();
             let queue = self.queued_events.clone();
             let wake = self.waker.clone();
             #[cfg(debug_assertions)]
             let debug = self.debug.clone();
             let cb = wasm_bindgen::closure::Closure::wrap(Box::new(move |e: WebSysEvent| {
-                if composing.get() {
-                    return;
-                }
-                if suppress_next_input.replace(false) {
-                    textarea.set_value("");
-                    #[cfg(debug_assertions)]
-                    {
-                        let mut st = debug.borrow_mut();
-                        st.snapshot.suppress_next_input = false;
-                        st.snapshot.suppressed_input_seen =
-                            st.snapshot.suppressed_input_seen.saturating_add(1);
-                        st.dirty = true;
-                    }
-                    #[cfg(debug_assertions)]
-                    debug_update_textarea_metrics(&textarea, &debug);
-                    return;
-                }
-
                 let Ok(input) = e.dyn_into::<InputEvent>() else {
                     return;
                 };
-                if input.is_composing() {
-                    return;
+                match dom_state
+                    .borrow_mut()
+                    .beforeinput_disposition(input.is_composing())
+                {
+                    DomInputDisposition::IgnoreComposing => return,
+                    DomInputDisposition::IgnoreSuppressed => {
+                        textarea.set_value("");
+                        #[cfg(debug_assertions)]
+                        {
+                            let mut st = debug.borrow_mut();
+                            st.snapshot.suppress_next_input = false;
+                            st.snapshot.suppressed_input_seen =
+                                st.snapshot.suppressed_input_seen.saturating_add(1);
+                            st.dirty = true;
+                        }
+                        #[cfg(debug_assertions)]
+                        debug_update_textarea_metrics(&textarea, &debug);
+                        return;
+                    }
+                    DomInputDisposition::Process => {}
                 }
 
                 let input_type = input.input_type();
@@ -903,10 +899,11 @@ impl WebImeBridge {
 
         #[cfg(debug_assertions)]
         {
+            let dom_state = self.dom_state.borrow();
             let mut st = self.debug.borrow_mut();
             st.snapshot.enabled = enabled;
-            st.snapshot.composing = self.composing.get();
-            st.snapshot.suppress_next_input = self.suppress_next_input.get();
+            st.snapshot.composing = dom_state.composing();
+            st.snapshot.suppress_next_input = dom_state.suppress_next_input();
             st.dirty = true;
         }
         #[cfg(debug_assertions)]
@@ -939,8 +936,7 @@ impl WebImeBridge {
             }
         }
         self.textarea.set_value("");
-        self.composing.set(false);
-        self.suppress_next_input.set(false);
+        self.dom_state.borrow_mut().on_ime_disabled();
 
         #[cfg(debug_assertions)]
         {
