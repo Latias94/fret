@@ -122,12 +122,14 @@ Target behavior (TanStack-aligned):
 
 ### Transitions
 
-Standardize a transition snapshot (portable, serializable for diagnostics):
+Standardize a transition snapshot (portable; diagnostics-friendly):
 
-- `cause`: push/replace/back/forward/redirect/guard
+- `cause`: `RouterTransitionCause` (`Navigate { action }`, `Redirect { action }`, `Sync`)
 - `from` / `to`: canonical locations
-- `redirect_chain`: optional
-- `blocked_by`: optional
+- `redirect_chain`: optional (future)
+- `blocked_by`: optional (future guards)
+- `RouterUpdate`: `navigate` / `sync` returns a structured “changed vs no-op” result
+- `RouterEvent`: a deterministic event stream (`Router::take_events()`) for diagnostics and tests
 
 ### History adapters
 

@@ -23,10 +23,79 @@ impl HistoryAdapter for MemoryHistory {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum RouterTransitionCause {
+    Navigate { action: NavigationAction },
+    Redirect { action: NavigationAction },
+    Sync,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct RouterBlockReason {
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RouterTransition {
-    pub action: NavigationAction,
+    pub cause: RouterTransitionCause,
     pub from: RouteLocation,
     pub to: RouteLocation,
+    pub redirect_chain: Vec<RouteLocation>,
+    pub blocked_by: Option<RouterBlockReason>,
+}
+
+impl RouterTransition {
+    pub fn navigate(action: NavigationAction, from: RouteLocation, to: RouteLocation) -> Self {
+        Self {
+            cause: RouterTransitionCause::Navigate { action },
+            from,
+            to,
+            redirect_chain: Vec::new(),
+            blocked_by: None,
+        }
+    }
+
+    pub fn sync(from: RouteLocation, to: RouteLocation) -> Self {
+        Self {
+            cause: RouterTransitionCause::Sync,
+            from,
+            to,
+            redirect_chain: Vec::new(),
+            blocked_by: None,
+        }
+    }
+
+    pub fn action(&self) -> Option<NavigationAction> {
+        match self.cause {
+            RouterTransitionCause::Navigate { action } => Some(action),
+            RouterTransitionCause::Redirect { action } => Some(action),
+            RouterTransitionCause::Sync => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RouterUpdate {
+    NoChange,
+    Changed(RouterTransition),
+}
+
+impl RouterUpdate {
+    pub fn changed(&self) -> bool {
+        match self {
+            Self::NoChange => false,
+            Self::Changed(_) => true,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum RouterEvent<R> {
+    Transitioned {
+        transition: RouterTransition,
+        state: RouterState<R>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +145,7 @@ pub struct Router<R, H> {
     search_mode: SearchValidationMode,
     history: H,
     state: RouterState<R>,
+    events: Vec<RouterEvent<R>>,
 }
 
 impl<R, H> Router<R, H>
@@ -103,6 +173,7 @@ where
             search_mode,
             history,
             state,
+            events: Vec::new(),
         })
     }
 
@@ -118,11 +189,15 @@ where
         &mut self.history
     }
 
-    pub fn sync(&mut self) -> Result<bool, RouteSearchValidationFailure> {
+    pub fn take_events(&mut self) -> Vec<RouterEvent<R>> {
+        std::mem::take(&mut self.events)
+    }
+
+    pub fn sync(&mut self) -> Result<RouterUpdate, RouteSearchValidationFailure> {
         self.history.refresh();
         let next_location = self.history.current().clone();
         if next_location == self.state.location {
-            return Ok(false);
+            return Ok(RouterUpdate::NoChange);
         }
 
         let next_state = RouterState::from_match_result(self.tree.match_routes_with_search(
@@ -131,21 +206,29 @@ where
             self.search_mode,
         )?);
 
+        let transition =
+            RouterTransition::sync(self.state.location.clone(), next_state.location.clone());
         self.state = next_state;
-        Ok(true)
+        self.state.last_transition = Some(transition.clone());
+        self.events.push(RouterEvent::Transitioned {
+            transition: transition.clone(),
+            state: self.state.clone(),
+        });
+
+        Ok(RouterUpdate::Changed(transition))
     }
 
     pub fn navigate(
         &mut self,
         action: NavigationAction,
         target: Option<RouteLocation>,
-    ) -> Result<bool, RouteSearchValidationFailure> {
+    ) -> Result<RouterUpdate, RouteSearchValidationFailure> {
         self.history.refresh();
         let from = self.history.current().clone();
 
         let changed = self.history.navigate(action, target);
         if !changed {
-            return Ok(false);
+            return Ok(RouterUpdate::NoChange);
         }
 
         self.history.refresh();
@@ -155,10 +238,16 @@ where
             self.search_table.as_ref(),
             self.search_mode,
         )?);
-        next_state.last_transition = Some(RouterTransition { action, from, to });
+        let transition = RouterTransition::navigate(action, from, to);
+        next_state.last_transition = Some(transition.clone());
 
         self.state = next_state;
-        Ok(true)
+        self.events.push(RouterEvent::Transitioned {
+            transition: transition.clone(),
+            state: self.state.clone(),
+        });
+
+        Ok(RouterUpdate::Changed(transition))
     }
 }
 
@@ -208,6 +297,7 @@ mod tests {
                     Some(RouteLocation::parse("/gallery?lang=zh"))
                 )
                 .expect("navigate should succeed")
+                .changed()
         );
 
         assert_eq!(router.state().location.to_url(), "/gallery?lang=zh");
@@ -219,9 +309,49 @@ mod tests {
             .last_transition
             .as_ref()
             .expect("transition should exist");
-        assert_eq!(transition.action, NavigationAction::Push);
+        assert_eq!(transition.action(), Some(NavigationAction::Push));
         assert_eq!(transition.from.to_url(), "/");
         assert_eq!(transition.to.to_url(), "/gallery?lang=zh");
+
+        let events = router.take_events();
+        assert_eq!(events.len(), 1);
+    }
+
+    #[test]
+    fn router_sync_records_transition_and_event_when_location_changes() {
+        #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+        enum RouteId {
+            Root,
+            Settings,
+        }
+
+        let tree = Arc::new(RouteTree::new(
+            RouteNode::new(RouteId::Root, "/")
+                .unwrap()
+                .with_children(vec![RouteNode::new(RouteId::Settings, "settings").unwrap()]),
+        ));
+
+        let search_table = Arc::new(RouteSearchTable::new());
+        let history = MemoryHistory::new(RouteLocation::parse("/"));
+        let mut router = Router::new(tree, search_table, SearchValidationMode::Strict, history)
+            .expect("router should build");
+
+        assert!(router.history_mut().push(RouteLocation::parse("/settings")));
+        let update = router.sync().expect("sync should succeed");
+        assert!(update.changed());
+
+        let transition = router
+            .state()
+            .last_transition
+            .as_ref()
+            .expect("transition should exist");
+        assert!(matches!(
+            transition.cause,
+            super::RouterTransitionCause::Sync
+        ));
+
+        let events = router.take_events();
+        assert_eq!(events.len(), 1);
     }
 
     #[test]

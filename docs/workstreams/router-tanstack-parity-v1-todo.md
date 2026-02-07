@@ -46,7 +46,9 @@ Status legend:
 ## Phase 3 - RouterState + history adapters
 
 - `[x]` Add `RouterState` (location, matches, status, last_transition).
-- `[x]` Define `RouterTransition` snapshot (portable, serializable).
+- `[x]` Define `RouterTransition` snapshot (portable; diagnostics-friendly).
+- `[x]` Add `RouterUpdate` return type for `navigate` / `sync`.
+- `[x]` Add `RouterEvent` queue (`Router::take_events()`).
 - `[x]` Define `HistoryAdapter` trait and implement:
   - memory adapter (wrap `MemoryHistory`)
   - web history adapter (wrap existing `web-history`)

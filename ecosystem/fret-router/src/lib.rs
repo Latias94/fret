@@ -46,7 +46,10 @@ pub use route_tree::{
     RouteAmbiguity, RouteMatch, RouteMatchResult, RouteMatchResultWithSearch, RouteMatchWithSearch,
     RouteNode, RouteSearchValidationFailure, RouteTree, RouteTreeDiagnostics, RouteTreeError,
 };
-pub use router_state::{HistoryAdapter, RouteMatchSnapshot, Router, RouterState, RouterTransition};
+pub use router_state::{
+    HistoryAdapter, RouteMatchSnapshot, Router, RouterBlockReason, RouterEvent, RouterState,
+    RouterTransition, RouterTransitionCause, RouterUpdate,
+};
 pub use search::{
     RouteSearchTable, SearchMap, SearchValidationError, SearchValidationMode, ValidateSearchFn,
 };

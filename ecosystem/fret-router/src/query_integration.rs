@@ -322,11 +322,11 @@ mod tests {
             User,
         }
 
-        let transition = RouterTransition {
-            action: NavigationAction::Push,
-            from: RouteLocation::parse("/users/1?tab=profile"),
-            to: RouteLocation::parse("/users/2?tab=profile"),
-        };
+        let transition = RouterTransition::navigate(
+            NavigationAction::Push,
+            RouteLocation::parse("/users/1?tab=profile"),
+            RouteLocation::parse("/users/2?tab=profile"),
+        );
 
         let next_matches = vec![
             RouteMatchSnapshot {
@@ -375,11 +375,11 @@ mod tests {
             Root,
         }
 
-        let transition = RouterTransition {
-            action: NavigationAction::Replace,
-            from: RouteLocation::parse("/?a=1"),
-            to: RouteLocation::parse("/?a=2"),
-        };
+        let transition = RouterTransition::navigate(
+            NavigationAction::Replace,
+            RouteLocation::parse("/?a=1"),
+            RouteLocation::parse("/?a=2"),
+        );
 
         let next_matches = vec![RouteMatchSnapshot {
             route: RouteId::Root,
