@@ -276,7 +276,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
   - Remaining: wire gates into TanStack-style instance helper surfaces (`getCanFilter`/`getCanGlobalFilter`)
-    and controlled state hook parity (`onColumnFiltersChange` / `onGlobalFilterChange`).
+    (tracked in `HTP-filt-090`).
 - [x] HTP-filt-030 Implement filterFn registry parity (`filterFns`):
   - built-ins, custom, and `auto` selection based on first known value.
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
@@ -304,7 +304,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
   - Fixture snapshot: `filtering_fns_global_filter_default_excludes_bool` in `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
   - Hook surface: `ecosystem/fret-ui-headless/src/table/row_model.rs` (`TableBuilder::get_column_can_global_filter`)
-- [~] HTP-filt-090 Add TanStack-like filtering helper surfaces (capability parity, consumer-facing).
+- [x] HTP-filt-090 Add TanStack-like filtering helper surfaces (capability parity, consumer-facing).
   - Target: consumers should not re-implement TanStack logic for:
     - `column.getCanFilter()`
     - `column.getFilterValue()`
@@ -316,9 +316,10 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     and `Table::column_filters_updater_set_value(..)` exist.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
-  - Remaining: add a small fixture parity case if TanStack behavior differs from naive state inspection
-    (e.g. enable flags + `autoRemove` interactions + empty-data behavior).
-- [~] HTP-filt-100 Add global filtering helper surface + controlled hook parity.
+  - Done (parity-gated): helper surface outcomes are asserted against upstream via `filtering_helpers` snapshots.
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/filtering_fns.json`
+    - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_filtering_fns_parity.rs`
+- [x] HTP-filt-100 Add global filtering helper surface + controlled hook parity.
   - Done (helper surface): `Table::global_filter_updater_set_value(..)` exists and is smoke-gated.
     - Evidence: `ecosystem/fret-ui-headless/src/table/row_model.rs`
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_capability_smoke.rs`
@@ -344,9 +345,17 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sort_undefined.json`
 - [x] HTP-sort-020 Implement `invertSorting` behavior.
 - [x] HTP-sort-021 Implement `sortDescFirst` behavior.
-- [~] HTP-sort-030 Implement option gates and transitions:
+- [x] HTP-sort-030 Implement option gates and transitions:
   - `enableSorting`, `enableMultiSort`, `maxMultiSortColCount`,
   - `enableSortingRemoval`, `enableMultiRemove`.
+  - Done (parity-gated): option-driven toggle transitions for direct calls (`toggleSorting`) and UI handler semantics
+    (`toggleSortingHandler`) including:
+    - `enableSortingRemoval=false` (no “remove” state on 3rd toggle),
+    - `maxMultiSortColCount` dropping oldest sorts,
+    - `enableMultiSort=false` and column-level `enableMultiSort=false` behavior,
+    - handler gating when column/table sorting is disabled.
+    - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_parity.rs`
+    - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/demo_process.json`
 - [~] HTP-sort-040 Implement sortingFn registry parity (`sortingFns`) and resolution (`auto` + built-ins + custom).
   - Done (parity-gated): built-in sorting fn keys + `auto` inference + named registry resolution.
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs`
@@ -354,6 +363,8 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): `getAutoSortDir`-based first-toggle direction inference (string => asc, else desc).
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_sorting_fns_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/sorting_fns.json`
+  - Update: added explicit descending and datetime toggle coverage.
+    - Snapshots: `sorting_fns_builtin_basic_desc`, `sorting_fns_builtin_datetime_desc`, `sorting_fns_toggle_dt_auto_first`
   - Remaining: broader edge-case coverage (mixed types / nullish behaviors).
 - [x] HTP-sort-050 Align manual sorting semantics:
   - Done (parity-gated): `manualSorting=true` returns `pre_sorted` row model.
@@ -388,7 +399,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
   - Done (parity-gated): reset behaviors (`column.resetSize()`, `table.resetColumnSizing()`, `table.resetHeaderSizeInfo()`).
     - Snapshots: `colsize_reset_column_size_removes_override`, `colsize_reset_column_sizing_default_true_clears`,
       `colsize_reset_column_sizing_restores_initial`, `colsize_reset_header_size_info_default_true_clears`.
-- [~] HTP-size-040 Align `columnSizingInfo` fields (isResizing, deltaOffset, etc.) and transitions.
+- [x] HTP-size-040 Align `columnSizingInfo` fields (isResizing, deltaOffset, etc.) and transitions.
   - Done (parity-gated): basic resize lifecycle + `onChange` vs `onEnd` write timing (LTR).
     - Evidence: `ecosystem/fret-ui-headless/tests/tanstack_v8_column_sizing_parity.rs`
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/column_sizing.json`
@@ -512,7 +523,7 @@ Goal: ensure we are 鈥渘ot weaker than TanStack鈥?by explicitly tracking upst
     - Gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_pinning_grouped_rows_parity.rs`
   - Covered: `getTopRows`/`getCenterRows`/`getBottomRows` ordering under grouping + pagination when pinning
     grouped root rows by id.
-- [~] HTP-expand-010 Align expanded state shape (`true | Record<RowId, boolean>`) and behaviors.
+- [x] HTP-expand-010 Align expanded state shape (`true | Record<RowId, boolean>`) and behaviors.
   - Done (parity-gated): expanded state transitions and row model outputs under `paginateExpandedRows` true/false.
     - Fixture: `ecosystem/fret-ui-headless/tests/fixtures/tanstack/v8/expanding.json`
     - Parity gate: `ecosystem/fret-ui-headless/tests/tanstack_v8_expanding_parity.rs`.

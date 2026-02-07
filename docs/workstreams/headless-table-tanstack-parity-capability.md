@@ -102,7 +102,7 @@ Source of truth:
 | `column.getPinnedIndex()` | `Table::column_pinned_index(column_id)` | Aligned | `column_pinning.json` |
 | `column.pin(position)` | `Table::toggled_column_pinning(..)` / `Table::column_pinning_updater(..)` | Aligned | `column_pinning.json` |
 | `row.getLeft/Center/RightVisibleCells()` | `snapshot_cells_for_row(..)` pinned splits | Aligned | `column_pinning.json` |
-| `table.getLeft/Center/RightLeafColumns()` | `split_pinned_columns(..)` over visible ordered leaf columns | Partial | planned consumer-facing helpers + direct gate (`HTP-colpin-030`) |
+| `table.getLeft/Center/RightLeafColumns()` | `Table::{pinned_leaf_columns,left_leaf_columns,center_leaf_columns,right_leaf_columns}` | Aligned | `column_pinning.json` + `tanstack_v8_column_pinning_parity.rs` |
 | `setColumnPinning/resetColumnPinning` | `Table::reset_column_pinning(..)` + updater surfaces | Aligned | `column_pinning.json` |
 
 ---
@@ -135,9 +135,9 @@ Source of truth:
 | `getPreFilteredRowModel/getFilteredRowModel` | `Table::pre_filtered_row_model()` / `Table::filtered_row_model()` | Aligned | `filtering_fns.json` |
 | `column.setFilterValue(updater)` | `set_column_filter_value_tanstack(&mut ColumnFiltersState, column_id, value)` | Aligned | `filtering_fns.json` |
 | `row.columnFilters` / `row.columnFiltersMeta` | `Table::row_filter_state_snapshot()` | Aligned | `filtering_meta.json` |
-| `setGlobalFilter(updater)` | `Table::global_filter_updater_set_value(..)` (plus Rust-native `TableState.global_filter` updates) | Partial | helper is smoke-gated; controlled hook parity still open (`HTP-filt-100`) |
-| `column.getCanFilter()` / `column.getFilterValue()` / `column.getIsFiltered()` | `Table::{column_can_filter,column_filter_value,column_is_filtered,column_filter_index,column_filters_updater_set_value}` | Partial | helper surfaces are smoke-gated; expand fixture parity as needed (`HTP-filt-090`) |
-| `column.getCanGlobalFilter()` | `Table::column_can_global_filter(..)` + `TableBuilder::get_column_can_global_filter(..)` | Partial | helper surface is smoke-gated; expand fixture parity as needed (`HTP-filt-090`) |
+| `setGlobalFilter(updater)` | `Table::global_filter_updater_set_value(..)` (plus Rust-native `TableState.global_filter` updates) | Partial | `filtering_fns.json` + `tanstack_v8_filtering_fns_parity.rs` |
+| `column.getCanFilter()` / `column.getFilterValue()` / `column.getIsFiltered()` | `Table::{column_can_filter,column_filter_value,column_is_filtered,column_filter_index,column_filters_updater_set_value}` | Partial | `filtering_fns.json` + `tanstack_v8_filtering_fns_parity.rs` (`filtering_helpers`) |
+| `column.getCanGlobalFilter()` | `Table::column_can_global_filter(..)` + `TableBuilder::get_column_can_global_filter(..)` | Partial | `filtering_fns.json` + `tanstack_v8_filtering_fns_parity.rs` (`filtering_helpers`) |
 
 ---
 

@@ -169,7 +169,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": "ap",
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
       }
     },
     {
@@ -276,7 +330,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": "banana",
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
       }
     },
     {
@@ -396,7 +504,64 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": [
+                4,
+                8
+              ],
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
       }
     },
     {
@@ -506,7 +671,64 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": [
+                "a",
+                "b"
+              ],
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
       }
     },
     {
@@ -633,7 +855,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": true,
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
       }
     },
     {
@@ -740,7 +1016,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": "5",
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
       }
     },
     {
@@ -852,7 +1182,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": "ap"
+        }
       }
     },
     {
@@ -932,7 +1316,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": "true"
+        }
       }
     },
     {
@@ -1075,7 +1513,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_equals_string": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "num_range": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "num_weak": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "tags_all": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": false,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            }
+          },
+          "global_filter": "ap"
+        }
       }
     },
     {
@@ -1161,7 +1653,61 @@
         "is_some_page_rows_selected": false,
         "is_all_rows_expanded": false,
         "is_some_rows_expanded": false,
-        "can_some_rows_expand": false
+        "can_some_rows_expand": false,
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": "A",
+              "is_filtered": true,
+              "filter_index": 0,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        }
       }
     },
     {
@@ -1397,6 +1943,60 @@
             "flag_equals": null,
             "text_custom": null
           }
+        },
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
         },
         "next_state": {
           "sorting": [],
@@ -1658,6 +2258,60 @@
             "text_custom": null
           }
         },
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
+        },
         "next_state": {
           "sorting": [],
           "columnFilters": [],
@@ -1916,6 +2570,60 @@
             "flag_equals": null,
             "text_custom": null
           }
+        },
+        "filtering_helpers": {
+          "columns": {
+            "text_auto": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "text_equals_string": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_range": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "num_weak": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            },
+            "tags_all": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "flag_equals": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": false
+            },
+            "text_custom": {
+              "can_filter": true,
+              "filter_value": null,
+              "is_filtered": false,
+              "filter_index": -1,
+              "can_global_filter": true
+            }
+          },
+          "global_filter": null
         },
         "next_state": {
           "sorting": [],

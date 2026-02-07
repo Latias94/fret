@@ -391,6 +391,20 @@ type RowSelectionDetail = {
   is_all_sub_rows_selected: Record<string, boolean>
 }
 
+type FilteringHelpersSnapshot = {
+  columns: Record<
+    string,
+    {
+      can_filter: boolean
+      filter_value: unknown | null
+      is_filtered: boolean
+      filter_index: number
+      can_global_filter: boolean
+    }
+  >
+  global_filter: unknown | null
+}
+
 type FixtureSnapshot = {
   id: SnapshotId
   options: TanStackOptions
@@ -419,6 +433,7 @@ type FixtureSnapshot = {
     is_all_rows_expanded?: boolean
     is_some_rows_expanded?: boolean
     can_some_rows_expand?: boolean
+    filtering_helpers?: FilteringHelpersSnapshot
     headers_cells?: {
       header_groups: {
         id: string
@@ -1919,9 +1934,10 @@ async function main(): Promise<void> {
 function snapshotForState(
   options: TanStackOptions,
   state: TanStackState,
+  extras?: (table: any) => Partial<FixtureSnapshot["expect"]>,
 ): FixtureSnapshot["expect"] {
   const { table } = buildTable(options, state)
-    return {
+  const out: FixtureSnapshot["expect"] = {
       core: snapshotRowModel(table.getCoreRowModel()),
       filtered: snapshotRowModel(table.getFilteredRowModel()),
       sorted: snapshotRowModel(table.getSortedRowModel()),
@@ -1946,10 +1962,35 @@ function snapshotForState(
     is_some_rows_expanded: Boolean(table.getIsSomeRowsExpanded?.()),
     can_some_rows_expand: Boolean(table.getCanSomeRowsExpand?.()),
   }
+
+  return { ...out, ...(extras ? extras(table) : {}) }
 }
 
 function emptyRowModelSnapshot(): any {
   return { rows: [], flatRows: [] }
+}
+
+function snapshotFilteringHelpers(table: any): FilteringHelpersSnapshot {
+  const out: FilteringHelpersSnapshot = {
+    columns: {},
+    global_filter: table.getState?.().globalFilter ?? null,
+  }
+
+  const cols: any[] = table.getAllLeafColumns?.() ?? []
+  for (const col of cols) {
+    const id = String(col.id)
+
+    const filterValue = col.getFilterValue?.()
+    out.columns[id] = {
+      can_filter: Boolean(col.getCanFilter?.()),
+      filter_value: filterValue === undefined ? null : filterValue,
+      is_filtered: Boolean(col.getIsFiltered?.()),
+      filter_index: Number(col.getFilterIndex?.() ?? -1),
+      can_global_filter: Boolean(col.getCanGlobalFilter?.()),
+    }
+  }
+
+  return out
 }
 
 function snapshotHeaderGroups(groups: any[]): {
@@ -2608,6 +2649,7 @@ function snapshotColumnPinning(
     options: TanStackOptions,
     state: TanStackState,
     actions: FixtureAction[],
+    extras?: (table: any) => Partial<FixtureSnapshot["expect"]>,
   ): FixtureSnapshot["expect"] {
     const { table, currentState } = buildTable(options, state)
     const doc = new FakeDocument()
@@ -2959,6 +3001,7 @@ function snapshotColumnPinning(
       is_some_rows_expanded: Boolean(table.getIsSomeRowsExpanded?.()),
       can_some_rows_expand: Boolean(table.getCanSomeRowsExpand?.()),
       ...sizing,
+      ...(extras ? extras(table) : {}),
       next_state: {
         sorting: currentState.sorting ?? [],
         columnFilters: currentState.columnFilters ?? [],
@@ -4078,11 +4121,27 @@ function snapshotColumnPinning(
         }),
       },
       {
+        id: "sorting_fns_builtin_basic_desc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "num_basic", desc: true }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "num_basic", desc: true }],
+        }),
+      },
+      {
         id: "sorting_fns_builtin_datetime",
         options: defaultOptions,
         state: { sorting: [{ id: "dt_datetime", desc: false }] },
         expect: snapshotForState(defaultOptions, {
           sorting: [{ id: "dt_datetime", desc: false }],
+        }),
+      },
+      {
+        id: "sorting_fns_builtin_datetime_desc",
+        options: defaultOptions,
+        state: { sorting: [{ id: "dt_datetime", desc: true }] },
+        expect: snapshotForState(defaultOptions, {
+          sorting: [{ id: "dt_datetime", desc: true }],
         }),
       },
       {
@@ -4178,22 +4237,41 @@ function snapshotColumnPinning(
           { type: "toggleSorting", column_id: "text_auto" },
         ]),
       },
+      {
+        id: "sorting_fns_toggle_dt_auto_first",
+        options: defaultOptions,
+        state: {},
+        actions: [{ type: "toggleSorting", column_id: "dt_auto" }],
+        expect: snapshotForActions(defaultOptions, {}, [
+          { type: "toggleSorting", column_id: "dt_auto" },
+        ]),
+      },
     ]
   } else if (case_id === "filtering_fns") {
     const base = defaultOptions
+    const withFilteringHelpers = (table: any) => ({
+      filtering_helpers: snapshotFilteringHelpers(table),
+    })
+    const mkExpectState = (options: TanStackOptions, state: TanStackState) =>
+      snapshotForState(options, state, withFilteringHelpers)
+    const mkExpectActions = (
+      options: TanStackOptions,
+      state: TanStackState,
+      actions: FixtureAction[],
+    ) => snapshotForActions(options, state, actions, withFilteringHelpers)
 
     snapshots = [
       {
         id: "filtering_fns_text_auto_includes",
         options: base,
         state: { columnFilters: [{ id: "text_auto", value: "ap" }] },
-        expect: snapshotForState(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }),
+        expect: mkExpectState(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }),
       },
       {
         id: "filtering_fns_text_equals_string",
         options: base,
         state: { columnFilters: [{ id: "text_equals_string", value: "banana" }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "text_equals_string", value: "banana" }],
         }),
       },
@@ -4201,7 +4279,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_num_in_number_range",
         options: base,
         state: { columnFilters: [{ id: "num_range", value: [4, 8] }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "num_range", value: [4, 8] }],
         }),
       },
@@ -4209,7 +4287,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_tags_arr_includes_all",
         options: base,
         state: { columnFilters: [{ id: "tags_all", value: ["a", "b"] }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "tags_all", value: ["a", "b"] }],
         }),
       },
@@ -4217,7 +4295,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_bool_equals",
         options: base,
         state: { columnFilters: [{ id: "flag_equals", value: true }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "flag_equals", value: true }],
         }),
       },
@@ -4225,7 +4303,7 @@ function snapshotColumnPinning(
         id: "filtering_fns_weak_equals_string_number",
         options: base,
         state: { columnFilters: [{ id: "num_weak", value: "5" }] },
-        expect: snapshotForState(base, {
+        expect: mkExpectState(base, {
           columnFilters: [{ id: "num_weak", value: "5" }],
         }),
       },
@@ -4233,25 +4311,25 @@ function snapshotColumnPinning(
         id: "filtering_fns_global_filter_includes",
         options: base,
         state: { globalFilter: "ap" },
-        expect: snapshotForState(base, { globalFilter: "ap" }),
+        expect: mkExpectState(base, { globalFilter: "ap" }),
       },
       {
         id: "filtering_fns_global_filter_default_excludes_bool",
         options: base,
         state: { globalFilter: "true" },
-        expect: snapshotForState(base, { globalFilter: "true" }),
+        expect: mkExpectState(base, { globalFilter: "true" }),
       },
       {
         id: "filtering_fns_global_filter_disabled_when_enable_filters_false",
         options: { ...base, enableFilters: false },
         state: { globalFilter: "ap" },
-        expect: snapshotForState({ ...base, enableFilters: false }, { globalFilter: "ap" }),
+        expect: mkExpectState({ ...base, enableFilters: false }, { globalFilter: "ap" }),
       },
       {
         id: "filtering_fns_registry_custom_text_case_sensitive",
         options: { ...base, filterFnsMode: "custom_text_case_sensitive" },
         state: { columnFilters: [{ id: "text_custom", value: "A" }] },
-        expect: snapshotForState(
+        expect: mkExpectState(
           { ...base, filterFnsMode: "custom_text_case_sensitive" },
           { columnFilters: [{ id: "text_custom", value: "A" }] },
         ),
@@ -4261,7 +4339,7 @@ function snapshotColumnPinning(
         options: base,
         state: { columnFilters: [{ id: "text_auto", value: "ap" }] },
         actions: [{ type: "setColumnFilterValue", column_id: "text_auto", value: "" }],
-        expect: snapshotForActions(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }, [
+        expect: mkExpectActions(base, { columnFilters: [{ id: "text_auto", value: "ap" }] }, [
           { type: "setColumnFilterValue", column_id: "text_auto", value: "" },
         ]),
       },
@@ -4270,7 +4348,7 @@ function snapshotColumnPinning(
         options: { ...base, __onColumnFiltersChange: "noop" },
         state: {},
         actions: [{ type: "setColumnFilterValue", column_id: "text_auto", value: "ap" }],
-        expect: snapshotForActions({ ...base, __onColumnFiltersChange: "noop" }, {}, [
+        expect: mkExpectActions({ ...base, __onColumnFiltersChange: "noop" }, {}, [
           { type: "setColumnFilterValue", column_id: "text_auto", value: "ap" },
         ]),
       },
@@ -4279,7 +4357,7 @@ function snapshotColumnPinning(
         options: { ...base, __onGlobalFilterChange: "noop" },
         state: {},
         actions: [{ type: "setGlobalFilterValue", value: "ap" }],
-        expect: snapshotForActions({ ...base, __onGlobalFilterChange: "noop" }, {}, [
+        expect: mkExpectActions({ ...base, __onGlobalFilterChange: "noop" }, {}, [
           { type: "setGlobalFilterValue", value: "ap" },
         ]),
       },
