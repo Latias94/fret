@@ -99,6 +99,10 @@ What we already do in Fret (evidence in the perf log):
 
 Open questions / likely gaps (need code-level confirmation against `repo-ref/zed/crates/gpui`):
 
+Baseline fact (quick reference):
+- On macOS, GPUI invokes a resize callback from the view `set_frame_size` path when the frame size actually changes
+  (see `repo-ref/zed/crates/gpui/src/platform/mac/window.rs`).
+
 1) **Text layout cache model under width jitter**
    - Hypothesis: GPUI amortizes shaping/line-break work via a cache keyed by font+style+wrap width buckets or by a
      layout index (visible-window aware), so “resize drag” does not reshuffle all paragraphs every frame.
