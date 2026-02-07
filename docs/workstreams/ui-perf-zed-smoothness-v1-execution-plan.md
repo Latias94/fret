@@ -46,6 +46,28 @@ baseline wrangling.
 
 If a change cannot satisfy one of these, it stays out-of-tree.
 
+### Rule 1.5: Global optimum bar (no “one-probe wins”)
+
+We treat perf as **system-level**, not script-local.
+
+Every perf-affecting change must:
+
+1. **Not regress the steady suite** under the canonical protocol and baseline:
+   - `fretboard diag perf ui-gallery-steady ... --perf-baseline <baseline>`
+2. **Not regress P0 resize probes** (even if the change targets another area):
+   - `tools/diag-scripts/ui-gallery-window-resize-stress-steady.json`
+   - `tools/diag-scripts/ui-gallery-window-resize-drag-jitter-steady.json`
+3. **Not regress at least one input hot-path probe**:
+   - pointer-move gate (bounds-tree / dispatch): `ui-gallery-hit-test-torture-*move-sweep*`
+4. If the change touches renderer/text caches, also run one GPU/churn probe:
+   - e.g. effects blur or SVG upload torture (see `ui-perf-gpui-gap-v1.md`).
+
+If a change improves one probe but regresses another, it is considered **not accepted** until we:
+
+- explain the regression via diagnostics,
+- either eliminate it or justify it as a contract trade-off, and
+- record the decision (and rollback plan) in the perf log.
+
 ### Rule 2: Evidence is mandatory and commit-addressable
 
 For each perf-affecting PR:
