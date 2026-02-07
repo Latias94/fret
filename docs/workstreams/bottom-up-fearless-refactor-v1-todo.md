@@ -117,9 +117,13 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 
 ## M3 — Renderer closure
 
-- [ ] BU-FR-render-030 Define a minimal renderer regression surface list (text, svg, atlas, clip/shadow).
+- [x] BU-FR-render-030 Define a minimal renderer regression surface list (text, svg, atlas, clip/shadow).
   - Link: `docs/renderer-refactor-roadmap.md`
-  - Evidence anchors: `crates/fret-render/src/renderer/mod.rs`, `crates/fret-render/src/text/mod.rs`
+  - Evidence anchors:
+    - `docs/workstreams/bottom-up-fearless-refactor-v1.md`
+    - `crates/fret-render/src/renderer/mod.rs`
+    - `crates/fret-render/src/text/mod.rs`
+    - `crates/fret-render/src/svg/mod.rs`
 
 - [ ] BU-FR-render-031 Inventory the current profiling/inspection workflows and ensure they are runnable on Windows.
   - Link: `docs/tracy.md`, `docs/renderdoc-inspection.md`

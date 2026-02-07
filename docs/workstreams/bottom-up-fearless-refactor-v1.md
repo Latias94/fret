@@ -253,6 +253,55 @@ Exit criteria (v1):
 - At least one renderer-heavy stress harness is used as a regression gate (perf snapshot checks or diag bundle checks).
 - Profiling/inspection workflows are runnable on Windows and produce reproducible artifacts.
 
+#### Renderer regression surfaces (v1)
+
+This list is intentionally small: it defines the “if this drifts, we want a fast failure” surfaces
+for renderer refactors.
+
+1. **Shader compilation + WebGPU validation**
+   - Gates:
+     - `crates/fret-render/src/renderer/mod.rs`
+
+2. **RenderPlan compilation (effect graph encoding)**
+   - Failure mode: pass ordering/scissor mapping/clip mask budgeting changes subtly.
+   - Gates:
+     - `crates/fret-render/src/renderer/render_plan.rs`
+
+3. **Intermediate target pool + budgets**
+   - Failure mode: uncontrolled target growth or eviction drift causing perf/memory regressions.
+   - Gates:
+     - `crates/fret-render/src/renderer/intermediate_pool.rs`
+
+4. **Clip/scissor correctness**
+   - Failure mode: clipped effects bleed outside bounds, scissor mapping off-by-ones.
+   - Gates:
+     - `crates/fret-render/tests/affine_clip_conformance.rs`
+     - `crates/fret-render/tests/postprocess_scissor_conformance.rs`
+
+5. **Backdrop effects correctness (blur/pixelate/color adjust)**
+   - Failure mode: wrong anchoring, wrong ordering, wrong clip handling.
+   - Gates:
+     - `crates/fret-render/tests/effect_backdrop_blur_conformance.rs`
+     - `crates/fret-render/tests/effect_backdrop_pixelate_conformance.rs`
+     - `crates/fret-render/tests/effect_backdrop_color_adjust_conformance.rs`
+
+6. **Filter-content effects correctness**
+   - Gates:
+     - `crates/fret-render/tests/effect_filter_content_blur_conformance.rs`
+     - `crates/fret-render/tests/effect_filter_content_pixelate_conformance.rs`
+
+7. **Text shaping/wrapping + key stability**
+   - Failure mode: shaping/paint cache keys drift, wrapping semantics regress.
+   - Gates:
+     - `crates/fret-render/src/text/mod.rs`
+     - `crates/fret-render/src/text/wrapper.rs`
+     - `crates/fret-render/src/text/parley_shaper.rs`
+
+8. **SVG rasterization outputs**
+   - Failure mode: alpha masks/rgba renders change unexpectedly, breaking icon rendering.
+   - Gates:
+     - `crates/fret-render/src/svg/mod.rs`
+
 ### M4 — Ecosystem rationalization (policy surfaces scale safely)
 
 Outcome: ecosystem crates align to a coherent layering: headless → kit → shadcn → specialized kits.
