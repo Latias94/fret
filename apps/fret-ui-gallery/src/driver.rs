@@ -110,14 +110,12 @@ fn build_ui_gallery_page_router() -> Router<UiGalleryRouteId, MemoryHistory> {
 fn apply_page_route_side_effects_via_router(
     app: &mut App,
     window: AppWindowId,
+    action: NavigationAction,
     current_page: Arc<str>,
     router: &mut Router<UiGalleryRouteId, MemoryHistory>,
 ) {
     let current_route = route_location_for_page(&current_page);
-    let update = router.navigate(
-        NavigationAction::Replace,
-        Some(current_route.canonicalized()),
-    );
+    let update = router.navigate(action, Some(current_route.canonicalized()));
 
     let Ok(update) = update else {
         return;
@@ -1119,7 +1117,13 @@ impl UiGalleryDriver {
         };
 
         if let Some(selected) = app.models().get_cloned(&state.selected_page) {
-            apply_page_route_side_effects_via_router(app, window, selected, &mut state.page_router);
+            apply_page_route_side_effects_via_router(
+                app,
+                window,
+                NavigationAction::Replace,
+                selected,
+                &mut state.page_router,
+            );
         }
 
         #[cfg(not(target_arch = "wasm32"))]
@@ -1179,7 +1183,13 @@ impl UiGalleryDriver {
             .workspace_tab_close_by_command
             .insert(cmd, page_for_tabs);
 
-        apply_page_route_side_effects_via_router(app, window, page.clone(), &mut state.page_router);
+        apply_page_route_side_effects_via_router(
+            app,
+            window,
+            NavigationAction::Push,
+            page.clone(),
+            &mut state.page_router,
+        );
         true
     }
 
@@ -1243,6 +1253,7 @@ impl UiGalleryDriver {
                     apply_page_route_side_effects_via_router(
                         app,
                         window,
+                        NavigationAction::Replace,
                         current_page,
                         &mut state.page_router,
                     );
@@ -1282,6 +1293,7 @@ impl UiGalleryDriver {
                     apply_page_route_side_effects_via_router(
                         app,
                         window,
+                        NavigationAction::Replace,
                         current_page,
                         &mut state.page_router,
                     );
