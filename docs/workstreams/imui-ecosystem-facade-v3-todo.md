@@ -133,4 +133,5 @@ Exit criteria:
 - [x] IMUIECO3-perf-050 Expand perf guard tests beyond the v2 smoke baseline (target floating hot paths).
   - Evidence: `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` (`floating_layer_z_order_does_not_clone_vec_each_frame`).
   - Evidence: `ecosystem/fret-ui-kit/src/imui.rs` (`FloatWindowLayerZOrderSnapshot`).
-- [ ] IMUIECO3-test-051 Add a small CI-friendly gate matrix (contracts + perf + diag scripts).
+- [x] IMUIECO3-test-051 Add a small CI-friendly gate matrix (contracts + perf + diag scripts).
+  - Evidence: `tools/diag_gate_imui_v3.ps1`.
