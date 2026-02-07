@@ -521,9 +521,9 @@ fn caret_rect_offsets_for_preedit_cursor() {
         Size::new(Px(500.0), Px(500.0)),
     );
 
-    let st = handle.state.borrow();
+    let mut st = handle.state.borrow_mut();
     let rect =
-        caret_rect_for_selection(&st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
+        caret_rect_for_selection(&mut st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
 
     assert_eq!(rect.origin.x, Px(20.0), "2 cols * 10px");
     assert_eq!(rect.origin.y, Px(0.0));
@@ -564,9 +564,9 @@ fn caret_rect_ignores_stale_row_geom_with_preedit_mapping() {
         );
     }
 
-    let st = handle.state.borrow();
+    let mut st = handle.state.borrow_mut();
     let rect =
-        caret_rect_for_selection(&st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
+        caret_rect_for_selection(&mut st, Px(20.0), Px(10.0), bounds, &scroll).expect("caret rect");
     assert_eq!(rect.origin.x, Px(10.0), "fallback col (1) * cell_w (10px)");
 }
 
@@ -600,9 +600,9 @@ fn caret_for_pointer_ignores_stale_row_geom_with_preedit_mapping() {
         );
     }
 
-    let st = handle.state.borrow();
+    let mut st = handle.state.borrow_mut();
     let caret = caret_for_pointer(
-        &st,
+        &mut st,
         0,
         bounds,
         fret_core::Point::new(Px(15.0), Px(5.0)),

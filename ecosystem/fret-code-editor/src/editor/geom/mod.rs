@@ -184,7 +184,7 @@ pub(super) fn map_row_local_to_buffer_byte(
 }
 
 pub(super) fn caret_for_pointer(
-    st: &CodeEditorState,
+    st: &mut CodeEditorState,
     row: usize,
     bounds: Rect,
     position: fret_core::Point,
@@ -203,6 +203,10 @@ pub(super) fn caret_for_pointer(
     }
 
     // Fallback to the MVP monospace heuristic when geometry hasn't been cached yet.
+    st.cache_stats.geom_pointer_hit_test_fallbacks = st
+        .cache_stats
+        .geom_pointer_hit_test_fallbacks
+        .saturating_add(1);
     let col = if cell_w.0 > 0.0 {
         (local_x.0 / cell_w.0).floor().max(0.0) as usize
     } else {
@@ -213,7 +217,7 @@ pub(super) fn caret_for_pointer(
 }
 
 pub(super) fn caret_rect_for_selection(
-    st: &CodeEditorState,
+    st: &mut CodeEditorState,
     row_h: Px,
     cell_w: Px,
     bounds: Rect,
@@ -257,6 +261,8 @@ pub(super) fn caret_rect_for_selection(
     }
 
     let x = x.unwrap_or_else(|| {
+        st.cache_stats.geom_caret_rect_fallbacks =
+            st.cache_stats.geom_caret_rect_fallbacks.saturating_add(1);
         let mut col = pt.col;
         if let Some(preedit) = st.preedit.as_ref() {
             col = col.saturating_add(preedit_cursor_offset_cols(preedit));

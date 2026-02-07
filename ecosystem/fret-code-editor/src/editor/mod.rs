@@ -216,6 +216,16 @@ pub struct CodeEditorCacheStats {
     pub row_text_evictions: u64,
     pub row_text_resets: u64,
 
+    /// Number of pointer hit-tests that fell back to the monospace `cell_w` heuristic
+    /// (caret stops unavailable).
+    pub geom_pointer_hit_test_fallbacks: u64,
+    /// Number of caret-rect queries that fell back to the monospace `cell_w` heuristic
+    /// (caret stops unavailable).
+    pub geom_caret_rect_fallbacks: u64,
+    /// Number of vertical caret moves that fell back to the column-based display map
+    /// (caret stops unavailable).
+    pub geom_vertical_move_fallbacks: u64,
+
     pub syntax_get_calls: u64,
     pub syntax_hits: u64,
     pub syntax_misses: u64,
@@ -746,30 +756,39 @@ impl CodeEditor {
 
                                 let prev = prev_stats.get();
                                 prev_stats.set(stats);
-                            let delta = CodeEditorCacheStats {
-                                row_text_get_calls: stats
-                                    .row_text_get_calls
-                                    .saturating_sub(prev.row_text_get_calls),
-                                row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
-                                row_text_misses: stats
-                                    .row_text_misses
-                                    .saturating_sub(prev.row_text_misses),
-                                row_text_evictions: stats
-                                    .row_text_evictions
-                                    .saturating_sub(prev.row_text_evictions),
-                                row_text_resets: stats
-                                    .row_text_resets
-                                    .saturating_sub(prev.row_text_resets),
-                                syntax_get_calls: stats
-                                    .syntax_get_calls
-                                    .saturating_sub(prev.syntax_get_calls),
-                                syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
-                                syntax_misses: stats.syntax_misses.saturating_sub(prev.syntax_misses),
-                                syntax_evictions: stats
-                                    .syntax_evictions
-                                    .saturating_sub(prev.syntax_evictions),
-                                syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
-                            };
+                             let delta = CodeEditorCacheStats {
+                                 row_text_get_calls: stats
+                                     .row_text_get_calls
+                                     .saturating_sub(prev.row_text_get_calls),
+                                 row_text_hits: stats.row_text_hits.saturating_sub(prev.row_text_hits),
+                                 row_text_misses: stats
+                                     .row_text_misses
+                                     .saturating_sub(prev.row_text_misses),
+                                 row_text_evictions: stats
+                                     .row_text_evictions
+                                     .saturating_sub(prev.row_text_evictions),
+                                 row_text_resets: stats
+                                     .row_text_resets
+                                     .saturating_sub(prev.row_text_resets),
+                                 geom_pointer_hit_test_fallbacks: stats
+                                     .geom_pointer_hit_test_fallbacks
+                                     .saturating_sub(prev.geom_pointer_hit_test_fallbacks),
+                                 geom_caret_rect_fallbacks: stats
+                                     .geom_caret_rect_fallbacks
+                                     .saturating_sub(prev.geom_caret_rect_fallbacks),
+                                 geom_vertical_move_fallbacks: stats
+                                     .geom_vertical_move_fallbacks
+                                     .saturating_sub(prev.geom_vertical_move_fallbacks),
+                                 syntax_get_calls: stats
+                                     .syntax_get_calls
+                                     .saturating_sub(prev.syntax_get_calls),
+                                 syntax_hits: stats.syntax_hits.saturating_sub(prev.syntax_hits),
+                                 syntax_misses: stats.syntax_misses.saturating_sub(prev.syntax_misses),
+                                 syntax_evictions: stats
+                                     .syntax_evictions
+                                     .saturating_sub(prev.syntax_evictions),
+                                 syntax_resets: stats.syntax_resets.saturating_sub(prev.syntax_resets),
+                             };
                                 (
                                     stats,
                                     delta,
@@ -938,7 +957,7 @@ impl CodeEditor {
                                 input::push_caret_rect_effect(
                                     host,
                                     action_cx,
-                                    &st,
+                                    &mut st,
                                     row_h,
                                     cmd_cell_w.get(),
                                     &cmd_scroll,
@@ -979,7 +998,7 @@ impl CodeEditor {
                         ));
                         st.undo_group = None;
 
-                        let caret = caret_for_pointer(&st, row, bounds, down.position, cell_w);
+                        let caret = caret_for_pointer(&mut st, row, bounds, down.position, cell_w);
                         input::apply_pointer_down_selection(
                             &mut st,
                             row,
@@ -989,7 +1008,7 @@ impl CodeEditor {
                         );
 
                         let caret_rect = caret_rect_for_selection(
-                            &st,
+                            &mut st,
                             row_h,
                             cell_w,
                             bounds,
@@ -1078,7 +1097,7 @@ impl CodeEditor {
                             Px(bounds.origin.x.0 + viewport_pos.x.0),
                             Px(bounds.origin.y.0 + viewport_y.0),
                         );
-                        let caret = caret_for_pointer(&st, row, bounds, caret_pos, cell_w);
+                        let caret = caret_for_pointer(&mut st, row, bounds, caret_pos, cell_w);
                         if caret != st.selection.focus {
                             st.selection.focus = caret;
                             st.caret_preferred_x = None;
@@ -1086,7 +1105,7 @@ impl CodeEditor {
                         }
 
                         let caret_rect = caret_rect_for_selection(
-                            &st,
+                            &mut st,
                             row_h,
                             cell_w,
                             bounds,
@@ -1214,14 +1233,14 @@ impl CodeEditor {
                         Px(bounds.origin.x.0 + viewport_pos.x.0),
                         Px(bounds.origin.y.0 + viewport_y.0),
                     );
-                    let caret = caret_for_pointer(&st, row, bounds, caret_pos, cell_w);
+                    let caret = caret_for_pointer(&mut st, row, bounds, caret_pos, cell_w);
                     if caret != st.selection.focus {
                         st.selection.focus = caret;
                         st.caret_preferred_x = None;
                     }
 
                     let caret_rect = caret_rect_for_selection(
-                        &st,
+                        &mut st,
                         row_h,
                         cell_w,
                         bounds,
@@ -1259,7 +1278,7 @@ impl CodeEditor {
                             input::push_caret_rect_effect(
                                 host,
                                 action_cx,
-                                &st,
+                                &mut st,
                                 row_h,
                                 text_cell_w.get(),
                                 &text_scroll,
@@ -1347,7 +1366,7 @@ impl CodeEditor {
                         input::push_caret_rect_effect(
                             host,
                             action_cx,
-                            &st,
+                            &mut st,
                             row_h,
                             ime_cell_w.get(),
                             &ime_scroll,
@@ -1408,7 +1427,7 @@ impl CodeEditor {
                         input::push_caret_rect_effect(
                             host,
                             action_cx,
-                            &st,
+                            &mut st,
                             row_h,
                             sel_cell_w.get(),
                             &sel_scroll,
@@ -1433,7 +1452,7 @@ impl CodeEditor {
                         input::push_caret_rect_effect(
                             host,
                             action_cx,
-                            &st,
+                            &mut st,
                             row_h,
                             clipboard_cell_w.get(),
                             &clipboard_scroll,

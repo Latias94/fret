@@ -2329,11 +2329,27 @@ pub fn build_app() -> App {
                         let selection = handle.selection();
                         let anchor = selection.anchor.min(text.len()) as u64;
                         let caret = selection.caret().min(text.len()) as u64;
+                        let stats = handle.cache_stats();
                         serde_json::json!({
                             "schema_version": 1,
                             "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
                             "text_len_bytes": text.len() as u64,
                             "selection": { "anchor": anchor, "caret": caret },
+                            "cache_stats": {
+                                "row_text_get_calls": stats.row_text_get_calls,
+                                "row_text_hits": stats.row_text_hits,
+                                "row_text_misses": stats.row_text_misses,
+                                "row_text_evictions": stats.row_text_evictions,
+                                "row_text_resets": stats.row_text_resets,
+                                "geom_pointer_hit_test_fallbacks": stats.geom_pointer_hit_test_fallbacks,
+                                "geom_caret_rect_fallbacks": stats.geom_caret_rect_fallbacks,
+                                "geom_vertical_move_fallbacks": stats.geom_vertical_move_fallbacks,
+                                "syntax_get_calls": stats.syntax_get_calls,
+                                "syntax_hits": stats.syntax_hits,
+                                "syntax_misses": stats.syntax_misses,
+                                "syntax_evictions": stats.syntax_evictions,
+                                "syntax_resets": stats.syntax_resets,
+                            },
                         })
                     });
 

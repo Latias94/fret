@@ -33,7 +33,7 @@ pub(super) fn scroll_caret_into_view(
 pub(super) fn push_caret_rect_effect(
     host: &mut dyn UiActionHost,
     action_cx: ActionCx,
-    st: &CodeEditorState,
+    st: &mut CodeEditorState,
     row_h: Px,
     cell_w: Px,
     scroll_handle: &fret_ui::scroll::ScrollHandle,
@@ -254,7 +254,7 @@ pub(super) fn handle_key_down(
     }
 
     scroll_caret_into_view(&st, row_h, scroll_handle);
-    push_caret_rect_effect(host, action_cx, &st, row_h, cell_w_px, scroll_handle);
+    push_caret_rect_effect(host, action_cx, &mut st, row_h, cell_w_px, scroll_handle);
 
     host.notify(action_cx);
     host.request_redraw(action_cx.window);
@@ -551,6 +551,10 @@ pub(super) fn move_caret_vertical(st: &mut CodeEditorState, delta: i32, extend: 
         st.buffer
             .clamp_to_char_boundary_left(byte.min(st.buffer.len_bytes()))
     } else {
+        st.cache_stats.geom_vertical_move_fallbacks = st
+            .cache_stats
+            .geom_vertical_move_fallbacks
+            .saturating_add(1);
         st.display_map
             .display_point_to_byte(&st.buffer, DisplayPoint::new(next_row, pt.col))
     };

@@ -10091,6 +10091,166 @@ pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo_j
     ))
 }
 
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: serde_json::Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low_json(
+        &bundle,
+        bundle_path,
+        warmup_frames,
+    )
+}
+
+pub(super) fn check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low_json(
+    bundle: &serde_json::Value,
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    const MAX_POINTER_FALLBACKS: u64 = 1;
+    const MAX_CARET_RECT_FALLBACKS: u64 = 1;
+    const MAX_VERTICAL_MOVE_FALLBACKS: u64 = 1;
+
+    let mut examined_snapshots = 0u64;
+    let mut ui_gallery_snapshots = 0u64;
+    let mut last_observed = None::<serde_json::Value>;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map_or(&[][..], |v| v);
+    for w in windows {
+        let window_id = w.get("window_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v);
+        for s in snaps {
+            let frame_id = s.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            if frame_id < warmup_frames {
+                continue;
+            }
+            examined_snapshots = examined_snapshots.saturating_add(1);
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64()).unwrap_or(0);
+            let app_snapshot = s.get("app_snapshot");
+            let kind = app_snapshot
+                .and_then(|v| v.get("kind"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if kind != "fret_ui_gallery" {
+                continue;
+            }
+            ui_gallery_snapshots = ui_gallery_snapshots.saturating_add(1);
+
+            let selected_page = app_snapshot
+                .and_then(|v| v.get("selected_page"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if selected_page != "code_editor_torture" {
+                continue;
+            }
+
+            let soft_wrap_cols = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("soft_wrap_cols"))
+                .and_then(|v| v.as_u64());
+            let cache_stats = app_snapshot
+                .and_then(|v| v.get("code_editor"))
+                .and_then(|v| v.get("torture"))
+                .and_then(|v| v.get("cache_stats"));
+
+            let pointer_fallbacks = cache_stats
+                .and_then(|v| v.get("geom_pointer_hit_test_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let caret_rect_fallbacks = cache_stats
+                .and_then(|v| v.get("geom_caret_rect_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let vertical_move_fallbacks = cache_stats
+                .and_then(|v| v.get("geom_vertical_move_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            last_observed = Some(serde_json::json!({
+                "window": window_id,
+                "tick_id": tick_id,
+                "frame_id": frame_id,
+                "selected_page": selected_page,
+                "soft_wrap_cols": soft_wrap_cols,
+                "geom_pointer_hit_test_fallbacks": pointer_fallbacks,
+                "geom_caret_rect_fallbacks": caret_rect_fallbacks,
+                "geom_vertical_move_fallbacks": vertical_move_fallbacks,
+            }));
+        }
+    }
+
+    let evidence_dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    let evidence_path =
+        evidence_dir.join("check.ui_gallery_code_editor_torture_geom_fallbacks_low.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "ui_gallery_code_editor_torture_geom_fallbacks_low",
+        "bundle_json": bundle_path.display().to_string(),
+        "evidence_dir": evidence_dir.display().to_string(),
+        "evidence_path": evidence_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "examined_snapshots": examined_snapshots,
+        "ui_gallery_snapshots": ui_gallery_snapshots,
+        "max_pointer_fallbacks": MAX_POINTER_FALLBACKS,
+        "max_caret_rect_fallbacks": MAX_CARET_RECT_FALLBACKS,
+        "max_vertical_move_fallbacks": MAX_VERTICAL_MOVE_FALLBACKS,
+        "last_observed": last_observed,
+    });
+    write_json_value(&evidence_path, &payload)?;
+
+    if ui_gallery_snapshots == 0 {
+        return Err(format!(
+            "ui-gallery code-editor geom fallback gate requires app_snapshot.kind=fret_ui_gallery after warmup, but none were observed (warmup_frames={warmup_frames}, examined_snapshots={examined_snapshots})\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    }
+
+    let Some(last) = last_observed.as_ref() else {
+        return Err(format!(
+            "ui-gallery code-editor geom fallback gate failed (no code_editor_torture snapshot observed after warmup)\n  bundle: {}\n  evidence: {}",
+            bundle_path.display(),
+            evidence_path.display()
+        ));
+    };
+
+    let pointer = last
+        .get("geom_pointer_hit_test_fallbacks")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(u64::MAX);
+    let caret_rect = last
+        .get("geom_caret_rect_fallbacks")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(u64::MAX);
+    let vertical = last
+        .get("geom_vertical_move_fallbacks")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(u64::MAX);
+
+    if pointer <= MAX_POINTER_FALLBACKS
+        && caret_rect <= MAX_CARET_RECT_FALLBACKS
+        && vertical <= MAX_VERTICAL_MOVE_FALLBACKS
+    {
+        return Ok(());
+    }
+
+    Err(format!(
+        "ui-gallery code-editor geom fallback gate failed (expected fallbacks <= {MAX_POINTER_FALLBACKS}/{MAX_CARET_RECT_FALLBACKS}/{MAX_VERTICAL_MOVE_FALLBACKS}, got pointer={pointer} caret_rect={caret_rect} vertical_move={vertical})\n  bundle: {}\n  evidence: {}",
+        bundle_path.display(),
+        evidence_path.display()
+    ))
+}
+
 pub(super) fn check_bundle_for_ui_gallery_code_editor_word_boundary(
     bundle_path: &Path,
     warmup_frames: u64,

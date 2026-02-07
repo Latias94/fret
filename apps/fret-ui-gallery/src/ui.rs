@@ -3334,6 +3334,27 @@ fn preview_code_editor_torture(
     let soft_wrap_enabled = cx
         .get_model_copied(&soft_wrap, Invalidation::Layout)
         .unwrap_or(false);
+
+    let handle = cx.with_state(
+        || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
+        |h| h.clone(),
+    );
+    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_applied.get() != Some(syntax_enabled) {
+        handle.set_language(if syntax_enabled { Some("rust") } else { None });
+        last_applied.set(Some(syntax_enabled));
+    }
+    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
+    if last_boundaries.get() != Some(boundary_identifier_enabled) {
+        handle.set_text_boundary_mode(if boundary_identifier_enabled {
+            fret_runtime::TextBoundaryMode::Identifier
+        } else {
+            fret_runtime::TextBoundaryMode::UnicodeWord
+        });
+        last_boundaries.set(Some(boundary_identifier_enabled));
+    }
+
+    let header_handle = handle.clone();
     let header = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -3380,11 +3401,22 @@ fn preview_code_editor_torture(
                     cx,
                     stack::HStackProps::default().gap(Space::N2).items_center(),
                     move |cx| {
+                        let reset_handle = header_handle.clone();
                         vec![
                             shadcn::Button::new("Load fonts…")
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .size(shadcn::ButtonSize::Sm)
                                 .on_click(CMD_CODE_EDITOR_LOAD_FONTS)
+                                .into_element(cx),
+                            shadcn::Button::new("Reset editor stats")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id("ui-gallery-code-editor-torture-reset-stats")
+                                .on_activate(Arc::new(move |host, action_cx, _reason| {
+                                    reset_handle.reset_cache_stats();
+                                    host.notify(action_cx);
+                                    host.request_redraw(action_cx.window);
+                                }))
                                 .into_element(cx),
                             shadcn::Switch::new(soft_wrap.clone())
                                 .test_id("ui-gallery-code-editor-torture-soft-wrap")
@@ -3401,25 +3433,6 @@ fn preview_code_editor_torture(
             ]
         },
     );
-
-    let handle = cx.with_state(
-        || code_editor::CodeEditorHandle::new(code_editor_torture_source()),
-        |h| h.clone(),
-    );
-    let last_applied = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_applied.get() != Some(syntax_enabled) {
-        handle.set_language(if syntax_enabled { Some("rust") } else { None });
-        last_applied.set(Some(syntax_enabled));
-    }
-    let last_boundaries = cx.with_state(|| Rc::new(Cell::new(None::<bool>)), |v| v.clone());
-    if last_boundaries.get() != Some(boundary_identifier_enabled) {
-        handle.set_text_boundary_mode(if boundary_identifier_enabled {
-            fret_runtime::TextBoundaryMode::Identifier
-        } else {
-            fret_runtime::TextBoundaryMode::UnicodeWord
-        });
-        last_boundaries.set(Some(boundary_identifier_enabled));
-    }
 
     #[cfg(not(target_arch = "wasm32"))]
     cx.app.with_global_mut(
