@@ -1,3 +1,11 @@
+//! GPU renderer for the Fret workspace.
+//!
+//! This crate owns the `wgpu`-backed renderer, resource registries, and performance snapshots used
+//! by the UI runtime and higher layers. Platform/windowing concerns (event loops, window handles,
+//! swapchain presentation policy) are expected to live in runner/platform crates.
+//!
+//! For module ownership and “where should this go?” guidance, see `crates/fret-render/README.md`.
+
 #![allow(clippy::too_many_arguments)]
 
 mod capabilities;
@@ -13,6 +21,9 @@ mod text;
 mod upload_counters;
 pub mod viewport_overlay;
 
+// -----------------------------------------------------------------------------
+// Stable re-exports (runner-facing renderer surface)
+// -----------------------------------------------------------------------------
 pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};
 pub use error::RenderError;
 pub use fret_core::ImageColorSpace;
